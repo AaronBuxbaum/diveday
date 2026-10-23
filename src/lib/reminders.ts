@@ -171,10 +171,20 @@ export function reminderEarnsItsSend(
      * week-out nudge still has something to say; ticked, it stops counting.
      */
     courseMaterialsDue?: boolean;
+    /**
+     * False when the shop switched the week-out reminder off on Features (ADR
+     * 20261005-optional-shop-features, amendment 2026-10-23). That silences
+     * only the plain "see you next week" hello: an empty checklist. Anything
+     * still on the list, the diver's or the shop's, and materials due still
+     * send, because the switch never silences a diver who has something to
+     * finish before the boat (review 2026-10-23, item 2).
+     */
+    weekOutHello?: boolean;
   } = {},
 ): boolean {
   if (TRIP_REMINDER_RHYTHM[kind].unconditional) return true;
   if (options.courseMaterialsDue) return true;
-  if (!checklist || checklist.length === 0) return true;
+  if (!checklist) return true;
+  if (checklist.length === 0) return options.weekOutHello !== false;
   return !checklist.every((item) => item.state === "done");
 }

@@ -8,7 +8,8 @@ import {
   thinBoatNeed,
 } from "@/lib/thin-boats";
 import type { DbExecutor } from "./client";
-import { bookings, trips } from "./schema";
+import { queryAll } from "./query-helpers";
+import { bookings, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
 
@@ -43,34 +44,48 @@ export async function listThinBoats(
   now: Date,
   limit: number = THIN_BOATS_SHOWN,
 ): Promise<{ shown: ThinBoat[]; total: number }> {
-  const rows = await db
-    .select({
-      id: trips.id,
-      title: trips.title,
-      startsAt: trips.startsAt,
-      capacity: trips.capacity,
-      minimumBookings: trips.minimumBookings,
-      minimumDecisionHours: trips.minimumDecisionHours,
-      diveSiteId: trips.diveSiteId,
-      courseId: trips.courseId,
-      certifiedPassengers: tripBoatCertifiedPassengers(),
-      booked: count(bookings.id),
-    })
-    .from(trips)
-    .leftJoin(bookings, liveBookingJoin)
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        liveTrip(),
-        notRehearsal(),
-        eq(trips.status, "scheduled"),
-        eq(trips.isPrivate, false),
-        gt(trips.startsAt, now),
-        lte(trips.startsAt, new Date(now.getTime() + THIN_BOATS_HORIZON_MS)),
-      ),
-    )
-    .groupBy(trips.id)
-    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+  // The deal door is the last-minute list's: a shop that switched the list
+  // off on the Features page sends no deals (`shops.last_minute_list_enabled`).
+  // The invite door is past-diver invites' (`shops.past_diver_invites_enabled`).
+  const switchesRead = async () =>
+    (
+      await db
+        .select({ deals: shops.lastMinuteListEnabled, invites: shops.pastDiverInvitesEnabled })
+        .from(shops)
+        .where(eq(shops.id, shopId))
+    )[0] ?? { deals: false, invites: false };
+  const [switches, rows] = await queryAll(db, [
+    switchesRead,
+    () =>
+      db
+        .select({
+          id: trips.id,
+          title: trips.title,
+          startsAt: trips.startsAt,
+          capacity: trips.capacity,
+          minimumBookings: trips.minimumBookings,
+          minimumDecisionHours: trips.minimumDecisionHours,
+          diveSiteId: trips.diveSiteId,
+          courseId: trips.courseId,
+          certifiedPassengers: tripBoatCertifiedPassengers(),
+          booked: count(bookings.id),
+        })
+        .from(trips)
+        .leftJoin(bookings, liveBookingJoin)
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            liveTrip(),
+            notRehearsal(),
+            eq(trips.status, "scheduled"),
+            eq(trips.isPrivate, false),
+            gt(trips.startsAt, now),
+            lte(trips.startsAt, new Date(now.getTime() + THIN_BOATS_HORIZON_MS)),
+          ),
+        )
+        .groupBy(trips.id)
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id)),
+  ]);
 
   const thin = rows.flatMap((row) => {
     const capacity = sellableSeats(row.capacity, row.certifiedPassengers);
@@ -84,9 +99,9 @@ export async function listThinBoats(
             booked: row.booked,
             capacity,
             need,
-            invitesPastDivers: row.diveSiteId !== null && row.courseId === null,
+            invitesPastDivers: switches.invites && row.diveSiteId !== null && row.courseId === null,
             isCourseSession: row.courseId !== null,
-            dealOpen: thinBoatDealOpen(row.startsAt, now),
+            dealOpen: switches.deals && thinBoatDealOpen(row.startsAt, now),
           },
         ]
       : [];

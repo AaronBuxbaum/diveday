@@ -1,21 +1,22 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import type { AssistDarkReason } from "@/lib/claude/dark";
-import { SHOP_FEATURES, type ShopFeature } from "@/lib/shop-features";
+import { SHOP_FEATURES, type ShopFeature, type ShopSwitch } from "@/lib/shop-features";
 
 /**
  * **The Features page's one list** (issue #2814, Aaron 2026-10-17): every
  * on/off switch a shop owns, once. Nine switches were drawn in seven places
  * (six optional features in four groups, the crew schedule, Stripe Tax, and
- * which kinds of diving the shop runs); they are rows of one page now, in the
- * order the issue names them.
+ * which kinds of diving the shop runs); they are rows of one page now, under
+ * five small group headings since the list grew past a screen (2026-10-23).
  *
  * A row is **only the switch**. Value settings (the divemaster target, the
  * pass-through fee) stay where they were; a row that has one links to it once
  * it is on. Off hides the feature and deletes nothing (`shop-features.ts`).
  *
  * **Each row keeps its own gate**, the one its switch had before it moved:
- * the six optional features are shop settings; tips and Stripe Tax are
- * payment settings; the crew schedule is the team's. The four predicates
+ * most optional features are shop settings; the money ones (tips, Stripe
+ * Tax, promo codes, packages) are payment settings; the crew schedule is the
+ * team's. The four predicates
  * resolve to owner and manager today and each states its own reason so one can
  * move without dragging the others (`action-helpers.ts`). The page hides a row
  * its reader may not flip, and the one Save writes only the rows the page drew
@@ -23,13 +24,19 @@ import { SHOP_FEATURES, type ShopFeature } from "@/lib/shop-features";
  */
 export type FeatureRowGate = "settings" | "payments" | "team";
 
-/** The three switches that are not one of `SHOP_FEATURES`. */
-type OtherFeatureRow = "crewSchedule" | "tax" | "divingOptions";
+/** Every switch on the page (`ShopSwitch` in `shop-features.ts`). */
+export type FeatureRowId = ShopSwitch;
 
-export type FeatureRowId = ShopFeature | OtherFeatureRow;
+/**
+ * The small headings the list falls under, in page order. A row belongs to
+ * exactly one; a group none of whose rows the reader may flip is not drawn.
+ */
+export const FEATURE_GROUPS = ["diving", "bookings", "divers", "crew", "claude"] as const;
+export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 
 export type FeatureRow = {
   id: FeatureRowId;
+  group: FeatureGroup;
   gate: FeatureRowGate;
   /** The row's name, on the page and in ⌘K. */
   headingKey: StaffMessageKey;
@@ -37,64 +44,60 @@ export type FeatureRow = {
   link?: { path: string; labelKey: "settings.features.crewTarget" | "settings.features.boats" };
 };
 
-const OPTIONAL_FEATURE_GATES: Record<ShopFeature, FeatureRowGate> = {
-  reviews: "settings",
-  dateRequests: "settings",
-  lastMinuteList: "settings",
-  tips: "payments",
-  publicYear: "settings",
-  padiChecks: "settings",
-  claudeSuggestions: "settings",
-  recapAutoApprove: "settings",
-};
+/** An optional feature's row: its words follow `settings.main.features.<id>`. */
+function optional(id: ShopFeature, group: FeatureGroup, gate: FeatureRowGate): FeatureRow {
+  return { id, group, gate, headingKey: `settings.main.features.${id}.heading` };
+}
 
-const OPTIONAL_FEATURE_HEADINGS: Record<ShopFeature, StaffMessageKey> = {
-  reviews: "settings.main.features.reviews.heading",
-  dateRequests: "settings.main.features.dateRequests.heading",
-  lastMinuteList: "settings.main.features.lastMinuteList.heading",
-  tips: "settings.main.features.tips.heading",
-  publicYear: "settings.main.features.publicYear.heading",
-  padiChecks: "settings.main.features.padiChecks.heading",
-  claudeSuggestions: "settings.main.features.claudeSuggestions.heading",
-  recapAutoApprove: "settings.main.features.recapAutoApprove.heading",
-};
-
-/** The optional features, in this page's order (not `SHOP_FEATURES`'). */
-const OPTIONAL_ORDER = [
-  "reviews",
-  "tips",
-  "dateRequests",
-  "lastMinuteList",
-  "publicYear",
-  "padiChecks",
-  "claudeSuggestions",
-  "recapAutoApprove",
-] as const satisfies readonly ShopFeature[];
-
+/**
+ * The rows in page order, grouped. Money features (tips, tax, promo codes,
+ * packages) keep the payments gate tips always had; the crew schedule keeps
+ * the team's; everything else is a shop setting.
+ */
 export const FEATURE_ROWS: readonly FeatureRow[] = [
-  ...OPTIONAL_ORDER.map(
-    (id): FeatureRow => ({
-      id,
-      gate: OPTIONAL_FEATURE_GATES[id],
-      headingKey: OPTIONAL_FEATURE_HEADINGS[id],
-    }),
-  ),
-  {
-    id: "crewSchedule",
-    gate: "team",
-    headingKey: "settings.main.crewSchedule.heading",
-    link: { path: "/settings#crew-schedule", labelKey: "settings.features.crewTarget" },
-  },
-  { id: "tax", gate: "payments", headingKey: "settings.main.tax.heading" },
   {
     id: "divingOptions",
+    group: "diving",
     gate: "settings",
     headingKey: "boats.divingOptionsHeading",
     link: { path: "/boats", labelKey: "settings.features.boats" },
   },
+  optional("hotelPickup", "diving", "settings"),
+  optional("publicConditions", "diving", "settings"),
+  optional("fieldGuide", "diving", "settings"),
+  optional("dateRequests", "bookings", "settings"),
+  optional("lastMinuteList", "bookings", "settings"),
+  optional("promoCodes", "bookings", "payments"),
+  optional("divePackages", "bookings", "payments"),
+  optional("tips", "bookings", "payments"),
+  { id: "tax", group: "bookings", gate: "payments", headingKey: "settings.main.tax.heading" },
+  optional("checkoutRecovery", "bookings", "settings"),
+  optional("buddyLinks", "bookings", "settings"),
+  optional("selfRegistration", "bookings", "settings"),
+  optional("waitlist", "bookings", "settings"),
+  optional("pastDiverInvites", "bookings", "settings"),
+  optional("partnerLinks", "bookings", "settings"),
+  optional("reviews", "divers", "settings"),
+  optional("publicYear", "divers", "settings"),
+  optional("padiChecks", "divers", "settings"),
+  optional("sightings", "divers", "settings"),
+  optional("diverPhotos", "divers", "settings"),
+  optional("weekOutReminder", "divers", "settings"),
+  optional("helpRequests", "divers", "settings"),
+  {
+    id: "crewSchedule",
+    group: "crew",
+    gate: "team",
+    headingKey: "settings.main.crewSchedule.heading",
+    link: { path: "/settings#crew-schedule", labelKey: "settings.features.crewTarget" },
+  },
+  optional("workOrders", "crew", "settings"),
+  optional("lostFound", "crew", "settings"),
+  optional("claudeSuggestions", "claude", "settings"),
+  optional("recapAutoApprove", "claude", "settings"),
 ];
 
-/** Whether `id` is one of the six optional features in `shop-features.ts`. */
+/** Whether `id` is one of the optional features in `shop-features.ts`. */
 export function isOptionalFeature(id: FeatureRowId): id is ShopFeature {
   return (SHOP_FEATURES as readonly string[]).includes(id);
 }

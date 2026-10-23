@@ -6,7 +6,7 @@ import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
 import type { WorkOrderLine } from "@/db/schema";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
-import { getShopById } from "@/db/shops";
+import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import {
   billWorkOrder,
   recordWorkOrderCounterPayment,
@@ -34,6 +34,19 @@ import { workOrderQuantityInput } from "@/lib/work-orders";
  * automatic ready message is not here: it rides the status move itself
  * (`announceReady` in `./_lib/announce-ready.ts`).
  */
+
+/**
+ * The signed-in staffer, unless the shop switched gear servicing off (the
+ * Features page): then a hand-built post lands on the gear register having
+ * sent and written nothing.
+ */
+async function requireBenchSession() {
+  const session = await requireStaffSession();
+  if (!(await shopHasFeatureOn(await getDb(), session.user.shopId, "workOrders"))) {
+    revalidateAndRedirect(shopPath(session.user.shopSlug, "gear"));
+  }
+  return session;
+}
 
 const orderSchema = z.object({ workOrderId: z.uuid() });
 const paymentSchema = z.object({
@@ -64,7 +77,7 @@ function benchLineItems(lines: readonly WorkOrderLine[]) {
 
 /** Send the ready message again, on a staffer's word. */
 export async function resendReadyNoticeAction(formData: FormData) {
-  const session = await requireStaffSession();
+  const session = await requireBenchSession();
   const board = shopPath(session.user.shopSlug, "gear", "work-orders");
   const parsed = orderSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
@@ -95,7 +108,7 @@ export async function resendReadyNoticeAction(formData: FormData) {
  * this *is* raising an order, built from the ticket's lines rather than typed.
  */
 export async function sendWorkOrderBillAction(formData: FormData) {
-  const session = await requireStaffSession();
+  const session = await requireBenchSession();
   const board = shopPath(session.user.shopSlug, "gear", "work-orders");
   const parsed = orderSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
@@ -155,7 +168,7 @@ const remindersSchema = z.object({
 
 /** Turn a customer piece's service reminders off, or back on, from the diver record. */
 export async function setCustomerGearRemindersAction(formData: FormData) {
-  const session = await requireStaffSession();
+  const session = await requireBenchSession();
   const board = shopPath(session.user.shopSlug, "gear", "work-orders");
   const parsed = remindersSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
@@ -180,7 +193,7 @@ export async function setCustomerGearRemindersAction(formData: FormData) {
  * step-up; `recordWorkOrderCounterPayment` records it as the ticket's bill.
  */
 export async function recordBenchPaymentAction(formData: FormData) {
-  const session = await requireStaffSession();
+  const session = await requireBenchSession();
   const board = shopPath(session.user.shopSlug, "gear", "work-orders");
   const parsed = paymentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));

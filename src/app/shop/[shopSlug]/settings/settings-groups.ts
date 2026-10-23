@@ -115,7 +115,14 @@ export function settingsSectionFragment(id: SectionId): string {
  * grants one — every destination re-checks server-side, which is what keeps
  * this a convenience rather than a gate.
  */
-export type SettingsRailGate = "payments" | "team" | "waivers" | "messaging" | "boats" | "billing";
+export type SettingsRailGate =
+  | "payments"
+  | "team"
+  | "waivers"
+  | "messaging"
+  | "boats"
+  | "billing"
+  | "selfRegistration";
 
 /**
  * The one warning a rail row may carry, named as a code rather than a
@@ -260,6 +267,8 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.counterQr.heading",
     group: "bookings",
     target: { kind: "section", id: "counterCard" },
+    // Counter sign-up switched off on Features: no card to find.
+    gate: "selfRegistration",
   },
   {
     id: "certCheck",
@@ -390,6 +399,7 @@ export function settingsRailGatesFor(reader: {
   canBilling: boolean;
   hasBoatDiving: boolean;
   isDemo: boolean;
+  selfRegistrationEnabled: boolean;
 }): Set<SettingsRailGate> {
   const gates = new Set<SettingsRailGate>();
   if (reader.canPayments) gates.add("payments");
@@ -397,6 +407,7 @@ export function settingsRailGatesFor(reader: {
   if (reader.canManageWaivers) gates.add("waivers");
   if (reader.canManageMessaging) gates.add("messaging");
   if (reader.hasBoatDiving) gates.add("boats");
+  if (reader.selfRegistrationEnabled) gates.add("selfRegistration");
   // The hub's own condition for its Billing door (`SettingsPage.tsx`).
   if (!reader.isDemo && reader.canBilling) gates.add("billing");
   return gates;
@@ -416,7 +427,7 @@ export function settingsRailRowHref(shopBasePath: string, row: SettingsRailRow):
  * re-checks its own permission server-side.
  */
 export function settingsShortcutsFor(
-  shop: { hasBoatDiving: boolean; isDemo: boolean },
+  shop: { hasBoatDiving: boolean; isDemo: boolean; selfRegistrationEnabled: boolean },
   roles: readonly Role[],
   shopSlug: string,
   t: StaffTranslator,
@@ -431,6 +442,7 @@ export function settingsShortcutsFor(
       canBilling: canManageBilling(roles),
       hasBoatDiving: shop.hasBoatDiving,
       isDemo: shop.isDemo,
+      selfRegistrationEnabled: shop.selfRegistrationEnabled,
     }),
   );
   const groupLabels = new Map(SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]));

@@ -57,6 +57,11 @@ export type AddDiverContext = {
    * for tomorrow is not a walk-in.
    */
   walkInOpen?: boolean;
+  /**
+   * The shop keeps a wait list (the Features page). Off, a full boat says it
+   * is full and offers no one a place on a list.
+   */
+  waitlistOn?: boolean;
   className?: string;
 };
 
@@ -103,6 +108,7 @@ export function AddDiverSection({
     confirmMatches,
     shopRentalItems,
     walkInOpen = false,
+    waitlistOn = true,
   } = context;
   const t = staffTranslator(locale);
   const searched = query.length > 0;
@@ -128,7 +134,7 @@ export function AddDiverSection({
     <div className={`flex flex-col gap-4 ${className}`.trim()}>
       <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
 
-      {confirmMatches && confirmMatches.length > 0 ? (
+      {confirmMatches && confirmMatches.length > 0 && (waitlistOn || !full) ? (
         <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 text-left">
           <div className="flex flex-col gap-2">
             <h3 className="font-semibold text-sm">
@@ -188,7 +194,9 @@ export function AddDiverSection({
         </div>
       ) : null}
 
-      {full ? (
+      {full && !waitlistOn ? (
+        <p className="text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>
+      ) : full ? (
         <>
           <p className="text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>
           {/* A full boat leads with the shop's people too (Aaron, 2026-10-23):

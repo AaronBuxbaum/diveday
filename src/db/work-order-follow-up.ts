@@ -170,7 +170,8 @@ export async function sendWorkOrderReadyNotice(
       ),
     )
     .limit(1);
-  if (!row) return { ok: false, reason: "not_found" };
+  // Gear servicing switched off (the Features page): no ticket email goes out.
+  if (!row?.shop.workOrdersEnabled) return { ok: false, reason: "not_found" };
   const { workOrder, person, shop } = row;
   if (!workOrder.personId || !person) return { ok: false, reason: "not_customer" };
   if (workOrder.status !== "ready") return { ok: false, reason: "not_ready" };
@@ -700,6 +701,8 @@ export async function sendDueServiceReminders(
         isNull(customerGearItems.deletedAt),
         isNull(people.deletedAt),
         isNull(customerGearReminderSettings.remindersOffAt),
+        // A shop that switched gear servicing off sends no service reminders.
+        eq(shops.workOrdersEnabled, true),
         // Any of the piece's dates in the window; which dates count for its
         // kind is `customerGearDueDates`' call, below.
         or(
@@ -858,6 +861,16 @@ export type WorkOrderAttentionRow = {
   subject: string;
   /** The promised day (past promise) or the day it went ready (uncollected). */
   since: CalendarDate;
+  /**
+   * The shop's own rental unit on a bench ticket (no customer), else null. Its
+   * service is fleet safety, so Today keeps it while gear servicing is off.
+   */
+  fleetUnitId: string | null;
+  /**
+   * Set by Today while gear servicing is off (the Features page): the bench
+   * pages are gone, so the row opens the unit on the gear register.
+   */
+  benchClosed?: true;
 };
 
 /**
@@ -879,6 +892,7 @@ export async function listWorkOrdersNeedingAttention(
       personId: workOrders.personId,
       personName: people.fullName,
       unitLabel: gearItems.label,
+      gearItemId: workOrders.gearItemId,
     })
     .from(workOrders)
     .leftJoin(people, eq(people.id, workOrders.personId))
@@ -903,6 +917,7 @@ export async function listWorkOrdersNeedingAttention(
         status: row.status,
         subject,
         since: row.promisedOn as CalendarDate,
+        fleetUnitId: row.personId ? null : row.gearItemId,
       });
       continue;
     }
@@ -918,6 +933,7 @@ export async function listWorkOrdersNeedingAttention(
         status: row.status,
         subject,
         since: readyOn as CalendarDate,
+        fleetUnitId: row.personId ? null : row.gearItemId,
       });
     }
   }

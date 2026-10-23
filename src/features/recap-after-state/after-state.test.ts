@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "@/db/bookings";
 import { getRecapPageData, type RecapPageData } from "@/db/recap";
-import { bookings } from "@/db/schema";
+import { bookings, diveSites, people, shops, tripSightings } from "@/db/schema";
 import { createTrip, upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { buildAfterStateProps } from "./after-state";
+import { buildAfterStateProps, recapBuddyLinkUrl } from "./after-state";
 
 const ctx = fileScopedShopContext();
 
@@ -270,5 +270,64 @@ describe("buildAfterStateProps", () => {
     expect(props.params).toEqual(params);
     expect(props.ownReview).toBeNull();
     expect(props.ownPulse).toBeNull();
+  });
+});
+
+describe("recapBuddyLinkUrl", () => {
+  const shop = { slug: "blue-mantis", buddyLinksEnabled: true };
+
+  it("links to the shop's schedule with this booking's referral id", () => {
+    expect(
+      recapBuddyLinkUrl(shop, "6f1c7b8e-2a43-4c4e-9a7d-0c7d1d9e4b21", "https://diveday.test"),
+    ).toMatch(/^https:\/\/diveday\.test\/s\/blue-mantis\?via=[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+  });
+
+  it("is null when the shop switched Bring a buddy off, or has no origin", () => {
+    const id = "6f1c7b8e-2a43-4c4e-9a7d-0c7d1d9e4b21";
+    expect(
+      recapBuddyLinkUrl({ ...shop, buddyLinksEnabled: false }, id, "https://diveday.test"),
+    ).toBeNull();
+    expect(recapBuddyLinkUrl(shop, id, null)).toBeNull();
+  });
+});
+
+/**
+ * Sightings switched off on Features: the recap names no species the crew
+ * logged, and the sighting itself stays.
+ */
+describe("the recap with sightings switched off", () => {
+  it("names nothing the crew logged, and names it again once back on", async () => {
+    const { bookingId } = await recapData();
+    const { db, shop } = ctx;
+    const [booking] = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    const [site] = await db
+      .select({ id: diveSites.id, name: diveSites.name })
+      .from(diveSites)
+      .where(eq(diveSites.shopId, shop.id))
+      .limit(1);
+    const [crew] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    if (!booking || !site || !crew) throw new Error("seed is missing a trip, a site or a person");
+    await db.insert(tripSightings).values({
+      shopId: shop.id,
+      tripId: booking.tripId,
+      diveSiteId: site.id,
+      diveSiteName: site.name,
+      speciesSlug: "green-sea-turtle",
+      count: 1,
+      recordedByPersonId: crew.id,
+    });
+    expect((await getRecapPageData(db, bookingId))?.observedSpecies).toContain("green-sea-turtle");
+
+    await db.update(shops).set({ sightingsEnabled: false }).where(eq(shops.id, shop.id));
+    const off = await getRecapPageData(db, bookingId);
+    expect(off?.observedSpecies).toEqual([]);
+    await db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, shop.id));
   });
 });

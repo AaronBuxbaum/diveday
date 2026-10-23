@@ -1,3 +1,4 @@
+import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -94,6 +95,7 @@ export function DayOfDetails({
   ]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
+  const shopReachable = Boolean(data.shop.contactPhone || data.shop.contactEmail);
   return (
     <form action={saveDayOfDetailsFromReady.bind(null, token)}>
       {/* The gear step's own "Saved.", for the same reason: the redirect
@@ -250,61 +252,94 @@ export function DayOfDetails({
             </Field>
           </div>
         ) : null}
-        <div className="py-5">
-          <h3 className="text-base font-semibold">{t("ready.helpHeading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("ready.helpBody")}</p>
-          {/* A handled request names nobody: "{name} will help you" is a
+        {/* Help requests switched off (the Features page) take no new ask: the
+            question goes, a request already open still says where it stands
+            and can be withdrawn, and the shop's own contact stands in for the
+            question so a diver who needs a hand still knows who to ask
+            (review 2026-10-23, item 3). */}
+        {data.helpRequestsOn || data.helpRequest || shopReachable ? (
+          <div className="py-5">
+            <h3 className="text-base font-semibold">{t("ready.helpHeading")}</h3>
+            {data.helpRequestsOn ? (
+              <p className="mt-1 text-sm text-muted">{t("ready.helpBody")}</p>
+            ) : null}
+            {/* A handled request names nobody: "{name} will help you" is a
               promise, and the helper may have left the boat since. */}
-          {data.helpRequest?.status === "handled" ? (
-            <p className="mt-3 text-base font-medium text-success-strong">
-              {t("ready.helpHandled")}
-            </p>
-          ) : (
-            <>
-              <fieldset className="mt-3 flex flex-col gap-2">
-                <legend className="sr-only">{t("ready.helpHeading")}</legend>
-                <RadioRow
-                  name="kind"
-                  value="none"
-                  label={t("ready.helpNone")}
-                  defaultChecked={!data.helpRequest}
+            {data.helpRequest?.status === "handled" ? (
+              <p className="mt-3 text-base font-medium text-success-strong">
+                {t("ready.helpHandled")}
+              </p>
+            ) : (
+              <>
+                {data.helpRequestsOn ? (
+                  <fieldset className="mt-3 flex flex-col gap-2">
+                    <legend className="sr-only">{t("ready.helpHeading")}</legend>
+                    <RadioRow
+                      name="kind"
+                      value="none"
+                      label={t("ready.helpNone")}
+                      defaultChecked={!data.helpRequest}
+                    />
+                    <RadioRow
+                      name="kind"
+                      value="carry_gear"
+                      label={t("ready.helpCarryGear")}
+                      defaultChecked={data.helpRequest?.kind === "carry_gear"}
+                    />
+                    <RadioRow
+                      name="kind"
+                      value="first_timer"
+                      label={t("ready.helpFirstTimer")}
+                      defaultChecked={data.helpRequest?.kind === "first_timer"}
+                    />
+                    <RadioRow
+                      name="kind"
+                      value="find_group"
+                      label={t("ready.helpFindGroup")}
+                      defaultChecked={data.helpRequest?.kind === "find_group"}
+                    />
+                  </fieldset>
+                ) : null}
+                {data.helpRequest ? (
+                  <p className="mt-3 text-base font-medium text-success-strong">
+                    {data.helpRequest.status === "acknowledged" && data.helpRequest.helperPersonName
+                      ? meetingInfo.length > 0
+                        ? t("ready.helpAcknowledged", {
+                            name: data.helpRequest.helperPersonName,
+                            meeting: meetingInfo.join(" · "),
+                          })
+                        : t("ready.helpAssignedFallback", {
+                            name: data.helpRequest.helperPersonName,
+                          })
+                      : t("ready.helpSent")}
+                  </p>
+                ) : null}
+                {/* Off, the radios are gone, so withdrawing is its own button:
+                    it posts the one answer the save still takes. */}
+                {data.helpRequest && !data.helpRequestsOn ? (
+                  <SubmitButton
+                    name="kind"
+                    value="none"
+                    pendingLabel={t("common.saving")}
+                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+                  >
+                    {t("ready.helpWithdraw")}
+                  </SubmitButton>
+                ) : null}
+              </>
+            )}
+            {!data.helpRequestsOn && shopReachable ? (
+              <>
+                <p className="mt-3 text-sm text-muted">{t("ready.helpAskShop")}</p>
+                <ShopContactLinks
+                  phone={data.shop.contactPhone}
+                  email={data.shop.contactEmail}
+                  className="text-sm"
                 />
-                <RadioRow
-                  name="kind"
-                  value="carry_gear"
-                  label={t("ready.helpCarryGear")}
-                  defaultChecked={data.helpRequest?.kind === "carry_gear"}
-                />
-                <RadioRow
-                  name="kind"
-                  value="first_timer"
-                  label={t("ready.helpFirstTimer")}
-                  defaultChecked={data.helpRequest?.kind === "first_timer"}
-                />
-                <RadioRow
-                  name="kind"
-                  value="find_group"
-                  label={t("ready.helpFindGroup")}
-                  defaultChecked={data.helpRequest?.kind === "find_group"}
-                />
-              </fieldset>
-              {data.helpRequest ? (
-                <p className="mt-3 text-base font-medium text-success-strong">
-                  {data.helpRequest.status === "acknowledged" && data.helpRequest.helperPersonName
-                    ? meetingInfo.length > 0
-                      ? t("ready.helpAcknowledged", {
-                          name: data.helpRequest.helperPersonName,
-                          meeting: meetingInfo.join(" · "),
-                        })
-                      : t("ready.helpAssignedFallback", {
-                          name: data.helpRequest.helperPersonName,
-                        })
-                    : t("ready.helpSent")}
-                </p>
-              ) : null}
-            </>
-          )}
-        </div>
+              </>
+            ) : null}
+          </div>
+        ) : null}
         {/* **A word to the crew** (issue #1182, delight report D22). Rendered
             only when there is something to offer: a first trip with this shop,
             or a return after a long gap. Budget rule 6's grammar, in order: the

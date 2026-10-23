@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn() }));
 vi.mock("@/db/boats", () => ({ listBoats: vi.fn(async () => []) }));
 vi.mock("@/db/interest-dates", () => ({
+  countWaitingDateInterests: vi.fn(async () => 0),
   listOpenDateInterests: vi.fn(),
   listClosedDateInterests: vi.fn(async () => []),
   listDeparturesOnDates: vi.fn(async () => []),
@@ -29,7 +30,9 @@ vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }))
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { canPersonConfigureTrips } = await import("@/db/authz");
-const { listOpenDateInterests, listClosedDateInterests } = await import("@/db/interest-dates");
+const { countWaitingDateInterests, listOpenDateInterests, listClosedDateInterests } = await import(
+  "@/db/interest-dates"
+);
 const { requireShopSurface } = await import("@/lib/session");
 const { default: RequestsPage } = await import("./page");
 
@@ -75,6 +78,7 @@ beforeEach(() => {
       defaultLocale: "en-US",
       timezone: "America/New_York",
       crewScheduleEnabled: true,
+      dateRequestsEnabled: true,
       diversPerDivemaster: 6,
       name: "Blue Mantis Divers",
     },
@@ -171,5 +175,43 @@ describe("closed requests", () => {
 
     expect(screen.queryByText("No requests yet")).toBeNull();
     expect(screen.getByText(/Marked done Wed, Oct\s14/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * **Date requests switched off** (the Features page): the tab is gone, and a
+ * direct URL lands on the inbox with no error, unless a course page's inquiry
+ * still waits here (those are not part of the switch).
+ */
+describe("with date requests switched off", () => {
+  function switchedOff() {
+    vi.mocked(requireShopSurface).mockResolvedValue({
+      session: { user: { shopId: SHOP_ID, personId: "staff", roles: ["captain"] } },
+      db: {},
+      shop: {
+        id: SHOP_ID,
+        slug: "blue-mantis",
+        defaultLocale: "en-US",
+        timezone: "America/New_York",
+        crewScheduleEnabled: true,
+        dateRequestsEnabled: false,
+        diversPerDivemaster: 6,
+        name: "Blue Mantis Divers",
+      },
+    } as never);
+  }
+
+  it("redirects to the inbox when nothing waits", async () => {
+    switchedOff();
+    vi.mocked(countWaitingDateInterests).mockResolvedValue(0);
+    await expect(renderPage()).rejects.toThrow(/NEXT_REDIRECT/);
+  });
+
+  it("still opens while a course inquiry waits", async () => {
+    switchedOff();
+    vi.mocked(countWaitingDateInterests).mockResolvedValue(1);
+    vi.mocked(canPersonConfigureTrips).mockResolvedValue(false);
+    await renderPage();
+    expect(screen.getAllByText("Priya Sharma").length).toBeGreaterThan(0);
   });
 });

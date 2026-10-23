@@ -23,6 +23,7 @@ import { auth } from "@/lib/auth";
 import { staffDestinationGates } from "@/lib/authz";
 import { REFUSED_SHOP_SLUG_HEADER, REQUEST_PATH_HEADER } from "@/lib/embed-routes";
 import { publicSchedulePath, shopSlugFromPublicPath } from "@/lib/public-routes";
+import { shopSwitchesOn } from "@/lib/shop-features";
 import { staffHomeSlug } from "@/lib/staff-home";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -174,7 +175,7 @@ async function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: L
           <ShopSearchField
             shopSlug={shopSlug}
             navGates={staffDestinationGates(session.user.roles, shop)}
-            crewSchedule={shop.crewScheduleEnabled}
+            switches={shopSwitchesOn(shop)}
             locale={locale ?? DEFAULT_DIVER_LOCALE}
             setLocale={setLocaleAction}
             createDiverAction={createDiverFromSearchAction}

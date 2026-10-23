@@ -187,7 +187,7 @@ export function ShopNav({
               todayBoats={todayBoats}
               readerId={readerId}
               gates={navGates}
-              crewSchedule={navOffers.crew}
+              switches={navOffers.switches}
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}

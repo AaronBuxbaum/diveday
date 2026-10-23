@@ -169,6 +169,7 @@ export function TripFullSection({
   alternatives = [],
   terms,
   offerLastMinuteList = true,
+  offerWaitlist = true,
   requirement = null,
 }: {
   shopSlug: string;
@@ -187,6 +188,8 @@ export function TripFullSection({
   terms?: React.ReactNode;
   /** Whether the shop keeps a last-minute list to point a diver at. */
   offerLastMinuteList?: boolean;
+  /** Whether the shop keeps a wait list (the Features page); off, no form to join one. */
+  offerWaitlist?: boolean;
   /**
    * Who this trip is for, already worded ("This charter is for divers with
    * …"), or null. One unboxed line inside the form it governs (UX audit #25).
@@ -262,41 +265,44 @@ export function TripFullSection({
           ))}
         </ul>
       ) : null}
-      <form
-        action={joinWaitlist.bind(null, tripRef)}
-        className="mt-6 flex flex-col gap-4 border-t border-border pt-6"
-      >
-        <div>
-          <h3 className="font-semibold">{t("waitlistHeading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("waitlistBody")}</p>
-          {requirement ? <p className="mt-1 text-sm text-muted">{requirement}</p> : null}
-          {/* The open form states the age with its attestation checkbox; the
+      {offerWaitlist ? (
+        <form
+          action={joinWaitlist.bind(null, tripRef)}
+          className="mt-6 flex flex-col gap-4 border-t border-border pt-6"
+        >
+          <div>
+            <h3 className="font-semibold">{t("waitlistHeading")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("waitlistBody")}</p>
+            {requirement ? <p className="mt-1 text-sm text-muted">{requirement}</p> : null}
+            {/* The open form states the age with its attestation checkbox; the
               wait list has no such checkbox, so a course's minimum age is said
               here in plain words — a parent deciding whether to queue their
               kid needs the answer before a seat opens, not after (task 23). */}
-          {trip.course?.minimumAge ? (
-            <p className="mt-1 text-sm text-muted">
-              {tTrip("minimumAge", { age: trip.course.minimumAge })}
-            </p>
-          ) : null}
-        </div>
-        {/* A party waits together as one lead with a count, invited when that
+            {trip.course?.minimumAge ? (
+              <p className="mt-1 text-sm text-muted">
+                {tTrip("minimumAge", { age: trip.course.minimumAge })}
+              </p>
+            ) : null}
+          </div>
+          {/* A party waits together as one lead with a count, invited when that
             many seats are free (fourth review, item 34). Up to the boat's own
             seats: a party bigger than the boat is a charter, and the line
             under the count says to ask the shop. Nobody else's name is asked
             for a seat that may never open, nor the lead's "Under 18": nothing
             is signed until a seat is booked. */}
-        <BookingPartyFields
-          maxPartySize={trip.capacity}
-          leadOnly
-          leadPhone
-          contactEmail={contactEmail}
-          contactPhone={contactPhone}
-        />
-        {/* Two joiners from one couple would each count the couple, so the
+          <BookingPartyFields
+            maxPartySize={trip.capacity}
+            leadOnly
+            leadPhone
+            contactEmail={contactEmail}
+            contactPhone={contactPhone}
+          />
+          {/* Two joiners from one couple would each count the couple, so the
             shop reads demand that is not there (dive-domain review r4-4, N8). */}
-        {trip.capacity > 1 ? <p className="text-sm text-muted">{t("waitlistPartyHint")}</p> : null}
-        {/* The same optional question the shop-wide deal list asks, in the same
+          {trip.capacity > 1 ? (
+            <p className="text-sm text-muted">{t("waitlistPartyHint")}</p>
+          ) : null}
+          {/* The same optional question the shop-wide deal list asks, in the same
             words, so a staffer working either list is reading one claim rather
             than two (FU-20260813). It describes the person joining — the lead
             of the party — and never gates the join.
@@ -307,17 +313,21 @@ export function TripFullSection({
             there is something for a staffer to pre-check the number against
             before that date. A broad interest signal has no date to check it
             for. */}
-        <DiveDeclarationFields showNitrox={false} />
-        <div>
-          <SubmitButton pendingLabel={t("waitlistJoining")} className={buttonClass({ busy: true })}>
-            {t("waitlistHeading")}
-          </SubmitButton>
-          {/* Same placement as the open form: the fine print sits under the
+          <DiveDeclarationFields showNitrox={false} />
+          <div>
+            <SubmitButton
+              pendingLabel={t("waitlistJoining")}
+              className={buttonClass({ busy: true })}
+            >
+              {t("waitlistHeading")}
+            </SubmitButton>
+            {/* Same placement as the open form: the fine print sits under the
               button it qualifies. */}
-          {terms}
-          <ErrorNotice message={errorMessage} />
-        </div>
-      </form>
+            {terms}
+            <ErrorNotice message={errorMessage} />
+          </div>
+        </form>
+      ) : null}
       {/* Only while the shop keeps the list (`shops.last_minute_list_enabled`):
           off, the anchor would land on nothing. */}
       {offerLastMinuteList ? (

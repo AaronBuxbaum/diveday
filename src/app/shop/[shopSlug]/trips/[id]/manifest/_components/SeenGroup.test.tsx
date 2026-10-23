@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { rendersFlush } from "@/test/button-flush";
 import { SeenGroup, type SeenGroupCopy } from "./SeenGroup";
+
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 /**
  * **The crew's Seen group** (slice 20r, the living reef). It rides the manifest
@@ -212,5 +216,37 @@ describe("SeenGroup", () => {
     // No permanently green badge on a surface where connectivity is not the
     // subject — the absence of the warning is what reads as "fine".
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("says a refused tap did not save, and asks for it again", async () => {
+    refresh.mockClear();
+    render(
+      <SeenGroup
+        chips={chips}
+        tallies={[]}
+        copy={copy}
+        recordAction={async () => ({ status: "error" })}
+        deleteAction={noop}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Nurse shark" }));
+    expect(await screen.findByText(copy.refusal)).toBeInTheDocument();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("refreshes, and reads as no lost connection, when sightings were switched off", async () => {
+    refresh.mockClear();
+    render(
+      <SeenGroup
+        chips={chips}
+        tallies={[]}
+        copy={copy}
+        recordAction={async () => ({ status: "switched_off" })}
+        deleteAction={noop}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Nurse shark" }));
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(copy.refusal)).toBeNull();
   });
 });

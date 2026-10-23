@@ -71,19 +71,36 @@ const rowsIn = (element: unknown) =>
     .map((input) => input.props.value);
 
 describe("the Features page", () => {
-  it("lists the eleven switches, once each, in the issue's order", async () => {
+  it("lists every switch, once each, grouped in page order", async () => {
     expect(rowsIn(await renderFeatures("owner"))).toEqual([
-      "reviews",
-      "tips",
+      "divingOptions",
+      "hotelPickup",
+      "publicConditions",
+      "fieldGuide",
       "dateRequests",
       "lastMinuteList",
+      "promoCodes",
+      "divePackages",
+      "tips",
+      "tax",
+      "checkoutRecovery",
+      "buddyLinks",
+      "selfRegistration",
+      "waitlist",
+      "pastDiverInvites",
+      "partnerLinks",
+      "reviews",
       "publicYear",
       "padiChecks",
+      "sightings",
+      "diverPhotos",
+      "weekOutReminder",
+      "helpRequests",
+      "crewSchedule",
+      "workOrders",
+      "lostFound",
       "claudeSuggestions",
       "recapAutoApprove",
-      "crewSchedule",
-      "tax",
-      "divingOptions",
     ]);
   });
 
@@ -91,16 +108,33 @@ describe("the Features page", () => {
     const names = inputNamesIn(await renderFeatures("owner"));
     const switches = names.filter((name) => name.startsWith("feature:"));
     expect(switches).toEqual([
-      "feature:reviews",
-      "feature:tips",
+      "feature:hotelPickup",
+      "feature:publicConditions",
+      "feature:fieldGuide",
       "feature:dateRequests",
       "feature:lastMinuteList",
+      "feature:promoCodes",
+      "feature:divePackages",
+      "feature:tips",
+      "feature:tax",
+      "feature:checkoutRecovery",
+      "feature:buddyLinks",
+      "feature:selfRegistration",
+      "feature:waitlist",
+      "feature:pastDiverInvites",
+      "feature:partnerLinks",
+      "feature:reviews",
       "feature:publicYear",
       "feature:padiChecks",
+      "feature:sightings",
+      "feature:diverPhotos",
+      "feature:weekOutReminder",
+      "feature:helpRequests",
+      "feature:crewSchedule",
+      "feature:workOrders",
+      "feature:lostFound",
       "feature:claudeSuggestions",
       "feature:recapAutoApprove",
-      "feature:crewSchedule",
-      "feature:tax",
     ]);
     for (const name of ["hasBoatDiving", "hasShoreDiving", "hasPoolDiving"]) {
       expect(names).toContain(name);
@@ -113,7 +147,7 @@ describe("the Features page", () => {
     expect(findElements(page, SubmitButton)).toHaveLength(1);
     // Every row the page drew is named, so the save knows which rows it may write.
     const [form] = findElements<{ children: unknown }>(page, "form");
-    expect(rowsIn(form)).toHaveLength(11);
+    expect(rowsIn(form)).toHaveLength(28);
   });
 
   it("does not render at all for a divemaster", async () => {

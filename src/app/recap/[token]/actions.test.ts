@@ -69,7 +69,8 @@ const { submitRecapPulse } = await import("@/db/recap-pulses");
 const { verifyRecapToken } = await import("@/lib/recap-links");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { startTipCheckout } = await import("@/db/tips");
-const { addRecapPhoto, isRecapOpen } = await import("@/db/recap");
+const { addRecapPhoto, canAddRecapPhoto, isRecapOpen } = await import("@/db/recap");
+const { recordDiverOwnLocaleForBooking } = await import("@/db/people");
 const { submitTripReview } = await import("@/db/reviews");
 const { storeRecapImage } = await import("@/lib/storage");
 const { startTipAction, submitRecapPulseAction, submitReviewAction, uploadRecapPhotoAction } =
@@ -291,6 +292,25 @@ describe("a recap that is not open", () => {
  * never onto everyone else's under the diver's name. The tick is honored only
  * through the readiness link (`ready/[token]/recap-photo-actions.ts`).
  */
+/**
+ * **A refused upload leaves nothing behind** (ADR 20261005-optional-shop-features):
+ * with recap photos switched off, `canAddRecapPhoto` refuses, and the diver's
+ * language is not recorded from a form that took nothing.
+ */
+describe("uploadRecapPhotoAction with recap photos switched off", () => {
+  it("refuses with no side effect: no bytes stored, no language recorded", async () => {
+    vi.mocked(canAddRecapPhoto).mockResolvedValueOnce({ ok: false, reason: "not_found" });
+    const data = new FormData();
+    data.append("photo", new File(["x"], "reef.jpg", { type: "image/jpeg" }));
+
+    await expect(uploadRecapPhotoAction(TOKEN, data)).rejects.toThrow(
+      `REDIRECT:/recap/${TOKEN}?photo=error`,
+    );
+    expect(storeRecapImage).not.toHaveBeenCalled();
+    expect(recordDiverOwnLocaleForBooking).not.toHaveBeenCalled();
+  });
+});
+
 describe("uploadRecapPhotoAction and the share tick", () => {
   it("adds the photo to this recap alone, whatever the post says", async () => {
     vi.mocked(storeRecapImage).mockResolvedValue({

@@ -110,3 +110,35 @@ describe("SiteFields — help under the control (K-418)", () => {
     }
   });
 });
+
+/** The field guide is a Features switch: off, its section and its fields are not drawn. */
+describe("SiteFields with the field guide off", () => {
+  it("draws no field-guide section, so the form posts no species and no tips heading", () => {
+    render(
+      <SiteFields
+        t={t}
+        depthUnit="meters"
+        certificationDescription="Who can dive this site."
+        routeCopy={routeEditorCopy(t)}
+        landmarkCopy={landmarkEditorCopy(t)}
+        fieldGuideCopy={fieldGuideEditorCopy(t)}
+        marineLifeCatalog={[]}
+        locale="en-US"
+        timezone="America/New_York"
+        fieldGuideOn={false}
+      />,
+      { container: document.body.appendChild(document.createElement("form")) },
+    );
+    const form = document.querySelector("form");
+    expect(form?.querySelector('[name="creatures"]')).toBeNull();
+    expect(form?.querySelector('[name="fieldGuideTipsHeading"]')).toBeNull();
+    expect(form?.querySelector('[name="name"]')).not.toBeNull();
+  });
+
+  it("draws both while on", () => {
+    renderFields();
+    const form = document.querySelector("form");
+    expect(form?.querySelector('[name="creatures"]')).not.toBeNull();
+    expect(form?.querySelector('[name="fieldGuideTipsHeading"]')).not.toBeNull();
+  });
+});

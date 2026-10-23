@@ -6,7 +6,13 @@ import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RosterEntry } from "./types";
 
-/** Hotel pickup / lodging details, with the form that sets them. */
+/**
+ * Hotel pickup / lodging details, with the form that sets them. While the shop
+ * does not offer hotel pickups (the Features page) the roster passes no
+ * action: the form goes, but a pickup a seat already holds is still said,
+ * because the crew still has to collect that diver. A seat with none says
+ * nothing.
+ */
 export function SeatPickup({
   booking,
   t,
@@ -16,10 +22,12 @@ export function SeatPickup({
   t: StaffTranslator;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
 }) {
+  const held = Boolean(booking.hotelPickupLocation || booking.pickupTime);
+  if (!updatePickupAction && !held) return null;
   return (
     <div>
       <GroupLabel as="p">{t("trips.roster.hotelPickupHeading")}</GroupLabel>
-      {booking.hotelPickupLocation || booking.pickupTime ? (
+      {held ? (
         <p className="mt-1 text-sm text-muted">
           {booking.hotelPickupLocation ?? t("trips.roster.hotelNotSpecified")}
           {booking.pickupTime ? ` · ${booking.pickupTime}` : ""}
@@ -31,11 +39,7 @@ export function SeatPickup({
         <CompactDisclosureRow
           className="mt-1"
           bodyClassName="mt-0"
-          label={
-            booking.hotelPickupLocation || booking.pickupTime
-              ? t("trips.roster.editPickup")
-              : t("trips.roster.setPickup")
-          }
+          label={held ? t("trips.roster.editPickup") : t("trips.roster.setPickup")}
         >
           <form
             action={updatePickupAction.bind(null, booking.id)}

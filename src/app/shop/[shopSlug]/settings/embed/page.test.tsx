@@ -1,6 +1,8 @@
+import { eq } from "drizzle-orm";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
@@ -100,7 +102,25 @@ describe("EmbedSettingsPage", () => {
       // and the demo shop has reviews on, so the reviews widget is offered.
       expect(Object.keys(generator?.props.copy.kinds ?? {})).toHaveLength(9);
       expect(generator?.props.kinds).toContain("reviews");
+      expect(generator?.props.kinds).toContain("partner");
       expect(generator?.props.copy.code).toBe("Embed code");
+    } finally {
+      process.env.APP_HOST = previousAppHost;
+    }
+  });
+
+  it("offers no partner link while partner links are off", async () => {
+    const { db, shop, personId } = await seededContext();
+    await db.update(shops).set({ partnerLinksEnabled: false }).where(eq(shops.id, shop.id));
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+    const previousAppHost = process.env.APP_HOST;
+    process.env.APP_HOST = "http://localhost:3000";
+    try {
+      const element = await EmbedSettingsPage({ params: Promise.resolve({ shopSlug: shop.slug }) });
+      const [generator] = findElements<{ kinds: readonly string[] }>(element, EmbedGenerator);
+      expect(generator?.props.kinds).not.toContain("partner");
+      expect(generator?.props.kinds).toContain("calendar");
     } finally {
       process.env.APP_HOST = previousAppHost;
     }

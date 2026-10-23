@@ -98,6 +98,33 @@ describe("AddDiverSection", () => {
     );
   });
 
+  it("says a full boat is full and offers no wait list while the wait list is off", () => {
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: true,
+          query: "Ana",
+          candidates: [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+          waitlistOn: false,
+          confirmName: "Ana",
+          confirmMatches: [{ id: "p-1", fullName: "Ana Reyes" } as SimilarDiver],
+        }}
+      />,
+    );
+    expect(screen.getByText("The boat is full.")).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
+    expect(screen.queryByText("Ana Reyes")).toBeNull();
+  });
+
   it("puts a returning diver on a full boat's wait list, never a second record", () => {
     const known = vi.fn();
     const seat = vi.fn();

@@ -26,6 +26,7 @@ export function seenGroupView({
   catalogSpecies,
   speciesBySite,
   canAssist = false,
+  sightingsOn = true,
   t,
 }: {
   checkpoint: RollCallCheckpoint;
@@ -42,8 +43,14 @@ export function seenGroupView({
   speciesBySite: Record<string, readonly ManifestSpecies[]>;
   /** Claude's "say what you saw" (the `sightings` assist) is available. */
   canAssist?: boolean;
+  /**
+   * Whether the shop has sightings on (Features). Off, there is no Seen group;
+   * every sighting stays logged.
+   */
+  sightingsOn?: boolean;
   t: StaffTranslator;
 }) {
+  if (!sightingsOn) return null;
   // **Which reef these taps attach to.**
   //
   // **A recorded dive speaks for itself, and a plan only speaks for a dive with

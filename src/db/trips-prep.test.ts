@@ -12,7 +12,14 @@ import {
   reserveGearUnit,
   setGearItemStatus,
 } from "./gear";
-import { gearItems, gearReservations, gearServiceEvents, rentalFitProfiles } from "./schema";
+import {
+  bookings,
+  gearItems,
+  gearReservations,
+  gearServiceEvents,
+  rentalFitProfiles,
+  shops,
+} from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripPrep, screenGearPicks } from "./trips-prep";
@@ -147,6 +154,25 @@ describe("getTripPrep", () => {
   it("answers null for a trip that is not this shop's", async () => {
     const { db, shop } = await context();
     expect(await getTripPrep(db, shop, "00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+
+  // Hotel pickups switched off (the Features page) stops new ones only: a
+  // diver already promised a pickup is still on Prep's pickup run.
+  it("still lists a pickup already set after the shop stops offering them", async () => {
+    const ctx = await context();
+    const [seat] = await ctx.db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, ctx.tripId), eq(bookings.status, "booked")))
+      .limit(1);
+    if (!seat) throw new Error("seeded trip has no booked seat");
+    await ctx.db
+      .update(bookings)
+      .set({ hotelPickupLocation: "Harbor Inn", pickupTime: "07:15" })
+      .where(eq(bookings.id, seat.id));
+    await ctx.db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, ctx.shop.id));
+    const prep = await getTripPrep(ctx.db, ctx.shop, ctx.tripId);
+    expect(prep?.hotelPickups.map((stop) => stop.hotelPickupLocation)).toContain("Harbor Inn");
   });
 
   /**

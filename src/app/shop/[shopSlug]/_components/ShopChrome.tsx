@@ -30,6 +30,7 @@ import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { ALL_SWITCHES_ON, shopSwitchesOn } from "@/lib/shop-features";
 import { settingsShortcutsFor } from "../settings/settings-groups";
 import { staffShopName } from "./staff-shop-name";
 
@@ -191,10 +192,12 @@ const loadShopChrome = cache(async (shopSlug: string) => {
           hasActiveCourses(db, shop.id),
           // The fleet **or** the bench: a shop that services customers'
           // regulators and owns no rental kit of its own still has a Gear
-          // section (ADR 20261008-gear-work-orders).
-          Promise.all([countGearItems(db, shop.id), countWorkOrders(db, shop.id)]).then(
-            ([units, tickets]) => units + tickets,
-          ),
+          // section (ADR 20261008-gear-work-orders). A shop that switched gear
+          // servicing off counts its fleet alone.
+          Promise.all([
+            countGearItems(db, shop.id),
+            shop.workOrdersEnabled ? countWorkOrders(db, shop.id) : 0,
+          ]).then(([units, tickets]) => units + tickets),
         ])
       : [0, [], false, 0];
   const boardingTripId = nextOfTodaysDepartures(todays, now);
@@ -236,7 +239,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
     navOffers: {
       courses: teaches,
       gear: gearCount > 0,
-      crew: shop?.crewScheduleEnabled ?? false,
+      switches: shop ? shopSwitchesOn(shop) : ALL_SWITCHES_ON,
     },
   };
 });

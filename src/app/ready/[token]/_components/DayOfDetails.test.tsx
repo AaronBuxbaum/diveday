@@ -14,6 +14,7 @@ afterEach(cleanup);
 function data(participantType: ReadyPageData["participantType"]): ReadyPageData {
   return {
     participantType,
+    shop: { contactPhone: null, contactEmail: null },
     trip: {
       meetingPointLabel: null,
       meetingPointAddress: null,
@@ -31,6 +32,7 @@ function data(participantType: ReadyPageData["participantType"]): ReadyPageData 
     hotelPickupLocation: null,
     offersHotelPickup: true,
     helpRequest: null,
+    helpRequestsOn: true,
     rentalFit: null,
     welcomeOffer: null,
     welcomeShared: false,
@@ -217,5 +219,75 @@ describe("the day-of help request promise", () => {
     expect(screen.getByText("The crew handled this request.")).toBeVisible();
     expect(screen.queryByText(/will help you/)).toBeNull();
     expect(screen.queryByText(/Sam/)).toBeNull();
+  });
+});
+
+/** Help requests switched off on the Features page take no new ask. */
+describe("the help question follows the shop's Help requests switch", () => {
+  const off = (over: Partial<ReadyPageData> = {}) =>
+    ({ ...data("diver"), helpRequestsOn: false, ...over }) as unknown as ReadyPageData;
+  const open = { kind: "carry_gear", status: "requested", helperPersonName: null };
+
+  it("asks for help while on, with no withdraw button and no contact line", () => {
+    render(<DayOfDetails token="tok" data={data("diver")} saved={false} t={t} />);
+    expect(screen.getAllByText(t("ready.helpHeading")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("radio", { name: t("ready.helpCarryGear") })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: t("ready.helpWithdraw") })).toBeNull();
+    expect(screen.queryByText(t("ready.helpAskShop"))).toBeNull();
+  });
+
+  it("asks nothing while off at a shop with no published contact", () => {
+    render(<DayOfDetails token="tok" data={off()} saved={false} t={t} />);
+    expect(screen.queryByText(t("ready.helpHeading"))).toBeNull();
+    expect(screen.queryByRole("radio", { name: t("ready.helpCarryGear") })).toBeNull();
+  });
+
+  it("puts the shop's contact where the question was while off", () => {
+    const shop = { contactPhone: "+1 305 555 0100", contactEmail: "desk@example.com" };
+    render(
+      <DayOfDetails
+        token="tok"
+        data={off({ shop } as Partial<ReadyPageData>)}
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(t("ready.helpAskShop"))).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "+1 305 555 0100" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "desk@example.com" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: t("ready.helpCarryGear") })).toBeNull();
+  });
+
+  it("still says where an open request stands while off, and offers one Withdraw", () => {
+    // Review 2026-10-23, item 3: a diver must never be stuck with an ask the
+    // crew is counting on and no way to take it back.
+    render(
+      <DayOfDetails
+        token="tok"
+        data={off({ helpRequest: open } as Partial<ReadyPageData>)}
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(t("ready.helpSent"))).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: t("ready.helpCarryGear") })).toBeNull();
+    expect(screen.queryByText(t("ready.helpBody"))).toBeNull();
+    const withdraw = screen.getAllByRole("button", { name: t("ready.helpWithdraw") });
+    expect(withdraw).toHaveLength(1);
+    expect(withdraw[0]).toHaveAttribute("name", "kind");
+    expect(withdraw[0]).toHaveAttribute("value", "none");
+  });
+
+  it("offers no Withdraw once the crew has handled the request", () => {
+    render(
+      <DayOfDetails
+        token="tok"
+        data={off({ helpRequest: { ...open, status: "handled" } } as Partial<ReadyPageData>)}
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(t("ready.helpHandled"))).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: t("ready.helpWithdraw") })).toBeNull();
   });
 });

@@ -86,6 +86,26 @@ describe("found items waiting to go home (fifth loop, item 7)", () => {
     expect(byPerson.get(seat.person.id)).toEqual(["Blue mask, black strap"]);
   });
 
+  it("raises no row while Lost and found is switched off, and keeps every item", async () => {
+    const { db, shop } = ctx;
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("demo needs a trip");
+    await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      description: "One fin",
+      actorPersonId: null,
+    });
+    const kinds = async () =>
+      (await getTodayWork(db, shop.id, shop.slug, shop.timezone, nowDate())).actions.map(
+        (action) => action.kind,
+      );
+    expect(await kinds()).toContain("lost_items_waiting");
+    await db.update(shops).set({ lostFoundEnabled: false }).where(eq(shops.id, shop.id));
+    expect(await kinds()).not.toContain("lost_items_waiting");
+    expect(await countOpenLostItems(db, shop.id, nowDate())).toBe(1);
+  });
+
   it("leaves out an unclaimed item older than thirty days, never one somebody owns", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);

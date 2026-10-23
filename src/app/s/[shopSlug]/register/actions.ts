@@ -106,7 +106,9 @@ export async function registerAtShopAction(
 
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
-  if (!shop) return { error: t("register.unavailable") };
+  // Counter sign-up switched off on Features: the page is gone, and a
+  // hand-built post puts nobody on file.
+  if (!shop?.selfRegistrationEnabled) return { error: t("register.unavailable") };
 
   // Whether the release goes out at all, decided per recipient: a bucket on
   // the address or number being *written to*, and for a text (billed to the

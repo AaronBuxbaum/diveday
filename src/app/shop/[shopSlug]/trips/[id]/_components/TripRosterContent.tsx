@@ -90,9 +90,10 @@ export type TripRosterContentContext = {
   shopName: string;
   locale: string;
   timezone: string;
-  depthUnit: "feet" | "meters";
   /** The shop's rental catalog, read by the ledger's fit line (`RosterSection`). */
   shopRentalItems?: readonly string[];
+  /** The shop offers hotel pickups (the Features page): only then may a seat set one. */
+  offersHotelPickup: boolean;
   tripNotice?: FormNotice;
   pageNotice?: FormNotice;
   noteDeleted?: { bookingId: string; body: string };
@@ -152,10 +153,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     shopName,
     locale,
     timezone,
-    // Kept on the interface for the page's own plumbing; the ledger's depth
-    // sentences carry their own unit (`depthWarningText`).
-    depthUnit: _depthUnit,
     shopRentalItems,
+    offersHotelPickup,
     tripNotice,
     pageNotice,
     noteDeleted,
@@ -346,7 +345,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           // departure: its ledger is the record.
           markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
           clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
-          updatePickupAction: actions.updateBookingPickupAction,
+          updatePickupAction: offersHotelPickup ? actions.updateBookingPickupAction : undefined,
           // Only a departure that serves lunch aboard asks for a lunch note.
           updateDietaryNoteAction: trip.lunchAboard
             ? actions.updateBookingDietaryNoteAction
@@ -410,6 +409,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
               context={{
                 shopSlug,
                 full: isFull(seatsOnSale(trip)),
+                waitlistOn: guests.waitlistOn,
                 query: diverQuery,
                 candidates: diverCandidates,
                 tripId: trip.id,

@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
+import { GroupLabel } from "@/components/ui/group-label";
 import { assistDarkReasonFor } from "@/db/assists";
 import {
   canPersonManagePaymentSettings,
@@ -22,6 +23,7 @@ import { settingsPaneClass } from "../_components/settings-pane";
 import { saveFeaturesAction } from "./actions";
 import {
   darkWhileOnKey,
+  FEATURE_GROUPS,
   FEATURE_ROWS,
   type FeatureRow,
   type FeatureRowGate,
@@ -126,8 +128,8 @@ function switches(shop: Shop, row: FeatureRow, t: StaffTranslator) {
 
 /**
  * **Features** — every on/off switch a shop owns, in one list (issue #2814).
- * Nine switches were drawn in seven places; each is a row here with its own
- * gate (`feature-rows.ts`), a sentence and a switch, and a row that has value
+ * Nine switches were drawn in seven places; each is a row here, under a small
+ * group heading, with its own gate (`feature-rows.ts`), a sentence and a switch, and a row that has value
  * settings of its own links to them once it is on. Off hides the feature and
  * deletes nothing it wrote (`shop-features.ts`).
  *
@@ -173,37 +175,48 @@ export default async function FeaturesPage({
         eyebrowHref={`${base}/settings`}
         title={t("settings.features.title")}
       />
-      <form action={saveFeaturesAction}>
-        <SectionCard padding="none">
-          <ul className="divide-y divide-border">
-            {FEATURE_ROWS.filter((row) => gates.has(row.gate)).map((row) => (
-              <Fragment key={row.id}>
-                <li id={row.id} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
-                  <input type="hidden" name={ROWS_FIELD} value={row.id} />
-                  <h2 className="text-sm font-semibold">{t(row.headingKey)}</h2>
-                  {switches(shop, row, t)}
-                  {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
-                    <p className="text-xs text-warning">{t(darkKey)}</p>
-                  ) : null}
-                  {row.link && linkShown(shop, row) ? (
-                    <Link
-                      href={`${base}${row.link.path}`}
-                      className="inline-block text-sm font-medium text-primary hover:underline"
-                    >
-                      {t(row.link.labelKey)}
-                    </Link>
-                  ) : null}
-                </li>
-                {row.id === "claudeSuggestions" && dark === null ? (
-                  <li id={REPLY_NOTES_ROW} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
-                    <ReplyNotesForm notes={shop.replyNotes} t={t} />
-                  </li>
-                ) : null}
-              </Fragment>
-            ))}
-          </ul>
-        </SectionCard>
-        <StickyFormActions className="mt-6">
+      <form action={saveFeaturesAction} className="space-y-8">
+        {FEATURE_GROUPS.map((group) => {
+          const rows = FEATURE_ROWS.filter((row) => row.group === group && gates.has(row.gate));
+          if (rows.length === 0) return null;
+          return (
+            <section key={group} aria-labelledby={`features-${group}`} className="space-y-3">
+              <GroupLabel as="h2" id={`features-${group}`}>
+                {t(`settings.features.groups.${group}`)}
+              </GroupLabel>
+              <SectionCard padding="none">
+                <ul className="divide-y divide-border">
+                  {rows.map((row) => (
+                    <Fragment key={row.id}>
+                      <li id={row.id} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
+                        <input type="hidden" name={ROWS_FIELD} value={row.id} />
+                        <h3 className="text-sm font-semibold">{t(row.headingKey)}</h3>
+                        {switches(shop, row, t)}
+                        {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
+                          <p className="text-xs text-warning">{t(darkKey)}</p>
+                        ) : null}
+                        {row.link && linkShown(shop, row) ? (
+                          <Link
+                            href={`${base}${row.link.path}`}
+                            className="inline-block text-sm font-medium text-primary hover:underline"
+                          >
+                            {t(row.link.labelKey)}
+                          </Link>
+                        ) : null}
+                      </li>
+                      {row.id === "claudeSuggestions" && dark === null ? (
+                        <li id={REPLY_NOTES_ROW} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
+                          <ReplyNotesForm notes={shop.replyNotes} t={t} />
+                        </li>
+                      ) : null}
+                    </Fragment>
+                  ))}
+                </ul>
+              </SectionCard>
+            </section>
+          );
+        })}
+        <StickyFormActions>
           <SubmitButton pendingLabel={t("settings.main.features.saving")} className={buttonClass()}>
             {t("settings.main.features.save")}
           </SubmitButton>

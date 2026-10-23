@@ -6,8 +6,13 @@
  * can run without: DiveDay's own star ratings,
  * divers asking for a day that is not on the board, the last-minute deals
  * list, tips on the recap, the shopfront's "Our year", the PADI checks
- * (beta), and Claude suggestions (ADR 20261018-claude-assists; off, every
- * assist is dark). Off hides the feature on every surface that offers it and deletes
+ * (beta), Claude suggestions (ADR 20261018-claude-assists; off, every
+ * assist is dark), lost and found, gear servicing (work orders), promo codes,
+ * dive packages, hotel pickups, abandoned-checkout emails, bring-a-buddy
+ * links, marine-life sightings, recap photos, counter QR
+ * self-registration, the waitlist, past-diver invites, day-of help requests,
+ * partner links, the week-out reminder, public conditions and the dive-site
+ * field guide. Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
  * **Every feature starts on for a new shop** (Aaron, 2026-10-23). "Our year"
@@ -28,6 +33,23 @@ export const SHOP_FEATURES = [
   "padiChecks",
   "claudeSuggestions",
   "recapAutoApprove",
+  "lostFound",
+  "workOrders",
+  "promoCodes",
+  "divePackages",
+  "hotelPickup",
+  "checkoutRecovery",
+  "buddyLinks",
+  "sightings",
+  "diverPhotos",
+  "selfRegistration",
+  "waitlist",
+  "pastDiverInvites",
+  "helpRequests",
+  "partnerLinks",
+  "weekOutReminder",
+  "publicConditions",
+  "fieldGuide",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -42,6 +64,23 @@ export const SHOP_FEATURE_COLUMNS = {
   padiChecks: "padiChecksEnabled",
   claudeSuggestions: "claudeSuggestionsEnabled",
   recapAutoApprove: "recapAssistAutoApprove",
+  lostFound: "lostFoundEnabled",
+  workOrders: "workOrdersEnabled",
+  promoCodes: "promoCodesEnabled",
+  divePackages: "divePackagesEnabled",
+  hotelPickup: "offersHotelPickup",
+  checkoutRecovery: "checkoutRecoveryEnabled",
+  buddyLinks: "buddyLinksEnabled",
+  sightings: "sightingsEnabled",
+  diverPhotos: "diverPhotosEnabled",
+  selfRegistration: "selfRegistrationEnabled",
+  waitlist: "waitlistEnabled",
+  pastDiverInvites: "pastDiverInvitesEnabled",
+  helpRequests: "helpRequestsEnabled",
+  partnerLinks: "partnerLinksEnabled",
+  weekOutReminder: "weekOutReminderEnabled",
+  publicConditions: "publicConditionsEnabled",
+  fieldGuide: "fieldGuideEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];
@@ -59,3 +98,52 @@ export function parseShopFeature(value: unknown): ShopFeature | null {
     ? (value as ShopFeature)
     : null;
 }
+
+/**
+ * **Every switch on the Features page**: the optional features above plus the
+ * three with rules of their own (the crew schedule, Stripe Tax, and which kinds
+ * of diving the shop runs). The guard in `feature-coverage.ts` maps every
+ * staff destination and every boolean on `shops` to one of these, or to a
+ * written reason it is core.
+ */
+export type ShopSwitch = ShopFeature | "crewSchedule" | "tax" | "divingOptions";
+
+/** The columns `shopSwitchesOn` reads. */
+export type ShopSwitchFlags = ShopFeatureFlags & {
+  crewScheduleEnabled: boolean;
+  taxEnabled: boolean;
+  hasBoatDiving: boolean;
+  hasShoreDiving: boolean;
+  hasPoolDiving: boolean;
+};
+
+/** Which switches are on, by switch. Plain booleans, so it crosses to a Client Component. */
+export type ShopSwitchesOn = Record<ShopSwitch, boolean>;
+
+/**
+ * Every switch's state for one shop. Diving is on while any kind is (the
+ * Features page refuses all three off); the boats register keeps its own gate
+ * on boat diving (`staffDestinationGates`).
+ */
+export function shopSwitchesOn(shop: ShopSwitchFlags): ShopSwitchesOn {
+  const on = Object.fromEntries(
+    SHOP_FEATURES.map((feature) => [feature, shopOffers(shop, feature)]),
+  ) as Record<ShopFeature, boolean>;
+  return {
+    ...on,
+    crewSchedule: shop.crewScheduleEnabled,
+    tax: shop.taxEnabled,
+    divingOptions: shop.hasBoatDiving || shop.hasShoreDiving || shop.hasPoolDiving,
+  };
+}
+
+/** Every switch on: the shape a caller with no shop row to read assumes. */
+export const ALL_SWITCHES_ON: ShopSwitchesOn = {
+  ...(Object.fromEntries(SHOP_FEATURES.map((feature) => [feature, true])) as Record<
+    ShopFeature,
+    boolean
+  >),
+  crewSchedule: true,
+  tax: true,
+  divingOptions: true,
+};

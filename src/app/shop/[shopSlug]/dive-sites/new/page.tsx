@@ -64,7 +64,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
   const diverT = diverTranslator(locale);
   const depthUnit = shop.depthUnit ?? "meters";
 
-  const sections = siteFormSections(t);
+  const sections = siteFormSections(t, shop.fieldGuideEnabled);
 
   return (
     // Wider from `lg` up than the 3xl it was: the rail takes a column of its
@@ -92,11 +92,15 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
                 <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
                   {t("diveSites.new.saveSiteBriefing")}
                 </SubmitButton>
-                <UnsavedSections sections={sections} copy={siteFormUnsavedCopy(t)} />
+                <UnsavedSections
+                  sections={sections}
+                  copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
+                />
               </>
             }
           >
             <SiteFields
+              fieldGuideOn={shop.fieldGuideEnabled}
               t={t}
               depthUnit={depthUnit}
               routeCopy={routeEditorCopy(t)}
