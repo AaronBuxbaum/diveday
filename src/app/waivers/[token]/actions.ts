@@ -39,6 +39,7 @@ import {
   questionnaireForJurisdiction,
   readMedicalAnswers,
 } from "@/lib/medical";
+import { MEDICAL_ALERT_FIELD, readMedicalAlert } from "@/lib/medical-alert";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTY_RETURN_COOKIE, partyReturnCookiePath } from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -227,6 +228,16 @@ function readFormShopAnswers(
 }
 
 /**
+ * The medical alert for the crew as posted (glossary *Medical alert for the
+ * crew*), or undefined when the form carried no such field, which leaves a
+ * saved draft as it was.
+ */
+function readFormMedicalAlert(formData: FormData): string | undefined {
+  const value = formData.get(MEDICAL_ALERT_FIELD);
+  return typeof value === "string" ? value : undefined;
+}
+
+/**
  * The first shop question the form leaves refused, in the shop's order, as the
  * field and question a refused submit names. Required means answered, never
  * which answer: this is the same rule the writer refuses on.
@@ -276,8 +287,11 @@ function firstInvalidWaiverField(
   guardianIssuePaths: IssuePaths = new Set(),
   contactField: WaiverInvalidField | undefined = undefined,
   shopQuestionField: WaiverInvalidField | undefined = undefined,
+  medicalAlertField: WaiverInvalidField | undefined = undefined,
 ): WaiverInvalidField | undefined {
   if (!answers) return "medical";
+  // The medical alert sits right under the questionnaire.
+  if (medicalAlertField) return medicalAlertField;
   // The contact section sits between the questions and the signature card, and
   // its refusal is the one a normal browser actually reaches: `required` covers
   // the two controls below it, but no markup can say "these two boxes move
@@ -390,6 +404,7 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
     medicalAnswers: answers,
     guardian: guardianDraftFrom(formData, guardianRequired),
     shopAnswers,
+    medicalAlert: readFormMedicalAlert(formData),
   });
   // A form the diver themselves just submitted through their own bearer
   // link — first-hand evidence of the language they read (docs ADR
@@ -457,6 +472,11 @@ export async function completeWaiverAction(token: string, formData: FormData) {
   const answers = readFormMedicalAnswers(formData, questionnaire);
   const shopAnswers = readFormShopAnswers(formData, shopQuestions);
   const refusedShop = refusedShopQuestion(shopQuestions, shopAnswers);
+  // Refused only for its shape (too long, a control character), never for
+  // what it says: the alert informs the crew and gates nothing (issue #2960).
+  const medicalAlert = readFormMedicalAlert(formData);
+  const refusedAlert: WaiverInvalidField | undefined =
+    medicalAlert !== undefined && !readMedicalAlert(medicalAlert).ok ? "medicalAlert" : undefined;
   // The guardian section is validated only when the page rendered one — the
   // writer decides the same way, from the date of birth on file, so a form
   // that omits it for an adult and one that includes it for a minor both
@@ -481,7 +501,8 @@ export async function completeWaiverAction(token: string, formData: FormData) {
     !answers ||
     (guardian && !guardian.success) ||
     refusedContact ||
-    refusedShop
+    refusedShop ||
+    refusedAlert
   ) {
     const invalidField = firstInvalidWaiverField(
       parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
@@ -491,6 +512,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
         : new Set(),
       refusedContact,
       refusedShop?.field,
+      refusedAlert,
     );
     // A refused guardian section keeps what the family typed, exactly as the
     // signature-card refusals below keep the diver's own answers.
@@ -502,6 +524,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
         medicalAnswers: answers,
         guardian: guardianDraftFrom(formData, guardianRequired),
         shopAnswers,
+        medicalAlert,
       });
     }
     redirect(
@@ -518,6 +541,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
     medicalAnswers: answers,
     // By id only; the writer reads the questions from the record's version.
     shopAnswers,
+    medicalAlert,
     // Optional — a diver who skips it still signs; blanks never clobber a
     // value already on file, and a half-filled pair never reaches here.
     emergencyContact:
@@ -550,6 +574,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
       medicalAnswers: answers,
       guardian: guardianDraftFrom(formData, guardianRequired),
       shopAnswers,
+      medicalAlert,
     });
     if (submittedContact?.kind === "pair") {
       if (recordBookingId) {
@@ -579,6 +604,10 @@ export async function completeWaiverAction(token: string, formData: FormData) {
     // version changed under a form left open, or a hand-built request).
     if (outcome.reason === "invalid_shop_answers") {
       redirect(refusedSubmitPath(token, "shopQuestionInvalid", outcome.questionId));
+    }
+    // The writer's own refusal of the alert's shape, past the check above.
+    if (outcome.reason === "invalid_medical_alert") {
+      redirect(refusedSubmitPath(token, "medicalAlert"));
     }
     if (outcome.reason === "invalid_signature") {
       redirect(refusedSubmitPath(token, undefined));

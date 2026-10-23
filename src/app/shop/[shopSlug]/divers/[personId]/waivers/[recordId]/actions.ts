@@ -1,6 +1,6 @@
 "use server";
 
-import { canPersonReadMedicalAnswers } from "@/db/authz";
+import { canPersonReadMedicalAlert, canPersonReadMedicalAnswers } from "@/db/authz";
 import { recordDiverActivity } from "@/db/operations";
 import { getSignedWaiverForDiver } from "@/db/waivers";
 import { type AnsweredMedicalQuestion, answeredMedicalQuestions } from "@/lib/medical";
@@ -60,4 +60,45 @@ export async function showMedicalAnswersAction(
       answeredMedicalQuestions(waiver.medicalAnswers) ??
       waiver.flaggedPrompts.map((prompt) => ({ id: prompt, prompt, yes: true })),
   };
+}
+
+export type ShowMedicalAlertResult = { ok: true; text: string } | { ok: false };
+
+/**
+ * **"Show the alert" on a signed release** (issue #2960): the diver's medical
+ * alert for the crew, read on purpose, the way "Show answers" reads the
+ * questionnaire above. Owner and manager only here (`canReadMedicalAlert`
+ * with no departure in hand); the crew read it on their own departure's
+ * manifest. The read goes on the diver's trail (`medical_alert_read`) before
+ * the words are handed back, and a trail that refuses the line shows nothing.
+ * Every refusal is the same `{ ok: false }`.
+ */
+export async function showMedicalAlertOnRecordAction(
+  shopSlug: string,
+  personId: string,
+  recordId: string,
+): Promise<ShowMedicalAlertResult> {
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const diverId = uuidParam(personId);
+  const waiverId = uuidParam(recordId);
+  if (!diverId || !waiverId) return { ok: false };
+  const actor = session.user.personId;
+  if (!(await canPersonReadMedicalAlert(db, shop.id, actor))) return { ok: false };
+  const waiver = await getSignedWaiverForDiver(db, {
+    shopId: shop.id,
+    personId: diverId,
+    recordId: waiverId,
+    readsMedicalAnswers: false,
+    readsMedicalAlert: true,
+  });
+  // A held seat carries none, and a paper or imported release stores none.
+  if (!waiver?.medicalAlert) return { ok: false };
+  const recorded = await recordDiverActivity(db, {
+    shopId: shop.id,
+    personId: waiver.personId,
+    actorPersonId: actor,
+    code: "medical_alert_read",
+  });
+  if (!recorded) return { ok: false };
+  return { ok: true, text: waiver.medicalAlert };
 }

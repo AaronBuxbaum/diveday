@@ -48,6 +48,7 @@
     "medical_answered_by_earlier_letter": "{actor} usó una carta del médico con fecha {evaluated}, escrita para la derivación de {diver} firmada el {referred}, para responder a la derivación posterior firmada el {signed}",
     "medical_clearance_opened": "{actor} abrió la evaluación médica de {diver}",
     "medical_answers_read": "{actor} leyó las respuestas médicas de {diver}",
+    "medical_alert_read": "{actor} leyó la alerta médica de {diver}",
     "date_of_birth_cleared_as_adult": "{actor} borró la fecha de nacimiento de {diver} e indicó que tiene 18 años o más",
     "record_exported": "{actor} descargó una copia del registro de {diver}",
     "drysuit_experience_recorded": "{actor} anotó que vio bucear a {diver} con traje seco",

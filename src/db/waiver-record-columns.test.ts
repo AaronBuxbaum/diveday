@@ -20,6 +20,7 @@ describe("waiver record column sets", () => {
     "draftMedicalAnswers",
     "draftGuardian",
     "draftShopAnswers",
+    "draftMedicalAlert",
   ];
 
   it("keeps the bearer token and the unsigned draft out of the sealed read", () => {
@@ -31,6 +32,7 @@ describe("waiver record column sets", () => {
         "templateBody",
         "signedName",
         "shopAnswers",
+        "medicalAlert",
         "integrityHash",
         "integrityVersion",
       ]),
@@ -39,7 +41,14 @@ describe("waiver record column sets", () => {
 
   it("keeps the release text and the seal out of the status read", () => {
     const state = Object.keys(WAIVER_STATE_COLUMNS);
-    for (const column of [...neverRead, "templateBody", "shopAnswers", "integrityHash"]) {
+    for (const column of [
+      ...neverRead,
+      "templateBody",
+      "shopAnswers",
+      // Medical-class text: only its own predicate-guarded readers (issue #2960).
+      "medicalAlert",
+      "integrityHash",
+    ]) {
       expect(state).not.toContain(column);
     }
   });

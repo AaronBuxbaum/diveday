@@ -34,7 +34,7 @@ vi.mock("@/lib/session", async () =>
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const { recordDiverActivity } = await import("@/db/operations");
-const { showMedicalAnswersAction } = await import("./actions");
+const { showMedicalAnswersAction, showMedicalAlertOnRecordAction } = await import("./actions");
 
 const ctx = fileScopedShopContext();
 
@@ -179,5 +179,74 @@ describe("showMedicalAnswersAction", () => {
       showMedicalAnswersAction("another-shop", record.personId, record.id),
     ).rejects.toThrow("NOT_FOUND");
     expect(await readLines(db, record.personId)).toEqual([]);
+  });
+});
+
+/**
+ * **"Show the alert" on the signed record** (issue #2960): owner and manager
+ * only, and each read on the diver's trail before the words leave the server.
+ */
+describe("showMedicalAlertOnRecordAction", () => {
+  const ALERT = "Bee-sting allergy. EpiPen in the blue dry bag.";
+
+  async function alerted() {
+    const base = await context();
+    await base.db
+      .update(waiverRecords)
+      .set({ medicalAlert: ALERT })
+      .where(eq(waiverRecords.id, base.record.id));
+    return base;
+  }
+
+  async function alertLines(db: Awaited<ReturnType<typeof context>>["db"], personId: string) {
+    return db
+      .select({ actor: activityEvents.actorPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.subjectPersonId, personId),
+          eq(activityEvents.code, "medical_alert_read"),
+        ),
+      );
+  }
+
+  it("records the read, then hands the owner the words", async () => {
+    const { db, shop, record, owner } = await alerted();
+    signIn(shop, owner);
+    await expect(
+      showMedicalAlertOnRecordAction(shop.slug, record.personId, record.id),
+    ).resolves.toEqual({ ok: true, text: ALERT });
+    expect(await alertLines(db, record.personId)).toEqual([{ actor: owner }]);
+  });
+
+  it("refuses a captain here, crew or not, and writes nothing", async () => {
+    const { db, shop, record, captain } = await alerted();
+    signIn(shop, captain);
+    await expect(
+      showMedicalAlertOnRecordAction(shop.slug, record.personId, record.id),
+    ).resolves.toEqual({ ok: false });
+    expect(await alertLines(db, record.personId)).toEqual([]);
+  });
+
+  it("shows nothing when the trail cannot take the line", async () => {
+    const { db, shop, record, owner } = await alerted();
+    signIn(shop, owner);
+    vi.mocked(recordDiverActivity).mockResolvedValueOnce(false);
+    await expect(
+      showMedicalAlertOnRecordAction(shop.slug, record.personId, record.id),
+    ).resolves.toEqual({ ok: false });
+    expect(await alertLines(db, record.personId)).toEqual([]);
+  });
+
+  it("answers nothing for a release with no alert, or another diver's", async () => {
+    const { db, shop, record, owner } = await context();
+    signIn(shop, owner);
+    await expect(
+      showMedicalAlertOnRecordAction(shop.slug, record.personId, record.id),
+    ).resolves.toEqual({ ok: false });
+    await expect(showMedicalAlertOnRecordAction(shop.slug, owner, record.id)).resolves.toEqual({
+      ok: false,
+    });
+    expect(await alertLines(db, record.personId)).toEqual([]);
   });
 });

@@ -414,6 +414,28 @@ export const waiverRecords = pgTable(
      * like the other drafts, and stripped by erasure.
      */
     draftShopAnswers: jsonb("draft_shop_answers").$type<DraftShopAnswers>(),
+    /**
+     * **The medical alert for the crew** (glossary *Medical alert for the
+     * crew*, issue #2960): what the diver wants the boat to know in an
+     * emergency, in their own words ("Bee-sting allergy. EpiPen in the blue
+     * dry bag."). Trimmed, NFC, at most 500 characters, no control character
+     * but a newline (`readMedicalAlert`); blank is null. Written by
+     * `completeWaiver` in the same pending-guarded update as the signature;
+     * paper and imported releases carry none.
+     *
+     * Medical-class data that **informs and never gates**: no status, medical
+     * review, readiness, admission, roll call or count reads it. Inside the
+     * version 1 seal **only when not null**, so every older seal still
+     * verifies. Read by owner, manager and the crew of the diver's departure
+     * (`canReadMedicalAlert`); destroyed by erasure.
+     */
+    medicalAlert: text("medical_alert"),
+    /**
+     * The medical alert as last saved with "Save and finish later". Never
+     * evidence, out of the export like the other drafts, cleared on every
+     * move and by erasure (`CLEARED_DRAFT_COLUMNS`).
+     */
+    draftMedicalAlert: text("draft_medical_alert"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),

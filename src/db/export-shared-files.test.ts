@@ -35,6 +35,8 @@ const WITHHELD = [
   pin(RENTAL_FIT_CSV, "note"),
   // The raw questionnaire: a hold surfaces as a status, never the answers.
   pin(WAIVER_RECORDS_CSV, "medical_answers"),
+  // The medical alert for the crew, medical-class text like the answers (issue #2960).
+  pin(WAIVER_RECORDS_CSV, "medical_alert"),
   // The shop's internal talk about a repair.
   pin(WORK_ORDERS_CSV, "technician_notes"),
   pin(WORK_ORDERS_CSV, "outcome_note"),

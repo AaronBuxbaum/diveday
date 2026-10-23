@@ -26,6 +26,7 @@ import {
   canOverrideGearRequest,
   canReadCrewAwayNote,
   canReadEveryIncidentReport,
+  canReadMedicalAlert,
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
@@ -127,6 +128,31 @@ describe("canReadShopAnswers (every staff role)", () => {
     expect(canReadShopAnswers(["diver"])).toBe(false);
     expect(canReadShopAnswers([])).toBe(false);
     expect(canReadShopAnswers(undefined)).toBe(false);
+  });
+});
+
+describe("canReadMedicalAlert (owner, manager, and the diver's own crew)", () => {
+  const crewing = { crewsDiversDeparture: true };
+  const notCrewing = { crewsDiversDeparture: false };
+
+  it("admits the owner and a manager whether or not they crew the departure", () => {
+    for (const role of ["owner", "manager"] as const) {
+      expect(canReadMedicalAlert([role], crewing)).toBe(true);
+      expect(canReadMedicalAlert([role], notCrewing)).toBe(true);
+    }
+  });
+
+  it("admits every other staff role only while crewing the diver's departure", () => {
+    for (const role of STAFF_ROLES.filter((role) => role !== "owner" && role !== "manager")) {
+      expect(canReadMedicalAlert([role], crewing)).toBe(true);
+      expect(canReadMedicalAlert([role], notCrewing)).toBe(false);
+    }
+  });
+
+  it("never admits a diver or nobody, even on a crew list", () => {
+    expect(canReadMedicalAlert(["diver"], crewing)).toBe(false);
+    expect(canReadMedicalAlert([], crewing)).toBe(false);
+    expect(canReadMedicalAlert(undefined, crewing)).toBe(false);
   });
 });
 

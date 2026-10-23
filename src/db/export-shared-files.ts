@@ -828,6 +828,16 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
       in: "shop",
       value: (row) => (row.shopAnswers ? JSON.stringify(row.shopAnswers) : null),
     },
+    // The medical alert for the crew (glossary *Medical alert for the crew*,
+    // issue #2960): the diver's own health words, inside the v1 seal when
+    // present, so a destination re-verifying the hash needs it. Shop-only,
+    // exactly as `medical_answers` is: the diver's bundle holds no medical
+    // answers pending H-01/H-03, and this is medical-class text.
+    {
+      header: "medical_alert",
+      in: "shop",
+      value: (row) => row.medicalAlert,
+    },
     // The physician clearance that ends a medical hold (issue #1252).
     // Its *document* is deliberately not here — see EXCLUDED_COLUMNS in
     // src/db/export.test.ts — but the fact and its accountable staff

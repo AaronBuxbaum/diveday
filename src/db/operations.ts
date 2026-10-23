@@ -136,6 +136,7 @@ export type DiverActivityCode =
   | "identity_repointed_onto"
   | "medical_clearance_opened"
   | "medical_answers_read"
+  | "medical_alert_read"
   | "date_of_birth_cleared_as_adult"
   | "record_exported"
   | "dispute_sheet_printed"

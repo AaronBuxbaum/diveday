@@ -460,6 +460,22 @@ export type OfflineManifestPayload = {
             ridingReferredOn?: CalendarDate;
           };
           /**
+           * **The diver's medical alert for the crew** (glossary *Medical
+           * alert for the crew*, issue #2960). The fact rides on every copy,
+           * so a deckhand with no signal still sees the chip; `text` rides
+           * only on a copy saved by a reader `canReadMedicalAlert` admits for
+           * this departure (owner, manager, its crew), so the divemaster at
+           * sea can open it. No read event is written offline: the copy was
+           * already this reader's to hold. Inside the same encrypted,
+           * expiring record as the emergency contact, never on a held seat,
+           * and it gates nothing.
+           *
+           * Optional and additive (no `OFFLINE_MANIFEST_RECORD_VERSION` bump;
+           * a bump purges unsynced roll calls). Absent when the diver wrote
+           * none, and a copy saved before it reads as none.
+           */
+          medicalAlert?: { text?: string };
+          /**
            * **A training mark that stands on this seat** (issue #2275): the
            * course the dive counts toward and whether an instructor was on the
            * crew when the copy was saved — the live manifest's fact and
@@ -933,6 +949,12 @@ export function serializeManifests(
   boatSafety: BoatSafetySection | null = null,
   /** The boat's open snags, worded; absent or empty carries none. */
   snags?: OfflineManifestPayload["snags"],
+  /**
+   * The medical alert texts by booking id, **only when the reader saving this
+   * copy may read them on this departure** (`canPersonReadMedicalAlertOnTrip`).
+   * Absent or empty, the copy carries the fact of each alert and no words.
+   */
+  medicalAlertTexts?: ReadonlyMap<string, string>,
 ): OfflineManifestPayload {
   return {
     shop,
@@ -1021,6 +1043,7 @@ export function serializeManifests(
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
+        ...offlineMedicalAlert(diver, medicalAlertTexts),
         ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
         ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
@@ -1068,6 +1091,20 @@ function offlineMedicalWarnings(
 }
 
 type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][number];
+
+/**
+ * The dock copy's medical alert for one (already withheld) diver: the fact,
+ * and the words only from `texts`, which the caller fills only for a reader
+ * allowed to hold them. Nothing on a held seat or a diver who wrote none.
+ */
+function offlineMedicalAlert(
+  diver: TripManifest["divers"][number],
+  texts: ReadonlyMap<string, string> | undefined,
+): { medicalAlert?: NonNullable<OfflineDiverRow["medicalAlert"]> } {
+  if (!diver.medicalAlert || diver.identityWithheld) return {};
+  const text = texts?.get(diver.bookingId);
+  return { medicalAlert: text ? { text } : {} };
+}
 
 export function offlineManifestExpiresAt(savedAt: Date, tripEndsAt: Date): Date {
   return new Date(

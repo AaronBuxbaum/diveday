@@ -23,6 +23,7 @@ import {
   canOverrideCertBlock,
   canOverrideGearRequest,
   canReadEveryIncidentReport,
+  canReadMedicalAlert,
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
@@ -35,8 +36,8 @@ import {
 } from "@/lib/authz";
 import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today";
 import type { DbExecutor } from "./client";
-import { people, personRoles, userAccounts } from "./schema";
-import { livePerson } from "./trips-live";
+import { people, personRoles, tripAssignments, trips, userAccounts } from "./schema";
+import { livePerson, liveTrip } from "./trips-live";
 
 /**
  * The account-and-roles half shared by both functions below: given a person
@@ -266,6 +267,48 @@ export const canPersonReadMedicalAnswers = (db: DbExecutor, shopId: string, pers
 /** The live check behind a signed record's answers to the shop's own questions (`canReadShopAnswers`). */
 export const canPersonReadShopAnswers = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canReadShopAnswers);
+
+/**
+ * The live check behind the **text of a medical alert for the crew** on one
+ * departure's manifest and roll call (`canReadMedicalAlert`, issue #2960):
+ * live roles, and whether this person is on that departure's crew right now
+ * (`trip_assignments`, shop-scoped through the live trip). A crew member taken
+ * off the boat this morning loses the text with the assignment. The caller
+ * still confirms the diver is booked on `tripId`.
+ */
+export async function canPersonReadMedicalAlertOnTrip(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  tripId: string,
+): Promise<boolean> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  if (roles === null) return false;
+  if (canReadMedicalAlert(roles, { crewsDiversDeparture: false })) return true;
+  const [assigned] = await db
+    .select({ personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(
+        eq(tripAssignments.tripId, tripId),
+        eq(tripAssignments.personId, personId),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  return canReadMedicalAlert(roles, { crewsDiversDeparture: Boolean(assigned) });
+}
+
+/**
+ * The same check with no departure in hand (the signed record page): only the
+ * roles that read it everywhere, the owner and a manager.
+ */
+export const canPersonReadMedicalAlert = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, (roles) =>
+    canReadMedicalAlert(roles, { crewsDiversDeparture: false }),
+  );
 
 /** The live check behind "Send a new waiver" on a refused seat (`retireMedicalRefusal`). */
 export const canPersonRetireMedicalRefusal = (db: DbExecutor, shopId: string, personId: string) =>

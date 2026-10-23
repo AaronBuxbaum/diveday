@@ -28,6 +28,7 @@ import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction } from "./actions";
 import { EmergencyContactSection } from "./EmergencyContactSection";
 import { GuardianCard } from "./GuardianCard";
+import { MEDICAL_ALERT_ANCHOR, MedicalAlertSection } from "./MedicalAlertSection";
 import { MedicalQuestionnaireSection } from "./MedicalQuestionnaireSection";
 import { medicalDraftState } from "./medical-draft-state";
 import { ShopQuestionsSection } from "./ShopQuestionsSection";
@@ -234,9 +235,12 @@ export default async function WaiverPage({
   const railAnchors: Partial<Record<WaiverRailSegmentId, string>> = fieldError
     ? fieldError.anchor === "medical-questionnaire"
       ? { medical: fieldError.anchor }
-      : shopQuestionRefusal
-        ? { questions: namedFieldError?.anchor ?? fieldError.anchor }
-        : { sign: fieldError.anchor }
+      : fieldError.anchor === MEDICAL_ALERT_ANCHOR
+        ? // Beside the questionnaire, under the Medical step it is not part of.
+          { medical: fieldError.anchor }
+        : shopQuestionRefusal
+          ? { questions: namedFieldError?.anchor ?? fieldError.anchor }
+          : { sign: fieldError.anchor }
     : {};
   const errorText =
     error === "invalid" && !namedFieldError
@@ -337,6 +341,19 @@ export default async function WaiverPage({
             questionnaire={questionnaire}
             draftResponses={draftResponses}
             primaryQuestionCount={primaryQuestionCount}
+            t={t}
+          />
+
+          {/* Right after the questionnaire, its own heading, optional, and
+              not a step on the rail (issue #2960). */}
+          <MedicalAlertSection
+            draft={record.draftMedicalAlert}
+            minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
+            error={
+              namedFieldError?.anchor === MEDICAL_ALERT_ANCHOR
+                ? t(namedFieldError.textKey)
+                : undefined
+            }
             t={t}
           />
 

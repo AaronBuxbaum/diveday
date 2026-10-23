@@ -68,10 +68,11 @@ describe("the emergency contact's two boxes", () => {
     // refuses on it alongside the medical answers and the signature.
     const actionsCount = (marker: string) => ACTIONS.split(marker).length - 1;
     expect(actionsCount("refusedContactField(submittedContact)")).toBe(2);
-    // One refusal, with the shop's own questions beside it (glossary *Shop
-    // question*); read with its line breaks folded, as the formatter wraps it.
+    // One refusal, with the shop's own questions and the medical alert's
+    // shape beside it (glossary *Shop question*, *Medical alert for the
+    // crew*); read with its line breaks folded, as the formatter wraps it.
     expect(ACTIONS.replace(/\s+/g, " ")).toContain(
-      "if ( !parsed.success || !answers || (guardian && !guardian.success) || refusedContact || refusedShop ) {",
+      "if ( !parsed.success || !answers || (guardian && !guardian.success) || refusedContact || refusedShop || refusedAlert ) {",
     );
     // Every write of the contact — the draft save, the signature, and the
     // re-save after a refused signature — is gated on a complete pair.

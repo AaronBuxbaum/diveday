@@ -1240,7 +1240,13 @@
     "shopQuestionsIntroMinor": "Responde estas preguntas sobre {name}. {shop} guarda las respuestas junto con esta exención.",
     "errorShopQuestionRequired": "Responde esta pregunta para firmar.",
     "errorShopQuestionInvalid": "Esa respuesta no es válida para esta pregunta. Revísala e inténtalo de nuevo.",
-    "shopQuestionsHealthNote": "Las preguntas de salud están en el cuestionario médico de arriba. Si alguna te corresponde, respóndela allí, no aquí."
+    "shopQuestionsHealthNote": "Las preguntas de salud están en el cuestionario médico de arriba. Si alguna te corresponde, respóndela allí, no aquí.",
+    "medicalAlertHeading": "Para la tripulación, en una emergencia",
+    "medicalAlertIntro": "Lo que la tripulación debe saber si algo sale mal en el barco: una alergia y dónde está tu medicamento, diabetes, un inhalador.",
+    "medicalAlertIntroMinor": "Lo que la tripulación debe saber sobre {name} si algo sale mal en el barco: una alergia y dónde está su medicamento, diabetes, un inhalador.",
+    "medicalAlertNotQuestionnaire": "Esto no reemplaza las preguntas médicas de arriba. Nadie lo revisa para decidir quién puede bucear.",
+    "medicalAlertLabel": "Lo que la tripulación debe saber",
+    "errorMedicalAlert": "Escribe como máximo 500 caracteres de texto simple."
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",
