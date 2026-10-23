@@ -4,6 +4,7 @@ import {
   count,
   eq,
   exists,
+  getTableColumns,
   gte,
   ilike,
   inArray,
@@ -903,15 +904,16 @@ export async function listSiteFieldGuides(db: AppDb, shopId: string, siteIds: st
   const unique = [...new Set(siteIds)];
   const bySite = new Map<string, (typeof diveSiteCreatures.$inferSelect)[]>();
   if (unique.length === 0) return bySite;
-  const [shop] = await db
-    .select({ on: shops.fieldGuideEnabled })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .limit(1);
-  if (!shop?.on) return bySite;
+  // The switch rides in the same statement as the rows: a join on the shop
+  // with its field guide on, not a read of the shop before it — this sits on
+  // the public trip page's one wave, where a second round trip is a phase.
   const rows = await db
-    .select()
+    .select(getTableColumns(diveSiteCreatures))
     .from(diveSiteCreatures)
+    .innerJoin(
+      shops,
+      and(eq(shops.id, diveSiteCreatures.shopId), eq(shops.fieldGuideEnabled, true)),
+    )
     .where(and(eq(diveSiteCreatures.shopId, shopId), inArray(diveSiteCreatures.diveSiteId, unique)))
     .orderBy(asc(diveSiteCreatures.position), asc(diveSiteCreatures.id));
   for (const row of rows) {
