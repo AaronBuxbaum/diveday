@@ -491,6 +491,7 @@ describe("what the rail hides", () => {
     boats: "boats",
     stripe: "payments",
     billing: "billing",
+    counterCard: "selfRegistration",
   };
 
   it("drops every gated destination for a reader who holds nothing", () => {

@@ -103,6 +103,12 @@ describe("a switched-off staff page", () => {
     expect(await openSwitchedOff("workOrdersEnabled", load, params)).toBe("/shop/blue-mantis/gear");
   });
 
+  it("the counter card lands on Settings while counter sign-up is off", async () => {
+    expect(
+      await openSwitchedOff("selfRegistrationEnabled", () => import("./print/counter-card/page")),
+    ).toBe("/shop/blue-mantis/settings");
+  });
+
   it("Dive packages lands on Discounts", async () => {
     expect(
       await openSwitchedOff("divePackagesEnabled", () => import("./promos/packages/page")),

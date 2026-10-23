@@ -53,7 +53,8 @@ export async function generateMetadata({
 export default async function RegisterPage({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
   const shop = await shopBySlugCached(shopSlug);
-  if (!shop) notFound();
+  // Counter sign-up switched off on Features: no page, as if never offered.
+  if (!shop?.selfRegistrationEnabled) notFound();
   const locale = await requestLocale(shop.defaultLocale);
   const { t } = await requestTranslator(shop.defaultLocale);
   const canAssist = await assistsAvailable(await getDb(), shop.id);
