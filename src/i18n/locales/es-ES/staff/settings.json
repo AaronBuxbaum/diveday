@@ -515,7 +515,7 @@
       "pastDiverInvites": {
         "heading": "Invitar a buceadores anteriores",
         "label": "Sugerir buceadores anteriores para un barco con plazas libres",
-        "description": "Buceadores que ya salieron contigo, sugeridos en una salida con pocas reservas junto con una oferta por correo que tú envías. Desactivado, no se sugiere ni se envía ninguno."
+        "description": "Buceadores que ya salieron contigo, sugeridos en una salida con pocas reservas junto con una oferta por correo que tú envías. Desactivado, no se sugiere a nadie; un buceador que eliges e invitas tú mismo sigue recibiendo el correo."
       },
       "partnerLinks": {
         "heading": "Enlaces de socios",

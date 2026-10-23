@@ -293,8 +293,10 @@ export const shops = pgTable(
     waitlistEnabled: boolean("waitlist_enabled").notNull().default(true),
     /**
      * **Invite past divers**: suggestions to invite divers who sailed before
-     * onto a thin boat, the quiet-day invite door and the seat offers they
-     * send. Off, none is suggested or sent.
+     * onto a thin boat, the quiet-day invite door, and the seat offer a
+     * suggestion sends. Off, nobody is suggested and a suggestion's invite is
+     * refused; an invite a staffer picks themselves (the roster's Invite, the
+     * course ladder, the no-show desk) is not a suggestion and still sends.
      */
     pastDiverInvitesEnabled: boolean("past_diver_invites_enabled").notNull().default(true),
     /**

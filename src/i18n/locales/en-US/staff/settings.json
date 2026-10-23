@@ -515,7 +515,7 @@
       "pastDiverInvites": {
         "heading": "Invite past divers",
         "label": "Suggest past divers for a boat with empty seats",
-        "description": "Divers who sailed with you before, suggested on a thin departure with an email offer you send. Off, none is suggested or sent."
+        "description": "Divers who sailed with you before, suggested on a thin departure with an email offer you send. Off, nobody is suggested; a diver you pick and invite yourself still gets the email."
       },
       "partnerLinks": {
         "heading": "Partner links",
