@@ -14,12 +14,12 @@
     "noAnswer": "That doesn’t match any of the list’s views. Try the search box."
   },
   "dupes": {
-    "ask": "Ask Claude whether this is one person",
+    "ask": "Ask AI whether this is one person",
     "pending": "Reading both records…",
     "verdict": {
-      "same": "Claude reads these as one person.",
-      "different": "Claude reads these as two people.",
-      "unsure": "Claude can’t tell from these records."
+      "same": "AI reads these as one person.",
+      "different": "AI reads these as two people.",
+      "unsure": "AI can’t tell from these records."
     }
   },
   "reviewFlags": {
