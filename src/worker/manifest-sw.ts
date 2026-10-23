@@ -6,11 +6,13 @@ import {
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
+  wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import {
   fetchOfflineManifestShopSlug,
   offlineManifestPayloads,
   offlineManifestShopSlug,
+  offlineManifestViewerPersonId,
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
 import {
@@ -327,6 +329,10 @@ async function refreshSavedManifests(): Promise<void> {
     // same fail-closed order the page-side auto-save keeps, rather than
     // leaving both shops' rosters readable side by side.
     await purgeOfflineManifestsExceptShop(shopSlug);
+    // Medical alert words another person saved on this device go before
+    // anything is saved for this one (H-153 amendment). A body that names
+    // nobody wipes them all: fail closed.
+    await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined);
     for (const payload of offlineManifestPayloads(body)) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.

@@ -65,55 +65,29 @@ function manifestWith(diver: Partial<TripManifest["divers"][number]>): TripManif
   } as TripManifest;
 }
 
-const ALERT = "Bee-sting allergy. EpiPen in the blue dry bag.";
-
-const save = (
-  diver: Partial<TripManifest["divers"][number]>,
-  texts?: ReadonlyMap<string, string>,
-) =>
-  serializeManifests(
-    [manifestWith(diver)],
-    shop,
-    (blocker) => blocker.code,
-    [],
-    null,
-    undefined,
-    texts,
-  ).manifests[0]?.divers[0] as Record<string, unknown>;
+const save = (diver: Partial<TripManifest["divers"][number]>) =>
+  serializeManifests([manifestWith(diver)], shop, (blocker) => blocker.code, [], null).manifests[0]
+    ?.divers[0] as Record<string, unknown>;
 
 describe("the dock copy of a medical alert", () => {
-  it("carries the words for a reader allowed them on this departure", () => {
-    expect(save({ medicalAlert: true }, new Map([["booking-1", ALERT]])).medicalAlert).toEqual({
-      text: ALERT,
-    });
-  });
-
-  it("carries the fact and no words for anyone else", () => {
+  it("carries the fact and never any words: the server serializes none into a payload", () => {
     const row = save({ medicalAlert: true });
     expect(row.medicalAlert).toEqual({});
     expect(JSON.stringify(row)).not.toContain("EpiPen");
-    // Another seat's words never land on this one.
-    expect(save({ medicalAlert: true }, new Map([["booking-2", ALERT]])).medicalAlert).toEqual({});
   });
 
-  it("writes no field for a diver with no alert, even if a text was passed", () => {
+  it("writes no field for a diver with no alert", () => {
     expect("medicalAlert" in save({})).toBe(false);
-    expect("medicalAlert" in save({ medicalAlert: false }, new Map([["booking-1", ALERT]]))).toBe(
-      false,
-    );
+    expect("medicalAlert" in save({ medicalAlert: false })).toBe(false);
   });
 
   it("never carries it on a held seat", () => {
-    const row = save(
-      {
-        medicalAlert: true,
-        identityClaim: { bookedAs: "Someone Else", matchedBy: null },
-        readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
-      },
-      new Map([["booking-1", ALERT]]),
-    );
+    const row = save({
+      medicalAlert: true,
+      identityClaim: { bookedAs: "Someone Else", matchedBy: null },
+      readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+    });
     expect(row.identityWithheld).toBe(true);
     expect("medicalAlert" in row).toBe(false);
-    expect(JSON.stringify(row)).not.toContain("EpiPen");
   });
 });

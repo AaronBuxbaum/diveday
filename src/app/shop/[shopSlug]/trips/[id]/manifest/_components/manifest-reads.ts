@@ -10,7 +10,6 @@ import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-reports";
 import { getTripManifests, rollCallOpenOnTrip } from "@/db/manifests";
-import { medicalAlertTextsForTrip } from "@/db/medical-alerts";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { lastAtSites } from "@/db/site-history";
@@ -111,7 +110,7 @@ export async function readManifestPage(
     // Who the owners were alerted about and are not found yet: their rows offer Found.
     openMissingAlerts(db, shopId, tripId),
     // Whether this reader may open a medical alert's words here (issue
-    // #2960): the owner, a manager, or this departure's crew right now.
+    // #2960): the owner, a manager, or crew a manager put on this departure.
     canPersonReadMedicalAlertOnTrip(db, shopId, personId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
@@ -147,14 +146,6 @@ export async function readManifestPage(
   const meetingWindows = dockTrip
     ? (await meetingWindowsByTrip(db, [dockTrip])).get(tripId)
     : undefined;
-  // The words ride only into this reader's own offline copy, and only when
-  // they may read them on this departure and some seat carries an alert. The
-  // live page never renders them: a recorded tap does (issue #2960).
-  const anyAlert = completeManifests?.[0]?.divers.some((diver) => diver.medicalAlert) ?? false;
-  const offlineMedicalAlertTexts =
-    mayReadMedicalAlerts && anyAlert
-      ? await medicalAlertTextsForTrip(db, shopId, tripId)
-      : undefined;
   return {
     completeManifests,
     buddyTeamsList,
@@ -171,15 +162,15 @@ export async function readManifestPage(
     stageStrip: { stage, meetingWindows },
     meetingPoint,
     // What this reader may do here: start a report, and whose owners were
-    // alerted (issue #2694); read the medical alerts, and their words for this
-    // reader's own offline copy (issue #2960).
+    // alerted (issue #2694); whether they may read the medical alerts (issue
+    // #2960). Never the words: they leave the server only through a recorded
+    // tap or an explicit offline save (H-153).
     reader: {
       mayStartIncidentReport,
       alerted: new Set(
         missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
       ),
       mayReadMedicalAlerts,
-      medicalAlertTexts: offlineMedicalAlertTexts,
     },
     vessel: vessels.get(tripId) ?? null,
     kitRecord,

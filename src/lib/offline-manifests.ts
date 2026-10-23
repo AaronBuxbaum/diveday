@@ -753,7 +753,61 @@ export type OfflineManifestEnvelope = {
    * surface a crew has with no signal.
    */
   arrivalEvents?: OfflineArrivalEvent[];
+  /**
+   * **Who saved the medical alerts' words onto this copy** (H-153
+   * amendment), and when. Set only by `saveOfflineMedicalAlerts`, after a
+   * permitted reader's explicit save on this departure; absent, the copy
+   * carries no words. Signing out, or another person signing in on this
+   * device, takes the words and this together (`wipeOfflineMedicalAlerts`).
+   */
+  medicalAlertsSavedBy?: OfflineMedicalAlertsSavedBy;
 };
+
+/** The person behind a copy's medical alert words (`medicalAlertsSavedBy`). */
+export type OfflineMedicalAlertsSavedBy = { personId: string; name: string; savedAt: string };
+
+/**
+ * What `POST /api/offline-manifests/[tripId]/medical-alerts` answers a
+ * permitted reader: the words by booking id, and the reader as the copy
+ * records them.
+ */
+export type OfflineMedicalAlertsResponse = {
+  texts: Record<string, string>;
+  savedBy: OfflineMedicalAlertsSavedBy;
+};
+
+/**
+ * A snapshot's manifests with each alerted diver's words set from `texts`
+ * (by booking id), and every other diver's words taken off. Only a diver the
+ * copy already flags gets words: the fact comes from the server's board, the
+ * words never add a flag.
+ */
+export function withMedicalAlertWords(
+  manifests: OfflineManifestPayload["manifests"],
+  texts: Readonly<Record<string, string>>,
+): OfflineManifestPayload["manifests"] {
+  return manifests.map((manifest) => ({
+    ...manifest,
+    divers: manifest.divers.map((diver) => {
+      if (!diver.medicalAlert) return diver;
+      const text = Object.hasOwn(texts, diver.bookingId) ? texts[diver.bookingId] : undefined;
+      return { ...diver, medicalAlert: text ? { text } : {} };
+    }),
+  }));
+}
+
+/** The words each alerted diver carries on a copy, by booking id. */
+export function medicalAlertWordsOf(
+  manifests: OfflineManifestPayload["manifests"],
+): Record<string, string> {
+  const texts: Record<string, string> = {};
+  for (const manifest of manifests) {
+    for (const diver of manifest.divers) {
+      if (diver.medicalAlert?.text) texts[diver.bookingId] = diver.medicalAlert.text;
+    }
+  }
+  return texts;
+}
 
 /** The arrival queue on an envelope of any age. */
 export function offlineArrivalEvents(
@@ -818,6 +872,12 @@ function countOfflineEvents(
 export type OfflineManifestUpcomingResponse = {
   shop: OfflineManifestPayload["shop"];
   payloads: OfflineManifestPayload[];
+  /**
+   * Who asked (H-153 amendment): a device that holds medical alert words
+   * another person saved wipes them before it saves anything for this one
+   * (`wipeOfflineMedicalAlerts`).
+   */
+  viewer: { personId: string };
 };
 
 /**
@@ -862,6 +922,17 @@ export function offlineManifestShopSlug(body: unknown): string | null {
   const { shop } = (body ?? {}) as Partial<OfflineManifestIdentityResponse>;
   const slug: unknown = shop?.slug;
   return typeof slug === "string" && slug.length > 0 ? slug : null;
+}
+
+/**
+ * Who asked, out of an unvalidated `/upcoming` body: a person id, or nothing.
+ * Nothing means no wipe-for-another-person round runs, and the caller saves
+ * the board as before; the board never carries alert words either way.
+ */
+export function offlineManifestViewerPersonId(body: unknown): string | null {
+  const { viewer } = (body ?? {}) as Partial<OfflineManifestUpcomingResponse>;
+  const personId: unknown = viewer?.personId;
+  return typeof personId === "string" && personId.length > 0 ? personId : null;
 }
 
 /**
@@ -949,12 +1020,6 @@ export function serializeManifests(
   boatSafety: BoatSafetySection | null = null,
   /** The boat's open snags, worded; absent or empty carries none. */
   snags?: OfflineManifestPayload["snags"],
-  /**
-   * The medical alert texts by booking id, **only when the reader saving this
-   * copy may read them on this departure** (`canPersonReadMedicalAlertOnTrip`).
-   * Absent or empty, the copy carries the fact of each alert and no words.
-   */
-  medicalAlertTexts?: ReadonlyMap<string, string>,
 ): OfflineManifestPayload {
   return {
     shop,
@@ -1043,7 +1108,7 @@ export function serializeManifests(
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
-        ...offlineMedicalAlert(diver, medicalAlertTexts),
+        ...offlineMedicalAlert(diver),
         ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
         ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
@@ -1093,17 +1158,17 @@ function offlineMedicalWarnings(
 type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][number];
 
 /**
- * The dock copy's medical alert for one (already withheld) diver: the fact,
- * and the words only from `texts`, which the caller fills only for a reader
- * allowed to hold them. Nothing on a held seat or a diver who wrote none.
+ * The dock copy's medical alert for one (already withheld) diver: the fact
+ * alone. The server never serializes the words into a payload (H-153); they
+ * reach a stored copy only through `saveOfflineMedicalAlerts`, after a
+ * permitted reader's explicit save. Nothing on a held seat or a diver who
+ * wrote none.
  */
-function offlineMedicalAlert(
-  diver: TripManifest["divers"][number],
-  texts: ReadonlyMap<string, string> | undefined,
-): { medicalAlert?: NonNullable<OfflineDiverRow["medicalAlert"]> } {
+function offlineMedicalAlert(diver: TripManifest["divers"][number]): {
+  medicalAlert?: NonNullable<OfflineDiverRow["medicalAlert"]>;
+} {
   if (!diver.medicalAlert || diver.identityWithheld) return {};
-  const text = texts?.get(diver.bookingId);
-  return { medicalAlert: text ? { text } : {} };
+  return { medicalAlert: {} };
 }
 
 export function offlineManifestExpiresAt(savedAt: Date, tripEndsAt: Date): Date {

@@ -7,17 +7,20 @@ import {
   canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
   isOfflineManifestExpired,
+  medicalAlertWordsOf,
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineArrivalEvent,
   type OfflineChecklistEvent,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
+  type OfflineMedicalAlertsSavedBy,
   type OfflineRollCallEvent,
   offlineArrivalEvents,
   offlineManifestExpiresAt,
   offlineRollCallSubject,
   pendingOfflineEventCount,
+  withMedicalAlertWords,
 } from "./offline-manifests";
 
 const DB_NAME = "diveday-offline-manifests";
@@ -600,9 +603,22 @@ export async function saveOfflineManifest(
     // for good instead of just losing that record's own queued events.
     const existing = await loadOfflineManifest(trip.id).catch(() => null);
     const savedAt = nowDate();
+    // **The medical alerts' words** (H-153 amendment). A payload from the
+    // server never carries them, and any it did carry are dropped here. Words
+    // an explicit save already put on this copy stay through the background
+    // refreshes that follow, for every diver the fresh board still flags, so
+    // the divemaster's tap at the dock survives the five-minute refresh.
+    // Signing out or another person signing in removes them
+    // (`wipeOfflineMedicalAlerts`), never a refresh.
+    const kept = existing?.medicalAlertsSavedBy
+      ? medicalAlertWordsOf(existing.snapshot.manifests)
+      : {};
+    const manifests = withMedicalAlertWords(payload.manifests, kept);
+    const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
     const envelope: OfflineManifestEnvelope = {
       snapshot: {
         ...payload,
+        manifests,
         version: OFFLINE_MANIFEST_RECORD_VERSION,
         snapshotId: crypto.randomUUID(),
         savedAt: savedAt.toISOString(),
@@ -611,6 +627,9 @@ export async function saveOfflineManifest(
       events: existing?.events ?? [],
       checklistEvents: existing?.checklistEvents ?? [],
       arrivalEvents: existing?.arrivalEvents ?? [],
+      ...(carriesWords && existing?.medicalAlertsSavedBy
+        ? { medicalAlertsSavedBy: existing.medicalAlertsSavedBy }
+        : {}),
     };
     const db = await openDatabase();
     try {
@@ -620,6 +639,81 @@ export async function saveOfflineManifest(
     }
     return envelope;
   });
+}
+
+/**
+ * **Puts the medical alerts' words on this device's copy of one departure**
+ * (H-153 amendment), after a permitted reader tapped save-for-offline and
+ * `POST /api/offline-manifests/[tripId]/medical-alerts` recorded the save on
+ * each diver's trail. Only divers the copy already flags take words, and the
+ * copy records who saved them. Null when there is no copy to put them on.
+ */
+export async function saveOfflineMedicalAlerts(
+  tripId: string,
+  texts: Readonly<Record<string, string>>,
+  savedBy: OfflineMedicalAlertsSavedBy,
+): Promise<OfflineManifestEnvelope | null> {
+  return withManifestLock(tripId, async () => {
+    const existing = await loadOfflineManifest(tripId).catch(() => null);
+    if (!existing) return null;
+    const manifests = withMedicalAlertWords(existing.snapshot.manifests, texts);
+    const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
+    const { medicalAlertsSavedBy: _previous, ...rest } = existing;
+    const envelope: OfflineManifestEnvelope = {
+      ...rest,
+      snapshot: { ...existing.snapshot, manifests },
+      ...(carriesWords ? { medicalAlertsSavedBy: savedBy } : {}),
+    };
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, envelope);
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
+/**
+ * **Takes the medical alerts' words off every copy on this device** (H-153
+ * amendment), keeping the rest of each copy: the roster, the fact of each
+ * alert, and every queued roll-call event. Run on sign-out with no argument,
+ * and with `keepSavedBy` whenever the server names who is signed in now
+ * (`/api/offline-manifests/upcoming`), so a shared tablet never shows one
+ * person's saved words to the next.
+ */
+export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<void> {
+  const saved = await listOfflineManifests();
+  await Promise.all(
+    saved
+      .filter(
+        (envelope) =>
+          envelope.medicalAlertsSavedBy &&
+          (!keepSavedBy || envelope.medicalAlertsSavedBy.personId !== keepSavedBy),
+      )
+      .map((envelope) => {
+        const tripId = envelope.snapshot.manifests[0]?.trip.id;
+        if (!tripId) return Promise.resolve();
+        return withManifestLock(tripId, async () => {
+          const current = await loadOfflineManifest(tripId).catch(() => null);
+          if (!current?.medicalAlertsSavedBy) return;
+          if (keepSavedBy && current.medicalAlertsSavedBy.personId === keepSavedBy) return;
+          const { medicalAlertsSavedBy: _wiped, ...rest } = current;
+          const db = await openDatabase();
+          try {
+            await persistEnvelope(db, {
+              ...rest,
+              snapshot: {
+                ...current.snapshot,
+                manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+              },
+            });
+          } finally {
+            db.close();
+          }
+        });
+      }),
+  );
 }
 
 export async function deleteOfflineManifest(

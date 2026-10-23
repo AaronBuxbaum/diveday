@@ -442,7 +442,6 @@ export default async function TripManifestPage({
             shop: { ...shop, emergencyReference },
             ...boatCheck,
             boatSafety,
-            medicalAlertTexts: reader.medicalAlertTexts,
             locale,
             t,
           })}

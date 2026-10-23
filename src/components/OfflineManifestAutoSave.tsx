@@ -5,8 +5,13 @@ import {
   primeOfflineManifestShell,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
+  wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
-import { offlineManifestPayloads, offlineManifestShopSlug } from "@/lib/offline-manifests";
+import {
+  offlineManifestPayloads,
+  offlineManifestShopSlug,
+  offlineManifestViewerPersonId,
+} from "@/lib/offline-manifests";
 
 // Matches the single-trip auto-save cadence (OfflineManifestManager) — see
 // ADR 20260726-shopwide-offline-manifest-priming. No UI: this mounts on every
@@ -83,6 +88,10 @@ export function OfflineManifestAutoSave() {
         // below) and let the next trigger retry the purge first, rather than
         // fail open on a cross-tenant boundary.
         await purgeOfflineManifestsExceptShop(shopSlug);
+        // Medical alert words another person saved on this device go before
+        // anything is saved for this one (H-153 amendment). A body that names
+        // nobody wipes them all: fail closed.
+        await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined);
         await Promise.all(
           offlineManifestPayloads(body).map((payload) =>
             saveOfflineManifest(payload).catch(() => {}),

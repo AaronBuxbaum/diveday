@@ -16,6 +16,7 @@ import { createTrip } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { offlineManifestViewerPersonId } from "@/lib/offline-manifests";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -236,7 +237,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const body = (await (await GET()).json()) as Record<string, unknown>;
-    expect(Object.keys(body).sort()).toEqual(["payloads", "shop"]);
+    expect(Object.keys(body).sort()).toEqual(["payloads", "shop", "viewer"]);
     expect(Array.isArray(body.payloads)).toBe(true);
   });
 
@@ -404,24 +405,36 @@ describe("GET /api/offline-manifests/upcoming — the medical alert for the crew
     return manifest?.divers.find((diver) => diver.bookingId === bookingId);
   }
 
-  it("carries the words for the owner", async () => {
+  it("carries the fact and never the words, even for the owner (H-153: only an explicit save carries them)", async () => {
     const { db, shop, personId } = await staffContext();
     const { bookingId } = await alertOnDemoSeat(db, shop.id);
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
-    expect((await seatOnCopy(bookingId))?.medicalAlert).toEqual({ text: ALERT });
+    const seat = await seatOnCopy(bookingId);
+    expect(seat?.medicalAlert).toEqual({});
+    expect(JSON.stringify(seat)).not.toContain("EpiPen");
   });
 
-  it("carries the fact alone for a divemaster off the crew, and the words once on it", async () => {
-    const { db, shop } = await staffContext();
+  it("carries the fact alone for a divemaster a manager put on the crew, too", async () => {
+    const { db, shop, personId } = await staffContext();
     const { tripId, bookingId } = await alertOnDemoSeat(db, shop.id);
     const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
+    await db
+      .insert(tripAssignments)
+      .values({ tripId, personId: divemaster, assignedByPersonId: personId });
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, divemaster, ["divemaster"]));
-    const off = await seatOnCopy(bookingId);
-    expect(off?.medicalAlert).toEqual({});
-    expect(JSON.stringify(off)).not.toContain("EpiPen");
-    await db.insert(tripAssignments).values({ tripId, personId: divemaster });
-    expect((await seatOnCopy(bookingId))?.medicalAlert).toEqual({ text: ALERT });
+    const seat = await seatOnCopy(bookingId);
+    expect(seat?.medicalAlert).toEqual({});
+    expect(JSON.stringify(seat)).not.toContain("EpiPen");
+  });
+
+  it("names who asked, so a device can wipe the words another person saved", async () => {
+    const { db, shop, personId } = await staffContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+    const response = await GET();
+    const body: unknown = await response.json();
+    expect(offlineManifestViewerPersonId(body)).toBe(personId);
   });
 });

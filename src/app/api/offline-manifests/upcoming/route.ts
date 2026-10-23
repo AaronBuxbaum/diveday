@@ -1,9 +1,8 @@
-import { canPersonReadMedicalAlertOnTrip, loadActiveStaffRoles } from "@/db/authz";
+import { loadActiveStaffRoles } from "@/db/authz";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
 import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
-import { medicalAlertTextsForTrip } from "@/db/medical-alerts";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopById } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
@@ -139,14 +138,6 @@ export async function GET() {
             }),
           )
         : null;
-      // The medical alerts' words ride only for a caller allowed them on this
-      // departure (owner, manager, its crew); every other copy carries the
-      // fact alone (issue #2960). Priming writes no read event.
-      const medicalAlertTexts =
-        departure?.divers.some((diver) => diver.medicalAlert) &&
-        (await canPersonReadMedicalAlertOnTrip(db, shop.id, session.user.personId, tripId))
-          ? await medicalAlertTextsForTrip(db, shop.id, tripId)
-          : undefined;
       return serializeManifests(
         manifests,
         {
@@ -163,8 +154,6 @@ export async function GET() {
           check: checks.get(item.id),
         })),
         boatSafety,
-        undefined,
-        medicalAlertTexts,
       );
     }),
   );
@@ -181,6 +170,9 @@ export async function GET() {
     // which is the same string without the board attached.
     shop: shopIdentity,
     payloads: payloads.filter((payload): payload is OfflineManifestPayload => payload !== null),
+    // Who asked, so the device wipes medical alert words someone else saved
+    // (H-153 amendment). The board itself never carries those words.
+    viewer: { personId: session.user.personId },
   };
   return Response.json(body, { headers: NO_STORE });
 }
