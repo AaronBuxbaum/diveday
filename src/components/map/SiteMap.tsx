@@ -107,8 +107,10 @@ export default function SiteMap({
 
       // The shop sits over the sites' pins and under every card: a site's
       // hover label and its open card (tooltips 650, popups 700) are read
-      // over the shop's pin and stem, never behind them.
+      // over the shop's pin, never behind it. Its stem runs under the pins
+      // (600), so a line to the shop never crosses a site (Aaron, 2026-10-23).
       map.createPane("shopAnchor").style.zIndex = "620";
+      map.createPane("shopStem").style.zIndex = "590";
 
       mapRef.current = map;
       setMapInstance(map);
@@ -169,6 +171,7 @@ export default function SiteMap({
         mapInstance,
         markersRef.current.get("shop-anchor"),
         markersRef.current.values(),
+        markersRef.current.get("shop-stem"),
       );
 
     // A pin answers its own button's click, never Leaflet's: Leaflet drops a
@@ -226,6 +229,7 @@ export default function SiteMap({
       // Geographic shop/site/cluster positions and their distinct roles do
       // not form a uniform control row. Size, focus and overlap rules still apply.
       if (shopAnchor) {
+        markersRef.current.set("shop-stem", addShopStem(L, mapInstance, shopAnchor));
         markersRef.current.set(
           "shop-anchor",
           addShopMarker(L, mapInstance, shopAnchor, shopLabel, markersRef.current),
@@ -625,7 +629,7 @@ function addShopMarker(
     html: createShopLandmark(anchor.name || label),
     className: "leaflet-shop-marker",
     iconSize: [44, 44],
-    iconAnchor: [22, 70],
+    iconAnchor: [22, 22],
   });
   const marker = L.marker([anchor.latitude, anchor.longitude], {
     icon,
@@ -642,21 +646,56 @@ function addShopMarker(
     opacity: 1,
     className: "leaflet-site-tooltip leaflet-shop-tooltip",
   });
-  marker.on("tooltipopen", () => updateShopMarkerPosition(map, marker, markers.values()));
+  marker.on("tooltipopen", () =>
+    updateShopMarkerPosition(map, marker, markers.values(), markers.get("shop-stem")),
+  );
   bindTooltipFocus(marker, "[role=img]");
-  updateShopMarkerPosition(map, marker);
+  updateShopMarkerPosition(map, marker, [], markers.get("shop-stem"));
   return marker;
 }
 
+/** The line from a shop badge pushed aside back to the shop's own spot. */
+function addShopStem(
+  L: typeof import("leaflet"),
+  map: LeafletMap,
+  anchor: ShopAnchor,
+): LeafletMarker {
+  return L.marker([anchor.latitude, anchor.longitude], {
+    icon: L.divIcon({
+      html: '<span class="leaflet-shop-stem__line"></span>',
+      className: "leaflet-shop-stem",
+      iconSize: [0, 0],
+    }),
+    interactive: false,
+    keyboard: false,
+    pane: "shopStem",
+  }).addTo(map);
+}
+
+/**
+ * Place the shop's badge on its own spot, or beside it when a pin or a control
+ * is there, with a stem back only then. A shop off the map is not drawn at
+ * all: a badge pinned to the edge read as a shop that was there (Aaron,
+ * 2026-10-23).
+ */
 function updateShopMarkerPosition(
   map: LeafletMap,
   marker?: LeafletMarker,
   markers: Iterable<LeafletMarker> = [],
+  stem?: LeafletMarker,
 ) {
   const element = marker?.getElement();
   if (!marker || !element) return;
+  const stemElement = stem?.getElement();
   const point = map.latLngToContainerPoint(marker.getLatLng());
   const size = map.getSize();
+  const onMap = point.x >= 0 && point.y >= 0 && point.x <= size.x && point.y <= size.y;
+  element.style.display = onMap ? "" : "none";
+  if (!onMap) {
+    marker.closeTooltip();
+    if (stemElement) stemElement.style.display = "none";
+    return;
+  }
   const controls = mapControlRectangles(map.getContainer());
   const targets = [...controls];
   for (const layer of markers) {
@@ -669,13 +708,21 @@ function updateShopMarkerPosition(
       continue;
     targets.push(labelRectangle(map.latLngToContainerPoint(layer.getLatLng()), { x: 58, y: 58 }));
   }
-  const badge = placeMapLabel({ x: point.x, y: point.y - 48 }, { x: 44, y: 44 }, size, targets);
+  const badge = placeMapLabel(point, { x: 44, y: 44 }, size, targets);
   const dx = badge.x - point.x;
   const dy = badge.y - point.y;
   element.style.marginLeft = `${dx - 22}px`;
   element.style.marginTop = `${dy - 22}px`;
-  element.style.setProperty("--shop-stem-length", `${Math.hypot(dx, dy)}px`);
-  element.style.setProperty("--shop-stem-angle", `${Math.atan2(dx, -dy)}rad`);
+  if (stemElement) {
+    // Only a badge moved off its spot needs a line back to it; one still
+    // covering the spot (within its own radius) points at it already.
+    const length = Math.hypot(dx, dy);
+    stemElement.style.display = length <= 22 ? "none" : "";
+    stemElement.style.marginLeft = `${dx}px`;
+    stemElement.style.marginTop = `${dy}px`;
+    stemElement.style.setProperty("--shop-stem-length", `${length}px`);
+    stemElement.style.setProperty("--shop-stem-angle", `${Math.atan2(dx, -dy)}rad`);
+  }
   const tooltip = marker.getTooltip();
   if (tooltip) {
     const content = tooltip.getElement();

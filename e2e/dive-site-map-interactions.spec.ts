@@ -63,6 +63,8 @@ test("a standalone site opens immediately and closing its card clears selection"
         const map = shop.closest(".leaflet-container");
         if (!map) throw new Error("Dive center is outside the map");
         const bounds = map.getBoundingClientRect();
+        // A shop whose spot the card panned off the map is not drawn at all.
+        if (!shop.checkVisibility()) return 0;
         const marker = shop.getBoundingClientRect();
         return Math.min(
           marker.left - bounds.left,

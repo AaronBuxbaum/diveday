@@ -29,13 +29,17 @@ export const BASEMAP_TILE_HOSTS = [ESRI_HOST] as const;
 export const BASEMAP_MAX_NATIVE_ZOOM = 18;
 export const BASEMAP_MAX_ZOOM = 19;
 
-/** The provider's credit, as Esri asks for it. */
-export const BASEMAP_CREDIT =
-  "Powered by Esri · Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+/**
+ * The provider's credit, as Esri asks for it: "Powered by Esri" and the
+ * imagery's sources. A map shows it on one short line, cut off where it runs
+ * long and opened in full on hover or focus, the way Esri's own Leaflet
+ * plugin shows it (Aaron, 2026-10-23: the full line was too long).
+ */
+const BASEMAP_SOURCES = "Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+export const BASEMAP_CREDIT = `Powered by Esri · ${BASEMAP_SOURCES}`;
 
 /** The credit with the provider linked, for Leaflet's attribution control. */
-export const BASEMAP_ATTRIBUTION =
-  '<a href="https://www.esri.com" target="_blank" rel="noopener">Powered by Esri</a> · Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+export const BASEMAP_ATTRIBUTION = `<a href="https://www.esri.com" target="_blank" rel="noopener">Powered by Esri</a> · ${BASEMAP_SOURCES}`;
 
 /**
  * The square a briefing frames around a site at a stored route zoom.

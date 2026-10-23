@@ -2372,22 +2372,22 @@ details[open]::details-content {
   z-index: 0;
   cursor: default;
 }
-.leaflet-shop-landmark::after {
+.leaflet-shop-stem__line {
+  /* Drawn from the badge's center down its length, then turned to end on
+     the shop's own spot (`updateShopMarkerPosition`). An inner line, since
+     Leaflet positions the marker element itself with a transform. */
   position: absolute;
-  z-index: -1;
-  inset-block-start: 50%;
-  left: calc(50% - 2px);
+  inset-block-start: 0;
+  left: -2px;
   width: 2px;
-  height: var(--shop-stem-length, 48px);
+  height: var(--shop-stem-length, 0px);
   /* A light edge each side, so the stem reads over dark water as well as
      over a reef flat (the basemap is imagery, src/lib/basemap.ts). */
   box-sizing: content-box;
   border-inline: 1px solid var(--surface);
-  clip-path: inset(22px 0 0);
   transform: rotate(var(--shop-stem-angle, 0rad));
   transform-origin: center top;
   background: var(--foreground);
-  content: "";
   pointer-events: none;
 }
 .leaflet-site-cluster-marker {
@@ -2564,6 +2564,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
   border-top-left-radius: var(--radius-base);
   border-top: 1px solid var(--border);
   border-left: 1px solid var(--border);
+}
+/* One short line, cut off where the sources run long and opened in full on
+   hover or focus (`BASEMAP_CREDIT`, src/lib/basemap.ts). */
+.leaflet-control-attribution {
+  max-width: 15rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.leaflet-control-attribution:hover,
+.leaflet-control-attribution:focus-within {
+  max-width: none;
+  white-space: normal;
 }
 .leaflet-control-attribution a {
   color: var(--primary);
