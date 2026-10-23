@@ -346,6 +346,18 @@ left out). It reports under its own check in a few minutes rather than the ~22 a
 Playwright and visual capture shards run every one of its tests again and still decide green. A
 red `Fast lane` is the same failure the shards will report; start on it without waiting for them.
 
+### This layer plus main
+
+A stacked layer's pull request targets the layer below, so GitHub's merge ref, which CI tests, is
+that layer plus the one below, never main. `.github/workflows/main-tip.yml` closes the gap for every
+pull request whose base is not main: its `This layer plus main` check merges main's current tip into
+the head and runs `pnpm check:migration-graph`, `pnpm typecheck` and `pnpm check:repo`, stopping at
+the first that fails. The job summary says "This layer plus main: OK" or names the conflict or the
+first error. It is not part of `CI result`, so a red main does not hold every stack; a red check
+here is a break the layer will meet on main, and the time to fix it is now. It was added after a
+migration diamond and run 39823408515 (`Cannot find name 'diverTranslator'`) reddened main on
+2026-10-23, each from two layers that were green alone.
+
 ### The weekly CI health check
 
 `.github/workflows/ci-health.yml` runs `node scripts/ci-health.mjs` every Monday over the pull

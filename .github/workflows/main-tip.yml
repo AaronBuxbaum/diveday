@@ -1,0 +1,83 @@
+# Does this layer still work on top of main as it is now?
+#
+# A stacked layer's pull request targets the layer below it, so GitHub's merge
+# ref, which CI and `scripts/check-migration-graph.mjs` test, is "this layer
+# plus the layer below", never main. Two individually green changes then meet
+# for the first time on main: run 39823408515 went red on `Cannot find name
+# 'diverTranslator'`, and a migration diamond reddened main the same day
+# (2026-10-23). This job merges main's current tip into the pull request's head
+# and runs only the cheap, whole-tree checks that caught both: the migration
+# graph, typecheck and `pnpm check:repo`. It reports "this layer plus main: OK"
+# or the first error.
+#
+# Only for a pull request whose base is not main: one based on main already has
+# that merge tested by CI itself. Not part of `CI result`, so a red main cannot
+# hold every stacked layer's merge; the check is there to be read.
+name: Main tip
+
+on:
+  pull_request:
+
+concurrency:
+  group: main-tip-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  main-tip:
+    name: This layer plus main
+    if: github.base_ref != github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # The merge needs main's history and this branch's back to their
+          # merge base; `check:repo`'s git-reading guards need it too.
+          fetch-depth: 0
+      - name: Merge main's tip into this layer
+        id: merge
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -uo pipefail
+          git fetch --no-tags origin "${DEFAULT_BRANCH}"
+          tip=$(git rev-parse --short "origin/${DEFAULT_BRANCH}")
+          echo "tip=${tip}" >> "$GITHUB_OUTPUT"
+          if ! git -c user.name="main-tip check" -c user.email="main-tip@users.noreply.github.com" \
+              merge --no-edit --no-ff "origin/${DEFAULT_BRANCH}" > merge.log 2>&1; then
+            conflicts=$(git diff --name-only --diff-filter=U | head -20 | tr '\n' ' ')
+            echo "::error title=This layer plus main: conflict::Merging ${DEFAULT_BRANCH} at ${tip} conflicts in: ${conflicts}"
+            echo "**This layer plus main (${tip}): conflict** in ${conflicts}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - uses: ./.github/actions/setup
+      # In order of cost, stopping at the first that fails, so the report is
+      # one error and not three.
+      - name: Check the merge
+        env:
+          TIP: ${{ steps.merge.outputs.tip }}
+        run: |
+          set -uo pipefail
+          for check in check:migration-graph typecheck check:repo; do
+            if ! pnpm "$check" > "$check.log" 2>&1; then
+              first=$(grep -m1 -E 'error|refus|fail|FAIL|✗' "$check.log" || tail -1 "$check.log")
+              cat "$check.log"
+              echo "::error title=This layer plus main: ${check} failed::${first}"
+              {
+                echo "**This layer plus main (${TIP}): \`pnpm ${check}\` failed.** First error:"
+                echo
+                echo '```'
+                echo "${first}"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          done
+          echo "::notice title=This layer plus main: OK::Migration graph, typecheck and check:repo pass on this layer merged with main at ${TIP}."
+          echo "**This layer plus main (${TIP}): OK.** Migration graph, typecheck and \`pnpm check:repo\` pass." >> "$GITHUB_STEP_SUMMARY"
