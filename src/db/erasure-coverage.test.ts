@@ -430,8 +430,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   global_dive_site_versions: "that catalog's own history",
 
   // DiveDay's own sales funnel (ADRs 20261007-setup-request-form and
-  // 20261007-founder-metrics). None belongs to a shop, so no shop's erasure
-  // reaches it.
+  // 20261007-founder-metrics). None belongs to a shop, so no shop's erasure reaches it.
   setup_requests:
     "a shop owner asking DiveDay to set them up: their name, address and phone, sent to DiveDay rather than to any shop. A diver is never on it. It leaves by `deleteSetupRequestsByEmail` / `deleteSetupRequestsByPhone` when that owner asks DiveDay to forget them",
   shop_setup_links:
@@ -443,8 +442,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
   stripe_webhook_events: "the platform's delivery ledger, pruned by retention; no payload",
-  claude_demo_spend:
-    "a month and what every minted demo together spent on Claude; no shop, no person",
+  claude_demo_spend: "a month and every minted demo's Claude spend; no person",
   sms_opt_outs:
     "a phone number that replied STOP, and nothing else. Keeping it after an erasure is what keeps the promise: removing it would let a later booking with that number text someone who said stop",
   media_deletion_attempts:
