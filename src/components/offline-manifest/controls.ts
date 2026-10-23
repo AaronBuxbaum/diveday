@@ -24,6 +24,11 @@ export type OfflineTripControls = {
    * because the captain asked for it: never worded as live or current.
    */
   servedWithoutAnswer: boolean;
+  /**
+   * The live manifest's address once DiveDay answers it again in time and
+   * nothing is waiting to send; null otherwise. Offered, never followed.
+   */
+  liveOffer: string | null;
   setCheckpoint: Dispatch<SetStateAction<RollCallCheckpoint>>;
   /** The diver or crew row saving now, by booking or person id. */
   busyBooking: string | null;

@@ -12,6 +12,7 @@ import {
   recordRollCall,
 } from "./manifests";
 import { markBookingNoShow } from "./no-show";
+import { CLIENT_EVENT_CONFLICT } from "./offline-replay";
 import { getBookingReadiness } from "./readiness";
 import { bookings, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
@@ -434,10 +435,12 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
    * that no lock lined up. Two seats on two departures share no lock, so the
    * second request reaches its insert while the first is uncommitted, waits
    * on the index, and gets 23505 once the first commits. One id on two
-   * subjects is a device bug, and the answer is the one the check before the
-   * lock already gives it: a duplicate, never a 500 that fails the batch.
+   * subjects is a device bug. Never a 500 that fails the batch, and never a
+   * `duplicate` either: that would mark a tap applied that wrote nothing about
+   * its own seat, which on a missing-diver mark is the quiet direction
+   * (re-review N9). It is refused as a conflict, out loud.
    */
-  it("answers a collision on the client-event index as a duplicate", async () => {
+  it("refuses a collision on the client-event index from another seat as a conflict", async () => {
     const pg = await postgresTestDb();
     const { shopId, tripId, bookingId, staffId, otherTripIds } = await firstSeatOnTheReef(pg.db);
     let elsewhere: { tripId: string; bookingId: string } | undefined;
@@ -467,9 +470,35 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
     const [firstResult, secondResult] = await Promise.all([first, second]);
 
     expect(firstResult).toMatchObject({ ok: true });
-    expect(secondResult).toEqual({
+    expect(secondResult).toEqual({ ok: false, reason: CLIENT_EVENT_CONFLICT });
+    expect(await rowsCarrying(pg.db, shared.clientEventId)).toBe(1);
+  });
+
+  it("refuses an id already recorded for another seat, before any lock", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, staffId } = await firstSeatOnTheReef(pg.db);
+    const [first, second] = await getTripRoster(pg.db, shopId, tripId);
+    if (!first || !second) throw new Error("demo reef trip needs two divers");
+    const shared = offlineEvent(1);
+    const mark = (bookingId: string) => ({
+      shopId,
+      tripId,
+      bookingId,
+      recordedByPersonId: staffId,
+      ...shared,
+      status: "not_boarded" as const,
+      checkpoint: "after_dive_1" as const,
+    });
+
+    const written = await recordRollCall(pg.db, mark(first.booking.id));
+    const replayedOnAnotherSeat = await recordRollCall(pg.db, mark(second.booking.id));
+    const replayedOnItsOwnSeat = await recordRollCall(pg.db, mark(first.booking.id));
+
+    expect(written).toMatchObject({ ok: true });
+    expect(replayedOnAnotherSeat).toEqual({ ok: false, reason: CLIENT_EVENT_CONFLICT });
+    expect(replayedOnItsOwnSeat).toEqual({
       ok: true,
-      eventId: firstResult.ok ? firstResult.eventId : "",
+      eventId: written.ok ? written.eventId : "",
       duplicate: true,
     });
     expect(await rowsCarrying(pg.db, shared.clientEventId)).toBe(1);

@@ -9,8 +9,14 @@ import {
 } from "@/lib/pre-departure-check";
 import { canPersonManageSafetyChecklist, loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
-import { answeringReplayAsDuplicate } from "./offline-replay";
+import {
+  answeringReplayAsDuplicate,
+  type CLIENT_EVENT_CONFLICT,
+  replayVerdict,
+  type StoredOfflineEvent,
+} from "./offline-replay";
 import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -236,14 +242,18 @@ export async function latestPreDepartureChecksForTrip(
   return latest;
 }
 
-/** The check event this shop already holds under a device's `clientEventId`, or undefined. */
-async function appliedCheckEventId(
+/** The check event this shop already holds under a device's `clientEventId`, with its line. */
+async function storedCheckEvent(
   tx: DbExecutor,
   shopId: string,
   clientEventId: string,
-): Promise<string | undefined> {
+): Promise<StoredOfflineEvent | undefined> {
   const [existing] = await tx
-    .select({ id: preDepartureCheckEvents.id })
+    .select({
+      id: preDepartureCheckEvents.id,
+      tripId: preDepartureCheckEvents.tripId,
+      checklistItemId: preDepartureCheckEvents.checklistItemId,
+    })
     .from(preDepartureCheckEvents)
     .where(
       and(
@@ -252,7 +262,7 @@ async function appliedCheckEventId(
       ),
     )
     .limit(1);
-  return existing?.id;
+  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.checklistItemId}` };
 }
 
 export type RecordPreDepartureCheckOutcome =
@@ -265,6 +275,7 @@ export type RecordPreDepartureCheckOutcome =
         | "staff_not_found"
         | "newer_event_exists"
         | typeof PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED
+        | typeof CLIENT_EVENT_CONFLICT
         | "snapshot_invalid";
     };
 
@@ -302,14 +313,21 @@ export async function recordPreDepartureCheck(
         if (!staffId) return { ok: false, reason: "staff_not_found" };
 
         if (source === "offline" && input.clientEventId) {
-          const applied = await appliedCheckEventId(tx, input.shopId, input.clientEventId);
-          if (applied) return { ok: true, eventId: applied, duplicate: true };
+          const replayed = replayVerdict(
+            await storedCheckEvent(tx, input.shopId, input.clientEventId),
+            `${input.tripId}/${input.checklistItemId}`,
+            "pre_departure_check_events",
+          );
+          if (replayed) return replayed;
         }
 
         // The trip's lock, so two requests carrying the same offline event take
         // turns: a device that gave up on a slow sync resends it while the first
         // request may still be running. `no key update`, the roll-call writers'
-        // lock on the same row, so this queues behind them rather than beside.
+        // lock on the same row, so this queues behind them rather than beside,
+        // and with their bounded wait: behind a stuck holder a tap fails fast
+        // (55P03) and stays queued on the device rather than hanging the sync.
+        await boundLockWaits(tx);
         const [trip] = await tx
           .select({ id: trips.id })
           .from(trips)
@@ -320,8 +338,12 @@ export async function recordPreDepartureCheck(
         // Without it a replayed `cleared` reads its own first copy as the newest
         // row and is refused as superseded.
         if (source === "offline" && input.clientEventId) {
-          const applied = await appliedCheckEventId(tx, input.shopId, input.clientEventId);
-          if (applied) return { ok: true, eventId: applied, duplicate: true };
+          const replayed = replayVerdict(
+            await storedCheckEvent(tx, input.shopId, input.clientEventId),
+            `${input.tripId}/${input.checklistItemId}`,
+            "pre_departure_check_events",
+          );
+          if (replayed) return replayed;
         }
         if (!trip) return { ok: false, reason: "trip_unavailable" };
 
@@ -401,7 +423,8 @@ export async function recordPreDepartureCheck(
       indexName: "pre_departure_check_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
       source: input.source,
-      applied: (clientEventId) => appliedCheckEventId(db, input.shopId, clientEventId),
+      subject: `${input.tripId}/${input.checklistItemId}`,
+      stored: (clientEventId) => storedCheckEvent(db, input.shopId, clientEventId),
     },
   );
   if (outcome.ok && !outcome.duplicate) {

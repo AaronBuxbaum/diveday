@@ -11,8 +11,8 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
-  OFFLINE_FALLBACK_PARAM,
   type OfflineManifestEnvelope,
+  offlineFallbackReason,
   pendingOfflineEventCount,
   rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
@@ -93,7 +93,8 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // would read "Online · Fresh copy · current" (captain review B1). Offline,
   // the ordinary wording already says "No signal", so it is used as is.
   const deviceOnline = useDeviceOnline();
-  const servedWithoutAnswer = searchParams.has(OFFLINE_FALLBACK_PARAM) && deviceOnline;
+  const fallback = useMemo(() => offlineFallbackReason(searchParams), [searchParams]);
+  const servedWithoutAnswer = fallback !== null && deviceOnline;
   // Freshness (current/aging/stale) is computed inline at render time from
   // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
   // this component as the wall clock crosses the 15-minute or 4-hour
@@ -167,20 +168,23 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       reconcileQueued.current = true;
       return reconcileInFlight.current;
     }
+    // The pass lets go in the same step that finds nothing queued, with no
+    // await between them: an ask can only find a pass still running, which
+    // takes it, or none, and starts one (re-review N10). Letting go after
+    // `await run` left a microtask or two where an ask joined a pass that had
+    // already finished, and sat pending until the next tap.
     const run = (async () => {
-      let again = true;
-      while (again) {
-        reconcileQueued.current = false;
-        await reconcileOnce();
-        again = reconcileQueued.current;
+      try {
+        do {
+          reconcileQueued.current = false;
+          await reconcileOnce();
+        } while (reconcileQueued.current);
+      } finally {
+        reconcileInFlight.current = null;
       }
     })();
     reconcileInFlight.current = run;
-    try {
-      await run;
-    } finally {
-      reconcileInFlight.current = null;
-    }
+    await run;
   }, [reconcileOnce]);
 
   // Reconciles every saved trip that still has a pending roll-call event, not
@@ -354,6 +358,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     discarded,
     acknowledgeDiscarded,
     reconcile,
+    fallback,
     servedWithoutAnswer,
   };
 }

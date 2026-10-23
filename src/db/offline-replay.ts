@@ -1,4 +1,42 @@
+import { log } from "@/lib/log";
 import { violatesUniqueIndex } from "./query-helpers";
+
+/**
+ * A device sent an offline event under a `clientEventId` this shop already
+ * holds for a *different* subject (another seat, another crew member, another
+ * checklist line, another departure). Only a device bug gets here: ids are
+ * `crypto.randomUUID()`. Answering `duplicate` would let the device mark its
+ * tap applied when nothing about that subject was written, the quiet
+ * direction on a missing-diver mark, so it is refused out loud instead
+ * (layer 1 re-review, N9).
+ */
+export const CLIENT_EVENT_CONFLICT = "client_event_conflict";
+
+/** What an event already on the record under a device's id says it is about. */
+export type StoredOfflineEvent = { id: string; subject: string };
+
+export type ReplayVerdict =
+  | { ok: true; eventId: string; duplicate: true }
+  | { ok: false; reason: typeof CLIENT_EVENT_CONFLICT };
+
+/**
+ * The answer to an offline event whose id is already recorded: a duplicate
+ * when the stored row is about the same subject, a conflict when it is not.
+ * Undefined when nothing is stored under the id. `subject` is compared
+ * exactly; each writer builds it the same way for the stored row and the
+ * replay (trip and seat, trip and person, trip and checklist line).
+ */
+export function replayVerdict(
+  stored: StoredOfflineEvent | undefined,
+  subject: string,
+  table: string,
+): ReplayVerdict | undefined {
+  if (!stored) return undefined;
+  if (stored.subject === subject) return { ok: true, eventId: stored.id, duplicate: true };
+  // Codes only: no ids or names in the line (the no-PII logging rule).
+  log("offline_sync.client_event_conflict", "warn", { table });
+  return { ok: false, reason: CLIENT_EVENT_CONFLICT };
+}
 
 /**
  * **An offline replay that collided with its own first copy is a duplicate,
@@ -12,6 +50,8 @@ import { violatesUniqueIndex } from "./query-helpers";
  * subject. This catches what is left: a collision on the
  * `(shop_id, client_event_id)` unique index that neither question saw, which
  * would otherwise abort the transaction with 23505 and fail the whole batch.
+ * The stored row is then judged as the two questions judge it
+ * ({@link replayVerdict}): same subject, a duplicate; another, a conflict.
  *
  * Only that one index, and only for an offline write that carried an id. Any
  * other error, or a collision whose row cannot then be read back, is thrown
@@ -23,9 +63,10 @@ export async function answeringReplayAsDuplicate<T>(
     indexName: string;
     clientEventId: string | undefined;
     source: "live" | "offline" | undefined;
-    applied: (clientEventId: string) => Promise<string | undefined>;
+    subject: string;
+    stored: (clientEventId: string) => Promise<StoredOfflineEvent | undefined>;
   },
-): Promise<T | { ok: true; eventId: string; duplicate: true }> {
+): Promise<T | ReplayVerdict> {
   try {
     return await write();
   } catch (error) {
@@ -36,8 +77,12 @@ export async function answeringReplayAsDuplicate<T>(
     ) {
       throw error;
     }
-    const eventId = await replay.applied(replay.clientEventId);
-    if (!eventId) throw error;
-    return { ok: true, eventId, duplicate: true };
+    const verdict = replayVerdict(
+      await replay.stored(replay.clientEventId),
+      replay.subject,
+      replay.indexName,
+    );
+    if (!verdict) throw error;
+    return verdict;
   }
 }

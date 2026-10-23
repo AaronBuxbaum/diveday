@@ -7,6 +7,8 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  appendOfflineArrival,
+  appendOfflineChecklistCheck,
   appendOfflineRollCall,
   loadOfflineManifest,
   saveOfflineManifest,
@@ -337,5 +339,67 @@ describe("syncOfflineManifest on a network that never answers", () => {
 
     expect(sentIds).toEqual([[first.clientEventId], [first.clientEventId, second.clientEventId]]);
     expect(settled?.events.map((event) => event.syncStatus)).toEqual(["applied", "applied"]);
+  });
+
+  /**
+   * Auditor review S3, case 5: a checklist tick and a counter arrival ride
+   * the same POST as the roll call. Through a pass the device gave up on,
+   * both stay pending and untouched, go again under the same ids, and settle
+   * when the server answers that it already holds them.
+   */
+  it("keeps checklist and arrival taps through a give-up, and settles them on the same ids", async () => {
+    await saveOfflineManifest({
+      ...payload,
+      checklist: { items: [{ id: "item-radio", label: "Radio check" }] },
+    });
+    const ticked = (
+      await appendOfflineChecklistCheck(tripId, {
+        checklistItemId: "item-radio",
+        status: "checked",
+        note: null,
+      })
+    ).checklistEvents[0];
+    const arrived = (
+      await appendOfflineArrival(tripId, {
+        bookingId: payload.manifests[0].divers[0].bookingId,
+        status: "arrived",
+      })
+    ).arrivalEvents?.[0];
+    if (!ticked || !arrived) throw new Error("the taps were not queued");
+    const sent: string[][] = [];
+    let answer = false;
+    server.use(
+      http.post("/api/offline-manifests/sync", async ({ request }) => {
+        posts += 1;
+        const body = (await request.json()) as {
+          checklistEvents: Array<{ clientEventId: string }>;
+          arrivalEvents: Array<{ clientEventId: string }>;
+        };
+        const ids = [...body.checklistEvents, ...body.arrivalEvents].map(
+          (event) => event.clientEventId,
+        );
+        sent.push(ids);
+        if (!answer) return new Promise<never>(() => {});
+        return HttpResponse.json({
+          results: ids.map((clientEventId) => ({ clientEventId, status: "duplicate" })),
+        });
+      }),
+    );
+
+    await abandonedPass();
+    const kept = await loadOfflineManifest(tripId);
+    expect(kept?.checklistEvents).toEqual([ticked]);
+    expect(kept?.arrivalEvents).toEqual([arrived]);
+
+    answer = true;
+    vi.useRealTimers();
+    const settled = await syncOfflineManifest(tripId);
+
+    expect(sent).toEqual([
+      [ticked.clientEventId, arrived.clientEventId],
+      [ticked.clientEventId, arrived.clientEventId],
+    ]);
+    expect(settled?.checklistEvents.map((event) => event.syncStatus)).toEqual(["applied"]);
+    expect(settled?.arrivalEvents?.map((event) => event.syncStatus)).toEqual(["applied"]);
   });
 });

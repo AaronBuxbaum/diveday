@@ -1,44 +1,41 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
-/** How long between two asks of the live manifest, once one has come back empty. */
+/** How long between two asks of the live manifest. */
 export const LIVE_RETRY_MS = 5_000;
 
 /**
- * How long one ask waits. Longer than the worker's four-second deadline on
- * purpose: this ask runs behind a page that is already usable, so a server
- * that answers in eight seconds still brings the captain back.
+ * How long one ask waits: under the worker's four-second navigation deadline
+ * (`NAVIGATION_TIMEOUT_MS`, src/worker/manifest-sw.ts), with room for the
+ * navigation's own overhead. An ask that succeeds has to predict that opening
+ * the live manifest will land there. With a longer budget, a server that
+ * answers in a steady five seconds passed the ask and failed the navigation,
+ * and the captain bounced back to the copy (layer 1 re-review, R1).
  */
-export const LIVE_ATTEMPT_TIMEOUT_MS = 30_000;
+export const LIVE_ATTEMPT_TIMEOUT_MS = 3_000;
 
 /**
- * **Back to the live manifest once DiveDay answers** (captain review B1).
+ * **Whether DiveDay is answering the live manifest again** (captain review
+ * B1, re-review R1).
  *
  * The service worker serves the saved copy when the live manifest is slow,
  * not only when the device is offline, and on that link the browser never
  * fires `online`: it never went offline. So this asks the live page itself,
- * every `LIVE_RETRY_MS`, and opens it the first time it answers.
+ * every `LIVE_RETRY_MS`, and says whether the last ask was answered in time.
+ *
+ * It never leaves the page. Swapping the list under a captain in the middle of
+ * a count moved the rows under a wet thumb and could drop a typed sentence on
+ * unload; the screen offers the live manifest instead, and the captain
+ * chooses when.
  *
  * The ask is an ordinary `fetch`, not a navigation, so the worker lets it
- * through to the network with no deadline of its own. A redirect (a session
- * that has ended sends the page to sign-in) is not an answer: leaving the
- * roll call for a sign-in form would be worse than staying on the copy.
- *
- * `canLeave` is asked at the moment of leaving. A tap still being written to
- * this phone, or a sentence typed about a missing diver and not yet sent,
- * holds the captain here until the next answer.
+ * through to the network. A redirect (a session that has ended sends the page
+ * to sign-in) is not an answer.
  */
-export function useLiveReturn(
-  liveHref: string | null,
-  canLeave: () => boolean,
-  /** How the page is left; a test passes its own, as jsdom cannot navigate. */
-  open: (href: string) => void = (href) => window.location.replace(href),
-) {
-  const canLeaveRef = useRef(canLeave);
-  canLeaveRef.current = canLeave;
-  const openRef = useRef(open);
-  openRef.current = open;
+export function useLiveAnswering(liveHref: string | null): boolean {
+  const [answering, setAnswering] = useState(false);
 
   useEffect(() => {
+    setAnswering(false);
     if (!liveHref) return;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -80,10 +77,7 @@ export function useLiveReturn(
       timer = setTimeout(async () => {
         const answered = await ask();
         if (stopped) return;
-        if (answered && canLeaveRef.current()) {
-          openRef.current(liveHref);
-          return;
-        }
+        setAnswering(answered);
         next();
       }, LIVE_RETRY_MS);
     };
@@ -95,4 +89,6 @@ export function useLiveReturn(
       attempt?.abort();
     };
   }, [liveHref]);
+
+  return answering;
 }

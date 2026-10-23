@@ -106,6 +106,32 @@ export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
 export const OFFLINE_FALLBACK_PARAM = "fallback";
 export type OfflineFallbackReason = "slow" | "failed";
 
+/**
+ * Why the worker sent the captain to the shell, read from its URL; `null`
+ * when the captain opened the saved copy themselves. A value the worker never
+ * writes still means the worker sent them, and reads as `failed`: the cost
+ * of a wrong guess here is a screen calling a saved list live.
+ */
+export function offlineFallbackReason(
+  params: Pick<URLSearchParams, "get">,
+): OfflineFallbackReason | null {
+  const why = params.get(OFFLINE_FALLBACK_PARAM);
+  if (why === null) return null;
+  return why === "slow" ? "slow" : "failed";
+}
+
+/**
+ * A saved trip's address in the shell. It keeps the reason the shell was
+ * opened with, so a trip reached from the list the worker swapped in says it
+ * is the saved copy as the list did, rather than "Fresh copy · current"
+ * (layer 1 re-review, R2).
+ */
+export function offlineTripHref(tripId: string, fallback: OfflineFallbackReason | null): string {
+  const params = new URLSearchParams({ trip: tripId });
+  if (fallback) params.set(OFFLINE_FALLBACK_PARAM, fallback);
+  return `/offline-manifest?${params}`;
+}
+
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * MINUTE_MS;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;

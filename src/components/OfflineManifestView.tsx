@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { watchRollCallTouches } from "@/components/roll-call-touch-guard";
+import { pendingOfflineEventCount } from "@/lib/offline-manifests";
 import type { OfflineTripControls } from "./offline-manifest/controls";
 import { OfflineManifestList } from "./offline-manifest/ManifestList";
 import { offlineRecorders } from "./offline-manifest/recorders";
@@ -12,7 +13,7 @@ import {
 import { DiscardedRecordsNotice, translatorForThisDevice } from "./offline-manifest/shared";
 import { OfflineTripScreen } from "./offline-manifest/TripScreen";
 import { liveManifestHref, offlineTripView } from "./offline-manifest/trip-view";
-import { useLiveReturn } from "./offline-manifest/use-live-return";
+import { useLiveAnswering } from "./offline-manifest/use-live-return";
 import { useSavedManifest } from "./offline-manifest/use-saved-manifest";
 
 const subscribeNever = () => () => {};
@@ -68,6 +69,7 @@ function OfflineManifestScreen() {
     discarded,
     acknowledgeDiscarded,
     reconcile,
+    fallback,
     servedWithoutAnswer,
   } = useSavedManifest(t);
   // A marker for the tools that photograph this page (`scripts/screenshot.mjs`,
@@ -104,17 +106,13 @@ function OfflineManifestScreen() {
     <DiscardedRecordsNotice t={t} records={discarded} onAcknowledge={acknowledgeDiscarded} />
   );
   // Sent here because DiveDay did not answer: keep asking the live manifest,
-  // and go back to it once it answers and nothing typed or tapped is mid-way.
-  useLiveReturn(
+  // and offer it once it answers in time. Never a swap: the captain chooses
+  // when to leave a count (re-review R1).
+  const liveHref =
     servedWithoutAnswer && envelope && tripId
       ? liveManifestHref(envelope, tripId, checkpoint)
-      : null,
-    () =>
-      busyBooking === null &&
-      busyChecklistItem === null &&
-      busyArrival === null &&
-      Object.values(noteDrafts).every((draft) => draft.trim() === ""),
-  );
+      : null;
+  const liveAnswering = useLiveAnswering(liveHref);
 
   // Before the store has been read, say what is actually true and nothing
   // more. See `storeRead` above for why this branch sits ahead of the
@@ -133,6 +131,7 @@ function OfflineManifestScreen() {
         message={message}
         discardNotice={discardNotice}
         readFailed={storeReadFailed}
+        fallback={fallback}
       />
     );
   }
@@ -178,6 +177,10 @@ function OfflineManifestScreen() {
     locale,
     message,
     servedWithoutAnswer,
+    // Offered only with nothing waiting to send: on the live list a mark still
+    // queued here shows only as "still sending", and its diver looks uncounted.
+    liveOffer:
+      liveAnswering && liveHref && pendingOfflineEventCount(envelope) === 0 ? liveHref : null,
     setCheckpoint,
     busyBooking,
     busyChecklistItem,

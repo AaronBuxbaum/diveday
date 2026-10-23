@@ -246,6 +246,36 @@ describe("useSavedManifest's syncs while one hangs", () => {
     expect(sync).toHaveBeenCalledTimes(2);
     expect(result.current.message).toBe(line("allCaughtUp"));
   });
+  it("never drops an ask made as a pass is finishing (re-review N10)", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", { pending: 1 }));
+    // One ask, made a given number of microtasks after the hung pass is
+    // answered: every one of them must be followed by a pass of its own,
+    // including the one that lands after the pass has looked for a queued
+    // ask and before it lets go.
+    for (let ticks = 0; ticks < 8; ticks++) {
+      sync.mockReset();
+      let release: (envelope: OfflineManifestEnvelope) => void = () => {};
+      sync.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = resolve;
+          }),
+      );
+      sync.mockResolvedValue(withEvents("trip-1", {}));
+      const { result, unmount } = at("trip=trip-1");
+      await waitFor(() => expect(sync).toHaveBeenCalledTimes(1));
+
+      await act(async () => {
+        release(withEvents("trip-1", { pending: 1 }));
+        for (let tick = 0; tick < ticks; tick++) await Promise.resolve();
+        await result.current.reconcile();
+      });
+
+      await waitFor(() => expect(sync, `an ask ${ticks} ticks in`).toHaveBeenCalledTimes(2));
+      unmount();
+    }
+  });
 });
 
 describe("useSavedManifest and why the copy is on screen", () => {

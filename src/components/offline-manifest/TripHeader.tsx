@@ -2,6 +2,7 @@ import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import type { OfflineTripControls } from "./controls";
 import type { OfflineTripView } from "./trip-view";
 
@@ -17,7 +18,7 @@ export function OfflineTripHeader({
   controls: OfflineTripControls;
 }) {
   const { envelope, manifest, expired, freshness, pending, rejected, dateTime } = view;
-  const { t, message, servedWithoutAnswer } = controls;
+  const { t, message, servedWithoutAnswer, liveOffer } = controls;
   const savedAt = dateTime.format(new Date(envelope.snapshot.savedAt));
   return (
     <div className="border-b border-border pb-6">
@@ -71,6 +72,14 @@ export function OfflineTripHeader({
               })}
         </p>
       )}
+      {servedWithoutAnswer && liveOffer ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3" role="status" aria-live="polite">
+          <p className="text-sm font-medium">{t("shared.offlineManifest.single.liveAnswering")}</p>
+          <a href={liveOffer} className={buttonClass({ size: "boat" })}>
+            {t("shared.offlineManifest.single.openLiveManifest")}
+          </a>
+        </div>
+      ) : null}
       <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
         {message}
       </p>

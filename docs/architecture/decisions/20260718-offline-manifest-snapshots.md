@@ -39,8 +39,12 @@ nothing saved on the device it keeps waiting for the network instead.
   phone still reads "online" and a copy saved minutes ago reads "fresh". So a shell opened by that
   redirect says DiveDay did not answer and when the copy was saved, shows no "Online" and no
   freshness wording, and asks the live manifest again every five seconds (it cannot wait for the
-  browser's `online` event, which never fires for a device that never went offline). It opens the
-  live manifest the first time it answers, unless a tap is being written or a sentence typed.
+  browser's `online` event, which never fires for a device that never went offline). Each ask gets
+  three seconds, under the worker's four, so a server that answers too slowly for the worker never
+  counts as answering. Once one is answered, and nothing on the phone is still waiting to sync, the
+  copy offers an "Open live manifest" button. It never leaves on its own: a swap mid-count would move
+  rows under a thumb and drop a typed note. The saved list keeps the reason on each trip's link, so a
+  trip reached through it says the same.
 - **Every sync of queued events gives up after ten seconds**, whoever calls it: the page, and the
   worker's Background Sync and push flushes, which go through the same `syncOfflineManifest`
   ([20260804-manifest-web-push](20260804-manifest-web-push.md), amended the same day). The events
@@ -52,7 +56,11 @@ nothing saved on the device it keeps waiting for the network instead.
   before any work and again under the trip or seat lock, where the first request's commit shows; a
   collision on the `(shop_id, client_event_id)` unique index that neither question saw is answered
   as a duplicate too. So a POST given up on that landed is a duplicate on retry, never a second row,
-  a 500, or a correction refused as superseded by its own first copy (`roll-call.postgres.test.ts`).
+  a 500, or a correction refused as superseded by its own first copy (`roll-call.postgres.test.ts`,
+  `pre-departure-check.postgres.test.ts`). An id already recorded for another subject (another
+  seat, crew member or checklist line) is refused as `client_event_conflict`, never answered as a
+  duplicate: only a device bug sends one, and a duplicate would mark a tap applied that nothing
+  recorded. The pre-departure check's trip lock waits at most five seconds, as the other writers' do.
 
 > Superseded by [20260726-manifest-offline-copy-automation](20260726-manifest-offline-copy-automation.md):
 > the snapshot now saves and refreshes itself automatically; "Save now" no longer exists, and a captain

@@ -45,7 +45,12 @@ import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { listTripGearAssignments } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
-import { answeringReplayAsDuplicate } from "./offline-replay";
+import {
+  answeringReplayAsDuplicate,
+  type CLIENT_EVENT_CONFLICT,
+  replayVerdict,
+  type StoredOfflineEvent,
+} from "./offline-replay";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
 import {
@@ -1513,6 +1518,7 @@ export type RecordRollCallOutcome =
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
          */
         | typeof RETRACTION_SUPERSEDED
+        | typeof CLIENT_EVENT_CONFLICT
         | "snapshot_invalid";
     };
 
@@ -1791,30 +1797,39 @@ export async function rollCallOpenOnTrip(
 
 /**
  * The roll-call event this shop already holds under a device's
- * `clientEventId`, or undefined. The offline replay check: asked before any
- * work and again under the seat lock (`recordRollCall`).
+ * `clientEventId`, with the seat it is about, or undefined. The offline replay
+ * check (`replayVerdict`): asked before any work and again under the seat
+ * lock (`recordRollCall`).
  */
-async function appliedRollCallEventId(
+async function storedRollCallEvent(
   tx: DbExecutor,
   shopId: string,
   clientEventId: string,
-): Promise<string | undefined> {
+): Promise<StoredOfflineEvent | undefined> {
   const [existing] = await tx
-    .select({ id: rollCallEvents.id })
+    .select({
+      id: rollCallEvents.id,
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+    })
     .from(rollCallEvents)
     .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.clientEventId, clientEventId)))
     .limit(1);
-  return existing?.id;
+  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.bookingId}` };
 }
 
-/** The same question of the crew trail (`recordCrewRollCall`). */
-async function appliedCrewRollCallEventId(
+/** The same question of the crew trail (`recordCrewRollCall`), with the person. */
+async function storedCrewRollCallEvent(
   tx: DbExecutor,
   shopId: string,
   clientEventId: string,
-): Promise<string | undefined> {
+): Promise<StoredOfflineEvent | undefined> {
   const [existing] = await tx
-    .select({ id: rollCallCrewEvents.id })
+    .select({
+      id: rollCallCrewEvents.id,
+      tripId: rollCallCrewEvents.tripId,
+      personId: rollCallCrewEvents.personId,
+    })
     .from(rollCallCrewEvents)
     .where(
       and(
@@ -1823,7 +1838,7 @@ async function appliedCrewRollCallEventId(
       ),
     )
     .limit(1);
-  return existing?.id;
+  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.personId}` };
 }
 
 export async function recordRollCall(
@@ -1858,7 +1873,8 @@ export async function recordRollCall(
       indexName: "roll_call_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
       source: input.source,
-      applied: (clientEventId) => appliedRollCallEventId(db, input.shopId, clientEventId),
+      subject: `${input.tripId}/${input.bookingId}`,
+      stored: (clientEventId) => storedRollCallEvent(db, input.shopId, clientEventId),
     },
   );
   // A duplicate offline-sync replay changed nothing, so it raises no signal —
@@ -1889,8 +1905,12 @@ async function writeRollCall(
   if (!staffId) return { ok: false, reason: "staff_not_found" };
 
   if (source === "offline" && input.clientEventId) {
-    const applied = await appliedRollCallEventId(tx, input.shopId, input.clientEventId);
-    if (applied) return { ok: true, eventId: applied, duplicate: true };
+    const replayed = replayVerdict(
+      await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+      `${input.tripId}/${input.bookingId}`,
+      "roll_call_events",
+    );
+    if (replayed) return replayed;
   }
 
   // The departure, then the seat — the one order every seat writer takes
@@ -1912,8 +1932,12 @@ async function writeRollCall(
   // as the newest row and is refused as `retraction_superseded`, and a
   // replayed mark reaches the insert and fails on the unique index.
   if (source === "offline" && input.clientEventId) {
-    const applied = await appliedRollCallEventId(tx, input.shopId, input.clientEventId);
-    if (applied) return { ok: true, eventId: applied, duplicate: true };
+    const replayed = replayVerdict(
+      await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+      `${input.tripId}/${input.bookingId}`,
+      "roll_call_events",
+    );
+    if (replayed) return replayed;
   }
   if (lockedTripId !== input.tripId) return { ok: false, reason: "booking_unavailable" };
   const [booking] = await tx
@@ -2123,6 +2147,7 @@ export type RecordCrewRollCallOutcome =
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
          */
         | typeof RETRACTION_SUPERSEDED
+        | typeof CLIENT_EVENT_CONFLICT
         | "snapshot_invalid";
     };
 
@@ -2194,8 +2219,12 @@ export async function recordCrewRollCall(
         // lookup means a replay costs nothing and cannot be refused by a roster
         // that has changed since.
         if (source === "offline" && input.clientEventId) {
-          const applied = await appliedCrewRollCallEventId(tx, input.shopId, input.clientEventId);
-          if (applied) return { ok: true, eventId: applied, duplicate: true };
+          const replayed = replayVerdict(
+            await storedCrewRollCallEvent(tx, input.shopId, input.clientEventId),
+            `${input.tripId}/${input.personId}`,
+            "roll_call_crew_events",
+          );
+          if (replayed) return replayed;
         }
 
         // Same tenancy and trip-status gate the other two writers apply — and the
@@ -2222,8 +2251,12 @@ export async function recordCrewRollCall(
         // sync can overlap the request it replaced, and only now does that
         // request's commit show.
         if (source === "offline" && input.clientEventId) {
-          const applied = await appliedCrewRollCallEventId(tx, input.shopId, input.clientEventId);
-          if (applied) return { ok: true, eventId: applied, duplicate: true };
+          const replayed = replayVerdict(
+            await storedCrewRollCallEvent(tx, input.shopId, input.clientEventId),
+            `${input.tripId}/${input.personId}`,
+            "roll_call_crew_events",
+          );
+          if (replayed) return replayed;
         }
         if (!trip) return { ok: false, reason: "trip_unavailable" };
         if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
@@ -2426,7 +2459,8 @@ export async function recordCrewRollCall(
       indexName: "roll_call_crew_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
       source: input.source,
-      applied: (clientEventId) => appliedCrewRollCallEventId(db, input.shopId, clientEventId),
+      subject: `${input.tripId}/${input.personId}`,
+      stored: (clientEventId) => storedCrewRollCallEvent(db, input.shopId, clientEventId),
     },
   );
   // Same push signal the other head-count writes raise: this changes whether

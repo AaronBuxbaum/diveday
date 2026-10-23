@@ -2,7 +2,11 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { offlineManifestTranslator } from "@/i18n/offline-manifest-messages";
-import { loadOfflineManifest } from "@/lib/offline-manifest-store";
+import {
+  listOfflineManifests,
+  loadOfflineManifest,
+  syncOfflineManifest,
+} from "@/lib/offline-manifest-store";
 import { OfflineManifestView } from "./OfflineManifestView";
 import { LIVE_RETRY_MS } from "./offline-manifest/use-live-return";
 import { envelope, identityResponse, setOnline } from "./offline-manifest/view-fixtures";
@@ -28,11 +32,34 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
 
 const t = offlineManifestTranslator("en-US");
 const LIVE = "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=departure";
+/** Whether the live manifest answers its asks; silent unless a test says so. */
+let liveAnswers = false;
 const fetchMock = vi.fn(async (input: unknown): Promise<Response> => {
-  // The live manifest stays silent: the captain is still on the copy.
-  if (String(input) === LIVE) return new Promise<Response>(() => {});
+  if (String(input) === LIVE) {
+    return liveAnswers ? new Response("live", { status: 200 }) : new Promise<Response>(() => {});
+  }
   return identityResponse("blue-mantis");
 });
+const pendingMark = {
+  clientEventId: "evt-1",
+  snapshotId: "snap-trip-1",
+  snapshotSavedAt: new Date(0).toISOString(),
+  tripId: "trip-1",
+  bookingId: "booking-1",
+  checkpoint: "departure" as const,
+  status: "boarded" as const,
+  occurredAt: new Date(0).toISOString(),
+  syncStatus: "pending" as const,
+};
+
+/**
+ * The header's offer, read from the status line that carries it. The foot's
+ * own "Open live manifest" link is always there and is not the offer.
+ */
+function liveOffer(): HTMLElement | null {
+  const said = screen.queryByText(t("shared.offlineManifest.single.liveAnswering"));
+  return said?.closest('[role="status"]')?.querySelector("a") ?? null;
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
@@ -41,6 +68,8 @@ beforeEach(() => {
   // swapped in because the live one was slow.
   setOnline(true);
   vi.mocked(loadOfflineManifest).mockResolvedValue(envelope("trip-1", "Two-Tank Reef"));
+  liveAnswers = false;
+  vi.mocked(listOfflineManifests).mockResolvedValue([]);
   fetchMock.mockClear();
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -83,6 +112,37 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(LIVE);
   });
 
+  it("offers the live manifest once DiveDay answers, and never leaves on its own (re-review R1)", async () => {
+    searchParams = new URLSearchParams("trip=trip-1&fallback=slow");
+    liveAnswers = true;
+    const before = window.location.href;
+    render(<OfflineManifestView />);
+    await screen.findByText(t("shared.connectivity.unansweredWithCopy"));
+    expect(liveOffer()).toBeNull();
+
+    await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
+
+    expect(liveOffer()).toHaveAttribute("href", LIVE);
+    expect(window.location.href).toBe(before);
+  });
+
+  it("does not offer the live manifest while a mark on this phone has not reached DiveDay", async () => {
+    searchParams = new URLSearchParams("trip=trip-1&fallback=slow");
+    liveAnswers = true;
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      envelope("trip-1", "Two-Tank Reef", { events: [pendingMark] }),
+    );
+    // The sync hangs: the mark stays pending, as it does on a slow link.
+    vi.mocked(syncOfflineManifest).mockImplementation(() => new Promise(() => {}));
+    render(<OfflineManifestView />);
+    await screen.findByText(t("shared.connectivity.unansweredWithCopy"));
+
+    await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(LIVE);
+    expect(liveOffer()).toBeNull();
+  });
+
   it("still calls a copy the captain opened online and current", async () => {
     searchParams = new URLSearchParams("trip=trip-1");
 
@@ -93,5 +153,25 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     expect(screen.getByText(t("shared.offlineManifest.freshnessPill.current"))).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(LIVE);
+  });
+
+  it("keeps the reason on the way from the saved list to a trip (re-review R2)", async () => {
+    searchParams = new URLSearchParams("fallback=slow");
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+
+    render(<OfflineManifestView />);
+
+    const row = await screen.findByRole("link", { name: /Two-Tank Reef/ });
+    expect(row).toHaveAttribute("href", "/offline-manifest?trip=trip-1&fallback=slow");
+  });
+
+  it("links a list the captain opened to the trip alone", async () => {
+    searchParams = new URLSearchParams();
+    vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);
+
+    render(<OfflineManifestView />);
+
+    const row = await screen.findByRole("link", { name: /Two-Tank Reef/ });
+    expect(row).toHaveAttribute("href", "/offline-manifest?trip=trip-1");
   });
 });
