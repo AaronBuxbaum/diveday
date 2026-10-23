@@ -1,4 +1,4 @@
-import type { Map as LeafletMap, MapOptions } from "leaflet";
+import type { Map as LeafletMap, MapOptions, ZoomPanOptions } from "leaflet";
 import {
   BASEMAP_ATTRIBUTION,
   BASEMAP_IMAGERY_URL,
@@ -17,15 +17,16 @@ import {
  * paint every marker, the shop's pin and its stem sat half a resize away from
  * their water and then jumped. A `ResizeObserver` runs after layout and before
  * paint, and it also sees a box that changes without the window (a layout
- * breakpoint, a panel opening). The move it causes ends at once rather than
- * 200ms later, so whatever redraws on `moveend` redraws in that same frame.
+ * breakpoint, a scrollbar, a panel opening). The move it causes ends at once
+ * rather than 200ms later, so whatever redraws on `moveend` redraws in that
+ * same frame.
  */
 export function createBasemapMap(
   L: typeof import("leaflet"),
   container: HTMLElement,
-  options: MapOptions & { credit?: boolean },
+  options: MapOptions & { credit?: boolean; holdsCenter?: () => boolean },
 ): LeafletMap {
-  const { credit = true, ...mapOptions } = options;
+  const { credit = true, holdsCenter, ...mapOptions } = options;
   const map = L.map(container, {
     ...mapOptions,
     maxZoom: BASEMAP_MAX_ZOOM,
@@ -39,7 +40,20 @@ export function createBasemapMap(
 
   if (typeof ResizeObserver !== "undefined") {
     const observer = new ResizeObserver(() => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      const holding = holdsCenter?.() ?? false;
       map.invalidateSize({ pan: true, animate: false, debounceMoveend: false });
+      // Leaflet keeps the center by whole pixels, so an odd change in width
+      // drifts it half a pixel, and a camera restored from the last visit
+      // came back a little off. A map holding a reader's camera (`holdsCenter`)
+      // gets its exact center back; one that refits itself is left to its fit.
+      // A plain `setView` pans by whole pixels and so moves nowhere; `reset`
+      // (Leaflet's own option, missing from its types) sets the exact center.
+      const drift = map.project(map.getCenter(), zoom).distanceTo(map.project(center, zoom));
+      if (holding && map.getZoom() === zoom && drift > 0 && drift <= 1) {
+        map.setView(center, zoom, { reset: true } as ZoomPanOptions);
+      }
     });
     observer.observe(container);
     map.on("unload", () => observer.disconnect());

@@ -151,6 +151,58 @@ describe("SiteMap labels through Leaflet", () => {
     const shopPane = Number(shop.parentElement?.style.zIndex);
     expect(shopPane).toBeGreaterThan(600);
     expect(shopPane).toBeLessThan(650);
+    // The shop's line runs under the pins (600), so it never crosses a site.
+    const stem = container.querySelector<HTMLElement>(".leaflet-shop-stem");
+    expect(Number(stem?.parentElement?.style.zIndex)).toBeLessThan(600);
+  });
+
+  it("draws the shop on its own spot with no line when nothing is there, and not at all off the map", async () => {
+    const L = await import("leaflet");
+    const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? 640 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? 440 : 0;
+    });
+    const { container } = render(
+      <SiteMap
+        center={CENTER}
+        pins={[{ ...PIN, latitude: CENTER.latitude + 1, longitude: CENTER.longitude + 1 }]}
+        shopAnchor={{ ...CENTER, name: "Blue Mantis" }}
+        clusterLabel="dive sites"
+      />,
+    );
+    await waitFor(() => expect(container.querySelector(".leaflet-shop-marker")).not.toBeNull());
+    const map = getContainer.mock.contexts[0];
+    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
+    const element = (selector: string) => {
+      const found = container.querySelector<HTMLElement>(selector);
+      if (!found) throw new Error(`${selector} did not mount`);
+      return found;
+    };
+    map.setView([CENTER.latitude, CENTER.longitude], 10, { animate: false });
+    await waitFor(() => {
+      expect(element(".leaflet-shop-marker").style.marginLeft).toBe("-22px");
+      expect(element(".leaflet-shop-marker").style.marginTop).toBe("-22px");
+      expect(element(".leaflet-shop-marker").style.display).toBe("");
+      expect(element(".leaflet-shop-stem").style.display).toBe("none");
+    });
+
+    // A site on the shop's own spot pushes the badge aside: now it needs the line.
+    map.setView([CENTER.latitude + 1, CENTER.longitude + 1], 10, { animate: false });
+    map.setView([CENTER.latitude, CENTER.longitude], 4, { animate: false });
+    await waitFor(() => expect(element(".leaflet-shop-stem").style.display).toBe(""));
+
+    map.setView([CENTER.latitude + 5, CENTER.longitude + 5], 10, { animate: false });
+    await waitFor(() => {
+      expect(element(".leaflet-shop-marker").style.display).toBe("none");
+      expect(element(".leaflet-shop-stem").style.display).toBe("none");
+    });
   });
 
   it("fits a noncoincident cluster fully in one click and lets a smaller cluster advance again", async () => {
@@ -205,8 +257,8 @@ describe("SiteMap labels through Leaflet", () => {
 
   it.each([
     [4, 220],
-    [-20, 220],
-    [-20, -20],
+    [30, 60],
+    [4, 4],
   ])(
     "keeps the shop badge and tooltip clear of map controls at coordinate %spx, %spx",
     async (horizontal, vertical) => {
