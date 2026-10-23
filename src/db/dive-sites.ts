@@ -643,7 +643,9 @@ export async function updateDiveSite(
       conservationNote: input.conservationNote || null,
       fitTone: input.fitTone ?? null,
       fitNote: input.fitNote || null,
-      fieldGuideTipsHeading: input.fieldGuideTipsHeading || null,
+      // Undefined leaves the heading alone, as `creatures` leaves the guide.
+      fieldGuideTipsHeading:
+        input.fieldGuideTipsHeading === undefined ? undefined : input.fieldGuideTipsHeading || null,
       landmarks: input.landmarks ?? [],
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       requiredSpecialties: input.requiredSpecialties ?? [],
@@ -695,8 +697,30 @@ export async function updateDiveSite(
  * themselves (`availableSiteName`) and have nothing to say to a staffer if that
  * ever loses a race.
  */
-export function createDiveSiteForForm(db: DbExecutor, input: DiveSiteInput) {
-  return refusingNameClash(db, (savepoint) => createDiveSite(savepoint, input));
+export async function createDiveSiteForForm(db: DbExecutor, input: DiveSiteInput) {
+  const allowed = await formFieldGuide(db, input.shopId, input);
+  return refusingNameClash(db, (savepoint) => createDiveSite(savepoint, allowed));
+}
+
+/**
+ * **The field guide is a Features switch.** Off, the form draws no field-guide
+ * section, so a save writes neither its species nor its tips heading: the
+ * guide is kept as it was, whatever a post carries, and comes back when the
+ * switch does. The site itself saves as usual.
+ */
+async function formFieldGuide(
+  db: DbExecutor,
+  shopId: string,
+  input: DiveSiteInput,
+): Promise<DiveSiteInput> {
+  const [shop] = await db
+    .select({ on: shops.fieldGuideEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (shop?.on) return input;
+  const { creatures: _creatures, fieldGuideTipsHeading: _tipsHeading, ...rest } = input;
+  return rest;
 }
 
 /**
@@ -721,8 +745,9 @@ export async function updateDiveSiteForForm(
   input: DiveSiteInput,
   options: { expectedVersion?: number | null } = {},
 ) {
+  const allowed = await formFieldGuide(db, shopId, input);
   const written = await refusingNameClash(db, (savepoint) =>
-    updateDiveSite(savepoint, shopId, siteId, input, options),
+    updateDiveSite(savepoint, shopId, siteId, allowed, options),
   );
   if (written !== null) return written;
   // The write matched nothing. Either the site is gone (or another shop's), or
@@ -864,11 +889,21 @@ export async function replaceDiveSiteCreatures(
  * simply absent from the map rather than present and empty — "this site has
  * nothing to show" and "this site was never asked about" are the same answer to
  * every caller, and both render nothing.
+ *
+ * **Every site is absent while the shop's field guide is off** (the Features
+ * page), so each reader of this — the public trip and site pages' briefings,
+ * the recap and the manifest's species shortlist — shows none. The rows stay.
  */
 export async function listSiteFieldGuides(db: AppDb, shopId: string, siteIds: string[]) {
   const unique = [...new Set(siteIds)];
   const bySite = new Map<string, (typeof diveSiteCreatures.$inferSelect)[]>();
   if (unique.length === 0) return bySite;
+  const [shop] = await db
+    .select({ on: shops.fieldGuideEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop?.on) return bySite;
   const rows = await db
     .select()
     .from(diveSiteCreatures)

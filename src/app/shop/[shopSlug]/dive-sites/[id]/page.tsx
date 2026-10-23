@@ -179,7 +179,7 @@ export default async function EditDiveSitePage({
     }
   }
 
-  const sections = siteFormSections(t);
+  const sections = siteFormSections(t, shop.fieldGuideEnabled);
 
   return (
     // Wider from `lg` up than the 3xl it was: the rail takes a column of its
@@ -327,7 +327,10 @@ export default async function EditDiveSitePage({
                 <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
                   {t("diveSites.edit.saveBriefing")}
                 </SubmitButton>
-                <UnsavedSections sections={sections} copy={siteFormUnsavedCopy(t)} />
+                <UnsavedSections
+                  sections={sections}
+                  copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
+                />
               </>
             }
           >
@@ -339,6 +342,7 @@ export default async function EditDiveSitePage({
                 once. */}
             <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
             <SiteFields
+              fieldGuideOn={shop.fieldGuideEnabled}
               t={t}
               depthUnit={depthUnit}
               tideStation={tideStationEcho(station, site)}

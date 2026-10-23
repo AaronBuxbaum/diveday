@@ -2,6 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
+import {
+  createDiveSite,
+  listDiveSiteCreatures,
+  listSiteFieldGuides,
+  updateDiveSiteForForm,
+} from "./dive-sites";
 import { upsertExecutedDive } from "./executed-dives";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import {
@@ -14,7 +20,7 @@ import {
   listRecapPhotosForTrips,
 } from "./recap";
 import { getMonthlyReport } from "./reporting";
-import { bookings, executedDives, people, personRoles, shops, trips } from "./schema";
+import { bookings, diveSites, executedDives, people, personRoles, shops, trips } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -179,5 +185,57 @@ describe("partner links switched off", () => {
       .from(bookings)
       .where(eq(bookings.id, seat.id));
     expect(kept?.referralSource).toBe("harbor-hotel");
+  });
+});
+
+describe("field guide switched off", () => {
+  async function guidedSite() {
+    const { db, shop } = ctx;
+    const site = await createDiveSite(db, {
+      shopId: shop.id,
+      name: "Switch Reef",
+      fieldGuideTipsHeading: "Look under the ledges",
+      creatures: ["banded-butterflyfish"],
+    });
+    if (!site) throw new Error("site not created");
+    return { db, shop, site };
+  }
+
+  it("reads no guide for any site, and keeps every row", async () => {
+    const { db, shop, site } = await guidedSite();
+    expect((await listSiteFieldGuides(db, shop.id, [site.id])).get(site.id)).toHaveLength(1);
+    await db.update(shops).set({ fieldGuideEnabled: false }).where(eq(shops.id, shop.id));
+    expect((await listSiteFieldGuides(db, shop.id, [site.id])).size).toBe(0);
+    expect(await listDiveSiteCreatures(db, shop.id, site.id)).toHaveLength(1);
+  });
+
+  it("keeps the guide and its tips heading when the site form saves without them", async () => {
+    const { db, shop, site } = await guidedSite();
+    await db.update(shops).set({ fieldGuideEnabled: false }).where(eq(shops.id, shop.id));
+    // The form drew no field-guide section, so the parse hands over an empty
+    // list and a blank heading; a hand-built post could carry anything.
+    await updateDiveSiteForForm(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Switch Reef",
+      fieldGuideTipsHeading: "",
+      creatures: [],
+    });
+    expect(await listDiveSiteCreatures(db, shop.id, site.id)).toHaveLength(1);
+    const [row] = await db
+      .select({ heading: diveSites.fieldGuideTipsHeading })
+      .from(diveSites)
+      .where(eq(diveSites.id, site.id));
+    expect(row?.heading).toBe("Look under the ledges");
+  });
+
+  it("writes the guide from the form while on", async () => {
+    const { db, shop, site } = await guidedSite();
+    await updateDiveSiteForForm(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Switch Reef",
+      fieldGuideTipsHeading: "",
+      creatures: [],
+    });
+    expect(await listDiveSiteCreatures(db, shop.id, site.id)).toHaveLength(0);
   });
 });
