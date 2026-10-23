@@ -144,23 +144,20 @@ export default async function TripManifestPage({
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
   const actions = bindManifestActions(actionContext, missingDiverReader);
-  // Sightings switched off on Features: no Seen group and no species in the
-  // dive log; nothing logged is erased, and roll call never changes.
-  const seen = !shop.sightingsEnabled
-    ? null
-    : seenGroupView({
-        checkpoint,
-        actionContext,
-        departureStartsAt: departureManifest.trip.startsAt,
-        executedDives,
-        plannedDives,
-        loggedSightings,
-        shopPickedSpecies,
-        catalogSpecies,
-        speciesBySite,
-        canAssist: checkpoint !== "departure" && (await assistsAvailable(db, shop.id)),
-        t,
-      });
+  const seen = seenGroupView({
+    checkpoint,
+    actionContext,
+    departureStartsAt: departureManifest.trip.startsAt,
+    executedDives,
+    plannedDives,
+    loggedSightings,
+    shopPickedSpecies,
+    catalogSpecies,
+    speciesBySite,
+    canAssist: checkpoint !== "departure" && (await assistsAvailable(db, shop.id)),
+    sightingsOn: shop.sightingsEnabled,
+    t,
+  });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
   const checklist = preDepartureCheckView({
     ...boatCheck,
@@ -395,10 +392,8 @@ export default async function TripManifestPage({
           />
         ) : null}
 
-        {/* **The living reef** — the crew's tally of what this departure saw,
-            under the log they are already filling in and nowhere near the roll
-            call's commit path or the head count above it. Nothing here gates
-            anything; it reaches the shop's own public trip page. */}
+        {/* **The living reef**: what the crew saw, away from roll call and head count. It
+            gates nothing, reaches the public trip page, and is gone while sightings are off. */}
         {!isDeparture && seen ? <SeenGroup idPrefix={idPrefix} {...seen} /> : null}
 
         {/* **The numbers a crew dials during** are a rare reference, behind the

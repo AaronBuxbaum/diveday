@@ -54,4 +54,9 @@ describe("seenGroupView", () => {
     expect(view({ checkpoint: "departure" })).toBeNull();
     expect(view({ departureStartsAt: new Date("2026-07-22T11:00:00.000Z") })).toBeNull();
   });
+
+  it("is nothing while the shop has sightings switched off on Features", () => {
+    expect(view()).not.toBeNull();
+    expect(view({ sightingsOn: false })).toBeNull();
+  });
 });

@@ -29,9 +29,9 @@ describe("the public schedule's Our year panel", () => {
  */
 describe("the public pages with sightings switched off", () => {
   it("draws no month shelf on the schedule", () => {
-    expect(SOURCE).toContain("{isEmbed || !shop.sightingsEnabled ? null : (");
-    expect(SOURCE.indexOf("<MonthSightingsSection")).toBeGreaterThan(
-      SOURCE.indexOf("!shop.sightingsEnabled"),
+    expect(SOURCE).toContain("<MonthSightingsSection shop={shop}");
+    expect(routeSource(import.meta.dirname, "MonthSightingsShelf.tsx")).toContain(
+      "if (!shop.sightingsEnabled) return null;",
     );
   });
 

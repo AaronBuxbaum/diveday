@@ -11,17 +11,22 @@ import type { MonthSightings } from "@/lib/month-sightings";
 /**
  * The shelf as the shopfront places it: read behind its own `<Suspense>`, so a
  * shop with years of logs never holds up the schedule, and nothing at all
- * while the evidence is too thin. `mt-12` is the page's section gap.
+ * while the evidence is too thin, or while the shop has sightings switched off
+ * on Features (nothing is read then). `mt-12` is the page's section gap.
  */
-export function MonthSightingsSection(props: {
-  shopId: string;
+export function MonthSightingsSection({
+  shop,
+  ...props
+}: {
+  shop: { id: string; sightingsEnabled: boolean };
   tz: string;
   locale: string;
   t: DiverTranslator;
 }) {
+  if (!shop.sightingsEnabled) return null;
   return (
     <Suspense fallback={null}>
-      <MonthSightingsLoaded {...props} />
+      <MonthSightingsLoaded shopId={shop.id} {...props} />
     </Suspense>
   );
 }

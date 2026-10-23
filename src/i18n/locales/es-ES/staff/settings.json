@@ -504,8 +504,8 @@
       },
       "diverPhotos": {
         "heading": "Fotos del resumen",
-        "label": "Dejar que buceadores y tripulación añadan fotos al resumen",
-        "description": "Fotos del día, compartidas con el barco. Desactivado, nadie puede añadir una; las fotos ya añadidas se quedan contigo para que puedas quitar cualquiera."
+        "label": "Dejar que buceadores y tripulación agreguen fotos al resumen",
+        "description": "Fotos del día, compartidas con el barco. Desactivado, nadie puede agregar una; las fotos ya agregadas se quedan contigo para que puedas quitar cualquiera."
       },
       "door": "Activar o desactivar funciones"
     },

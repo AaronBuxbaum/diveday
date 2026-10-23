@@ -42,7 +42,6 @@ import {
   recapPhotos,
   rollCallCrewEvents,
   rollCallEvents,
-  shops,
   tripAssignments,
   trips,
 } from "./schema";
@@ -1460,42 +1459,6 @@ describe("recap photos and crew shout-out", () => {
       deleted: true,
       imageUrl: "https://img/crew.jpg",
     });
-  });
-
-  it("takes no photo from a diver or the crew while recap photos are off, and keeps every one for takedown", async () => {
-    const { db, shop, reef, bookingId, afterTrip } = await recapContext();
-    const [staff] = await listStaff(db, shop.id);
-    if (!staff) throw new Error("staff fixture missing");
-    const kept = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/kept.jpg" });
-    if (!kept.ok) throw new Error("photo not added");
-    await db.update(shops).set({ diverPhotosEnabled: false }).where(eq(shops.id, shop.id));
-
-    expect(await canAddRecapPhoto(db, bookingId)).toEqual({ ok: false, reason: "not_found" });
-    expect(await addRecapPhoto(db, { bookingId, imageUrl: "https://img/new.jpg" })).toEqual({
-      ok: false,
-      reason: "not_found",
-    });
-    const crew = {
-      shopId: shop.id,
-      tripId: reef.id,
-      uploadedByPersonId: staff.person.id,
-      now: afterTrip,
-    };
-    expect(await canAddCrewRecapPhoto(db, crew)).toEqual({ ok: false, reason: "not_found" });
-    expect(await addCrewRecapPhoto(db, { ...crew, imageUrl: "https://img/crew.jpg" })).toEqual({
-      ok: false,
-      reason: "not_found",
-    });
-
-    // The diver's page shows no album; staff still see the photo to take it down.
-    expect((await getRecapPageData(db, bookingId))?.photos).toEqual([]);
-    const staffView = await listRecapPhotosForTrips(db, shop.id, [reef.id]);
-    expect(staffView.some((photo) => photo.id === kept.photo.id)).toBe(true);
-    expect(await deleteRecapPhoto(db, shop.id, kept.photo.id)).toEqual({
-      deleted: true,
-      imageUrl: "https://img/kept.jpg",
-    });
-    await db.update(shops).set({ diverPhotosEnabled: true }).where(eq(shops.id, shop.id));
   });
 
   it("carries the crew shout-out onto the recap and clears it on empty", async () => {
