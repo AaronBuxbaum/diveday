@@ -309,7 +309,9 @@ export const shops = pgTable(
     partnerLinksEnabled: boolean("partner_links_enabled").notNull().default(true),
     /**
      * **Week-out reminder**: the email a diver gets seven days before a
-     * departure. Off, it is not sent; the day-before reminder always is.
+     * departure. Off, the plain "see you next week" hello is not sent; a diver
+     * with anything still on their checklist or course materials due still
+     * gets it, and the day-before reminder always sends.
      */
     weekOutReminderEnabled: boolean("week_out_reminder_enabled").notNull().default(true),
     /**

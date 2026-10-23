@@ -525,7 +525,7 @@
       "weekOutReminder": {
         "heading": "Recordatorio de una semana",
         "label": "Enviar un correo a los buceadores una semana antes",
-        "description": "Un correo siete días antes de la salida. El recordatorio del día anterior se envía de todos modos."
+        "description": "Un correo siete días antes de la salida. Desactivado, quien no tiene nada pendiente no recibe nada una semana antes; quien todavía debe una exención, una certificación o los materiales del curso lo recibe igual, y el recordatorio del día anterior se envía de todos modos."
       },
       "helpRequests": {
         "heading": "Pedidos de ayuda",

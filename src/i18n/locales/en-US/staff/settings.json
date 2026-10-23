@@ -525,7 +525,7 @@
       "weekOutReminder": {
         "heading": "Week-out reminder",
         "label": "Email divers a week before they dive",
-        "description": "One email seven days before the departure. The day-before reminder goes out either way."
+        "description": "One email seven days before the departure. Off, a diver with nothing left to do hears nothing a week out; anyone with a waiver, a card or course materials still to finish gets it anyway, and the day-before reminder goes out either way."
       },
       "helpRequests": {
         "heading": "Help requests",

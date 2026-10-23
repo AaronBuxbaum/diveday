@@ -104,6 +104,31 @@ describe("reminderEarnsItsSend", () => {
     expect(reminderEarnsItsSend("trip_reminder_7d", [])).toBe(true);
   });
 
+  describe("with the week-out reminder switched off", () => {
+    // Review 2026-10-23, item 2: off silences only the plain hello.
+    const off = { weekOutHello: false };
+
+    it("holds the plain hello on a trip that gates on nothing", () => {
+      expect(reminderEarnsItsSend("trip_reminder_7d", [], off)).toBe(false);
+    });
+
+    it("still sends to a diver with something to do or something waiting", () => {
+      expect(reminderEarnsItsSend("trip_reminder_7d", items("done", "action"), off)).toBe(true);
+      expect(reminderEarnsItsSend("trip_reminder_7d", items("done", "waiting"), off)).toBe(true);
+    });
+
+    it("still sends a student's learning materials", () => {
+      expect(
+        reminderEarnsItsSend("trip_reminder_7d", [], { ...off, courseMaterialsDue: true }),
+      ).toBe(true);
+    });
+
+    it("still sends when there is no readiness evidence, and never touches the 24-hour one", () => {
+      expect(reminderEarnsItsSend("trip_reminder_7d", null, off)).toBe(true);
+      expect(reminderEarnsItsSend("trip_reminder_24h", [], off)).toBe(true);
+    });
+  });
+
   it("has a rule for every cadence, so a new one cannot arrive ruleless", () => {
     for (const cadence of TRIP_REMINDER_CADENCES) {
       expect(TRIP_REMINDER_RHYTHM[cadence.kind]?.kind).toBe(cadence.kind);
