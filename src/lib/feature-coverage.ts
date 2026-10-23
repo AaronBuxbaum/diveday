@@ -15,7 +15,10 @@ import type { StaffDestinationId } from "./staff-destinations";
  * the nav, the section tabs and ⌘K when that switch is off
  * (`staffDestinationOffered`), so classifying one is also wiring it.
  */
-export type FeatureCoverage = ShopSwitch | { readonly core: string };
+export type FeatureCoverage =
+  | ShopSwitch
+  | { readonly anyOf: readonly ShopSwitch[] }
+  | { readonly core: string };
 
 export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCoverage> = {
   today: { core: "daily operations: the shop home" },
@@ -40,7 +43,10 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
   reviews: "reviews",
   requests: "dateRequests",
   reports: { core: "the money record" },
-  promoCodes: "promoCodes",
+  // Money's Discounts tab holds three prices: codes, the last-minute deals and
+  // the door to dive packages. It stays while any of them is on, and shows
+  // only those (`promos/page.tsx`).
+  promoCodes: { anyOf: ["promoCodes", "lastMinuteList", "divePackages"] },
   settings: { core: "admin" },
   team: { core: "admin" },
   activity: { core: "admin: the record of who did what" },
@@ -75,8 +81,12 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   isDemo: { core: "platform marker for a demo shop, not a shop's choice" },
 };
 
-/** The switch a destination belongs to, or null when it is core. */
-export function destinationSwitch(id: StaffDestinationId): ShopSwitch | null {
+/**
+ * The switches a destination belongs to (it is offered while any is on), or
+ * null when it is core.
+ */
+export function destinationSwitches(id: StaffDestinationId): readonly ShopSwitch[] | null {
   const coverage = STAFF_DESTINATION_COVERAGE[id];
-  return typeof coverage === "string" ? coverage : null;
+  if (typeof coverage === "string") return [coverage];
+  return "anyOf" in coverage ? coverage.anyOf : null;
 }

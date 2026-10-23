@@ -41,19 +41,20 @@ type Page = (props: {
   searchParams: Promise<Record<string, string>>;
 }) => Promise<unknown>;
 
-/** Signs the owner in with one switch's column off, and opens the page. */
+type Column = keyof typeof shops.$inferInsert;
+
+/** Signs the owner in with these switches' columns off, and opens the page. */
 async function openSwitchedOff(
-  column: keyof typeof shops.$inferInsert,
+  off: Column | readonly Column[],
   load: () => Promise<{ default: unknown }>,
   params: Record<string, string> = {},
 ) {
   const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
-  await db
-    .update(shops)
-    .set({ [column]: false })
-    .where(eq(shops.id, shop.id));
+  const columns: readonly Column[] = typeof off === "string" ? [off] : off;
+  const set = (on: boolean) => Object.fromEntries(columns.map((column) => [column, on]));
+  await db.update(shops).set(set(false)).where(eq(shops.id, shop.id));
   const owner = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes("owner"));
   if (!owner) throw new Error("the seed has no owner");
   vi.mocked(getDb).mockResolvedValue(db);
@@ -76,10 +77,7 @@ async function openSwitchedOff(
       }),
     );
   } finally {
-    await db
-      .update(shops)
-      .set({ [column]: true })
-      .where(eq(shops.id, shop.id));
+    await db.update(shops).set(set(true)).where(eq(shops.id, shop.id));
   }
 }
 
@@ -103,5 +101,14 @@ describe("a switched-off staff page", () => {
     ],
   ])("gear servicing: %s lands on the gear register", async (_name, load, params) => {
     expect(await openSwitchedOff("workOrdersEnabled", load, params)).toBe("/shop/blue-mantis/gear");
+  });
+
+  it("Discounts lands on Orders once codes, deals and packages are all off", async () => {
+    expect(
+      await openSwitchedOff(
+        ["promoCodesEnabled", "lastMinuteListEnabled", "divePackagesEnabled"],
+        () => import("./promos/page"),
+      ),
+    ).toBe("/shop/blue-mantis/orders");
   });
 });

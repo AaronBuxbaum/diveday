@@ -42,7 +42,10 @@ describe("every feature is considered for the Features page", () => {
       ...Object.values(SHOP_BOOLEAN_COVERAGE),
     ]) {
       if (typeof coverage === "string") expect(switches).toContain(coverage);
-      else expect(coverage.core.trim().length).toBeGreaterThan(0);
+      else if ("anyOf" in coverage) {
+        expect(coverage.anyOf.length).toBeGreaterThan(1);
+        for (const one of coverage.anyOf) expect(switches).toContain(one);
+      } else expect(coverage.core.trim().length).toBeGreaterThan(0);
     }
     expect(Object.keys(STAFF_DESTINATION_COVERAGE).sort()).toEqual(
       STAFF_DESTINATIONS.map((destination) => destination.id).sort(),

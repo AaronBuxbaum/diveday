@@ -617,11 +617,21 @@ describe("a switched-off feature leaves every list", () => {
     expect(tabs(switchedOff("dateRequests"))).toEqual(["inbox", "reviews"]);
   });
 
-  it("drops Promo codes from the Money tabs and Work orders from the Gear tabs", () => {
-    expect(staffSectionTabs("money", owner, switchedOff("promoCodes")).map((d) => d.id)).toEqual([
+  it("drops Discounts from the Money tabs only when codes, deals and packages are all off, and Work orders from the Gear tabs", () => {
+    const money = (switches: ShopSwitchesOn) =>
+      staffSectionTabs("money", owner, switches).map((d) => d.id);
+    expect(money(switchedOff("promoCodes"))).toEqual(["orders", "promoCodes", "reports"]);
+    expect(money(switchedOff("promoCodes", "lastMinuteList"))).toContain("promoCodes");
+    expect(money(switchedOff("promoCodes", "lastMinuteList", "divePackages"))).toEqual([
       "orders",
       "reports",
     ]);
+    expect(
+      staffPaletteDestinations(
+        owner,
+        switchedOff("promoCodes", "lastMinuteList", "divePackages"),
+      ).map((d) => d.id),
+    ).not.toContain("promoCodes");
     expect(staffSectionTabs("gear", owner, switchedOff("workOrders")).map((d) => d.id)).toEqual([
       "gear",
     ]);

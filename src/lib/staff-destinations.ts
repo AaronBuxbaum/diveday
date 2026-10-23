@@ -1,5 +1,5 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
-import { destinationSwitch } from "./feature-coverage";
+import { destinationSwitches } from "./feature-coverage";
 import { ALL_SWITCHES_ON, type ShopSwitchesOn } from "./shop-features";
 
 /**
@@ -469,8 +469,8 @@ export function staffDestinationOffered(
   destination: StaffDestination,
   switches: ShopSwitchesOn,
 ): boolean {
-  const feature = destinationSwitch(destination.id);
-  return feature === null || switches[feature];
+  const features = destinationSwitches(destination.id);
+  return features === null || features.some((feature) => switches[feature]);
 }
 
 /** Every destination this viewer may see, in registry order. */
