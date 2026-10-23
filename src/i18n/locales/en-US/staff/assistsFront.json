@@ -42,7 +42,7 @@
   },
   "waiver": {
     "label": "Start from your current waiver",
-    "hint": "Choose its PDF and the text lands in the box above. Check it line by line against the PDF before you publish: Claude can misread a clause. The signature lines and medical questions are left out because the online form asks them itself. This is not legal advice.",
+    "hint": "Choose its PDF and the text lands in the box above. Check it line by line against the PDF before you publish: AI can misread a clause. The signature lines and medical questions are left out because the online form asks them itself. This is not legal advice.",
     "draft": "Draft from PDF",
     "drafting": "Reading the PDF…",
     "failed": "That file could not be read as a waiver. Choose a PDF of your release, under 5 MB."
@@ -50,7 +50,7 @@
   "setup": {
     "tab": "Website",
     "heading": "Set up from your website",
-    "intro": "Paste your site and Claude reads it for your tagline, phone, desk hours, prices and departures. Nothing changes until you accept a line.",
+    "intro": "Paste your site and AI reads it for your tagline, phone, desk hours, prices and departures. Nothing changes until you accept a line.",
     "siteLabel": "Your website",
     "read": "Read the site",
     "reading": "Reading the site…",
@@ -84,7 +84,7 @@
       "read": "Read. Accept the lines that are right.",
       "nothing": "Nothing on that site could be used. Check the address and try again.",
       "badSite": "That address cannot be read. Paste your shop’s own website, starting with https://.",
-      "dark": "Claude suggestions are off for this shop.",
+      "dark": "AI suggestions aren’t available for this shop right now.",
       "saved": "Saved.",
       "gone": "That line was already handled."
     }

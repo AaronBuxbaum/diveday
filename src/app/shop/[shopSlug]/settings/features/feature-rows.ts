@@ -1,4 +1,5 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
+import type { AssistDarkReason } from "@/lib/claude/dark";
 import { SHOP_FEATURES, type ShopFeature } from "@/lib/shop-features";
 
 /**
@@ -100,4 +101,21 @@ export function parseFeatureRow(value: unknown): FeatureRow | null {
 /** Whether `id` is one of the six optional features in `shop-features.ts`. */
 export function isOptionalFeature(id: FeatureRowId): id is ShopFeature {
   return (SHOP_FEATURES as readonly string[]).includes(id);
+}
+
+/**
+ * Why the AI suggestions stay hidden with their switch on (Aaron, 2026-10-23:
+ * the switch read on while every page said they were off). `shop_off` needs no
+ * line, the switch itself says it.
+ */
+const DARK_WHILE_ON: Record<Exclude<AssistDarkReason, "shop_off">, StaffMessageKey> = {
+  no_key: "settings.main.features.claudeSuggestions.dark.noProvider",
+  external_http_disabled: "settings.main.features.claudeSuggestions.dark.noProvider",
+  demo_shop: "settings.main.features.claudeSuggestions.dark.demoShop",
+  over_cap: "settings.main.features.claudeSuggestions.dark.overCap",
+};
+
+/** The line under the AI switch, or null when there is nothing to explain. */
+export function darkWhileOnKey(reason: AssistDarkReason | null): StaffMessageKey | null {
+  return reason === null || reason === "shop_off" ? null : DARK_WHILE_ON[reason];
 }

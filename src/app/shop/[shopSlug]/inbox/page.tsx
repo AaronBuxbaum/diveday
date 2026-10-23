@@ -208,13 +208,9 @@ export default async function InboxPage({
         words={staffPagerWords(t)}
       />
 
-      <ReplyNotesSection
-        notes={shop.replyNotes}
-        assists={assists}
-        shopSlug={shopSlug}
-        t={t}
-        action={saveReplyNotesAction}
-      />
+      {assists ? (
+        <ReplyNotesSection notes={shop.replyNotes} t={t} action={saveReplyNotesAction} />
+      ) : null}
     </main>
   );
 }

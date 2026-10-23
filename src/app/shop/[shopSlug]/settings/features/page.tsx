@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
+import { assistDarkReasonFor } from "@/db/assists";
 import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
@@ -19,6 +20,7 @@ import { type NoticeMessages, noticeFromParam, noticeRole } from "@/lib/staff-no
 import { settingsPaneClass } from "../_components/settings-pane";
 import { saveFeatureAction } from "./actions";
 import {
+  darkWhileOnKey,
   FEATURE_ROWS,
   type FeatureRow,
   type FeatureRowGate,
@@ -142,6 +144,8 @@ export default async function FeaturesPage({
     gates.add("team");
   }
   const banner = noticeFromParam(notice, noticeMessages(t));
+  // Never the reason the page fails: a read that throws shows no line.
+  const darkKey = darkWhileOnKey(await assistDarkReasonFor(db, shop.id).catch(() => null));
   const base = `/shop/${session.user.shopSlug}`;
 
   return (
@@ -160,6 +164,9 @@ export default async function FeaturesPage({
                 <input type="hidden" name="row" value={row.id} />
                 <h2 className="text-sm font-semibold">{t(row.headingKey)}</h2>
                 {switches(shop, row, t)}
+                {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
+                  <p className="text-xs text-warning">{t(darkKey)}</p>
+                ) : null}
                 {banner && saved === row.id ? (
                   <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)}>
                     {banner.text}

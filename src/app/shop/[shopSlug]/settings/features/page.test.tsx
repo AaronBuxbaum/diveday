@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { getShopBySlug, setShopCrewScheduleEnabled, setShopDivingOptions } from "@/db/shops";
+import {
+  getShopBySlug,
+  setShopCrewScheduleEnabled,
+  setShopDivingOptions,
+  setShopFeature,
+} from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
@@ -25,6 +30,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const FeaturesPage = (await import("./page")).default;
+const { darkWhileOnKey } = await import("./feature-rows");
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -109,5 +115,38 @@ describe("the Features page", () => {
     );
     expect(off).not.toContain(`${base}/settings#crew-schedule`);
     expect(off).not.toContain(`${base}/boats`);
+  });
+
+  it("says why AI suggestions stay hidden while their switch is on", async () => {
+    // No ANTHROPIC_API_KEY in the unit run, so the assists are dark on this server.
+    const lines = (page: unknown) =>
+      findElements<{ children?: unknown }>(page, "p").map((p) => String(p.props.children));
+    const on = await renderFeatures("owner", (db, shopId) =>
+      setShopFeature(db, shopId, "claudeSuggestions", true).then(() => undefined),
+    );
+    expect(lines(on)).toContain(
+      "AI isn’t connected on this server yet, so suggestions stay hidden even with this on.",
+    );
+
+    const off = await renderFeatures("owner", (db, shopId) =>
+      setShopFeature(db, shopId, "claudeSuggestions", false).then(() => undefined),
+    );
+    expect(lines(off).join(" ")).not.toMatch(/stay hidden/);
+  });
+});
+
+describe("the line under the AI switch", () => {
+  it("names the reason the switch can't, and nothing when it may run or is off", () => {
+    expect(darkWhileOnKey(null)).toBeNull();
+    expect(darkWhileOnKey("shop_off")).toBeNull();
+    expect(darkWhileOnKey("no_key")).toBe(
+      "settings.main.features.claudeSuggestions.dark.noProvider",
+    );
+    expect(darkWhileOnKey("demo_shop")).toBe(
+      "settings.main.features.claudeSuggestions.dark.demoShop",
+    );
+    expect(darkWhileOnKey("over_cap")).toBe(
+      "settings.main.features.claudeSuggestions.dark.overCap",
+    );
   });
 });
