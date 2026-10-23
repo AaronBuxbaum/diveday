@@ -797,6 +797,65 @@ export async function appendOfflineArrival(
   });
 }
 
+/**
+ * How long one sync waits for the server before it gives up and leaves the
+ * events for the next pass. Dock Wi-Fi can show full bars and carry nothing,
+ * and on that network a request neither answers nor fails: it waits, and
+ * every later reconcile on the page used to wait behind it until a reload.
+ * Ten seconds is long enough for a cold database and a full boat's batch.
+ */
+export const SYNC_TIMEOUT_MS = 10_000;
+
+/**
+ * The one round trip, under a deadline that covers the reply's body as well
+ * as its headers. Every way it can fail — no answer, an error status, a body
+ * that stops halfway, a body that is not JSON — is the same
+ * `sync_unreachable`, and every one of them leaves the device's events
+ * exactly as they were: still `pending`, same `clientEventId`.
+ *
+ * Giving up does not mean the server never got it. A request abandoned here
+ * may still have landed, or still be running, which is safe only because the
+ * next pass resends the same ids and the server dedupes on
+ * `(shop_id, client_event_id)` (the unique indexes in
+ * `src/db/schema/dive-day.ts`): each writer asks again under its lock, so a
+ * resend that overlaps the abandoned request is answered as a duplicate
+ * instead of a second row, a 500, or a refusal (`roll-call.postgres.test.ts`).
+ */
+async function postPendingEvents(batch: {
+  events: OfflineRollCallEvent[];
+  checklistEvents: OfflineChecklistEvent[];
+  arrivalEvents: OfflineArrivalEvent[];
+}): Promise<{ results: OfflineSyncResult[] }> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new OfflineManifestError("sync_unreachable"));
+    }, SYNC_TIMEOUT_MS);
+  });
+  const roundTrip = (async () => {
+    const response = await fetch("/api/offline-manifests/sync", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(batch),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new OfflineManifestError("sync_unreachable");
+    return (await response.json()) as { results: OfflineSyncResult[] };
+  })();
+  try {
+    // Raced as well as aborted: a fetch (or a body stream) that ignores its
+    // signal still cannot hold this past the deadline.
+    return await Promise.race([roundTrip, deadline]);
+  } catch {
+    throw new OfflineManifestError("sync_unreachable");
+  } finally {
+    clearTimeout(timer);
+    roundTrip.catch(() => undefined);
+  }
+}
+
 export async function syncOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
@@ -808,17 +867,11 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     (event) => event.syncStatus === "pending",
   );
   if (pendingOfflineEventCount(envelope) === 0 || !navigator.onLine) return envelope;
-  const response = await fetch("/api/offline-manifests/sync", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      events: pending,
-      checklistEvents: pendingChecklist,
-      arrivalEvents: pendingArrivals,
-    }),
+  const body = await postPendingEvents({
+    events: pending,
+    checklistEvents: pendingChecklist,
+    arrivalEvents: pendingArrivals,
   });
-  if (!response.ok) throw new OfflineManifestError("sync_unreachable");
-  const body = (await response.json()) as { results: OfflineSyncResult[] };
   // One map for both arrays: a roll-call event id and a checklist event id are
   // both `crypto.randomUUID()`, so they never collide, and the sync route
   // returns one flat `results` list naming whichever kind each id belongs to.

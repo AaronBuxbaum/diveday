@@ -45,6 +45,12 @@ import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { listTripGearAssignments } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
+import {
+  answeringReplayAsDuplicate,
+  type CLIENT_EVENT_CONFLICT,
+  replayVerdict,
+  type StoredOfflineEvent,
+} from "./offline-replay";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
 import {
@@ -1512,6 +1518,7 @@ export type RecordRollCallOutcome =
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
          */
         | typeof RETRACTION_SUPERSEDED
+        | typeof CLIENT_EVENT_CONFLICT
         | "snapshot_invalid";
     };
 
@@ -1788,6 +1795,52 @@ export async function rollCallOpenOnTrip(
   return row !== undefined;
 }
 
+/**
+ * The roll-call event this shop already holds under a device's
+ * `clientEventId`, with the seat it is about, or undefined. The offline replay
+ * check (`replayVerdict`): asked before any work and again under the seat
+ * lock (`recordRollCall`).
+ */
+async function storedRollCallEvent(
+  tx: DbExecutor,
+  shopId: string,
+  clientEventId: string,
+): Promise<StoredOfflineEvent | undefined> {
+  const [existing] = await tx
+    .select({
+      id: rollCallEvents.id,
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+    })
+    .from(rollCallEvents)
+    .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.clientEventId, clientEventId)))
+    .limit(1);
+  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.bookingId}` };
+}
+
+/** The same question of the crew trail (`recordCrewRollCall`), with the person. */
+async function storedCrewRollCallEvent(
+  tx: DbExecutor,
+  shopId: string,
+  clientEventId: string,
+): Promise<StoredOfflineEvent | undefined> {
+  const [existing] = await tx
+    .select({
+      id: rollCallCrewEvents.id,
+      tripId: rollCallCrewEvents.tripId,
+      personId: rollCallCrewEvents.personId,
+    })
+    .from(rollCallCrewEvents)
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, shopId),
+        eq(rollCallCrewEvents.clientEventId, clientEventId),
+      ),
+    )
+    .limit(1);
+  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.personId}` };
+}
+
 export async function recordRollCall(
   db: AppDb,
   input: {
@@ -1814,226 +1867,16 @@ export async function recordRollCall(
 ): Promise<RecordRollCallOutcome> {
   // One instant for the event and the boat snapshot it keeps (#2300).
   const occurredAt = input.occurredAt ?? nowDate();
-  const outcome = await db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
-    const checkpoint = input.checkpoint ?? "departure";
-    const source = input.source ?? "live";
-    const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
-    if (!staffId) return { ok: false, reason: "staff_not_found" };
-
-    if (source === "offline" && input.clientEventId) {
-      const [existing] = await tx
-        .select({ id: rollCallEvents.id })
-        .from(rollCallEvents)
-        .where(
-          and(
-            eq(rollCallEvents.shopId, input.shopId),
-            eq(rollCallEvents.clientEventId, input.clientEventId),
-          ),
-        )
-        .limit(1);
-      if (existing) return { ok: true, eventId: existing.id, duplicate: true };
-    }
-
-    // The departure, then the seat — the one order every seat writer takes
-    // (`lockSeatDeparture`, #2324), so neither this nor the desk ends up
-    // holding what the other is waiting for. The booking row `FOR UPDATE` is
-    // the one object the desk and the rail share, and until this lock existed
-    // they did not share it: the counter took it `FOR UPDATE` while this read
-    // was plain, so "the diver is aboard" and "the diver never came" were
-    // decided against the same pre-state, and the boat could sail carrying a
-    // body whose seat the shop had put back on sale. Raced for real in
-    // `roll-call.postgres.test.ts`, which is red the moment this is removed,
-    // and `seat-lock-order.postgres.test.ts`, red on the old booking-first order.
-    const lockedTripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
-    if (lockedTripId !== input.tripId) return { ok: false, reason: "booking_unavailable" };
-    const [booking] = await tx
-      .select({
-        id: bookings.id,
-        status: bookings.status,
-        personId: bookings.personId,
-        participantType: bookings.participantType,
-        turnedAwayAt: bookings.turnedAwayAt,
-        plannedDives: trips.plannedDives,
-        shopId: trips.shopId,
-        boatId: trips.boatId,
-        capacity: trips.capacity,
-        diverCapacity: trips.diverCapacity,
-      })
-      .from(bookings)
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.tripId, input.tripId),
-          ne(bookings.status, "cancelled"),
-          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
-        ),
-      )
-      .limit(1)
-      .for("update", { of: bookings });
-    if (!booking) return { ok: false, reason: "booking_unavailable" };
-    if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
-      return { ok: false, reason: "invalid_checkpoint" };
-    }
-
-    if (source === "offline") {
-      if (
-        offlineEventOutOfBounds({
-          clientEventId: input.clientEventId,
-          offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-          occurredAt,
-          now: nowDate(),
-        })
-      ) {
-        return { ok: false, reason: "snapshot_invalid" };
-      }
-      const [newest] = await tx
-        .select({
-          occurredAt: rollCallEvents.occurredAt,
-          clientEventId: rollCallEvents.clientEventId,
-        })
-        .from(rollCallEvents)
-        .where(
-          and(
-            eq(rollCallEvents.shopId, input.shopId),
-            eq(rollCallEvents.tripId, input.tripId),
-            eq(rollCallEvents.bookingId, booking.id),
-            eq(rollCallEvents.checkpoint, checkpoint),
-          ),
-        )
-        .orderBy(
-          desc(rollCallEvents.occurredAt),
-          desc(rollCallEvents.createdAt),
-          desc(rollCallEvents.seq),
-        )
-        .limit(1);
-      if (newest && newest.occurredAt > occurredAt) {
-        return { ok: false, reason: "newer_event_exists" };
-      }
-      // Second, and narrower: a retraction must still be about the statement
-      // that is standing. Refusing leaves that statement in place, which is the
-      // only direction that is safe here — the row this can be wrong about is a
-      // diver somebody said did not come back from a dive, and the device turns
-      // a refusal into an alarm that stays on screen rather than one that
-      // quietly clears (ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver).
-      if (
-        offlineRetractionSuperseded({
-          status: input.status,
-          retractsClientEventId: input.retractsClientEventId,
-          newest,
-        })
-      ) {
-        return { ok: false, reason: RETRACTION_SUPERSEDED };
-      }
-    }
-
-    // Readiness gates boarding at departure only. An after-dive checkpoint is a
-    // head count of bodies on the boat: a diver whose card was pulled or payment
-    // reversed mid-trip is still aboard, and refusing to record them present
-    // would corrupt the one number that says nobody was left in the water.
-    //
-    // The same reading is what the event keeps (issue #2414): a `boarded` event
-    // carries what readiness said at that moment, so a record can say "counted
-    // aboard while blocked" after the card is later verified. Written, never
-    // read to gate; every other status stores nothing.
-    let readinessSnapshot: ReadinessSnapshot | null = null;
-    if (input.status === "boarded") {
-      if (checkpoint === "departure") {
-        const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
-        if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
-        readinessSnapshot = readinessSnapshotOf(readiness);
-        // A seat the desk turned away and then sold is not the crew's to take
-        // back at the gangway: "Boat full. See the desk." (dde-3 #6). Counted
-        // under the departure lock taken above, as `undoBookingNoShow` counts.
-        // Only here: after a dive the body is on the boat, and the reclaim
-        // below stays unrefusable.
-        if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
-          const held = await heldSeatCounts(tx, input.shopId, input.tripId);
-          const capacity = await sellableCapacity(tx, booking);
-          if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
-            return { ok: false, reason: "boat_full" };
-          }
-        }
-      } else {
-        // The snapshot is a record, so a failed read costs the record and not
-        // the count: a savepoint, so even a failed query leaves the transaction
-        // usable for the insert below (issue #2414 review).
-        try {
-          const readiness = await tx.transaction((savepoint) =>
-            getBookingReadiness(savepoint, input.shopId, booking.id),
-          );
-          readinessSnapshot = readiness ? readinessSnapshotOf(readiness) : null;
-        } catch (error) {
-          log("roll_call.readiness_snapshot_skipped", "error", {
-            tripId: input.tripId,
-            checkpoint,
-            error: error instanceof Error ? error.message : "unknown",
-          });
-        }
-      }
-    }
-
-    const [event] = await tx
-      .insert(rollCallEvents)
-      .values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        bookingId: booking.id,
-        recordedByPersonId: staffId,
-        status: input.status,
-        checkpoint,
-        source,
-        clientEventId: source === "offline" ? input.clientEventId : null,
-        offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
-        note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
-          standingDiverRollCall(tx, {
-            shopId: input.shopId,
-            tripId: input.tripId,
-            bookingId: booking.id,
-            checkpoint,
-          }),
-        ),
-        readinessStatus: readinessSnapshot?.status ?? null,
-        readinessBlockers: readinessSnapshot?.blockers ?? null,
-        occurredAt,
-      })
-      .returning({ id: rollCallEvents.id });
-    if (!event) throw new Error("recordRollCall: insert returned no row");
-    await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
-    // The rail has contradicted the desk. Nothing above refused it and nothing
-    // here does either (the docblock says why); what happens instead is that
-    // the seat the counter released comes back with the body the crew are
-    // standing in front of — or looking for.
-    //
-    // **Both statements that mean the diver sailed, not the boarding alone.**
-    // `noShowGate` refuses the desk when the crew get there first; this is the
-    // same ordering when they get there second, and for one slice it covered
-    // only half of it. A crew member tapping "not back aboard" after a dive on
-    // a seat the desk had already released left a `no_show` standing over a
-    // diver in the water: the seat had left `SEAT_HELD_STATUSES` at the desk's
-    // tap, the counter had already offered it to the wait list, and the
-    // glossary's promise that the mark "cannot co-exist with a boarding at any
-    // checkpoint" was false in exactly the ordering the offline manifest makes
-    // ordinary — after-dive marks are made with no signal and arrive hours
-    // later (dive-domain-expert review, issue #1704).
-    if (booking.status === "no_show" && standingResultMeansSailed(checkpoint, input.status)) {
-      await reclaimReleasedSeat(tx, {
-        shopId: input.shopId,
-        tripId: input.tripId,
-        bookingId: booking.id,
-        personId: booking.personId,
-        recordedByPersonId: staffId,
-        occurredAt,
-        // Two facts, two trail lines: "the boat carried somebody the desk had
-        // written off" and "the desk wrote off somebody the crew then reported
-        // missing" are what an owner reconciling the departure needs told
-        // apart, and the second is the one that matters at 18:00.
-        missingAfterDive: input.status === "not_boarded",
-      });
-    }
-    return { ok: true, eventId: event.id };
-  });
+  const outcome = await answeringReplayAsDuplicate(
+    () => db.transaction((tx) => writeRollCall(tx, input, occurredAt)),
+    {
+      indexName: "roll_call_events_shop_client_event_unique",
+      clientEventId: input.clientEventId,
+      source: input.source,
+      subject: `${input.tripId}/${input.bookingId}`,
+      stored: (clientEventId) => storedRollCallEvent(db, input.shopId, clientEventId),
+    },
+  );
   // A duplicate offline-sync replay changed nothing, so it raises no signal —
   // every genuine write does, live or offline-applied alike (both funnel
   // through this one function; see ADR 20260726-manifest-push-refresh).
@@ -2048,6 +1891,242 @@ export async function recordRollCall(
   }
   logOfflineRetractionSignals(input, outcome);
   return outcome;
+}
+
+/** `recordRollCall`'s one transaction. */
+async function writeRollCall(
+  tx: AppTransaction,
+  input: Parameters<typeof recordRollCall>[1],
+  occurredAt: Date,
+): Promise<RecordRollCallOutcome> {
+  const checkpoint = input.checkpoint ?? "departure";
+  const source = input.source ?? "live";
+  const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+  if (!staffId) return { ok: false, reason: "staff_not_found" };
+
+  if (source === "offline" && input.clientEventId) {
+    const replayed = replayVerdict(
+      await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+      `${input.tripId}/${input.bookingId}`,
+      "roll_call_events",
+    );
+    if (replayed) return replayed;
+  }
+
+  // The departure, then the seat — the one order every seat writer takes
+  // (`lockSeatDeparture`, #2324), so neither this nor the desk ends up
+  // holding what the other is waiting for. The booking row `FOR UPDATE` is
+  // the one object the desk and the rail share, and until this lock existed
+  // they did not share it: the counter took it `FOR UPDATE` while this read
+  // was plain, so "the diver is aboard" and "the diver never came" were
+  // decided against the same pre-state, and the boat could sail carrying a
+  // body whose seat the shop had put back on sale. Raced for real in
+  // `roll-call.postgres.test.ts`, which is red the moment this is removed,
+  // and `seat-lock-order.postgres.test.ts`, red on the old booking-first order.
+  const lockedTripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+  // **Asked again, under the lock** (`checkInBooking` does the same). A
+  // device that gave up on a slow sync resends the same id while the request
+  // it abandoned may still be running here, holding this lock. The question
+  // above was answered before that request committed; asked now, it sees the
+  // commit. Without this the replay of a `cleared` reads its own first copy
+  // as the newest row and is refused as `retraction_superseded`, and a
+  // replayed mark reaches the insert and fails on the unique index.
+  if (source === "offline" && input.clientEventId) {
+    const replayed = replayVerdict(
+      await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+      `${input.tripId}/${input.bookingId}`,
+      "roll_call_events",
+    );
+    if (replayed) return replayed;
+  }
+  if (lockedTripId !== input.tripId) return { ok: false, reason: "booking_unavailable" };
+  const [booking] = await tx
+    .select({
+      id: bookings.id,
+      status: bookings.status,
+      personId: bookings.personId,
+      participantType: bookings.participantType,
+      turnedAwayAt: bookings.turnedAwayAt,
+      plannedDives: trips.plannedDives,
+      shopId: trips.shopId,
+      boatId: trips.boatId,
+      capacity: trips.capacity,
+      diverCapacity: trips.diverCapacity,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, input.tripId),
+        ne(bookings.status, "cancelled"),
+        scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
+      ),
+    )
+    .limit(1)
+    .for("update", { of: bookings });
+  if (!booking) return { ok: false, reason: "booking_unavailable" };
+  if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
+    return { ok: false, reason: "invalid_checkpoint" };
+  }
+
+  if (source === "offline") {
+    if (
+      offlineEventOutOfBounds({
+        clientEventId: input.clientEventId,
+        offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+        occurredAt,
+        now: nowDate(),
+      })
+    ) {
+      return { ok: false, reason: "snapshot_invalid" };
+    }
+    const [newest] = await tx
+      .select({
+        occurredAt: rollCallEvents.occurredAt,
+        clientEventId: rollCallEvents.clientEventId,
+      })
+      .from(rollCallEvents)
+      .where(
+        and(
+          eq(rollCallEvents.shopId, input.shopId),
+          eq(rollCallEvents.tripId, input.tripId),
+          eq(rollCallEvents.bookingId, booking.id),
+          eq(rollCallEvents.checkpoint, checkpoint),
+        ),
+      )
+      .orderBy(
+        desc(rollCallEvents.occurredAt),
+        desc(rollCallEvents.createdAt),
+        desc(rollCallEvents.seq),
+      )
+      .limit(1);
+    if (newest && newest.occurredAt > occurredAt) {
+      return { ok: false, reason: "newer_event_exists" };
+    }
+    // Second, and narrower: a retraction must still be about the statement
+    // that is standing. Refusing leaves that statement in place, which is the
+    // only direction that is safe here — the row this can be wrong about is a
+    // diver somebody said did not come back from a dive, and the device turns
+    // a refusal into an alarm that stays on screen rather than one that
+    // quietly clears (ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver).
+    if (
+      offlineRetractionSuperseded({
+        status: input.status,
+        retractsClientEventId: input.retractsClientEventId,
+        newest,
+      })
+    ) {
+      return { ok: false, reason: RETRACTION_SUPERSEDED };
+    }
+  }
+
+  // Readiness gates boarding at departure only. An after-dive checkpoint is a
+  // head count of bodies on the boat: a diver whose card was pulled or payment
+  // reversed mid-trip is still aboard, and refusing to record them present
+  // would corrupt the one number that says nobody was left in the water.
+  //
+  // The same reading is what the event keeps (issue #2414): a `boarded` event
+  // carries what readiness said at that moment, so a record can say "counted
+  // aboard while blocked" after the card is later verified. Written, never
+  // read to gate; every other status stores nothing.
+  let readinessSnapshot: ReadinessSnapshot | null = null;
+  if (input.status === "boarded") {
+    if (checkpoint === "departure") {
+      const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
+      if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+      readinessSnapshot = readinessSnapshotOf(readiness);
+      // A seat the desk turned away and then sold is not the crew's to take
+      // back at the gangway: "Boat full. See the desk." (dde-3 #6). Counted
+      // under the departure lock taken above, as `undoBookingNoShow` counts.
+      // Only here: after a dive the body is on the boat, and the reclaim
+      // below stays unrefusable.
+      if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
+        const held = await heldSeatCounts(tx, input.shopId, input.tripId);
+        const capacity = await sellableCapacity(tx, booking);
+        if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
+          return { ok: false, reason: "boat_full" };
+        }
+      }
+    } else {
+      // The snapshot is a record, so a failed read costs the record and not
+      // the count: a savepoint, so even a failed query leaves the transaction
+      // usable for the insert below (issue #2414 review).
+      try {
+        const readiness = await tx.transaction((savepoint) =>
+          getBookingReadiness(savepoint, input.shopId, booking.id),
+        );
+        readinessSnapshot = readiness ? readinessSnapshotOf(readiness) : null;
+      } catch (error) {
+        log("roll_call.readiness_snapshot_skipped", "error", {
+          tripId: input.tripId,
+          checkpoint,
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    }
+  }
+
+  const [event] = await tx
+    .insert(rollCallEvents)
+    .values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: staffId,
+      status: input.status,
+      checkpoint,
+      source,
+      clientEventId: source === "offline" ? input.clientEventId : null,
+      offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
+      note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+        standingDiverRollCall(tx, {
+          shopId: input.shopId,
+          tripId: input.tripId,
+          bookingId: booking.id,
+          checkpoint,
+        }),
+      ),
+      readinessStatus: readinessSnapshot?.status ?? null,
+      readinessBlockers: readinessSnapshot?.blockers ?? null,
+      occurredAt,
+    })
+    .returning({ id: rollCallEvents.id });
+  if (!event) throw new Error("recordRollCall: insert returned no row");
+  await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
+  // The rail has contradicted the desk. Nothing above refused it and nothing
+  // here does either (the docblock says why); what happens instead is that
+  // the seat the counter released comes back with the body the crew are
+  // standing in front of — or looking for.
+  //
+  // **Both statements that mean the diver sailed, not the boarding alone.**
+  // `noShowGate` refuses the desk when the crew get there first; this is the
+  // same ordering when they get there second, and for one slice it covered
+  // only half of it. A crew member tapping "not back aboard" after a dive on
+  // a seat the desk had already released left a `no_show` standing over a
+  // diver in the water: the seat had left `SEAT_HELD_STATUSES` at the desk's
+  // tap, the counter had already offered it to the wait list, and the
+  // glossary's promise that the mark "cannot co-exist with a boarding at any
+  // checkpoint" was false in exactly the ordering the offline manifest makes
+  // ordinary — after-dive marks are made with no signal and arrive hours
+  // later (dive-domain-expert review, issue #1704).
+  if (booking.status === "no_show" && standingResultMeansSailed(checkpoint, input.status)) {
+    await reclaimReleasedSeat(tx, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      bookingId: booking.id,
+      personId: booking.personId,
+      recordedByPersonId: staffId,
+      occurredAt,
+      // Two facts, two trail lines: "the boat carried somebody the desk had
+      // written off" and "the desk wrote off somebody the crew then reported
+      // missing" are what an owner reconciling the departure needs told
+      // apart, and the second is the one that matters at 18:00.
+      missingAfterDive: input.status === "not_boarded",
+    });
+  }
+  return { ok: true, eventId: event.id };
 }
 
 export type RecordCrewRollCallOutcome =
@@ -2068,6 +2147,7 @@ export type RecordCrewRollCallOutcome =
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
          */
         | typeof RETRACTION_SUPERSEDED
+        | typeof CLIENT_EVENT_CONFLICT
         | "snapshot_invalid";
     };
 
@@ -2095,8 +2175,8 @@ export type RecordCrewRollCallOutcome =
  * whichever half of the head count is speaking.
  *
  * **The `source === "offline"` branch is `recordRollCall`'s, mirrored.** Read
- * the two side by side: dedup on `clientEventId` before any other work, the
- * shared `offlineEventOutOfBounds` staleness bound, then newest-wins against
+ * the two side by side: dedup on `clientEventId` before any other work and
+ * again under the trip lock, the shared `offlineEventOutOfBounds` staleness bound, then newest-wins against
  * this subject's own history at this checkpoint. They agree because a
  * crew-specific interpretation of any of the three is how a device retry
  * double-writes, or an out-of-order one overwrites, the record of who came back
@@ -2124,249 +2204,265 @@ export async function recordCrewRollCall(
 ): Promise<RecordCrewRollCallOutcome> {
   // One instant for the event and the boat snapshot it keeps (#2300).
   const occurredAt = input.occurredAt ?? nowDate();
-  const outcome = await db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
-    const checkpoint = input.checkpoint ?? "departure";
-    const source = input.source ?? "live";
+  const outcome = await answeringReplayAsDuplicate(
+    () =>
+      db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
+        const checkpoint = input.checkpoint ?? "departure";
+        const source = input.source ?? "live";
 
-    const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
-    if (!staffId) return { ok: false, reason: "staff_not_found" };
+        const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+        if (!staffId) return { ok: false, reason: "staff_not_found" };
 
-    // Idempotency first, exactly as the diver path does it: a sync the device
-    // retried (the response never arrived, the tab was closed mid-flight) must
-    // not append a second row, and answering `duplicate` before any subject
-    // lookup means a replay costs nothing and cannot be refused by a roster
-    // that has changed since.
-    if (source === "offline" && input.clientEventId) {
-      const [existing] = await tx
-        .select({ id: rollCallCrewEvents.id })
-        .from(rollCallCrewEvents)
-        .where(
-          and(
-            eq(rollCallCrewEvents.shopId, input.shopId),
-            eq(rollCallCrewEvents.clientEventId, input.clientEventId),
-          ),
-        )
-        .limit(1);
-      if (existing) return { ok: true, eventId: existing.id, duplicate: true };
-    }
+        // Idempotency first, exactly as the diver path does it: a sync the device
+        // retried (the response never arrived, the tab was closed mid-flight) must
+        // not append a second row, and answering `duplicate` before any subject
+        // lookup means a replay costs nothing and cannot be refused by a roster
+        // that has changed since.
+        if (source === "offline" && input.clientEventId) {
+          const replayed = replayVerdict(
+            await storedCrewRollCallEvent(tx, input.shopId, input.clientEventId),
+            `${input.tripId}/${input.personId}`,
+            "roll_call_crew_events",
+          );
+          if (replayed) return replayed;
+        }
 
-    // Same tenancy and trip-status gate the other two writers apply — and the
-    // trip's lock, taken here, before the crew member's own seat below
-    // (#2324's one order: trip, then booking). An after-dive `not_boarded`
-    // locks that seat and then updates this row
-    // (`pauseRecapOnMissingAfterDive`); booking-then-trip deadlocked against
-    // the counter on a staffer's seat (`seat-lock-order.postgres.test.ts`).
-    // `no key update`, so the event's own foreign-key `KEY SHARE` passes.
-    const [trip] = await tx
-      .select({ id: trips.id, plannedDives: trips.plannedDives })
-      .from(trips)
-      .where(
-        and(
-          liveTrip(),
-          eq(trips.id, input.tripId),
-          eq(trips.shopId, input.shopId),
-          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
-        ),
-      )
-      .limit(1)
-      .for("no key update", { of: trips });
-    if (!trip) return { ok: false, reason: "trip_unavailable" };
-    if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
-      return { ok: false, reason: "invalid_checkpoint" };
-    }
+        // Same tenancy and trip-status gate the other two writers apply — and the
+        // trip's lock, taken here, before the crew member's own seat below
+        // (#2324's one order: trip, then booking). An after-dive `not_boarded`
+        // locks that seat and then updates this row
+        // (`pauseRecapOnMissingAfterDive`); booking-then-trip deadlocked against
+        // the counter on a staffer's seat (`seat-lock-order.postgres.test.ts`).
+        // `no key update`, so the event's own foreign-key `KEY SHARE` passes.
+        const [trip] = await tx
+          .select({ id: trips.id, plannedDives: trips.plannedDives })
+          .from(trips)
+          .where(
+            and(
+              liveTrip(),
+              eq(trips.id, input.tripId),
+              eq(trips.shopId, input.shopId),
+              scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
+            ),
+          )
+          .limit(1)
+          .for("no key update", { of: trips });
+        // Asked again under the trip lock, for `recordRollCall`'s reason: a resent
+        // sync can overlap the request it replaced, and only now does that
+        // request's commit show.
+        if (source === "offline" && input.clientEventId) {
+          const replayed = replayVerdict(
+            await storedCrewRollCallEvent(tx, input.shopId, input.clientEventId),
+            `${input.tripId}/${input.personId}`,
+            "roll_call_crew_events",
+          );
+          if (replayed) return replayed;
+        }
+        if (!trip) return { ok: false, reason: "trip_unavailable" };
+        if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
+          return { ok: false, reason: "invalid_checkpoint" };
+        }
 
-    // `isOnTripCrew` — the identical condition `listTripCrew` reads the crew
-    // list through, which is the whole point of it being one function. Without
-    // it this accepted a subject who was assigned but held no staff role and
-    // no history: their events were written, and then neither the crew list
-    // nor the denominator ever mentioned them, so a result existed about
-    // somebody the head count could not see (review 20260803, D11). It also
-    // *keeps accepting* a former staff member who is still on the list because
-    // of a result already recorded — so a checkpoint they are holding open can
-    // still be closed by naming what happened to them, rather than only by
-    // deleting them.
-    const [assigned] = await tx
-      .select({ personId: tripAssignments.personId })
-      .from(tripAssignments)
-      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-      .innerJoin(people, eq(people.id, tripAssignments.personId))
-      .leftJoin(
-        personRoles,
-        and(eq(personRoles.personId, people.id), inArray(personRoles.role, [...STAFF_ROLES])),
-      )
-      .where(
-        and(
-          liveTrip(),
-          eq(tripAssignments.tripId, input.tripId),
-          eq(tripAssignments.personId, input.personId),
-          eq(trips.shopId, input.shopId),
-          eq(people.shopId, input.shopId),
-          isOnTripCrew(tx, input.shopId, input.tripId),
-        ),
-      )
-      .limit(1);
-    if (!assigned) return { ok: false, reason: "crew_not_assigned" };
+        // `isOnTripCrew` — the identical condition `listTripCrew` reads the crew
+        // list through, which is the whole point of it being one function. Without
+        // it this accepted a subject who was assigned but held no staff role and
+        // no history: their events were written, and then neither the crew list
+        // nor the denominator ever mentioned them, so a result existed about
+        // somebody the head count could not see (review 20260803, D11). It also
+        // *keeps accepting* a former staff member who is still on the list because
+        // of a result already recorded — so a checkpoint they are holding open can
+        // still be closed by naming what happened to them, rather than only by
+        // deleting them.
+        const [assigned] = await tx
+          .select({ personId: tripAssignments.personId })
+          .from(tripAssignments)
+          .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+          .innerJoin(people, eq(people.id, tripAssignments.personId))
+          .leftJoin(
+            personRoles,
+            and(eq(personRoles.personId, people.id), inArray(personRoles.role, [...STAFF_ROLES])),
+          )
+          .where(
+            and(
+              liveTrip(),
+              eq(tripAssignments.tripId, input.tripId),
+              eq(tripAssignments.personId, input.personId),
+              eq(trips.shopId, input.shopId),
+              eq(people.shopId, input.shopId),
+              isOnTripCrew(tx, input.shopId, input.tripId),
+            ),
+          )
+          .limit(1);
+        if (!assigned) return { ok: false, reason: "crew_not_assigned" };
 
-    if (source === "offline") {
-      if (
-        offlineEventOutOfBounds({
-          clientEventId: input.clientEventId,
-          offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-          occurredAt,
-          now: nowDate(),
-        })
-      ) {
-        return { ok: false, reason: "snapshot_invalid" };
-      }
-      const [newest] = await tx
-        .select({
-          occurredAt: rollCallCrewEvents.occurredAt,
-          clientEventId: rollCallCrewEvents.clientEventId,
-        })
-        .from(rollCallCrewEvents)
-        .where(
-          and(
-            eq(rollCallCrewEvents.shopId, input.shopId),
-            eq(rollCallCrewEvents.tripId, input.tripId),
-            eq(rollCallCrewEvents.personId, assigned.personId),
-            eq(rollCallCrewEvents.checkpoint, checkpoint),
-          ),
-        )
-        .orderBy(
-          desc(rollCallCrewEvents.occurredAt),
-          desc(rollCallCrewEvents.createdAt),
-          desc(rollCallCrewEvents.seq),
-        )
-        .limit(1);
-      if (newest && newest.occurredAt > occurredAt) {
-        return { ok: false, reason: "newer_event_exists" };
-      }
-      // The same compare-and-set the diver path applies, through the same
-      // predicate — a crew-specific reading of when a retraction is still about
-      // the statement standing is how the two halves of one head count start
-      // disagreeing about whether a divemaster is still in the water.
-      if (
-        offlineRetractionSuperseded({
-          status: input.status,
-          retractsClientEventId: input.retractsClientEventId,
-          newest,
-        })
-      ) {
-        return { ok: false, reason: RETRACTION_SUPERSEDED };
-      }
-    }
-
-    // **The other half of the head count takes the seat back too**
-    // (dive-domain-expert review, issue #1686).
-    //
-    // `onTheWaterByRollCall` answers from two tables — the diver trail and,
-    // for a staffer who holds a seat on a trip they crew, this one — so the
-    // desk is refused when the crew get there first whichever table spoke. The
-    // mirror act was the diver table's alone, which left the desk-first
-    // ordering open on exactly the seat the diver path cannot cover: a
-    // staffer's own seat is the one that fails readiness, so the crew list is
-    // often the only place a boarding for them can be written at all. Marked
-    // absent at 08:20 because they went straight to the boat, boarded at the
-    // rail at 08:25, and the release stood — the seat sellable to a walk-in
-    // while its holder was on the water, and struck from every reader that
-    // counts a **dive day**, which hands a divemaster diving five days running
-    // the single-day flying wait.
-    //
-    // **Read here, before the insert, and with a `where` that does not narrow
-    // to `no_show`.** Not because the reclaim needs the row early — it does not
-    // — but because nothing else on this path touches a booking at all, so
-    // without this read the desk and the rail share no lock object and decide
-    // against the same pre-state *every* time rather than under a race. The
-    // `where` is the other half: narrowing it to `no_show` locks nothing until
-    // the desk's mark is already visible, which is the same gap wearing a
-    // `FOR UPDATE`. So the row is taken whole and the status it read decides
-    // whether there is anything to undo. `roll-call.postgres.test.ts` is red on
-    // either shortcut, at the gate rather than at the assertions.
-    //
-    // The branch that does *not* mean the person sailed — a dock `not_boarded`,
-    // a `cleared` — takes no lock, and needs none: it can only ever leave a
-    // release standing, never create one. Racing the desk there, the desk
-    // either still sees the boarding this event is superseding and refuses, or
-    // sees it gone and marks; what it cannot do is release a seat over a
-    // standing sailed result, because that is the read it makes under its own
-    // lock.
-    //
-    // **The reclaim hangs off the insert, not off this read**, which is why the
-    // two are apart. Moving the read earlier is harmless; moving the *reclaim*
-    // to any path that returns without writing is not. An older `boarded`
-    // losing newest-wins to a standing `cleared` answers `newer_event_exists`,
-    // so nothing stands that means the person sailed — taking their seat back
-    // there would leave the booking out of `no_show` with
-    // `onTheWaterByRollCall` still answering null about the same human, and a
-    // walk-in possibly already holding it. `manifests.test.ts` pins that
-    // ordering; nothing else in the file does.
-    //
-    // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
-    // crew member — who holds no seat — pays one index miss and locks nothing.
-    // The trip is already held (`for no key update`, above), so this takes
-    // the seat second, in the counter's own order (`lockSeatDeparture`).
-    const seat = standingResultMeansSailed(checkpoint, input.status)
-      ? ((
-          await tx
-            .select({ id: bookings.id, status: bookings.status })
-            .from(bookings)
+        if (source === "offline") {
+          if (
+            offlineEventOutOfBounds({
+              clientEventId: input.clientEventId,
+              offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+              occurredAt,
+              now: nowDate(),
+            })
+          ) {
+            return { ok: false, reason: "snapshot_invalid" };
+          }
+          const [newest] = await tx
+            .select({
+              occurredAt: rollCallCrewEvents.occurredAt,
+              clientEventId: rollCallCrewEvents.clientEventId,
+            })
+            .from(rollCallCrewEvents)
             .where(
               and(
-                eq(bookings.shopId, input.shopId),
-                eq(bookings.tripId, input.tripId),
-                eq(bookings.personId, assigned.personId),
-                ne(bookings.status, "cancelled"),
+                eq(rollCallCrewEvents.shopId, input.shopId),
+                eq(rollCallCrewEvents.tripId, input.tripId),
+                eq(rollCallCrewEvents.personId, assigned.personId),
+                eq(rollCallCrewEvents.checkpoint, checkpoint),
               ),
             )
-            .limit(1)
-            .for("update")
-        )[0] ?? null)
-      : null;
+            .orderBy(
+              desc(rollCallCrewEvents.occurredAt),
+              desc(rollCallCrewEvents.createdAt),
+              desc(rollCallCrewEvents.seq),
+            )
+            .limit(1);
+          if (newest && newest.occurredAt > occurredAt) {
+            return { ok: false, reason: "newer_event_exists" };
+          }
+          // The same compare-and-set the diver path applies, through the same
+          // predicate — a crew-specific reading of when a retraction is still about
+          // the statement standing is how the two halves of one head count start
+          // disagreeing about whether a divemaster is still in the water.
+          if (
+            offlineRetractionSuperseded({
+              status: input.status,
+              retractsClientEventId: input.retractsClientEventId,
+              newest,
+            })
+          ) {
+            return { ok: false, reason: RETRACTION_SUPERSEDED };
+          }
+        }
 
-    const [event] = await tx
-      .insert(rollCallCrewEvents)
-      .values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        personId: assigned.personId,
-        recordedByPersonId: staffId,
-        status: input.status,
-        checkpoint,
-        source,
-        clientEventId: source === "offline" ? input.clientEventId : null,
-        // No `offlineSnapshotSavedAt` counterpart: the diver row keeps it as
-        // evidence of which snapshot supplied the *readiness* it boarded on,
-        // and a crew member has no readiness to evidence. It is still an input
-        // above, where the staleness bound is computed from it.
-        note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
-          standingCrewRollCall(tx, {
+        // **The other half of the head count takes the seat back too**
+        // (dive-domain-expert review, issue #1686).
+        //
+        // `onTheWaterByRollCall` answers from two tables — the diver trail and,
+        // for a staffer who holds a seat on a trip they crew, this one — so the
+        // desk is refused when the crew get there first whichever table spoke. The
+        // mirror act was the diver table's alone, which left the desk-first
+        // ordering open on exactly the seat the diver path cannot cover: a
+        // staffer's own seat is the one that fails readiness, so the crew list is
+        // often the only place a boarding for them can be written at all. Marked
+        // absent at 08:20 because they went straight to the boat, boarded at the
+        // rail at 08:25, and the release stood — the seat sellable to a walk-in
+        // while its holder was on the water, and struck from every reader that
+        // counts a **dive day**, which hands a divemaster diving five days running
+        // the single-day flying wait.
+        //
+        // **Read here, before the insert, and with a `where` that does not narrow
+        // to `no_show`.** Not because the reclaim needs the row early — it does not
+        // — but because nothing else on this path touches a booking at all, so
+        // without this read the desk and the rail share no lock object and decide
+        // against the same pre-state *every* time rather than under a race. The
+        // `where` is the other half: narrowing it to `no_show` locks nothing until
+        // the desk's mark is already visible, which is the same gap wearing a
+        // `FOR UPDATE`. So the row is taken whole and the status it read decides
+        // whether there is anything to undo. `roll-call.postgres.test.ts` is red on
+        // either shortcut, at the gate rather than at the assertions.
+        //
+        // The branch that does *not* mean the person sailed — a dock `not_boarded`,
+        // a `cleared` — takes no lock, and needs none: it can only ever leave a
+        // release standing, never create one. Racing the desk there, the desk
+        // either still sees the boarding this event is superseding and refuses, or
+        // sees it gone and marks; what it cannot do is release a seat over a
+        // standing sailed result, because that is the read it makes under its own
+        // lock.
+        //
+        // **The reclaim hangs off the insert, not off this read**, which is why the
+        // two are apart. Moving the read earlier is harmless; moving the *reclaim*
+        // to any path that returns without writing is not. An older `boarded`
+        // losing newest-wins to a standing `cleared` answers `newer_event_exists`,
+        // so nothing stands that means the person sailed — taking their seat back
+        // there would leave the booking out of `no_show` with
+        // `onTheWaterByRollCall` still answering null about the same human, and a
+        // walk-in possibly already holding it. `manifests.test.ts` pins that
+        // ordering; nothing else in the file does.
+        //
+        // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
+        // crew member — who holds no seat — pays one index miss and locks nothing.
+        // The trip is already held (`for no key update`, above), so this takes
+        // the seat second, in the counter's own order (`lockSeatDeparture`).
+        const seat = standingResultMeansSailed(checkpoint, input.status)
+          ? ((
+              await tx
+                .select({ id: bookings.id, status: bookings.status })
+                .from(bookings)
+                .where(
+                  and(
+                    eq(bookings.shopId, input.shopId),
+                    eq(bookings.tripId, input.tripId),
+                    eq(bookings.personId, assigned.personId),
+                    ne(bookings.status, "cancelled"),
+                  ),
+                )
+                .limit(1)
+                .for("update")
+            )[0] ?? null)
+          : null;
+
+        const [event] = await tx
+          .insert(rollCallCrewEvents)
+          .values({
             shopId: input.shopId,
             tripId: input.tripId,
-            personId: input.personId,
+            personId: assigned.personId,
+            recordedByPersonId: staffId,
+            status: input.status,
             checkpoint,
-          }),
-        ),
-        occurredAt,
-      })
-      .returning({ id: rollCallCrewEvents.id });
-    if (!event) throw new Error("recordCrewRollCall: insert returned no row");
-    await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
-    // The seat was released and the rail has now said the person sailed, so it
-    // comes back with them — the same consequence, the same trail lines and the
-    // same one-direction rule as the diver path's (`reclaimReleasedSeat`).
-    if (seat?.status === "no_show") {
-      await reclaimReleasedSeat(tx, {
-        shopId: input.shopId,
-        tripId: input.tripId,
-        bookingId: seat.id,
-        personId: assigned.personId,
-        recordedByPersonId: staffId,
-        occurredAt,
-        missingAfterDive: input.status === "not_boarded",
-      });
-    }
-    return { ok: true, eventId: event.id };
-  });
+            source,
+            clientEventId: source === "offline" ? input.clientEventId : null,
+            // No `offlineSnapshotSavedAt` counterpart: the diver row keeps it as
+            // evidence of which snapshot supplied the *readiness* it boarded on,
+            // and a crew member has no readiness to evidence. It is still an input
+            // above, where the staleness bound is computed from it.
+            note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+              standingCrewRollCall(tx, {
+                shopId: input.shopId,
+                tripId: input.tripId,
+                personId: input.personId,
+                checkpoint,
+              }),
+            ),
+            occurredAt,
+          })
+          .returning({ id: rollCallCrewEvents.id });
+        if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+        await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
+        // The seat was released and the rail has now said the person sailed, so it
+        // comes back with them — the same consequence, the same trail lines and the
+        // same one-direction rule as the diver path's (`reclaimReleasedSeat`).
+        if (seat?.status === "no_show") {
+          await reclaimReleasedSeat(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            bookingId: seat.id,
+            personId: assigned.personId,
+            recordedByPersonId: staffId,
+            occurredAt,
+            missingAfterDive: input.status === "not_boarded",
+          });
+        }
+        return { ok: true, eventId: event.id };
+      }),
+    {
+      indexName: "roll_call_crew_events_shop_client_event_unique",
+      clientEventId: input.clientEventId,
+      source: input.source,
+      subject: `${input.tripId}/${input.personId}`,
+      stored: (clientEventId) => storedCrewRollCallEvent(db, input.shopId, clientEventId),
+    },
+  );
   // Same push signal the other head-count writes raise: this changes whether
   // the checkpoint reads complete on every device holding the manifest open —
   // and, as on the diver path, a duplicate offline replay changed nothing, so

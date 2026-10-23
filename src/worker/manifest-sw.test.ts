@@ -404,6 +404,24 @@ describe("the /ready/ registration's fetch", () => {
     expect(await (await offline.responded)?.text()).toContain("live");
   });
 
+  it("serves the kept copy within four seconds when the network never answers", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      fetchMock.mockImplementationOnce(() => new Promise<Response>(() => {}));
+      const dead = navigate(`https://dive.day${PATH}`);
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(await (await dead.responded)?.text()).toContain("live");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   /** Security review of layer 8, D2: a self-cancel lands here, and the copy goes with the seat. */
   it("forgets the copy when the page comes back cancelled", async () => {
     fetchMock.mockResolvedValueOnce(html("live"));
@@ -454,5 +472,167 @@ describe("the /ready/ registration's fetch", () => {
     const load = navigate(`https://dive.day${PATH}`);
     expect(load.responded).toBeUndefined();
     expect(kept.size).toBe(0);
+  });
+});
+
+/**
+ * Dock Wi-Fi that shows full bars and carries nothing: the request neither
+ * answers nor fails. Every fallback below used to wait for `fetch` to *fail*,
+ * so on that network the captain stared at a blank tab instead of the saved
+ * roll call. A fetch that never settles (and ignores its abort signal, the
+ * worst case) is the adversary here.
+ */
+describe("a navigation on a network that never answers", () => {
+  const SHELL = new Response("offline shell", { status: 200 });
+  const TRIP = "0b6c3a52-6f1e-4c55-9d0a-2f1d8f2b9c11";
+  let shellSaved = true;
+
+  function navigate(url: string) {
+    const handler = listeners.get("fetch");
+    if (!handler) throw new Error("no fetch listener");
+    let responded: Promise<Response> | undefined;
+    handler({
+      request: { url, method: "GET", mode: "navigate" },
+      respondWith: (promise: Promise<Response>) => {
+        responded = promise;
+      },
+      waitUntil: () => {},
+    });
+    if (!responded) throw new Error(`the worker left ${url} to the browser`);
+    return responded;
+  }
+
+  /** Settles `promise` or reports that it is still waiting after `ms` of fake time. */
+  async function settledAfter<T>(promise: Promise<T>, ms: number): Promise<T | "still waiting"> {
+    const marker = Symbol("pending");
+    let outcome: T | typeof marker = marker;
+    promise.then((value) => {
+      outcome = value;
+    });
+    await vi.advanceTimersByTimeAsync(ms);
+    return outcome === marker ? "still waiting" : outcome;
+  }
+
+  const hung = () => new Promise<Response>(() => {});
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    shellSaved = true;
+    vi.stubGlobal("caches", {
+      match: async (key: string) =>
+        shellSaved && key === "/offline-manifest" ? SHELL.clone() : undefined,
+      open: async () => ({ put: async () => {}, match: async () => undefined }),
+    });
+    fetchMock.mockImplementation(hung);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("lands the captain on the saved roll call within four seconds, checkpoint and all", async () => {
+    const response = navigate(
+      `https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest?checkpoint=after_dive_1`,
+    );
+    expect(await settledAfter(response, 3_999)).toBe("still waiting");
+    const landed = await settledAfter(response, 1);
+    if (landed === "still waiting") throw new Error("still waiting at four seconds");
+    expect(landed.status).toBe(302);
+    expect(landed.headers.get("location")).toBe(
+      `https://dive.day/offline-manifest?trip=${TRIP}&checkpoint=after_dive_1&fallback=slow`,
+    );
+  });
+
+  it("asks the network to stop once it has given up on it", async () => {
+    const response = navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`);
+    await settledAfter(response, 4_000);
+    const init = fetchMock.mock.calls[0]?.[1] as { signal?: AbortSignal } | undefined;
+    expect(init?.signal?.aborted).toBe(true);
+  });
+
+  it("lands the counter on its saved copy within four seconds", async () => {
+    const landed = await settledAfter(
+      navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}`),
+      4_000,
+    );
+    if (landed === "still waiting") throw new Error("still waiting at four seconds");
+    expect(landed.headers.get("location")).toBe(
+      `https://dive.day/offline-manifest?trip=${TRIP}&fallback=slow`,
+    );
+  });
+
+  it("lands the bare address on the saved copy within four seconds", async () => {
+    const landed = await settledAfter(navigate("https://dive.day/"), 4_000);
+    if (landed === "still waiting") throw new Error("still waiting at four seconds");
+    expect(landed.headers.get("location")).toBe("https://dive.day/offline-manifest?fallback=slow");
+  });
+
+  it("serves the saved offline shell itself within four seconds", async () => {
+    const landed = await settledAfter(navigate("https://dive.day/offline-manifest"), 4_000);
+    if (landed === "still waiting") throw new Error("still waiting at four seconds");
+    expect(await landed.text()).toBe("offline shell");
+  });
+
+  it("says a request that failed outright was a failure, not a slow answer", async () => {
+    fetchMock.mockImplementation(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    const landed = await settledAfter(
+      navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`),
+      0,
+    );
+    if (landed === "still waiting") throw new Error("a failed request still waited");
+    expect(landed.headers.get("location")).toBe(
+      `https://dive.day/offline-manifest?trip=${TRIP}&fallback=failed`,
+    );
+  });
+
+  /**
+   * Captain review S3: the worker's own redirect is a second navigation, and
+   * it went through the four-second wait again before the shell, so a dead
+   * link put first paint at eight seconds. Timed end to end: the live
+   * manifest, its redirect, and the shell that redirect names.
+   */
+  it("puts the saved roll call on screen within four seconds in all, redirect included", async () => {
+    const live = navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`);
+    expect(await settledAfter(live, 3_999)).toBe("still waiting");
+    const redirect = await settledAfter(live, 1);
+    if (redirect === "still waiting") throw new Error("still waiting at four seconds");
+    const location = redirect.headers.get("location");
+    if (!location) throw new Error("the worker answered without a redirect");
+    const requestsBeforeHop = fetchMock.mock.calls.length;
+
+    const shell = await settledAfter(navigate(location), 0);
+
+    if (shell === "still waiting") throw new Error("the hop to the shell waited again");
+    expect(await shell.text()).toBe("offline shell");
+    expect(fetchMock.mock.calls.length).toBe(requestsBeforeHop);
+  });
+
+  it("keeps waiting for a slow page when the device has nothing saved to show instead", async () => {
+    shellSaved = false;
+    let answer: (response: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const response = navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`);
+    expect(await settledAfter(response, 4_000)).toBe("still waiting");
+    answer(new Response("live manifest", { status: 200 }));
+    const landed = await settledAfter(response, 0);
+    if (landed === "still waiting") throw new Error("the late page never arrived");
+    expect(await landed.text()).toBe("live manifest");
+  });
+
+  it("still serves the live page when it answers inside four seconds", async () => {
+    fetchMock.mockImplementation(async () => new Response("live manifest", { status: 200 }));
+    const landed = await settledAfter(
+      navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`),
+      0,
+    );
+    if (landed === "still waiting") throw new Error("the live page never arrived");
+    expect(await landed.text()).toBe("live manifest");
   });
 });

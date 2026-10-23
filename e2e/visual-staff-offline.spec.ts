@@ -106,6 +106,42 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The saved copy the worker opened because DiveDay did not answer**
+       * (captain review B1, 2026-10-23). Online, and saved a moment ago, so
+       * the ordinary header would read "Online · Fresh copy · This copy is
+       * current"; this one says DiveDay did not answer and when the copy was
+       * saved. The live manifest is held silent so the shell's own ask does
+       * not bring up the offer before the first frame; then it answers, and
+       * the second frame is the offer (re-review R1).
+       */
+      test(`an offline copy opened for a silent DiveDay renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await settleOfflineShellWorker(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
+        await page.route(
+          (url) => url.pathname.endsWith("/manifest") && url.pathname.includes("/trips/"),
+          () => {},
+        );
+        await page.goto(`/offline-manifest?trip=${tripId}&fallback=slow`);
+        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+        await expect(page.getByText("No answer · device copy")).toBeVisible();
+        await capture(page, "offline-manifest-unanswered", scheme);
+
+        await page.unrouteAll();
+        await expect(
+          page.getByRole("status").filter({ hasText: "DiveDay is answering again." }),
+        ).toBeVisible({
+          timeout: 15_000,
+        });
+        await capture(page, "offline-manifest-live-answering", scheme);
+      });
+
+      /**
        * **The same saved copy after a dive, with nothing recorded yet** — the
        * ordinary opening of a surface-interval count at sea. "Mark not back
        * aboard" is neutral on every row until somebody records it, as on the

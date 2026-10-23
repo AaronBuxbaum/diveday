@@ -26,6 +26,15 @@ import {
 import { offlinePreviousGaps } from "./checkpoint-gap-inputs";
 import { deviceLocale } from "./shared";
 
+/** The live manifest this saved copy stands in for, at the checkpoint on screen. */
+export function liveManifestHref(
+  envelope: OfflineManifestEnvelope,
+  tripId: string,
+  checkpoint: RollCallCheckpoint,
+): string {
+  return `/shop/${envelope.snapshot.shop.slug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
+}
+
 /**
  * **What the saved copy says at this checkpoint** — every count, seat and
  * crew reading the offline manifest draws, derived from the decrypted copy

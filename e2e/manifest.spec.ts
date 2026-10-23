@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
@@ -10,6 +11,8 @@ import {
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
+
+const staff = staffTranslator("en-US");
 
 signedInAsOwner();
 
@@ -598,6 +601,48 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
   // showing one checkpoint's data under another's label.
   await page.goto(`/offline-manifest?trip=${tripId}&checkpoint=after_dive_999`);
   await expect(page.getByRole("heading", { name: "Before departure roll call" })).toBeVisible();
+});
+
+/**
+ * **A copy the worker opened because DiveDay was slow** (captain review B1,
+ * 2026-10-23; re-review R1, R2). The worker swaps the saved copy in after four
+ * silent seconds on a link that still reads online, and the header used to
+ * call that copy "Online · Fresh copy · This copy is current". Playwright
+ * cannot hold a worker's own fetch open, so this lands where the worker's
+ * redirect lands, on the list, as the root path's does; `manifest-sw.test.ts`
+ * covers the redirect itself. Once DiveDay answers, the copy offers the live
+ * manifest and the captain chooses when: it never leaves on its own.
+ */
+test("a copy opened because DiveDay was slow says so from the list on, and offers the live manifest once it answers", async ({
+  page,
+}) => {
+  // The board walk, then one live-manifest ask (five seconds) and the open.
+  test.setTimeout(35_000);
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+  await offlineCopySaved(page);
+  const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
+
+  await page.goto("/offline-manifest?fallback=slow");
+  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+
+  await expect(page).toHaveURL(`/offline-manifest?trip=${tripId}&fallback=slow`);
+  await expect(page.getByText(staff("shared.connectivity.unansweredWithCopy"))).toBeVisible();
+  await expect(page.getByText(/DiveDay didn’t answer, so this is the list/)).toBeVisible();
+  await expect(page.getByText("Fresh copy")).toHaveCount(0);
+  await expect(page.getByText(staff("shared.connectivity.online"), { exact: true })).toHaveCount(0);
+  // DiveDay answers this time: the copy says so and offers the live list,
+  // and stays put until the captain takes the offer.
+  const offer = page
+    .getByRole("status")
+    .filter({ hasText: staff("shared.offlineManifest.single.liveAnswering") })
+    .getByRole("link", { name: staff("shared.offlineManifest.single.openLiveManifest") });
+  await expect(offer).toBeVisible({ timeout: 15_000 });
+  await expect(page).toHaveURL(`/offline-manifest?trip=${tripId}&fallback=slow`);
+  await offer.click();
+  await page.waitForURL((url) => url.pathname.endsWith(`/trips/${tripId}/manifest`));
+  await expect(page.getByRole("heading", { name: /roll call/ })).toBeVisible();
 });
 
 test("visiting any shop page auto-saves the near-term board without opening a manifest, and dive.day root falls back to the saved list offline", async ({
@@ -1275,7 +1320,8 @@ test("a failed reload of the counter lands on this device's saved copy", async (
   await page.reload();
 
   // The redirect carries the focus across, so the copy that opens is the boat
-  // the staffer was working rather than the device-wide list.
-  await expect(page).toHaveURL(new RegExp(`/offline-manifest\\?trip=${tripId}$`));
+  // the staffer was working rather than the device-wide list, and says why the
+  // worker opened it (`fallback=failed`: the request failed, offline).
+  await expect(page).toHaveURL(new RegExp(`/offline-manifest\\?trip=${tripId}&fallback=failed$`));
   await expect(page.getByRole("region", { name: "At the counter" })).toBeVisible();
 });
