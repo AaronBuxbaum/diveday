@@ -2567,7 +2567,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-control-attribution a {
   color: var(--primary);
-  text-decoration: none;
+  /* Underlined: beside muted text the link's color alone is not enough to
+     tell it apart (axe link-in-text-block). */
+  text-decoration: underline;
 }
 .leaflet-popup {
   position: absolute;
