@@ -311,7 +311,7 @@ export function ConversationSection({
                       className={buttonClass({
                         variant: "secondary",
                         size: "sm",
-                        className: "h-auto justify-self-start whitespace-normal py-2 text-start",
+                        className: "justify-self-start text-start",
                       })}
                     >
                       {reopenWords(REOPEN_MESSAGE_KEY[message])}
