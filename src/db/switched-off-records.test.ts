@@ -5,8 +5,12 @@ import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import {
   createDiveSite,
+  importGlobalDiveSiteTemplate,
   listDiveSiteCreatures,
+  listGlobalDiveSiteTemplates,
   listSiteFieldGuides,
+  pullDiveSiteTemplateUpdates,
+  undoDiveSiteTemplateUpdate,
   updateDiveSiteForForm,
 } from "./dive-sites";
 import { upsertExecutedDive } from "./executed-dives";
@@ -27,6 +31,8 @@ import {
   bookings,
   diveSites,
   executedDives,
+  globalDiveSites,
+  globalDiveSiteVersions,
   interests,
   people,
   personRoles,
@@ -238,6 +244,57 @@ describe("field guide switched off", () => {
       .from(diveSites)
       .where(eq(diveSites.id, site.id));
     expect(row?.heading).toBe("Look under the ledges");
+  });
+
+  it("writes no guide from a template pull, or its undo, while off", async () => {
+    // Review 2026-10-23, item 11: the pull is a writer of the site row too.
+    const { db, shop } = ctx;
+    const entry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
+      (row) => row.version.briefing.name === "Molasses Reef",
+    );
+    if (!entry) throw new Error("seed: no published Molasses Reef template");
+    const imported = await importGlobalDiveSiteTemplate(db, shop.id, entry.template.id);
+    if (!imported) throw new Error("expected a catalog copy");
+    const next = entry.version.version + 1;
+    await db.insert(globalDiveSiteVersions).values({
+      globalDiveSiteId: entry.template.id,
+      version: next,
+      briefing: {
+        ...entry.version.briefing,
+        description: "A newer published briefing.",
+        fieldGuideTipsHeading: "The catalog's tips",
+        creatureSlugs: ["banded-butterflyfish", "green-sea-turtle"],
+      },
+    });
+    await db
+      .update(globalDiveSites)
+      .set({ currentVersion: next })
+      .where(eq(globalDiveSites.id, entry.template.id));
+    const guideBefore = async () => ({
+      creatures: (await listDiveSiteCreatures(db, shop.id, imported.id)).map((c) => c.catalogSlug),
+      heading: (
+        await db
+          .select({ heading: diveSites.fieldGuideTipsHeading })
+          .from(diveSites)
+          .where(eq(diveSites.id, imported.id))
+      )[0]?.heading,
+    });
+    const before = await guideBefore();
+    await db.update(shops).set({ fieldGuideEnabled: false }).where(eq(shops.id, shop.id));
+
+    const pulled = await pullDiveSiteTemplateUpdates(
+      db,
+      shop.id,
+      imported.id,
+      "replace-template-copy",
+    );
+    expect(pulled.status).toBe("updated");
+    const [row] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
+    expect(row?.description).toBe("A newer published briefing.");
+    expect(await guideBefore()).toEqual(before);
+
+    expect((await undoDiveSiteTemplateUpdate(db, shop.id, imported.id)).status).toBe("undone");
+    expect(await guideBefore()).toEqual(before);
   });
 
   it("writes the guide from the form while on", async () => {

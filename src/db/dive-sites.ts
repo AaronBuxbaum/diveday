@@ -713,14 +713,19 @@ async function formFieldGuide(
   shopId: string,
   input: DiveSiteInput,
 ): Promise<DiveSiteInput> {
+  if (await fieldGuideOn(db, shopId)) return input;
+  const { creatures: _creatures, fieldGuideTipsHeading: _tipsHeading, ...rest } = input;
+  return rest;
+}
+
+/** Whether the shop keeps a field guide (the Features page). */
+async function fieldGuideOn(db: DbExecutor, shopId: string): Promise<boolean> {
   const [shop] = await db
     .select({ on: shops.fieldGuideEnabled })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
-  if (shop?.on) return input;
-  const { creatures: _creatures, fieldGuideTipsHeading: _tipsHeading, ...rest } = input;
-  return rest;
+  return shop?.on === true;
 }
 
 /**
@@ -1309,7 +1314,19 @@ export async function pullDiveSiteTemplateUpdates(
     const baseline = diveSiteTemplateSnapshot(briefingInUnit(baselineRow.briefing, unit));
     const latestSnapshot = diveSiteTemplateSnapshot(briefingInUnit(latest.briefing, unit));
     const diff = diveSiteTemplateDiff(currentSnapshot, baseline, latestSnapshot);
-    const merged = mergedDiveSiteTemplateSnapshot(currentSnapshot, baseline, latestSnapshot, mode);
+    // **The field guide's own fields pass through `formFieldGuide`'s rule**
+    // (review 2026-10-23, item 11): with the guide off, a template pull writes
+    // neither its species nor its tips heading, so the guide comes back as the
+    // shop left it when the switch does.
+    const guideOn = await fieldGuideOn(tx, shopId);
+    const pulled = mergedDiveSiteTemplateSnapshot(currentSnapshot, baseline, latestSnapshot, mode);
+    const merged = guideOn
+      ? pulled
+      : {
+          ...pulled,
+          creatures: currentSnapshot.creatures,
+          fieldGuideTipsHeading: currentSnapshot.fieldGuideTipsHeading,
+        };
     const [updated] = await tx
       .update(diveSites)
       .set({
@@ -1347,7 +1364,7 @@ export async function pullDiveSiteTemplateUpdates(
       .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
       .returning();
     if (!updated) return { status: "unavailable" as const };
-    await replaceDiveSiteCreatures(tx, shopId, siteId, merged.creatures);
+    if (guideOn) await replaceDiveSiteCreatures(tx, shopId, siteId, merged.creatures);
     return { status: "updated" as const, mode, diff, site: updated };
   });
 }
@@ -1364,6 +1381,8 @@ export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, site
       .for("update");
     const undo = site?.templateUpdateUndo;
     if (!site || !undo) return { status: "unavailable" as const };
+    // As the pull: with the field guide off, the undo leaves its fields alone.
+    const guideOn = await fieldGuideOn(tx, shopId);
 
     const [restored] = await tx
       .update(diveSites)
@@ -1388,7 +1407,9 @@ export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, site
         divePlan: undo.snapshot.divePlan,
         fitTone: undo.snapshot.fitTone,
         fitNote: undo.snapshot.fitNote,
-        fieldGuideTipsHeading: undo.snapshot.fieldGuideTipsHeading,
+        fieldGuideTipsHeading: guideOn
+          ? undo.snapshot.fieldGuideTipsHeading
+          : site.fieldGuideTipsHeading,
         landmarks: undo.snapshot.landmarks,
         minimumCertificationLevel: undo.snapshot.minimumCertificationLevel,
         requiredSpecialties: undo.snapshot.requiredSpecialties,
@@ -1399,7 +1420,7 @@ export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, site
       .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
       .returning();
     if (!restored) return { status: "unavailable" as const };
-    await replaceDiveSiteCreatures(tx, shopId, siteId, undo.snapshot.creatures);
+    if (guideOn) await replaceDiveSiteCreatures(tx, shopId, siteId, undo.snapshot.creatures);
     return { status: "undone" as const, site: restored };
   });
 }
