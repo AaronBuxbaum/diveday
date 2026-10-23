@@ -447,7 +447,7 @@ export default async function TripManifestPage({
           })}
           copy={offlineManifestManagerCopy(t)}
         >
-          <ManifestDeviceSettings tripId={tripId} t={t} />
+          <ManifestDeviceSettings tripId={tripId} t={t} reader={reader} />
         </OfflineManifestManager>
       </div>
 

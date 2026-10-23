@@ -172,8 +172,12 @@ describe("OfflineDiverRollCall", () => {
     expect(notHere).toContain("Not here when saved");
   });
 
-  /** Issue #2960: the words ride only for a reader allowed them; everyone else, the fact. */
-  it("shows a medical alert's words to a reader allowed them, and the fact to everyone else", () => {
+  /**
+   * Issue #2960, H-153 amendment: the words only on a copy a permitted reader
+   * saved with them, with who saved it and that nobody reviewed it; any other
+   * copy says it was saved without them and who can save one that has them.
+   */
+  it("shows a medical alert's words on a copy saved with them, and says when a copy has none", () => {
     const alert = "Bee-sting allergy. EpiPen in the blue dry bag.";
     for (const [medicalAlert, words] of [
       [{ text: alert }, true],
@@ -183,15 +187,23 @@ describe("OfflineDiverRollCall", () => {
       const [first] = copy.snapshot.manifests[0]?.divers ?? [];
       if (!first) throw new Error("fixture diver missing");
       first.medicalAlert = medicalAlert;
+      if (words) {
+        copy.medicalAlertsSavedBy = { personId: "p-yusra", name: "Yusra Idrissi", savedAt: "" };
+      }
       const trip = offlineTripView(copy, "departure");
       if (!trip) throw new Error("the fixture carries a manifest");
       const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
       const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
       expect(row).toContain("Medical alert");
-      if (words) expect(row).toContain(alert);
-      else {
+      if (words) {
+        expect(row).toContain(alert);
+        expect(row).toContain("Saved with the words by Yusra Idrissi.");
+        expect(row).toContain("Nobody reviewed it, and it doesn’t change who can dive.");
+      } else {
         expect(row).not.toContain(alert);
-        expect(row).toContain("Only an owner, a manager or this departure’s crew can read it.");
+        expect(row).toContain("This copy was saved without the words.");
+        // Never "only crew can read it" to a viewer who may be crew.
+        expect(row).not.toContain("Only");
       }
       cleanup();
     }

@@ -171,6 +171,14 @@ export async function readManifestPage(
         missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
       ),
       mayReadMedicalAlerts,
+      // Offer "Save the medical alerts for offline" (H-153 amendment) only to
+      // a reader allowed the words, on a departure where a seat has an alert.
+      mayCarryMedicalAlertsOffline:
+        mayReadMedicalAlerts &&
+        (completeManifests?.[0]?.divers.some(
+          (diver) => diver.medicalAlert && !diver.identityWithheld,
+        ) ??
+          false),
     },
     vessel: vessels.get(tripId) ?? null,
     kitRecord,

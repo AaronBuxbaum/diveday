@@ -119,6 +119,7 @@
     "medicalAlertShow": "Show the alert",
     "medicalAlertShowing": "Showing…",
     "medicalAlertShowHint": "Opening it is noted on their record.",
+    "medicalAlertNotReviewed": "Written by the diver. Nobody reviewed it, and it doesn’t change who can dive.",
     "medicalAlertShowFailed": "The alert couldn’t be shown. Try again."
   },
   "courseForms": {

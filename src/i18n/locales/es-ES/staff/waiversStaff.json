@@ -119,6 +119,7 @@
     "medicalAlertShow": "Mostrar la alerta",
     "medicalAlertShowing": "Mostrando…",
     "medicalAlertShowHint": "Abrirla queda anotado en su ficha.",
+    "medicalAlertNotReviewed": "La escribió el buceador. Nadie la ha revisado y no cambia quién puede bucear.",
     "medicalAlertShowFailed": "No se pudo mostrar la alerta. Vuelve a intentarlo."
   },
   "courseForms": {

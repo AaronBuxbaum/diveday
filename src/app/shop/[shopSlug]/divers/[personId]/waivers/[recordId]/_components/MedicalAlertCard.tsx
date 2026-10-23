@@ -56,6 +56,7 @@ export function MedicalAlertCard({
             showing: t("waiversStaff.record.medicalAlertShowing"),
             showHint: t("waiversStaff.record.medicalAlertShowHint"),
             failed: t("waiversStaff.record.medicalAlertShowFailed"),
+            notReviewed: t("waiversStaff.record.medicalAlertNotReviewed"),
           }}
         />
       )}
