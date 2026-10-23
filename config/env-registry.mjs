@@ -787,6 +787,22 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "ArcGIS Location Platform key for the shared basemap (ADR 20261022-one-shared-basemap,",
+      "issue #2943). Public by design: the browser sends it with every tile request, so it",
+      "is NEXT_PUBLIC_ and is never a secret. Vercel",
+      "needs it in Production and Preview, since a preview build inlines it too.",
+    ],
+    keys: [
+      {
+        key: "NEXT_PUBLIC_ARCGIS_API_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "maps draw the keyless Esri imagery tiles, as they do today",
+      },
+    ],
+  },
+  {
+    doc: [
       "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
       "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
       "plan caps crons at daily; the cadence buckets are >=24h wide so a daily run",
