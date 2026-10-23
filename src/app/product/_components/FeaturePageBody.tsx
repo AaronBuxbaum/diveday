@@ -1,6 +1,7 @@
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { heroPriceLine } from "@/app/_components/HeroFootnotes";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
@@ -12,9 +13,12 @@ import {
   ITEM_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { planCopyParams } from "@/lib/billing/plan-display";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import {
+  type FeaturePageKey,
   type FeaturePageSlug,
   featurePagePath,
   getFeaturePage,
@@ -31,6 +35,39 @@ import { FeatureScreen } from "./FeatureScreen";
  */
 const INVENTORY_ROW_CLASS =
   "flex gap-3 border-b border-border py-3.5 leading-6 first:border-t sm:[&:nth-child(2)]:border-t";
+
+/**
+ * The feature page's sentences that state the plan's terms, per pricing arm
+ * (ADR 20261022-pricing-ab-test). The flat arm's are today's, word for word.
+ * The percent arm's say its own terms, and on the payments page, where the
+ * note and the first question say DiveDay takes no percentage, they say what
+ * it takes and when.
+ */
+function featureArmCopy(t: DiverTranslator, key: FeaturePageKey, offer: PlanTerms, locale: string) {
+  const params = planCopyParams(offer, locale);
+  const own = {
+    note3: t(`marketing.featurePages.${key}.note3`),
+    faq1A: t(`marketing.featurePages.${key}.faq1A`),
+  };
+  if (offer.plan !== "percent_of_volume") {
+    const price = { price: params.price, cadence: t(earlyAccessPrice.cadenceKey) };
+    return {
+      ...own,
+      includedPrice: t("marketing.featureChrome.includedPrice", price),
+      closePrice: t("marketing.featureChrome.closePrice", price),
+    };
+  }
+  return {
+    ...(key === "payments"
+      ? {
+          note3: t("marketing.featureChrome.percentArm.paymentsNote3", params),
+          faq1A: t("marketing.featureChrome.percentArm.paymentsFaq1A", params),
+        }
+      : own),
+    includedPrice: t("marketing.featureChrome.percentArm.includedPrice", params),
+    closePrice: t("marketing.featureChrome.percentArm.closePrice", params),
+  };
+}
 
 /**
  * **One feature page**, the same six parts for all twelve (H-93): what the
@@ -57,9 +94,12 @@ const INVENTORY_ROW_CLASS =
 export async function FeaturePageBody({
   slug,
   locale,
+  offer,
 }: {
   slug: FeaturePageSlug;
   locale: DiverLocale;
+  /** The reader's pricing arm and its numbers (ADR 20261022-pricing-ab-test). */
+  offer: PlanTerms;
 }) {
   "use cache";
   cacheLife("max");
@@ -68,10 +108,11 @@ export async function FeaturePageBody({
   const t = diverTranslator(locale);
   const key = page.key;
   const name = t(`marketing.featurePages.${key}.name`);
+  const copy = featureArmCopy(t, key, offer, locale);
   const notes = [
     t(`marketing.featurePages.${key}.note1`),
     t(`marketing.featurePages.${key}.note2`),
-    t(`marketing.featurePages.${key}.note3`),
+    copy.note3,
   ];
   const steps = [
     {
@@ -88,16 +129,12 @@ export async function FeaturePageBody({
     },
   ];
   const questions = [
-    { q: t(`marketing.featurePages.${key}.faq1Q`), a: t(`marketing.featurePages.${key}.faq1A`) },
+    { q: t(`marketing.featurePages.${key}.faq1Q`), a: copy.faq1A },
     { q: t(`marketing.featurePages.${key}.faq2Q`), a: t(`marketing.featurePages.${key}.faq2A`) },
     { q: t(`marketing.featurePages.${key}.faq3Q`), a: t(`marketing.featurePages.${key}.faq3A`) },
   ];
   const included = capabilityGroup(key);
   const related = relatedFeaturePages(page);
-  const price = {
-    price: earlyAccessPrice.price,
-    cadence: t(earlyAccessPrice.cadenceKey),
-  };
 
   return (
     <main className="flex-1">
@@ -166,7 +203,7 @@ export async function FeaturePageBody({
             {/* The price at the first door, as on `/` and `/product`: a page
                 reached from a search is the most evaluating landing on the
                 site, and "what does it cost" is its second question. */}
-            <p className="mt-2 text-sm text-muted">{t("marketing.home.heroPriceLine", price)}</p>
+            <p className="mt-2 text-sm text-muted">{heroPriceLine(t, offer, locale)}</p>
           </div>
           <MarketingHeroMotion>
             {/* The roll call is a phone, narrower than the column, so its
@@ -229,9 +266,7 @@ export async function FeaturePageBody({
               <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.featureChrome.includedTitle")}
               </h2>
-              <p className="mt-4 leading-7 text-muted">
-                {t("marketing.featureChrome.includedPrice", price)}
-              </p>
+              <p className="mt-4 leading-7 text-muted">{copy.includedPrice}</p>
               <Link
                 href="/pricing"
                 className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
@@ -295,9 +330,7 @@ export async function FeaturePageBody({
               demo={page.demo}
               className="mt-8 justify-center"
             />
-            <p className="mt-6 font-medium text-balance">
-              {t("marketing.featureChrome.closePrice", price)}
-            </p>
+            <p className="mt-6 font-medium text-balance">{copy.closePrice}</p>
           </div>
         </section>
       </MarketingReveal>

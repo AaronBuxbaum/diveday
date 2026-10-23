@@ -17,9 +17,11 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import type { PricingPlan } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
-import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { guideForPlan, MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { requestPricingArm } from "@/lib/pricing-arm-request";
 import { HubGuideRow } from "./_components/HubGuideRow";
 import {
   HUB_CLOSING_ROW_CLASS,
@@ -100,13 +102,13 @@ export default function SwitchHubPage() {
 }
 
 async function LocalizedSwitchHubBody() {
-  const locale = await requestLocale();
-  return <SwitchHubBody locale={locale} />;
+  const [locale, arm] = await Promise.all([requestLocale(), requestPricingArm()]);
+  return <SwitchHubBody locale={locale} arm={arm} />;
 }
 
 /**
- * Cached per negotiated locale (DIVER_LOCALES — two entries) — no
- * session-scoped content.
+ * Cached per negotiated locale (DIVER_LOCALES — two entries) and pricing arm
+ * — no session-scoped content.
  *
  * The hub has exactly one job: **help a shop owner recognize themselves.** So
  * the page is a list of names, not a gallery. It used to be six bordered
@@ -120,7 +122,7 @@ async function LocalizedSwitchHubBody() {
  * sections instead of five and the escape hatch sits where the search failed
  * rather than two screens below it.
  */
-async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
+async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: PricingPlan }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
@@ -133,7 +135,8 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
     ...MIGRATION_GUIDES.map((guide) => ({
       href: `/switching/${guide.slug}`,
       title: t("switching.hub.switchingFrom", { competitor: guide.competitor }),
-      summary: t(guide.cardSummary),
+      // Per pricing arm (ADR 20261022-pricing-ab-test).
+      summary: t(guideForPlan(guide, arm).cardSummary),
     })),
   ];
   return (

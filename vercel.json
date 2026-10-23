@@ -27,6 +27,6 @@
     { "path": "/api/cron/crew-notices", "schedule": "6 * * * *" },
     { "path": "/api/cron/desk-pings", "schedule": "5 * * * *" },
     { "path": "/api/cron/bookkeeper", "schedule": "9 13 2,3 * *" },
-    { "path": "/api/cron/pricing-volume", "schedule": "8 14 2,3 * *" }
+    { "path": "/api/cron/pricing-volume", "schedule": "8 14,18,22 2,3 * *" }
   ]
 }

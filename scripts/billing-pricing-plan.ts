@@ -8,11 +8,14 @@
  * directory, so stop `pnpm dev` first). The numbers are held to the same
  * bounds as the `PRICING_*` environment; a number left out takes the
  * environment's value for that plan. A shop holding a live subscription cannot
- * move to another plan or monthly fee: cancel it first.
+ * move to another plan or monthly fee: cancel it first. An open Checkout
+ * session is expired at Stripe first, when billing is configured here, and
+ * refuses the change when it cannot be.
  */
 import { getDb } from "@/db/client";
 import { setShopPricingPlan } from "@/db/shop-subscriptions";
 import { type PlanTerms, parsePricingPlanArgs } from "@/lib/billing/pricing-plans";
+import { billingProviderFromEnvironment } from "@/lib/billing/stripe-billing";
 import { pricingConfig } from "@/lib/pricing-flags";
 
 const USAGE =
@@ -41,7 +44,10 @@ async function main(argv: readonly string[]): Promise<number> {
   }
   const { args } = parsed;
   const db = await getDb();
-  const outcome = await setShopPricingPlan(db, args, pricingConfig());
+  const provider = billingProviderFromEnvironment();
+  const outcome = await setShopPricingPlan(db, args, pricingConfig(), {
+    settleCheckout: provider ? (id) => provider.settleCheckoutSession(id) : undefined,
+  });
   switch (outcome.status) {
     case "no_such_shop":
       console.error(`No shop has the slug "${args.shopSlug}".`);
@@ -52,6 +58,11 @@ async function main(argv: readonly string[]): Promise<number> {
     case "live_subscription":
       console.error(
         `${args.shopSlug} holds a live subscription on ${describe(outcome.current)}. Cancel it first (Settings > Billing > Cancel plan, or the Stripe dashboard), then run this again.`,
+      );
+      return 1;
+    case "checkout_open":
+      console.error(
+        `${args.shopSlug} has a Checkout session open that could not be expired (billing not configured here, Stripe unreachable, or it already completed). Wait for it to finish or expire, then run this again.`,
       );
       return 1;
     case "set":
