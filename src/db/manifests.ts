@@ -44,6 +44,7 @@ import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { listTripGearAssignments } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { bookingsWithMedicalAlert, standingReleaseByBooking } from "./medical-alerts";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import {
   answeringReplayAsDuplicate,
@@ -1101,6 +1102,14 @@ export async function getTripManifests(
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   if (!shop) return null;
+  // The fact of a medical alert for the crew on each seat's standing release
+  // (issue #2960), never its text: every staffer who opens this manifest sees
+  // that one exists. Held seats are left out by `standingReleaseByBooking`.
+  const alertedBookings = await bookingsWithMedicalAlert(
+    db,
+    shopId,
+    standingReleaseByBooking(readinessRows),
+  );
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
   );
@@ -1267,6 +1276,7 @@ export async function getTripManifests(
       email: person.email,
       emergencyContactName: person.emergencyContactName,
       emergencyContactPhone: person.emergencyContactPhone,
+      medicalAlert: alertedBookings.has(booking.id),
       readiness: readinessByBooking.get(booking.id),
       identityClaim: booking.identityUnconfirmedAt
         ? {

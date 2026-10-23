@@ -756,6 +756,11 @@ async function scrubWaiverRecords(
         // Outside the v2 seal, so destroying them reads as erased, not as
         // tampered (glossary *Shop question*).
         shopAnswers: null,
+        // The medical alert for the crew is the diver's own health words
+        // (issue #2960). Outside the v2 seal like the answers above, so it
+        // reads as erased, not as tampered; its draft goes with
+        // CLEARED_DRAFT_COLUMNS.
+        medicalAlert: null,
         // The guardian's name and email are a third party's personal data
         // held only because they are on this diver's release, and they go
         // with the diver's own. The fact of the co-signature — relationship,

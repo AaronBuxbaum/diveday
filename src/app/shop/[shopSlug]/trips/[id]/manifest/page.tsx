@@ -122,7 +122,7 @@ export default async function TripManifestPage({
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
-    missingDiverReader,
+    reader,
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
@@ -140,10 +140,9 @@ export default async function TripManifestPage({
   // which counted booked divers only — so a checkpoint could read complete with
   // a divemaster still in the water.
   const completeness = manifest.completeness;
-  const rollCallComplete = completeness.complete;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext, missingDiverReader);
+  const actions = bindManifestActions(actionContext, reader);
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -248,7 +247,7 @@ export default async function TripManifestPage({
         idPrefix={idPrefix}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
-        rollCallComplete={rollCallComplete}
+        rollCallComplete={completeness.complete}
         completeness={completeness}
         summary={manifest.summary}
         {...headCountView({ manifest, checkpoint, isDeparture })}
@@ -325,6 +324,7 @@ export default async function TripManifestPage({
             missingDiver: actions.missingDiver,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
+            showMedicalAlert: actions.showMedicalAlert,
             t,
           }}
         />
@@ -440,7 +440,6 @@ export default async function TripManifestPage({
           payload={offlineManifestPayload({
             completeManifests,
             shop: { ...shop, emergencyReference },
-            shopSlug,
             ...boatCheck,
             boatSafety,
             locale,
@@ -448,7 +447,7 @@ export default async function TripManifestPage({
           })}
           copy={offlineManifestManagerCopy(t)}
         >
-          <ManifestDeviceSettings tripId={tripId} t={t} />
+          <ManifestDeviceSettings tripId={tripId} t={t} reader={reader} />
         </OfflineManifestManager>
       </div>
 
@@ -469,7 +468,7 @@ export default async function TripManifestPage({
         tripId={tripId}
         checkpoint={checkpoint}
         summary={manifest.summary}
-        complete={rollCallComplete}
+        complete={completeness.complete}
         t={t}
       />
     </div>

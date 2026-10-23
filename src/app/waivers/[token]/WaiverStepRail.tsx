@@ -54,6 +54,34 @@ export const WAIVER_RAIL_TOTAL = 3;
 
 export type WaiverRailSegmentId = "release" | "medical" | "questions" | "sign";
 
+/**
+ * **The rail becomes a navigator only after a refusal**, and only for the one
+ * segment that owns the refused field. A refused submit lands the reader back
+ * at the top of a page whose problem is several hundred pixels down, and the
+ * rail is the thing already sitting there. Nothing ever links *forward*: a
+ * diver cannot tap "Sign" to skip the release. The medical alert for the crew
+ * sits beside the questionnaire, so its refusal points at Medical, the step it
+ * is not part of (issue #2960).
+ */
+export function refusalRailAnchors({
+  refusedAnchor,
+  shopQuestionAnchor,
+  medicalAlertAnchor,
+}: {
+  /** The refused field's anchor, or none when nothing was refused. */
+  refusedAnchor: string | undefined;
+  /** A shop question's own anchor when the refusal is one, else none. */
+  shopQuestionAnchor: string | undefined;
+  medicalAlertAnchor: string;
+}): Partial<Record<WaiverRailSegmentId, string>> {
+  if (refusedAnchor === undefined) return {};
+  if (refusedAnchor === "medical-questionnaire" || refusedAnchor === medicalAlertAnchor) {
+    return { medical: refusedAnchor };
+  }
+  if (shopQuestionAnchor !== undefined) return { questions: shopQuestionAnchor };
+  return { sign: refusedAnchor };
+}
+
 /** The segments in the order a diver walks them. Never re-ordered. */
 export const WAIVER_RAIL_ORDER = ["release", "medical", "questions", "sign"] as const;
 

@@ -13,6 +13,7 @@ import {
   signingDate,
 } from "@/lib/guardian";
 import { validateMedicalAnswers } from "@/lib/medical";
+import { readDraftMedicalAlert, readMedicalAlert } from "@/lib/medical-alert";
 import { personNamesMatch } from "@/lib/person-name";
 import { localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
@@ -123,6 +124,11 @@ export async function saveWaiverDraft(
      * asks; omitted, the saved draft is left as it was.
      */
     shopAnswers?: Readonly<Record<string, string>>;
+    /**
+     * The medical alert for the crew as typed. Kept when signing would keep
+     * it, dropped otherwise; omitted, the saved draft is left as it was.
+     */
+    medicalAlert?: string;
     now?: Date;
   },
 ): Promise<boolean> {
@@ -146,6 +152,9 @@ export async function saveWaiverDraft(
       draftMedicalAnswers: input.medicalAnswers,
       ...(input.guardian === undefined ? {} : { draftGuardian: input.guardian }),
       ...(draftShopAnswers === undefined ? {} : { draftShopAnswers }),
+      ...(input.medicalAlert === undefined
+        ? {}
+        : { draftMedicalAlert: readDraftMedicalAlert(input.medicalAlert) }),
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id });
@@ -173,6 +182,12 @@ export type CompleteWaiverOutcome =
         | "invalid_signature"
         | "name_mismatch"
         | "invalid_medical"
+        /**
+         * The medical alert for the crew is longer than the box allows or
+         * carries a control character. Never about what it says: the alert
+         * informs and never gates (issue #2960).
+         */
+        | "invalid_medical_alert"
         /** The diver is a minor on the signing day and no guardian section came with the signature. */
         | "guardian_required"
         /** A guardian section came, and it is not a signature: no consent, no relationship, no email, or the diver's own name. */
@@ -455,6 +470,11 @@ export async function completeWaiver(
      * sealed snapshot is built from those (dive-domain review B1).
      */
     shopAnswers?: Readonly<Record<string, string>>;
+    /**
+     * The medical alert for the crew as typed (glossary *Medical alert for
+     * the crew*). Stored trimmed, blank as null; nothing reads what it says.
+     */
+    medicalAlert?: string;
     now?: Date;
   },
 ): Promise<CompleteWaiverOutcome> {
@@ -549,6 +569,14 @@ export async function completeWaiver(
   if (!shopAnswers.ok) {
     return { ok: false, reason: "invalid_shop_answers", questionId: shopAnswers.questionId };
   }
+  // **The medical alert for the crew** (issue #2960), refused before the
+  // record is touched only for its shape (too long, a control character).
+  // What it says reaches nothing below: `needsMedicalReview` reads the
+  // standard answers alone, so "stent placed in June" written here with every
+  // answer No completes as `completed` and readiness clears as it would
+  // without it. The alert informs the crew; it never refers anyone.
+  const medicalAlert = readMedicalAlert(input.medicalAlert);
+  if (!medicalAlert.ok) return { ok: false, reason: "invalid_medical_alert" };
   const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);
   const status = medicalReviewRequired ? ("medical_review" as const) : ("completed" as const);
   const [saved] = await db
@@ -564,6 +592,8 @@ export async function completeWaiver(
       // In the same pending-guarded update as the signature, so the seal
       // below covers it. Null exactly when the version asked nothing.
       shopAnswers: shopAnswers.snapshot,
+      // Sealed with the signature only when there is one (`signedMetadata`).
+      medicalAlert: medicalAlert.value,
       completedAt: now,
       // Signed: the link has done its job, so the openable copy goes. The token
       // still *resolves* (a diver revisiting sees their signed release) — it
@@ -585,6 +615,7 @@ export async function completeWaiver(
         : {}),
       draftGuardian: null,
       draftShopAnswers: null,
+      draftMedicalAlert: null,
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id, status: waiverRecords.status });

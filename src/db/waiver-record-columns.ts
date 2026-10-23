@@ -14,12 +14,17 @@ import { waiverRecords } from "./schema";
  *   integrity audit read it through {@link WAIVER_SEALED_COLUMNS}, because
  *   the seal covers it.
  * - `draftSignerName`, `draftMedicalAnswers`, `draftGuardian`,
- *   `draftShopAnswers` — what a bearer typed before signing. Nothing about
- *   readiness reads an unsigned draft.
+ *   `draftShopAnswers`, `draftMedicalAlert` — what a bearer typed before
+ *   signing. Nothing about readiness reads an unsigned draft.
  * - `shopAnswers` — the shop's own questions as answered. They inform and
  *   never gate, so no status read, roster or manifest has a use for them; the
  *   signed record reads them through {@link WAIVER_SEALED_COLUMNS}, because
  *   the seal covers them.
+ * - `medicalAlert` — the diver's medical alert for the crew, medical-class
+ *   free text that informs and never gates. Only its own readers see it
+ *   (`src/db/medical-alerts.ts`, behind `canReadMedicalAlert`) and the signed
+ *   record through {@link WAIVER_SEALED_COLUMNS}; a roster or readiness pass
+ *   that carried it would hand it to every staffer.
  * - `tokenHash`, `tokenSealed` — the bearer link. A status read must never be
  *   able to hand it back out.
  * - `integrityHash` — only the integrity check reads the seal, through
@@ -38,6 +43,8 @@ const {
   draftGuardian: _draftGuardian,
   draftShopAnswers: _draftShopAnswers,
   shopAnswers: _shopAnswers,
+  draftMedicalAlert: _draftMedicalAlert,
+  medicalAlert: _medicalAlert,
   tokenHash: _tokenHash,
   tokenSealed: _tokenSealed,
   integrityHash: _integrityHash,
@@ -83,6 +90,7 @@ export const CLEARED_DRAFT_COLUMNS = {
   draftMedicalAnswers: null,
   draftGuardian: null,
   draftShopAnswers: null,
+  draftMedicalAlert: null,
 } as const satisfies {
   [Column in keyof typeof allColumns as Column extends `draft${string}` ? Column : never]:
     | null

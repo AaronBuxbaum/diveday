@@ -60,6 +60,8 @@ const record = {
   draftGuardian: null,
   shopAnswers: null as ShopAnswer[] | null,
   draftShopAnswers: null,
+  medicalAlert: null as string | null,
+  draftMedicalAlert: null as string | null,
   completedAt: new Date("2026-07-29T01:00:00.000Z"),
   integrityHash: null,
   integrityVersion: null,
@@ -511,6 +513,136 @@ describe("waiver integrity over the shop's own questions (glossary *Shop questio
     expect(computeWaiverIntegrityHash({ ...erased, shopAnswers: answers }, 2)).toBe(
       computeWaiverIntegrityHash({ ...erased, shopAnswers: null }, WAIVER_INTEGRITY_VERSION_ERASED),
     );
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("waiver integrity over the medical alert for the crew (issue #2960)", () => {
+  /** v1 over `record` before the alert existed (the shop-questions describe pins the same value). */
+  const V1_DIGEST_BEFORE_MEDICAL_ALERT =
+    "6a856dd2717dd12eaa1c0efe8e7238f64b28b0d33268c1087d42647cf5a63fed";
+  /**
+   * v1 over `record` plus one shop answer, computed from the build before the
+   * alert existed (e0ff890e): a record with shop answers and no alert keeps
+   * its digest too.
+   */
+  const V1_DIGEST_WITH_SHOP_ANSWER_BEFORE_MEDICAL_ALERT =
+    "b868d4226ca6caf46162c73317a415a70decb8344045ec88b1a29f31d04e97f1";
+  const oneAnswer: ShopAnswer[] = [
+    { id: "divecount01", kind: "number", prompt: "How many dives?", required: false, answer: 40 },
+  ];
+  const alert = "Bee-sting allergy. EpiPen in the blue dry bag.";
+  const alerted = { ...record, medicalAlert: alert };
+
+  it("keeps every record with no alert on its old digest byte for byte", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(computeWaiverIntegrityHash(record)).toBe(V1_DIGEST_BEFORE_MEDICAL_ALERT);
+    expect(computeWaiverIntegrityHash({ ...record, shopAnswers: oneAnswer })).toBe(
+      V1_DIGEST_WITH_SHOP_ANSWER_BEFORE_MEDICAL_ALERT,
+    );
+    // A draft alert is never evidence.
+    const drafted = { ...record, draftMedicalAlert: "typed, not signed" };
+    expect(computeWaiverIntegrityHash(drafted)).toBe(V1_DIGEST_BEFORE_MEDICAL_ALERT);
+    vi.unstubAllEnvs();
+  });
+
+  it("seals the alert under v1, so stripping, adding or changing it reads invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const sealed = {
+      ...alerted,
+      integrityHash: computeWaiverIntegrityHash(alerted),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+    };
+    expect(sealed.integrityHash).not.toBe(V1_DIGEST_BEFORE_MEDICAL_ALERT);
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    for (const medicalAlert of [null, "", "Bee-sting allergy.", `${alert} `]) {
+      expect(verifyWaiverIntegrity({ ...sealed, medicalAlert })).toBe("invalid");
+    }
+    // An alert added to a record sealed without one.
+    expect(
+      verifyWaiverIntegrity({
+        ...alerted,
+        integrityHash: V1_DIGEST_BEFORE_MEDICAL_ALERT,
+        integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("seals the alert alongside shop answers, each one independently", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const both = { ...alerted, shopAnswers: oneAnswer };
+    const sealed = {
+      ...both,
+      integrityHash: computeWaiverIntegrityHash(both),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+    };
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: null })).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...sealed, shopAnswers: null })).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("carries the alert inside a v3 refile and a v4 guardian redaction", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const moved = {
+      ...alerted,
+      personId: "00000000-0000-4000-8000-0000000000aa",
+      movedFromPersonId: record.personId,
+      movedAt: new Date("2026-10-05T17:00:00.000Z"),
+      movedByPersonId: "00000000-0000-4000-8000-0000000000bb",
+    };
+    const redacted = {
+      ...alerted,
+      guardianName: "Jonas Fischer",
+      guardianRelationship: "parent",
+      guardianEmail: null,
+      guardianSignatureMethod: "typed_consent",
+      guardianConsentedAt: new Date("2026-07-29T01:00:00.000Z"),
+      guardianSignedAt: new Date("2026-07-29T01:00:00.000Z"),
+      guardianEmailErasedAt: new Date("2026-10-07T09:00:00.000Z"),
+      guardianEmailErasedByPersonId: "00000000-0000-4000-8000-0000000000cc",
+    };
+    for (const [row, version] of [
+      [moved, WAIVER_INTEGRITY_VERSION_MOVED],
+      [redacted, WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED],
+    ] as const) {
+      const sealed = {
+        ...row,
+        integrityHash: computeWaiverIntegrityHash(row, version),
+        integrityVersion: version,
+      };
+      expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+      expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: null })).toBe("invalid");
+      expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: "Asthma" })).toBe("invalid");
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it("leaves the alert out of the v2 erasure seal, which it does not survive", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(computeWaiverIntegrityHash({ ...erased, medicalAlert: alert }, 2)).toBe(
+      computeWaiverIntegrityHash(
+        { ...erased, medicalAlert: null },
+        WAIVER_INTEGRITY_VERSION_ERASED,
+      ),
+    );
+    vi.unstubAllEnvs();
+  });
+
+  it("reads an erased record carrying an alert or a draft of one as invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const sealed = {
+      ...erased,
+      medicalAlert: null,
+      draftMedicalAlert: null,
+      integrityHash: computeWaiverIntegrityHash(erased, WAIVER_INTEGRITY_VERSION_ERASED),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
+    };
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: alert })).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: "" })).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...sealed, draftMedicalAlert: alert })).toBe("invalid");
     vi.unstubAllEnvs();
   });
 });

@@ -36,13 +36,15 @@ export function DiverRowTrigger({
   timezone: string;
   t: StaffTranslator;
 }) {
+  // A held seat's release may be somebody else's: no chip (H-13).
+  const alerted = Boolean(diver.medicalAlert) && !diver.identityWithheld;
   return (
     <>
       <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
         {String(index + 1).padStart(2, "0")}
       </span>
       <span
-        className={`min-w-0 flex-1 ${capsule || typeBadge || diver.notHere ? "sm:flex-initial print:flex-initial" : ""}`}
+        className={`min-w-0 flex-1 ${capsule || typeBadge || diver.notHere || alerted ? "sm:flex-initial print:flex-initial" : ""}`}
       >
         <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
           {diver.fullName}
@@ -73,7 +75,7 @@ export function DiverRowTrigger({
         first line: a second line there only made every
         flagged row taller, and on paper it cost the packet
         pages (e2e/paper-day). */}
-      {capsule || typeBadge || diver.notHere ? (
+      {capsule || typeBadge || diver.notHere || alerted ? (
         <span
           className={`order-last flex basis-full flex-wrap items-center gap-2 sm:order-none sm:flex-1 sm:basis-auto print:order-none print:flex-1 print:basis-auto ${
             // Level with the name's line: the top of a
@@ -83,6 +85,11 @@ export function DiverRowTrigger({
         >
           {capsule}
           {typeBadge}
+          {/* **The diver wrote a medical alert for the crew** (issue #2960):
+            the fact, on the row, for every staffer, outside the one-capsule
+            chain like the badges beside it. Its words are one tap away in
+            the sheet, for the readers allowed them. Never a gate. */}
+          {alerted ? <Badge tone="primary">{t("manifest.medicalAlertChip")}</Badge> : null}
           {/* **The desk wrote this one off** (#1209). On the
             row and not in the sheet, unlike "Checked in":
             that one is routine and a tap away is fine, this

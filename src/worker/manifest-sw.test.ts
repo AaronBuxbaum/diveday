@@ -11,6 +11,7 @@ import {
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
+  wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_RECORD_VERSION,
@@ -25,6 +26,7 @@ vi.mock("@/lib/offline-manifest-store", () => ({
   purgeOfflineManifestsExceptShop: vi.fn(),
   saveOfflineManifest: vi.fn(),
   syncOfflineManifest: vi.fn(),
+  wipeOfflineMedicalAlerts: vi.fn(),
 }));
 
 // Fixed strings rather than the frozen clock: nothing under test reads the
@@ -297,6 +299,25 @@ describe("refreshSavedManifests (the push event)", () => {
     expect(vi.mocked(purgeOfflineManifestsExceptShop).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
+    // Medical alert words go before the board is written (H-153): this body
+    // names nobody, so all of them.
+    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined);
+    expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
+    );
+  });
+
+  it("drops saved words on a departure the body does not say this viewer may hold (security review 2, L3)", async () => {
+    routeFetch({
+      upcoming: () => upcomingResponse("blue-mantis", [tripPayload("trip-1", "blue-mantis")]),
+    });
+
+    await firePush();
+
+    // This body carries no `mayHoldMedicalAlertWords`: fail closed.
+    expect(saveOfflineManifest).toHaveBeenCalledWith(expect.anything(), {
+      keepMedicalAlertWords: false,
+    });
   });
 
   it.each([
