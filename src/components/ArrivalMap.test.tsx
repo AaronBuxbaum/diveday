@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
+import { ARRIVAL_MAP_PROBES } from "@/lib/maps";
 import { ArrivalMap } from "./ArrivalMap";
 
 /**
@@ -42,7 +42,7 @@ describe("ArrivalMap", () => {
   it("draws nothing while online until the map host answers, then the map", () => {
     const container = mount();
     expect(container.querySelector("iframe")).toBeNull();
-    expect(probes.map((probe) => probe.src)).toEqual([...MAP_REACHABILITY_PROBES]);
+    expect(probes.map((probe) => probe.src)).toEqual([...ARRIVAL_MAP_PROBES]);
     act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
@@ -77,7 +77,7 @@ describe("ArrivalMap", () => {
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
+    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length * 2);
     act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
@@ -89,12 +89,12 @@ describe("ArrivalMap", () => {
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
+    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length);
     visibility.mockReturnValue("visible");
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
+    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length * 2);
     act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
@@ -106,7 +106,7 @@ describe("ArrivalMap", () => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
+    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length);
   });
 
   it("stops listening once the map is gone", () => {
@@ -119,6 +119,6 @@ describe("ArrivalMap", () => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
+    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length);
   });
 });

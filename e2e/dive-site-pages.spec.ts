@@ -134,17 +134,15 @@ test("the site page publishes the place as structured data and points at itself"
 });
 
 /**
- * **The map shows only when both mapping hosts answer.**
- * The probes verify OpenStreetMap and CARTO tile availability.
+ * **The route map shows only once the basemap's host answers.**
  */
-const [OSM_PROBE, CARTO_PROBE] = MAP_REACHABILITY_PROBES;
+const [BASEMAP_PROBE] = MAP_REACHABILITY_PROBES;
 // A one-pixel transparent GIF; the probe reads only that an image decoded.
 const PIXEL = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
 
 for (const { name, blocked, state } of [
-  { name: "only OpenStreetMap blocked", blocked: OSM_PROBE, state: "failed" },
-  { name: "only CARTO blocked", blocked: CARTO_PROBE, state: "failed" },
-  { name: "neither blocked", blocked: undefined, state: "reachable" },
+  { name: "the basemap blocked", blocked: BASEMAP_PROBE, state: "failed" },
+  { name: "nothing blocked", blocked: undefined, state: "reachable" },
 ] as const) {
   test(`the dive-site map is ${state} with ${name}`, {
     tag: READ_ONLY,
@@ -157,7 +155,7 @@ for (const { name, blocked, state } of [
       );
     }
     await page.goto(SITE_PATH);
-    const frame = page.locator("iframe[data-map-state]").first();
+    const frame = page.locator("[data-map-state]").first();
     // The frame asks only once it is on screen.
     await frame.scrollIntoViewIfNeeded();
     await expect(frame).toHaveAttribute("data-map-state", state);

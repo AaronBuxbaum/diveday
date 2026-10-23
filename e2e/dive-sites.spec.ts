@@ -386,7 +386,7 @@ test.describe("staff", () => {
     // The e2e context refuses the map's reachability probe (fixtures.ts), so
     // the frame keeps its box but stays hidden and the route draws alone, the
     // way the page reads on a boat with no signal (MapFrame).
-    const terrain = page.getByTitle(`Terrain map of ${siteName}`);
+    const terrain = page.locator("figure [data-map-reachable]");
     await expect(terrain).toHaveAttribute("data-map-reachable", "false");
     await expect(terrain).toBeHidden();
   });

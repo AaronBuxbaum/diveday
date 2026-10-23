@@ -14,8 +14,11 @@ import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
  * the marina or a network that blocks the host draws no empty block on
  * either.
  */
-export function useMapReachable(active: boolean): boolean {
-  return useMapState(active) === "reachable";
+export function useMapReachable(
+  active: boolean,
+  probeUrls: readonly string[] = MAP_REACHABILITY_PROBES,
+): boolean {
+  return useMapState(active, undefined, probeUrls) === "reachable";
 }
 
 /** Where the map host stands: not yet answered, answered, or given up on. */
@@ -27,7 +30,11 @@ export type MapState = "waiting" | "reachable" | "failed";
  * blocked host errors at once; a stalled one never answers, so the silence is
  * read as failure, and an answer that comes late still wins.
  */
-export function useMapState(active: boolean, giveUpMs?: number): MapState {
+export function useMapState(
+  active: boolean,
+  giveUpMs?: number,
+  probeUrls: readonly string[] = MAP_REACHABILITY_PROBES,
+): MapState {
   const [reachable, setReachable] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
   useEffect(() => {
@@ -69,13 +76,13 @@ export function useMapState(active: boolean, giveUpMs?: number): MapState {
         old.onerror = null;
       }
       loaded = 0;
-      probes = MAP_REACHABILITY_PROBES.map((url) => {
+      probes = probeUrls.map((url) => {
         const probe = new Image();
-        // Google learns that something asked, never which page.
+        // The host learns that something asked, never which page.
         probe.referrerPolicy = "no-referrer";
         probe.onload = () => {
           loaded += 1;
-          if (settled || loaded < MAP_REACHABILITY_PROBES.length) return;
+          if (settled || loaded < probeUrls.length) return;
           // All answered: nothing asks again after it.
           settled = true;
           clearTimeout(giveUp);
@@ -109,6 +116,6 @@ export function useMapState(active: boolean, giveUpMs?: number): MapState {
         probe.onerror = null;
       }
     };
-  }, [active, giveUpMs]);
+  }, [active, giveUpMs, probeUrls]);
   return reachable ? "reachable" : gaveUp ? "failed" : "waiting";
 }
