@@ -36,7 +36,11 @@ describe("the week-out reminder switch", () => {
     const { db, shop, reef, bookingId } = await bookedSeat();
     await db.update(shops).set({ weekOutReminderEnabled: false }).where(eq(shops.id, shop.id));
     const email = fakeEmail();
-    const opts = { emailProvider: email.provider, smsProvider: fakeSms().provider, appOrigin: null };
+    const opts = {
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: null,
+    };
     const mine = () =>
       email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId).map((n) => n.kind);
 

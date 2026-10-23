@@ -367,9 +367,7 @@ export async function bookSpot(
   // **Every seat of a party carries it**, the organizer's included. One person
   // booking four seats through a hotel's link is four divers that hotel sent,
   // which is the number a shop counting its partners means.
-  //
-  // **Partner links are a Features switch.** Off, a cookie from a link handed
-  // out earlier books like any unreferred visit and credits nobody.
+  // Partner links switched off (the Features page) credit nobody, old cookie or not.
   const referralSource = shopNow.partnerLinksEnabled
     ? partnerFromReferralCookie((await cookies()).get(REFERRAL_COOKIE)?.value, shopSlug)
     : null;

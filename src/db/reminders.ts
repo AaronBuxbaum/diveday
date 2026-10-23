@@ -356,6 +356,20 @@ async function nightBeforeFlySafe(
 }
 
 /**
+ * **The week-out reminder is a Features switch; the night-before one is not**
+ * (ADR 20261005-optional-shop-features, amendment 2026-10-23). Off, the 7-day
+ * bucket passes unsent and writes nothing, and the 24-hour reminder still comes
+ * due in its own bucket.
+ */
+function shopDueReminder(
+  shop: { weekOutReminderEnabled: boolean },
+  input: Parameters<typeof dueReminder>[0],
+) {
+  const cadence = dueReminder(input);
+  return cadence?.kind === "trip_reminder_7d" && !shop.weekOutReminderEnabled ? null : cadence;
+}
+
+/**
  * Send every pre-trip reminder that has come due since the last run, across all
  * shops. Idempotent by construction: a booking's reminder is deduped by a
  * `notification_deliveries` row keyed on (booking, cadence kind), so re-running
@@ -488,20 +502,12 @@ export async function sendDueReminders(
     cadence: NonNullable<ReturnType<typeof dueReminder>>;
   }> = [];
   for (const row of rows) {
-    const cadence = dueReminder({
+    const cadence = shopDueReminder(row.shop, {
       startsAt: row.trip.startsAt,
       now,
       sentKinds: sentByBooking.get(row.booking.id) ?? new Set(),
     });
     if (!cadence) {
-      summary.skipped += 1;
-      continue;
-    }
-    // **The week-out reminder is a Features switch; the night-before one is
-    // not** (ADR 20261005-optional-shop-features, amendment 2026-10-23). Off,
-    // the 7-day bucket passes unsent and writes nothing, and the 24-hour
-    // reminder still comes due in its own bucket.
-    if (cadence.kind === "trip_reminder_7d" && !row.shop.weekOutReminderEnabled) {
       summary.skipped += 1;
       continue;
     }
