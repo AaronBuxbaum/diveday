@@ -41,6 +41,11 @@ export type RecapNoteEditorContext = {
   crewPhotoInputId?: string;
   uploadCrewPhotoAction?: (formData: FormData) => void;
   deleteCrewPhotoAction?: (formData: FormData) => void;
+  /**
+   * Whether the shop takes recap photos (Features). Off, the crew can add
+   * none, while every photo already added stays here so one can be removed.
+   */
+  photosOn?: boolean;
   tripId?: string;
   recapSendAction?: (formData: FormData) => void;
   toggleRecapAutoSendPauseAction?: (formData: FormData) => void;
@@ -90,6 +95,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
     crewPhotoInputId = "crew-recap-photo",
     uploadCrewPhotoAction,
     deleteCrewPhotoAction,
+    photosOn = true,
     tripId,
     recapSendAction,
     toggleRecapAutoSendPauseAction,
@@ -103,6 +109,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
     recapStatusSummary,
   } = context;
   const recapLocked = Boolean(recapSentAt);
+  const crewCanAdd = !recapLocked && photosOn;
   const statusSummary =
     recapStatusSummary ??
     (recapLocked && recapSentAt && recapSentAtLabel
@@ -217,7 +224,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
           thumbnails, six to a row on a desk, so an empty gallery is one small
           dashed tile rather than a 220px box. A count only once there is
           something to count. */}
-      {uploadCrewPhotoAction && deleteCrewPhotoAction && (crewPhotos.length > 0 || !recapLocked) ? (
+      {uploadCrewPhotoAction && deleteCrewPhotoAction && (crewPhotos.length > 0 || crewCanAdd) ? (
         <section className="mt-6">
           <GroupLabel as="h4" meta={crewPhotos.length > 0 ? crewPhotos.length : undefined}>
             {t("closeout.crewPhotos.heading")}
@@ -260,7 +267,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
                 ) : null}
               </li>
             ))}
-            {!recapLocked ? (
+            {crewCanAdd ? (
               <li>
                 <form action={uploadCrewPhotoAction}>
                   <ImageUploadTile

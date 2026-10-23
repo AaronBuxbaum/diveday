@@ -194,6 +194,56 @@ describe("the settled station's post-trip recap note", () => {
   });
 });
 
+describe("the recap's photos with recap photos switched off", () => {
+  it("adds no crew photo, and keeps every photo already there with its Remove", () => {
+    render(
+      <RecapNoteEditor
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: false,
+          t,
+          crewPhotos: [{ id: "crew-1", imageUrl: "https://img.example/crew.jpg" }],
+          photos: [
+            {
+              id: "diver-1",
+              imageUrl: "https://img.example/diver.jpg",
+              caption: null,
+              diverName: "Ava After",
+              bookingId: "booking-1",
+            },
+          ],
+          uploadCrewPhotoAction: vi.fn(),
+          deleteCrewPhotoAction: vi.fn(),
+          deletePhotoAction: vi.fn(),
+          photosOn: false,
+        }}
+      />,
+    );
+    expect(screen.queryByLabelText("Add a photo")).not.toBeInTheDocument();
+    // What is there stays, so staff can still take one down.
+    expect(screen.getByRole("img", { name: "Crew photo from this departure" })).toBeInTheDocument();
+    expect(document.querySelectorAll('input[name="photoId"]').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("draws no empty crew gallery to add to", () => {
+    render(
+      <RecapNoteEditor
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: false,
+          t,
+          uploadCrewPhotoAction: vi.fn(),
+          deleteCrewPhotoAction: vi.fn(),
+          photosOn: false,
+        }}
+      />,
+    );
+    expect(screen.queryByText(t("closeout.crewPhotos.heading"))).not.toBeInTheDocument();
+  });
+});
+
 describe("the recap row at rest", () => {
   const WAITING = "This recap will go out automatically in about 3 hours.";
 

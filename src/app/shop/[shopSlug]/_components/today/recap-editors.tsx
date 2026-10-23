@@ -32,7 +32,7 @@ export async function recapEditorsFor({
   t,
 }: {
   db: AppDb;
-  shop: { id: string; timezone: string; sightingsEnabled: boolean };
+  shop: { id: string; timezone: string; sightingsEnabled: boolean; diverPhotosEnabled: boolean };
   closeout: { departures: readonly Departure[] };
   noted?: string;
   now: Date;
@@ -69,6 +69,7 @@ export async function recapEditorsFor({
           crewPhotoInputId: `crew-recap-photo-${departure.tripId}`,
           uploadCrewPhotoAction: uploadCrewRecapPhotoAction.bind(null, departure.tripId),
           deleteCrewPhotoAction: deleteCrewRecapPhotoAction.bind(null, departure.tripId),
+          photosOn: shop.diverPhotosEnabled,
           tripId: departure.tripId,
           recapSendAction: sendRecapAction.bind(null, departure.tripId),
           toggleRecapAutoSendPauseAction,

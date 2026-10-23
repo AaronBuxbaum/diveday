@@ -122,6 +122,8 @@ export type AfterStateProps = {
   photos: RecapPhotoView[];
   /** How many photos one booking may hold — `MAX_RECAP_PHOTOS_PER_BOOKING`. */
   maxPhotos: number;
+  /** Whether the shop takes recap photos (Features); off, no photo door is drawn. */
+  photosOn: boolean;
   /** Dive days with this shop, native bookings and imported visits merged. */
   visitCount: number;
   currency: ShopCurrency;
@@ -388,6 +390,7 @@ export async function buildAfterStateProps(input: {
     shoutout: data.shoutout,
     photos: data.photos,
     maxPhotos: MAX_RECAP_PHOTOS_PER_BOOKING,
+    photosOn: data.shop.diverPhotosEnabled,
     visitCount: data.visitCount,
     // The shop's declared currency (ADR 20260731-shop-currency), so a tip is
     // denominated the same way the trip the diver paid for was. The presets

@@ -154,6 +154,11 @@ export type RecapPageData = {
     /** Whether the recap offers a "bring a buddy" link (`shops.buddy_links_enabled`). */
     buddyLinksEnabled: boolean;
     /**
+     * Whether the recap takes and shows photos (`shops.diver_photos_enabled`).
+     * Off, `photos` below is empty and the page draws no photo door.
+     */
+    diverPhotosEnabled: boolean;
+    /**
      * The shop's measurement settings, so the recap's conditions tiles read in
      * the units the shop actually works in (src/lib/depth-units.ts,
      * src/lib/temperature-units.ts). Two independent settings, not one — a
@@ -926,6 +931,7 @@ async function loadRecapPageData(
       reviewUrl: row.reviewUrl,
       reviewsEnabled: row.reviewsEnabled,
       buddyLinksEnabled: row.buddyLinksEnabled,
+      diverPhotosEnabled: row.diverPhotosEnabled,
       depthUnit: row.depthUnit,
       temperatureUnit: row.temperatureUnit,
       brandColor: row.brandColor,
@@ -967,7 +973,9 @@ async function loadRecapPageData(
     bookingId,
     personId: row.personId,
     shoutout: trip.recapShoutout,
-    photos,
+    // Recap photos switched off: the diver's page shows no album; every photo
+    // is kept, and staff still see each one for takedown.
+    photos: row.diverPhotosEnabled ? photos : [],
     // A phone-only diver (a supported case — their recap can go out by SMS
     // instead) has nothing `startTipCheckout` can hand to Stripe as a
     // customer email; offering the form anyway would fail on every
@@ -1101,6 +1109,20 @@ export type RecapPhotoEligibility =
   | { ok: false; reason: "not_found" | "cancelled" | "limit" };
 
 /**
+ * Whether the shop takes recap photos (`shops.diver_photos_enabled`, the
+ * Features switch). Off, every upload door refuses as if there were nothing to
+ * add to; photos already added stay, and staff can still take one down.
+ */
+async function diverPhotosOn(db: DbExecutor, shopId: string): Promise<boolean> {
+  const [shop] = await db
+    .select({ on: shops.diverPhotosEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return shop?.on === true;
+}
+
+/**
  * Whether a booking may take another recap photo — the same booking/cancelled/cap
  * gate as `addRecapPhoto`, but read-only. The public upload action runs this
  * *before* writing bytes to blob storage, so a cancelled booking or one already
@@ -1128,6 +1150,7 @@ export async function canAddRecapPhoto(
     .where(eq(bookings.id, bookingId))
     .limit(1);
   if (!booking) return { ok: false, reason: "not_found" };
+  if (!(await diverPhotosOn(db, booking.shopId))) return { ok: false, reason: "not_found" };
   if (booking.status === "cancelled" || booking.status === "no_show") {
     return { ok: false, reason: "cancelled" };
   }
@@ -1175,6 +1198,7 @@ export async function addRecapPhoto(
       .limit(1)
       .for("update");
     if (!booking) return { ok: false, reason: "not_found" };
+    if (!(await diverPhotosOn(tx, booking.shopId))) return { ok: false, reason: "not_found" };
     // Same no_show/cancelled treatment as canAddRecapPhoto above (Codex
     // finding) — the locked, insert-time check, not just the pre-storage one.
     if (booking.status === "cancelled" || booking.status === "no_show") {
@@ -1285,6 +1309,7 @@ export async function canAddCrewRecapPhoto(
   if (!(await canStaffUploadCrewRecapPhoto(db, input.shopId, input.uploadedByPersonId))) {
     return { ok: false, reason: "not_staff" };
   }
+  if (!(await diverPhotosOn(db, input.shopId))) return { ok: false, reason: "not_found" };
   const [trip] = await db
     .select({ endsAt: trips.endsAt, status: trips.status })
     .from(trips)
@@ -1322,6 +1347,8 @@ export async function addCrewRecapPhoto(
   return db.transaction(async (tx) => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.uploadedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "not_staff" } as const;
+    if (!(await diverPhotosOn(tx, input.shopId)))
+      return { ok: false, reason: "not_found" } as const;
     const [trip] = await tx
       .select({ endsAt: trips.endsAt, status: trips.status })
       .from(trips)
