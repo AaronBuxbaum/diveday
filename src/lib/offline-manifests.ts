@@ -915,6 +915,15 @@ export type OfflineManifestUpcomingResponse = {
    * (`wipeOfflineMedicalAlerts`).
    */
   viewer: { personId: string };
+  /**
+   * Per departure in `payloads`, whether this viewer may still hold that
+   * departure's medical alert words (`canPersonReadMedicalAlertOnTrip`, read
+   * live; security review 2, L3). A background refresh drops saved words for
+   * any departure this does not answer true for, so a crew member taken off
+   * the boat, or a manager demoted, loses them at the next refresh while the
+   * device is online. One already at sea keeps them until it expires (H-153).
+   */
+  mayHoldMedicalAlertWords: Record<string, boolean>;
 };
 
 /**
@@ -970,6 +979,26 @@ export function offlineManifestViewerPersonId(body: unknown): string | null {
   const { viewer } = (body ?? {}) as Partial<OfflineManifestUpcomingResponse>;
   const personId: unknown = viewer?.personId;
   return typeof personId === "string" && personId.length > 0 ? personId : null;
+}
+
+/**
+ * Whether an unvalidated `/upcoming` body lets this viewer keep the medical
+ * alert words saved on `tripId`'s copy. Anything but an explicit `true`,
+ * including a body from before the field existed, answers false: the words
+ * are dropped, never kept, when the server's answer cannot be read.
+ */
+export function offlineManifestMayHoldMedicalAlertWords(
+  body: unknown,
+  tripId: string | undefined,
+): boolean {
+  if (!tripId) return false;
+  const { mayHoldMedicalAlertWords } = (body ?? {}) as Partial<OfflineManifestUpcomingResponse>;
+  if (typeof mayHoldMedicalAlertWords !== "object" || mayHoldMedicalAlertWords === null) {
+    return false;
+  }
+  return (
+    Object.hasOwn(mayHoldMedicalAlertWords, tripId) && mayHoldMedicalAlertWords[tripId] === true
+  );
 }
 
 /**

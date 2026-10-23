@@ -54,9 +54,18 @@ function payloadFor(tripId: string): OfflineManifestPayload {
   };
 }
 
-function upcomingResponse(payloads: OfflineManifestPayload[], viewer?: { personId: string }) {
+function upcomingResponse(
+  payloads: OfflineManifestPayload[],
+  viewer?: { personId: string },
+  mayHoldMedicalAlertWords?: Record<string, boolean>,
+) {
   return new Response(
-    JSON.stringify({ shop: { slug: "blue-mantis" }, payloads, ...(viewer ? { viewer } : {}) }),
+    JSON.stringify({
+      shop: { slug: "blue-mantis" },
+      payloads,
+      ...(viewer ? { viewer } : {}),
+      ...(mayHoldMedicalAlertWords ? { mayHoldMedicalAlertWords } : {}),
+    }),
     { status: 200 },
   );
 }
@@ -300,5 +309,32 @@ describe("OfflineManifestAutoSave", () => {
     render(<OfflineManifestAutoSave />);
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
     expect(wipeOfflineMedicalAlerts).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it("tells each save whether this viewer may still hold that departure's words (security review 2, L3)", async () => {
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue({} as never);
+    vi.mocked(fetch).mockResolvedValue(
+      upcomingResponse(
+        [payloadFor("trip-1"), payloadFor("trip-2"), payloadFor("trip-3")],
+        {
+          personId: "person-now",
+        },
+        { "trip-1": true, "trip-2": false },
+      ),
+    );
+    render(<OfflineManifestAutoSave />);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(3));
+    const keep = new Map(
+      vi
+        .mocked(saveOfflineManifest)
+        .mock.calls.map(([payload, options]) => [
+          payload.manifests[0]?.trip.id,
+          options?.keepMedicalAlertWords,
+        ]),
+    );
+    // Taken off the boat (false), or not named at all: the words go.
+    expect(Object.fromEntries(keep)).toEqual({ "trip-1": true, "trip-2": false, "trip-3": false });
   });
 });

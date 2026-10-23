@@ -12,7 +12,10 @@ import {
   saveOfflineMedicalAlerts,
   wipeOfflineMedicalAlerts,
 } from "./offline-manifest-store";
-import type { OfflineManifestPayload } from "./offline-manifests";
+import {
+  type OfflineManifestPayload,
+  offlineManifestMayHoldMedicalAlertWords,
+} from "./offline-manifests";
 
 const ALERT = "Bee-sting allergy. EpiPen in the blue dry bag.";
 const ALERTED = "22222222-2222-2222-2222-222222222222";
@@ -127,6 +130,49 @@ describe("the medical alerts' words on a device copy", () => {
     const after = await saveOfflineManifest(cleared);
     expect(JSON.stringify(after)).not.toContain("EpiPen");
     expect(after.medicalAlertsSavedBy).toBeUndefined();
+  });
+
+  it("drops the saved words on a background refresh once the viewer may no longer hold them (security review 2, L3)", async () => {
+    await saveOfflineManifest(payloadFor(TRIP));
+    await saveOfflineMedicalAlerts(TRIP, { [ALERTED]: ALERT }, DIVEMASTER);
+    // Still on the crew: the refresh keeps them.
+    const crewing = { payloads: [], mayHoldMedicalAlertWords: { [TRIP]: true } };
+    const kept = await saveOfflineManifest(payloadFor(TRIP), {
+      keepMedicalAlertWords: offlineManifestMayHoldMedicalAlertWords(crewing, TRIP),
+    });
+    expect(words(kept)).toEqual([{ text: ALERT }, undefined]);
+    // Taken off the boat: the next refresh drops the words, keeps the fact.
+    const removed = { payloads: [], mayHoldMedicalAlertWords: { [TRIP]: false } };
+    const after = await saveOfflineManifest(payloadFor(TRIP), {
+      keepMedicalAlertWords: offlineManifestMayHoldMedicalAlertWords(removed, TRIP),
+    });
+    expect(JSON.stringify(after)).not.toContain("EpiPen");
+    expect(after.medicalAlertsSavedBy).toBeUndefined();
+    expect(words(after)).toEqual([{}, undefined]);
+    expect(JSON.stringify(await loadOfflineManifest(TRIP))).not.toContain("EpiPen");
+  });
+
+  it("reads a missing or malformed answer as may not hold them", () => {
+    expect(offlineManifestMayHoldMedicalAlertWords({}, TRIP)).toBe(false);
+    expect(offlineManifestMayHoldMedicalAlertWords(null, TRIP)).toBe(false);
+    expect(
+      offlineManifestMayHoldMedicalAlertWords(
+        { mayHoldMedicalAlertWords: { [TRIP]: "yes" } },
+        TRIP,
+      ),
+    ).toBe(false);
+    expect(
+      offlineManifestMayHoldMedicalAlertWords(
+        { mayHoldMedicalAlertWords: { [TRIP]: true } },
+        OTHER_TRIP,
+      ),
+    ).toBe(false);
+    expect(
+      offlineManifestMayHoldMedicalAlertWords(
+        { mayHoldMedicalAlertWords: { [TRIP]: true } },
+        undefined,
+      ),
+    ).toBe(false);
   });
 
   it("wipes the words from every copy on sign-out, keeping the rest of each copy", async () => {

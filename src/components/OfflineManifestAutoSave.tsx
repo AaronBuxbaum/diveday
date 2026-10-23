@@ -8,6 +8,7 @@ import {
   wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import {
+  offlineManifestMayHoldMedicalAlertWords,
   offlineManifestPayloads,
   offlineManifestShopSlug,
   offlineManifestViewerPersonId,
@@ -94,7 +95,13 @@ export function OfflineManifestAutoSave() {
         await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined);
         await Promise.all(
           offlineManifestPayloads(body).map((payload) =>
-            saveOfflineManifest(payload).catch(() => {}),
+            saveOfflineManifest(payload, {
+              // Words this viewer may no longer hold go (security review 2, L3).
+              keepMedicalAlertWords: offlineManifestMayHoldMedicalAlertWords(
+                body,
+                payload.manifests[0]?.trip.id,
+              ),
+            }).catch(() => {}),
           ),
         );
       } catch {

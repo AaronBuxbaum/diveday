@@ -16,7 +16,10 @@ import { createTrip } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { offlineManifestViewerPersonId } from "@/lib/offline-manifests";
+import {
+  offlineManifestMayHoldMedicalAlertWords,
+  offlineManifestViewerPersonId,
+} from "@/lib/offline-manifests";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -237,7 +240,12 @@ describe("GET /api/offline-manifests/upcoming", () => {
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
     const body = (await (await GET()).json()) as Record<string, unknown>;
-    expect(Object.keys(body).sort()).toEqual(["payloads", "shop", "viewer"]);
+    expect(Object.keys(body).sort()).toEqual([
+      "mayHoldMedicalAlertWords",
+      "payloads",
+      "shop",
+      "viewer",
+    ]);
     expect(Array.isArray(body.payloads)).toBe(true);
   });
 
@@ -427,6 +435,36 @@ describe("GET /api/offline-manifests/upcoming — the medical alert for the crew
     const seat = await seatOnCopy(bookingId);
     expect(seat?.medicalAlert).toEqual({});
     expect(JSON.stringify(seat)).not.toContain("EpiPen");
+  });
+
+  it("says per departure whether this viewer may still hold the words, read live (security review 2, L3)", async () => {
+    const { db, shop, personId } = await staffContext();
+    const { tripId } = await alertOnDemoSeat(db, shop.id);
+    const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
+    vi.mocked(getDb).mockResolvedValue(db);
+    const answer = async () => {
+      const body: unknown = await (await GET()).json();
+      return offlineManifestMayHoldMedicalAlertWords(body, tripId);
+    };
+    // The owner, on every departure on the board.
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+    const ownerBody = (await (await GET()).json()) as Body;
+    for (const payload of ownerBody.payloads) {
+      const id = payload.manifests[0]?.trip.id;
+      expect(offlineManifestMayHoldMedicalAlertWords(ownerBody, id), id).toBe(true);
+    }
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, divemaster, ["divemaster"]));
+    expect(await answer()).toBe(false);
+    // Put on the crew by the owner: may hold them.
+    await db
+      .insert(tripAssignments)
+      .values({ tripId, personId: divemaster, assignedByPersonId: personId });
+    expect(await answer()).toBe(true);
+    // Taken off the boat: the next refresh is told to drop them.
+    await db
+      .delete(tripAssignments)
+      .where(and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, divemaster)));
+    expect(await answer()).toBe(false);
   });
 
   it("names who asked, so a device can wipe the words another person saved", async () => {

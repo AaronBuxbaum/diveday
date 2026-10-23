@@ -593,7 +593,17 @@ export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): 
 
 export async function saveOfflineManifest(
   payload: OfflineManifestPayload,
+  options: {
+    /**
+     * False when the server says this viewer may no longer hold the words
+     * (`offlineManifestMayHoldMedicalAlertWords`, security review 2, L3): the
+     * refresh drops any saved words along with who saved them. The manifest
+     * page's own save, whose viewer the page just checked, leaves it true.
+     */
+    keepMedicalAlertWords?: boolean;
+  } = {},
 ): Promise<OfflineManifestEnvelope> {
+  const keepMedicalAlertWords = options.keepMedicalAlertWords ?? true;
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   return withManifestLock(trip.id, async () => {
@@ -607,12 +617,14 @@ export async function saveOfflineManifest(
     // server never carries them, and any it did carry are dropped here. Words
     // an explicit save already put on this copy stay through the background
     // refreshes that follow, for every diver the fresh board still flags, so
-    // the divemaster's tap at the dock survives the five-minute refresh.
-    // Signing out or another person signing in removes them
-    // (`wipeOfflineMedicalAlerts`), never a refresh.
-    const kept = existing?.medicalAlertsSavedBy
-      ? medicalAlertWordsOf(existing.snapshot.manifests)
-      : {};
+    // the divemaster's tap at the dock survives the five-minute refresh,
+    // unless the server says this viewer may no longer hold them
+    // (`keepMedicalAlertWords`). Signing out or another person signing in
+    // removes them too (`wipeOfflineMedicalAlerts`).
+    const kept =
+      keepMedicalAlertWords && existing?.medicalAlertsSavedBy
+        ? medicalAlertWordsOf(existing.snapshot.manifests)
+        : {};
     const manifests = withMedicalAlertWords(payload.manifests, kept);
     const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
     const envelope: OfflineManifestEnvelope = {

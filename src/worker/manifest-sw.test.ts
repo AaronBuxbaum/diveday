@@ -307,6 +307,19 @@ describe("refreshSavedManifests (the push event)", () => {
     );
   });
 
+  it("drops saved words on a departure the body does not say this viewer may hold (security review 2, L3)", async () => {
+    routeFetch({
+      upcoming: () => upcomingResponse("blue-mantis", [tripPayload("trip-1", "blue-mantis")]),
+    });
+
+    await firePush();
+
+    // This body carries no `mayHoldMedicalAlertWords`: fail closed.
+    expect(saveOfflineManifest).toHaveBeenCalledWith(expect.anything(), {
+      keepMedicalAlertWords: false,
+    });
+  });
+
   it.each([
     ["carries no shop", () => upcomingResponse(null, [tripPayload("trip-1", "blue-mantis")])],
     [

@@ -12,6 +12,7 @@ import {
   fetchOfflineManifestShopSlug,
   OFFLINE_FALLBACK_PARAM,
   type OfflineFallbackReason,
+  offlineManifestMayHoldMedicalAlertWords,
   offlineManifestPayloads,
   offlineManifestShopSlug,
   offlineManifestViewerPersonId,
@@ -404,7 +405,13 @@ async function refreshSavedManifests(): Promise<void> {
     for (const payload of offlineManifestPayloads(body)) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.
-      await saveOfflineManifest(payload).catch(() => undefined);
+      // Words this viewer may no longer hold go (security review 2, L3).
+      await saveOfflineManifest(payload, {
+        keepMedicalAlertWords: offlineManifestMayHoldMedicalAlertWords(
+          body,
+          payload.manifests[0]?.trip.id,
+        ),
+      }).catch(() => undefined);
     }
   } catch {
     // Offline, signed out, or the endpoint moved — all the same here.
