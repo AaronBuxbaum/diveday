@@ -147,6 +147,38 @@ discount that does not exist.
     Features row asks owners to take the cards down. A hand-built registration and the
     card-photo read refuse, the counter card leaves Settings (row, rail, ⌘K) and its print page
     lands on Settings. Divers who signed themselves up stay, with the divers list's filter.
+- **Amended 2026-10-23 (Aaron: the "Maybe" rows are switches too): seven more**, one migration
+  (`l4-feature-switches`), each **default true** for every shop: `waitlist_enabled`,
+  `past_diver_invites_enabled`, `help_requests_enabled`, `partner_links_enabled`,
+  `week_out_reminder_enabled`, `public_conditions_enabled` and `field_guide_enabled`. Nothing
+  safety-related moves: the 24-hour reminder, the staff conditions panel, the high-wind alert,
+  roll call and readiness stay core.
+  - **Wait list** off: no door offers one (a full trip page draws no join form and its foot bar
+    says Find another trip; a course's full dates say See this date; the deal list stops pointing
+    at a trip's list; the roster's full band, its on-file and typed doors, a new diver's form and
+    the took-a-call outcome), and `lockFullDeparture` refuses a post that reaches it. The roster's
+    who-wants-in panel, the demand banner and Today's seat-wanted row read no diver's own ask, and
+    `deliverSeatOffer` stamps and sends nothing for one. The nightly series roll **still moves
+    interests** to the next date (bookkeeping) and sends no offer. Interests on file stay.
+  - **Past-diver invites** off: no suggestions on the roster, no invite door on a quiet day's thin
+    boats, and the suggestion's invite action refuses. A manual invite and the course ladder are
+    their own doors and stay.
+  - **Help requests** off: the ready page asks no help question and `saveHelpRequest` refuses a new
+    or changed ask. **A request already open stays**: the diver still sees where it stands and may
+    withdraw it, and it stays on Today until the crew handles it, since a diver may be counting on it.
+  - **Partner links** off: Website embed offers no partner link, a booking with an earlier link's
+    cookie records no referral source (the proxy may still set the cookie; the booking ignores it),
+    and Reports counts no referred seat. Seats already credited keep their source.
+  - **Week-out reminder** off: the 7-day bucket passes unsent and writes nothing; the night-before
+    reminder always sends.
+  - **Public conditions** off: a public trip page shows neither the crew's read nor the automated
+    outlook (and fetches none), its change ledger leaves out conditions updates, and a booked diver's
+    "conditions changed" notice is not drawn there. Link previews and structured data never carried
+    a forecast. The conditions hold, a booked diver's ready page and every staff surface stay.
+  - **Field guide** off: `listSiteFieldGuides` reads none, so public site and trip pages, the recap
+    and the manifest's species shortlist show none (a site's own prose speaks instead). The site
+    editor draws no field-guide section, and the form's save writes neither the species nor the
+    tips heading, so a save erases nothing. Sites, the CSV import and the export stay.
 
 ## Alternatives considered
 

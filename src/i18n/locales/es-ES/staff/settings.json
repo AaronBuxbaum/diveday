@@ -530,7 +530,7 @@
       "helpRequests": {
         "heading": "Pedidos de ayuda",
         "label": "Dejar que los buceadores pidan ayuda el día de la salida",
-        "description": "Un botón en su página de preparación que pone el pedido en Hoy. Desactivado, el botón desaparece; los pedidos ya abiertos siguen en Hoy hasta que los atiendas."
+        "description": "Una pregunta en su página de preparación que pone el pedido en Hoy. Desactivado, la pregunta desaparece; los pedidos ya abiertos siguen en Hoy hasta que los atiendas."
       },
       "publicConditions": {
         "heading": "Condiciones públicas",

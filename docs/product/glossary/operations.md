@@ -275,7 +275,9 @@
   requests, the last-minute list, tips, "Our year", the **PADI checks**, Claude suggestions,
   recap highlights without a tap, lost and found, gear servicing (work orders), promo codes, dive
   packages, **Hotel pickup**, checkout reminders (abandoned-checkout emails), bring a buddy,
-  marine-life sightings, recap photos and counter sign-up (QR self-registration)
+  marine-life sightings, recap photos, counter sign-up (QR self-registration), the wait list,
+  past-diver invites, help requests, partner links, the week-out reminder, public conditions and
+  the field guide
   (`src/lib/shop-features.ts`, one `shops` column each, every one on for a new shop). Off hides the feature on every surface that offers it, redirects
   its staff pages and deletes nothing (ADR 20261005-optional-shop-features).
 - **Feature coverage** — the one answer, per staff destination and per boolean on `shops`, to "is
