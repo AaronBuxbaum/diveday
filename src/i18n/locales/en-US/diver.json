@@ -4502,7 +4502,12 @@
           "note3": "Certification records and rental sizes are not in a FareHarbor export, because a booking engine does not hold them (see the scope table below). Expect people and their contact details. Certs and sizes you build in DiveDay as divers arrive.",
           "note4": "What FareHarbor does hold is bookings, and those come across. Run the Bookings report over the same wide date range and your regulars arrive with their visit history rather than as new names."
         },
-        "importerNote": "A FareHarbor export is mostly contact and booking data. People, emails, phones, and any emergency contact import. Certification records and rental sizes do not, because a booking platform does not hold them. Import Contacts first, then Bookings: DiveDay matches divers by email, so the second file adds each booking to the same diver’s history instead of duplicating them."
+        "importerNote": "A FareHarbor export is mostly contact and booking data. People, emails, phones, and any emergency contact import. Certification records and rental sizes do not, because a booking platform does not hold them. Import Contacts first, then Bookings: DiveDay matches divers by email, so the second file adds each booking to the same diver’s history instead of duplicating them.",
+        "percentArm": {
+          "cardSummary": "A booking engine for tours, not dive software. Keep it for the storefront and run the dive day it cannot, or take the booking here too.",
+          "metaDescription": "On FareHarbor? Keep its booking and distribution network and run the dive day it was never built for (cert checks, waivers, and the roll-call manifest), or take the booking here too. Bring your divers across with a clear picture of what comes with them.",
+          "heroLede": "FareHarbor takes the online booking and puts you in front of its hotel and reseller network. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep FareHarbor for the storefront, or take the booking here too."
+        }
       },
       "rezdy": {
         "cardSummary": "A general tours platform with a big reseller marketplace, not dive software. Keep it for distribution, or leave the monthly fee and per-booking cut behind.",
@@ -4553,7 +4558,12 @@
           "note3": "Certification records and rental sizes are not in a Rezdy export, because a booking engine does not hold them (see the scope table below). Expect people and their contact details. Certs and sizes you build in DiveDay as divers arrive.",
           "note4": "What Rezdy does hold is bookings, and those come across. The Orders report’s one-row-per-booking shape carries your regulars’ visit history over with them."
         },
-        "importerNote": "A Rezdy export is mostly contact and booking data. People, emails, phones, and any emergency contact import. Certification records and rental sizes do not, because a booking platform does not hold them. Bring the Orders file: DiveDay matches divers by email, so its repeated rows for one customer become that diver’s visit history rather than duplicate people."
+        "importerNote": "A Rezdy export is mostly contact and booking data. People, emails, phones, and any emergency contact import. Certification records and rental sizes do not, because a booking platform does not hold them. Bring the Orders file: DiveDay matches divers by email, so its repeated rows for one customer become that diver’s visit history rather than duplicate people.",
+        "percentArm": {
+          "cardSummary": "A general tours platform with a big reseller marketplace, not dive software. Keep it for distribution, or take the booking here too.",
+          "metaDescription": "On Rezdy? Keep its reseller marketplace and run the dive day it was never built for (cert checks, waivers, and the roll-call manifest), or take the booking here too. Bring your divers across with a clear picture of what comes with them.",
+          "heroLede": "Rezdy takes the online booking and pushes your trips to its reseller marketplace and the big OTAs. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep Rezdy for the storefront, or take the booking here too."
+        }
       }
     },
     "about": {
@@ -4599,7 +4609,12 @@
       "whoAnswersLabel": "Who answers you",
       "whoAnswersValue": "One of the people who build DiveDay, at {email}.",
       "closingTitle": "The demo is a working shop, with divers booked on today’s boat",
-      "closingDescription": "Open it as the owner, the captain or a diver and run the day through: book a seat, sign the waiver, check someone in, and call the roll with the phone in airplane mode. When you want a shop of your own, write to us and we’ll build it with you."
+      "closingDescription": "Open it as the owner, the captain or a diver and run the day through: book a seat, sign the waiver, check someone in, and call the roll with the phone in airplane mode. When you want a shop of your own, write to us and we’ll build it with you.",
+      "percentArm": {
+        "onePriceTitle": "One plan covers the shop",
+        "onePriceBody": "The plan is {percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {, with no monthly fee}}, and it covers every part of DiveDay and a login for everyone on your staff. Tips never count toward it. The pricing page lists each thing it covers.",
+        "seeCost": "{percent} of card money{hasBase, select, yes { and {base} a month} other { through DiveDay}}. See the full list"
+      }
     },
     "product": {
       "eyebrow": "Features",
@@ -4925,7 +4940,11 @@
         "season": "Across the season"
       },
       "closePrice": "{price} {cadence}, with every feature in it.",
-      "demoNote": "The demo opens on {place}. It’s a working sample shop, with no sign-up and no card."
+      "demoNote": "The demo opens on {place}. It’s a working sample shop, with no sign-up and no card.",
+      "percentArm": {
+        "includedPrice": "Every line here is in the one plan, at {percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {}}.",
+        "closePrice": "{percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {}}, with every feature in it."
+      }
     },
     "featurePages": {
       "onlineBooking": {
@@ -5238,7 +5257,11 @@
         "faq3Q": "Does it work with my accounting?",
         "faq3A": "Paid and refunded orders post to QuickBooks as receipts, and the report downloads as a spreadsheet.",
         "closeTitle": "Look over a day of demo orders",
-        "demoPlace": "the day’s orders, as the owner"
+        "demoPlace": "the day’s orders, as the owner",
+        "percentArm": {
+          "note3": "No row carries a DiveDay fee. DiveDay’s {percent} is billed to you once a month, on an invoice of its own.",
+          "faq1A": "Yes. The fee is {percent} of the card money taken through DiveDay{hasBase, select, yes {, plus {base} a month} other {}}, billed once a month. Tips, tax and money taken at the counter never count, and nothing is added to your guest’s price. Stripe charges its own card fees in your Stripe account."
+        }
       }
     },
     "setUp": {

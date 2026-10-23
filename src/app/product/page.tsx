@@ -3,6 +3,7 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { heroPriceLine } from "@/app/_components/HeroFootnotes";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
@@ -16,13 +17,10 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { switchingHref } from "@/lib/funnel";
-import {
-  earlyAccessPrice,
-  fullShopExport,
-  productCapabilityIndex,
-  sharedLinkCard,
-} from "@/lib/marketing";
+import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
+import { requestPricingOffer } from "@/lib/pricing-arm-request";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -78,13 +76,13 @@ export const metadata: Metadata = {
  * the body must not wait on that.
  */
 export default async function ProductPage() {
-  const locale = await requestLocale();
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <ProductBody locale={locale} />
+      <ProductBody locale={locale} offer={offer} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
@@ -92,8 +90,8 @@ export default async function ProductPage() {
   );
 }
 
-/** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */
-async function ProductBody({ locale }: { locale: DiverLocale }) {
+/** Cached per negotiated locale (DIVER_LOCALES — two entries) and pricing offer — no session-scoped content. */
+async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
@@ -129,12 +127,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               verifying claims. Same one-primary block as the home hero. */}
           <FunnelCtas locale={locale} source="product" className="mt-8" />
           <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
-          <p className="mt-2 text-sm text-muted">
-            {t("marketing.home.heroPriceLine", {
-              price: earlyAccessPrice.price,
-              cadence: t(earlyAccessPrice.cadenceKey),
-            })}
-          </p>
+          <p className="mt-2 text-sm text-muted">{heroPriceLine(t, offer, locale)}</p>
         </div>
       </section>
 

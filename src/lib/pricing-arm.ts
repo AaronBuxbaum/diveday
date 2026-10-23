@@ -30,12 +30,23 @@ export const PRICING_ARM_COOKIE = "dd_pricing";
 export const PRICING_ARM_COOKIE_MAX_AGE = 90 * 24 * 60 * 60;
 export const PRICING_ARM_HEADER = "x-diveday-pricing-arm";
 
-/** The pages that state a price, and the set-up form that records which one was seen. */
-const PRICING_MARKETING_PATHS = new Set(["/", "/pricing", "/get-set-up"]);
+/**
+ * The pages that state a price or a claim about it (`/about`, the feature
+ * hub and pages, the switching hub and guides as well as `/` and `/pricing`),
+ * and the set-up form that records which one was seen.
+ */
+const PRICING_MARKETING_PATHS = new Set(["/", "/pricing", "/get-set-up", "/about"]);
+/** Sections whose hub and every page under it state the price. */
+const PRICING_MARKETING_SECTIONS = ["/product", "/switching"] as const;
 
 export function isPricingMarketingPath(pathname: string): boolean {
   const trimmed = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  return PRICING_MARKETING_PATHS.has(trimmed);
+  return (
+    PRICING_MARKETING_PATHS.has(trimmed) ||
+    PRICING_MARKETING_SECTIONS.some(
+      (section) => trimmed === section || trimmed.startsWith(`${section}/`),
+    )
+  );
 }
 
 /**

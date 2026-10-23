@@ -1,4 +1,5 @@
 import type { DiverMessageKey } from "@/i18n/messages";
+import type { PricingPlan } from "@/lib/billing/pricing-plans";
 import type { ImportScopeRowId } from "./import";
 
 /**
@@ -78,8 +79,12 @@ export type CoexistFraming = {
    * and state the honest no-live-sync caveat: the CSV export below is the bridge.
    */
   bridgeNote: DiverMessageKey;
-  /** The alternative path: drop the channel entirely and take the booking in DiveDay. */
-  replace: { heading: DiverMessageKey; body: DiverMessageKey };
+  /**
+   * The alternative path: drop the channel entirely and take the booking in
+   * DiveDay. Its argument is the incumbent's per-booking fee against a flat
+   * price, so the pricing test's percent arm has none ({@link guideForPlan}).
+   */
+  replace?: { heading: DiverMessageKey; body: DiverMessageKey };
 };
 
 /**
@@ -153,6 +158,17 @@ export type MigrationGuide = {
   heroEyebrow: DiverMessageKey;
   heroTitle: DiverMessageKey;
   heroLede: DiverMessageKey;
+
+  /**
+   * The pricing test's percent arm (ADR 20261022-pricing-ab-test): the
+   * sentences that set the incumbent's per-booking fee against a flat price,
+   * with the contrast taken out. Only the booking-channel guides carry one.
+   */
+  percentArm?: {
+    cardSummary: DiverMessageKey;
+    metaDescription: DiverMessageKey;
+    heroLede: DiverMessageKey;
+  };
 
   /** Honest framing of the incumbent — paragraphs, no marketing puffery. */
   context: DiverMessageKey[];
@@ -557,6 +573,11 @@ const fareharbor: MigrationGuide = {
   heroEyebrow: "marketing.guides.fareharbor.heroEyebrow",
   heroTitle: "marketing.guides.fareharbor.heroTitle",
   heroLede: "marketing.guides.fareharbor.heroLede",
+  percentArm: {
+    cardSummary: "marketing.guides.fareharbor.percentArm.cardSummary",
+    metaDescription: "marketing.guides.fareharbor.percentArm.metaDescription",
+    heroLede: "marketing.guides.fareharbor.percentArm.heroLede",
+  },
 
   // Three paragraphs, not four: the fourth ("so there are two honest ways
   // DiveDay fits a FareHarbor shop…") announced the section immediately below
@@ -674,6 +695,11 @@ const rezdy: MigrationGuide = {
   heroEyebrow: "marketing.guides.rezdy.heroEyebrow",
   heroTitle: "marketing.guides.rezdy.heroTitle",
   heroLede: "marketing.guides.rezdy.heroLede",
+  percentArm: {
+    cardSummary: "marketing.guides.rezdy.percentArm.cardSummary",
+    metaDescription: "marketing.guides.rezdy.percentArm.metaDescription",
+    heroLede: "marketing.guides.rezdy.percentArm.heroLede",
+  },
 
   // Three paragraphs — same cut as FareHarbor's, for the same reason.
   context: [
@@ -792,4 +818,18 @@ export const MIGRATION_GUIDE_SLUGS: string[] = MIGRATION_GUIDES.map((guide) => g
 /** Look up a guide by slug; an unknown slug returns null (→ 404). */
 export function getMigrationGuide(slug: string): MigrationGuide | null {
   return MIGRATION_GUIDES.find((entry) => entry.slug === slug) ?? null;
+}
+
+/**
+ * A guide as the reader's pricing arm reads it (ADR 20261022-pricing-ab-test).
+ * The flat arm's is the guide itself. The percent arm's swaps in the
+ * sentences without the per-booking-fee contrast and drops the "leave the fee
+ * behind" box, a comparison that holds only against a flat price.
+ */
+export function guideForPlan(guide: MigrationGuide, plan: PricingPlan): MigrationGuide {
+  if (plan !== "percent_of_volume") return guide;
+  const { percentArm, coexist, ...rest } = guide;
+  if (!coexist) return { ...rest, ...percentArm };
+  const { heading, intro, runsInDiveDay, bridgeNote } = coexist;
+  return { ...rest, ...percentArm, coexist: { heading, intro, runsInDiveDay, bridgeNote } };
 }
