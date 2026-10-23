@@ -156,29 +156,49 @@ discount that does not exist.
   - **Wait list** off: no door offers one (a full trip page draws no join form and its foot bar
     says Find another trip; a course's full dates say See this date; the deal list stops pointing
     at a trip's list; the roster's full band, its on-file and typed doors, a new diver's form and
-    the took-a-call outcome), and `lockFullDeparture` refuses a post that reaches it. The roster's
-    who-wants-in panel, the demand banner and Today's seat-wanted row read no diver's own ask, and
-    `deliverSeatOffer` stamps and sends nothing for one. The nightly series roll **still moves
-    interests** to the next date (bookkeeping) and sends no offer. Interests on file stay.
+    the took-a-call outcome, which comes back to Add a booking with the caller's details kept), and
+    `lockFullDeparture` refuses a post that reaches it, after answering that a seat is open when
+    one is. **The list's own sends stop**: the nightly roll's invite and the "Who wants in" offer
+    (`deliverSeatOffer` without `initiatedBy`) fall back to the composer, and the roll **still moves
+    interests** to the next date (bookkeeping). **Nobody already waiting vanishes**: their asks stay
+    on the roster's panel and Today's seat-wanted row until someone handles them, and the no-show
+    desk counts none (it offers the rebooking). **A staffer's own outreach is not the list's**:
+    the roster's Invite, the course ladder, the no-show desk's "Email them this date" and a deal
+    blast pass `initiatedBy: "shop"` and send even to a diver whose row is a wait-list ask.
   - **Past-diver invites** off: no suggestions on the roster, no invite door on a quiet day's thin
-    boats, and the suggestion's invite action refuses. A manual invite and the course ladder are
-    their own doors and stay.
+    boats, and the suggestion's invite (`initiatedBy: "suggestion"`) refuses and sends nothing.
+    An invite a staffer picks themselves (the roster's Invite, the course ladder, the no-show desk)
+    is not a suggestion and still sends `seat_offer_commercial`. **Only suggestions and automatic
+    sends are gated** (review 2026-10-23, item 9), consistent with the wait list above.
+  - **Queued retries ask again**: a seat offer carries `governedBy` (`waitlist` or
+    `pastDiverInvites`) when a switch governs it, and `drainNotificationRetries` refuses it
+    (`switched_off`) while that switch is off; a staffer's own offer carries none and always goes.
   - **Help requests** off: the ready page asks no help question and `saveHelpRequest` refuses a new
-    or changed ask. **A request already open stays**: the diver still sees where it stands and may
-    withdraw it, and it stays on Today until the crew handles it, since a diver may be counting on it.
+    or changed ask; the shop's phone and email stand where the question was. **A request already
+    open stays**: the diver still sees where it stands and has one Withdraw button (it posts
+    `none`, the one answer the save still takes), and it stays on Today until the crew handles it,
+    since a diver may be counting on it.
   - **Partner links** off: Website embed offers no partner link, a booking with an earlier link's
     cookie records no referral source (the proxy may still set the cookie; the booking ignores it),
     and Reports counts no referred seat. Seats already credited keep their source.
-  - **Week-out reminder** off: the 7-day bucket passes unsent and writes nothing; the night-before
-    reminder always sends.
-  - **Public conditions** off: a public trip page shows neither the crew's read nor the automated
-    outlook (and fetches none), its change ledger leaves out conditions updates, and a booked diver's
-    "conditions changed" notice is not drawn there. Link previews and structured data never carried
-    a forecast. The conditions hold, a booked diver's ready page and every staff surface stay.
+  - **Week-out reminder** off: **only the plain hello is silenced** (`reminderEarnsItsSend`'s
+    `weekOutHello`): a 7-day reminder whose checklist is empty is not sent and writes nothing. A
+    diver with anything still on the list (theirs or the shop's: a waiver, a card, a pending
+    physician referral) or course materials due still hears a week out, and no readiness evidence
+    still sends, because the switch never silences a safety message a booked diver needs. A queued
+    retry of a hello (`open` 0, no medical review) is refused while off. The night-before reminder
+    always sends.
+  - **Public conditions** off: **only the automated outlook goes**, and none is fetched. The crew's
+    own read, their conditions updates in the change ledger and a booked diver's "conditions
+    changed since you booked" notice stay for every reader: `/ready` sends a booked diver to that
+    page and a held departure's notice says "see the conditions update above", and the page cannot
+    tell a booked diver from a browser outside the embed. Link previews and structured data never
+    carried a forecast. The conditions hold and every staff surface stay.
   - **Field guide** off: `listSiteFieldGuides` reads none, so public site and trip pages, the recap
     and the manifest's species shortlist show none (a site's own prose speaks instead). The site
-    editor draws no field-guide section, and the form's save writes neither the species nor the
-    tips heading, so a save erases nothing. Sites, the CSV import and the export stay.
+    editor draws no field-guide section, and neither the form's save nor a catalog template pull
+    (or its undo) writes the species or the tips heading, so nothing erases the guide. Sites, the
+    CSV import and the export stay.
 
 ## Alternatives considered
 
