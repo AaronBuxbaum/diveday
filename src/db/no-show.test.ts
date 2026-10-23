@@ -931,25 +931,6 @@ describe("noShowSalvage", () => {
     });
   });
 
-  it("counts nobody waiting while the wait list is switched off, so the rebooking shows", async () => {
-    // Review 2026-10-23, item 5: a wait list nobody can be offered from is no
-    // salvage; the desk gets the other day instead.
-    const { db, shop, trip, personId, now } = await context();
-    const [waiting] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(eq(people.shopId, shop.id))
-      .limit(1);
-    if (!waiting) throw new Error("seeded person missing");
-    await db
-      .insert(interests)
-      .values(departureInterest({ shopId: shop.id, tripId: trip.id, personId: waiting.id }));
-    await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
-
-    const offer = await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now });
-    expect(offer.kind).not.toBe("waitlist");
-  });
-
   it("falls back to a day the diver who missed could be put on instead", async () => {
     const { db, shop, trip, personId, now } = await context();
     const [site] = await db

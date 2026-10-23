@@ -317,14 +317,14 @@ export function DayOfDetails({
                 {/* Off, the radios are gone, so withdrawing is its own button:
                     it posts the one answer the save still takes. */}
                 {data.helpRequest && !data.helpRequestsOn ? (
-                  <button
-                    type="submit"
+                  <SubmitButton
                     name="kind"
                     value="none"
+                    pendingLabel={t("common.saving")}
                     className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
                   >
                     {t("ready.helpWithdraw")}
-                  </button>
+                  </SubmitButton>
                 ) : null}
               </>
             )}
