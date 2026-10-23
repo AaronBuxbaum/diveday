@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 // Do the committed migrations still form a single-headed graph?
 //
-// drizzle-kit 1.0 stores a full schema snapshot per migration folder, and each
-// snapshot names its parents in `prevIds`. Those parents make `drizzle/` a DAG
+// drizzle-kit 1.0 stores a snapshot per migration folder, and each snapshot
+// names its parents in `prevIds`. Those parents make `drizzle/` a DAG
 // rather than a list: a branch cut from main today has its migration's
 // `prevIds` pointing at whatever main's head was *then*, so two migrations
 // authored in parallel and merged normally leave the graph with two open
-// heads. `drizzle-kit check` walks every fork point in that DAG, compares the
-// branches hanging below it, and refuses the tree when two of them touch the
-// same object -- two columns added to `shops` in the same afternoon is all it
-// takes, and this repo adds columns to `shops` from several branches a week.
+// heads. `drizzle-kit check` compares every pair of open heads by the
+// footprints their snapshots record (the names each statement writes and
+// reads) and refuses the tree when two branches write the same object -- the
+// same column added twice, or one column altered both ways. Since snapshot
+// version 9 (drizzle-kit 1.0.0-rc.5) two different columns on one table no
+// longer collide.
 //
 // The reason this is a repo safeguard and not a footnote: the same walk runs
 // inside `drizzle-kit migrate`, which `scripts/vercel-build.mjs` calls **in the
@@ -156,9 +158,10 @@ polices.`,
 //
 // A rebase that drops a migration folder and keeps the one written on top of it
 // leaves a snapshot whose `prevIds` names an id nothing in the tree holds.
-// drizzle-kit's commutativity walk only visits fork points it can reach, so the
-// dangling edge is skipped rather than refused and `check` exits 0; the graph
-// cannot be walked back to its root, and the first to notice is migrate time.
+// drizzle-kit 1.0.0-rc.5 refuses that tree itself, but this runs first so the
+// refusal is not followed by the `pnpm db:merge` remedy below, which cannot
+// fix it: a merge node over a missing parent is still a graph that cannot be
+// walked back to its root.
 // `originUUID` is drizzle-kit's sentinel for "no parent" on the first snapshot.
 const ORIGIN_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -179,8 +182,8 @@ if (dangling.length > 0) {
 
 ${dangling.map(({ name, prevId }) => `  ${MIGRATIONS_DIR}/${name}/snapshot.json names "${prevId}"`).join("\n")}
 
-\`drizzle-kit check\` skips an edge it cannot follow, so this tree would pass
-there and break at migrate time. The usual cause is a rebase that dropped the
+drizzle-kit cannot reconstruct the schema through an edge it cannot follow,
+so migrate refuses this tree. The usual cause is a rebase that dropped the
 parent's folder: restore it, or regenerate this migration on top of the
 current head with \`pnpm db:generate\`.`,
   );
@@ -197,9 +200,9 @@ rewrite anything:
   pnpm db:merge
 
 That writes one more migration folder whose SQL is empty and whose snapshot
-names every open head as a parent. A fork whose branches reach a common leaf is
-skipped by drizzle's walk, so the tree goes quiet and no DDL is added. Commit it
-with the change that provoked it.
+names every open head as a parent. drizzle compares open heads only, and this
+leaves one, so the tree goes quiet and no DDL is added. Commit it with the
+change that provoked it.
 
 Read the diagram before you run it. If two branches genuinely add the same
 column, the merge folder will silence this check and the second \`ADD COLUMN\`
