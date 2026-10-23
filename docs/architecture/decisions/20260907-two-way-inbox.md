@@ -64,7 +64,9 @@ URL the app then acts on without checking it against what the stack provisioned.
 5. **WhatsApp inbound rides the existing webhook.** The `messages` field the delivery parser
    skipped is read beside it; text is kept, media is counted with its caption and never fetched.
    A typed reply goes out as free text through a new `sendText` on the adapter, and is refused
-   before sending when the diver's last message is older than Meta's 24-hour window.
+   before sending when the diver's last message is older than Meta's 24-hour window. Past it the
+   composer is replaced by why, and by three approved **asks to write back** sent through the
+   shop's courtesy template, one per silence; the diver's answer reopens the window (2026-10-23).
 6. **A reply is a notification kind.** `staff_reply` carries the staffer's words and the diver's
    own `Message-ID`; the SES adapter sets `In-Reply-To` and `References` from it, so the answer
    lands in the diver's thread. It goes out in the diver's recorded locale, falling back to the

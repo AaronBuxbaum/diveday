@@ -1859,6 +1859,15 @@
   and the **SMS channel** otherwise. Any WhatsApp failure — most often a diver who simply isn't on
   WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
   after the boat leaves is worth nothing.
+- **Ask to write back** — the WhatsApp message a staffer sends from a diver's conversation once
+  the diver's last WhatsApp is more than 24 hours old, when WhatsApp no longer carries a typed
+  reply (Meta's customer-service window). One of three fixed sentences from the diver bundle
+  (`notifications.whatsappReopen.*`: an answer is ready, a question, picking up where we left off),
+  in the diver's language, carried by the shop's approved **courtesy message** template. Recorded
+  on `staff_replies` without answering the message, and one per silence: a WhatsApp reply sent a
+  full window after the diver last wrote can only be one, so `whatsAppReopenSentAt`
+  (`src/lib/inbox.ts`) finds it without a column. The diver's answer opens a fresh window and
+  the composer is back. Send path `sendWhatsAppReopen` in `src/db/staff-reply.ts`.
 - **STOP list** — the phone numbers that replied STOP to DiveDay's texting number (`sms_opt_outs`,
   ADR [20261007-sms-stop-and-help](../../architecture/decisions/20261007-sms-stop-and-help.md)). One
   list for the platform, because every shop texts from the one number. A listed number gets no SMS

@@ -72,7 +72,9 @@
     "placeholder": "Type your answer",
     "send": "Send",
     "sending": "Sending…",
-    "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
+    "windowClosed": "{name} last wrote on WhatsApp more than 24 hours ago. After that, WhatsApp stops a business typing freely, so nobody gets messages they never asked for.",
+    "reopenLead": "Send one of these WhatsApp-approved messages instead. When {name} answers, you can type your reply.",
+    "reopenSent": "You asked {name} to write back {date}. When they do, you can type your reply here.",
     "diverRemoved": "This diver’s record was removed, so replies are switched off."
   },
   "notices": {
@@ -84,8 +86,11 @@
     "channelUnsupported": "DiveDay cannot answer a text message yet.",
     "noReplyAddress": "There is no address to answer on.",
     "cannotBeSent": "This reply cannot be sent as it stands. Nothing went out, and trying again will not change that.",
-    "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
+    "whatsappWindowClosed": "Their last WhatsApp message is more than 24 hours old, so WhatsApp won’t take a typed reply. Send one of the approved messages to ask them to write back.",
     "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
+    "reopenFailed": "That did not reach WhatsApp. Try again in a minute, or call them.",
+    "reopenWindowOpen": "They wrote again in the last 24 hours, so type your reply instead.",
+    "reopenAlreadyAsked": "You already asked them to write back. Wait for their answer before asking again.",
     "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
     "lateMarked": "Marked running late. The roster and the manifest show it.",
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",

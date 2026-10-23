@@ -3,10 +3,11 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isDiverRemoved, updateDiver } from "@/db/divers";
-import { sendStaffReply } from "@/db/staff-reply";
+import { sendStaffReply, sendWhatsAppReopen } from "@/db/staff-reply";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { readForm, text } from "@/lib/form-parse";
+import { WHATSAPP_REOPEN_MESSAGES } from "@/lib/inbox";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -143,5 +144,49 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
   // `noticeUrl` kebabs the code, so a domain reason spelt snake_case needs no
   // translation here.
   const notice = result.status === "sent" ? "reply-sent" : `reply-${result.reason}`;
+  revalidateAndRedirect(base, backTo(base, notice, "reply"));
+}
+
+const reopenForm = z.object({ messageId: text(), message: z.enum(WHATSAPP_REOPEN_MESSAGES) });
+
+/**
+ * **Ask the diver to write back on WhatsApp**, once a typed reply can no
+ * longer go (`sendWhatsAppReopen`). The same gate and the same per-staff send
+ * bound as a typed reply: it is the shop speaking either way.
+ */
+export async function reopenWhatsAppAction(shopSlug: string, personId: string, formData: FormData) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-reply",
+    "reply",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const parsed = reopenForm.safeParse(Object.fromEntries(formData));
+  const messageId = parsed.success ? uuidParam(parsed.data.messageId) : null;
+  if (!parsed.success || !messageId) {
+    revalidateAndRedirect(base, backTo(base, "reopen-message-not-found", "reply"));
+  }
+  const sendAllowed = await checkRateLimit(
+    rateLimitKey("staff-send", "reply", staff.user.personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  if (!sendAllowed.allowed) {
+    revalidateAndRedirect(base, backTo(base, "reopen-send-limit", "reply"));
+  }
+  const result = await sendWhatsAppReopen(db, {
+    shopId: staff.user.shopId,
+    personId,
+    messageId,
+    message: parsed.data.message,
+    sentByPersonId: staff.user.personId,
+  });
+  const notice =
+    result.status === "sent"
+      ? "reopen-sent"
+      : result.status === "failed"
+        ? "reopen-send-failed"
+        : `reopen-${result.reason}`;
   revalidateAndRedirect(base, backTo(base, notice, "reply"));
 }
