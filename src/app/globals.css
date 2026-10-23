@@ -2372,6 +2372,13 @@ details[open]::details-content {
   z-index: 0;
   cursor: default;
 }
+/* MapLibre's place-label canvas (leaflet-basemap.ts), placed by Leaflet. */
+.leaflet-gl-layer,
+.leaflet-gl-layer .maplibregl-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 .leaflet-shop-stem__line {
   /* Drawn from the badge's center down its length, then turned to end on
      the shop's own spot (`updateShopMarkerPosition`). An inner line, since
