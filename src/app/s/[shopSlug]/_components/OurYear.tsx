@@ -54,8 +54,8 @@ async function publicShopYear(
 /**
  * **"Our year" at the foot of the shopfront** — the Reports year card's
  * sentence ("312 divers. 140 boats out. 18 reefs and wrecks.") where a diver
- * comparing shops reads it. Only with the shop's yes (`shops.public_year_enabled`,
- * off by default), and only counts: `getShopYear` carries no money across its
+ * comparing shops reads it. Only while the shop's switch is on
+ * (`shops.public_year_enabled`, on for a new shop since 2026-10-23), and only counts: `getShopYear` carries no money across its
  * boundary at all, and this panel shows nothing but the range and the
  * sentence. Nothing at all before a departure has sailed: a year of zeroes is
  * not something a shop would choose to publish.

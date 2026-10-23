@@ -10,7 +10,11 @@ import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
-import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
+import {
+  SHOP_FEATURE_COLUMNS,
+  type ShopFeature,
+  type ShopFeatureColumn,
+} from "@/lib/shop-features";
 import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
@@ -798,6 +802,33 @@ export async function setShopFeature(
     .set({ [SHOP_FEATURE_COLUMNS[feature]]: enabled })
     .where(eq(shops.id, shopId))
     .returning();
+  return shop ?? null;
+}
+
+/**
+ * The on/off columns the Features page writes: the optional features, Stripe
+ * Tax, the crew schedule and the three kinds of diving.
+ */
+export type ShopSwitches = Partial<
+  Pick<
+    typeof shops.$inferSelect,
+    | ShopFeatureColumn
+    | "taxEnabled"
+    | "crewScheduleEnabled"
+    | "hasBoatDiving"
+    | "hasShoreDiving"
+    | "hasPoolDiving"
+  >
+>;
+
+/**
+ * Writes the Features page's switches in one statement, so a save lands whole
+ * or not at all. A column absent from `switches` is left as it was: only the
+ * rows the page drew, and the reader may flip, are ever named.
+ */
+export async function setShopSwitches(db: AppDb, shopId: string, switches: ShopSwitches) {
+  if (Object.keys(switches).length === 0) return null;
+  const [shop] = await db.update(shops).set(switches).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
 }
 

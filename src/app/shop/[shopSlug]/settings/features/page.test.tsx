@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { SubmitButton } from "@/components/SubmitButton";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug, setShopCrewScheduleEnabled, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
@@ -31,7 +32,7 @@ const SHOP_SLUG = "blue-mantis";
 async function renderFeatures(
   role: Role,
   seed?: (db: AppDb, shopId: string) => Promise<void>,
-  searchParams: { notice?: string; saved?: string } = {},
+  searchParams: { notice?: string } = {},
 ) {
   const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, SHOP_SLUG);
@@ -58,7 +59,7 @@ async function renderFeatures(
 
 const rowsIn = (element: unknown) =>
   findElements<{ name: string; value: string }>(element, "input")
-    .filter((input) => input.props.name === "row")
+    .filter((input) => input.props.name === "rows")
     .map((input) => input.props.value);
 
 describe("the Features page", () => {
@@ -78,12 +79,33 @@ describe("the Features page", () => {
     ]);
   });
 
-  it("offers each switch under the name its column had, and the three diving modes together", async () => {
+  it("offers each switch under its row's own name, and the three diving modes together", async () => {
     const names = inputNamesIn(await renderFeatures("owner"));
-    expect(names.filter((name) => name === "enabled")).toHaveLength(10);
+    const switches = names.filter((name) => name.startsWith("feature:"));
+    expect(switches).toEqual([
+      "feature:reviews",
+      "feature:tips",
+      "feature:dateRequests",
+      "feature:lastMinuteList",
+      "feature:publicYear",
+      "feature:padiChecks",
+      "feature:claudeSuggestions",
+      "feature:recapAutoApprove",
+      "feature:crewSchedule",
+      "feature:tax",
+    ]);
     for (const name of ["hasBoatDiving", "hasShoreDiving", "hasPoolDiving"]) {
       expect(names).toContain(name);
     }
+  });
+
+  it("is one form with one Save for every switch", async () => {
+    const page = await renderFeatures("owner");
+    expect(findElements(page, "form")).toHaveLength(1);
+    expect(findElements(page, SubmitButton)).toHaveLength(1);
+    // Every row the page drew is named, so the save knows which rows it may write.
+    const [form] = findElements<{ children: unknown }>(page, "form");
+    expect(rowsIn(form)).toHaveLength(11);
   });
 
   it("does not render at all for a divemaster", async () => {

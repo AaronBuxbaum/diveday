@@ -256,7 +256,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the features page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/features");
         await page.getByRole("heading", { level: 1, name: "Features" }).waitFor();
-        await page.getByRole("button", { name: "Save" }).first().waitFor();
+        await page.getByRole("button", { name: "Save" }).waitFor();
         await capture(page, "settings-features", scheme);
       });
 

@@ -113,9 +113,9 @@
   Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
   Offered only at a shop that turned the **PADI checks** on.
 - **PADI checks** — the shop's own switch, "PADI checks (beta)" in Settings, for both checks run on
-  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-121, H-106). Off by
-  default, because they run under the shop's own PADI membership and have not been tried on the
-  real page; off, a PADI card keeps its "(member sign-in)" link and nothing offers or accepts a
+  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-121, H-106). On for
+  a new shop since 2026-10-23 (Aaron); they run under the membership of the shop's PADI Pro who is
+  signed in. Off, a PADI card keeps its "(member sign-in)" link and nothing offers or accepts a
   check (`agencyCheckOffered`, `shops.padi_checks_enabled`).
 - **Agency-listed certification** — a nitrox or specialty certification an **Agency check** found on
   the same page as the card it matched, and that the staffer chose to add (layer 3 of ADR

@@ -34,7 +34,7 @@ import { expect, test } from "./fixtures";
  * not survive the failure it is there for.
  */
 
-/** The tax switch: a row of the Features page (issue #2814), with its own Save. */
+/** The tax switch: a row of the Features page (issue #2814), saved by the page's one Save. */
 function taxRow(page: Page) {
   return page.locator("li#tax");
 }
@@ -45,8 +45,8 @@ const TAX_LABEL = "Use Stripe Tax for new booking and invoice payments";
 async function setTax(page: Page, shopSlug: string, enabled: boolean) {
   await page.goto(`/shop/${shopSlug}/settings/features`);
   await taxRow(page).getByLabel(TAX_LABEL).setChecked(enabled);
-  await taxRow(page).getByRole("button", { name: "Save" }).click();
-  await expect(taxRow(page).getByText("Saved")).toBeVisible();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
 }
 
 test.describe("Stripe Tax opt-in", () => {

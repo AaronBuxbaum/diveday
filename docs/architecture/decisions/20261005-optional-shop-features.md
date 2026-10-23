@@ -73,6 +73,16 @@ discount that does not exist.
   row, the pass-through fee in Money. Schema, defaults and what Off hides are unchanged. ⌘K finds
   each switch by name. This reverses the first alternative below.
 
+- **Amended 2026-10-23 (Aaron): every feature starts on, and the page has one Save.** A new shop
+  gets every switch on the Features page on: `public_year_enabled`, `padi_checks_enabled`,
+  `crew_schedule_enabled` and `recap_assist_auto_approve` now default true like the other four
+  (migration `every-feature-starts-on`), and every seeded shop has all of them on. A shop turns
+  off what it does not want. Existing rows keep the value they hold; nothing is backfilled. Stripe
+  Tax and shore and pool diving keep their defaults pending the owner's call. The page is one form
+  with one Save that writes every row it drew in one statement, and leaves a row the reader may not
+  flip (its gate fails, so the page did not draw it) exactly as it was. The 2026-10-15 amendment's
+  "defaults off" and the "Default off, like the crew schedule" alternative below are history.
+
 ## Alternatives considered
 
 - **One "Features" group in Settings listing every switch.** *Rejected at first, adopted

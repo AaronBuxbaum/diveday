@@ -36,6 +36,12 @@ No agency offers a certification API ([H-10](../../product/human-decisions/READM
 - **Signed out.** The staffer reads "Sign in to the PADI Pros' Site first, then check again", on DiveChek and on the eLearning check alike, never "Couldn't read PADI's page", and nothing is sent to the server. A "Check all" stops on it at once, naming the diver it stopped at, because it is the agency's state and not one diver's: every PADI card after it would meet the same sign-in.
 - **Terms.** DiveChek is a PADI member benefit, and PADI may read an extension filling its search as automated use. No published PADI clause found forbids it, but the Pros' Site's own terms sit behind the sign-in and have not been read. H-121 records that this was weighed, the call to build it pending a read of those terms and a real-page test, and the switch that holds it off by default until then.
 
+- **Amended 2026-10-23 (Aaron Buxbaum, H-121): the switch starts on.** `padi_checks_enabled` now
+  defaults true for a new shop, and the seeded shops no longer set it. This replaces the exit
+  above that held the default off until the Pros' Site terms were read or PADI answered: Aaron
+  made that call on 2026-10-23. "Beta" stays until the real pages are seen. A shop whose Pros do
+  not want the check turns it off in Settings, Features; existing shops keep their value.
+
 ## Other cards on the agency's page (layer 3)
 
 - **What it offers.** After a match the same page often lists the diver's other ratings. `agencyListedCards` (`src/lib/agency-check.ts`) reads them, and the staffer sees "PADI also shows these certifications. Add them? Each waits for Mark certified." with one tick per certification, all ticked. Nitrox and the specialties a site or trip can require (`dive_specialty`), never levels: a level card's number is the agency's number for the diver, unique per agency at a shop, so a second level card cannot sit beside the one just checked, and a higher rating stays the staffer's to record.

@@ -265,7 +265,7 @@
   offer here is worse than one that says nobody is waiting. No branch seats anyone or moves money;
   the money is one sentence and a link to that diver's orders.
 - **Crew schedule** — whether a shop plans its crew in DiveDay (`shops.crew_schedule_enabled`, Settings
-  → Team, **off for a new shop**). On, the shop has the Crew view of Schedule (working shifts, days
+  → Features, **on for a new shop** since 2026-10-23). On, the shop has the Crew view of Schedule (working shifts, days
   away, crew asking for a departure), the crew line on the week, and the nudges measured against
   its **Target diver:divemaster ratio**. Off, all of that is gone. Every departure keeps its crew
   editor either way, because who is aboard is manifest data (the crew roll call, the souls-on-board
@@ -2012,8 +2012,8 @@
 - **Assist** — a suggestion Claude makes to staff (a drafted reply, a sorted message, a value read
   off a card or a website), which a person accepts, edits or ignores (ADR 20261018-claude-assists).
   An assist never clears anything, and it never sends, publishes or saves on its own, with one
-  opt-in exception: a shop that turns on "Recap highlights" (`shops.recap_assist_auto_approve`,
-  off by default) lets the recap send fill a highlight the crew left blank, never over the crew's
+  exception: while "Recap highlights" is on (`shops.recap_assist_auto_approve`, on for a new shop
+  since 2026-10-23) the recap send fills a highlight the crew left blank, never over the crew's
   own words and never on a departure with an incident report (the ADR's 2026-10-22 amendment). One
   assist is the diver's: the card photo on the public register page fills the boxes they would
   type, rate limited per address and per shop. An assist is **dark** (offers nothing, says

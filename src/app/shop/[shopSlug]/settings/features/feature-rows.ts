@@ -17,7 +17,8 @@ import { SHOP_FEATURES, type ShopFeature } from "@/lib/shop-features";
  * payment settings; the crew schedule is the team's. The four predicates
  * resolve to owner and manager today and each states its own reason so one can
  * move without dragging the others (`action-helpers.ts`). The page hides a row
- * its reader may not flip and the action re-checks it, row by row.
+ * its reader may not flip, and the one Save writes only the rows the page drew
+ * and the reader passes the gate of (`save-plan.ts`).
  */
 export type FeatureRowGate = "settings" | "payments" | "team";
 
@@ -91,11 +92,6 @@ export const FEATURE_ROWS: readonly FeatureRow[] = [
     link: { path: "/boats", labelKey: "settings.features.boats" },
   },
 ];
-
-/** Narrows an untrusted form value to a row, or null. */
-export function parseFeatureRow(value: unknown): FeatureRow | null {
-  return FEATURE_ROWS.find((row) => row.id === value) ?? null;
-}
 
 /** Whether `id` is one of the six optional features in `shop-features.ts`. */
 export function isOptionalFeature(id: FeatureRowId): id is ShopFeature {

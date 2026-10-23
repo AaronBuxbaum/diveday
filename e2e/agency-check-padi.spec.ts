@@ -24,9 +24,9 @@ const PADI_CHECKS_OFF =
  * page. Any other agency finds nobody, so nothing else is written. The
  * verdict, the write and the Undo are the real ones.
  *
- * The checks are a per-shop switch, off by default (H-121). The seeded demo
- * has it on; a minted `privateShop` has it off, which is where the last test
- * shows the link alone and turns the switch on in Settings.
+ * The checks are a per-shop switch, on for every new and seeded shop since
+ * 2026-10-23 (H-121). The last test turns it off on a minted `privateShop`,
+ * shows the link alone, and turns it back on in Settings.
  */
 async function installFakeExtension(page: Page, mode: Mode) {
   await page.addInitScript((answer) => {
@@ -224,7 +224,8 @@ test.describe("at the seeded demo, which runs the PADI checks", () => {
 
 /**
  * No `signedInAsOwner()` here: the `privateShop` fixture signs the page in as
- * the minted shop's owner, and a minted shop has the PADI checks off.
+ * the minted shop's owner. A minted shop starts with the PADI checks on, so
+ * the test turns them off first.
  */
 test("a shop that has not turned PADI checks on keeps the link and offers no check, until Settings turns them on", async ({
   page,
@@ -232,6 +233,15 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
 }) => {
   test.setTimeout(120_000);
   await installFakeExtension(page, "match");
+  const features = `/shop/${privateShop.slug}/settings/features`;
+  const row = page.locator("li#padiChecks");
+  await page.goto(features);
+  await expect(row.getByRole("checkbox")).toBeChecked();
+  await row.getByRole("checkbox").uncheck();
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.waitForURL(/notice=feature-saved/);
+  await expect(row.getByRole("checkbox")).not.toBeChecked();
+
   const { name, cards, record } = await diverWithPendingPadiCard(page, {
     shop: privateShop.slug,
     checks: false,
@@ -262,15 +272,12 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   ).toHaveCount(0);
   expect(await padiLookups(page)).toBe(0);
 
-  // Settings > Features: the switch, off, and turned on.
-  await page.goto(`/shop/${privateShop.slug}/settings/features`);
-  const row = page.locator("li#padiChecks");
+  // Settings > Features: the switch, off, and turned back on.
+  await page.goto(features);
   await expect(row.getByRole("checkbox")).not.toBeChecked();
-  await expect(
-    row.getByText(/^Beta: nobody has tried this on PADI’s real DiveChek page yet/),
-  ).toBeVisible();
+  await expect(row.getByText(/^Beta: check a diver’s PADI card on DiveChek/)).toBeVisible();
   await row.getByRole("checkbox").check();
-  await row.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/notice=feature-saved/);
   await expect(row.getByRole("checkbox")).toBeChecked();
 

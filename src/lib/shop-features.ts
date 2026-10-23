@@ -2,18 +2,19 @@
  * **The optional features a shop can switch off** (ADR
  * 20261005-optional-shop-features).
  *
- * Each is a boolean on `shops`, on by default (except "Our year" on the
- * shopfront, which publishes the shop's own counts and so waits for its yes),
- * and each is a feature a shop can run without: DiveDay's own star ratings,
+ * Each is a boolean on `shops`, on by default, and each is a feature a shop
+ * can run without: DiveDay's own star ratings,
  * divers asking for a day that is not on the board, the last-minute deals
  * list, tips on the recap, the shopfront's "Our year", the PADI checks
  * (beta), and Claude suggestions (ADR 20261018-claude-assists; off, every
  * assist is dark). Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
- * The PADI checks also default off: "Check with PADI" (DiveChek) and the PADI
- * eLearning check run under the shop's own PADI membership, so the shop opts
- * in (H-121). The rule is `agencyCheckOffered` in `agency-check.ts`.
+ * **Every feature starts on for a new shop** (Aaron, 2026-10-23). "Our year"
+ * and the PADI checks used to wait for the shop's yes (H-121) and recap
+ * highlights without a tap for the crew's; a shop now turns off what it does
+ * not want on the Features page. The PADI rule is `agencyCheckOffered` in
+ * `agency-check.ts`.
  *
  * The crew schedule is the same idea with its own rule (`crew-schedule.ts`),
  * because switching it off also has to keep a safety count honest.

@@ -79,8 +79,8 @@ kept here so the ADR stays short.
 
 ### Recap highlights, filled before send
 
-With "Recap highlights" on (`shops.recap_assist_auto_approve`, Settings → Features, off by
-default), the recap send (`autoFillRecapLine` in `src/db/recap-assist.ts`, called from
+With "Recap highlights" on (`shops.recap_assist_auto_approve`, Settings → Features, on for a new
+shop since 2026-10-23), the recap send (`autoFillRecapLine` in `src/db/recap-assist.ts`, called from
 `src/db/recap.ts`) writes Claude's line into `trips.recap_shoutout` as if the crew had saved it,
 and divers read it on the recap. Turning the switch on is the shop's standing approval. Its guards:
 

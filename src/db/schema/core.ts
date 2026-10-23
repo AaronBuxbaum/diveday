@@ -159,12 +159,14 @@ export const shops = pgTable(
      * Off by default: a two-person shop where the owner skippers every boat
      * has no roster to keep, and a page of empty rows and "No crew" warnings
      * is noise it would have to learn to ignore (ADR 20261005-crew-schedule-is-a-setting).
+     * **Amended 2026-10-23 (Aaron): on for a new shop**, like every switch on
+     * the Features page; a shop that keeps no roster turns it off there.
      *
      * Off never loosens a safety cap. A course session still names its
      * instructor on the trip page, because the agency training ratio refuses
      * seats from that count (`src/lib/course-ratios.ts`) whatever this says.
      */
-    crewScheduleEnabled: boolean("crew_schedule_enabled").notNull().default(false),
+    crewScheduleEnabled: boolean("crew_schedule_enabled").notNull().default(true),
     /**
      * **Optional features a shop can switch off** (ADR
      * 20261005-optional-shop-features). Each defaults on, so a new shop sees
@@ -188,22 +190,23 @@ export const shops = pgTable(
     tipsEnabled: boolean("tips_enabled").notNull().default(true),
     /**
      * **"Our year" on the public schedule**: the Reports year card's counts
-     * (divers, boats out, sites) at the foot of the shopfront. The one
-     * optional feature that defaults *off*: it publishes a reading of the
-     * shop's own records, so the shop opts in (Aaron, 2026-10-11). Counts
-     * only, never money (`src/db/public-year.ts`).
+     * (divers, boats out, sites) at the foot of the shopfront. Counts only,
+     * never money (`src/db/public-year.ts`). It defaulted off from 2026-10-11
+     * (the shop opted in to publishing its own counts); since 2026-10-23 every
+     * feature starts on for a new shop (Aaron), and the shop turns it off on
+     * the Features page.
      */
-    publicYearEnabled: boolean("public_year_enabled").notNull().default(false),
+    publicYearEnabled: boolean("public_year_enabled").notNull().default(true),
     /**
      * **PADI checks (beta)**: "Check with PADI" (DiveChek) on a pending PADI
      * card and the PADI eLearning check on a course roster, both run by the
      * DiveDay extension in a staffer's browser signed in to the PADI Pros'
-     * Site under the shop's own membership (H-121, H-106). Off by default and
-     * the shop's own opt-in: the membership and its terms are the shop's, and
-     * neither check has been tried against the live site yet (#2259). Off
-     * keeps the "(member sign-in)" link (`src/lib/agency-check.ts`).
+     * Site under the shop's own membership (H-121, H-106). On for a new shop
+     * since 2026-10-23 (Aaron, amending H-121's opt-in): a shop whose Pros do
+     * not want it turns it off on the Features page. Off keeps the "(member
+     * sign-in)" link (`src/lib/agency-check.ts`).
      */
-    padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(false),
+    padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(true),
     /**
      * **Claude suggestions**: the drafts, sorting and reading Claude offers
      * staff across the app (ADR 20261018-claude-assists). On by default; off,
@@ -214,10 +217,11 @@ export const shops = pgTable(
     /**
      * **Recap highlights without a tap** (the `recap` assist): when a
      * departure's recap goes out and the crew left its note empty, Claude's
-     * two-sentence highlight from the logged sightings fills it. Off by
-     * default, so a crew approves each one by saving it.
+     * two-sentence highlight from the logged sightings fills it. On for a new
+     * shop since 2026-10-23 (Aaron: every feature starts on); off, a crew
+     * approves each one by saving it.
      */
-    recapAssistAutoApprove: boolean("recap_assist_auto_approve").notNull().default(false),
+    recapAssistAutoApprove: boolean("recap_assist_auto_approve").notNull().default(true),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's

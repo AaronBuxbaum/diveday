@@ -1,85 +1,48 @@
 "use server";
 
-import { z } from "zod";
-import { canPersonManageStaffAccounts } from "@/db/authz";
-import { getDb } from "@/db/client";
 import {
-  setShopCrewScheduleEnabled,
-  setShopDivingOptions,
-  setShopFeature,
-  setShopTaxEnabled,
-} from "@/db/shops";
-import { checkbox, formValue, readForm } from "@/lib/form-parse";
+  canPersonManagePaymentSettings,
+  canPersonManageShopSettings,
+  canPersonManageStaffAccounts,
+} from "@/db/authz";
+import { getDb } from "@/db/client";
+import { setShopSwitches } from "@/db/shops";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { paymentSettingsBlock, settingsBlock } from "../action-helpers";
-import { type FeatureRowGate, isOptionalFeature, parseFeatureRow } from "./feature-rows";
-
-const featureForm = z.object({
-  row: formValue(),
-  enabled: checkbox(),
-  hasBoatDiving: checkbox(),
-  hasShoreDiving: checkbox(),
-  hasPoolDiving: checkbox(),
-});
-
-/** The row's own gate, re-checked against live roles; a refusal redirects. */
-async function gateBlock(
-  gate: FeatureRowGate,
-  session: { user: { shopId: string; personId: string; shopSlug: string } },
-): Promise<void> {
-  if (gate === "settings") return settingsBlock(session);
-  if (gate === "payments") return paymentSettingsBlock(session);
-  const allowed = await canPersonManageStaffAccounts(
-    await getDb(),
-    session.user.shopId,
-    session.user.personId,
-  );
-  if (allowed) return;
-  const settings = shopPath(session.user.shopSlug, "settings");
-  revalidateAndRedirect(settings, noticeUrl(settings, "not-authorized"));
-}
+import type { FeatureRowGate } from "./feature-rows";
+import { planFeatureSave } from "./save-plan";
 
 /**
- * **Flips one switch on the Features page** (issue #2814). Every row posts here
- * with its own `row` id, so the row that changed comes back with its notice.
- * Only the switch moves: the divemaster target and every other value setting
- * is left as it was, and turning a feature off deletes nothing it wrote
- * (`shop-features.ts`). The one row with three switches, diving options,
- * refuses all three off: a shop needs at least one kind of departure.
+ * **Saves the Features page, every switch at once** (issue #2814; one Save,
+ * Aaron 2026-10-23). The page is shop settings, so a reader who may not manage
+ * them is refused whole. Past that, each row keeps its own gate, re-checked
+ * here against live roles: a row is written only when the page drew it and the
+ * reader passes its gate now, and every other column is left as it was
+ * (`planFeatureSave`). Only the switches move: the divemaster target and every
+ * other value setting stay, and turning a feature off deletes nothing it wrote
+ * (`shop-features.ts`). All three kinds of diving off refuses the whole save.
  */
-export async function saveFeatureAction(formData: FormData) {
+export async function saveFeaturesAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "features");
-  const form = readForm(featureForm, formData);
-  const row = parseFeatureRow(form.row);
-  // Only a hand-built post names no row; it gets the page back unchanged.
-  if (!row) {
-    revalidateAndRedirect(page, page);
-    return;
-  }
-  await gateBlock(row.gate, session);
-
+  const { shopId, personId, shopSlug } = session.user;
+  const page = shopPath(shopSlug, "settings", "features");
   const db = await getDb();
-  const shopId = session.user.shopId;
-  if (isOptionalFeature(row.id)) {
-    await setShopFeature(db, shopId, row.id, form.enabled);
-  } else if (row.id === "tax") {
-    await setShopTaxEnabled(db, shopId, form.enabled);
-  } else if (row.id === "crewSchedule") {
-    await setShopCrewScheduleEnabled(db, shopId, form.enabled);
-  } else {
-    const { hasBoatDiving, hasShoreDiving, hasPoolDiving } = form;
-    // Unticking all three would leave the builder with no mode to offer and trip
-    // creation still defaulting to `boat`; the DB check refuses it too, and this
-    // is the half that says so in words instead of raising.
-    if (!hasBoatDiving && !hasShoreDiving && !hasPoolDiving) {
-      revalidateAndRedirect(page, noticeUrl(page, "diving-options-none", { saved: row.id }));
-      return;
-    }
-    await setShopDivingOptions(db, shopId, { hasBoatDiving, hasShoreDiving, hasPoolDiving });
-  }
 
-  revalidateAndRedirect(page, noticeUrl(page, "feature-saved", { saved: row.id }));
+  if (!(await canPersonManageShopSettings(db, shopId, personId))) {
+    const settings = shopPath(shopSlug, "settings");
+    revalidateAndRedirect(settings, noticeUrl(settings, "not-authorized"));
+  }
+  const gates = new Set<FeatureRowGate>(["settings"]);
+  if (await canPersonManagePaymentSettings(db, shopId, personId)) gates.add("payments");
+  if (await canPersonManageStaffAccounts(db, shopId, personId)) gates.add("team");
+
+  const plan = planFeatureSave(formData, gates);
+  // Only a hand-built post names no row; it gets the page back unchanged.
+  if (plan.kind === "nothing") revalidateAndRedirect(page, page);
+  if (plan.kind === "diving-options-none") {
+    revalidateAndRedirect(page, noticeUrl(page, "diving-options-none"));
+  }
+  await setShopSwitches(db, shopId, plan.switches);
+  revalidateAndRedirect(page, noticeUrl(page, "feature-saved"));
 }

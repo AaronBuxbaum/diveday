@@ -55,7 +55,7 @@ Review #2923 found two exceptions to the Context; both stay.
   shop's cap, so two limits apply, both failing closed: 10 an hour per address (`cardScanByIp`),
   40 a day per shop (`cardScanByShop`). A photo Haiku says is not a card never reaches Sonnet.
 - **The recap line can reach divers without a tap.** With "Recap highlights" on
-  (`shops.recap_assist_auto_approve`, off by default), the recap send (`autoFillRecapLine`) fills
+  (`shops.recap_assist_auto_approve`, on by default since 2026-10-23), the recap send (`autoFillRecapLine`) fills
   a blank highlight; turning it on is the shop's standing approval. It never replaces the crew's
   words, never runs with a live incident report, and any failure is no line. Every guard:
   [ai-ml.md](../../product/features/ai-ml.md#recap-highlights-filled-before-send).

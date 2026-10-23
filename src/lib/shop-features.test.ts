@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseShopFeature, SHOP_FEATURES, shopOffers } from "./shop-features";
+import { parseShopFeature, SHOP_FEATURE_COLUMNS, SHOP_FEATURES, shopOffers } from "./shop-features";
 
 const allOn = {
   reviewsEnabled: true,
@@ -31,24 +31,22 @@ describe("parseShopFeature", () => {
   });
 });
 
-describe("PADI checks", () => {
-  it("wait for the shop's own yes, like Our year", async () => {
+describe("a new shop", () => {
+  it("starts with every feature on, and the crew schedule too (Aaron, 2026-10-23)", async () => {
     const { shops } = await import("@/db/schema");
-    expect(shops.padiChecksEnabled.default).toBe(false);
-    expect(shops.publicYearEnabled.default).toBe(false);
+    for (const feature of SHOP_FEATURES) {
+      expect(shops[SHOP_FEATURE_COLUMNS[feature]].default, feature).toBe(true);
+    }
+    expect(shops.crewScheduleEnabled.default).toBe(true);
   });
-});
 
-describe("Claude suggestions", () => {
-  it("start on: every assist is a draft a person still accepts", async () => {
+  it("keeps Stripe Tax off until the shop's owner decides otherwise", async () => {
     const { shops } = await import("@/db/schema");
-    expect(shops.claudeSuggestionsEnabled.default).toBe(true);
+    expect(shops.taxEnabled.default).toBe(false);
+  });
+
+  it("knows the assist switches by name", () => {
     expect(parseShopFeature("claudeSuggestions")).toBe("claudeSuggestions");
-  });
-
-  it("recap highlights start off: the crew approves each one until the shop says otherwise", async () => {
-    const { shops } = await import("@/db/schema");
-    expect(shops.recapAssistAutoApprove.default).toBe(false);
     expect(parseShopFeature("recapAutoApprove")).toBe("recapAutoApprove");
   });
 });
