@@ -339,11 +339,12 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
 
 /**
  * **The pricing arm** (ADR 20261022-pricing-ab-test): while `PRICING_TEST=on`,
- * a visitor to `/`, `/pricing` or `/get-set-up` without a valid `dd_pricing`
- * cookie is given an arm at the configured split, and the answer is handed to
- * the page as `PRICING_ARM_HEADER` (always overwritten, so a client cannot
- * send one) on this same request, because the cookie set here only arrives
- * with the next one. Off, it writes nothing and passes on nothing.
+ * a page view (GET or HEAD) of a page that states a price
+ * (`isPricingMarketingPath`) without a valid `dd_pricing` cookie is given an
+ * arm at the configured split; another method passes on only the cookie's.
+ * The answer is handed to the page as `PRICING_ARM_HEADER` (always
+ * overwritten, so a client cannot send one) on this same request, because the
+ * cookie set here only arrives with the next one. Off, it writes nothing and passes on nothing.
  *
  * Unlike the referral cookies this one carries nothing a database trusts as
  * proof of anything, so it needs no navigation check: an `<img>` that plants
@@ -356,6 +357,7 @@ function rememberPricingArm(req: NextRequest, res: Response): string | null {
     pathname: req.nextUrl.pathname,
     cookie: req.cookies.get(PRICING_ARM_COOKIE)?.value,
     config: pricingConfig(),
+    method: req.method,
   });
   if (!decision.arm) return null;
   if (decision.setCookie && res instanceof NextResponse) {

@@ -254,11 +254,52 @@ export interface BillingProvider {
     identifier: string;
     timestamp: Date;
   }): Promise<BillingCallResult<"reported" | "already_reported">>;
+  /**
+   * What the meter behind the metered `priceId` holds for one customer over a
+   * window, in cents: how the monthly close learns whether a report whose
+   * answer was lost reached Stripe, once Stripe's 24-hour identifier window
+   * can no longer dedupe a re-send.
+   */
+  meterValueReported(input: {
+    priceId: string;
+    customerId: string;
+    from: Date;
+    to: Date;
+  }): Promise<BillingCallResult<number>>;
+  /**
+   * A final month's percent fee, for a shop whose subscription ended before
+   * its month closed: no subscription item is left to bill a meter event, so
+   * it is an invoice item tagged with the statement's identifier, on an
+   * invoice Stripe emails. Once-only by that tag: an item already invoiced is
+   * `already_invoiced`, and a pending one is invoiced without a second item.
+   */
+  invoiceFinalMonth(input: {
+    customerId: string;
+    amountCents: number;
+    identifier: string;
+    /** `yyyy-mm`, for the line's description. */
+    month: string;
+  }): Promise<BillingCallResult<"invoiced" | "already_invoiced">>;
 }
 
 const priceProductResponse = z.object({
   product: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
 });
+const priceMeterResponse = z.object({ recurring: z.object({ meter: z.string().min(1) }) });
+const meterSummariesResponse = z.object({
+  data: z.array(z.object({ aggregated_value: z.number().finite() })),
+});
+const invoiceItemsResponse = z.object({
+  data: z.array(
+    z.object({
+      id: z.string().min(1),
+      invoice: z.union([z.string(), z.object({ id: z.string() })]).nullable(),
+      metadata: z.record(z.string(), z.string()).nullable().optional(),
+    }),
+  ),
+});
+/** The statement tag on a final month's invoice item: its meter identifier. */
+const FINAL_MONTH_TAG = "diveday_statement";
 const stripeErrorResponse = z.object({
   error: z.object({ code: z.string().optional() }).optional(),
 });
@@ -437,12 +478,84 @@ export function stripeBillingProvider(
         const answer = stripeErrorResponse.safeParse(await response.json().catch(() => null));
         // Stripe already holds an event with this identifier: an earlier run
         // reported it and lost the answer before stamping the statement.
-        return answer.success && answer.data.error?.code === "resource_already_exists"
+        // `duplicate_meter_event` is the one duplicate code Stripe documents
+        // (its v2 meter-events API). This v1 endpoint validates
+        // asynchronously and documents none, so the close does not rely on
+        // it: past the identifier's 24 hours it asks the meter first
+        // (`meterValueReported`).
+        return answer.success && answer.data.error?.code === "duplicate_meter_event"
           ? { status: "ok", value: "already_reported" }
           : { status: "failed" };
       } catch {
         return { status: "failed" };
       }
+    },
+
+    async meterValueReported({ priceId, customerId, from, to }) {
+      const price = priceMeterResponse.safeParse(
+        await call("GET", `prices/${encodeURIComponent(priceId)}`),
+      );
+      if (!price.success) return { status: "failed" };
+      const query = new URLSearchParams({
+        customer: customerId,
+        start_time: String(Math.floor(from.getTime() / 1000)),
+        end_time: String(Math.floor(to.getTime() / 1000)),
+      });
+      const summaries = meterSummariesResponse.safeParse(
+        await call(
+          "GET",
+          `billing/meters/${encodeURIComponent(price.data.recurring.meter)}/event_summaries?${query}`,
+        ),
+      );
+      if (!summaries.success) return { status: "failed" };
+      const total = summaries.data.data.reduce((sum, row) => sum + row.aggregated_value, 0);
+      return { status: "ok", value: total };
+    },
+
+    async invoiceFinalMonth({ customerId, amountCents, identifier, month }) {
+      if (!Number.isSafeInteger(amountCents) || amountCents <= 0) return { status: "failed" };
+      const listed = invoiceItemsResponse.safeParse(
+        await call(
+          "GET",
+          `invoiceitems?${new URLSearchParams({ customer: customerId, limit: "100" })}`,
+        ),
+      );
+      if (!listed.success) return { status: "failed" };
+      const tagged = listed.data.data.find(
+        (item) => item.metadata?.[FINAL_MONTH_TAG] === identifier,
+      );
+      if (tagged?.invoice) return { status: "ok", value: "already_invoiced" };
+      if (!tagged) {
+        const item = idResponse.safeParse(
+          await post(
+            "invoiceitems",
+            new URLSearchParams({
+              customer: customerId,
+              amount: String(amountCents),
+              currency: "usd",
+              description: `DiveDay fee, ${month}`,
+              [`metadata[${FINAL_MONTH_TAG}]`]: identifier,
+            }),
+            `${identifier}-item`,
+          ),
+        );
+        if (!item.success) return { status: "failed" };
+      }
+      const invoice = idResponse.safeParse(
+        await post(
+          "invoices",
+          new URLSearchParams({
+            customer: customerId,
+            collection_method: "send_invoice",
+            days_until_due: "14",
+            pending_invoice_items_behavior: "include",
+            auto_advance: "true",
+            [`metadata[${FINAL_MONTH_TAG}]`]: identifier,
+          }),
+          `${identifier}-invoice`,
+        ),
+      );
+      return invoice.success ? { status: "ok", value: "invoiced" } : { status: "failed" };
     },
   };
 }

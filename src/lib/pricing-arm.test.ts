@@ -5,11 +5,27 @@ import { isPricingMarketingPath, visitorPricingArm } from "./pricing-arm";
 const ON = { ...DEFAULT_PRICING_CONFIG, test: true };
 
 describe("isPricingMarketingPath", () => {
-  it("names the three pages that state or record a price", () => {
-    for (const path of ["/", "/pricing", "/pricing/", "/get-set-up"]) {
+  it("names the pages that state or record a price", () => {
+    for (const path of [
+      "/",
+      "/pricing",
+      "/pricing/",
+      "/get-set-up",
+      "/about",
+      "/product",
+      "/product/payments",
+      "/switching",
+      "/switching/rezdy",
+    ]) {
       expect(isPricingMarketingPath(path)).toBe(true);
     }
-    for (const path of ["/product", "/get-set-up/sent", "/shop/x/settings/billing", "/s/x"]) {
+    for (const path of [
+      "/products",
+      "/switchingx",
+      "/get-set-up/sent",
+      "/shop/x/settings/billing",
+      "/s/x",
+    ]) {
       expect(isPricingMarketingPath(path)).toBe(false);
     }
   });
@@ -51,7 +67,33 @@ describe("visitorPricingArm", () => {
 
   it("decides nothing off the marketing pages", () => {
     expect(
-      visitorPricingArm({ pathname: "/product", cookie: "percent_of_volume", config: ON }),
+      visitorPricingArm({ pathname: "/privacy", cookie: "percent_of_volume", config: ON }),
     ).toEqual({ arm: null, setCookie: false });
+  });
+
+  it("draws an arm only for a GET or HEAD, and passes a valid cookie on for any method", () => {
+    expect(
+      visitorPricingArm({ pathname: "/get-set-up", cookie: undefined, config: ON, method: "POST" }),
+    ).toEqual({ arm: null, setCookie: false });
+    expect(
+      visitorPricingArm({ pathname: "/get-set-up", cookie: "bogus", config: ON, method: "POST" }),
+    ).toEqual({ arm: null, setCookie: false });
+    expect(
+      visitorPricingArm({
+        pathname: "/get-set-up",
+        cookie: "percent_of_volume",
+        config: ON,
+        method: "POST",
+      }),
+    ).toEqual({ arm: "percent_of_volume", setCookie: false });
+    expect(
+      visitorPricingArm({
+        pathname: "/",
+        cookie: undefined,
+        config: ON,
+        method: "HEAD",
+        random: () => 0.1,
+      }),
+    ).toEqual({ arm: "percent_of_volume", setCookie: true });
   });
 });
