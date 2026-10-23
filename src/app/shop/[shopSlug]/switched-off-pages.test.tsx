@@ -103,6 +103,12 @@ describe("a switched-off staff page", () => {
     expect(await openSwitchedOff("workOrdersEnabled", load, params)).toBe("/shop/blue-mantis/gear");
   });
 
+  it("Dive packages lands on Discounts", async () => {
+    expect(
+      await openSwitchedOff("divePackagesEnabled", () => import("./promos/packages/page")),
+    ).toBe("/shop/blue-mantis/promos");
+  });
+
   it("Discounts lands on Orders once codes, deals and packages are all off", async () => {
     expect(
       await openSwitchedOff(
