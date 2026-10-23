@@ -871,9 +871,9 @@ async function recordWrittenTables(
         if (property === "update" || property === "delete" || property === "insert") {
           return (table: Parameters<AppDb["delete"]>[0]) => {
             written.add(getTableName(table));
-            return (inner as unknown as AppDb)[property as "update" | "delete" | "insert"](
-              table as never,
-            ) as unknown;
+            // One call shape: the three signatures no longer unify (drizzle-kit rc.5).
+            const write = (inner as unknown as Record<string, (t: unknown) => unknown>)[property];
+            return write.call(inner, table);
           };
         }
         if (property === "transaction") {
