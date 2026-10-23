@@ -1039,8 +1039,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "imported_payment_history",
   // The request's single-use setup link (ADR 20261009-single-use-setup-links):
   // a hash, an expiry and a spent instant, one per request, deleted with it.
-  // Its own clock is the expiry, which closes it; there is nothing left in it
-  // to age out.
+  // Its own clock is the expiry, which closes it; there is nothing left in it to age out.
   "shop_setup_links",
   "internal_notes",
   "staff_credentials",
@@ -1152,7 +1151,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",
-  // One row a month: what every minted demo together spent on Claude.
   "claude_demo_spend",
   "shop_milestones",
   "integration_sync_records",

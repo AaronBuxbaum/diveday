@@ -342,8 +342,7 @@ const EXCLUDED_TABLES = [
   // the shop (ADR 20260804-shop-owned-backup-export).
   "shop_backup_destinations",
   // Delivery outcomes for those bundles — operational plumbing about the
-  // export process, not a shop record; same reasoning as
-  // notification_deliveries.
+  // export process, not a shop record; same reasoning as notification_deliveries.
   "shop_backup_deliveries",
   // Integration provider credentials, OAuth state, delivery retries, and
   // external-id mappings are operational machinery rather than shop records.
