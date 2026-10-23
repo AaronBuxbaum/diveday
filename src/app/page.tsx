@@ -5,7 +5,9 @@ import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { closingPriceLine, HeroFootnotes } from "@/app/_components/HeroFootnotes";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
+import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
+import { JsonLd } from "@/components/JsonLd";
 import { WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
@@ -38,12 +40,7 @@ import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { type FeaturePageSlug, featurePagePath, getFeaturePage } from "@/lib/feature-pages";
 import { switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
-import {
-  earlyAccessPriceAmount,
-  fullShopExport,
-  midSeasonCutover,
-  sharedLinkCard,
-} from "@/lib/marketing";
+import { fullShopExport, midSeasonCutover, sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { requestPricingOffer } from "@/lib/pricing-arm-request";
@@ -85,31 +82,9 @@ export const metadata: Metadata = {
   },
 };
 
-const softwareApplicationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "DiveDay",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  description:
-    "Dive shop software for bookings, waivers, cert checks, trip prep, and boat manifests.",
-  offers: {
-    "@type": "Offer",
-    price: earlyAccessPriceAmount,
-    priceCurrency: "USD",
-  },
-};
-
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
-      <script
-        type="application/ld+json"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data built from our own constants above and `<`-escaped below.
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(softwareApplicationJsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
@@ -137,7 +112,13 @@ export default function Home() {
 
 async function LocalizedHomeBody() {
   const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
-  return <HomeBody locale={locale} offer={offer} />;
+  return (
+    <>
+      {/* Per pricing arm, so it streams with the body (`homeSoftwareJsonLd`). */}
+      <JsonLd data={homeSoftwareJsonLd(offer)} />
+      <HomeBody locale={locale} offer={offer} />
+    </>
+  );
 }
 
 /**
