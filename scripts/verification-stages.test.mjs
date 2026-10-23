@@ -100,6 +100,21 @@ function isAlive(pid) {
   }
 }
 
+/**
+ * SIGKILL is queued, not synchronous: the parent's `process.kill(-group)` returns, the parent
+ * exits with 143, and on a loaded machine the child can still be tearing down when the test
+ * looks. Poll the same liveness check until it clears or the bound passes.
+ */
+function diedWithin(pid, ms) {
+  const sleeper = new Int32Array(new SharedArrayBuffer(4));
+  const deadline = Date.now() + ms;
+  while (isAlive(pid)) {
+    if (Date.now() >= deadline) return false;
+    Atomics.wait(sleeper, 0, 0, 20);
+  }
+  return true;
+}
+
 it("reaps owned detached stages with quote-bearing paths when their parent receives SIGTERM", () => {
   // These bytes must remain path data through both JSON-encoded JavaScript literals.
   // Unquoted interpolation would execute the exit canary instead of writing the PID.
@@ -116,7 +131,7 @@ it("reaps owned detached stages with quote-bearing paths when their parent recei
     });
     expect(result.status).toBe(143);
     pid = Number(readFileSync(pidFile, "utf8"));
-    expect(isAlive(pid)).toBe(false);
+    expect(diedWithin(pid, 2000)).toBe(true);
   } finally {
     if (pid) {
       try {
