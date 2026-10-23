@@ -109,8 +109,11 @@ export async function saveRentalsAction(formData: FormData) {
   const terms = parseRentalTerms(fields.rentalTerms ?? null);
   if (!terms.ok) redirect(noticeUrl(page, "rental-terms-invalid"));
 
-  const months = Number(fields.regulatorServiceMonths);
-  if (!isCustomerRegulatorServiceMonths(months)) {
+  // The regulator interval belongs to gear servicing: while that is switched
+  // off (the Features page) the field is not on the form and the saved value
+  // waits unchanged.
+  const months = shop.workOrdersEnabled ? Number(fields.regulatorServiceMonths) : null;
+  if (months !== null && !isCustomerRegulatorServiceMonths(months)) {
     redirect(noticeUrl(page, "regulator-service-invalid"));
   }
 
@@ -121,6 +124,6 @@ export async function saveRentalsAction(formData: FormData) {
     nitroxCents,
   });
   await setShopRentalTerms(db, session.user.shopId, terms.terms);
-  await setShopCustomerRegulatorServiceMonths(db, session.user.shopId, months);
+  if (months !== null) await setShopCustomerRegulatorServiceMonths(db, session.user.shopId, months);
   revalidateAndRedirect(page, noticeUrl(page, "rentals-saved"));
 }

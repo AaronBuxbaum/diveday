@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { keptTypedScope } from "@/components/kept-typed-scope";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
@@ -66,6 +66,9 @@ export default async function NewWorkOrderPage({
   const { shopSlug } = await params;
   const search = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
+  // Gear servicing switched off (the Features page): the bench is gone, the
+  // register is where Gear opens, and no ticket is deleted.
+  if (!shop.workOrdersEnabled) redirect(shopPath(shopSlug, "gear"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const board = shopPath(shopSlug, "gear", "work-orders");

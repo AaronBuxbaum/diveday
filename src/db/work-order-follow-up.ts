@@ -170,7 +170,8 @@ export async function sendWorkOrderReadyNotice(
       ),
     )
     .limit(1);
-  if (!row) return { ok: false, reason: "not_found" };
+  // Gear servicing switched off (the Features page): no ticket email goes out.
+  if (!row?.shop.workOrdersEnabled) return { ok: false, reason: "not_found" };
   const { workOrder, person, shop } = row;
   if (!workOrder.personId || !person) return { ok: false, reason: "not_customer" };
   if (workOrder.status !== "ready") return { ok: false, reason: "not_ready" };
@@ -700,6 +701,8 @@ export async function sendDueServiceReminders(
         isNull(customerGearItems.deletedAt),
         isNull(people.deletedAt),
         isNull(customerGearReminderSettings.remindersOffAt),
+        // A shop that switched gear servicing off sends no service reminders.
+        eq(shops.workOrdersEnabled, true),
         // Any of the piece's dates in the window; which dates count for its
         // kind is `customerGearDueDates`' call, below.
         or(

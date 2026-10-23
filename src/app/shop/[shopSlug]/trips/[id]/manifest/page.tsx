@@ -358,6 +358,7 @@ export default async function TripManifestPage({
           timeZone={shop.timezone}
           stage={stageStrip.stage}
           seats={manifest.divers}
+          lostFound={shop.lostFoundEnabled}
         />
 
         {/* **The plan** (issue #1184, D24).

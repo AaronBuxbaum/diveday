@@ -1211,3 +1211,34 @@ describe("recording a payment taken at the counter", () => {
     }
   });
 });
+
+/**
+ * **Gear servicing switched off** (the Features page): no ready message and no
+ * service reminder goes out; the tickets and pieces are kept.
+ */
+describe("with gear servicing switched off", () => {
+  it("sends neither the ready message nor a service reminder", async () => {
+    const { db, shop } = await context();
+    const maya = await diver(db, shop.id, "Maya Off");
+    const reg = await piece(db, shop.id, maya.id, { serviceDueOn: "2026-08-15" });
+    const ticket = await readyTicket(db, shop.id, maya.id, reg.id);
+    await db.update(shops).set({ workOrdersEnabled: false }).where(eq(shops.id, shop.id));
+    const email = fakeEmail();
+
+    expect(
+      await sendWorkOrderReadyNotice(
+        db,
+        { shopId: shop.id, workOrderId: ticket.id },
+        { emailProvider: email.provider },
+      ),
+    ).toEqual({ ok: false, reason: "not_found" });
+    await sendDueServiceReminders(db, {
+      now: nowDate(),
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      whatsAppProviders: new Map(),
+      appOrigin: "https://diveday.test",
+    });
+    expect(onlyTo(email.sent, maya.email ?? "")).toEqual([]);
+  });
+});

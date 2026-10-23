@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { lostItemRowAction } from "@/app/actions/lost-items";
 import { EmptyState } from "@/components/EmptyState";
 import { LostItemRow } from "@/components/lost-found/LostItemRow";
@@ -30,6 +31,8 @@ export const metadata: Metadata = {
 export default async function LostFoundPage({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
   const { db, shop } = await requireShopSurface(shopSlug);
+  // Switched off on the Features page: no list, and no error either.
+  if (!shop.lostFoundEnabled) redirect(shopPath(shopSlug, "schedule", "board"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const items = await listOpenLostItems(db, shop.id);

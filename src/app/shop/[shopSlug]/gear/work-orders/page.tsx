@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -56,6 +57,9 @@ export default async function WorkOrdersPage({
   const { shopSlug } = await params;
   const search = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
+  // Gear servicing switched off (the Features page): the bench is gone, the
+  // register is where Gear opens, and no ticket is deleted.
+  if (!shop.workOrdersEnabled) redirect(shopPath(shopSlug, "gear"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);

@@ -27,6 +27,7 @@ export function DockDesk({
   timeZone,
   stage,
   seats,
+  lostFound,
 }: {
   t: StaffTranslator;
   shopId: string;
@@ -38,6 +39,8 @@ export function DockDesk({
   /** The crew's newest word, whatever its age (`latestTripStage`). */
   stage: { stage: TripStage; recordedAt: Date } | null;
   seats: readonly { bookingId: string; fullName: string }[];
+  /** Whether the shop keeps a lost-and-found list (`shops.lost_found_enabled`). */
+  lostFound: boolean;
 }) {
   const now = nowDate();
   const cancelled = trip.cancelled === true;
@@ -79,13 +82,15 @@ export function DockDesk({
           }}
         />
       ) : null}
-      <LostItemsSection
-        t={t}
-        shopId={shopId}
-        tripId={tripId}
-        open={leftAboardOpen({ ...trip, now, timeZone, stage, cancelled })}
-        seats={seats.map((seat) => ({ bookingId: seat.bookingId, name: seat.fullName }))}
-      />
+      {lostFound ? (
+        <LostItemsSection
+          t={t}
+          shopId={shopId}
+          tripId={tripId}
+          open={leftAboardOpen({ ...trip, now, timeZone, stage, cancelled })}
+          seats={seats.map((seat) => ({ bookingId: seat.bookingId, name: seat.fullName }))}
+        />
+      ) : null}
     </>
   );
 }
