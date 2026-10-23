@@ -49,6 +49,7 @@
     "medical_clearance_opened": "{actor} opened the physician’s evaluation for {diver}",
     "medical_answers_read": "{actor} read {diver}’s medical answers",
     "medical_alert_read": "{actor} read {diver}’s medical alert",
+    "medical_alert_saved_offline": "{actor} saved {diver}’s medical alert for offline",
     "date_of_birth_cleared_as_adult": "{actor} cleared {diver}’s date of birth and said they’re 18 or older",
     "record_exported": "{actor} downloaded a copy of {diver}’s record",
     "drysuit_experience_recorded": "{actor} recorded seeing {diver} dive dry",

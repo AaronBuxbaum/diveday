@@ -1,6 +1,7 @@
 "use server";
 
 import { canPersonReadMedicalAlert, canPersonReadMedicalAnswers } from "@/db/authz";
+import { recordMedicalAlertTrailLine } from "@/db/medical-alerts";
 import { recordDiverActivity } from "@/db/operations";
 import { getSignedWaiverForDiver } from "@/db/waivers";
 import { type AnsweredMedicalQuestion, answeredMedicalQuestions } from "@/lib/medical";
@@ -93,11 +94,14 @@ export async function showMedicalAlertOnRecordAction(
   });
   // A held seat carries none, and a paper or imported release stores none.
   if (!waiver?.medicalAlert) return { ok: false };
-  const recorded = await recordDiverActivity(db, {
+  // One line per reader and diver within ten minutes
+  // (`recordMedicalAlertTrailLine`); the words come back on every tap.
+  const recorded = await recordMedicalAlertTrailLine(db, {
     shopId: shop.id,
     personId: waiver.personId,
     actorPersonId: actor,
     code: "medical_alert_read",
+    departureId: null,
   });
   if (!recorded) return { ok: false };
   return { ok: true, text: waiver.medicalAlert };

@@ -7,7 +7,7 @@ import {
 } from "@/lib/waiver-integrity";
 import type { ShopAnswer } from "@/lib/waiver-questions";
 import type { DbExecutor } from "./client";
-import { bookings, people, trips, waiverRecords } from "./schema";
+import { bookings, people, personRoles, tripAssignments, trips, waiverRecords } from "./schema";
 import { at } from "./seed-clock";
 import { DEMO_SHOP_QUESTIONS } from "./seed-waiver-questions";
 import { getCurrentWaiverTemplate } from "./waivers-templates";
@@ -37,6 +37,10 @@ const ANSWERS: Record<string, ShopAnswer["answer"]> = {
  * signature on the current terms, it becomes her standing release, and she is
  * as ready after as before: the alert informs and never gates.
  *
+ * Only crew someone else put on the boat read the words (H-153, review
+ * fixes), and a seeded roster names nobody, so the shop's owner is recorded
+ * as having assigned this one departure's crew.
+ *
  * Runs after `seedWaiverQuestions` (it answers the questions that writes) and
  * before `seedWaiverEvidence`, which leaves a release dated before its cutoff
  * as it is.
@@ -45,7 +49,7 @@ export async function seedMedicalAlert(db: DbExecutor, shopId: string): Promise<
   const template = await getCurrentWaiverTemplate(db, shopId);
   if (!template) return;
   const [seat] = await db
-    .select({ personId: people.id, fullName: people.fullName })
+    .select({ personId: people.id, fullName: people.fullName, tripId: trips.id })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -107,4 +111,17 @@ export async function seedMedicalAlert(db: DbExecutor, shopId: string): Promise<
       integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
     })
     .where(eq(waiverRecords.id, signed.id));
+  const [owner] = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "owner"), isNull(people.deletedAt)))
+    .limit(1);
+  if (!owner) return;
+  await db
+    .update(tripAssignments)
+    .set({ assignedByPersonId: owner.id })
+    .where(
+      and(eq(tripAssignments.tripId, seat.tripId), isNull(tripAssignments.assignedByPersonId)),
+    );
 }

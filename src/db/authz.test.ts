@@ -268,6 +268,7 @@ describe("the medical alert for the crew (canPersonReadMedicalAlertOnTrip, issue
   it("admits other staff on the departure they crew, and on no other", async () => {
     const { db, shop } = ctx;
     const { mine, other } = await twoTrips(db, shop.id);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
     for (const role of [
       "instructor",
       "assistant_instructor",
@@ -278,7 +279,9 @@ describe("the medical alert for the crew (canPersonReadMedicalAlertOnTrip, issue
       const person = await makeStaff(db, shop.id, [role]);
       // Unassigned: the fact of an alert, never its text.
       expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, mine)).toBe(false);
-      await db.insert(tripAssignments).values({ tripId: mine, personId: person });
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: mine, personId: person, assignedByPersonId: manager });
       expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, mine)).toBe(true);
       // Crewing one departure reads nothing on another.
       expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, other)).toBe(false);
@@ -287,16 +290,43 @@ describe("the medical alert for the crew (canPersonReadMedicalAlertOnTrip, issue
     }
   });
 
+  it("refuses crew who rostered themselves, or whose assignment names nobody, and admits the same person once a manager assigns them", async () => {
+    const { db, shop } = ctx;
+    const { mine, other } = await twoTrips(db, shop.id);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    const instructor = await makeStaff(db, shop.id, ["instructor"]);
+    // Self-rostered on the board: no trust in the roster they wrote themselves.
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: mine, personId: instructor, assignedByPersonId: instructor });
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, instructor, mine)).toBe(false);
+    // An assignment that names nobody is not a manager's assignment either.
+    await db.insert(tripAssignments).values({ tripId: other, personId: instructor });
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, instructor, other)).toBe(false);
+    // Assigned by a manager: admitted.
+    await db
+      .update(tripAssignments)
+      .set({ assignedByPersonId: manager })
+      .where(and(eq(tripAssignments.tripId, mine), eq(tripAssignments.personId, instructor)));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, instructor, mine)).toBe(true);
+    // The owner and a manager are unaffected by how they got on the roster.
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: mine, personId: manager, assignedByPersonId: manager });
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, manager, mine)).toBe(true);
+  });
+
   it("refuses an assigned crew member who is disabled or deleted, and another shop's departure", async () => {
     const { db, shop } = ctx;
     const { mine } = await twoTrips(db, shop.id);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
     const disabled = await makeStaff(db, shop.id, ["divemaster"], { status: "disabled" });
     const deleted = await makeStaff(db, shop.id, ["divemaster"], { deleted: true });
     const crewing = await makeStaff(db, shop.id, ["divemaster"]);
     await db.insert(tripAssignments).values([
-      { tripId: mine, personId: disabled },
-      { tripId: mine, personId: deleted },
-      { tripId: mine, personId: crewing },
+      { tripId: mine, personId: disabled, assignedByPersonId: manager },
+      { tripId: mine, personId: deleted, assignedByPersonId: manager },
+      { tripId: mine, personId: crewing, assignedByPersonId: manager },
     ]);
     expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, disabled, mine)).toBe(false);
     expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, deleted, mine)).toBe(false);
@@ -312,7 +342,9 @@ describe("the medical alert for the crew (canPersonReadMedicalAlertOnTrip, issue
       .where(eq(trips.shopId, elsewhere.id))
       .limit(1);
     if (otherTrip) {
-      await db.insert(tripAssignments).values({ tripId: otherTrip.id, personId: crewing });
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: otherTrip.id, personId: crewing, assignedByPersonId: manager });
       expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, crewing, otherTrip.id)).toBe(false);
     }
   });

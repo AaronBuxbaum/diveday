@@ -1,8 +1,7 @@
 "use server";
 
 import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
-import { medicalAlertForSeat } from "@/db/medical-alerts";
-import { recordDiverActivity } from "@/db/operations";
+import { medicalAlertForSeat, recordMedicalAlertTrailLine } from "@/db/medical-alerts";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
@@ -17,7 +16,9 @@ export type ShowSeatMedicalAlertResult = { ok: true; text: string } | { ok: fals
  *
  * The read goes on the diver's trail (`medical_alert_read`) before the words
  * are handed back, the way "Show answers" records `medical_answers_read`; a
- * trail that refuses the line shows nothing. A page render never writes it.
+ * trail that refuses the line shows nothing. One line per reader, diver and
+ * departure within ten minutes (`recordMedicalAlertTrailLine`); every tap
+ * still gets the words. A page render never writes it and never carries them.
  * Every refusal is the same `{ ok: false }`.
  */
 export async function showSeatMedicalAlertAction(
@@ -33,11 +34,12 @@ export async function showSeatMedicalAlertAction(
   if (!(await canPersonReadMedicalAlertOnTrip(db, shop.id, actor, trip))) return { ok: false };
   const alert = await medicalAlertForSeat(db, shop.id, trip, seat);
   if (!alert) return { ok: false };
-  const recorded = await recordDiverActivity(db, {
+  const recorded = await recordMedicalAlertTrailLine(db, {
     shopId: shop.id,
     personId: alert.personId,
     actorPersonId: actor,
     code: "medical_alert_read",
+    departureId: trip,
   });
   if (!recorded) return { ok: false };
   return { ok: true, text: alert.text };

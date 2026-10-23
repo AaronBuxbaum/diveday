@@ -2,6 +2,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
+import { canPersonReadMedicalAlertOnTrip } from "./authz";
 import { getTripManifests } from "./manifests";
 import { medicalAlertTextsForTrip } from "./medical-alerts";
 import { listTripReadiness } from "./readiness";
@@ -33,6 +34,14 @@ describe("the seeded medical alert", () => {
     if (!trip) throw new Error("seeded departure missing");
     const crew = await db.select().from(tripAssignments).where(eq(tripAssignments.tripId, trip.id));
     expect(crew.length).toBeGreaterThan(0);
+    // Assigned by someone else, so the crew reads the words (H-153).
+    const readers: boolean[] = [];
+    for (const member of crew) {
+      expect(member.assignedByPersonId).not.toBeNull();
+      expect(member.assignedByPersonId).not.toBe(member.personId);
+      readers.push(await canPersonReadMedicalAlertOnTrip(db, shop.id, member.personId, trip.id));
+    }
+    expect(readers).toContain(true);
 
     const rows = await listTripReadiness(db, shop.id, trip.id);
     const seat = rows.find((row) => row.person.fullName === DEMO_MEDICAL_ALERT_DIVER);

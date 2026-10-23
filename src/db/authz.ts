@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { cache } from "react";
 import {
   canAddDiver,
@@ -271,10 +271,15 @@ export const canPersonReadShopAnswers = (db: DbExecutor, shopId: string, personI
 /**
  * The live check behind the **text of a medical alert for the crew** on one
  * departure's manifest and roll call (`canReadMedicalAlert`, issue #2960):
- * live roles, and whether this person is on that departure's crew right now
- * (`trip_assignments`, shop-scoped through the live trip). A crew member taken
- * off the boat this morning loses the text with the assignment. The caller
- * still confirms the diver is booked on `tripId`.
+ * live roles, and whether someone else put this person on that departure's
+ * crew (`trip_assignments`, shop-scoped through the live trip). A row the
+ * person wrote for themselves, or one that names nobody, does not count: the
+ * same rule as `src/db/training-mark-resolve.ts`, because anyone who can
+ * configure trips could otherwise roster themselves into the text. The owner
+ * and a manager read it however they got on the roster. A crew member taken
+ * off the boat this morning loses the text online with the assignment (a copy
+ * saved for offline keeps it until it expires, H-153). The caller still
+ * confirms the diver is booked on `tripId`.
  */
 export async function canPersonReadMedicalAlertOnTrip(
   db: DbExecutor,
@@ -293,6 +298,8 @@ export async function canPersonReadMedicalAlertOnTrip(
       and(
         eq(tripAssignments.tripId, tripId),
         eq(tripAssignments.personId, personId),
+        isNotNull(tripAssignments.assignedByPersonId),
+        ne(tripAssignments.assignedByPersonId, tripAssignments.personId),
         eq(trips.shopId, shopId),
         liveTrip(),
       ),

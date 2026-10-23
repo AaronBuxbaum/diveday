@@ -4,6 +4,8 @@ import { activityEvents, tripAssignments, trips, waiverRecords } from "@/db/sche
 import { completeWaiver } from "@/db/waivers-completion";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import { clearAnswers, now, waiverContextFor } from "@/db/waivers-test-fixtures";
+import { MINUTE_MS } from "@/lib/clock";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
@@ -100,14 +102,24 @@ describe("showSeatMedicalAlertAction", () => {
     expect(await readLines(db, person.id)).toEqual([{ actor: owner }]);
   });
 
-  it("hands them to a captain crewing this departure, and refuses them off it", async () => {
-    const { db, shop, trip, booking, person, captain } = await alerted();
+  it("hands them to a captain a manager put on this departure, and refuses them off it or self-rostered", async () => {
+    const { db, shop, trip, booking, person, captain, owner } = await alerted();
     signIn(shop, captain);
     await expect(showSeatMedicalAlertAction(shop.slug, trip.id, booking.id)).resolves.toEqual({
       ok: false,
     });
     expect(await readLines(db, person.id)).toEqual([]);
-    await db.insert(tripAssignments).values({ tripId: trip.id, personId: captain });
+    // Rostered by themselves: still refused.
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: trip.id, personId: captain, assignedByPersonId: captain });
+    await expect(showSeatMedicalAlertAction(shop.slug, trip.id, booking.id)).resolves.toEqual({
+      ok: false,
+    });
+    await db
+      .update(tripAssignments)
+      .set({ assignedByPersonId: owner })
+      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.personId, captain)));
     await expect(showSeatMedicalAlertAction(shop.slug, trip.id, booking.id)).resolves.toEqual({
       ok: true,
       text: ALERT,
@@ -116,7 +128,7 @@ describe("showSeatMedicalAlertAction", () => {
   });
 
   it("refuses a seat that is not on the departure named, even to its crew", async () => {
-    const { db, shop, trip, booking, person, captain } = await alerted();
+    const { db, shop, trip, booking, person, captain, owner } = await alerted();
     const [other] = await db
       .select({ id: trips.id })
       .from(trips)
@@ -126,7 +138,7 @@ describe("showSeatMedicalAlertAction", () => {
     const elsewhere = other.id;
     await db
       .insert(tripAssignments)
-      .values({ tripId: elsewhere, personId: captain })
+      .values({ tripId: elsewhere, personId: captain, assignedByPersonId: owner })
       .onConflictDoNothing();
     signIn(shop, captain);
     // Crewing another departure and naming it with this seat reads nothing.
@@ -134,6 +146,26 @@ describe("showSeatMedicalAlertAction", () => {
       ok: false,
     });
     expect(await readLines(db, person.id)).toEqual([]);
+  });
+
+  it("writes one read per reader, diver and departure within ten minutes, and shows the words every time", async () => {
+    const { db, shop, trip, booking, person, owner } = await alerted();
+    signIn(shop, owner);
+    for (let tap = 0; tap < 3; tap++) {
+      await expect(showSeatMedicalAlertAction(shop.slug, trip.id, booking.id)).resolves.toEqual({
+        ok: true,
+        text: ALERT,
+      });
+      advanceClock(3 * MINUTE_MS);
+    }
+    expect(await readLines(db, person.id)).toHaveLength(1);
+    // Past ten minutes after the first line, the next tap is a new read.
+    advanceClock(2 * MINUTE_MS);
+    await expect(showSeatMedicalAlertAction(shop.slug, trip.id, booking.id)).resolves.toEqual({
+      ok: true,
+      text: ALERT,
+    });
+    expect(await readLines(db, person.id)).toHaveLength(2);
   });
 
   it("shows nothing when the trail cannot take the line", async () => {
