@@ -122,6 +122,28 @@ discount that does not exist.
     roster pickup. A diver's package order and a last-minute deal's code refuse in the database
     reader itself while their switch is off.
 
+- **Amended 2026-10-23 (Aaron: "every feature a shop could run without is a switch"): five more
+  switches**, one migration (`l3-feature-switches`), each **default true** for every shop, existing
+  ones included: `checkout_recovery_enabled`, `buddy_links_enabled`, `sightings_enabled`,
+  `diver_photos_enabled` and `self_registration_enabled`. Off hides and refuses; nothing is deleted.
+  - **Checkout reminders** off: the cron sends no abandoned-checkout email; pending checkouts are
+    left as they are.
+  - **Bring a buddy** off: the recap draws no buddy link; an old link still books a seat and
+    credits nobody; Reports' buddy seats and referrers and the diver record's friends count read
+    as none. Every recorded referral is kept.
+  - **Sightings** off: the manifest's Seen group and the dive log's species field go, the
+    shopfront's month shelf and a trip page's site sightings are not read, the recap names no
+    species, and no highlight is drafted from sightings. A chip tap and the sightings assist
+    refuse. **Saving a dive keeps the species already logged** (`keepObservedSpecies`, plus a
+    hidden field), because the save replaces the whole row. Roll call, head count and readiness
+    never change.
+  - **Recap photos** off: no upload from the recap link, the readiness link or the crew's
+    departure album, and the diver's recap shows no photo door or album. Photos already added stay
+    on Today with their Remove so staff can take one down, and media deletions keep running.
+  - **Counter sign-up** off: `/s/<shop>/register` is a 404, a hand-built registration and the
+    card-photo read refuse, the counter card leaves Settings (row, rail, ⌘K) and its print page
+    lands on Settings. Divers who signed themselves up stay, with the divers list's filter.
+
 ## Alternatives considered
 
 - **One "Features" group in Settings listing every switch.** *Rejected at first, adopted

@@ -274,8 +274,9 @@
 - **Optional feature** — a feature a shop can switch off on the **Features** page of Settings (`/settings/features`, which also holds the crew schedule, Stripe Tax and the kinds of diving a shop runs): diver reviews, date
   requests, the last-minute list, tips, "Our year", the **PADI checks**, Claude suggestions,
   recap highlights without a tap, lost and found, gear servicing (work orders), promo codes, dive
-  packages and **Hotel pickup** (`src/lib/shop-features.ts`, one `shops` column each, every one
-  on for a new shop). Off hides the feature on every surface that offers it, redirects
+  packages, **Hotel pickup**, checkout reminders (abandoned-checkout emails), bring a buddy,
+  marine-life sightings, recap photos and counter sign-up (QR self-registration)
+  (`src/lib/shop-features.ts`, one `shops` column each, every one on for a new shop). Off hides the feature on every surface that offers it, redirects
   its staff pages and deletes nothing (ADR 20261005-optional-shop-features).
 - **Feature coverage** — the one answer, per staff destination and per boolean on `shops`, to "is
   this something a shop could run without?": its Features switch, or `core` with the reason it
