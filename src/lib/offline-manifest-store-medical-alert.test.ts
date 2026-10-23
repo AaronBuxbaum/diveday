@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 // Browser-side store: the medical alerts' words on a device copy (H-153 amendment).
 import "fake-indexeddb/auto";
-import { waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { forgetThisDevice } from "@/components/forget-device";
 import {
@@ -221,10 +220,9 @@ describe("the medical alerts' words on a device copy", () => {
   it("is what signing out runs (`forgetThisDevice`, both sign-out doors and the sign-in page)", async () => {
     await saveOfflineManifest(payloadFor(TRIP));
     await saveOfflineMedicalAlerts(TRIP, { [ALERTED]: ALERT }, DIVEMASTER);
-    forgetThisDevice();
-    await waitFor(async () => {
-      expect((await loadOfflineManifest(TRIP))?.medicalAlertsSavedBy).toBeUndefined();
-    });
+    // Awaitable (security review 2, L4): both sign-out doors wait for it.
+    await forgetThisDevice();
+    expect((await loadOfflineManifest(TRIP))?.medicalAlertsSavedBy).toBeUndefined();
     expect(JSON.stringify(await loadOfflineManifest(TRIP))).not.toContain("EpiPen");
   });
 });

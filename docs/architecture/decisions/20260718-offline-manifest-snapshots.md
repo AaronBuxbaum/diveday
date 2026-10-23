@@ -138,6 +138,11 @@ rules than the rest of the copy (H-153, amendment of 2026-10-23):
   included): on sign-out (`forgetThisDevice`, which the sign-in page also runs) and whenever an
   `/upcoming` answer names a different person than the one who saved them. A body that names nobody
   wipes them all.
+- Both sign-out doors await the wipe (up to two seconds) before they navigate. **A session that ends
+  without the sign-in page loading leaves the saved words on the device**: a closed browser, or a
+  session that expires while the tablet sits on `/offline-manifest` (which needs no session), runs
+  no wipe, and anyone holding the unlocked device can read the words there until the copy expires
+  or the next sign-in on it (security review 2, L4).
 - A crew member removed from the departure after saving loses the words at the next background
   refresh while the device is online. A device that is offline keeps them until sign-out, another
   person's sign-in, or the copy's expiry. That is accepted: the boat may already be at sea, and the
