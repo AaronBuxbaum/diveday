@@ -174,6 +174,19 @@ export const SUBPROCESS_TIMEOUTS = {
    * rather than arrive as the job's anonymous timeout.
    */
   personaWalk: 1_200_000,
+  /**
+   * One `aws s3 cp` of the newest full-cluster dump for the monthly restore drill
+   * (`scripts/restore-drill.mjs`). A gzipped dump of a pre-pilot database is
+   * megabytes; ten minutes is room for a few gigabytes on a runner's network.
+   */
+  dumpDownload: 600_000,
+  /**
+   * One `pg_restore` of that dump into a scratch Neon branch, including the
+   * container image pull. Twenty minutes, under the drill workflow's own
+   * thirty-minute job cap, so a wedged restore names itself and the branch is
+   * still deleted by the script rather than left behind by a killed job.
+   */
+  pgRestore: 1_200_000,
 };
 
 /** Whether a `spawnSync` result or a caught `execFileSync` error is a timeout kill. */
