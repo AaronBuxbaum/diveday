@@ -249,6 +249,39 @@ export const shops = pgTable(
      */
     divePackagesEnabled: boolean("dive_packages_enabled").notNull().default(true),
     /**
+     * **Abandoned-checkout emails**: the one nudge a diver gets when a
+     * booking's payment was started and never finished. Off, the cron sends
+     * none; the unpaid booking itself is untouched.
+     */
+    checkoutRecoveryEnabled: boolean("checkout_recovery_enabled").notNull().default(true),
+    /**
+     * **Bring a buddy**: the share link on a diver's ready page and recap, the
+     * credit a booking through it earns, and the referred-seats lines on
+     * Reports and the diver's record. Off hides the link and records no new
+     * credit; credits already earned stay.
+     */
+    buddyLinksEnabled: boolean("buddy_links_enabled").notNull().default(true),
+    /**
+     * **Marine-life sightings**: what the crew saw on a dive (the manifest's
+     * "Seen" group and the dive log's species), the shopfront's month shelf,
+     * a trip page's recent sightings and the recap's field guide. Off hides
+     * every one and erases no sighting; roll call and head count never change.
+     */
+    sightingsEnabled: boolean("sightings_enabled").notNull().default(true),
+    /**
+     * **Recap photos**: divers and crew adding photos to a departure's recap.
+     * Off, no upload is taken and the recap shows no album; photos already
+     * added stay visible to staff so one can still be taken down, and media
+     * deletions keep running.
+     */
+    diverPhotosEnabled: boolean("diver_photos_enabled").notNull().default(true),
+    /**
+     * **Counter QR self-registration**: the printed counter card and the
+     * public sign-up page it opens. Off, the page is gone and the card leaves
+     * Settings; divers who already signed themselves up stay.
+     */
+    selfRegistrationEnabled: boolean("self_registration_enabled").notNull().default(true),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not

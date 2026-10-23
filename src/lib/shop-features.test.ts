@@ -15,6 +15,11 @@ const allOn = {
   promoCodesEnabled: true,
   divePackagesEnabled: true,
   offersHotelPickup: true,
+  checkoutRecoveryEnabled: true,
+  buddyLinksEnabled: true,
+  sightingsEnabled: true,
+  diverPhotosEnabled: true,
+  selfRegistrationEnabled: true,
 };
 
 describe("shopOffers", () => {

@@ -482,6 +482,31 @@
         "label": "Ofrecemos recogida en el hotel",
         "description": "La página de cada buceador pregunta si quiere que lo recojan y dónde se aloja, y el manifiesto muestra a quién recoger."
       },
+      "checkoutRecovery": {
+        "heading": "Recordatorios de pago",
+        "label": "Escribir al buceador que no terminó de pagar",
+        "description": "Un correo, dos horas después de que el buceador deja el pago, con un enlace a su reserva. Desactivado, no se envía nada y su reserva queda como estaba."
+      },
+      "buddyLinks": {
+        "heading": "Trae a alguien",
+        "label": "Dar a cada buceador un enlace para traer a alguien",
+        "description": "Aparece en la página del buceador y en el resumen de la salida después de la inmersión. Quien reserva con ese enlace se cuenta en Informes y en la ficha del buceador."
+      },
+      "selfRegistration": {
+        "heading": "Registro en el mostrador",
+        "label": "Dejar que quien llega sin reserva se registre solo",
+        "description": "El código QR de la tarjeta del mostrador abre un formulario en su teléfono para sus datos de contacto, certificación y tallas de alquiler. Desactivado, la tarjeta y su formulario desaparecen; quien ya se registró se queda."
+      },
+      "sightings": {
+        "heading": "Avistamientos",
+        "label": "Anotar lo que vieron los buceadores",
+        "description": "La tripulación anota las especies después de cada inmersión. Aparecen en tus páginas públicas, los sitios de buceo y el resumen de la salida. Desactivado, se ocultan y se guarda cada avistamiento."
+      },
+      "diverPhotos": {
+        "heading": "Fotos del resumen",
+        "label": "Dejar que buceadores y tripulación añadan fotos al resumen",
+        "description": "Fotos del día, compartidas con el barco. Desactivado, nadie puede añadir una; las fotos ya añadidas se quedan contigo para que puedas quitar cualquiera."
+      },
       "door": "Activar o desactivar funciones"
     },
     "crewSchedule": {

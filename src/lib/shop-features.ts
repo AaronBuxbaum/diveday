@@ -8,7 +8,9 @@
  * list, tips on the recap, the shopfront's "Our year", the PADI checks
  * (beta), Claude suggestions (ADR 20261018-claude-assists; off, every
  * assist is dark), lost and found, gear servicing (work orders), promo codes,
- * dive packages and hotel pickups. Off hides the feature on every surface that offers it and deletes
+ * dive packages, hotel pickups, abandoned-checkout emails, bring-a-buddy
+ * links, marine-life sightings, recap photos and counter QR
+ * self-registration. Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
  * **Every feature starts on for a new shop** (Aaron, 2026-10-23). "Our year"
@@ -34,6 +36,11 @@ export const SHOP_FEATURES = [
   "promoCodes",
   "divePackages",
   "hotelPickup",
+  "checkoutRecovery",
+  "buddyLinks",
+  "sightings",
+  "diverPhotos",
+  "selfRegistration",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -53,6 +60,11 @@ export const SHOP_FEATURE_COLUMNS = {
   promoCodes: "promoCodesEnabled",
   divePackages: "divePackagesEnabled",
   hotelPickup: "offersHotelPickup",
+  checkoutRecovery: "checkoutRecoveryEnabled",
+  buddyLinks: "buddyLinksEnabled",
+  sightings: "sightingsEnabled",
+  diverPhotos: "diverPhotosEnabled",
+  selfRegistration: "selfRegistrationEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

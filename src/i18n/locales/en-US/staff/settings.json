@@ -482,6 +482,31 @@
         "label": "We offer hotel pickup",
         "description": "Each diver’s page asks whether they want a pickup and where they’re staying, and the manifest lists who to collect."
       },
+      "checkoutRecovery": {
+        "heading": "Checkout reminders",
+        "label": "Email a diver who didn’t finish paying",
+        "description": "One email, two hours after a diver leaves checkout, with a link back to their booking. Off, nothing is sent and their booking stays as it was."
+      },
+      "buddyLinks": {
+        "heading": "Bring a buddy",
+        "label": "Give each diver a link to bring a buddy",
+        "description": "Shown on the diver’s page and trip recap after the dive. A friend who books through it is counted on Reports and the diver’s record."
+      },
+      "selfRegistration": {
+        "heading": "Counter sign-up",
+        "label": "Let walk-ins sign themselves up",
+        "description": "The QR code on your counter card opens a form on their phone for contact details, certification and rental sizes. Off, the card and its form are gone; divers who already signed up stay."
+      },
+      "sightings": {
+        "heading": "Sightings",
+        "label": "Log what divers saw",
+        "description": "The crew notes species after each dive. They show on your public pages, dive sites and the trip recap. Off, they’re hidden and every sighting is kept."
+      },
+      "diverPhotos": {
+        "heading": "Recap photos",
+        "label": "Let divers and crew add photos to the recap",
+        "description": "Photos from the day, shared with the boat. Off, nobody can add one; photos already added stay with you so you can remove any."
+      },
       "door": "Turn features on or off"
     },
     "crewSchedule": {

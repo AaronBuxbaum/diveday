@@ -78,6 +78,11 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   promoCodesEnabled: "promoCodes",
   divePackagesEnabled: "divePackages",
   offersHotelPickup: "hotelPickup",
+  checkoutRecoveryEnabled: "checkoutRecovery",
+  buddyLinksEnabled: "buddyLinks",
+  sightingsEnabled: "sightings",
+  diverPhotosEnabled: "diverPhotos",
+  selfRegistrationEnabled: "selfRegistration",
   isDemo: { core: "platform marker for a demo shop, not a shop's choice" },
 };
 
