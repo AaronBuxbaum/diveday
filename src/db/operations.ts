@@ -136,6 +136,8 @@ export type DiverActivityCode =
   | "identity_repointed_onto"
   | "medical_clearance_opened"
   | "medical_answers_read"
+  | "medical_alert_read"
+  | "medical_alert_saved_offline"
   | "date_of_birth_cleared_as_adult"
   | "record_exported"
   | "dispute_sheet_printed"
@@ -151,7 +153,18 @@ export type DiverActivityCode =
  */
 export async function recordDiverActivity(
   db: DbExecutor,
-  input: { shopId: string; personId: string; actorPersonId: string; code: DiverActivityCode },
+  input: {
+    shopId: string;
+    personId: string;
+    actorPersonId: string;
+    code: DiverActivityCode;
+    /**
+     * The departure a medical alert was read or saved on (issue #2960), kept
+     * in the params rather than `trip_id` so the line stays on the diver's
+     * trail and off the trip's feed, its incident export and dispute sheet.
+     */
+    departureId?: string;
+  },
 ): Promise<boolean> {
   const [diver] = await db
     .select({ name: people.fullName })
@@ -172,7 +185,11 @@ export async function recordDiverActivity(
     actorPersonId: input.actorPersonId,
     subjectPersonId: input.personId,
     code: input.code,
-    params: { actor: actor.name, diver: diver.name },
+    params: {
+      actor: actor.name,
+      diver: diver.name,
+      ...(input.departureId ? { departure: input.departureId } : {}),
+    },
     occurredAt: nowDate(),
   });
   return true;

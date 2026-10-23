@@ -5,6 +5,7 @@ import { EYEBROW_CLASS, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import {
+  canPersonReadMedicalAlert,
   canPersonReadMedicalAnswers,
   canPersonReadMedicalClearanceDocument,
   canPersonReadShopAnswers,
@@ -20,9 +21,10 @@ import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED } from "@/lib/waiver-integrity";
+import { MedicalAlertCard } from "./_components/MedicalAlertCard";
 import { MedicalAnswers } from "./_components/MedicalAnswers";
 import { ShopAnswersCard } from "./_components/ShopAnswersCard";
-import { showMedicalAnswersAction } from "./actions";
+import { showMedicalAlertOnRecordAction, showMedicalAnswersAction } from "./actions";
 
 export const instant = true;
 
@@ -56,11 +58,15 @@ export default async function SignedWaiverPage({
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [readsMedicalAnswers, canOpenEvaluation, readsShopAnswers] = await Promise.all([
-    canPersonReadMedicalAnswers(db, shop.id, session.user.personId),
-    canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
-    canPersonReadShopAnswers(db, shop.id, session.user.personId),
-  ]);
+  const [readsMedicalAnswers, canOpenEvaluation, readsShopAnswers, readsMedicalAlert] =
+    await Promise.all([
+      canPersonReadMedicalAnswers(db, shop.id, session.user.personId),
+      canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
+      canPersonReadShopAnswers(db, shop.id, session.user.personId),
+      // Owner and manager only here: this page has no departure whose crew
+      // the reader could be on (issue #2960).
+      canPersonReadMedicalAlert(db, shop.id, session.user.personId),
+    ]);
   // Never the full questionnaire on render: an owner or manager reads it by
   // tapping "Show answers", whose action records the read (issue #2157).
   const waiver = await getSignedWaiverForDiver(db, {
@@ -279,6 +285,21 @@ export default async function SignedWaiverPage({
             t={t}
           />
         ) : null}
+
+        <MedicalAlertCard
+          onFile={waiver.medicalAlertOnFile}
+          show={
+            readsMedicalAlert && waiver.medicalAlertOnFile
+              ? showMedicalAlertOnRecordAction.bind(null, shopSlug, waiver.personId, waiver.id)
+              : undefined
+          }
+          identityHeld={waiver.identityHeld}
+          erasedAt={waiver.erasedAt}
+          signatureMethod={waiver.signatureMethod}
+          locale={locale}
+          timezone={shop.timezone}
+          t={t}
+        />
 
         <SectionCard title={t("waiversStaff.record.releaseHeading")}>
           <p className="text-sm whitespace-pre-wrap text-muted">{waiver.templateBody}</p>

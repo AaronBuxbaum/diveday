@@ -83,3 +83,22 @@ snapshot is what was asked and answered, so it is signed evidence and the seal c
 
 Rejected: a new seal version for the answers. It would have split the verifier on a fact the
 column's own null already says, and left every pre-existing record on a version it does not need.
+
+## Amendment 2026-10-23 — the medical alert for the crew is a second conditional key
+
+A signed record can now carry the diver's **medical alert for the crew** (glossary entry of that
+name, issue #2960, H-153), `waiver_records.medical_alert`: plain text the diver wrote, at most 500
+characters. It is what the diver signed beside, so the seal covers it, by the rule above.
+
+- **The key is conditional.** `medicalAlert` joins the version 1 field set only when the column is
+  not null, so every existing digest, with or without shop answers, still verifies byte for byte.
+  A blank alert is stored as null, never as an empty string, so "the diver wrote nothing" has one
+  spelling and one digest. Stripping an alert from a record that had one changes the digest and
+  reads `invalid`.
+- **Versions 3 and 4 inherit it; version 2 (erased) excludes it.** Erasure nulls the alert and its
+  draft with the diver's other words, so a version 2 record carrying `medical_alert` or
+  `draft_medical_alert` reads `invalid`.
+- `medicalAlert` is in `WAIVER_SEALED_FIELDS`; the draft, `draft_medical_alert`, is never sealed,
+  never exported, joins the shared draft-column list and is cleared on signing.
+- The alert never feeds readiness, admission, referral or any count. The seal makes it evidence of
+  what the diver wrote, not of anything about their fitness.

@@ -1,4 +1,4 @@
-import { loadActiveStaffRoles } from "@/db/authz";
+import { canPersonReadMedicalAlertOnTrip, loadActiveStaffRoles } from "@/db/authz";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
 import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
@@ -158,6 +158,21 @@ export async function GET() {
     }),
   );
 
+  const served = payloads.filter((payload): payload is OfflineManifestPayload => payload !== null);
+  // Read live per departure, so a refresh drops words this viewer saved and
+  // may no longer hold (security review 2, L3).
+  const mayHoldMedicalAlertWords: Record<string, boolean> = {};
+  for (const payload of served) {
+    const tripId = payload.manifests[0]?.trip.id;
+    if (!tripId) continue;
+    mayHoldMedicalAlertWords[tripId] = await canPersonReadMedicalAlertOnTrip(
+      db,
+      shop.id,
+      session.user.personId,
+      tripId,
+    );
+  }
+
   const body: OfflineManifestUpcomingResponse = {
     // Always returned, even with zero trips in the window: a caller that is
     // already paying for the roster gets the server-verified "who am I signed
@@ -169,7 +184,11 @@ export async function GET() {
     // A caller that wants *only* this asks `/api/offline-manifests/identity`,
     // which is the same string without the board attached.
     shop: shopIdentity,
-    payloads: payloads.filter((payload): payload is OfflineManifestPayload => payload !== null),
+    payloads: served,
+    // Who asked, so the device wipes medical alert words someone else saved
+    // (H-153 amendment). The board itself never carries those words.
+    viewer: { personId: session.user.personId },
+    mayHoldMedicalAlertWords,
   };
   return Response.json(body, { headers: NO_STORE });
 }

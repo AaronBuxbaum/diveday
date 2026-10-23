@@ -6,13 +6,16 @@ import {
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
+  wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import {
   fetchOfflineManifestShopSlug,
   OFFLINE_FALLBACK_PARAM,
   type OfflineFallbackReason,
+  offlineManifestMayHoldMedicalAlertWords,
   offlineManifestPayloads,
   offlineManifestShopSlug,
+  offlineManifestViewerPersonId,
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
 import {
@@ -395,10 +398,20 @@ async function refreshSavedManifests(): Promise<void> {
     // same fail-closed order the page-side auto-save keeps, rather than
     // leaving both shops' rosters readable side by side.
     await purgeOfflineManifestsExceptShop(shopSlug);
+    // Medical alert words another person saved on this device go before
+    // anything is saved for this one (H-153 amendment). A body that names
+    // nobody wipes them all: fail closed.
+    await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined);
     for (const payload of offlineManifestPayloads(body)) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.
-      await saveOfflineManifest(payload).catch(() => undefined);
+      // Words this viewer may no longer hold go (security review 2, L3).
+      await saveOfflineManifest(payload, {
+        keepMedicalAlertWords: offlineManifestMayHoldMedicalAlertWords(
+          body,
+          payload.manifests[0]?.trip.id,
+        ),
+      }).catch(() => undefined);
     }
   } catch {
     // Offline, signed out, or the endpoint moved — all the same here.

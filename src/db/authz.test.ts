@@ -1,3 +1,4 @@
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
@@ -14,6 +15,8 @@ import {
   canPersonManageWaiverTemplates,
   canPersonOverrideGearRequest,
   canPersonReadEveryIncidentReport,
+  canPersonReadMedicalAlert,
+  canPersonReadMedicalAlertOnTrip,
   canPersonReadMedicalAnswers,
   canPersonReadPrivateRecapPulse,
   canPersonRefund,
@@ -21,7 +24,7 @@ import {
   loadActiveStaffRolesByPerson,
 } from "./authz";
 import type { AppDb } from "./client";
-import { people, personRoles, userAccounts } from "./schema";
+import { people, personRoles, shops, tripAssignments, trips, userAccounts } from "./schema";
 
 let seq = 0;
 
@@ -237,6 +240,170 @@ describe("medical answers on a signed record (canPersonReadMedicalAnswers)", () 
     expect(
       await canPersonReadMedicalAnswers(db, "00000000-0000-0000-0000-000000000000", manager),
     ).toBe(false);
+  });
+});
+
+describe("the medical alert for the crew (canPersonReadMedicalAlertOnTrip, issue #2960)", () => {
+  async function twoTrips(db: AppDb, shopId: string) {
+    const rows = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shopId), isNull(trips.deletedAt)))
+      .limit(2);
+    const [mine, other] = rows;
+    if (!mine || !other) throw new Error("expected two seeded departures");
+    return { mine: mine.id, other: other.id };
+  }
+
+  it("admits the owner and a manager on any departure, crewing it or not", async () => {
+    const { db, shop } = ctx;
+    const { mine } = await twoTrips(db, shop.id);
+    for (const role of ["owner", "manager"] as const) {
+      const person = await makeStaff(db, shop.id, [role]);
+      expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, mine)).toBe(true);
+      expect(await canPersonReadMedicalAlert(db, shop.id, person)).toBe(true);
+    }
+  });
+
+  it("admits other staff on the departure they crew, and on no other", async () => {
+    const { db, shop } = ctx;
+    const { mine, other } = await twoTrips(db, shop.id);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    for (const role of [
+      "instructor",
+      "assistant_instructor",
+      "divemaster",
+      "captain",
+      "crew",
+    ] as const) {
+      const person = await makeStaff(db, shop.id, [role]);
+      // Unassigned: the fact of an alert, never its text.
+      expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, mine)).toBe(false);
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: mine, personId: person, assignedByPersonId: manager });
+      expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, mine)).toBe(true);
+      // Crewing one departure reads nothing on another.
+      expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, other)).toBe(false);
+      // No departure in hand (the signed record): owner and manager only.
+      expect(await canPersonReadMedicalAlert(db, shop.id, person)).toBe(false);
+    }
+  });
+
+  it("refuses crew who rostered themselves, or whose assignment names nobody, and admits the same person once a manager assigns them", async () => {
+    const { db, shop } = ctx;
+    const { mine, other } = await twoTrips(db, shop.id);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    const instructor = await makeStaff(db, shop.id, ["instructor"]);
+    // Self-rostered on the board: no trust in the roster they wrote themselves.
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: mine, personId: instructor, assignedByPersonId: instructor });
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, instructor, mine)).toBe(false);
+    // An assignment that names nobody is not a manager's assignment either.
+    await db.insert(tripAssignments).values({ tripId: other, personId: instructor });
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, instructor, other)).toBe(false);
+    // Assigned by a manager: admitted.
+    await db
+      .update(tripAssignments)
+      .set({ assignedByPersonId: manager })
+      .where(and(eq(tripAssignments.tripId, mine), eq(tripAssignments.personId, instructor)));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, instructor, mine)).toBe(true);
+    // The owner and a manager are unaffected by how they got on the roster.
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: mine, personId: manager, assignedByPersonId: manager });
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, manager, mine)).toBe(true);
+  });
+
+  it("counts an assignment only when a live owner or manager of this shop made it (security review 2, M-1)", async () => {
+    const { db, shop } = ctx;
+    const { mine, other } = await twoTrips(db, shop.id);
+    const owner = await makeStaff(db, shop.id, ["owner"]);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    const a = await makeStaff(db, shop.id, ["instructor"]);
+    const b = await makeStaff(db, shop.id, ["instructor"]);
+    const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
+    // Two instructors roster each other, and one rosters a friendly divemaster.
+    await db.insert(tripAssignments).values([
+      { tripId: mine, personId: b, assignedByPersonId: a },
+      { tripId: mine, personId: a, assignedByPersonId: b },
+      { tripId: mine, personId: divemaster, assignedByPersonId: a },
+    ]);
+    for (const person of [a, b, divemaster]) {
+      expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, person, mine)).toBe(false);
+    }
+    // A manager's assignment and the owner's assignment count.
+    await db
+      .update(tripAssignments)
+      .set({ assignedByPersonId: manager })
+      .where(and(eq(tripAssignments.tripId, mine), eq(tripAssignments.personId, b)));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, b, mine)).toBe(true);
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: other, personId: divemaster, assignedByPersonId: owner });
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, divemaster, other)).toBe(true);
+    // The manager is later demoted: what they assigned stops counting.
+    await db
+      .update(personRoles)
+      .set({ role: "instructor" })
+      .where(eq(personRoles.personId, manager));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, b, mine)).toBe(false);
+    // The owner's account is disabled, then the person removed: the same.
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, owner));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, divemaster, other)).toBe(false);
+    await db.update(userAccounts).set({ status: "active" }).where(eq(userAccounts.personId, owner));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, divemaster, other)).toBe(true);
+    await db
+      .update(people)
+      .set({ deletedAt: new Date("2026-06-01T00:00:00Z") })
+      .where(eq(people.id, owner));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, divemaster, other)).toBe(false);
+    // Another shop's manager is nobody's manager here.
+    const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
+    if (!elsewhere) throw new Error("expected a second seeded shop");
+    const outsider = await makeStaff(db, elsewhere.id, ["manager"]);
+    await db
+      .update(tripAssignments)
+      .set({ assignedByPersonId: outsider })
+      .where(and(eq(tripAssignments.tripId, mine), eq(tripAssignments.personId, a)));
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, a, mine)).toBe(false);
+  });
+
+  it("refuses an assigned crew member who is disabled or deleted, and another shop's departure", async () => {
+    const { db, shop } = ctx;
+    const { mine } = await twoTrips(db, shop.id);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    const disabled = await makeStaff(db, shop.id, ["divemaster"], { status: "disabled" });
+    const deleted = await makeStaff(db, shop.id, ["divemaster"], { deleted: true });
+    const crewing = await makeStaff(db, shop.id, ["divemaster"]);
+    await db.insert(tripAssignments).values([
+      { tripId: mine, personId: disabled, assignedByPersonId: manager },
+      { tripId: mine, personId: deleted, assignedByPersonId: manager },
+      { tripId: mine, personId: crewing, assignedByPersonId: manager },
+    ]);
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, disabled, mine)).toBe(false);
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, deleted, mine)).toBe(false);
+    // Another shop: neither its staff nor its departures answer here.
+    const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
+    if (!elsewhere) throw new Error("expected a second seeded shop");
+    expect(await canPersonReadMedicalAlertOnTrip(db, elsewhere.id, crewing, mine)).toBe(false);
+    const otherManager = await makeStaff(db, elsewhere.id, ["manager"]);
+    expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, otherManager, mine)).toBe(false);
+    const [otherTrip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, elsewhere.id))
+      .limit(1);
+    if (otherTrip) {
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: otherTrip.id, personId: crewing, assignedByPersonId: manager });
+      expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, crewing, otherTrip.id)).toBe(false);
+    }
   });
 });
 

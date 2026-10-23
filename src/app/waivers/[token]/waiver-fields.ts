@@ -14,7 +14,9 @@ export type WaiverInvalidField =
   | "guardianAcknowledged"
   /** A shop question (glossary *Shop question*): required and left blank, or an answer its kind cannot hold. */
   | "shopQuestionRequired"
-  | "shopQuestionInvalid";
+  | "shopQuestionInvalid"
+  /** The medical alert for the crew: longer than the box allows, or a control character in it. */
+  | "medicalAlert";
 
 /** Copy and same-page anchor for each field a fallback submit can name as missing. */
 export const WAIVER_FIELD_ERROR: Record<
@@ -56,6 +58,8 @@ export const WAIVER_FIELD_ERROR: Record<
   // record's version asks.
   shopQuestionRequired: { textKey: "waiver.errorShopQuestionRequired", anchor: "shop-questions" },
   shopQuestionInvalid: { textKey: "waiver.errorShopQuestionInvalid", anchor: "shop-questions" },
+  // Refused on the box itself, for its shape and never for what it says.
+  medicalAlert: { textKey: "waiver.errorMedicalAlert", anchor: "medicalAlert" },
 };
 
 /** One refused field's copy and anchor, as the page and its cards receive it. */

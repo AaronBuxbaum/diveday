@@ -7,11 +7,13 @@ import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { SEGMENT_CORNER } from "@/components/ui/segmented";
+import { forgetThisDevice } from "./forget-device";
 import { ShopIdentityMenu, shopInitials } from "./ShopIdentityMenu";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/shop/blue-mantis/trips/abc",
 }));
+vi.mock("./forget-device", () => ({ forgetThisDevice: vi.fn(async () => {}) }));
 
 afterEach(() => {
   cleanup();
@@ -138,6 +140,34 @@ describe("ShopIdentityMenu — the open panel", () => {
 
   const horizontalPadding = (element: Element) =>
     [...element.classList].filter((token) => /^(p|px|pl|pr|ps|pe)-/.test(token));
+
+  it("signs out only once the device has forgotten this staffer (security review 2, L4)", async () => {
+    let finishWipe!: () => void;
+    vi.mocked(forgetThisDevice).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishWipe = resolve;
+        }),
+    );
+    const signOutAction = vi.fn(async () => {});
+    render(
+      <ShopIdentityMenu
+        shopName="Blue Mantis Divers"
+        signOutAction={signOutAction}
+        locale="en-US"
+        languages={LANGUAGES}
+        setLocaleAction={vi.fn()}
+        copy={COPY}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out now?" }));
+    await vi.waitFor(() => expect(forgetThisDevice).toHaveBeenCalledTimes(1));
+    expect(signOutAction).not.toHaveBeenCalled();
+    await act(async () => finishWipe());
+    await vi.waitFor(() => expect(signOutAction).toHaveBeenCalledTimes(1));
+  });
 
   it("puts the LANGUAGE label, both languages and Sign out on the tick gutter and no other inset", async () => {
     await openMenu();

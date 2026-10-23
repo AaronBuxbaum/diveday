@@ -3,9 +3,11 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   HELD_SEND_TIMEOUT_MS,
+  manifestRow,
   openCounterFor,
   openDiverFileGroup,
   openFirstRosterRowWith,
+  openManifestPerson,
   openTripFromBoard,
   openTripTab,
   sendWaiverForFirstDiver,
@@ -1490,4 +1492,79 @@ test("a shop question is published, answered by the diver and shown on the signe
   });
   await expect(card.getByText(PROMPT)).toBeVisible();
   await expect(card.getByText(ANSWER, { exact: true })).toBeVisible();
+});
+
+/**
+ * Issue #2960: a diver writes a medical alert for the crew and signs. It
+ * gates nothing, the boat's manifest shows the chip on their row, and the
+ * owner reads it on the signed record through a recorded tap.
+ */
+test("a diver's medical alert for the crew is signed, flagged on the manifest and read on the record", async ({
+  page,
+}) => {
+  // A held send counts eight seconds down before it leaves, then a signing
+  // and two staff pages.
+  test.slow();
+  const staff = staffTranslator("en-US");
+  const diver = diverTranslator("en-US");
+  const ALERT = "Type 1 diabetic. Glucose gel in my BCD pocket.";
+
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Trip");
+  const row = await openFirstRosterRowWith(page, "Send waiver");
+  const diverLink = row.locator('a[href*="/divers/"]').first();
+  const diverName = (await diverLink.innerText()).trim();
+  const diverHref = await diverLink.getAttribute("href");
+  await row.getByRole("button", { name: "Send waiver", exact: true }).click();
+  const waiverHref = await waiverLinkFromResult(
+    page,
+    page.locator("#roster").filter({ visible: true }).getByRole("status"),
+  );
+
+  await page.goto(waiverHref);
+  await expect(
+    page.getByRole("heading", { name: diver("waiver.medicalAlertHeading") }),
+  ).toBeVisible();
+  // Not a step of its own: optional, one box.
+  await expect(
+    page.getByTestId("waiver-step-rail").getByText(diver("waiver.medicalAlertHeading")),
+  ).toHaveCount(0);
+  const medicalNo = page.locator("#medical-questionnaire").getByRole("radio", { name: "No" });
+  await medicalNo.first().waitFor();
+  const count = await medicalNo.count();
+  for (let i = 0; i < count; i++) await medicalNo.nth(i).check();
+  await page.getByLabel(diver("waiver.medicalAlertLabel")).fill(ALERT);
+  await page.getByLabel("Type your full name").fill(diverName);
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  // Signed, never held for review: the alert refers nobody.
+  await expect(page).toHaveURL(/\/ready\//);
+
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Manifest");
+  const manifestEntry = manifestRow(page, diverName);
+  await expect(
+    manifestEntry.getByText(staff("manifest.medicalAlertChip"), { exact: true }),
+  ).toBeVisible();
+  await openManifestPerson(manifestEntry);
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByText(ALERT)).toHaveCount(0);
+
+  // The diver's own record opens onto the release they just signed.
+  await page.goto(diverHref ?? "/");
+  await page
+    .getByRole("region", { name: staff("divers.stats.waiver"), exact: true })
+    .locator('a[href*="/waivers/"]')
+    .first()
+    .click();
+  await page.waitForURL(/\/divers\/[^/]+\/waivers\/[^/]+$/);
+  await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
+  const card = page.locator("section").filter({
+    has: page.getByRole("heading", { name: staff("waiversStaff.record.medicalAlertHeading") }),
+  });
+  await expect(card.getByText(ALERT)).toHaveCount(0);
+  await card.getByRole("button", { name: staff("waiversStaff.record.medicalAlertShow") }).click();
+  await expect(card.getByText(ALERT)).toBeVisible();
 });

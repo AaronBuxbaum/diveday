@@ -952,7 +952,7 @@ jobs:
           path: visual-flakes
           merge-multiple: true
       # A tracker that cannot be reached must not turn main red, since a red
-      # main stops the deploy gate (H-153); the warning names what was missed.
+      # main stops the deploy gate (H-158); the warning names what was missed.
       - name: File one issue per flaky capture
         continue-on-error: true
         env:

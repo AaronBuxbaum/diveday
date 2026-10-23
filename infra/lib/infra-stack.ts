@@ -2315,7 +2315,7 @@ exports.handler = async (event) => {
         id: "production-deploy-gate",
         title: "Give the production deploy gate its Vercel credentials, then turn it on",
         category: "Credentials",
-        when: "once, at the pilot shop's first real booking (H-153), and again if the token is revoked. Skippable until then: with DEPLOY_REQUIRES_GREEN unset, every push to main deploys as before",
+        when: "once, at the pilot shop's first real booking (H-158), and again if the token is revoked. Skippable until then: with DEPLOY_REQUIRES_GREEN unset, every push to main deploys as before",
         why: "With the gate on, Vercel's push-triggered production build cancels itself and .github/workflows/deploy-gate.yml deploys each commit only after its CI on main is green, with the Vercel CLI. That needs a Vercel token and the project ids, and the switch itself has to be set on both GitHub and Vercel, because Vercel cannot read a GitHub variable. No CLI here can mint the token.",
         run: [
           "Mint a token for this environment alone: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project. Never reuse the preview-deploy-token one: the preview job runs pull request code, and any token that can deploy the project can deploy production around the gate.",
@@ -2790,7 +2790,7 @@ exports.handler = async (event) => {
         // the token is the same thing no CLI here can do for itself.
         "preview-deploy-token",
         // Same class, and optional until the pilot's first real booking
-        // (H-153): the deploy gate's token, plus the switch it turns on.
+        // (H-158): the deploy gate's token, plus the switch it turns on.
         "production-deploy-gate",
         // Same class again: Neon's direct connection string is another vendor's
         // credential, so no CLI here can learn the value even though one can

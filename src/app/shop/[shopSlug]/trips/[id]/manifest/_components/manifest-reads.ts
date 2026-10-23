@@ -1,3 +1,4 @@
+import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
 import { departureKitRecord } from "@/db/boat-safety";
 import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
@@ -56,6 +57,7 @@ export async function readManifestPage(
     partyPlan,
     rollCallOpen,
     missingAlerts,
+    mayReadMedicalAlerts,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -107,6 +109,9 @@ export async function readManifestPage(
     rollCallOpenOnTrip(db, shopId, tripId),
     // Who the owners were alerted about and are not found yet: their rows offer Found.
     openMissingAlerts(db, shopId, tripId),
+    // Whether this reader may open a medical alert's words here (issue
+    // #2960): the owner, a manager, or crew a manager put on this departure.
+    canPersonReadMedicalAlertOnTrip(db, shopId, personId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -156,12 +161,24 @@ export async function readManifestPage(
     // The crew's latest word and the run's windows, read together (`stageStripProps`).
     stageStrip: { stage, meetingWindows },
     meetingPoint,
-    // Who may start a report here, and whose owners were alerted (issue #2694).
-    missingDiverReader: {
+    // What this reader may do here: start a report, and whose owners were
+    // alerted (issue #2694); whether they may read the medical alerts (issue
+    // #2960). Never the words: they leave the server only through a recorded
+    // tap or an explicit offline save (H-153).
+    reader: {
       mayStartIncidentReport,
       alerted: new Set(
         missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
       ),
+      mayReadMedicalAlerts,
+      // Offer "Save the medical alerts for offline" (H-153 amendment) only to
+      // a reader allowed the words, on a departure where a seat has an alert.
+      mayCarryMedicalAlertsOffline:
+        mayReadMedicalAlerts &&
+        (completeManifests?.[0]?.divers.some(
+          (diver) => diver.medicalAlert && !diver.identityWithheld,
+        ) ??
+          false),
     },
     vessel: vessels.get(tripId) ?? null,
     kitRecord,

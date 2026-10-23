@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  refusalRailAnchors,
   WAIVER_RAIL_TEST_ID,
   type WaiverRailLabels,
   type WaiverRailSegmentId,
@@ -391,5 +392,24 @@ describe("what the rail must never say", () => {
     // one. `QuestionnaireOutcome` is the only thing on this page that speaks
     // about what an answer means.
     expect(BODY).not.toMatch(/cleared|clearance|fit to dive|physician|referral/i);
+  });
+});
+
+describe("where a refusal points the rail", () => {
+  const anchors = (refusedAnchor: string | undefined, shopQuestionAnchor?: string) =>
+    refusalRailAnchors({ refusedAnchor, shopQuestionAnchor, medicalAlertAnchor: "medicalAlert" });
+
+  it("links nothing when nothing was refused", () => {
+    expect(anchors(undefined)).toEqual({});
+  });
+
+  it("points the questionnaire and the medical alert at Medical", () => {
+    expect(anchors("medical-questionnaire")).toEqual({ medical: "medical-questionnaire" });
+    expect(anchors("medicalAlert")).toEqual({ medical: "medicalAlert" });
+  });
+
+  it("points a shop question at its own anchor, and anything else at Sign", () => {
+    expect(anchors("shop-questions", "q-dives")).toEqual({ questions: "q-dives" });
+    expect(anchors("signerName")).toEqual({ sign: "signerName" });
   });
 });

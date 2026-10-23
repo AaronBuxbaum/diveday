@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MedicalAlertReveal } from "@/components/MedicalAlertReveal";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { Badge } from "@/components/ui/badge";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -8,6 +9,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import type { DiverRowState } from "./diver-row-state";
+import { medicalAlertView } from "./medical-alert-view";
 import { MissingDiverControls } from "./missing-diver-controls";
 import {
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -49,6 +51,7 @@ export function DiverRowPanel({
     missingDiver,
     rollCallButtonCopy,
     rollCallClosed,
+    showMedicalAlert,
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
@@ -124,6 +127,26 @@ export function DiverRowPanel({
           <StatusMark variant="warning" size="md" />
           <span>{depthWarningText(t, diver.depthAdvisory)}</span>
         </p>
+      ) : null}
+      {/* **The diver's medical alert for the crew** (issue #2960, H-153),
+        above the contact facts it sits beside in an emergency: the words
+        behind a recorded tap for the owner, a manager and crew a manager put
+        on this departure, and for anyone else who can read them and whom to
+        ask. Never on a held seat. */}
+      {diver.medicalAlert && !diver.identityWithheld ? (
+        <section className="mb-3 flex flex-col gap-2 rounded-lg bg-primary-tint px-3 py-2">
+          <h3 className="text-base font-semibold text-primary">
+            {t("manifest.medicalAlertHeading")}
+          </h3>
+          <MedicalAlertReveal
+            {...medicalAlertView({
+              show: showMedicalAlert?.(diver.bookingId),
+              tripId,
+              bookingId: diver.bookingId,
+              t,
+            })}
+          />
+        </section>
       ) : null}
       <DiverFacts
         diver={diver}

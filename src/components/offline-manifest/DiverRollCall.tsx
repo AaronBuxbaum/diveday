@@ -246,6 +246,12 @@ function OfflineDiverRow({
               a referral replaced. Never a block; the crew at the rail
               decides with it in view. */}
             {medicalChip ? <Badge tone="warning">{medicalChip}</Badge> : null}
+            {/* The diver wrote a medical alert for the crew (issue #2960):
+              the fact on every copy, the words in the details below only
+              on a copy saved by a reader allowed them. Never a gate. */}
+            {diver.medicalAlert && !withheld ? (
+              <Badge tone="primary">{t("manifest.medicalAlertChip")}</Badge>
+            ) : null}
             {/* Snorkeler or rider, as on the live roll call (ADR
               20261007-participant-types). Every row is still called;
               this only says who the body is. */}
@@ -386,6 +392,38 @@ function OfflineDiverRow({
                       <span className="mt-0.5 block text-muted break-words">
                         {diver.dietaryNote}
                       </span>
+                    </p>
+                  ) : null}
+                  {/* The medical alert's words, as the diver wrote them, on a
+                    copy a permitted reader saved with them on purpose (H-153
+                    amendment), with who saved it and that nobody reviewed it;
+                    otherwise that this copy was saved without them and who can
+                    save one that has them. Reading it here writes no event:
+                    the save was recorded when the server handed them out. */}
+                  {diver.medicalAlert ? (
+                    <p>
+                      <span className="font-bold">{t("manifest.medicalAlertHeading")}</span>
+                      {diver.medicalAlert.text ? (
+                        <>
+                          <span className="mt-0.5 block break-words whitespace-pre-wrap">
+                            {diver.medicalAlert.text}
+                          </span>
+                          {view.envelope.medicalAlertsSavedBy ? (
+                            <span className="mt-0.5 block text-muted">
+                              {t("manifest.medicalAlertSavedBy", {
+                                name: view.envelope.medicalAlertsSavedBy.name,
+                              })}
+                            </span>
+                          ) : null}
+                          <span className="mt-0.5 block text-muted">
+                            {t("manifest.medicalAlertNotReviewed")}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="mt-0.5 block text-muted">
+                          {t("manifest.medicalAlertReadersOffline")}
+                        </span>
+                      )}
                     </p>
                   ) : null}
                   {/* The live manifest's own sentences, in the same tone

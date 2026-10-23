@@ -365,6 +365,30 @@ export function canReadShopAnswers(roles: readonly Role[] | undefined): boolean 
 }
 
 /**
+ * Who reads the **text of a diver's medical alert for the crew** (glossary
+ * *Medical alert for the crew*, issue #2960, option 1 as Aaron chose it on
+ * 2026-10-23): the owner and a manager always, and any other staff role only
+ * for a diver booked on a departure a live owner or manager put them on the
+ * crew of (`trip_assignments`, never a row they or another instructor wrote), on that
+ * departure's manifest and roll call. The crew are the people who need to
+ * know where the EpiPen is; the rest of the staff see that an alert exists
+ * and who can read it, never what it says.
+ *
+ * `crewsDiversDeparture` is the caller's answer, read from the roster for the
+ * departure in hand (`canPersonReadMedicalAlertOnTrip`, src/db/authz.ts); a
+ * surface with no departure in hand (the signed record) passes false. Never a
+ * bearer page other than the diver's own waiver, never the dispute sheet,
+ * never the public site.
+ */
+export function canReadMedicalAlert(
+  roles: readonly Role[] | undefined,
+  scope: { crewsDiversDeparture: boolean },
+): boolean {
+  if (isOwnerOrManager(roles)) return true;
+  return isStaff(roles) && scope.crewsDiversDeparture;
+}
+
+/**
  * **Retire a physician's refusal so the seat can take a fresh release** — the
  * supersede act the glossary's *Physician clearance* entry named as the thing
  * to build once a shop hit it (Aaron, 2026-10-06).

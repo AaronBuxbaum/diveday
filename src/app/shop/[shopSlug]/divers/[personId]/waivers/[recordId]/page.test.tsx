@@ -37,6 +37,7 @@ const { auth } = (await import("@/lib/auth")) as unknown as {
 const SignedWaiverPage = (await import("./page")).default;
 const { MedicalAnswers } = await import("./_components/MedicalAnswers");
 const { ShopAnswersCard } = await import("./_components/ShopAnswersCard");
+const { MedicalAlertCard } = await import("./_components/MedicalAlertCard");
 
 /** The seeded refusal (`seed-medical-review.ts`) names this physician. */
 const PHYSICIAN = "Dr. Imani Reyes";
@@ -89,6 +90,25 @@ function shopAnswersTextIn(node: unknown): string | undefined {
   if (node.type === ShopAnswersCard)
     return textIn(ShopAnswersCard(node.props as Parameters<typeof ShopAnswersCard>[0])).join("\n");
   return shopAnswersTextIn(node.props.children);
+}
+
+/** The medical alert card's props, and the words it says, called as the page called it. */
+function medicalAlertCardIn(
+  node: unknown,
+): { props: Parameters<typeof MedicalAlertCard>[0]; text: string } | undefined {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = medicalAlertCardIn(child);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (!isValidElement<{ children?: unknown }>(node)) return undefined;
+  if (node.type === MedicalAlertCard) {
+    const props = node.props as Parameters<typeof MedicalAlertCard>[0];
+    return { props, text: textIn(MedicalAlertCard(props)).join("\n") };
+  }
+  return medicalAlertCardIn(node.props.children);
 }
 
 async function renderAs(
@@ -190,6 +210,7 @@ async function renderAs(
     text: textIn(tree).join("\n"),
     show: showActionIn(tree),
     shopAnswersText: shopAnswersTextIn(tree) ?? "",
+    alertCard: medicalAlertCardIn(tree),
   };
 }
 
@@ -361,5 +382,61 @@ describe("a signed release's answers to the shop's questions", () => {
     });
     expect(text).toContain(staff("waiversStaff.record.shopAnswersImported"));
     expect(text).not.toContain(NOT_ON_RELEASE);
+  });
+});
+
+/**
+ * Issue #2960: the medical alert for the crew. An owner or manager reads the
+ * words through a recorded tap; every other staffer reads that one is on file.
+ * No render carries the words, for anyone.
+ */
+describe("a signed release's medical alert for the crew", () => {
+  const staff = staffTranslator("en-US");
+  const ALERT = "Stent placed in June, on blood thinners.";
+
+  it.each([["owner"], ["manager"]] as const)(
+    "the %s reads it only through Show the alert",
+    async (role) => {
+      const { text, alertCard } = await renderAs([role], { recordPatch: { medicalAlert: ALERT } });
+      expect(text).not.toContain(ALERT);
+      if (!alertCard?.props.show) throw new Error("expected a Show the alert action");
+      expect(alertCard.text).not.toContain(ALERT);
+      const shown = await alertCard.props.show();
+      expect(shown).toEqual({ ok: true, text: ALERT });
+    },
+  );
+
+  it.each([["instructor"], ["divemaster"], ["captain"], ["crew"]] as const)(
+    "a %s reads that one is on file, never the words",
+    async (role) => {
+      const { text, alertCard } = await renderAs([role], { recordPatch: { medicalAlert: ALERT } });
+      expect(text).not.toContain(ALERT);
+      expect(alertCard?.props.show).toBeUndefined();
+      expect(alertCard?.text).toContain(staff("waiversStaff.record.medicalAlertOnFile"));
+      expect(alertCard?.text).not.toContain(ALERT);
+    },
+  );
+
+  it("says the diver left none, and offers nothing to show", async () => {
+    const { alertCard } = await renderAs(["owner"], {
+      recordPatch: { signatureMethod: "typed_consent" },
+    });
+    expect(alertCard?.props.show).toBeUndefined();
+    expect(alertCard?.text).toContain(staff("waiversStaff.record.medicalAlertNone"));
+  });
+
+  it("says an erased release's alert was erased", async () => {
+    const { alertCard } = await renderAs(["owner"], {
+      recordPatch: { medicalAlert: null, anonymizedAt: new Date("2026-09-01T12:00:00.000Z") },
+    });
+    expect(alertCard?.props.show).toBeUndefined();
+    expect(alertCard?.text).toContain("The alert was erased with the diver’s personal data on");
+  });
+
+  it("says a paper release records none, rather than that the diver left none", async () => {
+    const { alertCard } = await renderAs(["owner"], {
+      recordPatch: { signatureMethod: "in_person_attested" },
+    });
+    expect(alertCard?.text).toContain(staff("waiversStaff.record.medicalAlertPaper"));
   });
 });

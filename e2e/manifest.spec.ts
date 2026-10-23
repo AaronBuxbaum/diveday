@@ -1,11 +1,17 @@
 import type { Page } from "@playwright/test";
+import {
+  DEMO_MEDICAL_ALERT,
+  DEMO_MEDICAL_ALERT_DIVER,
+  DEMO_MEDICAL_ALERT_TRIP,
+} from "../src/db/seed-medical-alert";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
   manifestRow,
   offlineCopySaved,
   openBoatCheck,
+  openDiverFileGroup,
   openManifestPerson,
   openOnThisPhone,
   openTripFromBoard,
@@ -685,11 +691,14 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
   await context.setOffline(true);
   await page.goto("/");
   // The root path's own failed navigation redirects here instead of the
-  // browser's offline error, listing every trip already saved.
-  await expect(page).toHaveURL(/\/offline-manifest$/);
+  // browser's offline error, listing every trip already saved. The redirect
+  // names why (`fallback=failed`), and the list keeps that on the trip it
+  // opens, so the trip screen knows it is the saved copy too.
+  await expect(page).toHaveURL(/\/offline-manifest\?fallback=failed$/);
   await expect(page.getByRole("heading", { name: "Saved on this device" })).toBeVisible();
   await expect(page.getByText("Two-Tank Reef — Molasses & French")).toBeVisible();
   await page.getByText("Two-Tank Reef — Molasses & French").click();
+  await expect(page).toHaveURL(/\/offline-manifest\?trip=[^&]+&fallback=failed$/);
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
 
   await context.setOffline(false);
@@ -1324,4 +1333,76 @@ test("a failed reload of the counter lands on this device's saved copy", async (
   // worker opened it (`fallback=failed`: the request failed, offline).
   await expect(page).toHaveURL(new RegExp(`/offline-manifest\\?trip=${tripId}&fallback=failed$`));
   await expect(page.getByRole("region", { name: "At the counter" })).toBeVisible();
+});
+
+/**
+ * Issue #2960: every staffer sees the chip; the departure's crew opens the
+ * words, and the read is on the diver's trail. The seeded alert is on
+ * tomorrow's crewed departure (`src/db/seed-medical-alert.ts`).
+ */
+test("a departure's crew opens a diver's medical alert, and the read is on their trail", async ({
+  page,
+  browser,
+  workerBaseURL,
+  staffStorageState,
+}) => {
+  // Three staffers, each opening the manifest and a person sheet.
+  test.slow();
+  const staff = staffTranslator("en-US");
+  const openAlertSheet = async (viewer: Page) => {
+    await viewer.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(viewer, DEMO_MEDICAL_ALERT_TRIP);
+    await openTripTab(viewer, "Manifest");
+    const row = manifestRow(viewer, DEMO_MEDICAL_ALERT_DIVER);
+    await expect(row.getByText(staff("manifest.medicalAlertChip"), { exact: true })).toBeVisible();
+    await openManifestPerson(row);
+    const sheet = viewer.getByRole("dialog");
+    await expect(
+      sheet.getByRole("heading", { name: staff("manifest.medicalAlertHeading") }),
+    ).toBeVisible();
+    return sheet;
+  };
+
+  // An instructor who is not on this departure's crew: the fact, and who can read it.
+  const instructorContext = await browser.newContext({
+    baseURL: workerBaseURL,
+    storageState: await staffStorageState("instructor"),
+  });
+  try {
+    const instructor = makeActivitySafe(await instructorContext.newPage());
+    const sheet = await openAlertSheet(instructor);
+    await expect(sheet.getByText(staff("manifest.medicalAlertReaders"))).toBeVisible();
+    await expect(
+      sheet.getByRole("button", { name: staff("manifest.medicalAlertShow") }),
+    ).toHaveCount(0);
+    await expect(sheet.getByText(DEMO_MEDICAL_ALERT)).toHaveCount(0);
+  } finally {
+    await instructorContext.close();
+  }
+
+  // A divemaster on the crew: the words, behind a tap that says it is noted.
+  const crewContext = await browser.newContext({
+    baseURL: workerBaseURL,
+    storageState: await staffStorageState("divemaster"),
+  });
+  try {
+    const crew = makeActivitySafe(await crewContext.newPage());
+    const sheet = await openAlertSheet(crew);
+    await expect(sheet.getByText(DEMO_MEDICAL_ALERT)).toHaveCount(0);
+    await expect(sheet.getByText(staff("manifest.medicalAlertShowHint"))).toBeVisible();
+    await sheet.getByRole("button", { name: staff("manifest.medicalAlertShow") }).click();
+    await expect(sheet.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
+    await expect(sheet.getByText(staff("manifest.medicalAlertNotReviewed"))).toBeVisible();
+  } finally {
+    await crewContext.close();
+  }
+
+  // The owner finds the read on the diver's trail.
+  await page.goto(`/shop/blue-mantis/divers?q=${encodeURIComponent(DEMO_MEDICAL_ALERT_DIVER)}`);
+  await page.getByRole("link", { name: DEMO_MEDICAL_ALERT_DIVER, exact: true }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: DEMO_MEDICAL_ALERT_DIVER }),
+  ).toBeVisible();
+  const trail = await openDiverFileGroup(page, staff("divers.activity.heading"));
+  await expect(trail.getByText(`read ${DEMO_MEDICAL_ALERT_DIVER}’s medical alert`)).toBeVisible();
 });

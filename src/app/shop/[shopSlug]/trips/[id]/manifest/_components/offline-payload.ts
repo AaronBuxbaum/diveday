@@ -17,7 +17,6 @@ import { snagSentences } from "./pre-departure-check-view";
 export function offlineManifestPayload({
   completeManifests,
   shop,
-  shopSlug,
   checklistItems,
   checklistChecks,
   boatSafety,
@@ -26,8 +25,7 @@ export function offlineManifestPayload({
   t,
 }: {
   completeManifests: readonly TripManifest[];
-  shop: Omit<OfflineManifestPayload["shop"], "slug">;
-  shopSlug: string;
+  shop: OfflineManifestPayload["shop"];
   checklistItems: Awaited<ReturnType<typeof listChecklistItems>>;
   checklistChecks: Awaited<ReturnType<typeof latestPreDepartureChecksForTrip>>;
   boatSafety: BoatSafetySection | null;
@@ -39,7 +37,7 @@ export function offlineManifestPayload({
   return serializeManifests(
     completeManifests,
     {
-      slug: shopSlug,
+      slug: shop.slug,
       name: shop.name,
       timezone: shop.timezone,
       emergencyReference: shop.emergencyReference,

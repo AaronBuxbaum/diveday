@@ -1,0 +1,81 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "dac2b7a5-137f-4741-b2c4-7cb3e1a0db7a",
+  "prevIds": [
+    "36dfae6e-069c-413b-bbef-119bd4965797"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "medical_alert"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.medical_alert",
+        "n|col|public.waiver_records.medical_alert",
+        "e|col|public.waiver_records.medical_alert"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_medical_alert"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_medical_alert",
+        "n|col|public.waiver_records.draft_medical_alert",
+        "e|col|public.waiver_records.draft_medical_alert"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "medical_alert",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "draft_medical_alert",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

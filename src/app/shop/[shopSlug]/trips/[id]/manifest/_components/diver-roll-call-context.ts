@@ -2,6 +2,7 @@ import type {
   RollCallAction,
   RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import type { MedicalAlertResult } from "@/components/MedicalAlertReveal";
 import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
@@ -56,5 +57,11 @@ export type DiverRollCallContext = {
    */
   rollCallButtonCopy: (bookingId: string) => RollCallButtonCopy;
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
+  /**
+   * One seat's "Show the alert" (issue #2960), bound only for a reader allowed
+   * the medical alerts' words on this departure. Absent, a flagged row still
+   * wears its chip and says who can read it.
+   */
+  showMedicalAlert?: (bookingId: string) => () => Promise<MedicalAlertResult>;
   t: StaffTranslator;
 };
