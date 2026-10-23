@@ -450,9 +450,17 @@
         "description": "Drafts and sorting your staff can edit or ignore. Nothing is sent or saved until someone on your team does it. What AI reads goes to Anthropic, DiveDay’s AI provider.",
         "dark": {
           "noProvider": "AI isn’t connected on this server yet, so suggestions stay hidden even with this on.",
-          "demoShop": "Demo shops never show AI suggestions, so they stay hidden here even with this on.",
+          "demoOverCap": "Demo shops share a small monthly AI allowance, and it’s used up. Suggestions come back on the 1st (UTC).",
           "overCap": "This shop used this month’s AI allowance. Suggestions come back on the 1st (UTC)."
         }
+      },
+      "replyNotes": {
+        "heading": "Notes for AI",
+        "label": "What should AI know about your shop?",
+        "placeholder": "Park behind the shop by the tank racks. The gate opens at 7:15.",
+        "save": "Save notes",
+        "saving": "Saving…",
+        "saved": "Notes saved. AI reads them from now on."
       },
       "recapAutoApprove": {
         "heading": "Recap highlights",

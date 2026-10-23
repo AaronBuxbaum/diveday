@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { AppDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -35,7 +36,7 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { saveFeatureAction } = await import("./actions");
+const { saveFeatureAction, saveReplyNotesAction } = await import("./actions");
 
 async function context() {
   const { db, shop } = ctx;
@@ -173,5 +174,41 @@ describe("the Features page's action", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/${FEATURES}`);
     expect(await getShopById(db, shop.id)).toEqual(before);
+  });
+});
+
+describe("saving the shop's notes for AI", () => {
+  async function notesOf(db: AppDb, shopId: string): Promise<string | null> {
+    return (await getShopById(db, shopId))?.replyNotes ?? null;
+  }
+
+  function notesForm(notes: string): FormData {
+    const formData = new FormData();
+    formData.set("notes", notes);
+    return formData;
+  }
+
+  it("writes an owner's trimmed words, and an empty box clears them", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => saveReplyNotesAction(notesForm("  Gate opens at 7:15.  ")));
+    expect(to).toBe(
+      `/shop/${shop.slug}/${FEATURES}?notice=notes-saved&saved=replyNotes#replyNotes`,
+    );
+    expect(await notesOf(db, shop.id)).toBe("Gate opens at 7:15.");
+
+    await redirectedTo(() => saveReplyNotesAction(notesForm("   ")));
+    expect(await notesOf(db, shop.id)).toBeNull();
+  });
+
+  it("refuses a captain, as it refuses every switch, and writes nothing", async () => {
+    const { db, shop, captain } = await context();
+    const before = await notesOf(db, shop.id);
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() => saveReplyNotesAction(notesForm("A captain's words")));
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
+    expect(await notesOf(db, shop.id)).toBe(before);
   });
 });
