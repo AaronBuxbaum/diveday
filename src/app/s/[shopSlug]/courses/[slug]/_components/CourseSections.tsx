@@ -419,6 +419,7 @@ export function CourseSessions({
   timezone,
   locale,
   inquiryHref,
+  waitlistOn = true,
   t,
 }: {
   sessions: Array<{
@@ -434,8 +435,11 @@ export function CourseSessions({
   locale: string;
   /** Anchor to the "Get in touch" composer, or null when the shop published no address. */
   inquiryHref: string | null;
+  /** The shop keeps a wait list (the Features page); off, a full date offers none. */
+  waitlistOn?: boolean;
   t: DiverTranslator;
 }) {
+  const fullLabel = waitlistOn ? t("course.joinWaitList") : t("course.seeFullDate");
   // The featured slot answers "when can I start?" — so it holds the soonest
   // date a diver can actually book, not merely the soonest date. When the
   // very next session is full but a later one is open, featuring the full one
@@ -499,7 +503,7 @@ export function CourseSessions({
                       variant: full ? "secondary" : "primary",
                     })}
                   >
-                    {full ? t("course.joinWaitList") : t("course.bookThisDate")}
+                    {full ? fullLabel : t("course.bookThisDate")}
                   </Link>
                 </div>
               );
@@ -529,7 +533,7 @@ export function CourseSessions({
                             size: "sm",
                           })}
                         >
-                          {full ? t("course.joinWaitList") : t("course.bookThisDate")}
+                          {full ? fullLabel : t("course.bookThisDate")}
                         </Link>
                       </li>
                     );
@@ -592,13 +596,16 @@ export function courseFootBar(
   sessions: ReadonlyArray<{ capacity: number; booked: number }>,
   inquiryHref: string | null,
   t: DiverTranslator,
+  waitlistOn = true,
 ): { href: string; label: string } | null {
   if (sessions.length > 0) {
     return {
       href: "#dates",
       label: sessions.some((session) => !isFull(session))
         ? t("booking.bookVerb")
-        : t("course.joinWaitList"),
+        : waitlistOn
+          ? t("course.joinWaitList")
+          : t("course.seeFullDate"),
     };
   }
   return inquiryHref ? { href: inquiryHref, label: t("course.requestDateLink") } : null;

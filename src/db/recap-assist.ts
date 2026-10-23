@@ -48,7 +48,9 @@ export async function recapLogFor(
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
-  if (!row) return null;
+  // Sightings switched off on Features: nothing logged is read into a line,
+  // so neither "Draft it" nor the send-time highlight has facts to write from.
+  if (!row?.shop.sightingsEnabled) return null;
   const sightings = await db
     .select({
       slug: tripSightings.speciesSlug,

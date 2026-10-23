@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { STAFF_DESTINATION_COVERAGE } from "./feature-coverage";
+import { ALL_SWITCHES_ON, type ShopSwitch, type ShopSwitchesOn } from "./shop-features";
 import {
   currentStaffDestination,
   currentStaffSection,
@@ -16,6 +18,7 @@ import {
   staffDestinationSuffix,
   staffNavSections,
   staffPaletteDestinations,
+  staffSectionTabs,
   staffShopRoot,
   visibleStaffDestinations,
 } from "./staff-destinations";
@@ -38,8 +41,12 @@ const crew: StaffDestinationGates = {
   tripTags: false,
   safetyChecklist: false,
 };
-const everything: StaffNavOffers = { courses: true, gear: true, crew: true };
-const nothing: StaffNavOffers = { courses: false, gear: false, crew: false };
+const everything: StaffNavOffers = { courses: true, gear: true, switches: ALL_SWITCHES_ON };
+const nothing: StaffNavOffers = { courses: false, gear: false, switches: ALL_SWITCHES_ON };
+const switchedOff = (...off: ShopSwitch[]): ShopSwitchesOn => ({
+  ...ALL_SWITCHES_ON,
+  ...Object.fromEntries(off.map((feature) => [feature, false])),
+});
 
 describe("the staff destination registry", () => {
   it("gives every destination a unique id and a unique URL", () => {
@@ -332,10 +339,10 @@ describe("what each consumer derives", () => {
   it("offers the Crew view only to a shop that keeps a crew schedule", () => {
     // Off, `/staffing` redirects to the week, so a palette row would be a door
     // onto a page that is not there.
-    expect(staffPaletteDestinations(owner, { crew: true }).map((d) => d.id)).toContain("staffing");
-    expect(staffPaletteDestinations(owner, { crew: false }).map((d) => d.id)).not.toContain(
-      "staffing",
-    );
+    expect(staffPaletteDestinations(owner, ALL_SWITCHES_ON).map((d) => d.id)).toContain("staffing");
+    expect(
+      staffPaletteDestinations(owner, switchedOff("crewSchedule")).map((d) => d.id),
+    ).not.toContain("staffing");
   });
 
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {
@@ -584,5 +591,57 @@ describe("whether a destination's own link opens the page being read", () => {
     expect(isStaffDestinationPage(`${root}/settings/team`, root, staffDestination("team"))).toBe(
       true,
     );
+  });
+});
+
+describe("a switched-off feature leaves every list", () => {
+  // Every destination tied to a switch, by that switch (`feature-coverage.ts`).
+  const tied = Object.entries(STAFF_DESTINATION_COVERAGE).flatMap(([id, coverage]) =>
+    typeof coverage === "string" && coverage !== "divingOptions"
+      ? [[id as StaffDestinationId, coverage] as const]
+      : [],
+  );
+
+  it.each(tied)("drops %s from the palette when %s is off", (id, feature) => {
+    expect(staffPaletteDestinations(owner, ALL_SWITCHES_ON).map((d) => d.id)).toContain(id);
+    expect(staffPaletteDestinations(owner, switchedOff(feature)).map((d) => d.id)).not.toContain(
+      id,
+    );
+  });
+
+  it("drops Reviews and Requests from the Inbox tabs when they are off", () => {
+    const tabs = (switches: ShopSwitchesOn) =>
+      staffSectionTabs("inbox", owner, switches).map((d) => d.id);
+    expect(tabs(ALL_SWITCHES_ON)).toEqual(["inbox", "requests", "reviews"]);
+    expect(tabs(switchedOff("reviews"))).toEqual(["inbox", "requests"]);
+    expect(tabs(switchedOff("dateRequests"))).toEqual(["inbox", "reviews"]);
+  });
+
+  it("drops Discounts from the Money tabs only when codes, deals and packages are all off, and Work orders from the Gear tabs", () => {
+    const money = (switches: ShopSwitchesOn) =>
+      staffSectionTabs("money", owner, switches).map((d) => d.id);
+    expect(money(switchedOff("promoCodes"))).toEqual(["orders", "promoCodes", "reports"]);
+    expect(money(switchedOff("promoCodes", "lastMinuteList"))).toContain("promoCodes");
+    expect(money(switchedOff("promoCodes", "lastMinuteList", "divePackages"))).toEqual([
+      "orders",
+      "reports",
+    ]);
+    expect(
+      staffPaletteDestinations(
+        owner,
+        switchedOff("promoCodes", "lastMinuteList", "divePackages"),
+      ).map((d) => d.id),
+    ).not.toContain("promoCodes");
+    expect(staffSectionTabs("gear", owner, switchedOff("workOrders")).map((d) => d.id)).toEqual([
+      "gear",
+    ]);
+  });
+
+  it("keeps the nav's sections but never leads one with a switched-off page", () => {
+    const offers = { ...everything, switches: switchedOff("lostFound", "workOrders") };
+    const ids = staffNavSections(owner, offers).map((entry) => entry.destination.id);
+    expect(ids).toContain("gear");
+    expect(ids).not.toContain("lostFound");
+    expect(ids).not.toContain("workOrders");
   });
 });

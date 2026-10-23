@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";
-import { bookingCapabilities, bookings, certifications, people } from "@/db/schema";
+import { bookingCapabilities, bookings, certifications, people, shops } from "@/db/schema";
 import { createTrip } from "@/db/trips-create";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -69,6 +69,7 @@ const { redirect } = await import("next/navigation");
 const { createBookingParty } = await import("@/db/bookings");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot } = await import("./actions");
+const { cookies } = await import("next/headers");
 
 /**
  * A free departure three days out on the suite's frozen clock: no per-diver
@@ -335,5 +336,40 @@ describe("the readiness link after booking", () => {
         ),
       );
     expect(links.map((link) => link.delivered).sort()).toEqual([false, true]);
+  });
+});
+
+/**
+ * A hotel's link credits the seats booked through it, and only while the
+ * shop's partner links are on (the Features page): off, the same cookie
+ * books like any unreferred visit.
+ */
+describe("the partner-link credit", () => {
+  async function bookWithPartnerCookie(on: boolean) {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ partnerLinksEnabled: on }).where(eq(shops.id, shop.id));
+    const tripId = await freeDeparture(db, shop.id);
+    const jar = { get: () => ({ name: "diveday_ref", value: `${shop.slug}:harbor-hotel` }) };
+    vi.mocked(cookies).mockImplementation((async () => jar) as unknown as typeof cookies);
+    try {
+      await post(shop.slug, tripId, submission([{ email: "partner-guest@example.com" }]));
+    } finally {
+      vi.mocked(cookies).mockImplementation((async () => ({
+        get: () => undefined,
+      })) as unknown as typeof cookies);
+    }
+    const [row] = await db
+      .select({ referralSource: bookings.referralSource })
+      .from(bookings)
+      .where(eq(bookings.tripId, tripId));
+    return row?.referralSource;
+  }
+
+  it("credits the partner while partner links are on", async () => {
+    expect(await bookWithPartnerCookie(true)).toBe("harbor-hotel");
+  });
+
+  it("books with no credit while partner links are off", async () => {
+    expect(await bookWithPartnerCookie(false)).toBeNull();
   });
 });

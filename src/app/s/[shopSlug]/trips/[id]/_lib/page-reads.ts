@@ -187,7 +187,8 @@ export async function readTripPage(
         .filter((id): id is string => Boolean(id));
       const [extras, seen, siteReviews] = await Promise.all([
         listDiveSiteBriefingExtras(db, shop.id, siteIds),
-        siteSightings(db, shop.id, siteIds),
+        // Sightings switched off on Features: no "seen here" beat.
+        shop.sightingsEnabled ? siteSightings(db, shop.id, siteIds) : new Map(),
         // What earlier divers said about these sites, under the plan
         // (fifth-loop ideas, item 20). Off in the frame and for a shop that
         // has reviews off, like the aggregate below.

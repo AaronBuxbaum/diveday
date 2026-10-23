@@ -17,7 +17,6 @@ import {
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 import { dockDayNoticeMessages } from "../sub-page-notices";
 import { saveDeskPaymentAction } from "./desk-payment-actions";
-import { saveHotelPickupAction } from "./pickup-actions";
 
 /** The four answers, in the order a shop most often has them; "" is "Don't say". */
 const DESK_PAYMENT_CHOICES = [
@@ -79,33 +78,6 @@ export default async function DockDaySettingsPage({
         siteBottomTimeOverrides={siteBottomTimeOverrides}
       />
       <CrewLeadForm shop={shop} t={t} />
-      {/* Whether `/ready` asks a diver about a pickup at all (fourth UX
-          review, item 8): most shops run none, so it is off until a shop
-          says it does. Part of the same dock day, so it lives on this page. */}
-      <FieldGrid
-        as="form"
-        action={saveHotelPickupAction}
-        columns={1}
-        className="mt-8 border-t border-border pt-6"
-      >
-        <ChoiceRow
-          name="offersHotelPickup"
-          type="checkbox"
-          defaultChecked={shop.offersHotelPickup}
-          className="text-sm"
-        >
-          <span className="block font-medium">{t("settings.main.pickup.label")}</span>
-          <span className="block text-xs text-muted">{t("settings.main.pickup.description")}</span>
-        </ChoiceRow>
-        <FieldActions>
-          <SubmitButton
-            pendingLabel={t("settings.main.pickup.submitting")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("settings.main.pickup.submit")}
-          </SubmitButton>
-        </FieldActions>
-      </FieldGrid>
       <TurnaroundForm shop={shop} t={t} />
       {/* How divers pay at the desk (fifth-loop ideas, item 21): one sentence
           after every "due at the shop", so a visitor brings cash or a card. */}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ConnectivityStatus, type ConnectivityStatusCopy } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
@@ -161,7 +162,18 @@ export function SeenGroup({
   // One flag for the group, set by whichever tap answered last. A success
   // clears it, which is the honest reading: the boat has bars again.
   const [refused, setRefused] = useState(false);
-  const onResult = (result: SightingResult) => setRefused(result.status === "error");
+  const router = useRouter();
+  const onResult = (result: SightingResult) => {
+    // The shop switched sightings off while this manifest was open. That is
+    // not a lost connection, so no "tap it again": the page refreshes and the
+    // group is gone (ADR 20261005-optional-shop-features).
+    if (result.status === "switched_off") {
+      setRefused(false);
+      router.refresh();
+      return;
+    }
+    setRefused(result.status === "error");
+  };
   const headingId = scopedId(idPrefix, "seen-heading");
   return (
     <section className="print:hidden" aria-labelledby={headingId}>

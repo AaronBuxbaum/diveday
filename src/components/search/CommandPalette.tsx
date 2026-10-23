@@ -164,7 +164,7 @@ function paletteGroups({
   boatBoardingHref,
   root,
   gates,
-  crewSchedule,
+  switches,
   copy,
   languages,
   locale,
@@ -183,7 +183,7 @@ function paletteGroups({
   boatBoardingHref: string | undefined;
   root: string;
   gates: StaffDestinationGates;
-  crewSchedule: boolean;
+  switches: Parameters<typeof staffPaletteDestinations>[1];
   copy: CommandPaletteCopy;
   languages: readonly LanguageChoice[];
   locale: string;
@@ -200,7 +200,7 @@ function paletteGroups({
     root,
     boatBoardingHref,
     gates,
-    crewSchedule,
+    switches,
     settingsShortcuts,
     copy,
   });
@@ -391,7 +391,7 @@ function gotoItems({
   root,
   boatBoardingHref,
   gates,
-  crewSchedule,
+  switches,
   settingsShortcuts,
   copy,
 }: {
@@ -400,7 +400,7 @@ function gotoItems({
   root: string;
   boatBoardingHref: string | undefined;
   gates: StaffDestinationGates;
-  crewSchedule: boolean;
+  switches: Parameters<typeof staffPaletteDestinations>[1];
   settingsShortcuts: readonly SettingsShortcut[];
   copy: CommandPaletteCopy;
 }): PaletteItem[] {
@@ -428,7 +428,7 @@ function gotoItems({
   }
   // One list with the nav and the keyboard shortcuts, already filtered for
   // this viewer's permissions.
-  for (const destination of staffPaletteDestinations(gates, { crew: crewSchedule })) {
+  for (const destination of staffPaletteDestinations(gates, switches)) {
     const label = copy.destinationLabels[destination.id];
     const title = copy.destinationTitles[destination.id];
     if (q === "" || label.toLowerCase().includes(q) || title?.toLowerCase().includes(q)) {
@@ -481,7 +481,7 @@ export function CommandPalette({
   shopSlug,
   boatBoardingHref,
   gates,
-  crewSchedule = true,
+  switches,
   locale,
   languages,
   setLocaleAction,
@@ -506,8 +506,8 @@ export function CommandPalette({
    * destination is absent from both, never present here and missing there.
    */
   gates: StaffDestinationGates;
-  /** Whether the shop keeps a crew schedule; off, the Crew view is not offered. */
-  crewSchedule?: boolean;
+  /** Which Features-page switches are on; a switched-off feature's doors are not offered. */
+  switches?: Parameters<typeof staffPaletteDestinations>[1];
   /** The language this render was written in; it is not offered as a choice. */
   locale: string;
   /** Every language DiveDay carries, each named in itself. */
@@ -582,7 +582,7 @@ export function CommandPalette({
         boatBoardingHref,
         root,
         gates,
-        crewSchedule,
+        switches,
         copy,
         languages,
         locale,
@@ -601,7 +601,7 @@ export function CommandPalette({
       boatBoardingHref,
       root,
       gates,
-      crewSchedule,
+      switches,
       copy,
       languages,
       locale,

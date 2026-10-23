@@ -5,7 +5,6 @@
       "packingSaved": "Packing checklist saved for every trip",
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder",
-      "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
       "deskPaymentSaved": "Saved. Every seat due at the shop says how to pay.",
       "deskPaymentInvalid": "Nothing changed: choose card, cash, card and cash, or don’t say.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
@@ -232,12 +231,6 @@
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
     },
-    "pickup": {
-      "label": "We offer hotel pickup",
-      "description": "When on, each diver’s page asks whether they want a pickup and where they’re staying.",
-      "submit": "Save pickup",
-      "submitting": "Saving…"
-    },
     "deskPayment": {
       "legend": "How divers pay at the desk",
       "description": "Said wherever a seat is due at the shop: the booking form, the confirmation and the diver’s page.",
@@ -437,7 +430,7 @@
       "publicYear": {
         "heading": "Our year",
         "label": "Show “Our year” on your schedule",
-        "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money. Off until you turn it on."
+        "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money."
       },
       "padiChecks": {
         "heading": "PADI checks (beta)",
@@ -463,6 +456,91 @@
         "heading": "Recap highlights",
         "label": "Write the recap highlight when the crew leaves it blank",
         "description": "AI writes two sentences from the sightings your crew logged, and they go out on the recap. Off, the crew writes or approves each one."
+      },
+      "lostFound": {
+        "heading": "Lost and found",
+        "label": "Keep a lost-and-found list",
+        "description": "What crews find aboard, logged on the departure and listed until it goes home. The diver gets an email when you find something of theirs."
+      },
+      "workOrders": {
+        "heading": "Gear servicing",
+        "label": "Service divers’ own gear",
+        "description": "Work orders for gear divers bring in, their tags, and an email when it’s ready. Divers who ask get a reminder when service is due. Your rental fleet’s service dates stay either way."
+      },
+      "promoCodes": {
+        "heading": "Promo codes",
+        "label": "Take promo codes",
+        "description": "Codes you make under Discounts, typed by divers when they book. A last-minute deal’s code still works while the last-minute list is on."
+      },
+      "divePackages": {
+        "heading": "Dive packages",
+        "label": "Sell dive packages",
+        "description": "Prepaid dives a diver buys up front and spends on later bookings. Off, you stop selling them; divers who already bought one keep using it."
+      },
+      "hotelPickup": {
+        "heading": "Hotel pickups",
+        "label": "We offer hotel pickup",
+        "description": "Each diver’s page asks whether they want a pickup and where they’re staying, and the manifest lists who to collect."
+      },
+      "checkoutRecovery": {
+        "heading": "Checkout reminders",
+        "label": "Email a diver who didn’t finish paying",
+        "description": "One email, two hours after a diver leaves checkout, with a link back to their booking. Off, nothing is sent and their booking stays as it was."
+      },
+      "buddyLinks": {
+        "heading": "Bring a buddy",
+        "label": "Give each diver a link to bring a buddy",
+        "description": "Shown on the diver’s page and trip recap after the dive. A friend who books through it is counted on Reports and the diver’s record."
+      },
+      "selfRegistration": {
+        "heading": "Counter sign-up",
+        "label": "Let walk-ins sign themselves up",
+        "description": "The QR code on your counter card opens a form on their phone for contact details, certification and rental sizes. Off, the form is gone and the QR sends walk-ins to your crew; divers who already signed up stay. Take printed counter cards down when you turn it off."
+      },
+      "sightings": {
+        "heading": "Sightings",
+        "label": "Log what divers saw",
+        "description": "The crew notes species after each dive. They show on your public pages, dive sites and the trip recap. Off, they’re hidden and every sighting is kept."
+      },
+      "diverPhotos": {
+        "heading": "Recap photos",
+        "label": "Let divers and crew add photos to the recap",
+        "description": "Photos from the day, shared with the boat. Off, nobody can add one; photos already added stay with you so you can remove any."
+      },
+      "waitlist": {
+        "heading": "Wait list",
+        "label": "Keep a wait list for full departures",
+        "description": "Divers ask to hear when a seat opens on a full boat, and you offer it by email. Off, nobody new joins and the list sends nothing on its own; divers already waiting stay on Today until you handle them, and you can still email any diver a date yourself."
+      },
+      "pastDiverInvites": {
+        "heading": "Invite past divers",
+        "label": "Suggest past divers for a boat with empty seats",
+        "description": "Divers who sailed with you before, suggested on a thin departure with an email offer you send. Off, nobody is suggested; a diver you pick and invite yourself still gets the email."
+      },
+      "partnerLinks": {
+        "heading": "Partner links",
+        "label": "Give hotels and partners a booking link",
+        "description": "Each seat booked through a partner’s link is credited to them on Reports. Off, Website embed offers no partner link and no new seat is credited; earlier credits stay."
+      },
+      "weekOutReminder": {
+        "heading": "Week-out reminder",
+        "label": "Email divers a week before they dive",
+        "description": "One email seven days before the departure. Off, a diver with nothing left to do hears nothing a week out; anyone with a waiver, a card or course materials still to finish gets it anyway, and the day-before reminder goes out either way."
+      },
+      "helpRequests": {
+        "heading": "Help requests",
+        "label": "Let divers ask for help on the day",
+        "description": "A question on their ready page that puts the request on Today. Off, divers see your phone and email there instead; a request already open stays on Today until you handle it, and the diver can still withdraw it."
+      },
+      "publicConditions": {
+        "heading": "Public conditions",
+        "label": "Show divers the automated forecast",
+        "description": "The water, sea and wind outlook on each trip page when your crew hasn’t written their own. Off, it’s gone; your crew’s conditions and updates still show, and the high-wind alert stays either way."
+      },
+      "fieldGuide": {
+        "heading": "Field guide",
+        "label": "Keep a field guide for each site",
+        "description": "The species you pick for each dive site, shown on its public page, in trip briefings and on the recap. Off, they’re hidden and kept; your sites stay."
       },
       "door": "Turn features on or off"
     },
@@ -1191,6 +1269,13 @@
   "features": {
     "title": "Features",
     "crewTarget": "Set the divemaster target",
-    "boats": "Your boats"
+    "boats": "Your boats",
+    "groups": {
+      "diving": "Diving",
+      "bookings": "Bookings and money",
+      "divers": "Divers",
+      "crew": "Crew and gear",
+      "claude": "AI"
+    }
   }
 }

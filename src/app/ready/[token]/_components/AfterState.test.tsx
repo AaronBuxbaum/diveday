@@ -771,3 +771,21 @@ describe("a diver already booked on a later boat", () => {
     expect(screen.queryByText(/recap\.bookedNext/)).toBeNull();
   });
 });
+
+/**
+ * Recap photos switched off on Features (ADR 20261005-optional-shop-features):
+ * the page draws no photo door at all, and a shop with the switch on still
+ * gets its door.
+ */
+describe("the photo door", () => {
+  it("is drawn while the shop takes recap photos", () => {
+    const { container } = render(<AfterState context={props()} />);
+    expect(container.querySelector('input[name="photo"]')).not.toBeNull();
+  });
+
+  it("is not drawn while recap photos are switched off", () => {
+    const { container } = render(<AfterState context={props({ photosOn: false })} />);
+    expect(container.querySelector('input[name="photo"]')).toBeNull();
+    expect(screen.queryByText("recap.yourPhotos")).toBeNull();
+  });
+});

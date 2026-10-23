@@ -23,6 +23,7 @@
     "email": "Una entrada en lista de espera necesita un correo: por ahí se ofrece una plaza que se libera.",
     "departure": "Elige la salida por la que preguntó.",
     "interest": "Di sobre qué preguntó.",
+    "waitlistOff": "La lista de espera está desactivada, así que no puede anotarse. Sus datos siguen aquí: anota el día que quiere.",
     "logged": "Llamada anotada"
   }
 }

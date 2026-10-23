@@ -26,6 +26,7 @@ import {
 } from "@/lib/plan-change";
 import { utcToWallTime } from "@/lib/zoned";
 import type { ExecutedDiveResult } from "../actions";
+import { SPECIES_SHOWN_FIELD } from "./species-shown";
 
 function dateTimeValue(value: Date | null, timeZone: string) {
   if (!value) return "";
@@ -95,6 +96,7 @@ export function ExecutedDiveLog({
   timeZone,
   depthUnit,
   checkpoint,
+  sightingsOn = true,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
@@ -136,6 +138,12 @@ export function ExecutedDiveLog({
    * *actual site* select above it, which the crew can change mid-form.
    */
   speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
+  /**
+   * Whether the shop has sightings on (Features). Off, the species field is
+   * not drawn and the logged species rides along unseen, so saving the dive
+   * never erases it.
+   */
+  sightingsOn?: boolean;
   executed: ReadonlyArray<{
     executed: ExecutedDive;
     actualSite: { id: string; name: string } | null;
@@ -195,6 +203,7 @@ export function ExecutedDiveLog({
                   liveDiveSites={liveDiveSites}
                   catalogSpecies={catalogSpecies}
                   speciesBySite={speciesBySite}
+                  sightingsOn={sightingsOn}
                   action={action}
                   labels={labels}
                   timeZone={timeZone}
@@ -223,6 +232,7 @@ function ExecutedDiveForm({
   liveDiveSites,
   catalogSpecies,
   speciesBySite,
+  sightingsOn,
   action,
   labels,
   timeZone,
@@ -236,6 +246,7 @@ function ExecutedDiveForm({
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
   catalogSpecies: ReadonlyArray<{ slug: string; name: string }>;
   speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
+  sightingsOn: boolean;
   action: (
     previous: ExecutedDiveResult | undefined,
     formData: FormData,
@@ -422,21 +433,26 @@ function ExecutedDiveForm({
             admitted the blue tang and refused the thing anyone would actually
             write down. Guide-first keeps the ordinary pick one thumb-flick
             away without ruling the extraordinary one out. */}
-        <Field label={labels.observedSpecies} description={labels.observedSpeciesHint}>
-          <select
-            name="observedSpeciesSlug"
-            value={species}
-            onChange={(event) => setSpecies(event.target.value)}
-            className={controlClass}
-          >
-            <option value="">{labels.observedSpeciesNone}</option>
-            {speciesOptions.map((entry) => (
-              <option key={entry.slug} value={entry.slug}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {sightingsOn ? (
+          <Field label={labels.observedSpecies} description={labels.observedSpeciesHint}>
+            <select
+              name="observedSpeciesSlug"
+              value={species}
+              onChange={(event) => setSpecies(event.target.value)}
+              className={controlClass}
+            >
+              <option value="">{labels.observedSpeciesNone}</option>
+              {speciesOptions.map((entry) => (
+                <option key={entry.slug} value={entry.slug}>
+                  {entry.name}
+                </option>
+              ))}
+            </select>
+            {/* The save writes the species only from a form that drew this
+                picker; without the marker it keeps the one logged before. */}
+            <input type="hidden" name={SPECIES_SHOWN_FIELD} value="1" />
+          </Field>
+        ) : null}
       </FieldGrid>
       <ChoiceRow
         name="notRecorded"

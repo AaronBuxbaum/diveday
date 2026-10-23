@@ -199,6 +199,7 @@ export async function rollSailedSeriesInterests(
       seriesId: trips.seriesId,
       startsAt: trips.startsAt,
       shopSlug: shops.slug,
+      waitlistOn: shops.waitlistEnabled,
     })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
@@ -248,6 +249,11 @@ export async function rollSailedSeriesInterests(
     });
     outcome.rolled += interestIds.length;
     if (interestIds.length === 0) continue;
+    // **The roll is bookkeeping; the invite is the wait list's send.** With the
+    // wait list off (the Features page) the interests still move to the next
+    // date, so the list is where it belongs once the switch is back on, and no
+    // seat offer goes out.
+    if (!row.waitlistOn) continue;
     // Invited only while the next date has a seat to give, and from that
     // date's whole queue in the order people asked: a rolled interest keeps the
     // time they first asked, so it takes its place in the line, never the

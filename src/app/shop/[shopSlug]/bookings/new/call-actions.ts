@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
-import { discardFormDraft } from "@/db/form-drafts";
+import { discardFormDraft, saveFormDraft } from "@/db/form-drafts";
 import { askForDate } from "@/db/interests";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
@@ -84,6 +84,23 @@ export async function tookACallAction(shopSlug: string, formData: FormData): Pro
 
   const refusal = callRefusal(outcome, parsed.data);
   if (refusal) refuse(shopSlug, REFUSAL_NOTICE[refusal], outcome);
+
+  // **A wait list switched off is asked before the draft goes** (review
+  // 2026-10-23, item 6): the form drawn before the switch went off can still
+  // post "wait list", and the trip page's writer would refuse it after the
+  // caller's details were gone. They are kept as the draft instead, and the
+  // form reopens on a date request, the door that is still open.
+  if (outcome === "waitlist" && !shop.waitlistEnabled) {
+    await saveFormDraft(db, {
+      shopId: shop.id,
+      personId: session.user.personId,
+      form: "took_a_call",
+      fields: [...formData].flatMap(([key, value]): [string, string][] =>
+        typeof value === "string" && key !== "outcome" ? [[key, value]] : [],
+      ),
+    });
+    refuse(shopSlug, "call-waitlist-off", "date-request");
+  }
 
   // The call was taken: whatever half-typed copy of it was being kept is
   // finished with. Discarded *before* the write, because each branch below

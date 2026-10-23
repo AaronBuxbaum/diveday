@@ -1321,6 +1321,9 @@ export async function getTripManifests(
         tripEndsAt: trip.endsAt,
       }),
       depthAdvisory: depthByBooking.get(booking.id),
+      // Said whether or not the shop still offers hotel pickups (the Features
+      // page): switching the offer off stops new ones, and a diver already
+      // promised a pickup is still collected.
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
       // The lunch note (item 56): where the crew actually look, as well as

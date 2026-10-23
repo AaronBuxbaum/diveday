@@ -19,6 +19,7 @@ import {
   type ShopPromoCode,
   shopPromoCodes,
   shopPromoRedemptions,
+  shops,
   tripLastMinutePromos,
 } from "./schema";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
@@ -205,6 +206,14 @@ export async function getRedeemableShopPromo(
   db: DbExecutor,
   input: { shopId: string; code: string; kind: PromoBookingKind; now?: Date },
 ): Promise<ShopPromoCode | null> {
+  // A shop that switched promo codes off (the Features page) takes none; the
+  // codes are kept for when it is switched back on.
+  const [shop] = await db
+    .select({ on: shops.promoCodesEnabled })
+    .from(shops)
+    .where(eq(shops.id, input.shopId))
+    .limit(1);
+  if (!shop?.on) return null;
   const promo = await getShopPromoByCode(db, input.shopId, input.code);
   // No Stripe promotion-code id means the mint never completed — the code
   // exists locally but cannot discount anything.
@@ -473,6 +482,10 @@ export async function recordShopPromoRedemption(
  * paid booking, for a shop that has never made a code, sent divers looking for
  * a discount that does not exist (ADR 20261005-optional-shop-features).
  *
+ * Each half follows its own Features switch: shop-wide codes while promo
+ * codes are on, a trip's deal while the last-minute list is. With both off
+ * the box is gone.
+ *
  * Deliberately looser than redemption: scope and a start date still in the
  * future are not checked, so the box errs toward showing. `getRedeemableShopPromo`
  * and `getActiveTripPromoByCode` remain what decides whether a typed code applies.
@@ -485,6 +498,7 @@ export async function tripMayTakeACode(
   const [shopCode] = await db
     .select({ id: shopPromoCodes.id })
     .from(shopPromoCodes)
+    .innerJoin(shops, and(eq(shops.id, shopPromoCodes.shopId), eq(shops.promoCodesEnabled, true)))
     .where(
       and(
         eq(shopPromoCodes.shopId, input.shopId),
@@ -498,6 +512,10 @@ export async function tripMayTakeACode(
   const [tripCode] = await db
     .select({ id: tripLastMinutePromos.id })
     .from(tripLastMinutePromos)
+    .innerJoin(
+      shops,
+      and(eq(shops.id, tripLastMinutePromos.shopId), eq(shops.lastMinuteListEnabled, true)),
+    )
     .where(
       and(
         eq(tripLastMinutePromos.shopId, input.shopId),

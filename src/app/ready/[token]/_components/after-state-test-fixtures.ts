@@ -39,6 +39,7 @@ export function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps
     shoutout: null,
     photos: [],
     maxPhotos: 12,
+    photosOn: true,
     visitCount: 3,
     currency: "usd",
     canTip: false,

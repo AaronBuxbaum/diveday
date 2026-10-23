@@ -82,13 +82,6 @@ export async function uploadRecapPhotos(
   const caption = captionParse.ok ? captionParse.data.caption : "";
   const { shareWithBoat } = options;
   const db = await getDb();
-  // The recap link is the diver's own, and this is a form they just submitted
-  // from their own device — first-hand evidence of the language they read
-  // (docs ADR 20260731-per-person-notification-locale).
-  await recordDiverOwnLocaleForBooking(db, {
-    bookingId,
-    locale: await requestFirstHandLocale(),
-  });
 
   // Gate before the expensive side effect: refuse a cancelled/no-show or
   // already-capped booking without ever writing to blob storage. A cancelled
@@ -104,6 +97,15 @@ export async function uploadRecapPhotos(
       `${back}?photo=${eligibility.reason === "limit" ? "limit" : eligibility.reason === "cancelled" ? "cancelled" : "error"}`,
     );
   }
+  // The recap link is the diver's own, and this is a form they just submitted
+  // from their own device — first-hand evidence of the language they read
+  // (docs ADR 20260731-per-person-notification-locale). Recorded only once the
+  // upload is allowed, so a refused one (recap photos switched off, a closed
+  // recap, a full album) leaves nothing behind.
+  await recordDiverOwnLocaleForBooking(db, {
+    bookingId,
+    locale: await requestFirstHandLocale(),
+  });
 
   let added = 0;
   let hitLimit = false;

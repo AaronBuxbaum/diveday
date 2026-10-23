@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
+
 import { act } from "@testing-library/react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ALL_SWITCHES_ON } from "@/lib/shop-features";
 import {
   type StaffDestinationGates,
   staffNavSections,
@@ -26,7 +28,7 @@ const gates: StaffDestinationGates = {
 const props = {
   root,
   gates,
-  items: staffNavSections(gates, { courses: false, gear: false, crew: true }),
+  items: staffNavSections(gates, { courses: false, gear: false, switches: ALL_SWITCHES_ON }),
   copy: {
     navAriaLabel: "Main",
     sections: {

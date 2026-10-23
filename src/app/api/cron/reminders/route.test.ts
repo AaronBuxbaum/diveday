@@ -62,6 +62,7 @@ beforeEach(() => {
     optedOut: 0,
     unaddressable: 0,
     failed: 0,
+    switchedOff: 0,
   });
   vi.mocked(retryPendingMediaDeletions)
     .mockReset()

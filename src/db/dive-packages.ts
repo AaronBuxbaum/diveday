@@ -17,6 +17,7 @@ import {
   orderLineItems,
   orders,
   paymentDisputes,
+  shops,
 } from "./schema";
 
 /**
@@ -38,8 +39,17 @@ export async function listDivePackages(db: DbExecutor, shopId: string) {
  * What a diver can buy online right now: the live price list less any package
  * whose end date has passed (`packageOnSale`). The public nav and the public
  * packages page both ask this, so a lapsed package never earns a tab.
+ *
+ * Empty while the shop has dive packages switched off (the Features page):
+ * nothing is sold, and the dives divers already bought are still drawn from.
  */
 export async function listPackagesOnSale(db: DbExecutor, shopId: string, now = nowDate()) {
+  const [shop] = await db
+    .select({ on: shops.divePackagesEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop?.on) return [];
   return (await listDivePackages(db, shopId)).filter((pkg) => packageOnSale(pkg, now));
 }
 

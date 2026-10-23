@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { maxLineItemUnitAmountCents } from "@/db/orders";
+import { shopHasFeatureOn } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import { validateDivePackage } from "@/lib/dive-packages";
 import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
@@ -25,6 +26,16 @@ const packageForm = z.object({
 const packageIdForm = z.object({ packageId: text() });
 
 /**
+ * Dive packages switched off (the Features page): the packages page lands on
+ * Discounts, and so does a hand-built post, having changed no price.
+ */
+async function packagesOn(shopId: string, page: string) {
+  if (!(await shopHasFeatureOn(await getDb(), shopId, "divePackages"))) {
+    revalidateAndRedirect(page);
+  }
+}
+
+/**
  * Add a prepaid dive package to the shop's price list
  * (ADR 20260822-a-package-is-entitlements-not-money).
  *
@@ -37,6 +48,7 @@ export async function createDivePackageAction(formData: FormData) {
   const page = shopPath(session.user.shopSlug, "promos", "packages");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
+  await packagesOn(session.user.shopId, page);
   const db = await getDb();
   // The shop's own currency decides the multiplier, the same way every other
   // price box on this page is read — 5000 in a JPY shop is ¥5,000.
@@ -74,6 +86,7 @@ export async function deleteDivePackageAction(formData: FormData) {
   const page = shopPath(session.user.shopSlug, "promos", "packages");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
+  await packagesOn(session.user.shopId, page);
   // `uuidParam`, like `deleteBoatAction` two hundred lines down: a malformed id
   // reaches `eq(divePackages.id, $1)` against a uuid column, Postgres raises
   // 22P02, and the owner gets an unhandled 500 where a refusal belongs

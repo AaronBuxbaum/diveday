@@ -155,6 +155,7 @@ export default async function TripManifestPage({
     catalogSpecies,
     speciesBySite,
     canAssist: checkpoint !== "departure" && (await assistsAvailable(db, shop.id)),
+    sightingsOn: shop.sightingsEnabled,
     t,
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
@@ -351,11 +352,10 @@ export default async function TripManifestPage({
         />
         <DockDesk
           t={t}
-          shopId={shop.id}
+          shop={shop}
           tripId={tripId}
           isDeparture={isDeparture}
           trip={departureManifest.trip}
-          timeZone={shop.timezone}
           stage={stageStrip.stage}
           seats={manifest.divers}
         />
@@ -388,13 +388,12 @@ export default async function TripManifestPage({
             })}
             action={actions.saveExecutedDive}
             checkpoint={checkpoint}
+            sightingsOn={shop.sightingsEnabled}
           />
         ) : null}
 
-        {/* **The living reef** — the crew's tally of what this departure saw,
-            under the log they are already filling in and nowhere near the roll
-            call's commit path or the head count above it. Nothing here gates
-            anything; it reaches the shop's own public trip page. */}
+        {/* **The living reef**: what the crew saw, away from roll call and head count. It
+            gates nothing, reaches the public trip page, and is gone while sightings are off. */}
         {!isDeparture && seen ? <SeenGroup idPrefix={idPrefix} {...seen} /> : null}
 
         {/* **The numbers a crew dials during** are a rare reference, behind the

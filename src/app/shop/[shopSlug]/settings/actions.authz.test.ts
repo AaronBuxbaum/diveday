@@ -59,7 +59,6 @@ const {
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
 } = await import("./boat-actions");
-const { saveHotelPickupAction } = await import("./dock-day/pickup-actions");
 const { saveDeskPaymentAction } = await import("./dock-day/desk-payment-actions");
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
@@ -300,12 +299,6 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings?notice=not-authorized`,
     );
 
-    const pickup = new FormData();
-    pickup.set("offersHotelPickup", "on");
-    expect(await redirectedTo(() => saveHotelPickupAction(pickup))).toBe(
-      `/shop/${shop.slug}/settings?notice=not-authorized`,
-    );
-
     const desk = new FormData();
     desk.set("deskPayment", "cash");
     expect(await redirectedTo(() => saveDeskPaymentAction(desk))).toBe(
@@ -506,18 +499,6 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings/dock-day?notice=crew-lead-saved`,
     );
     expect((await getShopById(db, shop.id))?.crewLeadMinutes).toBeNull();
-
-    // "We offer hotel pickup" (fourth UX review, item 8): on, then off again.
-    const pickup = new FormData();
-    pickup.set("offersHotelPickup", "on");
-    expect(await redirectedTo(() => saveHotelPickupAction(pickup))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=pickup-saved`,
-    );
-    expect((await getShopById(db, shop.id))?.offersHotelPickup).toBe(true);
-    expect(await redirectedTo(() => saveHotelPickupAction(new FormData()))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=pickup-saved`,
-    );
-    expect((await getShopById(db, shop.id))?.offersHotelPickup).toBe(false);
 
     // How divers pay at the desk (fifth-loop ideas, item 21): cash, then
     // "Don't say", and a forged value changes nothing.

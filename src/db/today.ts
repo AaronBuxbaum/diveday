@@ -66,7 +66,7 @@ import {
 import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
-import { countOpenDateInterests } from "./interest-dates";
+import { countWaitingDateInterests } from "./interest-dates";
 import { listOpenAnytimeWindows } from "./interests";
 import { countOpenLostItems } from "./lost-items";
 import {
@@ -1060,6 +1060,10 @@ async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
     })
     .from(interests)
     .innerJoin(people, eq(people.id, interests.personId))
+    // **Read whatever the wait list's switch says** (review 2026-10-23, item
+    // 8): a diver already waiting when the shop turned it off stays on Today
+    // until someone handles them. The one tap's email is the wait list's own
+    // send, so off it falls back to the composer and staff write by hand.
     .where(
       and(
         eq(interests.scope, "departure"),
@@ -1817,8 +1821,9 @@ async function readTodayWave(
       : null,
     readReviewsAwaitingModeration(db, shopId),
     countUnansweredMessages(db, shopId),
-    // Open date requests count into the same unanswered row (issue #2658).
-    countOpenDateInterests(db, shopId),
+    // Open date requests count into the same unanswered row (issue #2658);
+    // with date requests switched off, only course inquiries do.
+    countWaitingDateInterests(db, shopId),
     db
       .select({
         unitsConfirmedAt: shops.unitsConfirmedAt,
@@ -1827,6 +1832,10 @@ async function readTodayWave(
         // The blank-card desk row (fifth loop, item 3) rides this read.
         emergencyReference: shops.emergencyReference,
         temperatureUnit: shops.temperatureUnit,
+        // The Features switches whose rows this queue raises (Lost and found,
+        // gear servicing): off, their rows are dropped after the wave.
+        lostFoundEnabled: shops.lostFoundEnabled,
+        workOrdersEnabled: shops.workOrdersEnabled,
       })
       .from(shops)
       .where(eq(shops.id, shopId))
@@ -2042,7 +2051,7 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [wave, agencyCheckCards, lostItemsWaiting] = await Promise.all([
+  const [waveRead, agencyCheckCards, lostItemsFound] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,
@@ -2065,6 +2074,21 @@ export async function getTodayWork(
     // The found items waiting (fifth loop, item 7), beside the wave.
     countOpenLostItems(db, shopId, now),
   ]);
+  // A feature the shop switched off on the Features page raises no row: the
+  // reads above ran beside the shop row that says so, and what they found is
+  // still there for when it is switched back on (`shop-features.ts`).
+  // Gear servicing off keeps the shop's own units' late tickets: their service
+  // is fleet safety, and the row opens the unit on the register instead.
+  const wave =
+    waveRead.shopUnits?.workOrdersEnabled === false
+      ? {
+          ...waveRead,
+          workOrdersNeedingAttention: waveRead.workOrdersNeedingAttention
+            .filter((row) => row.fleetUnitId !== null)
+            .map((row) => ({ ...row, benchClosed: true as const })),
+        }
+      : waveRead;
+  const lostItemsWaiting = waveRead.shopUnits?.lostFoundEnabled === false ? 0 : lostItemsFound;
   const {
     departureRollCall,
     departureCrewRollCall,

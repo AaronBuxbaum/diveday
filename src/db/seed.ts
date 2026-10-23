@@ -405,13 +405,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // Its desk hours are its own, saved (the default 08:00 to 18:00), so the
       // storefront footer prints them. Every switch on the Features page
       // ("Our year", the crew schedule, the PADI checks, recap highlights
-      // without a tap) starts on for every shop since 2026-10-23, so the demo
-      // photographs and exercises all of them without naming one here.
+      // without a tap, hotel pickups from the Key Largo resorts) starts on for
+      // every shop since 2026-10-23, so the demo photographs and exercises all
+      // of them without naming one here.
       deskHoursConfirmedAt: nowDate(),
-      // A Key Largo shop picks divers up from the resorts, so `/ready` asks
-      // "Want a pickup?" here; a new shop runs none until it says so (fourth
-      // UX review, item 8).
-      offersHotelPickup: true,
       // The desk takes cards and cash, and every "due at the shop" says so
       // (fifth-loop ideas, item 21); a new shop says nothing until it chooses.
       deskPayment: "card_and_cash",

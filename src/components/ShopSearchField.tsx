@@ -1,6 +1,7 @@
 import { localeEndonym } from "@/i18n/language-labels";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { ShopSwitchesOn } from "@/lib/shop-features";
 import type { StaffDestinationGates } from "@/lib/staff-destinations";
 import { commandPaletteCopy, signOutAction } from "./command-palette-props";
 import { LazyCommandPalette } from "./search/LazyCommandPalette";
@@ -16,14 +17,14 @@ import { LazyCommandPalette } from "./search/LazyCommandPalette";
 export function ShopSearchField({
   shopSlug,
   navGates,
-  crewSchedule,
+  switches,
   locale,
   setLocale,
   createDiverAction,
 }: {
   shopSlug: string;
   navGates: StaffDestinationGates;
-  crewSchedule: boolean;
+  switches: ShopSwitchesOn;
   locale: string;
   setLocale: (locale: string) => Promise<void>;
   createDiverAction: (formData: FormData) => Promise<void>;
@@ -34,7 +35,7 @@ export function ShopSearchField({
       variant="field"
       shopSlug={shopSlug}
       gates={navGates}
-      crewSchedule={crewSchedule}
+      switches={switches}
       locale={locale}
       languages={DIVER_LOCALES.map((value) => ({ locale: value, label: localeEndonym(value) }))}
       setLocaleAction={setLocale}

@@ -18,6 +18,8 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { handoffHref } from "@/lib/booking-handoff";
 import type { BrandDisplayFontCode } from "@/lib/brand";
+import { BUDDY_PARAM } from "@/lib/buddy-links";
+import { buddyReferralId } from "@/lib/buddy-tokens";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
@@ -32,7 +34,7 @@ import {
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
-import { publicTripPath } from "@/lib/public-routes";
+import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
@@ -120,6 +122,8 @@ export type AfterStateProps = {
   photos: RecapPhotoView[];
   /** How many photos one booking may hold — `MAX_RECAP_PHOTOS_PER_BOOKING`. */
   maxPhotos: number;
+  /** Whether the shop takes recap photos (Features); off, no photo door is drawn. */
+  photosOn: boolean;
   /** Dive days with this shop, native bookings and imported visits merged. */
   visitCount: number;
   currency: ShopCurrency;
@@ -237,6 +241,26 @@ async function nextDiveHandoffHref(
 ): Promise<string | null> {
   const issued = await issueBookingHandoff(db, { shopId: shop.id, bookingId });
   return issued ? handoffHref(publicTripPath(shop.slug, tripId), issued.token) : null;
+}
+
+/**
+ * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): the
+ * recap's own link to the shop's schedule, carrying this booking's signed,
+ * non-secret referral id, for the diver to hand to a friend.
+ *
+ * Null when the shop switched "Bring a buddy" off on Features (ADR
+ * 20261005-optional-shop-features), and when no canonical origin is
+ * configured: the errand is to send it to somebody, and a path nobody can
+ * follow out of a message is no link.
+ */
+export function recapBuddyLinkUrl(
+  shop: { slug: string; buddyLinksEnabled: boolean },
+  bookingId: string,
+  origin: string | null,
+): string | null {
+  if (!shop.buddyLinksEnabled || !origin) return null;
+  const schedule = new URL(publicSchedulePath(shop.slug), `${origin}/`).toString();
+  return `${schedule}?${BUDDY_PARAM}=${buddyReferralId(bookingId)}`;
 }
 
 export async function buildAfterStateProps(input: {
@@ -366,6 +390,7 @@ export async function buildAfterStateProps(input: {
     shoutout: data.shoutout,
     photos: data.photos,
     maxPhotos: MAX_RECAP_PHOTOS_PER_BOOKING,
+    photosOn: data.shop.diverPhotosEnabled,
     visitCount: data.visitCount,
     // The shop's declared currency (ADR 20260731-shop-currency), so a tip is
     // denominated the same way the trip the diver paid for was. The presets

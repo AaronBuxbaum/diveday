@@ -6,7 +6,7 @@ import type { RecordLostItemState } from "@/components/lost-found/LostItemForm";
 import type { LostItemRowState } from "@/components/lost-found/LostItemRow";
 import { type AppDb, getDb } from "@/db/client";
 import { recordLostItem, setLostItemStatus, tellLostItemOwner } from "@/db/lost-items";
-import { getShopById } from "@/db/shops";
+import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import { parseForm, readForm, single, text } from "@/lib/form-parse";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
@@ -69,6 +69,11 @@ export async function lostItemRowAction(
   }
   const db = await getDb();
   const shopId = session.user.shopId;
+  // Lost and found switched off (the Features page): no list to work from,
+  // so a hand-built post changes nothing. Every item is kept.
+  if (!(await shopHasFeatureOn(db, shopId, "lostFound"))) {
+    return { status: "refused", reason: "not_found" };
+  }
   const { itemId, intent } = parsed.data;
   if (intent === "tell") {
     const told = await tellLostItemOwner(db, { shopId, itemId });

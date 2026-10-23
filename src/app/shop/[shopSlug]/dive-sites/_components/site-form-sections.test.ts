@@ -71,3 +71,21 @@ describe("the dive-site briefing's sections", () => {
     expect(copy.inSections[2]).not.toContain(labels.about);
   });
 });
+
+/** The field guide is a Features switch: off, the form, the rail and the unsaved count lose it. */
+describe("the briefing's sections with the field guide off", () => {
+  const t = staffTranslator("en-US");
+
+  it("leaves the field guide out of the rail and the unsaved sentences, in order", () => {
+    const rail = siteFormSections(t, false).map((section) => section.id);
+    expect(rail).not.toContain(SITE_FORM_SECTION_IDS.fieldGuide);
+    expect(rail).toEqual(
+      siteFormSections(t)
+        .map((section) => section.id)
+        .filter((id) => id !== SITE_FORM_SECTION_IDS.fieldGuide),
+    );
+    const unsaved = siteFormUnsavedCopy(t, false);
+    expect(unsaved.inSection).toHaveLength(rail.length);
+    expect(unsaved.inSections).toHaveLength(rail.length + 1);
+  });
+});

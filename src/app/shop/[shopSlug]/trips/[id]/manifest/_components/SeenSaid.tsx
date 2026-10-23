@@ -68,7 +68,7 @@ export function SeenSaid({
           formData.set("speciesSlug", item.slug);
           const result = await recordAction(undefined, formData);
           onResult(result);
-          if (result.status === "error") return;
+          if (result.status !== "ok") return;
         }
       }
       setProposal(null);

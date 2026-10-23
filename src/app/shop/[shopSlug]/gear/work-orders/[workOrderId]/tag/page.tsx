@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
@@ -45,6 +45,9 @@ export default async function ClaimTagPage({
   if (!workOrderId) notFound();
 
   const { db, shop } = await requireShopSurface(shopSlug);
+  // Gear servicing switched off (the Features page): the bench is gone, the
+  // register is where Gear opens, and no ticket is deleted.
+  if (!shop.workOrdersEnabled) redirect(shopPath(shopSlug, "gear"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
