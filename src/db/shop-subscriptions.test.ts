@@ -522,6 +522,45 @@ describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
     });
   });
 
+  it("refuses an override while a Checkout session is open, unless it is expired first", async () => {
+    const { db, shop } = ctx;
+    const slug = await slugOf(db, shop.id);
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await snapshotShopPricing(db, shop.id, {
+      plan: "flat_monthly",
+      monthlyCents: 9_900,
+      basisPoints: 0,
+    });
+    await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_open" });
+    const percent = {
+      shopSlug: slug,
+      plan: "percent_of_volume" as const,
+      monthlyCents: null,
+      basisPoints: null,
+    };
+    // Session S still sells the flat price: no override may move the plan under it.
+    expect(await setShopPricingPlan(db, percent, ON)).toEqual({ status: "checkout_open" });
+    const unsettled = async () => ({ status: "failed" }) as const;
+    expect(await setShopPricingPlan(db, percent, ON, { settleCheckout: unsettled })).toEqual({
+      status: "checkout_open",
+    });
+    const completed = async () => ({ status: "ok", value: "completed" }) as const;
+    expect(await setShopPricingPlan(db, percent, ON, { settleCheckout: completed })).toEqual({
+      status: "checkout_open",
+    });
+    expect((await getShopSubscription(db, shop.id))?.pricingPlan).toBe("flat_monthly");
+    // Expired at Stripe: the override lands and the dead session is forgotten.
+    const cleared = async () => ({ status: "ok", value: "cleared" }) as const;
+    expect(await setShopPricingPlan(db, percent, ON, { settleCheckout: cleared })).toMatchObject({
+      status: "set",
+      terms: { plan: "percent_of_volume" },
+    });
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      pricingPlan: "percent_of_volume",
+      stripeCheckoutSessionId: null,
+    });
+  });
+
   it("keeps a subscriber on what Checkout sold when the environment moves", async () => {
     const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");

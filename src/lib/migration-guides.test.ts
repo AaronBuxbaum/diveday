@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { INTERNAL_VOCABULARY } from "@/test/copy";
-import { getMigrationGuide, MIGRATION_GUIDE_SLUGS, MIGRATION_GUIDES } from "./migration-guides";
+import {
+  getMigrationGuide,
+  guideForPlan,
+  MIGRATION_GUIDE_SLUGS,
+  MIGRATION_GUIDES,
+} from "./migration-guides";
 
 const t = diverTranslator("en-US");
 
@@ -15,6 +20,13 @@ const t = diverTranslator("en-US");
 function en(key: DiverMessageKey, values?: Record<string, string>): string {
   const resolved = t(key, values);
   expect(resolved, `bundle is missing ${key}`).not.toBe(key);
+  return resolved;
+}
+
+const tEs = diverTranslator("es-ES");
+function es(key: DiverMessageKey): string {
+  const resolved = tEs(key);
+  expect(resolved, `es-ES bundle is missing ${key}`).not.toBe(key);
   return resolved;
 }
 
@@ -204,6 +216,7 @@ describe("migration guides", () => {
       const coexist = guide?.coexist;
       if (!coexist) throw new Error("unreachable");
       expect(en(coexist.bridgeNote).trim().length).toBeGreaterThan(0);
+      if (!coexist.replace) throw new Error(`${slug} has no replace box`);
       expect(en(coexist.replace.body).trim().length).toBeGreaterThan(0);
     }
     for (const slug of ["eve", "diveshop360", "smartwaiver"]) {
@@ -272,8 +285,9 @@ describe("migration guides", () => {
               en(i.detail, values),
             ]),
             en(guide.coexist.bridgeNote),
-            en(guide.coexist.replace.heading),
-            en(guide.coexist.replace.body),
+            ...(guide.coexist.replace
+              ? [en(guide.coexist.replace.heading), en(guide.coexist.replace.body)]
+              : []),
           ]
         : [];
       const website = guide.website
@@ -401,6 +415,35 @@ describe("the website ledger", () => {
       expect(body).not.toMatch(/\d+\s*(days?|weeks?|pages?|días?|semanas?|páginas?)/i);
       expect(body).not.toMatch(/free website|web gratis|sitio gratis/i);
       expect(body).toMatch(locale === "en-US" ? /a person at DiveDay/ : /una persona de DiveDay/);
+    }
+  });
+});
+
+describe("guideForPlan (ADR 20261022-pricing-ab-test)", () => {
+  it("is the guide itself for the flat arm", () => {
+    for (const guide of MIGRATION_GUIDES) {
+      expect(guideForPlan(guide, "flat_monthly")).toBe(guide);
+    }
+  });
+
+  it("takes the per-booking-fee contrast out for the percent arm, in both locales", () => {
+    for (const slug of ["fareharbor", "rezdy"]) {
+      const registered = getMigrationGuide(slug);
+      if (!registered) throw new Error(slug);
+      const guide = guideForPlan(registered, "percent_of_volume");
+      expect(guide.coexist?.replace).toBeUndefined();
+      expect(guide.coexist?.bridgeNote).toBe(registered.coexist?.bridgeNote);
+      for (const key of [guide.cardSummary, guide.metaDescription, guide.heroLede]) {
+        expect(en(key)).not.toMatch(/per-booking|cut\b|fee behind/);
+        expect(es(key)).not.toMatch(/comisión por reserva/);
+      }
+    }
+  });
+
+  it("leaves the leave-it guides' words alone for the percent arm", () => {
+    for (const slug of ["eve", "diveshop360", "smartwaiver"]) {
+      const registered = getMigrationGuide(slug);
+      expect(registered && guideForPlan(registered, "percent_of_volume")).toEqual(registered);
     }
   });
 });

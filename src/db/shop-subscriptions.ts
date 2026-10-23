@@ -410,6 +410,23 @@ export function shopPricing(
 }
 
 /**
+ * The numbers a subscription was sold, whatever its status now: what a
+ * subscription that ended inside a month is billed that month at.
+ */
+export function soldPricing(
+  shopId: string,
+  row: ShopSubscriptionRow | null,
+  config: PricingConfig,
+): PlanTerms {
+  return effectivePricing({
+    stored: storedPricing(row),
+    shopId,
+    config,
+    hasLiveSubscription: true,
+  });
+}
+
+/**
  * Snapshot the numbers Checkout is about to sell (grandfathering): the plan
  * and its fee and rate, so a later change to the `PRICING_*` environment never
  * moves what a subscriber pays. An arm already stored keeps its source.
@@ -449,7 +466,8 @@ export type SetPricingPlanOutcome =
   | { status: "set"; terms: PlanTerms }
   | { status: "no_such_shop" }
   | { status: "demo_shop" }
-  | { status: "live_subscription"; current: PlanTerms };
+  | { status: "live_subscription"; current: PlanTerms }
+  | { status: "checkout_open" };
 
 /**
  * `pnpm billing:pricing-plan`: put a shop on a plan by hand (`override`),
@@ -461,6 +479,12 @@ export type SetPricingPlanOutcome =
  * numbers it was sold, so it has to be canceled first. A new rate on a live
  * percent subscription is allowed, because DiveDay computes the fee itself and
  * reports it in cents.
+ *
+ * Refused too while a Checkout session "Add a card" opened may still complete:
+ * it sells the numbers snapshotted when it opened, so a plan set under it
+ * would have DiveDay bill one plan while Stripe bills another.
+ * `settleCheckout` (the billing provider's, when billing is configured)
+ * expires it first; one that completed, or could not be settled, refuses.
  */
 export async function setShopPricingPlan(
   db: AppDb,
@@ -471,6 +495,11 @@ export async function setShopPricingPlan(
     basisPoints: number | null;
   },
   config: PricingConfig,
+  options: {
+    settleCheckout?: (
+      sessionId: string,
+    ) => Promise<{ status: "ok"; value: "cleared" | "completed" } | { status: "failed" }>;
+  } = {},
 ): Promise<SetPricingPlanOutcome> {
   const [shop] = await db
     .select({ id: shops.id, isDemo: shops.isDemo })
@@ -482,6 +511,13 @@ export async function setShopPricingPlan(
   const row = await getShopSubscription(db, shop.id);
   const live = holdsLiveSubscription(row);
   const current = shopPricing(shop.id, row, config);
+  const openSession = !live ? (row?.stripeCheckoutSessionId ?? null) : null;
+  if (openSession) {
+    const settled = options.settleCheckout ? await options.settleCheckout(openSession) : null;
+    if (settled?.status !== "ok" || settled.value !== "cleared") {
+      return { status: "checkout_open" };
+    }
+  }
 
   let next: {
     pricingPlan: PricingPlan | null;
@@ -525,7 +561,13 @@ export async function setShopPricingPlan(
   }
 
   const now = nowDate();
-  const values = { ...next, pricingPlanSetAt: now, updatedAt: now };
+  const values = {
+    ...next,
+    // The session just expired at Stripe can start nothing now.
+    ...(openSession ? { stripeCheckoutSessionId: null } : {}),
+    pricingPlanSetAt: now,
+    updatedAt: now,
+  };
   await db
     .insert(shopSubscriptions)
     .values({ shopId: shop.id, ...values, createdAt: now })
