@@ -9,6 +9,7 @@ import {
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "./waiver-integrity";
+import type { ShopAnswer } from "./waiver-questions";
 
 const record = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -57,6 +58,8 @@ const record = {
   guardianEmailErasedAt: null as Date | null,
   guardianEmailErasedByPersonId: null as string | null,
   draftGuardian: null,
+  shopAnswers: null as ShopAnswer[] | null,
+  draftShopAnswers: null,
   completedAt: new Date("2026-07-29T01:00:00.000Z"),
   integrityHash: null,
   integrityVersion: null,
@@ -375,5 +378,139 @@ describe("waiver integrity over a guardian's address erased on request (H-103, i
     expect(
       signedIntegrityVersionFor({ ...redacted, movedAt: new Date("2026-10-01T00:00:00.000Z") }),
     ).toBe(WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED);
+  });
+});
+
+describe("waiver integrity over the shop's own questions (glossary *Shop question*)", () => {
+  /**
+   * The digest the v1 field set gave this exact row **before shop questions
+   * existed**, computed from that build's `waiver-integrity.ts` under the
+   * test secret. Every seal already written must keep verifying, so a record
+   * with no answers hashes to it byte for byte.
+   */
+  const V1_DIGEST_BEFORE_SHOP_QUESTIONS =
+    "6a856dd2717dd12eaa1c0efe8e7238f64b28b0d33268c1087d42647cf5a63fed";
+
+  const answers: ShopAnswer[] = [
+    { id: "divecount01", kind: "number", prompt: "How many dives?", required: false, answer: 40 },
+    {
+      id: "heardabout1",
+      kind: "choice",
+      prompt: "How did you hear about us?",
+      required: false,
+      options: ["A friend", "Online search"],
+      answer: null,
+    },
+    {
+      id: "insurance01",
+      kind: "yes_no",
+      prompt: "Do you carry dive accident insurance?",
+      required: true,
+      answer: false,
+    },
+  ];
+  const answered = { ...record, shopAnswers: answers };
+
+  it("keeps an existing v1 record with no shop answers on its digest byte for byte", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(computeWaiverIntegrityHash(record)).toBe(V1_DIGEST_BEFORE_SHOP_QUESTIONS);
+    vi.unstubAllEnvs();
+  });
+
+  it("seals the answers, so stripping, adding or changing one reads invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const sealed = {
+      ...answered,
+      integrityHash: computeWaiverIntegrityHash(answered),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+    };
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    const [dives, heard, insured] = answers;
+    if (!dives || !heard || !insured) throw new Error("fixture");
+    for (const tampered of [
+      { ...sealed, shopAnswers: null },
+      { ...sealed, shopAnswers: [] },
+      { ...sealed, shopAnswers: [dives, heard] },
+      { ...sealed, shopAnswers: [{ ...dives, answer: 400 }, heard, insured] },
+      { ...sealed, shopAnswers: [dives, heard, { ...insured, answer: true }] },
+      { ...sealed, shopAnswers: [dives, heard, { ...insured, prompt: "Insured?" }] },
+    ]) {
+      expect(verifyWaiverIntegrity(tampered)).toBe("invalid");
+    }
+    // Answers added to a record sealed without any.
+    expect(
+      verifyWaiverIntegrity({
+        ...answered,
+        integrityHash: V1_DIGEST_BEFORE_SHOP_QUESTIONS,
+        integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("verifies a v3 refile and a v4 guardian redaction of a record with answers", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const moved = {
+      ...answered,
+      personId: "00000000-0000-4000-8000-0000000000aa",
+      movedFromPersonId: record.personId,
+      movedAt: new Date("2026-10-05T17:00:00.000Z"),
+      movedByPersonId: "00000000-0000-4000-8000-0000000000bb",
+    };
+    const redacted = {
+      ...answered,
+      guardianName: "Jonas Fischer",
+      guardianRelationship: "parent",
+      guardianEmail: null,
+      guardianSignatureMethod: "typed_consent",
+      guardianConsentedAt: new Date("2026-07-29T01:00:00.000Z"),
+      guardianSignedAt: new Date("2026-07-29T01:00:00.000Z"),
+      guardianEmailErasedAt: new Date("2026-10-07T09:00:00.000Z"),
+      guardianEmailErasedByPersonId: "00000000-0000-4000-8000-0000000000cc",
+    };
+    for (const [row, version] of [
+      [moved, WAIVER_INTEGRITY_VERSION_MOVED],
+      [redacted, WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED],
+    ] as const) {
+      const sealed = {
+        ...row,
+        integrityHash: computeWaiverIntegrityHash(row, version),
+        integrityVersion: version,
+      };
+      expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+      expect(verifyWaiverIntegrity({ ...sealed, shopAnswers: null })).toBe("invalid");
+    }
+    vi.unstubAllEnvs();
+  });
+
+  // Security review L2: an erased (v2) record never holds answers, so answers
+  // planted back on one are tampering, not a record that verifies.
+  it("reads an erased record carrying answers or a draft of them as invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const sealed = {
+      ...erased,
+      shopAnswers: null,
+      draftShopAnswers: null,
+      integrityHash: computeWaiverIntegrityHash(
+        { ...erased, shopAnswers: null },
+        WAIVER_INTEGRITY_VERSION_ERASED,
+      ),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
+    };
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    expect(verifyWaiverIntegrity({ ...sealed, shopAnswers: answers })).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...sealed, shopAnswers: [] })).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...sealed, draftShopAnswers: { divecount01: 40 } })).toBe(
+      "invalid",
+    );
+    vi.unstubAllEnvs();
+  });
+
+  it("leaves them out of the v2 erasure seal, which they do not survive", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(computeWaiverIntegrityHash({ ...erased, shopAnswers: answers }, 2)).toBe(
+      computeWaiverIntegrityHash({ ...erased, shopAnswers: null }, WAIVER_INTEGRITY_VERSION_ERASED),
+    );
+    vi.unstubAllEnvs();
   });
 });

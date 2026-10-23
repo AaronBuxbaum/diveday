@@ -16,6 +16,7 @@ import { getWaiverSignerOnFile } from "@/db/waiver-signing";
 import {
   completeWaiver,
   getWaiverForToken,
+  getWaiverTemplateQuestions,
   saveBookingEmergencyContact,
   savePersonEmergencyContact,
   saveWaiverDraft,
@@ -42,6 +43,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTY_RETURN_COOKIE, partyReturnCookiePath } from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { buildShopAnswers, type ShopQuestion, shopAnswerField } from "@/lib/waiver-questions";
 import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
 
 /**
@@ -120,6 +122,13 @@ async function signingContext(token: string) {
     record: state.record,
     recordBookingId: state.record.bookingId,
     questionnaire: questionnaireForJurisdiction(shop.jurisdiction),
+    // The shop's own questions on the version this link was issued under,
+    // never the shop's current list (glossary *Shop question*).
+    shopQuestions: await getWaiverTemplateQuestions(
+      db,
+      state.record.shopId,
+      state.record.templateId,
+    ),
     guardianRequired: guardianSignatureRequired(
       signerOnFile?.dateOfBirth,
       signingDate(nowDate(), shop.timezone),
@@ -200,6 +209,41 @@ function guardianDraftFrom(formData: FormData, guardianRequired: boolean) {
 }
 
 /**
+ * The shop questions' answers as posted, raw by question id: only the ids the
+ * record's own version asks are read, and nothing else in the form can name a
+ * prompt, a kind or an option. `completeWaiver` validates them again and
+ * builds the sealed snapshot itself (dive-domain review B1).
+ */
+function readFormShopAnswers(
+  formData: FormData,
+  questions: readonly ShopQuestion[],
+): Record<string, string> {
+  const answers: Record<string, string> = {};
+  for (const question of questions) {
+    const value = formData.get(shopAnswerField(question.id));
+    if (typeof value === "string") answers[question.id] = value;
+  }
+  return answers;
+}
+
+/**
+ * The first shop question the form leaves refused, in the shop's order, as the
+ * field and question a refused submit names. Required means answered, never
+ * which answer: this is the same rule the writer refuses on.
+ */
+function refusedShopQuestion(
+  questions: readonly ShopQuestion[],
+  answers: Readonly<Record<string, string>>,
+): { field: WaiverInvalidField; questionId: string } | undefined {
+  const outcome = buildShopAnswers(questions, (id) => answers[id]);
+  if (outcome.ok) return undefined;
+  return {
+    field: outcome.reason === "required" ? "shopQuestionRequired" : "shopQuestionInvalid",
+    questionId: outcome.questionId,
+  };
+}
+
+/**
  * The field names a zod refusal names, as a set. Aliased rather than written
  * inline three times: a `ReadonlySet<PropertyKey>` parameter followed by
  * another one puts a `>` and a `<` around two lines of prose-shaped text,
@@ -231,6 +275,7 @@ function firstInvalidWaiverField(
   answers: MedicalAnswers | null,
   guardianIssuePaths: IssuePaths = new Set(),
   contactField: WaiverInvalidField | undefined = undefined,
+  shopQuestionField: WaiverInvalidField | undefined = undefined,
 ): WaiverInvalidField | undefined {
   if (!answers) return "medical";
   // The contact section sits between the questions and the signature card, and
@@ -238,6 +283,8 @@ function firstInvalidWaiverField(
   // the two controls below it, but no markup can say "these two boxes move
   // together".
   if (contactField) return contactField;
+  // The shop's own questions come next on the page, before the signature.
+  if (shopQuestionField) return shopQuestionField;
   if (signatureIssuePaths.has("signerName")) return "signerName";
   if (signatureIssuePaths.has("acknowledged")) return "acknowledged";
   return GUARDIAN_FIELDS.find((field) => guardianIssuePaths.has(field));
@@ -269,13 +316,20 @@ function refusedContactField(
  * provides; only the signature-card refusals consume it, and `FlashParams`
  * strips it with the other flash params after render.
  */
-function refusedSubmitPath(token: string, field: WaiverInvalidField | undefined) {
+function refusedSubmitPath(
+  token: string,
+  field: WaiverInvalidField | undefined,
+  /** The shop question a `shopQuestion*` refusal is about; the page re-checks it is the record's. */
+  questionId?: string,
+) {
   const nonce = crypto.randomUUID().slice(0, 8);
-  const anchor =
-    field && WAIVER_FIELD_ERROR[field].anchor !== "medical-questionnaire"
+  const anchor = questionId
+    ? `#shop-question-${questionId}`
+    : field && WAIVER_FIELD_ERROR[field].anchor !== "medical-questionnaire"
       ? `#${WAIVER_FIELD_ERROR[field].anchor}`
       : "";
-  return `/waivers/${token}?error=invalid${field ? `&field=${field}` : ""}&at=${nonce}${anchor}`;
+  const question = questionId ? `&q=${encodeURIComponent(questionId)}` : "";
+  return `/waivers/${token}?error=invalid${field ? `&field=${field}` : ""}${question}&at=${nonce}${anchor}`;
 }
 
 /**
@@ -318,9 +372,10 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
   }
   const context = await signingContext(token);
   if (!context) redirect(`/waivers/${token}?error=unavailable`);
-  const { record, recordBookingId, questionnaire, guardianRequired } = context;
+  const { record, recordBookingId, questionnaire, guardianRequired, shopQuestions } = context;
   const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
   const answers = readFormMedicalAnswers(formData, questionnaire, { allowIncomplete: true });
+  const shopAnswers = readFormShopAnswers(formData, shopQuestions);
   if (!parsed.success || !answers) {
     const invalidField = firstInvalidWaiverField(
       parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
@@ -334,6 +389,7 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
     acknowledged: parsed.data.acknowledged === "on",
     medicalAnswers: answers,
     guardian: guardianDraftFrom(formData, guardianRequired),
+    shopAnswers,
   });
   // A form the diver themselves just submitted through their own bearer
   // link — first-hand evidence of the language they read (docs ADR
@@ -396,9 +452,11 @@ export async function completeWaiverAction(token: string, formData: FormData) {
   }
   const context = await signingContext(token);
   if (!context) redirect(`/waivers/${token}?error=unavailable`);
-  const { record, recordBookingId, questionnaire, guardianRequired } = context;
+  const { record, recordBookingId, questionnaire, guardianRequired, shopQuestions } = context;
   const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
   const answers = readFormMedicalAnswers(formData, questionnaire);
+  const shopAnswers = readFormShopAnswers(formData, shopQuestions);
+  const refusedShop = refusedShopQuestion(shopQuestions, shopAnswers);
   // The guardian section is validated only when the page rendered one — the
   // writer decides the same way, from the date of birth on file, so a form
   // that omits it for an adult and one that includes it for a minor both
@@ -418,7 +476,13 @@ export async function completeWaiverAction(token: string, formData: FormData) {
       })
     : undefined;
   const refusedContact = refusedContactField(submittedContact);
-  if (!parsed.success || !answers || (guardian && !guardian.success) || refusedContact) {
+  if (
+    !parsed.success ||
+    !answers ||
+    (guardian && !guardian.success) ||
+    refusedContact ||
+    refusedShop
+  ) {
     const invalidField = firstInvalidWaiverField(
       parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
       answers,
@@ -426,6 +490,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
         ? new Set(guardian.error.issues.map((issue) => issue.path[0]))
         : new Set(),
       refusedContact,
+      refusedShop?.field,
     );
     // A refused guardian section keeps what the family typed, exactly as the
     // signature-card refusals below keep the diver's own answers.
@@ -436,14 +501,23 @@ export async function completeWaiverAction(token: string, formData: FormData) {
         acknowledged: typed.success && typed.data.acknowledged === "on",
         medicalAnswers: answers,
         guardian: guardianDraftFrom(formData, guardianRequired),
+        shopAnswers,
       });
     }
-    redirect(refusedSubmitPath(token, invalidField));
+    redirect(
+      refusedSubmitPath(
+        token,
+        invalidField,
+        invalidField === refusedShop?.field ? refusedShop?.questionId : undefined,
+      ),
+    );
   }
   const outcome = await completeWaiver(await getDb(), token, {
     signerName: parsed.data.signerName,
     agreed: true,
     medicalAnswers: answers,
+    // By id only; the writer reads the questions from the record's version.
+    shopAnswers,
     // Optional — a diver who skips it still signs; blanks never clobber a
     // value already on file, and a half-filled pair never reaches here.
     emergencyContact:
@@ -475,6 +549,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,
       guardian: guardianDraftFrom(formData, guardianRequired),
+      shopAnswers,
     });
     if (submittedContact?.kind === "pair") {
       if (recordBookingId) {
@@ -499,6 +574,11 @@ export async function completeWaiverAction(token: string, formData: FormData) {
     }
     if (outcome.reason === "invalid_medical") {
       redirect(refusedSubmitPath(token, "medical"));
+    }
+    // The writer's own refusal of a shop answer, past the check above (the
+    // version changed under a form left open, or a hand-built request).
+    if (outcome.reason === "invalid_shop_answers") {
+      redirect(refusedSubmitPath(token, "shopQuestionInvalid", outcome.questionId));
     }
     if (outcome.reason === "invalid_signature") {
       redirect(refusedSubmitPath(token, undefined));

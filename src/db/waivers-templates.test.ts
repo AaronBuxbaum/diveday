@@ -220,6 +220,85 @@ describe("saving the waiver template", () => {
   });
 
   /**
+   * **The shop's own questions are part of the version** (glossary *Shop
+   * question*): a list that changes is a new version through the same
+   * materiality choice as a body edit, and one that only looks different, a
+   * pasted prompt or stray spaces, is not, for the reason an identical body is
+   * not (#720).
+   */
+  it("versions a questions-only edit, through the publisher's own materiality choice", async () => {
+    const { db, shop, template } = await signedContext();
+    const before = await waiverTemplateHistory(db, shop.id);
+    const generation = template.materialGeneration;
+    const questions = [
+      { id: "insurance01", kind: "yes_no" as const, prompt: "Insured?", required: false },
+    ];
+
+    const added = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: template.body,
+      questions,
+      material: false,
+    });
+    expect(added.versioned).toBe(true);
+    expect(added.template.questions).toEqual(questions);
+    expect(added.template.materialGeneration).toBe(generation);
+    expect(await waiverTemplateHistory(db, shop.id)).toHaveLength(before.length + 1);
+    // Never inferred from "only questions changed": the publisher said material.
+    const material = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: template.body,
+      questions: [{ ...questions[0], required: true }],
+      material: true,
+    });
+    expect(material.versioned).toBe(true);
+    expect(material.template.materialGeneration).toBe(generation + 1);
+  });
+
+  it("writes no version when the list is the same after normalisation", async () => {
+    const { db, shop, template } = await signedContext();
+    const questions = [
+      {
+        id: "heardabout1",
+        kind: "choice" as const,
+        prompt: "¿Cómo nos conoció?",
+        required: false,
+        options: ["Un amigo", "Internet"],
+      },
+    ];
+    const first = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: template.body,
+      questions,
+      material: false,
+    });
+    expect(first.versioned).toBe(true);
+    const again = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: template.body,
+      // What a round trip through the editor can hand back: decomposed
+      // accents and stray spaces around the same words.
+      questions: [
+        {
+          ...questions[0],
+          prompt: ` ${"¿Cómo nos conoció?".normalize("NFD")} `,
+          options: ["Un amigo ", "Internet"],
+        },
+      ],
+    });
+    expect(again.versioned).toBe(false);
+    expect(again.template.id).toBe(first.template.id);
+    // Omitted, the list carries forward like the title, so a caller with no
+    // list in hand never removes the shop's questions by accident.
+    const bodyEdit = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: `${template.body}\n\nOne more line.`,
+      material: false,
+    });
+    expect(bodyEdit.template.questions).toEqual(questions);
+  });
+
+  /**
    * Issue #842. A divemaster who signed the shop's release person-scoped counts
    * in `divers` like anyone else, and must never reach `boardingSoon` on the
    * strength of a crew assignment: the release is the customer's, and joining

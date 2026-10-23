@@ -7,6 +7,10 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Shop questions on the release (built 2026-10-23)
+
+A shop adds up to fifteen of its own questions to its release on the waivers page (yes or no, short text, whole number, date, or one of a list), each optional unless marked "Must be answered to sign"; the editor says what DiveDay already asks and warns, without refusing, beside a health-worded prompt. The list is part of the release version, so changing it publishes a new version through the usual correction-or-material choice, and an identical list publishes nothing. A diver answers after the medical questionnaire and emergency contact, in "Questions from <shop>" and its own step on the rail; nothing is pre-selected, and answers inform and never gate. The server builds the snapshot from the record's own version and seals it with the release; the signed record shows each answer or a blank as sealed, with whether it was required and a list's options, and lists apart, under "Asked now, not on this release", the current questions the signing version did not ask; it says a paper, imported or erased release recorded none. A refused publish keeps the text and questions as typed, and an edit to the questions alone words the correction-or-material choice for what it does to standing signers. The shop's export carries the answers; erasure strips them, and an erased record carrying answers again reads as tampered. Glossary "Shop question"; ADR [20260729-staffing-waiver-audit-and-localized-copy](../architecture/decisions/20260729-staffing-waiver-audit-and-localized-copy.md), amendment 2026-10-23.
+
 ## UX audit continuity and operational trust (merged 2026-10-21)
 
 Search distinguishes failed lookup from no matches and prevents activation of a previous query's

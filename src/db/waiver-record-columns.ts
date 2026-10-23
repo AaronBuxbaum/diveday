@@ -13,8 +13,13 @@ import { waiverRecords } from "./schema";
  *   shows. The signed copy (`getSignedWaiverRecordForShop`) and the
  *   integrity audit read it through {@link WAIVER_SEALED_COLUMNS}, because
  *   the seal covers it.
- * - `draftSignerName`, `draftMedicalAnswers`, `draftGuardian` — what a bearer
- *   typed before signing. Nothing about readiness reads an unsigned draft.
+ * - `draftSignerName`, `draftMedicalAnswers`, `draftGuardian`,
+ *   `draftShopAnswers` — what a bearer typed before signing. Nothing about
+ *   readiness reads an unsigned draft.
+ * - `shopAnswers` — the shop's own questions as answered. They inform and
+ *   never gate, so no status read, roster or manifest has a use for them; the
+ *   signed record reads them through {@link WAIVER_SEALED_COLUMNS}, because
+ *   the seal covers them.
  * - `tokenHash`, `tokenSealed` — the bearer link. A status read must never be
  *   able to hand it back out.
  * - `integrityHash` — only the integrity check reads the seal, through
@@ -31,6 +36,8 @@ const {
   draftSignerName: _draftSignerName,
   draftMedicalAnswers: _draftMedicalAnswers,
   draftGuardian: _draftGuardian,
+  draftShopAnswers: _draftShopAnswers,
+  shopAnswers: _shopAnswers,
   tokenHash: _tokenHash,
   tokenSealed: _tokenSealed,
   integrityHash: _integrityHash,
@@ -59,3 +66,25 @@ const allColumns = getTableColumns(waiverRecords);
 export const WAIVER_SEALED_COLUMNS = Object.fromEntries(
   WAIVER_SEALED_FIELDS.map((field) => [field, allColumns[field]]),
 ) as { [Field in WaiverSealedField]: (typeof allColumns)[Field] };
+
+/**
+ * **Every draft column of a pending link, cleared** (security review M1): what
+ * a bearer typed before signing, which belongs to whoever typed it. Spread by
+ * every writer that moves a pending link to another diver (the split in
+ * `bookings.ts`, the repoint in `identity-repoint.ts`) and by erasure
+ * (`anonymize.ts`), so a draft never ends up filed under someone who did not
+ * type it, where the typist's erasure cannot find it.
+ * `waiver-record-columns.test.ts` compares the keys with every `draft*`
+ * column of the schema, so a new draft column cannot be missed.
+ */
+export const CLEARED_DRAFT_COLUMNS = {
+  draftSignerName: null,
+  draftAcknowledged: false,
+  draftMedicalAnswers: null,
+  draftGuardian: null,
+  draftShopAnswers: null,
+} as const satisfies {
+  [Column in keyof typeof allColumns as Column extends `draft${string}` ? Column : never]:
+    | null
+    | false;
+};

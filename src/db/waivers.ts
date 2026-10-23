@@ -84,6 +84,8 @@ export {
 export {
   getCurrentWaiverGeneration,
   getCurrentWaiverTemplate,
+  getSignedRecordShopAnswers,
+  getWaiverTemplateQuestions,
   type SaveWaiverTemplateInput,
   type SaveWaiverTemplateResult,
   type StandingWaiverExposure,

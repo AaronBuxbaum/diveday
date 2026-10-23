@@ -26,6 +26,7 @@ import {
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
+  canReadShopAnswers,
   canRefund,
   canReplyToReviews,
   canRetireMedicalRefusal,
@@ -261,6 +262,10 @@ export const canPersonReadMedicalClearanceDocument = (
 /** The live check behind a signed record's whole questionnaire (`canReadMedicalAnswers`). */
 export const canPersonReadMedicalAnswers = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canReadMedicalAnswers);
+
+/** The live check behind a signed record's answers to the shop's own questions (`canReadShopAnswers`). */
+export const canPersonReadShopAnswers = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canReadShopAnswers);
 
 /** The live check behind "Send a new waiver" on a refused seat (`retireMedicalRefusal`). */
 export const canPersonRetireMedicalRefusal = (db: DbExecutor, shopId: string, personId: string) =>

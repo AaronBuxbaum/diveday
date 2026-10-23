@@ -44,20 +44,34 @@ import { SettledCheck } from "@/components/ui/SettledCheck";
 /** The rail's own hook, named here so a spec and a test cannot drift from it. */
 export const WAIVER_RAIL_TEST_ID = "waiver-step-rail";
 
-/** Three segments, always — the denominator of "N of 3 done". */
+/**
+ * Three segments on a release that asks only DiveDay's questions — the
+ * denominator of "N of 3 done". A shop that adds its own questions (glossary
+ * *Shop question*) gives the rail a fourth, **Questions**, between Medical and
+ * Sign, and only then: a step nobody is asked is not a step.
+ */
 export const WAIVER_RAIL_TOTAL = 3;
 
-export type WaiverRailSegmentId = "release" | "medical" | "sign";
+export type WaiverRailSegmentId = "release" | "medical" | "questions" | "sign";
 
-/** The three segments in the order a diver walks them. Never re-ordered. */
-export const WAIVER_RAIL_ORDER = ["release", "medical", "sign"] as const;
+/** The segments in the order a diver walks them. Never re-ordered. */
+export const WAIVER_RAIL_ORDER = ["release", "medical", "questions", "sign"] as const;
+
+/** The rail's names: the three every release has, and Questions when the shop asks any. */
+export type WaiverRailLabels = Record<Exclude<WaiverRailSegmentId, "questions">, string> & {
+  questions?: string;
+};
 
 export type WaiverRailProgress = {
   release: boolean;
   medical: boolean;
+  /** Null when the release asks no shop questions, and the rail draws no such step. */
+  questions: boolean | null;
   sign: boolean;
-  /** How many of the three have settled — always 0…3, always reachable. */
+  /** How many steps have settled — always 0…total, always reachable. */
   done: number;
+  /** 3, or 4 with the shop's questions. */
+  total: number;
 };
 
 /**
@@ -106,6 +120,17 @@ export function waiverRailProgress(input: {
   medicalStillOpen?: boolean;
   /** The waiver is signed and on file. */
   signed: boolean;
+  /**
+   * The shop's own questions, when the release asks any: how many required
+   * ones are still blank, and whether the diver has reached the section
+   * (scrolled to it, focused one of its controls, or answered one). Absent,
+   * the rail has its three steps. The step settles once Medical has, the
+   * section has been reached and nothing required is blank, never on which
+   * answer was given: shop questions inform and never gate. Without
+   * `reached`, a release whose questions are all optional ticked the step
+   * while it was still below the fold (dive-domain review 2, S7).
+   */
+  shopQuestions?: { requiredRemaining: number; reached: boolean };
 }): WaiverRailProgress {
   const release = input.signed || input.medicalAnswered > 0;
   const medical =
@@ -114,12 +139,19 @@ export function waiverRailProgress(input: {
       (input.medicalTotal > 0 &&
         input.medicalAnswered >= input.medicalTotal &&
         (input.medicalFollowUpsRemaining ?? 0) === 0));
+  const questions = input.shopQuestions
+    ? input.signed ||
+      (medical && input.shopQuestions.reached && input.shopQuestions.requiredRemaining === 0)
+    : null;
   const sign = input.signed;
+  const steps = questions === null ? [release, medical, sign] : [release, medical, questions, sign];
   return {
     release,
     medical,
+    questions,
     sign,
-    done: [release, medical, sign].filter(Boolean).length,
+    done: steps.filter(Boolean).length,
+    total: steps.length,
   };
 }
 
@@ -131,8 +163,8 @@ export function WaiverStepRail({
   className = "",
 }: {
   progress: WaiverRailProgress;
-  /** The three segment names in the diver's own language, already resolved. */
-  labels: Record<WaiverRailSegmentId, string>;
+  /** The segment names in the diver's own language, already resolved. */
+  labels: WaiverRailLabels;
   /** "2 of 3 done", already filled and pluralised by the caller. */
   doneLabel: string;
   /**
@@ -165,13 +197,13 @@ export function WaiverStepRail({
     >
       <ol className="flex flex-wrap items-center gap-x-5 gap-y-1">
         {WAIVER_RAIL_ORDER.map((id) => {
+          const settled = progress[id];
+          const label = labels[id];
+          // Questions is a step only on a release that asks the shop's own.
+          if (settled === null || label === undefined) return null;
           const anchor = anchors?.[id];
           const mark = (
-            <SettledCheck
-              settled={progress[id]}
-              label={labels[id]}
-              className="text-sm font-medium"
-            />
+            <SettledCheck settled={settled} label={label} className="text-sm font-medium" />
           );
           // A flex box, not a block: a block `<li>` set the mark on its own
           // 24px body-text strut, 26px tall with the 20px mark at its top, and
@@ -180,7 +212,7 @@ export function WaiverStepRail({
             <li
               key={id}
               data-rail-step={id}
-              className={`flex items-center ${progress[id] ? "" : "text-muted"}`.trim()}
+              className={`flex items-center ${settled ? "" : "text-muted"}`.trim()}
             >
               {anchor ? (
                 <a

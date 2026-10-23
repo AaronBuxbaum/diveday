@@ -16,6 +16,7 @@ import { validateMedicalAnswers } from "@/lib/medical";
 import { personNamesMatch } from "@/lib/person-name";
 import { localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
+import { buildShopAnswers, draftShopAnswersFrom } from "@/lib/waiver-questions";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
 import { needsMedicalReview } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
@@ -23,7 +24,7 @@ import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { bookings, people, waiverRecords } from "./schema";
 import { seatMinorDeclared } from "./waiver-signing";
-import { shopTimezone } from "./waivers-templates";
+import { getWaiverTemplateQuestions, shopTimezone } from "./waivers-templates";
 
 export type TokenWaiverState =
   | { state: "unavailable" }
@@ -116,12 +117,26 @@ export async function saveWaiverDraft(
     medicalAnswers: MedicalAnswers;
     /** The guardian section as typed, for a parent who comes back to the link. */
     guardian?: DraftGuardian;
+    /**
+     * The shop questions as typed, raw by question id. Kept only where a value
+     * reads as a valid answer to a question the record's own template version
+     * asks; omitted, the saved draft is left as it was.
+     */
+    shopAnswers?: Readonly<Record<string, string>>;
     now?: Date;
   },
 ): Promise<boolean> {
   const state = await getWaiverForToken(db, token, input.now);
   if (state.state !== "available") return false;
   const now = input.now ?? nowDate();
+  const shopAnswers = input.shopAnswers;
+  const draftShopAnswers =
+    shopAnswers === undefined
+      ? undefined
+      : draftShopAnswersFrom(
+          await getWaiverTemplateQuestions(db, state.record.shopId, state.record.templateId),
+          (id) => shopAnswers[id],
+        );
   const [saved] = await db
     .update(waiverRecords)
     .set({
@@ -130,6 +145,7 @@ export async function saveWaiverDraft(
       draftAcknowledged: input.acknowledged,
       draftMedicalAnswers: input.medicalAnswers,
       ...(input.guardian === undefined ? {} : { draftGuardian: input.guardian }),
+      ...(draftShopAnswers === undefined ? {} : { draftShopAnswers }),
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id });
@@ -138,6 +154,17 @@ export async function saveWaiverDraft(
 
 export type CompleteWaiverOutcome =
   | { ok: true; status: "completed" | "medical_review"; idempotent: boolean }
+  | {
+      ok: false;
+      /**
+       * A shop question's answer is missing (a required one left blank) or is
+       * not a value its kind can hold. Never about *which* answer was given:
+       * shop questions inform and never gate (dive-domain review B1).
+       */
+      reason: "invalid_shop_answers";
+      /** The first refused question in the shop's order, for the page to ring. */
+      questionId: string;
+    }
   | {
       ok: false;
       reason:
@@ -421,6 +448,13 @@ export async function completeWaiver(
      * page never rendered for them.
      */
     guardian?: GuardianInput;
+    /**
+     * The diver's answers to the shop's own questions, raw by question id.
+     * Only the ids are trusted: the questions, their prompts, kinds and
+     * options are read from the record's own template version, and the
+     * sealed snapshot is built from those (dive-domain review B1).
+     */
+    shopAnswers?: Readonly<Record<string, string>>;
     now?: Date;
   },
 ): Promise<CompleteWaiverOutcome> {
@@ -496,6 +530,25 @@ export async function completeWaiver(
   if (!medicalValidation.ok) {
     return { ok: false, reason: "invalid_medical" };
   }
+  // **The shop's own questions** (glossary *Shop question*), read from the
+  // version this link was issued under, the way `template_body` is: a link
+  // signs against what the diver was shown, never what the shop publishes
+  // later. Refused before the record is touched, like every refusal above.
+  // The outcome is a snapshot or a refusal and nothing else: no answer, of
+  // any kind, reaches the status, the medical review, or anything that reads
+  // them. `required` is answered, never a particular answer.
+  const questions = await getWaiverTemplateQuestions(
+    db,
+    state.record.shopId,
+    state.record.templateId,
+  );
+  const submittedShopAnswers = input.shopAnswers ?? {};
+  const shopAnswers = buildShopAnswers(questions, (id) =>
+    Object.hasOwn(submittedShopAnswers, id) ? submittedShopAnswers[id] : null,
+  );
+  if (!shopAnswers.ok) {
+    return { ok: false, reason: "invalid_shop_answers", questionId: shopAnswers.questionId };
+  }
   const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);
   const status = medicalReviewRequired ? ("medical_review" as const) : ("completed" as const);
   const [saved] = await db
@@ -508,6 +561,9 @@ export async function completeWaiver(
       signedAt: evidence.signedAt,
       medicalAnswers: input.medicalAnswers,
       medicalReviewRequired,
+      // In the same pending-guarded update as the signature, so the seal
+      // below covers it. Null exactly when the version asked nothing.
+      shopAnswers: shopAnswers.snapshot,
       completedAt: now,
       // Signed: the link has done its job, so the openable copy goes. The token
       // still *resolves* (a diver revisiting sees their signed release) — it
@@ -528,6 +584,7 @@ export async function completeWaiver(
           }
         : {}),
       draftGuardian: null,
+      draftShopAnswers: null,
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id, status: waiverRecords.status });

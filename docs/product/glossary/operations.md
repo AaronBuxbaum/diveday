@@ -439,7 +439,10 @@
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
   `invalid` means staff must stop and investigate. The signed records' **Can’t be checked** view
-  lists the `unsealed` ones.
+  lists the `unsealed` ones. A release that asked **shop questions** seals the diver's answers too:
+  the snapshot joins the sealed set only when it is there, so a release signed before shops could
+  ask anything keeps the digest it was sealed with, and an erasure's re-seal leaves the answers out
+  (ADR 20260729-staffing-waiver-audit-and-localized-copy, amendment of 2026-10-23).
 
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
@@ -1372,7 +1375,9 @@
   answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox,
   ended by a **physician clearance** recorded against that record or, while it stays open, by a clean
   later release (H-98 amended, #2195). The hold is a fact about the diver, not the trip: until one of
-  those, it blocks every departure, including one that does not require the release (H-104).
+  those, it blocks every departure, including one that does not require the release (H-104). A
+  version can also carry the shop's own **shop questions**, which are part of the version: a changed
+  list is a new version, chosen as a correction or a material change like any other edit.
 
   **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
   held against the version it was signed on, so a new version leaves every booked diver on every
@@ -1398,6 +1403,24 @@
   product boundary, not legal advice: a shop whose own counsel wants staff on a release still has
   the paper/in-person path, and if that ever becomes the norm it is a human decision to record
   (H-01/H-03), not a query to widen.
+- **Shop question** — one of up to fifteen questions a shop adds to its release ("How did you hear
+  about us?", "Do you carry dive insurance?"): yes or no, short text, a whole number, a date, or one
+  of a list. A diver answers them after the medical questionnaire and the emergency contact, in
+  their own section and their own step, before signing. They **inform and never gate**: no answer
+  holds anyone back from a departure, and *required* means answered, never answered a particular
+  way. The questions belong to the release version the record was issued on; at signing the server
+  writes a snapshot of each prompt and its answer onto the record, inside the **integrity seal**, so
+  a later edit or deletion never changes what a diver was asked. A version that asked nothing leaves
+  no snapshot. An answer is what the diver wrote and nothing more: never evidence of fitness, age,
+  emergency contact or certification, which DiveDay asks for itself, and not where diving currency
+  lives (that is asked on each booking). A prompt or option with a health word gets a warning in
+  the editor, because health questions belong to the standard questionnaire, which refers a diver
+  to a doctor; an answer here is never shown to the crew as a medical alert, and the diver is told
+  to answer health questions on the questionnaire instead. The signed record shows the sealed
+  answers exactly as sealed, and, under its own heading, the shop's current questions that the
+  record's own version did not ask (decided from the two versions, never from a missing answer). A
+  paper, imported or erased release records no answers, and the signed record says so. The answers
+  travel in the shop's export, not in the diver's own bundle, as medical answers do.
 - **Course form** — a form a course asks each student to sign as well as the release, such as an
   agency's course release or a safe-diving-practices statement. The words are the shop's own, written
   beside the release and versioned on every real edit (DiveDay ships none, H-10). Each course
@@ -1556,7 +1579,9 @@
   these records, so recording one requires an explicit staff attestation that the paper medical form
   was reviewed and no answer needs physician sign-off. A flagged medical must instead go through the
   diver-facing link, which captures the questionnaire and routes to review — the medical block is
-  never a checkbox. Recorded from a **seat** (a trip's roster, the check-in queue) or from the
+  never a checkbox. It records no answers to the shop's **shop questions** either: nobody attested
+  to them, so the signed record says they were not recorded rather than that they are on the paper.
+  Recorded from a **seat** (a trip's roster, the check-in queue) or from the
   **diver** (their own record), which is the same record either way — a diver who has booked nothing
   yet can still hand over a signed release, and the record simply names no booking. See
   [20260811-person-scoped-paper-waivers](../../architecture/decisions/20260811-person-scoped-paper-waivers.md).

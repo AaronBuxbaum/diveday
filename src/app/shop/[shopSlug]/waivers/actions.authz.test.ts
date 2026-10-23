@@ -49,6 +49,7 @@ const { requireStaffSession } = await import("@/lib/session");
 const { deleteCourseFormAction, saveCourseFormAction, saveWaiverAction } = await import(
   "./actions"
 );
+const { RELEASE_FORM_IDLE } = await import("./release-form-state");
 
 /** Long enough to clear the 40-character minimum the schema enforces. */
 const NEW_BODY = "Rewritten release text posted by someone who should not be able to publish it.";
@@ -91,7 +92,7 @@ describe("publishing a waiver template", () => {
     const before = await currentTemplate(db, shop.id);
     signIn(shop, captain);
 
-    const to = await redirectedTo(() => saveWaiverAction(withBody(NEW_BODY)));
+    const to = await redirectedTo(() => saveWaiverAction(RELEASE_FORM_IDLE, withBody(NEW_BODY)));
 
     // Bounced to Today, not to a read-only copy of the release: the surface
     // doesn't exist for this role at all.
@@ -114,7 +115,7 @@ describe("publishing a waiver template", () => {
       }),
     );
 
-    const to = await redirectedTo(() => saveWaiverAction(withBody(NEW_BODY)));
+    const to = await redirectedTo(() => saveWaiverAction(RELEASE_FORM_IDLE, withBody(NEW_BODY)));
 
     expect(to).toBe(`/shop/${shop.slug}?notice=waivers-not-authorized`);
     expect(await currentTemplate(db, shop.id)).toEqual(before);
@@ -125,7 +126,7 @@ describe("publishing a waiver template", () => {
     const before = await currentTemplate(db, shop.id);
     signIn(shop, owner);
 
-    const to = await redirectedTo(() => saveWaiverAction(withBody(NEW_BODY)));
+    const to = await redirectedTo(() => saveWaiverAction(RELEASE_FORM_IDLE, withBody(NEW_BODY)));
 
     // Not a bare "saved": the demo shop holds signed releases against the
     // version this just replaced, and every one of them stops counting the
@@ -148,7 +149,9 @@ describe("publishing a waiver template", () => {
     const before = await currentTemplate(db, shop.id);
     signIn(shop, owner);
 
-    const to = await redirectedTo(() => saveWaiverAction(withBody(NEW_BODY, "non-material")));
+    const to = await redirectedTo(() =>
+      saveWaiverAction(RELEASE_FORM_IDLE, withBody(NEW_BODY, "non-material")),
+    );
 
     expect(to).toBe(`/shop/${shop.slug}/waivers?notice=saved`);
     const after = await currentTemplate(db, shop.id);
@@ -162,9 +165,100 @@ describe("publishing a waiver template", () => {
     const before = await currentTemplate(db, shop.id);
     signIn(shop, owner);
 
-    const to = await redirectedTo(() => saveWaiverAction(withBody(before?.body ?? "")));
+    const to = await redirectedTo(() =>
+      saveWaiverAction(RELEASE_FORM_IDLE, withBody(before?.body ?? "")),
+    );
 
     expect(to).toBe(`/shop/${shop.slug}/waivers?notice=waiver-unchanged`);
+    expect(await currentTemplate(db, shop.id)).toEqual(before);
+  });
+
+  it("publishes a questions-only edit as a new version, with the same body", async () => {
+    const { db, shop, owner } = await context();
+    const before = await getCurrentWaiverTemplate(db, shop.id);
+    if (!before) throw new Error("seeded template missing");
+    signIn(shop, owner);
+    const formData = withBody(before.body, "non-material");
+    const questions = [
+      { id: "insurance01", kind: "yes_no", prompt: "Do you carry DAN insurance?", required: true },
+    ];
+    formData.set("questions", JSON.stringify(questions));
+
+    const to = await redirectedTo(() => saveWaiverAction(RELEASE_FORM_IDLE, formData));
+
+    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=saved`);
+    const after = await getCurrentWaiverTemplate(db, shop.id);
+    expect(after?.version).toBe(before.version + 1);
+    expect(after?.body).toBe(before.body);
+    expect(after?.questions).toEqual(questions);
+    expect(after?.materialGeneration).toBe(before.materialGeneration);
+  });
+
+  it("refuses a question list the server cannot read, without touching the current version", async () => {
+    const { db, shop, owner } = await context();
+    const before = await currentTemplate(db, shop.id);
+    signIn(shop, owner);
+    for (const questions of [
+      "not json",
+      JSON.stringify([{ id: "bad id", kind: "yes_no", prompt: "Insured?", required: false }]),
+      JSON.stringify([
+        { id: "choice00001", kind: "choice", prompt: "Pick", required: false, options: ["One"] },
+      ]),
+    ]) {
+      const formData = withBody(NEW_BODY);
+      formData.set("questions", questions);
+      expect(await saveWaiverAction(RELEASE_FORM_IDLE, formData)).toMatchObject({
+        status: "refused",
+        refusal: "questions",
+      });
+    }
+    expect(await currentTemplate(db, shop.id)).toEqual(before);
+  });
+
+  // Dive-domain review 2, S2: a refused publish hands back everything typed,
+  // and names the question it refused.
+  it("hands a refused list back with the text and the question it refused", async () => {
+    const { db, shop, owner } = await context();
+    const before = await currentTemplate(db, shop.id);
+    signIn(shop, owner);
+    const formData = withBody(NEW_BODY, "non-material");
+    const nine = Array.from({ length: 9 }, (_, i) => `Option ${i + 1}`);
+    const questions = [
+      { id: "insurance01", kind: "yes_no", prompt: "Insured?", required: true },
+      { id: "heardabout1", kind: "choice", prompt: "Heard of us?", required: false, options: nine },
+    ];
+    formData.set("questions", JSON.stringify(questions));
+
+    expect(await saveWaiverAction(RELEASE_FORM_IDLE, formData)).toEqual({
+      status: "refused",
+      refusal: "questions",
+      questionNumber: 2,
+      typed: { body: NEW_BODY, questions, material: "non-material" },
+    });
+    expect(await currentTemplate(db, shop.id)).toEqual(before);
+  });
+
+  // Security review M2: a list field longer than any real list is refused
+  // before it is parsed, and quickly.
+  it("refuses a huge question list unread", async () => {
+    const { db, shop, owner } = await context();
+    const before = await currentTemplate(db, shop.id);
+    signIn(shop, owner);
+    const formData = withBody(NEW_BODY);
+    const options = Array.from({ length: 150_000 }, (_, i) => String(i));
+    formData.set(
+      "questions",
+      JSON.stringify([
+        { id: "heardabout1", kind: "choice", prompt: "x", required: false, options },
+      ]),
+    );
+    const started = performance.now();
+    expect(await saveWaiverAction(RELEASE_FORM_IDLE, formData)).toMatchObject({
+      status: "refused",
+      refusal: "questions",
+      typed: { questions: null },
+    });
+    expect(performance.now() - started).toBeLessThan(1_000);
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 
@@ -173,9 +267,11 @@ describe("publishing a waiver template", () => {
     const before = await currentTemplate(db, shop.id);
     signIn(shop, owner);
 
-    const to = await redirectedTo(() => saveWaiverAction(withBody("Too short.")));
-
-    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=invalid`);
+    expect(await saveWaiverAction(RELEASE_FORM_IDLE, withBody("Too short."))).toMatchObject({
+      status: "refused",
+      refusal: "body",
+      typed: { body: "Too short." },
+    });
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 
@@ -207,9 +303,11 @@ describe("publishing a waiver template", () => {
     const formData = new FormData();
     formData.set("body", NEW_BODY);
 
-    const to = await redirectedTo(() => saveWaiverAction(formData));
-
-    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=waiver-materiality-required`);
+    expect(await saveWaiverAction(RELEASE_FORM_IDLE, formData)).toMatchObject({
+      status: "refused",
+      refusal: "materiality",
+      typed: { body: NEW_BODY, material: null },
+    });
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 
@@ -219,13 +317,13 @@ describe("publishing a waiver template", () => {
     const noChoice = new FormData();
     noChoice.set("body", NEW_BODY);
 
-    const tooShort = await redirectedTo(() => saveWaiverAction(withBody("Too short.")));
-    const unstated = await redirectedTo(() => saveWaiverAction(noChoice));
+    const tooShort = await saveWaiverAction(RELEASE_FORM_IDLE, withBody("Too short."));
+    const unstated = await saveWaiverAction(RELEASE_FORM_IDLE, noChoice);
 
-    // The inequality is the pin, not either code on its own: a staffer reads
-    // the banner, and one code can only ever render one sentence.
-    expect(unstated).not.toBe(tooShort);
-    expect(unstated).not.toContain("notice=invalid");
+    // The inequality is the pin, not either refusal on its own: a staffer
+    // reads the line beside Publish, and one refusal renders one sentence.
+    expect(unstated.status === "refused" && unstated.refusal).toBe("materiality");
+    expect(tooShort.status === "refused" && tooShort.refusal).toBe("body");
   });
 });
 

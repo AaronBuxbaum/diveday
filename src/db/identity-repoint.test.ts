@@ -140,6 +140,48 @@ describe("repointHeldBooking", () => {
     expect(filed.every((row) => row.personId === second && row.moved === first)).toBe(true);
   });
 
+  // Security review M1: what the old match half-typed on the link stays with
+  // nobody, including the shop questions' draft.
+  it("clears every draft on the link it moves", async () => {
+    const { db, shop, second, bookingId, staff } = await namesakes();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, bookingId));
+    await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, bookingId));
+    await db
+      .update(waiverRecords)
+      .set({
+        draftSignerName: "Alex K",
+        draftAcknowledged: true,
+        draftShopAnswers: { demoreferral1: "secret" },
+      })
+      .where(eq(waiverRecords.bookingId, bookingId));
+
+    const result = await repointHeldBooking(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      toPersonId: second,
+    });
+    expect(result.ok).toBe(true);
+    const moved = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, bookingId));
+    expect(moved.length).toBeGreaterThan(0);
+    for (const row of moved) {
+      expect(row.personId).toBe(second);
+      expect(row.draftSignerName).toBeNull();
+      expect(row.draftAcknowledged).toBe(false);
+      expect(row.draftShopAnswers).toBeNull();
+    }
+  });
+
   it("refuses another shop's namesake", async () => {
     const { db, shop, bookingId, staff } = await namesakes();
     const [other] = await db

@@ -4,8 +4,12 @@ import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { canPersonReadMedicalAnswers, canPersonReadMedicalClearanceDocument } from "@/db/authz";
-import { getSignedWaiverForDiver } from "@/db/waivers";
+import {
+  canPersonReadMedicalAnswers,
+  canPersonReadMedicalClearanceDocument,
+  canPersonReadShopAnswers,
+} from "@/db/authz";
+import { getSignedRecordShopAnswers, getSignedWaiverForDiver } from "@/db/waivers";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
@@ -17,6 +21,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED } from "@/lib/waiver-integrity";
 import { MedicalAnswers } from "./_components/MedicalAnswers";
+import { ShopAnswersCard } from "./_components/ShopAnswersCard";
 import { showMedicalAnswersAction } from "./actions";
 
 export const instant = true;
@@ -51,9 +56,10 @@ export default async function SignedWaiverPage({
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [readsMedicalAnswers, canOpenEvaluation] = await Promise.all([
+  const [readsMedicalAnswers, canOpenEvaluation, readsShopAnswers] = await Promise.all([
     canPersonReadMedicalAnswers(db, shop.id, session.user.personId),
     canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
+    canPersonReadShopAnswers(db, shop.id, session.user.personId),
   ]);
   // Never the full questionnaire on render: an owner or manager reads it by
   // tapping "Show answers", whose action records the read (issue #2157).
@@ -65,6 +71,11 @@ export default async function SignedWaiverPage({
     withholdAnswers: true,
   });
   if (!waiver) notFound();
+  // The answers to the shop's own questions: every staff role reads them, as
+  // they read the release (glossary *Shop question*).
+  const shopAnswers = readsShopAnswers
+    ? await getSignedRecordShopAnswers(db, { shopId: shop.id, personId, recordId })
+    : null;
 
   const when = (date: Date) => formatDateTimeTz(date, locale, shop.timezone);
   const evaluatedOn =
@@ -252,6 +263,22 @@ export default async function SignedWaiverPage({
             }}
           />
         </SectionCard>
+
+        {shopAnswers ? (
+          <ShopAnswersCard
+            shopAnswers={shopAnswers.shopAnswers}
+            versionAsked={shopAnswers.versionAsked}
+            notOnThisRelease={shopAnswers.notOnThisRelease}
+            erasedAt={shopAnswers.erasedAt}
+            signatureMethod={waiver.signatureMethod}
+            templateVersion={waiver.templateVersion}
+            signedAt={waiver.signedAt}
+            identityHeld={shopAnswers.identityHeld}
+            locale={locale}
+            timezone={shop.timezone}
+            t={t}
+          />
+        ) : null}
 
         <SectionCard title={t("waiversStaff.record.releaseHeading")}>
           <p className="text-sm whitespace-pre-wrap text-muted">{waiver.templateBody}</p>

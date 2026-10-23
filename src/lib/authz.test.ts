@@ -29,12 +29,14 @@ import {
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
+  canReadShopAnswers,
   canRefund,
   canReplyToReviews,
   canViewShopActivity,
   canViewShopReports,
   isStaff,
   type Role,
+  STAFF_ROLES,
   staffDestinationGates,
 } from "./authz";
 
@@ -117,6 +119,15 @@ describe("accountable-role gates (export/import/reports)", () => {
       });
     });
   }
+});
+
+describe("canReadShopAnswers (every staff role)", () => {
+  it("admits every staff role that can open a signed record, and nobody else", () => {
+    for (const role of STAFF_ROLES) expect(canReadShopAnswers([role])).toBe(true);
+    expect(canReadShopAnswers(["diver"])).toBe(false);
+    expect(canReadShopAnswers([])).toBe(false);
+    expect(canReadShopAnswers(undefined)).toBe(false);
+  });
 });
 
 describe("canCallDayBlowout (owner/manager/captain)", () => {

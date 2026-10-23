@@ -346,6 +346,25 @@ export function canReadMedicalAnswers(roles: readonly Role[] | undefined): boole
 }
 
 /**
+ * Who reads the **shop's own questions as a diver answered them** on a signed
+ * record (glossary *Shop question*): every staff role that can open the record.
+ * The answers are operational (dives logged, how they heard of the shop,
+ * insurance), the crew act on them, and hiding them behind owner/manager would
+ * mean the people at the rail never see them (dive-domain review, point 1).
+ *
+ * Its own predicate, never a borrow of whatever gate the record page happens
+ * to run, for the reason {@link canReadPrivateRecapPulse} sets out: a reader
+ * set that may change needs a name. That answer holds only while health
+ * questions stay on the standard questionnaire, which is why the editor warns
+ * on a health word; if a medical-class field ever arrives it is not this one.
+ * Never the roster, the manifest, the dispute sheet, or a bearer page other
+ * than the diver's own waiver.
+ */
+export function canReadShopAnswers(roles: readonly Role[] | undefined): boolean {
+  return isStaff(roles);
+}
+
+/**
  * **Retire a physician's refusal so the seat can take a fresh release** — the
  * supersede act the glossary's *Physician clearance* entry named as the thing
  * to build once a shop hit it (Aaron, 2026-10-06).

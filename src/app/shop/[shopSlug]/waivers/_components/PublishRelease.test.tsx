@@ -20,12 +20,18 @@ const COPY: PublishReleaseCopy = {
   correctionDetail: "Every standing signature stays current.",
   material: "A material change",
   materialDetail: "Asks all 27 standing signatures to sign again. 4 divers board within 7 days.",
+  correctionQuestions: "A correction: questions only",
+  correctionQuestionsDetail:
+    "Every standing signature stays current. Those divers are not asked the new questions until they sign again.",
+  materialQuestions: "A material change: everyone answers the new questions",
+  materialQuestionsDetail:
+    "Asks all 27 standing signatures to sign again and answer the new questions. 4 divers board within 7 days.",
   action: "Publish",
   confirm: "Publish — 27 sign again",
   pending: "Publishing…",
 };
 
-function renderPublish(standingSignatures: boolean) {
+function renderPublish(standingSignatures: boolean, questionsOnly = false) {
   const submitted = vi.fn();
   const view = render(
     // A real `<form>`, because what these tests are about is whether the form
@@ -38,7 +44,11 @@ function renderPublish(standingSignatures: boolean) {
         submitted();
       }}
     >
-      <PublishRelease copy={COPY} standingSignatures={standingSignatures} />
+      <PublishRelease
+        copy={COPY}
+        standingSignatures={standingSignatures}
+        questionsOnly={questionsOnly}
+      />
     </form>,
   );
   const form = view.container.querySelector("form");
@@ -155,5 +165,38 @@ describe("with nothing signed against the current release", () => {
     expect(screen.queryByText(COPY.choiceLegend)).toBeNull();
     expect(screen.getByRole("button", { name: COPY.action })).toHaveAttribute("type", "submit");
     expect(form.checkValidity()).toBe(true);
+  });
+});
+
+/**
+ * Dive-domain review 2, S1: an owner who added "How did you hear about us?"
+ * did not make "a correction, wording only", and the only option that
+ * sounded like adding something sent the whole roster back to sign.
+ */
+describe("a questions-only edit", () => {
+  it("names what a correction does to standing signers, and keeps the cost on the material option", () => {
+    renderPublish(true, true);
+    expect(screen.getByRole("radio", { name: /A correction: questions only/ })).toBeTruthy();
+    expect(screen.getByText(COPY.correctionQuestionsDetail)).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: /A material change: everyone answers the new questions/ }),
+    ).toBeTruthy();
+    expect(screen.getByText(COPY.materialQuestionsDetail)).toBeTruthy();
+    // The wording-only pair is not on screen beside it.
+    expect(screen.queryByText(COPY.correction)).toBeNull();
+  });
+
+  it("still asks: neither option is chosen for the staffer", () => {
+    const { form } = renderPublish(true, true);
+    expect(form.checkValidity()).toBe(false);
+    expect(
+      screen.getAllByRole("radio").every((radio) => !(radio as HTMLInputElement).checked),
+    ).toBe(true);
+  });
+
+  it("keeps the wording pair when the text changed", () => {
+    renderPublish(true, false);
+    expect(screen.getByText(COPY.correction)).toBeTruthy();
+    expect(screen.queryByText(COPY.correctionQuestions)).toBeNull();
   });
 });

@@ -1403,7 +1403,16 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   shopFile(BUDDY_PAIRS_CSV),
   {
     file: "waiver_templates.csv",
-    header: ["id", "title", "version", "material_generation", "deleted_at", "created_at", "body"],
+    header: [
+      "id",
+      "title",
+      "version",
+      "material_generation",
+      "deleted_at",
+      "created_at",
+      "body",
+      "questions",
+    ],
     rows: ({ templateRows }) =>
       templateRows.map((row) => [
         row.id,
@@ -1413,6 +1422,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.deletedAt,
         row.createdAt,
         row.body,
+        // The shop's own questions on this version, as JSON: part of the
+        // version, so a restore that lost them would pin every record to a
+        // version that asked nothing (glossary *Shop question*).
+        JSON.stringify(row.questions),
       ]),
     note: EXPORT_FILE_NOTES["waiver_templates.csv"],
   },

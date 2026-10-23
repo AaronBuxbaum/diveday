@@ -52,6 +52,17 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
  *   risk, so the radios do not render and Publish stands alone — the same
  *   condition the old two-button fork used, kept exactly.
  *
+ * - **An edit to the questions alone has its own words** (dive-domain review
+ *   2, S1). "A correction: wording only" is not what an owner who added "How
+ *   did you hear about us?" did, and the only option that sounded like adding
+ *   something sent the whole roster back to sign. When the release text is
+ *   unchanged and only the list moved, the pair says what each choice does to
+ *   standing signers instead: a correction keeps them and does not ask them
+ *   the new questions until they sign again; a material change sends everyone
+ *   back. The choice stays explicit and the exposure count stays on the
+ *   material option: only the words change, and materiality is never
+ *   inferred from which part changed.
+ *
  * The words all arrive from the server (`waiversStaff.publish.*`): staff copy
  * never crosses to the client, so a staff Client Component takes its words as
  * props (ADR 20260730-staff-copy-localization).
@@ -61,6 +72,9 @@ export type PublishReleaseCopy = {
   choiceLegend: string;
   correction: string;
   correctionDetail: string;
+  /** The correction option when only the questions changed. */
+  correctionQuestions: string;
+  correctionQuestionsDetail: string;
   material: string;
   /**
    * What a material publish costs, already counted and pluralised by the
@@ -68,6 +82,9 @@ export type PublishReleaseCopy = {
    * any of those divers are on a departure inside the operational horizon.
    */
   materialDetail: string;
+  /** The material option when only the questions changed, with the same counts. */
+  materialQuestions: string;
+  materialQuestionsDetail: string;
   /** The one button. */
   action: string;
   /** Its armed label on the material path, carrying the count again. */
@@ -76,7 +93,7 @@ export type PublishReleaseCopy = {
 };
 
 /** The two answers `saveWaiverAction` accepts, and the only two this posts. */
-type Materiality = "material" | "non-material";
+export type Materiality = "material" | "non-material";
 
 function MaterialityChoice({
   value,
@@ -120,8 +137,14 @@ function MaterialityChoice({
 export function PublishRelease({
   copy,
   standingSignatures,
+  questionsOnly = false,
+  initialChoice = null,
 }: {
   copy: PublishReleaseCopy;
+  /** The release text is as published and only the questions changed. */
+  questionsOnly?: boolean;
+  /** The choice a refused publish carried, so it stands again beside the text. */
+  initialChoice?: Materiality | null;
   /**
    * Whether any signature stands against the current release. False on a
    * shop's first release, and on one nobody has signed yet — publishing then
@@ -129,7 +152,7 @@ export function PublishRelease({
    */
   standingSignatures: boolean;
 }) {
-  const [choice, setChoice] = useState<Materiality | null>(null);
+  const [choice, setChoice] = useState<Materiality | null>(initialChoice);
   const publishClass = buttonClass();
 
   // A row wrapper on both branches, so the button keeps its own width inside
@@ -151,15 +174,15 @@ export function PublishRelease({
         <div className="mt-2">
           <MaterialityChoice
             value="non-material"
-            title={copy.correction}
-            detail={copy.correctionDetail}
+            title={questionsOnly ? copy.correctionQuestions : copy.correction}
+            detail={questionsOnly ? copy.correctionQuestionsDetail : copy.correctionDetail}
             checked={choice === "non-material"}
             onChoose={setChoice}
           />
           <MaterialityChoice
             value="material"
-            title={copy.material}
-            detail={copy.materialDetail}
+            title={questionsOnly ? copy.materialQuestions : copy.material}
+            detail={questionsOnly ? copy.materialQuestionsDetail : copy.materialDetail}
             checked={choice === "material"}
             onChoose={setChoice}
           />

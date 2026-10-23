@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
@@ -249,7 +250,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // confirm in writing (glossary, **Waiver / release**), and the diver who
   // reads the last thing on the page is the one who never chases the sign-off
   // and turns up at the dock unboardable.
-  await expect(page.getByTestId("waiver-step-rail")).toContainText("2 of 3 done");
+  // Four steps, because the demo shop asks its own questions
+  // (`seed-waiver-questions.ts`): Release, Questions and Sign settle; Medical
+  // stays open.
+  await expect(page.getByTestId("waiver-step-rail")).toContainText("3 of 4 done");
 
   // The page a referred diver hands their doctor (H-127, amended after the
   // layer r5-3 reviews): their name and the official form to print; the
@@ -317,8 +321,9 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   await page.goto(waiverHref ?? "/");
   await page.getByLabel("Type your full name").fill("Adversarial Diver");
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
-  // Answer every question except the last one.
-  const noRadios = page.getByRole("radio", { name: "No" });
+  // Answer every question except the last one. The questionnaire's own
+  // radios: the demo shop's insurance question has a "No" too.
+  const noRadios = page.locator("#medical-questionnaire").getByRole("radio", { name: "No" });
   // Same wait as the first test above: the questionnaire streams in after `goto` resolves.
   await noRadios.first().waitFor();
   const questionCount = await noRadios.count();
@@ -686,13 +691,14 @@ test("a Box opened after a draft reload asks its questions rather than answering
 /**
  * **The waiver paces itself** — ADR 20260827-the-divers-thread, decision 5.
  *
- * The counting rule, walked end to end on the real page: fresh draft 0 of 3,
- * any medical answer 1 of 3, all answered 2 of 3, and 3 of 3 only once
- * `completeWaiver` has taken the signature. The rule itself is pinned without a
+ * The counting rule, walked end to end on the real page: fresh draft 0 of 4,
+ * any medical answer 1 of 4, all answered 3 of 4 (the demo shop's own
+ * questions are all optional, so their step settles with Medical), and 4 of 4
+ * only once `completeWaiver` has taken the signature. The rule itself is pinned without a
  * browser in `src/app/waivers/[token]/WaiverStepRail.test.tsx`; what only this
  * can prove is that the live count is wired to the diver's own radios.
  */
-test("the step rail paces the waiver and reaches 3 of 3 only once it is signed", async ({
+test("the step rail paces the waiver and reaches 4 of 4 only once it is signed", async ({
   page,
 }) => {
   // A held send counts eight seconds down before it leaves (ADR
@@ -706,12 +712,13 @@ test("the step rail paces the waiver and reaches 3 of 3 only once it is signed",
 
   await page.goto(waiverHref ?? "/");
   const rail = page.getByTestId("waiver-step-rail");
-  // Release · Medical · Sign, each named in words beside a mark that differs by
-  // shape as well as ink — the rail is readable with no colour perception.
-  for (const step of ["Release", "Medical", "Sign"]) {
+  // Release · Medical · Questions · Sign, each named in words beside a mark
+  // that differs by shape as well as ink — the rail is readable with no colour
+  // perception. Questions is there because the demo shop asks its own.
+  for (const step of ["Release", "Medical", "Questions", "Sign"]) {
     await expect(rail.getByText(step, { exact: true })).toBeVisible();
   }
-  await expect(rail).toContainText("0 of 3 done");
+  await expect(rail).toContainText("0 of 4 done");
   // Not a navigator on first pass: nothing here lets a diver tap past the
   // release to the signature.
   await expect(rail.getByRole("link")).toHaveCount(0);
@@ -724,18 +731,18 @@ test("the step rail paces the waiver and reaches 3 of 3 only once it is signed",
   // no "I have read this" control of its own — presenting the full text is what
   // typed consent means here — so moving into the questions is the evidence.
   await noRadios.first().check();
-  await expect(rail).toContainText("1 of 3 done");
+  await expect(rail).toContainText("1 of 4 done");
 
   for (let i = 1; i < questionCount; i++) {
     await noRadios.nth(i).check();
   }
-  await expect(rail).toContainText("2 of 3 done");
+  await expect(rail).toContainText("3 of 4 done");
 
   // And it stops there. A typed name and a ticked box are not a signature, so
-  // the page a diver is still filling in can never read 3 of 3.
+  // the page a diver is still filling in can never read 4 of 4.
   await page.getByLabel("Type your full name").fill("Priya Sharma");
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
-  await expect(rail).toContainText("2 of 3 done");
+  await expect(rail).toContainText("3 of 4 done");
 
   // One primary. Saving is still a real submit on the same form — the
   // affordance demoted to a text link, the mechanism did not — so a diver with
@@ -745,7 +752,7 @@ test("the step rail paces the waiver and reaches 3 of 3 only once it is signed",
   await expect(page).toHaveURL(/\/ready\//);
 
   await page.goto(waiverHref ?? "/");
-  await expect(page.getByTestId("waiver-step-rail")).toContainText("3 of 3 done");
+  await expect(page.getByTestId("waiver-step-rail")).toContainText("4 of 4 done");
 });
 
 /**
@@ -772,19 +779,25 @@ test("a Box a diver's own yes opens keeps the rail's Medical step open", async (
 
   await page.goto(waiverHref ?? "/");
   const rail = page.getByTestId("waiver-step-rail");
-  const noRadios = page.getByRole("radio", { name: "No" });
+  // The questionnaire's own radios: the demo shop's insurance question has a
+  // "No" too, and the counter below counts page one alone.
+  const noRadios = page.locator("#medical-questionnaire").getByRole("radio", { name: "No" });
   // Same wait as the first test above: the questionnaire streams in after `goto` resolves.
   await noRadios.first().waitFor();
   const pageOneCount = await noRadios.count();
   for (let i = 0; i < pageOneCount; i++) {
     await noRadios.nth(i).check();
   }
-  await expect(rail).toContainText("2 of 3 done");
+  // The demo shop's own questions are all optional, but Questions waits until
+  // the diver has reached them (dive-domain review 2, S7).
+  await expect(rail).toContainText("2 of 4 done");
+  await page.locator("#shop-questions").scrollIntoViewIfNeeded();
+  await expect(rail).toContainText("3 of 4 done");
 
   // One answer changed, and four required questions arrive with it.
   const over45 = page.getByRole("group", { name: /I am over 45 years of age/ });
   await over45.getByRole("radio", { name: "Yes" }).check();
-  await expect(rail).toContainText("1 of 3 done");
+  await expect(rail).toContainText("1 of 4 done");
   await expect(
     page.getByText("Your answers opened a few follow-up questions above", { exact: false }),
   ).toBeVisible();
@@ -806,7 +819,7 @@ test("a Box a diver's own yes opens keeps the rail's Medical step open", async (
   for (let i = 0; i < boxCount; i++) {
     await boxNoRadios.nth(i).check();
   }
-  await expect(rail).toContainText("2 of 3 done");
+  await expect(rail).toContainText("3 of 4 done");
   await expect(counter).toBeVisible();
 });
 
@@ -1364,4 +1377,117 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
   // way back is a fresh release (Aaron, 2026-10-06), offered to the owner.
   await expect(row.getByRole("link", { name: "Record physician clearance" })).toHaveCount(0);
   await expect(row.getByRole("button", { name: "Send a new waiver" })).toBeVisible();
+});
+
+/**
+ * **The shop's own questions, end to end** (glossary *Shop question*): an
+ * owner adds one to the release and publishes it as a correction, a diver
+ * answers it after the medical questionnaire and signs, and the signed record
+ * shows what they wrote. The answer is sealed with the release, so it is read
+ * back from the record, never from the form.
+ *
+ * On the demo shop, like the editor test above, because the send needs a
+ * booked diver; the per-test reset restores the release.
+ */
+test("a shop question is published, answered by the diver and shown on the signed record", async ({
+  page,
+}) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2), and this test also publishes and
+  // signs, so it takes the slow budget.
+  test.slow();
+  const staff = staffTranslator("en-US");
+  const diver = diverTranslator("en-US");
+  const PROMPT = "Which hotel are you staying at?";
+  const ANSWER = "Casa Marina";
+
+  await page.goto("/shop/blue-mantis/waivers#release");
+  await expect(
+    page.getByRole("heading", { name: staff("waiversStaff.questions.heading") }),
+  ).toBeVisible();
+  // What DiveDay already asks is said before anyone adds a question.
+  await expect(page.getByText(staff("waiversStaff.questions.alreadyAsked"))).toBeVisible();
+  const before = await page
+    .getByLabel(staff("waiversStaff.questions.promptLabel"), { exact: true })
+    .count();
+  await page.getByRole("button", { name: staff("waiversStaff.questions.add") }).click();
+  const prompts = page.getByLabel(staff("waiversStaff.questions.promptLabel"), { exact: true });
+  await expect(prompts).toHaveCount(before + 1);
+  const added = page.locator("[data-shop-question]").last();
+  // A health word warns and never refuses.
+  await prompts.last().fill("Any medical conditions?");
+  await expect(added.getByText(staff("waiversStaff.questions.healthWarning"))).toBeVisible();
+  await prompts.last().fill(PROMPT);
+  await expect(added.getByText(staff("waiversStaff.questions.healthWarning"))).toHaveCount(0);
+  await added
+    .getByRole("combobox", { name: staff("waiversStaff.questions.kindLabel") })
+    .selectOption({ label: staff("waiversStaff.questions.kind.text") });
+  await added.getByLabel(staff("waiversStaff.questions.requiredLabel")).check();
+
+  // Only the questions changed, so the choice says what each option does to
+  // the divers who already signed (dive-domain review 2, S1).
+  await expect(
+    page.getByText(staff("waiversStaff.publish.correctionQuestionsDetail")),
+  ).toBeVisible();
+  // A correction keeps every standing signature, and the list is still a new version.
+  await page
+    .getByRole("radio", { name: staff("waiversStaff.publish.correctionQuestions") })
+    .check();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(staff("waiversStaff.banner.savedNew"));
+  await expect(page.getByText(/Version 4 ·/)).toBeVisible();
+
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Trip");
+  const row = await openFirstRosterRowWith(page, "Send waiver");
+  const diverLink = row.locator('a[href*="/divers/"]').first();
+  const diverName = (await diverLink.innerText()).trim();
+  const diverHref = await diverLink.getAttribute("href");
+  await row.getByRole("button", { name: "Send waiver", exact: true }).click();
+  const waiverHref = await waiverLinkFromResult(
+    page,
+    page.locator("#roster").filter({ visible: true }).getByRole("status"),
+  );
+
+  await page.goto(waiverHref);
+  const section = page.locator("#shop-questions");
+  await expect(
+    section.getByRole("heading", {
+      name: diver("waiver.shopQuestionsHeading", { shop: "Blue Mantis Divers" }),
+    }),
+  ).toBeVisible();
+  // Its own step on the rail, between Medical and Sign.
+  await expect(
+    page.getByTestId("waiver-step-rail").getByText(diver("waiver.railQuestions"), { exact: true }),
+  ).toBeVisible();
+  // Nothing is pre-selected in the shop's section.
+  await expect(section.getByRole("radio", { checked: true })).toHaveCount(0);
+
+  // Every medical answer "No": the questionnaire's radios, never the shop's.
+  const medicalNo = page.locator("#medical-questionnaire").getByRole("radio", { name: "No" });
+  await medicalNo.first().waitFor();
+  const count = await medicalNo.count();
+  for (let i = 0; i < count; i++) await medicalNo.nth(i).check();
+  await section.getByLabel(PROMPT).fill(ANSWER);
+  await page.getByLabel("Type your full name").fill(diverName);
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  // The diver's own record opens onto the release they just signed: its
+  // Waiver row is a door to the signed record.
+  await page.goto(diverHref ?? "/");
+  await page
+    .getByRole("region", { name: staff("divers.stats.waiver"), exact: true })
+    .locator('a[href*="/waivers/"]')
+    .first()
+    .click();
+  await page.waitForURL(/\/divers\/[^/]+\/waivers\/[^/]+$/);
+  await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
+  const card = page.locator("section").filter({
+    has: page.getByRole("heading", { name: staff("waiversStaff.record.shopAnswersHeading") }),
+  });
+  await expect(card.getByText(PROMPT)).toBeVisible();
+  await expect(card.getByText(ANSWER, { exact: true })).toBeVisible();
 });

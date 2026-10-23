@@ -100,6 +100,7 @@ import {
   sellableCapacity,
   tripBoatCertifiedPassengers,
 } from "./trips-queries";
+import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -3792,10 +3793,7 @@ export async function splitBookingIdentity(
         .update(waiverRecords)
         .set({
           personId: person.id,
-          draftSignerName: null,
-          draftMedicalAnswers: null,
-          draftAcknowledged: false,
-          draftGuardian: null,
+          ...CLEARED_DRAFT_COLUMNS,
           // How the link last reached the matched diver's inbox or phone: a
           // bounce or a provider id about *their* address, not the new diver's.
           deliveryError: null,

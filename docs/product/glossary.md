@@ -302,6 +302,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Shared photo
 - Shop currency
 - Shop day scan
+- Shop question
 - Shore alert contact
 - Sign once
 - Skipped occurrence

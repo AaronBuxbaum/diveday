@@ -1233,7 +1233,14 @@
     "railMedical": "Salud",
     "railSign": "Firma",
     "railProgressOne": "{done} de {total} completado",
-    "railProgressOther": "{done} de {total} completados"
+    "railProgressOther": "{done} de {total} completados",
+    "railQuestions": "Preguntas",
+    "shopQuestionsHeading": "Preguntas de {shop}",
+    "shopQuestionsIntro": "{shop} guarda tus respuestas junto con esta exención.",
+    "shopQuestionsIntroMinor": "Responde estas preguntas sobre {name}. {shop} guarda las respuestas junto con esta exención.",
+    "errorShopQuestionRequired": "Responde esta pregunta para firmar.",
+    "errorShopQuestionInvalid": "Esa respuesta no es válida para esta pregunta. Revísala e inténtalo de nuevo.",
+    "shopQuestionsHealthNote": "Las preguntas de salud están en el cuestionario médico de arriba. Si alguna te corresponde, respóndela allí, no aquí."
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",

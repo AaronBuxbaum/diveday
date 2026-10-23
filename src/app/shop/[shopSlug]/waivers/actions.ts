@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
@@ -15,10 +16,38 @@ import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/l
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { readPostedShopQuestions, type ShopQuestion } from "@/lib/waiver-questions";
+import {
+  type ReleaseFormRefusal,
+  type ReleaseFormState,
+  typedShopQuestions,
+} from "./release-form-state";
 
 const templateSchema = z.object({
   body: z.string().trim().min(40).max(12_000),
 });
+
+/**
+ * The editor's "Your questions" list, posted as one JSON field and read by
+ * `readPostedShopQuestions`, the rule of record: refused unread above its
+ * length cap (security review M2), then `parseShopQuestions`. Absent (a POST
+ * that never met the editor) carries the current list forward, as the title
+ * does; present and unreadable is a refusal, never a silent empty list that
+ * would publish a version asking nothing.
+ */
+function readQuestions(
+  formData: FormData,
+): { ok: true; questions?: ShopQuestion[] } | { ok: false; questionNumber?: number } {
+  const raw = formData.get("questions");
+  if (raw === null) return { ok: true };
+  if (typeof raw !== "string") return { ok: false };
+  const questions = readPostedShopQuestions(raw);
+  if (questions.ok) return { ok: true, questions: questions.questions };
+  return {
+    ok: false,
+    ...(questions.index === undefined ? {} : { questionNumber: questions.index + 1 }),
+  };
+}
 
 /**
  * Publish a new version of the shop's waiver — its legal instrument, and the
@@ -30,16 +59,41 @@ const templateSchema = z.object({
  * exactly the layer a POST straight at the action skips. The gate stays *inside*
  * the action for that reason — the page's own check guards the render, this one
  * guards the write (ADR-0006). See `./actions.authz.test.ts`.
+ *
+ * Bound to the editor through `useActionState` (`./_components/ReleaseForm`):
+ * a refusal returns what was typed rather than redirecting, so the release
+ * text and the questions stand back up exactly as they were (dive-domain
+ * review 2, S2; `./release-form-state.ts`). Every success still redirects
+ * with its `?notice=`.
  */
-export async function saveWaiverAction(formData: FormData) {
+export async function saveWaiverAction(
+  _previous: ReleaseFormState,
+  formData: FormData,
+): Promise<ReleaseFormState> {
   const staff = await requireStaffSession();
   const editor = await getDb();
   if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
     redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
   }
   const waivers = shopPath(staff.user.shopSlug, "waivers");
+  const materialValue = readForm(materialField, formData).material;
+  const rawBody = formData.get("body");
+  const refused = (refusal: ReleaseFormRefusal, questionNumber?: number): ReleaseFormState => ({
+    status: "refused",
+    refusal,
+    ...(questionNumber === undefined ? {} : { questionNumber }),
+    typed: {
+      // The release is capped at 12 000 by the form; nothing longer is echoed.
+      body: typeof rawBody === "string" ? rawBody.slice(0, 12_000) : "",
+      questions: typedShopQuestions(formData.get("questions")),
+      material:
+        materialValue === "material" || materialValue === "non-material" ? materialValue : null,
+    },
+  });
   const parsed = templateSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(noticeUrl(waivers, "invalid"));
+  if (!parsed.success) return refused("body");
+  const questions = readQuestions(formData);
+  if (!questions.ok) return refused("questions", questions.questionNumber);
   // Counted *before* the save, because after it the number is zero by
   // construction: the new version is current and nothing is signed against it
   // yet. This is the same act `saveRequirementsAction` performs for one
@@ -55,28 +109,27 @@ export async function saveWaiverAction(formData: FormData) {
   // that is a render-time gate on an action reachable without it — and
   // defaulting a missing answer either way would decide, on the shop's behalf,
   // whether its whole roster signs again.
-  const materialValue = readForm(materialField, formData).material;
   if (atRisk.divers > 0 && materialValue !== "material" && materialValue !== "non-material") {
-    // Its **own** code, never the `invalid` above. That one renders "the
-    // release needs to be at least a few sentences long", and this refusal is
+    // Its **own** refusal, never the `body` one above. That one says the
+    // release needs to be at least a few sentences long, and this refusal is
     // not about the text: an owner told to lengthen a release they never
-    // shortened has been handed the wrong problem, and nothing on the screen
-    // would tell them otherwise.
+    // shortened has been handed the wrong problem.
     //
     // Nor is this an adversary-only path. A material publish bumps
     // `materialGeneration`, so the very next render counts zero standing
     // signatures and `PublishRelease` draws no radios at all; divers then sign
     // the new release over the following minutes. The staffer who spots a typo
     // and publishes again *from that same tab* posts no `material` field, and
-    // lands here. `revalidateAndRedirect` rather than a bare `redirect` for
-    // that reason — the destination render is what finally puts the choice on
-    // screen, so it must not be served from the cached segment that had none.
-    revalidateAndRedirect(waivers, noticeUrl(waivers, "waiver-materiality-required"));
+    // lands here. The path is revalidated for that reason: the refreshed render
+    // is what finally puts the choice on screen, beside the text they typed.
+    revalidatePath(waivers);
+    return refused("materiality");
   }
   const isMaterial = materialValue !== "non-material";
   const { versioned } = await saveWaiverTemplate(editor, {
     shopId: staff.user.shopId,
     body: parsed.data.body,
+    questions: questions.questions,
     material: isMaterial,
     actorPersonId: staff.user.personId,
   });

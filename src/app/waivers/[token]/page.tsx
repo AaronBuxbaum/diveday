@@ -22,14 +22,17 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
-import { medicalProgress, medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
+import { questionnaireForJurisdiction } from "@/lib/medical";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction } from "./actions";
 import { EmergencyContactSection } from "./EmergencyContactSection";
 import { GuardianCard } from "./GuardianCard";
 import { MedicalQuestionnaireSection } from "./MedicalQuestionnaireSection";
+import { medicalDraftState } from "./medical-draft-state";
+import { ShopQuestionsSection } from "./ShopQuestionsSection";
 import { SignatureCard } from "./SignatureCard";
+import { isShopQuestionRefusal, shopQuestionsForPage } from "./shop-questions-state";
 import { WaiverCompleted } from "./WaiverCompleted";
 import { ExpiredLink, HeldWaiverCard, UnavailableWaiverLink } from "./WaiverDoorCards";
 import { WaiverHelpLine } from "./WaiverHelpLine";
@@ -65,6 +68,8 @@ export default async function WaiverPage({
     saved?: string;
     error?: string;
     field?: string;
+    /** The shop question a refusal names (`shopQuestionsForPage`). */
+    q?: string;
     sent?: string;
     at?: string;
   }>;
@@ -75,7 +80,7 @@ export default async function WaiverPage({
   // exists so a *repeat* of the identical refusal (same wrong name twice) still remounts
   // `FieldErrorFocus` and re-runs the scroll-and-ring — without it the second attempt renders an
   // unchanged tree and the effect never fires again (see FieldErrorFocus's own docstring).
-  const { saved, error, field, sent, at } = await searchParams;
+  const { saved, error, field, q, sent, at } = await searchParams;
   // `Object.hasOwn`, not `in` — `field` is attacker-supplied and `in` walks
   // the prototype chain (`?field=toString` would mint a fieldError whose
   // anchor is a built-in function).
@@ -89,8 +94,12 @@ export default async function WaiverPage({
   // guardian's card, and the emergency contact's two boxes. The banner below
   // keeps only what has no single control to sit with: the medical section,
   // the generic incomplete, and the link-level refusals.
-  const namedFieldError =
-    fieldError && fieldError.anchor !== "medical-questionnaire" ? fieldError : undefined;
+  // A shop question's is named only once its version is known to ask it, below.
+  const shopQuestionRefusal = isShopQuestionRefusal(field);
+  let namedFieldError =
+    fieldError && fieldError.anchor !== "medical-questionnaire" && !shopQuestionRefusal
+      ? fieldError
+      : undefined;
   const db = await getDb();
   // A dead or expired link resolves no shop, so there is no
   // `shops.default_locale` to fall back to — negotiate from the visitor's own
@@ -164,6 +173,8 @@ export default async function WaiverPage({
       medicalTotal: 0,
       medicalStillOpen: needsReview,
       signed: true,
+      // The Questions step stood on this page only when the version asked any.
+      shopQuestions: state.record.shopAnswers ? { requiredRemaining: 0, reached: true } : undefined,
     });
     return (
       <WaiverCompleted
@@ -203,47 +214,16 @@ export default async function WaiverPage({
   );
   const draftGuardian = record.draftGuardian;
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
-  const draft = record.draftMedicalAnswers;
-  /** Only pre-fill draft answers captured against this same questionnaire. */
-  const draftResponses =
-    draft &&
-    draft.questionnaireId === questionnaire.id &&
-    draft.questionnaireVersion === questionnaire.version
-      ? draft.responses
-      : undefined;
+  const { draftResponses, primaryQuestionCount, draftAnsweredFields, draftFollowUpsRemaining } =
+    medicalDraftState(questionnaire, record.draftMedicalAnswers);
   // The trip this waiver is for (task 42) — named on the page itself so the
   // diver can verify what they're signing for, rather than trusting a link
   // that names only the shop.
   const tripHeader = recordBookingId
     ? await getWaiverTripHeader(db, record.shopId, recordBookingId)
     : null;
-  /**
-   * The fixed list of questions the diver is handed. The follow-ups their own
-   * answers open are deliberately not in it — see `QuestionnaireProgress`.
-   */
-  const primaryQuestionCount = questionnaire.questions.filter(
-    (question) => question.section === "primary",
-  ).length;
-  /**
-   * **Where the saved draft already stands, so the first paint is honest.**
-   * `WaiverPacing`'s live count is a delegated listener and cannot see an
-   * answer given before it mounted; without these two figures the HTML ships
-   * "0 of 3 done" over radios the server has just rendered checked. The page
-   * knows both, so it hands them over rather than leaving the client to
-   * discover them a bundle later — or, with JavaScript off, never.
-   *
-   * `remaining - primaryRemaining` is exactly the blanks inside a Box the
-   * diver's own yes opened: `medicalProgress` counts *applicable* questions,
-   * so a Box nothing opened is not in either figure.
-   */
-  const draftAnswers: Readonly<Record<string, boolean | undefined>> = draftResponses ?? {};
-  const draftProgress = medicalProgress(questionnaire, draftAnswers);
-  const draftAnsweredFields = questionnaire.questions
-    .filter(
-      (question) =>
-        question.section === "primary" && typeof draftAnswers[question.id] === "boolean",
-    )
-    .map((question) => medicalQuestionField(question.id));
+  const shopQuestions = await shopQuestionsForPage(db, record, { field, q, fieldError }, t);
+  namedFieldError = shopQuestions.refusedFieldError ?? namedFieldError;
   /**
    * **The rail becomes a navigator only after a refusal**, and only for the one
    * segment that owns the refused field. A refused submit lands the reader back
@@ -254,7 +234,9 @@ export default async function WaiverPage({
   const railAnchors: Partial<Record<WaiverRailSegmentId, string>> = fieldError
     ? fieldError.anchor === "medical-questionnaire"
       ? { medical: fieldError.anchor }
-      : { sign: fieldError.anchor }
+      : shopQuestionRefusal
+        ? { questions: namedFieldError?.anchor ?? fieldError.anchor }
+        : { sign: fieldError.anchor }
     : {};
   const errorText =
     error === "invalid" && !namedFieldError
@@ -289,13 +271,14 @@ export default async function WaiverPage({
           questionnaire counter sits inside the form, and both read one count
           off one delegated listener. */}
       <WaiverPacing
-        labels={railLabels(t)}
+        labels={railLabels(t, shopQuestions.pacing !== undefined)}
         anchors={railAnchors}
         progressOne={t.raw("waiver.railProgressOne")}
         progressOther={t.raw("waiver.railProgressOther")}
         medicalTotal={primaryQuestionCount}
         initialAnswered={draftAnsweredFields}
-        initialFollowUpsRemaining={draftProgress.remaining - draftProgress.primaryRemaining}
+        initialFollowUpsRemaining={draftFollowUpsRemaining}
+        shopQuestions={shopQuestions.pacing}
         locale={locale}
       >
         {/* **One notice grammar** — the four treatments this page grew, one per
@@ -360,6 +343,16 @@ export default async function WaiverPage({
           <EmergencyContactSection
             emergencyContact={emergencyContact}
             namedFieldError={namedFieldError}
+            t={t}
+          />
+
+          {/* After everything DiveDay asks, before the signature; nothing when this version asks none. */}
+          <ShopQuestionsSection
+            questions={shopQuestions.questions}
+            draft={shopQuestions.draft}
+            shopName={shopName}
+            minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
+            refused={shopQuestions.refused}
             t={t}
           />
 

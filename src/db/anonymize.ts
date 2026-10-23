@@ -145,6 +145,7 @@ import {
 } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
 import { customerProviderFromEnvironment } from "./stripe-providers";
+import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
 export type AnonymizeDiverRefusal =
   /** No live person with this id at this shop. */
@@ -747,12 +748,14 @@ async function scrubWaiverRecords(
     const [stripped] = await tx
       .update(waiverRecords)
       .set({
-        draftSignerName: null,
-        draftMedicalAnswers: null,
-        draftAcknowledged: false,
-        draftGuardian: null,
+        ...CLEARED_DRAFT_COLUMNS,
         signedName: null,
         medicalAnswers: null,
+        // The shop's questions as answered are the diver's own words, and a
+        // text answer can carry somebody else's ("my wife Ana dives too").
+        // Outside the v2 seal, so destroying them reads as erased, not as
+        // tampered (glossary *Shop question*).
+        shopAnswers: null,
         // The guardian's name and email are a third party's personal data
         // held only because they are on this diver's release, and they go
         // with the diver's own. The fact of the co-signature — relationship,

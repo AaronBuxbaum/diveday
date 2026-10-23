@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { DraftShopAnswers, ShopAnswer, ShopQuestion } from "@/lib/waiver-questions";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -44,6 +45,15 @@ export const waiverTemplates = pgTable(
      */
     materialGeneration: integer("material_generation").notNull().default(1),
     body: text("body").notNull(),
+    /**
+     * **The shop's own questions on this version** (glossary *Shop question*):
+     * an ordered list, asked after the standard medical questionnaire. Part of
+     * the version like the body, so the questions a diver saw are pinned by
+     * `waiver_records.template_id`; a changed list is a new version through the
+     * publisher's materiality choice, and an unchanged one is not (#720). They
+     * inform and never gate. Validated by `parseShopQuestions`.
+     */
+    questions: jsonb("questions").$type<ShopQuestion[]>().notNull().default([]),
     /** Soft delete, spelled the one way every other entity spells it (ADR 20260820-every-delete-is-soft). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: appNowTimestamp("created_at").notNull(),
@@ -383,6 +393,27 @@ export const waiverRecords = pgTable(
      * stripped by erasure.
      */
     draftGuardian: jsonb("draft_guardian").$type<DraftGuardian>(),
+    /**
+     * **The shop's questions as asked, with the diver's answers** (glossary
+     * *Shop question*): a snapshot `completeWaiver` builds from this record's
+     * own `template_id` row, never from what a client sent, written in the
+     * same pending-guarded update as the signature. Non-null whenever the
+     * pinned template asked at least one question (an optional one left blank
+     * answers null); null when it asked none, never `[]`.
+     *
+     * Inside the version 1 seal **only when not null**, so every seal written
+     * before this column existed still verifies (`signedMetadata`). Informs and
+     * never gates: no status, review, readiness or manifest rule reads it.
+     * Destroyed by erasure, with the rest of the diver's own words.
+     */
+    shopAnswers: jsonb("shop_answers").$type<ShopAnswer[]>(),
+    /**
+     * The shop questions as last saved with "Save and finish later", by
+     * question id. Re-validated against the pinned questions on load
+     * (`restoreDraftShopAnswers`); never evidence, out of the export bundle
+     * like the other drafts, and stripped by erasure.
+     */
+    draftShopAnswers: jsonb("draft_shop_answers").$type<DraftShopAnswers>(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),

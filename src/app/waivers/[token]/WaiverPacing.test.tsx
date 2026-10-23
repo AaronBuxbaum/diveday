@@ -7,7 +7,7 @@ import { medicalQuestionField, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
 import { WaiverPacing } from "./WaiverPacing";
-import { WAIVER_RAIL_TEST_ID, type WaiverRailSegmentId } from "./WaiverStepRail";
+import { WAIVER_RAIL_TEST_ID, type WaiverRailLabels } from "./WaiverStepRail";
 
 afterEach(cleanup);
 
@@ -24,7 +24,7 @@ afterEach(cleanup);
  * progress than the diver had.
  */
 
-const LABELS: Record<WaiverRailSegmentId, string> = {
+const LABELS: WaiverRailLabels = {
   release: "Release",
   medical: "Medical",
   sign: "Sign",
@@ -251,5 +251,52 @@ describe("the count as the diver moves through the form", () => {
     );
     const counter = await screen.findByText(`1 of ${PRIMARY.length} answered`);
     expect(counter).toBeInTheDocument();
+  });
+});
+
+/**
+ * Dive-domain review 2, S7: a release whose shop questions are all optional
+ * has nothing required blank from the start, so the Questions step used to
+ * tick as soon as Medical did, with the section still below the fold.
+ */
+describe("the Questions step on a release whose questions are all optional", () => {
+  function withOptionalQuestion(initialReached: boolean) {
+    return (
+      <WaiverPacing
+        labels={{ ...LABELS, questions: "Questions" }}
+        progressOne="{done} of {total} done"
+        progressOther="{done} of {total} done"
+        medicalTotal={PRIMARY.length}
+        initialAnswered={PRIMARY_FIELDS}
+        initialFollowUpsRemaining={0}
+        shopQuestions={{ initialRequiredRemaining: 0, initialReached }}
+        locale="en-US"
+      >
+        <MedicalQuestionnaireFields
+          questionnaire={RSTC_QUESTIONNAIRE}
+          initialResponses={ALL_NO}
+          copy={COPY}
+        />
+        <section id="shop-questions">
+          <label>
+            How did you hear about us?
+            <input name="sq_demoheard01" />
+          </label>
+        </section>
+      </WaiverPacing>
+    );
+  }
+
+  it("stays open until the diver reaches the section, and settles once they do", async () => {
+    render(withOptionalQuestion(false));
+    expect(screen.getByTestId(WAIVER_RAIL_TEST_ID).textContent).toContain("2 of 4 done");
+    await userEvent.click(screen.getByRole("textbox", { name: "How did you hear about us?" }));
+    await waitFor(() =>
+      expect(screen.getByTestId(WAIVER_RAIL_TEST_ID).textContent).toContain("3 of 4 done"),
+    );
+  });
+
+  it("starts settled when the saved draft already holds an answer there", () => {
+    expect(renderToStaticMarkup(withOptionalQuestion(true))).toContain("3 of 4 done");
   });
 });
