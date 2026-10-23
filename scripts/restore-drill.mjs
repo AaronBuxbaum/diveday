@@ -103,6 +103,8 @@ export function worstCaseMs() {
 /**
  * The environment a subprocess gets: what finds programs and their config, and nothing that
  * signs in anywhere. The Neon key, the AWS session and any GitHub token stay in this process.
+ * This stops inheritance and accidental printing; it is not a wall against a hostile
+ * dependency, which can still read this process's environment from /proc.
  */
 export const SUBPROCESS_ENV_KEYS = [
   "PATH",

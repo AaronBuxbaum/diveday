@@ -56,6 +56,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         timeout-minutes: 3
+        with:
+          persist-credentials: false
       - name: Confirm the drill's secrets and variables are set
         timeout-minutes: 1
         env:

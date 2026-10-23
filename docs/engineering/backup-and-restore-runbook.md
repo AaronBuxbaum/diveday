@@ -558,7 +558,9 @@ deployment branch `main` only, with a required reviewer** (first-run step 6). `w
 runs the workflow file as the chosen ref has it, so on an environment without that rule a pushed
 branch can rewrite the drill's guards, or add a workflow naming `restore-drill`, and read
 everything below; a Neon branch also inherits production's role passwords. The job's `if` on the
-default branch is a second lock only, since a branch can edit it.
+default branch is a second lock only, since a branch can edit it. The required reviewer also
+approves each monthly scheduled run before it starts. Subprocesses get a short env allowlist
+(`SUBPROCESS_ENV_KEYS`), which stops the keys being inherited or printed, not a hostile dependency.
 
 | Name | Kind | Where it comes from |
 | --- | --- | --- |
