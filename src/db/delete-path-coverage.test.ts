@@ -144,6 +144,8 @@ const UNSCOPED_REASONS: Record<string, string> = {
     "provider coordination keyed by ceiling and period, holding no person",
   stripe_webhook_events:
     "the platform's delivery ledger, pruned by retention; it carries no payload",
+  claude_demo_spend:
+    "what every minted demo together spent on Claude, one row a month; it must outlive a deleted demo or the shared allowance refills",
   setup_requests:
     "a shop asking DiveDay to be set up, before any shop exists — the platform's lead list, not a tenant's (ADR 20261007-setup-request-form)",
   demo_entries:

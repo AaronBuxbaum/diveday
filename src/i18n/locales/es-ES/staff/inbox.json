@@ -95,17 +95,6 @@
     "lateMarked": "Marcado: llega tarde. La lista y el manifiesto lo muestran.",
     "lateClosed": "Ese lugar ya no admite el aviso: hizo el check-in, se canceló o el barco ya salió.",
     "deleted": "Mensaje eliminado",
-    "gone": "Ese mensaje ya no está en la bandeja.",
-    "notesSaved": "Notas guardadas. Claude las lee en el próximo borrador."
-  },
-  "replyNotes": {
-    "heading": "Notas para Claude",
-    "label": "¿Qué debe saber un borrador de respuesta?",
-    "hint": "Estacionamiento, alquiler, qué traer. Claude las lee junto con tu calendario, precios y horario del mostrador cuando redacta una respuesta en la ficha de un buceador. No incluyas nombres ni números de buceadores. Nada sale hasta que alguien lo envía.",
-    "placeholder": "Estaciona detrás del centro, junto a los tanques. El portón abre a las 7:15.",
-    "off": "Las sugerencias de Claude están desactivadas en este centro.",
-    "turnOn": "Actívalas en Ajustes",
-    "save": "Guardar notas",
-    "saving": "Guardando…"
+    "gone": "Ese mensaje ya no está en la bandeja."
   }
 }

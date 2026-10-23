@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   check,
   index,
   integer,
@@ -53,6 +54,21 @@ export const claudeUsage = pgTable(
     index("claude_usage_created_at_idx").on(table.createdAt),
   ],
 );
+
+/**
+ * **What every demo shop together spent on Claude, one row per UTC month**
+ * (Aaron, 2026-10-23): the shared demo allowance's ledger. Demos are deleted
+ * by the reaper and by the mint cap, and their `claude_usage` rows cascade
+ * with them, so a sum over live demos would forget a deleted demo's spend and
+ * refill the allowance (security review, 2026-10-23). This row has no shop and
+ * survives every delete; `src/db/assists.ts` adds each demo reservation and
+ * settles it under the demo lock. A month and a number, no person.
+ */
+export const claudeDemoSpend = pgTable("claude_demo_spend", {
+  /** The first day of the UTC month, `YYYY-MM-01`. */
+  month: text("month").primaryKey(),
+  spentMicroUsd: bigint("spent_micro_usd", { mode: "number" }).notNull().default(0),
+});
 
 /**
  * **What an assist answered, kept where asking again would be waste**: the

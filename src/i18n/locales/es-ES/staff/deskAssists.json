@@ -14,12 +14,12 @@
     "noAnswer": "Eso no coincide con ninguna vista de la lista. Prueba con el buscador."
   },
   "dupes": {
-    "ask": "Preguntar a Claude si es una sola persona",
+    "ask": "Preguntar a la IA si es una sola persona",
     "pending": "Leyendo los dos registros…",
     "verdict": {
-      "same": "Claude cree que es una sola persona.",
-      "different": "Claude cree que son dos personas.",
-      "unsure": "Claude no puede saberlo con estos registros."
+      "same": "La IA cree que es una sola persona.",
+      "different": "La IA cree que son dos personas.",
+      "unsure": "La IA no puede saberlo con estos registros."
     }
   },
   "reviewFlags": {
