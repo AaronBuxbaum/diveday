@@ -614,6 +614,12 @@ function drysuitExperienceSeen(
   };
 }
 
+function latestCalendarDate(left: string | null, right: string | null): string | null {
+  if (!left) return right;
+  if (!right) return left;
+  return left >= right ? left : right;
+}
+
 function oldestDate(left: Date | null, right: Date | null): Date | null {
   if (!left) return right;
   if (!right) return left;
@@ -1306,6 +1312,9 @@ export async function mergeDiverRecords(input: {
           // A staffer's "seen diving dry" (#2136) travels with its author and
           // note: the earliest record wins, survivor on a tie.
           ...drysuitExperienceSeen(survivor, source),
+          // The later recorded last dive: both are true, and the later one
+          // is the one that says when they last dived.
+          lastDiveOn: latestCalendarDate(survivor.lastDiveOn, source.lastDiveOn),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,
             source.courtesyEmailOptOutAt,

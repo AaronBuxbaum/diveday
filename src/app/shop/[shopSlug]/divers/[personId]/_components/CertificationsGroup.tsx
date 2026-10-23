@@ -40,6 +40,7 @@ import {
   type DiverProfile,
   type Shop,
 } from "./shared";
+import { onlyNotHeld, saysNotCertified, TripNeedsRow, tripNeedsLines } from "./trip-needs";
 
 /**
  * **Every card this diver holds, as one group** (ADR 20260827-people-not-lists,
@@ -407,11 +408,21 @@ export function CertificationsGroup({
     diver.specialtyCertifications.length === 0;
 
   const onFile = cardsOnFile(diver, t, noCertificationDeclared);
+  // A card the diver does not hold reads as one fact on the row, and the
+  // reasons wait behind the door (Aaron, 2026-10-23). The row stays in danger
+  // ink with the departure it keeps them off, so the block is never quieter;
+  // only the paragraph explaining it moved.
+  // A card the fact already names (an empty file's "None on file") keeps the
+  // fact alone; any other card not held makes the row say "Not certified",
+  // even beside a card waiting for a look — that look clears only its own card.
+  const summarySays = summarySaysGap(gap, onFile.tone, diver);
+  const notCertified = saysNotCertified(gap) && !(summarySays && onlyNotHeld(gap));
   const missing = fileGap(gap, {
     t,
     locale,
     timezone: shop.timezone,
-    factSaysIt: summarySaysGap(gap, onFile.tone, diver),
+    factSaysIt: summarySays && !notCertified,
+    says: notCertified ? t("divers.file.notCertified") : undefined,
   });
 
   // The first row anybody has to act on takes the ledger's anchor. Counted the
@@ -653,7 +664,7 @@ export function CertificationsGroup({
       summary={onFile.text}
       summaryTone={missing?.tone ?? onFile.tone}
       detail={missing?.detail}
-      open={Boolean(status) || Boolean(missing?.open)}
+      open={Boolean(status) || (Boolean(missing?.open) && !(notCertified && onlyNotHeld(gap)))}
       stacked
     >
       <InsetGroup
@@ -663,6 +674,7 @@ export function CertificationsGroup({
         // `<div>`s cannot give it.
         bodyAs="ul"
       >
+        {notCertified ? <TripNeedsRow t={t} lines={tripNeedsLines(t, gap)} /> : null}
         {rows}
         <NoCertificationRows
           diver={diver}

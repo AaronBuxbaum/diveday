@@ -45,6 +45,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - In training
 - Intro-session in-water ratio
 - Junior certification
+- Last known dive
 - Levels
 - Minimum extension version
 - Minor

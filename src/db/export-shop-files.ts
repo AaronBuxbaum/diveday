@@ -524,6 +524,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "drysuit_experience_seen_at",
       "drysuit_experience_seen_by_person_id",
       "drysuit_experience_seen_note",
+      // The last dive anywhere, as staff recorded it. Their dives with the
+      // shop are in bookings.csv; the record shows the later of the two.
+      "last_dive_on",
       // **Where this record came from.** Set once, when a diver put
       // themselves on file at the shop's counter QR rather than being
       // typed in by staff (issue #1236). It changes how a destination
@@ -572,6 +575,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.drysuitExperienceSeenAt,
         row.drysuitExperienceSeenByPersonId,
         row.drysuitExperienceSeenNote,
+        row.lastDiveOn,
         row.selfRegisteredAt,
         row.createdByBookingId,
         row.deletedAt,

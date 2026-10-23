@@ -414,8 +414,14 @@ export function buildDiverStatus(
   if (certBlocker) {
     rows.push({
       kind: "certification",
-      // Still a blocker, but a planned one: the course finishes first.
-      tone: certBlocker.code === "certification_in_training" ? "warning" : "danger",
+      // Still a blocker, but a planned one: the course finishes first. Only
+      // when that is every reason: finishing an Advanced course earns no Deep
+      // card (dive-domain review, 2026-10-23).
+      tone: [certBlocker, ...moreCertBlockers].every(
+        (blocker) => blocker.code === "certification_in_training",
+      )
+        ? "warning"
+        : "danger",
       sentence: { blocker: certBlocker },
       ...(moreCertBlockers.length > 0 ? { alsoBlockers: moreCertBlockers } : {}),
       action: certificationFix(certBlocker) ?? undefined,

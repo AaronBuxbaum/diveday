@@ -28,10 +28,21 @@ export function fileGap(
     locale,
     timezone,
     factSaysIt,
-  }: { t: StaffTranslator; locale: string; timezone: string; factSaysIt: boolean },
+    says,
+  }: {
+    t: StaffTranslator;
+    locale: string;
+    timezone: string;
+    factSaysIt: boolean;
+    /**
+     * The row's own short sentence, in place of the status row's full one,
+     * for a group that spells the reasons out behind its door instead.
+     */
+    says?: string;
+  },
 ): FileGap | undefined {
   if (!row) return undefined;
-  const sentence = factSaysIt ? null : statusRowText(t, row);
+  const sentence = factSaysIt ? null : (says ?? statusRowText(t, row));
   const departure = row.tripContext
     ? // A danger gap is a consequence, not a deadline: a physician's "no"
       // will not clear before Friday, and "Needed for" would suggest it might.

@@ -931,6 +931,23 @@ export const people = pgTable(
      */
     drysuitExperienceSeenNote: text("drysuit_experience_seen_note"),
     /**
+     * **The last dive the shop knows of, anywhere**, as a staff member wrote
+     * it on the diver's record (Aaron, 2026-10-23; ADR
+     * 20261023-last-known-dive). A calendar day, not a band: "14 March 2025
+     * in Bonaire" off a logbook or a computer is a fact that stays true, where
+     * "within a year" goes stale the day after it is said — which is why the
+     * diver's own answer on `/ready` stays a band on the booking
+     * (`bookings.last_dived_band`, ADR 20260821-currency-is-what-catches-people).
+     *
+     * Never read alone. The record shows the later of this and the diver's
+     * own last dive day with the shop (`lastKnownDive`, src/db/last-dive.ts),
+     * so a trip with the shop moves the date forward without anybody typing
+     * it, and nothing moves it back. **Gates nothing**, like the band: a
+     * refresher is a divemaster's conversation, not a refusal. Null is "not
+     * recorded". Erasure takes it; a merge keeps the later of the two.
+     */
+    lastDiveOn: date("last_dive_on", { mode: "string" }),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts
