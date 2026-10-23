@@ -494,11 +494,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
     "token_hash", // bearer credential — never exported
-    // The openable copy of that same credential, kept only while the link is
-    // live (ADR 20260820-waiver-links-are-reused-not-reissued). Excluded for a
-    // stronger reason than the hash: this one *can* be opened, and an export
-    // bundle leaves DiveDay's custody entirely — to a shop's own S3, a laptop,
-    // an email attachment. A destination issues its own links.
+    // The openable copy of that same credential, kept only while the link is live
+    // (ADR 20260820-waiver-links-are-reused-not-reissued). Stronger than the hash: it
+    // *can* be opened, and an export bundle leaves DiveDay's custody entirely — to a
+    // shop's own S3, a laptop, an email attachment. A destination issues its own links.
     "token_sealed",
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",

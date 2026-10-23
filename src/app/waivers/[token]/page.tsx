@@ -40,7 +40,7 @@ import { WaiverHelpLine } from "./WaiverHelpLine";
 import { WaiverPacing } from "./WaiverPacing";
 import { WaiverRelease } from "./WaiverRelease";
 import { WaiverSignBlock } from "./WaiverSignBlock";
-import { type WaiverRailSegmentId, waiverRailProgress } from "./WaiverStepRail";
+import { refusalRailAnchors, waiverRailProgress } from "./WaiverStepRail";
 import { WaiverTripMeta } from "./WaiverTripMeta";
 import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
 import { railLabels } from "./waiver-rail-copy";
@@ -225,23 +225,14 @@ export default async function WaiverPage({
     : null;
   const shopQuestions = await shopQuestionsForPage(db, record, { field, q, fieldError }, t);
   namedFieldError = shopQuestions.refusedFieldError ?? namedFieldError;
-  /**
-   * **The rail becomes a navigator only after a refusal**, and only for the one
-   * segment that owns the refused field. A refused submit lands the reader back
-   * at the top of a page whose problem is several hundred pixels down, and the
-   * rail is the thing already sitting there. Nothing ever links *forward*: a
-   * diver cannot tap "Sign" to skip the release.
-   */
-  const railAnchors: Partial<Record<WaiverRailSegmentId, string>> = fieldError
-    ? fieldError.anchor === "medical-questionnaire"
-      ? { medical: fieldError.anchor }
-      : fieldError.anchor === MEDICAL_ALERT_ANCHOR
-        ? // Beside the questionnaire, under the Medical step it is not part of.
-          { medical: fieldError.anchor }
-        : shopQuestionRefusal
-          ? { questions: namedFieldError?.anchor ?? fieldError.anchor }
-          : { sign: fieldError.anchor }
-    : {};
+  // Only the segment owning a refused field links to it (`refusalRailAnchors`).
+  const railAnchors = refusalRailAnchors({
+    refusedAnchor: fieldError?.anchor,
+    shopQuestionAnchor: shopQuestionRefusal
+      ? (namedFieldError?.anchor ?? fieldError?.anchor)
+      : undefined,
+    medicalAlertAnchor: MEDICAL_ALERT_ANCHOR,
+  });
   const errorText =
     error === "invalid" && !namedFieldError
       ? t(fieldError?.textKey ?? "waiver.incomplete")

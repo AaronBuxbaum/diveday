@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { MedicalAlertResult } from "@/components/MedicalAlertReveal";
+import type { TripManifest } from "@/lib/manifests";
 import { DiverRowPanel } from "./DiverRowPanel";
 import { DiverRowPrint } from "./DiverRowPrint";
 import { diver, diverContext, renderList, t } from "./diver-roll-call-test-fixtures";
 import { diverRowState } from "./diver-row-state";
-import type { MedicalAlertResult } from "@/components/MedicalAlertReveal";
-import type { TripManifest } from "@/lib/manifests";
 
 afterEach(cleanup);
 
