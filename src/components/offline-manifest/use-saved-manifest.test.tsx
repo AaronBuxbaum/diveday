@@ -213,6 +213,71 @@ describe("useSavedManifest on a trip", () => {
   });
 });
 
+/**
+ * Captain review S2: each roll-call tap asked for its own sync, and on a link
+ * that carries nothing each one held the whole deadline, so a boat counted
+ * back aboard sent one overlapping POST of the same pending events per name.
+ */
+describe("useSavedManifest's syncs while one hangs", () => {
+  it("runs one at a time, and folds every ask made meanwhile into one more pass", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", { pending: 3 }));
+    let release: (envelope: OfflineManifestEnvelope) => void = () => {};
+    sync.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    sync.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(sync).toHaveBeenCalledTimes(1));
+
+    let asks: Promise<void>[] = [];
+    await act(async () => {
+      asks = Array.from({ length: 5 }, () => result.current.reconcile());
+    });
+    expect(sync).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      release(withEvents("trip-1", { pending: 3 }));
+      await Promise.all(asks);
+    });
+    expect(sync).toHaveBeenCalledTimes(2);
+    expect(result.current.message).toBe(line("allCaughtUp"));
+  });
+});
+
+describe("useSavedManifest and why the copy is on screen", () => {
+  it("knows the worker sent the captain here because DiveDay did not answer", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1&fallback=slow");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.servedWithoutAnswer).toBe(true);
+  });
+
+  it("leaves the ordinary no-signal wording to a device that is offline", async () => {
+    load.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1&fallback=failed");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.servedWithoutAnswer).toBe(false);
+    setOnline(true);
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(result.current.servedWithoutAnswer).toBe(true);
+  });
+
+  it("knows a copy the captain opened is not one", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.servedWithoutAnswer).toBe(false);
+  });
+});
+
 describe("useSavedManifest on the list", () => {
   it("lists what the device holds and counts it", async () => {
     const saved = [envelope("trip-1", "Morning"), envelope("trip-2", "Night")];

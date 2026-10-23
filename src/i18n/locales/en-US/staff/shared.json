@@ -96,7 +96,9 @@
     "online": "Online",
     "onlineTitle": "This device is online.",
     "offlineTitle": "This device has no connection right now.",
-    "offlineWithCopy": "No signal · device copy"
+    "offlineWithCopy": "No signal · device copy",
+    "unansweredWithCopy": "No answer · device copy",
+    "unansweredTitle": "DiveDay didn’t answer, so this is the copy saved on this device."
   },
   "capacity": {
     "full": "Full",
@@ -392,6 +394,7 @@
       "savedAt": "Saved {when}",
       "expiredBanner": "This saved copy has expired and can’t be used to board divers. Any change still waiting to send below will keep trying, but new roll call must be recorded on the live manifest.",
       "freshnessBanner": "{freshnessNote}. Readiness reflects that moment, and we’ll re-check everything once you’re back in signal.",
+      "unansweredBanner": "DiveDay didn’t answer, so this is the list this phone saved ({when}), not the live one. The live manifest opens again on its own once DiveDay answers.",
       "pendingRejectedCounts": "{pending} waiting to send · {rejected} need a look",
       "checkpointNavAria": "Roll-call checkpoint",
       "statsDivers": "Passengers",

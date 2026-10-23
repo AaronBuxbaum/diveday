@@ -11,7 +11,8 @@ import {
 } from "./offline-manifest/ShellScreens";
 import { DiscardedRecordsNotice, translatorForThisDevice } from "./offline-manifest/shared";
 import { OfflineTripScreen } from "./offline-manifest/TripScreen";
-import { offlineTripView } from "./offline-manifest/trip-view";
+import { liveManifestHref, offlineTripView } from "./offline-manifest/trip-view";
+import { useLiveReturn } from "./offline-manifest/use-live-return";
 import { useSavedManifest } from "./offline-manifest/use-saved-manifest";
 
 const subscribeNever = () => () => {};
@@ -67,6 +68,7 @@ function OfflineManifestScreen() {
     discarded,
     acknowledgeDiscarded,
     reconcile,
+    servedWithoutAnswer,
   } = useSavedManifest(t);
   // A marker for the tools that photograph this page (`scripts/screenshot.mjs`,
   // issue #2235): set on the document once the store has been read, so a
@@ -100,6 +102,18 @@ function OfflineManifestScreen() {
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const discardNotice = (
     <DiscardedRecordsNotice t={t} records={discarded} onAcknowledge={acknowledgeDiscarded} />
+  );
+  // Sent here because DiveDay did not answer: keep asking the live manifest,
+  // and go back to it once it answers and nothing typed or tapped is mid-way.
+  useLiveReturn(
+    servedWithoutAnswer && envelope && tripId
+      ? liveManifestHref(envelope, tripId, checkpoint)
+      : null,
+    () =>
+      busyBooking === null &&
+      busyChecklistItem === null &&
+      busyArrival === null &&
+      Object.values(noteDrafts).every((draft) => draft.trim() === ""),
   );
 
   // Before the store has been read, say what is actually true and nothing
@@ -163,6 +177,7 @@ function OfflineManifestScreen() {
     t,
     locale,
     message,
+    servedWithoutAnswer,
     setCheckpoint,
     busyBooking,
     busyChecklistItem,

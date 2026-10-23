@@ -204,4 +204,138 @@ describe("syncOfflineManifest on a network that never answers", () => {
       syncStatus: "applied",
     });
   });
+
+  /** One pass that gives up at the deadline, the captain's queue left as it was. */
+  async function abandonedPass() {
+    const first = syncOfflineManifest(tripId);
+    await giveUpAfter(first, 10_000);
+    await expect(first).rejects.toMatchObject({ code: "sync_unreachable" });
+  }
+
+  /**
+   * Auditor review S3, case 3: the abandoned POST landed, so the server
+   * answers the resend `duplicate`. That is the server saying "already on
+   * the record", and the device must settle the event, not refuse it or keep
+   * sending it.
+   */
+  it("settles an event the server says it already holds, after the device gave up on it", async () => {
+    const queued = await queueOneEvent();
+    let answer = false;
+    server.use(
+      http.post("/api/offline-manifests/sync", async ({ request }) => {
+        posts += 1;
+        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        if (!answer) return new Promise<never>(() => {});
+        return HttpResponse.json({
+          results: body.events.map((event) => ({
+            clientEventId: event.clientEventId,
+            status: "duplicate",
+          })),
+        });
+      }),
+    );
+
+    await abandonedPass();
+    answer = true;
+    vi.useRealTimers();
+    const second = await syncOfflineManifest(tripId);
+
+    expect(second?.events).toEqual([
+      expect.objectContaining({ clientEventId: queued.clientEventId, syncStatus: "applied" }),
+    ]);
+  });
+
+  /**
+   * Case 1: an answer that arrives after the device gave up is not read. A
+   * refusal landing at 10,001 ms must not mark the event refused; the next
+   * pass's answer is the one that counts.
+   */
+  it("ignores an answer that arrives after it gave up, and takes the next pass's", async () => {
+    const queued = await queueOneEvent();
+    let pass = 0;
+    server.use(
+      http.post("/api/offline-manifests/sync", async ({ request }) => {
+        posts += 1;
+        pass += 1;
+        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        const status = pass === 1 ? "rejected" : "applied";
+        if (pass === 1) await new Promise((resolve) => setTimeout(resolve, 10_001));
+        return HttpResponse.json({
+          results: body.events.map((event) => ({
+            clientEventId: event.clientEventId,
+            status,
+            ...(status === "rejected" ? { reason: "newer_event_exists" } : {}),
+          })),
+        });
+      }),
+    );
+
+    await abandonedPass();
+    await vi.advanceTimersByTimeAsync(1);
+    for (let turn = 0; turn < 50; turn += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    expect((await loadOfflineManifest(tripId))?.events[0]).toMatchObject({
+      clientEventId: queued.clientEventId,
+      syncStatus: "pending",
+    });
+
+    vi.useRealTimers();
+    const second = await syncOfflineManifest(tripId);
+    expect(second?.events[0]).toMatchObject({
+      clientEventId: queued.clientEventId,
+      syncStatus: "applied",
+    });
+    expect(second?.events[0]?.rejectionReason).toBeUndefined();
+  });
+
+  /**
+   * Case 2: the captain keeps counting while the POST hangs. That tap must
+   * survive the give-up, and the next pass sends both, in the order tapped.
+   */
+  it("keeps a tap made while the sync hung, and sends it next, in order", async () => {
+    const first = await queueOneEvent();
+    const sentIds: string[][] = [];
+    let answer = false;
+    server.use(
+      http.post("/api/offline-manifests/sync", async ({ request }) => {
+        posts += 1;
+        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        sentIds.push(body.events.map((event) => event.clientEventId));
+        if (!answer) return new Promise<never>(() => {});
+        return HttpResponse.json({
+          results: body.events.map((event) => ({
+            clientEventId: event.clientEventId,
+            status: "applied",
+          })),
+        });
+      }),
+    );
+
+    const hanging = syncOfflineManifest(tripId);
+    const gaveUp = hanging.catch((error: unknown) => error);
+    for (let turn = 0; posts === 0 && turn < 10_000; turn += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    const during = await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "after_dive_1",
+      status: "cleared",
+      retractsClientEventId: first.clientEventId,
+    });
+    const second = during.events[1];
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await gaveUp).toMatchObject({ code: "sync_unreachable" });
+    expect((await loadOfflineManifest(tripId))?.events.map((event) => event.syncStatus)).toEqual([
+      "pending",
+      "pending",
+    ]);
+
+    answer = true;
+    vi.useRealTimers();
+    const settled = await syncOfflineManifest(tripId);
+
+    expect(sentIds).toEqual([[first.clientEventId], [first.clientEventId, second.clientEventId]]);
+    expect(settled?.events.map((event) => event.syncStatus)).toEqual(["applied", "applied"]);
+  });
 });

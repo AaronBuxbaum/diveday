@@ -9,6 +9,8 @@ import {
 } from "@/lib/offline-manifest-store";
 import {
   fetchOfflineManifestShopSlug,
+  OFFLINE_FALLBACK_PARAM,
+  type OfflineFallbackReason,
   offlineManifestPayloads,
   offlineManifestShopSlug,
   pendingOfflineEventCount,
@@ -80,7 +82,8 @@ const NAVIGATION_TIMEOUT_MS = 4_000;
 /**
  * Network-first with a deadline: the live page whenever the network answers,
  * the device's saved copy when it fails, and the saved copy too once
- * `NAVIGATION_TIMEOUT_MS` passes without an answer.
+ * `NAVIGATION_TIMEOUT_MS` passes without an answer. `saved` is told which of
+ * the two it was, so the copy can say why it is on screen.
  *
  * With nothing saved to show, it keeps waiting for the network rather than
  * trading a slow page for an error page. `live` receives the abort signal,
@@ -89,7 +92,7 @@ const NAVIGATION_TIMEOUT_MS = 4_000;
  */
 async function networkFirst(
   live: (signal: AbortSignal) => Promise<Response>,
-  saved: () => Promise<Response | null | undefined>,
+  saved: (why: OfflineFallbackReason) => Promise<Response | null | undefined>,
 ): Promise<Response> {
   const controller = new AbortController();
   const network = live(controller.signal);
@@ -103,23 +106,32 @@ async function networkFirst(
     const answered = await Promise.race([network, deadline]);
     if (answered) return answered;
   } catch {
-    return (await saved()) ?? Response.error();
+    return (await saved("failed")) ?? Response.error();
   } finally {
     clearTimeout(timer);
   }
-  const copy = await saved();
+  const copy = await saved("slow");
   if (!copy) return network.catch(() => Response.error());
   controller.abort();
   network.catch(() => undefined);
   return copy;
 }
 
-/** The saved offline shell, opened at `search`, or null when this device has none. */
-async function offlineShellRedirect(search?: URLSearchParams): Promise<Response | null> {
+/**
+ * The saved offline shell, opened at `search`, or null when this device has
+ * none. The redirect says why it was made (`OFFLINE_FALLBACK_PARAM`): the
+ * shell words a copy it was sent to differently from one a captain opened, and
+ * this worker serves the shell for that redirect from its cache at once.
+ */
+async function offlineShellRedirect(
+  why: OfflineFallbackReason,
+  search = new URLSearchParams(),
+): Promise<Response | null> {
   const cachedShell = await caches.match(OFFLINE_SHELL);
   if (!cachedShell) return null;
   const redirectTarget = new URL(OFFLINE_SHELL, self.location.origin);
-  if (search) redirectTarget.search = search.toString();
+  search.set(OFFLINE_FALLBACK_PARAM, why);
+  redirectTarget.search = search.toString();
   return Response.redirect(redirectTarget.href, 302);
 }
 
@@ -628,6 +640,19 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (event.request.mode === "navigate" && url.pathname === OFFLINE_SHELL) {
+    // **One deadline across the hop.** This worker's own redirect from the
+    // live manifest, the counter or `/` has already given the network its
+    // four seconds; spending four more here put the captain's first paint at
+    // eight on a dead link. So the shell it sent them to comes from the cache.
+    if (url.searchParams.has(OFFLINE_FALLBACK_PARAM)) {
+      event.respondWith(
+        caches
+          .match(OFFLINE_SHELL)
+          .then((cachedShell) => cachedShell ?? fetch(event.request))
+          .catch(() => Response.error()),
+      );
+      return;
+    }
     event.respondWith(
       networkFirst(
         (signal) =>
@@ -650,7 +675,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       networkFirst(
         (signal) => fetch(event.request, { signal }),
-        () => offlineShellRedirect(),
+        (why) => offlineShellRedirect(why),
       ),
     );
     return;
@@ -665,7 +690,7 @@ self.addEventListener("fetch", (event) => {
       // own offline copy once the network fails or stops answering.
       networkFirst(
         (signal) => fetch(event.request, { signal }),
-        () => offlineShellRedirect(new URLSearchParams({ trip: tripId })),
+        (why) => offlineShellRedirect(why, new URLSearchParams({ trip: tripId })),
       ),
     );
     return;
@@ -681,13 +706,13 @@ self.addEventListener("fetch", (event) => {
         // network fails or stops answering.
         networkFirst(
           (signal) => fetch(event.request, { signal }),
-          () => {
+          (why) => {
             const search = new URLSearchParams({ trip: tripId });
             // Carries the checkpoint a captain was on (e.g. "after_dive_1") so a
             // reload mid roll call doesn't drop them back to "Before departure".
             const checkpoint = url.searchParams.get("checkpoint");
             if (checkpoint) search.set("checkpoint", checkpoint);
-            return offlineShellRedirect(search);
+            return offlineShellRedirect(why, search);
           },
         ),
       );

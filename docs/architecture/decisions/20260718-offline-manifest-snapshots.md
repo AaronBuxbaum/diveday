@@ -30,10 +30,29 @@ never tapped "Save now" had no page at all to land on once signal dropped.
 bars and carry nothing, and there a request neither answers nor fails. Every navigation fallback in
 the worker (this live-manifest route, the counter, `/`, the offline shell and the diver's `/ready/`
 copy) now gives the network four seconds, then serves the saved copy and aborts the request. With
-nothing saved on the device it keeps waiting for the network instead. The page's sync of queued
-events gives up after ten seconds and leaves them pending for the next pass, which resends the same
-`clientEventId`s; the server dedupes on `(shop_id, client_event_id)`, so a POST given up on that
-still landed is answered as a duplicate rather than written twice.
+nothing saved on the device it keeps waiting for the network instead.
+
+- **One deadline, not two.** The worker's redirect to the offline shell names why it was made
+  (`?fallback=slow` or `?fallback=failed`), and the worker serves that shell from its cache at once,
+  so a dead link puts the saved roll call on screen in four seconds, not eight.
+- **A copy served for silence never says it is live.** A slow server is not an offline device: the
+  phone still reads "online" and a copy saved minutes ago reads "fresh". So a shell opened by that
+  redirect says DiveDay did not answer and when the copy was saved, shows no "Online" and no
+  freshness wording, and asks the live manifest again every five seconds (it cannot wait for the
+  browser's `online` event, which never fires for a device that never went offline). It opens the
+  live manifest the first time it answers, unless a tap is being written or a sentence typed.
+- **Every sync of queued events gives up after ten seconds**, whoever calls it: the page, and the
+  worker's Background Sync and push flushes, which go through the same `syncOfflineManifest`
+  ([20260804-manifest-web-push](20260804-manifest-web-push.md), amended the same day). The events
+  stay pending and the next pass resends the same `clientEventId`s. The offline view runs one sync at
+  a time and folds every tap made meanwhile into one more, and a tap frees its row as soon as it is
+  on the phone rather than when the sync ends.
+- **A resend may overlap the request it replaced**, which can still be running on the server. Each
+  writer (roll call, crew roll call, the pre-departure check) asks whether the id is already recorded
+  before any work and again under the trip or seat lock, where the first request's commit shows; a
+  collision on the `(shop_id, client_event_id)` unique index that neither question saw is answered
+  as a duplicate too. So a POST given up on that landed is a duplicate on retry, never a second row,
+  a 500, or a correction refused as superseded by its own first copy (`roll-call.postgres.test.ts`).
 
 > Superseded by [20260726-manifest-offline-copy-automation](20260726-manifest-offline-copy-automation.md):
 > the snapshot now saves and refreshes itself automatically; "Save now" no longer exists, and a captain

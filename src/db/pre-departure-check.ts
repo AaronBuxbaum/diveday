@@ -10,6 +10,7 @@ import {
 import { canPersonManageSafetyChecklist, loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
+import { answeringReplayAsDuplicate } from "./offline-replay";
 import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -235,6 +236,25 @@ export async function latestPreDepartureChecksForTrip(
   return latest;
 }
 
+/** The check event this shop already holds under a device's `clientEventId`, or undefined. */
+async function appliedCheckEventId(
+  tx: DbExecutor,
+  shopId: string,
+  clientEventId: string,
+): Promise<string | undefined> {
+  const [existing] = await tx
+    .select({ id: preDepartureCheckEvents.id })
+    .from(preDepartureCheckEvents)
+    .where(
+      and(
+        eq(preDepartureCheckEvents.shopId, shopId),
+        eq(preDepartureCheckEvents.clientEventId, clientEventId),
+      ),
+    )
+    .limit(1);
+  return existing?.id;
+}
+
 export type RecordPreDepartureCheckOutcome =
   | { ok: true; eventId: string; duplicate?: boolean }
   | {
@@ -273,105 +293,117 @@ export async function recordPreDepartureCheck(
     occurredAt?: Date;
   },
 ): Promise<RecordPreDepartureCheckOutcome> {
-  const outcome = await db.transaction(async (tx): Promise<RecordPreDepartureCheckOutcome> => {
-    const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? nowDate();
-    const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
-    if (!staffId) return { ok: false, reason: "staff_not_found" };
+  const outcome = await answeringReplayAsDuplicate(
+    () =>
+      db.transaction(async (tx): Promise<RecordPreDepartureCheckOutcome> => {
+        const source = input.source ?? "live";
+        const occurredAt = input.occurredAt ?? nowDate();
+        const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
+        if (!staffId) return { ok: false, reason: "staff_not_found" };
 
-    if (source === "offline" && input.clientEventId) {
-      const [existing] = await tx
-        .select({ id: preDepartureCheckEvents.id })
-        .from(preDepartureCheckEvents)
-        .where(
-          and(
-            eq(preDepartureCheckEvents.shopId, input.shopId),
-            eq(preDepartureCheckEvents.clientEventId, input.clientEventId),
-          ),
-        )
-        .limit(1);
-      if (existing) return { ok: true, eventId: existing.id, duplicate: true };
-    }
+        if (source === "offline" && input.clientEventId) {
+          const applied = await appliedCheckEventId(tx, input.shopId, input.clientEventId);
+          if (applied) return { ok: true, eventId: applied, duplicate: true };
+        }
 
-    const [trip] = await tx
-      .select({ id: trips.id })
-      .from(trips)
-      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-      .limit(1);
-    if (!trip) return { ok: false, reason: "trip_unavailable" };
+        // The trip's lock, so two requests carrying the same offline event take
+        // turns: a device that gave up on a slow sync resends it while the first
+        // request may still be running. `no key update`, the roll-call writers'
+        // lock on the same row, so this queues behind them rather than beside.
+        const [trip] = await tx
+          .select({ id: trips.id })
+          .from(trips)
+          .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+          .limit(1)
+          .for("no key update", { of: trips });
+        // Asked again under that lock, where the first request's commit shows.
+        // Without it a replayed `cleared` reads its own first copy as the newest
+        // row and is refused as superseded.
+        if (source === "offline" && input.clientEventId) {
+          const applied = await appliedCheckEventId(tx, input.shopId, input.clientEventId);
+          if (applied) return { ok: true, eventId: applied, duplicate: true };
+        }
+        if (!trip) return { ok: false, reason: "trip_unavailable" };
 
-    const [item] = await tx
-      .select({ id: preDepartureChecklistItems.id })
-      .from(preDepartureChecklistItems)
-      .where(
-        and(
-          eq(preDepartureChecklistItems.id, input.checklistItemId),
-          eq(preDepartureChecklistItems.shopId, input.shopId),
-          isNull(preDepartureChecklistItems.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (!item) return { ok: false, reason: "item_unavailable" };
+        const [item] = await tx
+          .select({ id: preDepartureChecklistItems.id })
+          .from(preDepartureChecklistItems)
+          .where(
+            and(
+              eq(preDepartureChecklistItems.id, input.checklistItemId),
+              eq(preDepartureChecklistItems.shopId, input.shopId),
+              isNull(preDepartureChecklistItems.deletedAt),
+            ),
+          )
+          .limit(1);
+        if (!item) return { ok: false, reason: "item_unavailable" };
 
-    if (source === "offline") {
-      if (
-        offlineEventOutOfBounds({
-          clientEventId: input.clientEventId,
-          offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-          occurredAt,
-          now: nowDate(),
-        })
-      ) {
-        return { ok: false, reason: "snapshot_invalid" };
-      }
-      const [newest] = await tx
-        .select({
-          occurredAt: preDepartureCheckEvents.occurredAt,
-          clientEventId: preDepartureCheckEvents.clientEventId,
-        })
-        .from(preDepartureCheckEvents)
-        .where(
-          and(
-            eq(preDepartureCheckEvents.shopId, input.shopId),
-            eq(preDepartureCheckEvents.tripId, input.tripId),
-            eq(preDepartureCheckEvents.checklistItemId, input.checklistItemId),
-          ),
-        )
-        .orderBy(
-          sql`${preDepartureCheckEvents.occurredAt} desc`,
-          sql`${preDepartureCheckEvents.createdAt} desc`,
-          sql`${preDepartureCheckEvents.seq} desc`,
-        )
-        .limit(1);
-      if (newest && newest.occurredAt > occurredAt) {
-        return { ok: false, reason: "newer_event_exists" };
-      }
-      if (
-        input.status === "cleared" &&
-        input.retractsClientEventId &&
-        newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase()
-      ) {
-        return { ok: false, reason: PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED };
-      }
-    }
+        if (source === "offline") {
+          if (
+            offlineEventOutOfBounds({
+              clientEventId: input.clientEventId,
+              offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+              occurredAt,
+              now: nowDate(),
+            })
+          ) {
+            return { ok: false, reason: "snapshot_invalid" };
+          }
+          const [newest] = await tx
+            .select({
+              occurredAt: preDepartureCheckEvents.occurredAt,
+              clientEventId: preDepartureCheckEvents.clientEventId,
+            })
+            .from(preDepartureCheckEvents)
+            .where(
+              and(
+                eq(preDepartureCheckEvents.shopId, input.shopId),
+                eq(preDepartureCheckEvents.tripId, input.tripId),
+                eq(preDepartureCheckEvents.checklistItemId, input.checklistItemId),
+              ),
+            )
+            .orderBy(
+              sql`${preDepartureCheckEvents.occurredAt} desc`,
+              sql`${preDepartureCheckEvents.createdAt} desc`,
+              sql`${preDepartureCheckEvents.seq} desc`,
+            )
+            .limit(1);
+          if (newest && newest.occurredAt > occurredAt) {
+            return { ok: false, reason: "newer_event_exists" };
+          }
+          if (
+            input.status === "cleared" &&
+            input.retractsClientEventId &&
+            newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase()
+          ) {
+            return { ok: false, reason: PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED };
+          }
+        }
 
-    const [event] = await tx
-      .insert(preDepartureCheckEvents)
-      .values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        checklistItemId: input.checklistItemId,
-        recordedByPersonId: staffId,
-        status: input.status,
-        source,
-        clientEventId: source === "offline" ? input.clientEventId : null,
-        note: input.note?.trim() || null,
-        occurredAt,
-      })
-      .returning({ id: preDepartureCheckEvents.id });
-    if (!event) throw new Error("recordPreDepartureCheck: insert returned no row");
-    return { ok: true, eventId: event.id };
-  });
+        const [event] = await tx
+          .insert(preDepartureCheckEvents)
+          .values({
+            shopId: input.shopId,
+            tripId: input.tripId,
+            checklistItemId: input.checklistItemId,
+            recordedByPersonId: staffId,
+            status: input.status,
+            source,
+            clientEventId: source === "offline" ? input.clientEventId : null,
+            note: input.note?.trim() || null,
+            occurredAt,
+          })
+          .returning({ id: preDepartureCheckEvents.id });
+        if (!event) throw new Error("recordPreDepartureCheck: insert returned no row");
+        return { ok: true, eventId: event.id };
+      }),
+    {
+      indexName: "pre_departure_check_events_shop_client_event_unique",
+      clientEventId: input.clientEventId,
+      source: input.source,
+      applied: (clientEventId) => appliedCheckEventId(db, input.shopId, clientEventId),
+    },
+  );
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
   }

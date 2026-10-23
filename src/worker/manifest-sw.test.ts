@@ -539,7 +539,7 @@ describe("a navigation on a network that never answers", () => {
     if (landed === "still waiting") throw new Error("still waiting at four seconds");
     expect(landed.status).toBe(302);
     expect(landed.headers.get("location")).toBe(
-      `https://dive.day/offline-manifest?trip=${TRIP}&checkpoint=after_dive_1`,
+      `https://dive.day/offline-manifest?trip=${TRIP}&checkpoint=after_dive_1&fallback=slow`,
     );
   });
 
@@ -556,19 +556,57 @@ describe("a navigation on a network that never answers", () => {
       4_000,
     );
     if (landed === "still waiting") throw new Error("still waiting at four seconds");
-    expect(landed.headers.get("location")).toBe(`https://dive.day/offline-manifest?trip=${TRIP}`);
+    expect(landed.headers.get("location")).toBe(
+      `https://dive.day/offline-manifest?trip=${TRIP}&fallback=slow`,
+    );
   });
 
   it("lands the bare address on the saved copy within four seconds", async () => {
     const landed = await settledAfter(navigate("https://dive.day/"), 4_000);
     if (landed === "still waiting") throw new Error("still waiting at four seconds");
-    expect(landed.headers.get("location")).toBe("https://dive.day/offline-manifest");
+    expect(landed.headers.get("location")).toBe("https://dive.day/offline-manifest?fallback=slow");
   });
 
   it("serves the saved offline shell itself within four seconds", async () => {
     const landed = await settledAfter(navigate("https://dive.day/offline-manifest"), 4_000);
     if (landed === "still waiting") throw new Error("still waiting at four seconds");
     expect(await landed.text()).toBe("offline shell");
+  });
+
+  it("says a request that failed outright was a failure, not a slow answer", async () => {
+    fetchMock.mockImplementation(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    const landed = await settledAfter(
+      navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`),
+      0,
+    );
+    if (landed === "still waiting") throw new Error("a failed request still waited");
+    expect(landed.headers.get("location")).toBe(
+      `https://dive.day/offline-manifest?trip=${TRIP}&fallback=failed`,
+    );
+  });
+
+  /**
+   * Captain review S3: the worker's own redirect is a second navigation, and
+   * it went through the four-second wait again before the shell, so a dead
+   * link put first paint at eight seconds. Timed end to end: the live
+   * manifest, its redirect, and the shell that redirect names.
+   */
+  it("puts the saved roll call on screen within four seconds in all, redirect included", async () => {
+    const live = navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`);
+    expect(await settledAfter(live, 3_999)).toBe("still waiting");
+    const redirect = await settledAfter(live, 1);
+    if (redirect === "still waiting") throw new Error("still waiting at four seconds");
+    const location = redirect.headers.get("location");
+    if (!location) throw new Error("the worker answered without a redirect");
+    const requestsBeforeHop = fetchMock.mock.calls.length;
+
+    const shell = await settledAfter(navigate(location), 0);
+
+    if (shell === "still waiting") throw new Error("the hop to the shell waited again");
+    expect(await shell.text()).toBe("offline shell");
+    expect(fetchMock.mock.calls.length).toBe(requestsBeforeHop);
   });
 
   it("keeps waiting for a slow page when the device has nothing saved to show instead", async () => {

@@ -814,10 +814,12 @@ export const SYNC_TIMEOUT_MS = 10_000;
  * exactly as they were: still `pending`, same `clientEventId`.
  *
  * Giving up does not mean the server never got it. A request abandoned here
- * may still have landed, which is safe only because the next pass resends the
- * same ids and the server dedupes on `(shop_id, client_event_id)` (the unique
- * indexes in `src/db/schema/dive-day.ts`), answering the replay as a
- * duplicate instead of writing a second row.
+ * may still have landed, or still be running, which is safe only because the
+ * next pass resends the same ids and the server dedupes on
+ * `(shop_id, client_event_id)` (the unique indexes in
+ * `src/db/schema/dive-day.ts`): each writer asks again under its lock, so a
+ * resend that overlaps the abandoned request is answered as a duplicate
+ * instead of a second row, a 500, or a refusal (`roll-call.postgres.test.ts`).
  */
 async function postPendingEvents(batch: {
   events: OfflineRollCallEvent[];

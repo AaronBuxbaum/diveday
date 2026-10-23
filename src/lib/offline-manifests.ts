@@ -95,6 +95,17 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  */
 export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
 
+/**
+ * The query parameter the service worker puts on its own redirect to the
+ * offline shell, naming why it sent the captain there: `slow` when the live
+ * page did not answer within its deadline, `failed` when the request failed.
+ * The shell reads it to say plainly that this is the saved list and not the
+ * live one, and the worker reads it to serve the shell from its cache at once
+ * rather than spending a second deadline on the hop it just made.
+ */
+export const OFFLINE_FALLBACK_PARAM = "fallback";
+export type OfflineFallbackReason = "slow" | "failed";
+
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * MINUTE_MS;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;

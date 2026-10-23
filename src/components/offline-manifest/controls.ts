@@ -19,6 +19,11 @@ export type OfflineTripControls = {
   locale: DiverLocale;
   /** The one status line under the header. */
   message: string;
+  /**
+   * The service worker opened this copy because DiveDay did not answer, not
+   * because the captain asked for it: never worded as live or current.
+   */
+  servedWithoutAnswer: boolean;
   setCheckpoint: Dispatch<SetStateAction<RollCallCheckpoint>>;
   /** The diver or crew row saving now, by booking or person id. */
   busyBooking: string | null;
