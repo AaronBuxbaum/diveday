@@ -92,6 +92,7 @@ const CALL_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> =
   "call-email": { tone: "danger", key: "calls.notice.email" },
   "call-departure": { tone: "danger", key: "calls.notice.departure" },
   "call-interest": { tone: "danger", key: "calls.notice.interest" },
+  "call-waitlist-off": { tone: "warning", key: "calls.notice.waitlistOff" },
 };
 
 /**

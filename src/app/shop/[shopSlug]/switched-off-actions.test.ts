@@ -5,6 +5,7 @@ import {
   divePackages,
   diveSites,
   executedDives,
+  formDrafts,
   interests,
   lostItems,
   people,
@@ -61,6 +62,7 @@ const { recordSightingAction, deleteSightingAction, saveExecutedDiveAction } = a
 const { addKnownDiverToWaitlistAction, invitePastDiverAction } = await import(
   "./trips/[id]/roster-seating-actions"
 );
+const { tookACallAction } = await import("./bookings/new/call-actions");
 
 async function asOwnerWith(feature: ShopFeature) {
   const { db, shop } = ctx;
@@ -302,5 +304,47 @@ describe("actions behind a switched-off feature", () => {
       ),
     ).toContain("notice=invite-unavailable");
     expect(await asks()).toEqual([]);
+  });
+
+  it("sends a wait-list call back to Add a booking with the caller's details kept", async () => {
+    // Review 2026-10-23, item 6: the draft used to be discarded before the
+    // wait list's writer refused, so the caller's details were gone.
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() + 6 * 24 * 3_600_000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Switched-off call",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+      capacity: 4,
+    });
+    if (!trip) throw new Error("trip not created");
+    const { owner } = await asOwnerWith("waitlist");
+    vi.mocked(requireShopSurface).mockImplementation((async () => ({
+      db,
+      shop: await getShopById(db, shop.id),
+      session: staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: owner }),
+    })) as never);
+
+    const to = await redirectedTo(() =>
+      tookACallAction(
+        shop.slug,
+        form({
+          outcome: "waitlist",
+          fullName: "Calla Caller",
+          email: "calla@example.com",
+          tripId: trip.id,
+        }),
+      ),
+    );
+    expect(to).toContain(`/shop/${shop.slug}/bookings/new`);
+    expect(to).toContain("notice=call-waitlist-off");
+    expect(to).toContain("outcome=date-request");
+    const [draft] = await db
+      .select({ fields: formDrafts.fields })
+      .from(formDrafts)
+      .where(eq(formDrafts.personId, owner));
+    expect(draft?.fields).toMatchObject({ fullName: "Calla Caller", email: "calla@example.com" });
+    expect(await db.select().from(interests).where(eq(interests.tripId, trip.id))).toEqual([]);
   });
 });
