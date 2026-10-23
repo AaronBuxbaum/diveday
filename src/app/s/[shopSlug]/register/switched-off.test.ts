@@ -1,11 +1,12 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 
 /**
  * **Counter sign-up switched off on Features** (ADR
- * 20261005-optional-shop-features): the public register page is a 404, as if
- * the shop never offered it, and a hand-built post puts nobody on file and
- * reads no card photo.
+ * 20261005-optional-shop-features): a printed counter card's QR still lands
+ * somewhere, so the register page sends the diver to the crew and draws no
+ * form; a hand-built post puts nobody on file and reads no card photo.
  */
 
 const OFF_SHOP = {
@@ -15,6 +16,10 @@ const OFF_SHOP = {
   defaultLocale: "en-US",
   timezone: "America/New_York",
   selfRegistrationEnabled: false,
+  contactPhone: "+1 305 555 0142",
+  contactEmail: "desk@nocounter.example",
+  // Never shown on this page: what the shopfront footer does not show.
+  stripeAccountId: "acct_private",
 };
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
@@ -47,9 +52,23 @@ const { registerAtShopAction } = await import("./actions");
 const { readCardPhotoAtShopAction } = await import("./card-photo-action");
 
 describe("the counter sign-up with the switch off", () => {
-  it("is a 404", async () => {
+  it("sends the diver to the crew, with the shop’s name and contact, and draws no form", async () => {
+    const html = renderToStaticMarkup(
+      await RegisterPage({ params: Promise.resolve({ shopSlug: "no-counter" }) }),
+    );
+    expect(html).toContain("No Counter Divers");
+    expect(html).toContain(diverTranslator("en-US")("register.switchedOff"));
+    expect(html).toContain("+1 305 555 0142");
+    expect(html).toContain("desk@nocounter.example");
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain("<input");
+    expect(html).not.toContain("acct_private");
+  });
+
+  it("is still a 404 for a shop that does not exist", async () => {
+    vi.mocked(shopBySlugCached).mockResolvedValueOnce(null as never);
     await expect(
-      RegisterPage({ params: Promise.resolve({ shopSlug: "no-counter" }) }),
+      RegisterPage({ params: Promise.resolve({ shopSlug: "nobody" }) }),
     ).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
   });
 

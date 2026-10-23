@@ -138,12 +138,13 @@ discount that does not exist.
     species, and no highlight is drafted from sightings. A chip tap and the sightings assist
     refuse. **Saving a dive keeps the species already logged** unless the form drew the
     picker and its `speciesShown` marker (`keepObservedSpecies`), because the save replaces the
-    whole row. Roll call, head count and readiness
-    never change.
+    whole row. Roll call, head count and readiness never change.
   - **Recap photos** off: no upload from the recap link, the readiness link or the crew's
     departure album, and the diver's recap shows no photo door or album. Photos already added stay
     on Today with their Remove so staff can take one down, and media deletions keep running.
-  - **Counter sign-up** off: `/s/<shop>/register` is a 404, a hand-built registration and the
+  - **Counter sign-up** off: `/s/<shop>/register` draws no form, only the shop's name, phone and
+    email and a line sending the diver to the crew, since a printed card can stay taped up; the
+    Features row asks owners to take the cards down. A hand-built registration and the
     card-photo read refuse, the counter card leaves Settings (row, rail, ⌘K) and its print page
     lands on Settings. Divers who signed themselves up stay, with the divers list's filter.
 

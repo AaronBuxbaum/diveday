@@ -495,7 +495,7 @@
       "selfRegistration": {
         "heading": "Counter sign-up",
         "label": "Let walk-ins sign themselves up",
-        "description": "The QR code on your counter card opens a form on their phone for contact details, certification and rental sizes. Off, the card and its form are gone; divers who already signed up stay."
+        "description": "The QR code on your counter card opens a form on their phone for contact details, certification and rental sizes. Off, the form is gone and the QR sends walk-ins to your crew; divers who already signed up stay. Take printed counter cards down when you turn it off."
       },
       "sightings": {
         "heading": "Sightings",

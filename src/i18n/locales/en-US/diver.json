@@ -836,7 +836,8 @@
     "doneBody": "{shop} has your details. Watch for your release. Sign it before your first dive and you’re set.",
     "invalid": "Something in the form didn’t come through. Check it over and try again.",
     "contactRequired": "Leave an email or a phone number so we can reach you.",
-    "unavailable": "That shop isn’t taking registrations right now."
+    "unavailable": "That shop isn’t taking registrations right now.",
+    "switchedOff": "Ask the crew at the counter to sign you in."
   },
   "packages": {
     "title": "Dive packages",

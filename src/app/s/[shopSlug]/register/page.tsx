@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestLocale, requestTranslator } from "@/i18n/request";
+import { mailtoHref, telHref } from "@/lib/contact-links";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { registerAtShopAction } from "./actions";
 import { readCardPhotoAtShopAction } from "./card-photo-action";
@@ -24,7 +26,9 @@ export async function generateMetadata({
   if (!shop) return { title: "Register — DiveDay" };
   const { t } = await requestTranslator(shop.defaultLocale);
   return {
-    title: `${t("register.title", { shop: shop.name })} — ${shop.name}`,
+    title: shop.selfRegistrationEnabled
+      ? `${t("register.title", { shop: shop.name })} — ${shop.name}`
+      : shop.name,
     alternates: { canonical: publicShopRegisterPath(shop.slug) },
     // **Never indexed.** This is a form the shop points its own visitors at
     // with a printed QR, not a page a search engine should be offering to
@@ -53,8 +57,33 @@ export async function generateMetadata({
 export default async function RegisterPage({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
   const shop = await shopBySlugCached(shopSlug);
-  // Counter sign-up switched off on Features: no page, as if never offered.
-  if (!shop?.selfRegistrationEnabled) notFound();
+  if (!shop) notFound();
+  // Counter sign-up switched off on Features. A printed counter card can still
+  // be taped up, so its QR lands on a page that sends the diver to the crew
+  // rather than on a 404. No form, and nothing the shopfront footer does not
+  // already show: the shop's name, phone and email.
+  if (!shop.selfRegistrationEnabled) {
+    const { t } = await requestTranslator(shop.defaultLocale);
+    return (
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <ShopPageHeader title={shop.name} description={t("register.switchedOff")} />
+        {shop.contactPhone || shop.contactEmail ? (
+          <p className="mt-4 flex flex-wrap gap-x-4">
+            {shop.contactPhone ? (
+              <a href={telHref(shop.contactPhone)} className={`${tapTargetLinkClass} underline`}>
+                {shop.contactPhone}
+              </a>
+            ) : null}
+            {shop.contactEmail ? (
+              <a href={mailtoHref(shop.contactEmail)} className={`${tapTargetLinkClass} underline`}>
+                {shop.contactEmail}
+              </a>
+            ) : null}
+          </p>
+        ) : null}
+      </main>
+    );
+  }
   const locale = await requestLocale(shop.defaultLocale);
   const { t } = await requestTranslator(shop.defaultLocale);
   const canAssist = await assistsAvailable(await getDb(), shop.id);
