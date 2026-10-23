@@ -136,7 +136,6 @@
     "deskPaymentsAction": "Abrir ajustes de pago",
     "tomorrow": "Mañana · {date}",
     "week": "Esta semana",
-    "openBoard": "Abrir el calendario",
     "departures": "{count, plural, one {# salida} other {# salidas}}",
     "seatsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",
     "full": "Completa",

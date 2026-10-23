@@ -4,6 +4,7 @@ import {
   boatWorkItemText,
   helpRequestActionText,
   helpRequestDetailText,
+  kitUnaskedGroupDetailText,
   missingContactNamedDetailText,
   missingFitNamedDetailText,
   offerSeatActionText,
@@ -122,7 +123,29 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         });
         continue;
       }
-      for (const gap of boatWorkGaps(item.code, work, { tripHref, t })) {
+      // **Not asked about kit, one line per boat** (Aaron 2026-10-23): two or
+      // more divers nobody has asked share one row naming them, because the
+      // fix is the same walk down the prep list. One diver keeps their own row.
+      const kitGroup = item.code === "missing_sizes" && work.kitUnasked.length > 1;
+      if (kitGroup) {
+        actions.push({
+          id: `kit-unasked:${trip.id}`,
+          kind: "dive_prep",
+          urgency: urgencyFor(trip.startsAt, now),
+          subject: trip.title,
+          context: when,
+          departure,
+          aboutDeparture: true,
+          detail: kitUnaskedGroupDetailText(
+            t,
+            work.kitUnasked.map((diver) => diver.fullName),
+          ),
+          actionLabel: openPrepListActionText(t),
+          href: `${tripHref}/prep#${PREP_SECTION_ID}`,
+          dueAt: trip.startsAt,
+        });
+      }
+      for (const gap of boatWorkGaps(item.code, work, { tripHref, t, kitGroup })) {
         actions.push({
           id: `${gap.idPrefix}:${trip.id}:${gap.diver.personId}`,
           kind: gap.kind,
@@ -231,7 +254,7 @@ type BoatWorkGap = {
 function boatWorkGaps(
   code: Exclude<BoatWorkItem["code"], "open_orders">,
   work: BoatWork,
-  { tripHref, t }: { tripHref: string; t: StaffTranslator },
+  { tripHref, t, kitGroup }: { tripHref: string; t: StaffTranslator; kitGroup: boolean },
 ): BoatWorkGap[] {
   const prepHref = `${tripHref}/prep#${PREP_SECTION_ID}`;
   switch (code) {
@@ -246,7 +269,8 @@ function boatWorkGaps(
           actionLabel: openPrepListActionText(t),
           href: prepHref,
         })),
-        ...work.kitUnasked.map((diver) => ({
+        // A boat's unasked divers already have their one shared row.
+        ...(kitGroup ? [] : work.kitUnasked).map((diver) => ({
           idPrefix: "prep",
           kind: "dive_prep" as const,
           diver,

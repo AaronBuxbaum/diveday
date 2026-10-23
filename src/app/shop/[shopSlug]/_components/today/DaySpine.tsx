@@ -1219,8 +1219,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             <WeekHorizon
               panelClass={HORIZON_PANEL_CLASS}
               jobs={spine.week.jobs}
-              crewAway={weekCrewAway(spine.week.rows, timeZone)}
-              shopSlug={shopSlug}
+              crewAway={weekCrewAway(spine.week.rows)}
               t={t}
             >
               <StationRows rows={spine.week.rows} controls={controls} />

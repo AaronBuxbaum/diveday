@@ -213,6 +213,7 @@
     "boatWork": "{work}",
     "missingSizeNamed": "Le falta una talla de alquiler.",
     "kitUnaskedNamed": "Sin preguntar por su equipo.",
+    "kitUnaskedGroup": "Nadie les ha preguntado por su equipo: {names}.",
     "ungatedNitroxNamed": "Quiere nitrox, recibe aire a menos que se verifique una certificación antes de que salga el barco.",
     "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes {, rachas de {gusts} nudos} other {}}.",
     "instructorMissing": "Sin instructor asignado.",

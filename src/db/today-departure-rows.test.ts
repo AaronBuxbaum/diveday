@@ -104,6 +104,41 @@ describe("pushDepartureRows", () => {
     expect(folded).toHaveLength(4);
   });
 
+  // Aaron 2026-10-23: three divers nobody asked about kit read as three rows
+  // saying the same thing. Two or more share one line for the boat.
+  it("folds a boat's divers nobody asked about kit into one line naming every one", () => {
+    const dev = { personId: "p-dev", fullName: "Dev Shah" };
+    const eli = { personId: "p-eli", fullName: "Eli Park" };
+    const fay = { personId: "p-fay", fullName: "Fay Lund" };
+    const actions = pushed({
+      boatWork: new Map([
+        [
+          "t1",
+          {
+            missingSize: [ana],
+            kitUnasked: [ben, cara, dev, eli, fay],
+            ungatedNitrox: [],
+            missingContact: [],
+            openOrders: 0,
+          },
+        ],
+      ]),
+    });
+    expect(actions.map((action) => [action.id, action.subject])).toEqual([
+      ["kit-unasked:t1", "Reef Drift"],
+      ["prep:t1:p-ana", "Ana Ruiz"],
+    ]);
+    const kit = actions[0];
+    expect(kit?.aboutDeparture).toBe(true);
+    expect(kit?.diver).toBeUndefined();
+    // No "and 3 more": the row has nothing to open, so nobody is left unnamed.
+    expect(kit?.detail).toBe(
+      "Not asked about kit: Ben Cole, Cara Diaz, Dev Shah, Eli Park and Fay Lund.",
+    );
+    expect(kit?.href).toBe("/shop/blue-mantis/trips/t1/prep#packing-list");
+    expect(kit?.departure?.tripId).toBe("t1");
+  });
+
   it("names every blocked diver and nobody who is ready, in their own row", () => {
     const seat = (id: string, fullName: string, blockers: readonly { code: string }[]) => ({
       booking: { id: `b-${id}` },

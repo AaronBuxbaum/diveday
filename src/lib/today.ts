@@ -16,7 +16,6 @@ import {
   type WaiverBatchCode,
   waiverBatchLabelText,
 } from "@/i18n/today-labels";
-import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import type { AgencyCheckableCard } from "./agency-check-queue";
@@ -1980,23 +1979,16 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
 /**
  * **Who is away this week, named on the week line** (issue #2671, decided by
  * Aaron 2026-10-17): the rostered crew the week's `crew_away` rows name, each
- * counted once, and the shop-local day of the soonest such departure, which
- * the line's board link opens on. Null when nobody is. Every other later-day
- * row stays a count: the page is about today.
+ * counted once. Every other later-day row stays a count: the page is about
+ * today.
  */
-export function weekCrewAway(
-  rows: readonly TodayAction[],
-  timeZone: string,
-): { people: number; firstDay: CalendarDate } | null {
+export function weekCrewAway(rows: readonly TodayAction[]): number {
   const people = new Set<string>();
-  let soonest: Date | null = null;
   for (const row of rows) {
-    if (row.kind !== "crew_away" || !row.crewAway || row.crewAway.people.length === 0) continue;
+    if (row.kind !== "crew_away" || !row.crewAway) continue;
     for (const person of row.crewAway.people) people.add(person.personId);
-    if (row.dueAt && (soonest === null || row.dueAt < soonest)) soonest = row.dueAt;
   }
-  if (people.size === 0 || soonest === null) return null;
-  return { people: people.size, firstDay: calendarDateInTimezone(soonest, timeZone) };
+  return people.size;
 }
 
 /** Whether a row is a job of its own: a batch acts on divers already counted (`batch`). */
@@ -2178,12 +2170,18 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
           .map((station) => station.tripId)
       : [],
   );
+  // The blank emergency reference counts too when it names that minute's boat:
+  // it files under the desk, not the boat it would sail on (Aaron 2026-10-23).
+  // Every other desk row is not about a boat.
   const dueBeforeNext = next
     ? lead.filter(
         (action) =>
           countsAsJob(action) &&
-          action.departure != null &&
-          nextTripIds.has(action.departure.tripId),
+          (action.departure != null
+            ? nextTripIds.has(action.departure.tripId)
+            : action.kind === "emergency_card_blank" &&
+              action.dueAt != null &&
+              clockMinute(action.dueAt) === clockMinute(next.startsAt)),
       ).length
     : count;
   return {

@@ -24,9 +24,8 @@ export type DeskFacts = { emergencyCardHasNumbers: boolean; lostItemsWaiting: nu
  * - **Item 3, a blank emergency reference.** When a departure sails inside
  *   the next 48 hours and the shop's emergency reference has no number to dial,
  *   the owner hears it the day before, not the captain at sea. One row for the
- *   shop, filed under the first boat that would carry the blank card, so it
- *   ranks with that boat's own rows (it is in today's list even when that boat
- *   is tomorrow's).
+ *   shop, under "The desk", naming the first boat that would carry the blank
+ *   card and ranked by that boat's urgency.
  * - **Item 7, found items waiting to go home.** One counting row while anything
  *   is open, which is also Lost and found's door from Today.
  */
@@ -50,16 +49,17 @@ export function pushDeskRows(actions: TodayAction[], ctx: TodayRowsContext, fact
         time: at(next.startsAt, timeZone, locale),
         day: formatRelativeDay(next.startsAt, now, locale, timeZone),
       });
-      const time = at(next.startsAt, timeZone, locale);
       actions.push({
         id: "emergency-card-blank",
         kind: "emergency_card_blank",
         urgency: urgencyFor(next.startsAt, now),
         subject: words.subject,
         context: null,
-        // Under the boat it names, so its rank holds inside that boat's group
-        // rather than sinking to the desk's (review fixes, dive-domain FIX 1).
-        departure: { tripId: next.id, label: `${next.title} · ${time}` },
+        // **A desk row, not a boat's** (Aaron 2026-10-23): the card is the
+        // shop's, like the units question, so it files under "The desk" with no
+        // departure. The detail still names the first boat it would sail on, and
+        // its urgency is that boat's, so it ranks as high as the boat would.
+        // Filed on the boat, it hid inside a folded Tomorrow the day before.
         detail: words.detail,
         actionLabel: words.actionLabel,
         href: shopPath(shopSlug, "settings", "emergency-reference"),

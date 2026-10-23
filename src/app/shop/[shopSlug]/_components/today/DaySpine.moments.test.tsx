@@ -432,7 +432,8 @@ describe("the two horizon rows", () => {
     expect(screen.queryByText(/^Tomorrow/)).toBeNull();
   });
 
-  it("expands 'This week' in place to its jobs, with a door to the board inside", () => {
+  // Aaron 2026-10-23: the side panel's Board is the same door, so the week has none.
+  it("expands 'This week' in place to its jobs, with no board link inside", () => {
     const { container } = renderSpine({
       actions: [
         action({ id: "today", departure: boat("t1") }),
@@ -443,14 +444,11 @@ describe("the two horizon rows", () => {
     expect(week).not.toBeNull();
     expect(week).not.toHaveAttribute("open");
     expect(within(week as HTMLElement).getByText("This week")).toBeInTheDocument();
-    expect(
-      within(week as HTMLElement).getByRole("link", { name: "Open the board" }),
-    ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
+    expect(within(week as HTMLElement).queryByRole("link", { name: "Open the board" })).toBeNull();
   });
 
-  // Issue #2671: a rostered crew member away later this week is counted on the
-  // line, and the board opens on that departure's week.
-  it("counts the week's away crew on its line and opens the board on their week", () => {
+  // Issue #2671: a rostered crew member away later this week is counted on the line.
+  it("counts the week's away crew on its line", () => {
     const { container } = renderSpine({
       actions: [
         action({ id: "today", departure: boat("t1") }),
@@ -466,10 +464,6 @@ describe("the two horizon rows", () => {
     });
     const week = container.querySelector("details") as HTMLElement;
     expect(within(week).getByText("2 things, 1 crew member away")).toBeInTheDocument();
-    expect(within(week).getByRole("link", { name: "Open the board" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/schedule/board?week=2026-08-30",
-    );
   });
 
   it("renders no 'This week' row when the rest of the week is clear", () => {
