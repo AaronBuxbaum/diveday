@@ -385,6 +385,13 @@ describe("courseFootBar", () => {
     });
   });
 
+  it("points at the full dates, not a wait list, while the wait list is off", () => {
+    expect(courseFootBar([full], null, t, false)).toEqual({
+      href: "#dates",
+      label: "See this date",
+    });
+  });
+
   it("asks for a date when none is on the board, and keeps no door without an address", () => {
     expect(courseFootBar([], "#get-in-touch", t)).toEqual({
       href: "#get-in-touch",

@@ -77,10 +77,20 @@ export function siteFormSectionLabels(t: StaffTranslator): Record<SiteFormSectio
   };
 }
 
+/**
+ * The sections a shop's form draws, in page order: every one, less the field
+ * guide while its Features switch is off.
+ */
+export function siteFormSectionOrder(fieldGuideOn = true): readonly SiteFormSection[] {
+  return fieldGuideOn
+    ? SITE_FORM_SECTION_ORDER
+    : SITE_FORM_SECTION_ORDER.filter((section) => section !== "fieldGuide");
+}
+
 /** The rail's entries, in page order. */
-export function siteFormSections(t: StaffTranslator): EditorSectionRef[] {
+export function siteFormSections(t: StaffTranslator, fieldGuideOn = true): EditorSectionRef[] {
   const labels = siteFormSectionLabels(t);
-  return SITE_FORM_SECTION_ORDER.map((section) => ({
+  return siteFormSectionOrder(fieldGuideOn).map((section) => ({
     id: SITE_FORM_SECTION_IDS[section],
     label: labels[section],
   }));
@@ -94,15 +104,16 @@ export function siteFormSections(t: StaffTranslator): EditorSectionRef[] {
  * state, staff copy is server-side only, and a `{count}` interpolated in a
  * Client Component is a plural a translator can never reach (AGENTS.md).
  */
-export function siteFormUnsavedCopy(t: StaffTranslator): EditorUnsavedCopy {
+export function siteFormUnsavedCopy(t: StaffTranslator, fieldGuideOn = true): EditorUnsavedCopy {
   const labels = siteFormSectionLabels(t);
+  const order = siteFormSectionOrder(fieldGuideOn);
   return {
-    inSection: SITE_FORM_SECTION_ORDER.map((section) =>
+    inSection: order.map((section) =>
       t("diveSites.form.unsavedInSection", { section: labels[section] }),
     ),
     // Index is the count, so index 0 and 1 are never read — the one-section
     // sentence names the section instead of counting it.
-    inSections: Array.from({ length: SITE_FORM_SECTION_ORDER.length + 1 }, (_unused, count) =>
+    inSections: Array.from({ length: order.length + 1 }, (_unused, count) =>
       t("diveSites.form.unsavedInSections", { count }),
     ),
   };

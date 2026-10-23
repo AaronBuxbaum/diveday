@@ -7,6 +7,7 @@ import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db"
 import { readOwed } from "./owed";
 import {
   bookings,
+  courses,
   interests,
   orders,
   paymentOperationIntents,
@@ -471,6 +472,39 @@ describe("previewWeeklyDigest", () => {
       },
     ]);
     expect(await waitingOf()).toBe(before + 1);
+  });
+
+  it("counts only course inquiries while date requests are switched off", async () => {
+    const { db, shop, monday } = await context();
+    const day = new Date(monday.getTime() + 10 * 24 * 3_600_000).toISOString().slice(0, 10);
+    const waitingOf = async () =>
+      (await readWeeklyDigestFacts(db, shop, monday)).grades.reports.dateRequestsWaiting;
+    await db.update(shops).set({ dateRequestsEnabled: false }).where(eq(shops.id, shop.id));
+    const before = await waitingOf();
+    const [course] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Open Water",
+        slug: "digest-open-water",
+        agency: "PADI",
+        certifiesLevel: "open_water",
+      })
+      .returning();
+    if (!course) throw new Error("course not inserted");
+    const ask = { shopId: shop.id, scope: "date" as const, askedBy: "diver" as const };
+    await db.insert(interests).values([
+      { ...ask, interest: "Night dive", name: "Day ask", preferredDate: day },
+      { ...ask, courseId: course.id, name: "Course inquiry", preferredDate: day },
+    ]);
+    expect(await waitingOf()).toBe(before + 1);
+  });
+
+  it("suggests no boat for a deal while the last-minute list is switched off", async () => {
+    const { db, shop, monday } = await context();
+    await db.update(shops).set({ lastMinuteListEnabled: false }).where(eq(shops.id, shop.id));
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    expect(facts.grades.reports.thisWeek.weakest).toBeNull();
   });
 
   it("gives the owner the gear line and the safety sentence, and the crew neither", async () => {

@@ -605,6 +605,7 @@
     "orGetInTouch": "o escríbenos y programamos una.",
     "startsAt": "Empieza a las {time}",
     "joinWaitList": "Anotarme en la lista de espera",
+    "seeFullDate": "Ver esta fecha",
     "bookThisDate": "Reservar esta fecha",
     "faqsHeading": "Preguntas que hacen los buceadores",
     "howItRunsHeading": "Cómo se desarrolla el curso",
@@ -836,7 +837,8 @@
     "doneBody": "{shop} tiene tus datos. Atento a la exención: fírmala antes de tu primera inmersión y listo.",
     "invalid": "Algo del formulario no llegó bien. Revísalo e inténtalo de nuevo.",
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
-    "unavailable": "Ese centro no acepta registros en este momento."
+    "unavailable": "Ese centro no acepta registros en este momento.",
+    "switchedOff": "Pídele al personal del mostrador que te registre."
   },
   "packages": {
     "title": "Paquetes de inmersiones",
@@ -1064,6 +1066,8 @@
     "helpAcknowledged": "{name} te ayudará en {meeting}.",
     "helpAssignedFallback": "{name} te ayudará en esta salida.",
     "helpHandled": "La tripulación ha atendido esta solicitud.",
+    "helpWithdraw": "Cancelar mi solicitud",
+    "helpAskShop": "¿Necesitas una mano ese día? Pregúntale al centro.",
     "carriedHeading": "Sigue archivado a tu nombre",
     "carriedWaiver": "Tu exención firmada",
     "carriedCertification": "Tu certificación",
@@ -5650,6 +5654,11 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
+    },
+    "whatsappReopen": {
+      "answerReady": "Tenemos respuesta a tu mensaje. Contesta aquí y te la enviamos.",
+      "question": "Tenemos una pregunta rápida sobre tu mensaje. Contesta aquí cuando tengas un momento.",
+      "followUp": "Nos gustaría retomar la conversación. Contesta aquí cuando te venga bien."
     },
     "gearPieces": {
       "bcd": "chaleco",

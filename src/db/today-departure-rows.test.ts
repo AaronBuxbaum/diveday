@@ -9,7 +9,7 @@ import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { askAnytime } from "./interests";
 import { setBookingNitrox } from "./nitrox";
-import { boats, bookings, interests, nitroxCertifications, orders, people } from "./schema";
+import { boats, bookings, interests, nitroxCertifications, orders, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
@@ -102,6 +102,41 @@ describe("pushDepartureRows", () => {
       "nitrox certification, rental size, emergency contact",
     );
     expect(folded).toHaveLength(4);
+  });
+
+  // Aaron 2026-10-23: three divers nobody asked about kit read as three rows
+  // saying the same thing. Two or more share one line for the boat.
+  it("folds a boat's divers nobody asked about kit into one line naming every one", () => {
+    const dev = { personId: "p-dev", fullName: "Dev Shah" };
+    const eli = { personId: "p-eli", fullName: "Eli Park" };
+    const fay = { personId: "p-fay", fullName: "Fay Lund" };
+    const actions = pushed({
+      boatWork: new Map([
+        [
+          "t1",
+          {
+            missingSize: [ana],
+            kitUnasked: [ben, cara, dev, eli, fay],
+            ungatedNitrox: [],
+            missingContact: [],
+            openOrders: 0,
+          },
+        ],
+      ]),
+    });
+    expect(actions.map((action) => [action.id, action.subject])).toEqual([
+      ["kit-unasked:t1", "Reef Drift"],
+      ["prep:t1:p-ana", "Ana Ruiz"],
+    ]);
+    const kit = actions[0];
+    expect(kit?.aboutDeparture).toBe(true);
+    expect(kit?.diver).toBeUndefined();
+    // No "and 3 more": the row has nothing to open, so nobody is left unnamed.
+    expect(kit?.detail).toBe(
+      "Not asked about kit: Ben Cole, Cara Diaz, Dev Shah, Eli Park and Fay Lund.",
+    );
+    expect(kit?.href).toBe("/shop/blue-mantis/trips/t1/prep#packing-list");
+    expect(kit?.departure?.tripId).toBe("t1");
   });
 
   it("names every blocked diver and nobody who is ready, in their own row", () => {
@@ -205,6 +240,36 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(row?.offer?.personEmail).toBe("marina@example.com");
     expect(row?.offer?.tripId).toBe(reef.id);
     expect(row?.offer?.bookingPath).toBe(`/s/${shop.slug}/trips/${reef.id}`);
+  });
+
+  it("keeps a diver already waiting on Today after the wait list is switched off", async () => {
+    // Review 2026-10-23, item 8: switched off, nobody new joins, but whoever
+    // was already waiting stays in front of the desk until someone handles them.
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [waiter] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Ola Offswitch", email: "ola-off@example.com" })
+      .returning();
+    if (!waiter) throw new Error("could not seed a waiter");
+    await db.insert(interests).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      scope: "departure",
+      askedBy: "diver",
+      personId: waiter.id,
+      partySize: 1,
+    });
+    await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(row?.offer?.personName).toBe("Ola Offswitch");
+    expect(await db.select().from(interests).where(eq(interests.personId, waiter.id))).toHaveLength(
+      1,
+    );
   });
 
   // Dive-domain review of #2656, m2: one tap must not email "a seat opened" to

@@ -376,10 +376,10 @@ export default async function OrdersIndexPage({
         }
       />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="money"
         current="orders"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

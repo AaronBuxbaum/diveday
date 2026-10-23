@@ -61,7 +61,13 @@ import type { TripSharedReads } from "./trips-shared-reads";
  */
 
 /** `padiChecksEnabled`: whether PADI's eLearning check is offered here (H-121). */
-export type TripGuestsShop = { id: string; timezone: string; padiChecksEnabled: boolean };
+export type TripGuestsShop = {
+  id: string;
+  timezone: string;
+  padiChecksEnabled: boolean;
+  pastDiverInvitesEnabled: boolean;
+  waitlistEnabled: boolean;
+};
 
 export type TripGuestsFilters = {
   /** The returning-diver picker's query. Blank means the picker is closed. */
@@ -148,11 +154,8 @@ export async function getTripGuests(
     aboardAtSea,
   ] = await Promise.all([
     filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
-    // The returning-diver picker only books, so it is skipped once the boat is
-    // full — hand-entry then wait-lists instead.
-    isFull(trip) || diverQuery === ""
-      ? []
-      : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
+    // The returning-diver picker books an open boat and wait-lists a full one.
+    diverQuery === "" ? [] : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
     // The roster with what each seat's Paid mark recorded and still owes
     // (batch 6 item 1), so the amount field opens on the usual figure: one
     // statement over the seats, not a second beside it.
@@ -169,8 +172,10 @@ export async function getTripGuests(
       day: calendarDateInTimezone(trip.startsAt, shop.timezone),
     }),
     // Past divers of this departure's site worth asking (H-130), only while
-    // it has a seat to offer.
-    isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
+    // it has a seat to offer and the shop invites past divers (the Features page).
+    isFull(trip) || !shop.pastDiverInvitesEnabled
+      ? null
+      : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
     listOpenAnytimeInterests(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),
@@ -205,6 +210,10 @@ export async function getTripGuests(
       .filter(({ booking }) => booking.status !== "cancelled")
       .map(({ booking }) => booking.personId),
   );
+  // A seated diver's interest is hidden. **The wait list's switch hides
+  // nobody** (review 2026-10-23, item 8): a diver already waiting when it went
+  // off, and a reply to a date request (that feature's own row), stay on the
+  // panel until someone handles them; only joining is closed.
   const interests = departureInterests.filter(
     ({ interest }) => interest.personId === null || !seatedPersonIds.has(interest.personId),
   );
@@ -522,6 +531,8 @@ export async function getTripGuests(
       waitlisted: waitlist.reduce((seats, { interest }) => seats + (interest.partySize ?? 1), 0),
     }),
     dateInterests,
+    /** The shop keeps a wait list (the Features page); off, a full boat's roster offers none. */
+    waitlistOn: shop.waitlistEnabled,
     lastMinute: {
       matched: lastMinuteMatched,
       dateIso: tripDateIso,

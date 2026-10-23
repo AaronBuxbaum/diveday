@@ -48,8 +48,8 @@
 - **Our year** — the shopfront panel at the foot of the public schedule that states the shop's year
   so far in counts: divers, boats out, and reefs or wrecks, with the range it covers. The same read
   as the Reports year card (`getShopYear`, which carries no money across its boundary), and the
-  card's own sentence (`shopYear.card.*`). Opt-in: `shops.public_year_enabled` is the one optional
-  feature that defaults off, switched under Settings → Website. Absent before a departure has
+  card's own sentence (`shopYear.card.*`). Switched by `shops.public_year_enabled` in Settings →
+  Features, on for a new shop since 2026-10-23. Absent before a departure has
   sailed, and never inside the embed. Component in `src/app/s/[shopSlug]/_components/OurYear.tsx`.
 - **The shop's year** — the twelve months from the shop's season start
   (`shops.season_start_month`/`season_start_day`), as `ShopSeason` in `src/lib/season.ts`: the

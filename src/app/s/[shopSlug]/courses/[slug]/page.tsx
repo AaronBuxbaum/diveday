@@ -158,7 +158,7 @@ export default async function CoursePage({
   ].filter((item) => item !== null);
 
   // The phone's one persistent door (UX audit #8).
-  const footBar = courseFootBar(sessions, inquiryHref, t);
+  const footBar = courseFootBar(sessions, inquiryHref, t, shop.waitlistEnabled);
 
   // A hidden course is a staff preview, not a public document — emitting a
   // Course graph for a page divers cannot reach would advertise something that
@@ -221,6 +221,7 @@ export default async function CoursePage({
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions
         sessions={sessions}
+        waitlistOn={shop.waitlistEnabled}
         shopSlug={shopSlug}
         timezone={shop.timezone}
         locale={locale}

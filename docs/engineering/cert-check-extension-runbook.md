@@ -143,8 +143,8 @@ held apart (H-121, confirmed by Aaron Buxbaum on 2026-10-15):
   record, a several-divers page, a signed-out page, a Junior (or "Jr.") card, a diver whose name
   ends in "Jr." read as their name and not a Junior card, a PADI Scuba Diver card, and the date
   format of a page read by a Pro outside the US.
-- **The default turns on** only after the Pros' Site terms are pasted into H-121 or PADI answers in
-  writing. That call is the product owner's. If the terms rule the check out, `padi` comes out of
+- **The default turned on** on 2026-10-23: Aaron Buxbaum made the product owner's call before the
+  Pros' Site terms were read (H-121). If the terms rule the check out, `padi` comes out of
   `AGENCY_CHECKS` and `extension/agencies.js`, and a PADI card keeps its "(member sign-in)" link.
 
 PADI has no public API; Dive Shop 360 has a private, PADI-approved integration that makes PADI

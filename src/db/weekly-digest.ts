@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { isStaff, type Role } from "@/lib/authz";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
@@ -194,7 +194,8 @@ async function countReviewsReceived(
  * (`handledAt`, the stamp every staff reader of requests filters on; fourth UX
  * review, item 24) that asks for a day from today on, plus the undated ones
  * that came in since last Monday. A named day that has passed is no longer
- * waiting either, and an undated one is news for a week.
+ * waiting either, and an undated one is news for a week. A shop with date
+ * requests switched off counts only its course inquiries.
  */
 async function countDateRequestsWaiting(
   db: DbExecutor,
@@ -205,11 +206,15 @@ async function countDateRequestsWaiting(
   const [row] = await db
     .select({ n: count() })
     .from(interests)
+    .innerJoin(shops, eq(shops.id, interests.shopId))
     .where(
       and(
         eq(interests.shopId, shopId),
         eq(interests.scope, "date"),
         isNull(interests.closedAt),
+        // Switched off, the shopfront takes no day asks; a course page's
+        // inquiry is not one and still counts (`countWaitingDateInterests`).
+        or(eq(shops.dateRequestsEnabled, true), isNotNull(interests.courseId)),
         or(
           sql`greatest(${interests.preferredDate}, ${interests.alternateDate}) >= ${today}`,
           and(
@@ -333,6 +338,7 @@ export async function readWeeklyDigestFacts(
     incidents,
     neverSentDeal,
     suitedToADeal,
+    dealsOffered,
   ] = await Promise.all([
     countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
     countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
@@ -350,9 +356,17 @@ export async function readWeeklyDigestFacts(
       shop.id,
       thisWeekTrips.map((trip) => trip.id),
     ),
+    // A deal is the last-minute list's: switched off, no boat is suggested for one.
+    db
+      .select({ on: shops.lastMinuteListEnabled })
+      .from(shops)
+      .where(eq(shops.id, shop.id))
+      .then(([row]) => row?.on ?? false),
   ]);
   // Only a scheduled public boat departure is worth a deal (review N7).
-  const dealCandidates = new Set([...neverSentDeal].filter((id) => suitedToADeal.has(id)));
+  const dealCandidates = new Set(
+    dealsOffered ? [...neverSentDeal].filter((id) => suitedToADeal.has(id)) : [],
+  );
   // Today's own rows, counted rather than detected twice (item 24).
   const countKinds = (kinds: ReadonlySet<TodayActionKind>) =>
     reportsToday.actions.filter((action) => countsAsJob(action) && kinds.has(action.kind)).length;

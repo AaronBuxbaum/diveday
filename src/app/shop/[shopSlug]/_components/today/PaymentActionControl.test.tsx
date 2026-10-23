@@ -32,7 +32,8 @@ const COPY: PaymentActionCopy = {
     notOpen: "This order is no longer open. Open the trip to check its status.",
     notConfigured: "Payments aren’t connected for this shop yet.",
     failed: "Still couldn’t resend it. Open the trip to check the order.",
-    rateLimited: "You have resent a lot this hour. Try again in a little while.",
+    rateLimited:
+      "You have sent a lot of invoices this hour. Nothing went out; try again in a little while.",
   },
 };
 

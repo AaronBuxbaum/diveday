@@ -9,7 +9,7 @@ import { sendDueCheckoutRecoveries } from "./checkout-recovery";
 import { startBookingCheckout } from "./checkouts";
 import { setBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, people, trips } from "./schema";
-import { setShopTaxEnabled } from "./shops";
+import { setShopFeature, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -202,6 +202,87 @@ describe("sendDueCheckoutRecoveries", () => {
     });
     expect(again.sent).toBe(0);
     expect(email.sent).toHaveLength(1);
+  });
+
+  it("switched off, a paid session is still reconciled and a stale one expires, no email goes", async () => {
+    const { db, shop, tripId, checkoutId: paidId } = await pendingCheckoutContext(3);
+    await setShopFeature(db, shop.id, "checkoutRecovery", false);
+
+    // Two more pending checkouts on the same trip: one Stripe has let expire,
+    // one Stripe still reports open and unpaid (the one a reminder would nudge).
+    async function anotherCheckout(fullName: string, email: string, sessionId: string) {
+      const party = await createBookingParty(db, [
+        { actor: "staff" as const, shopId: shop.id, tripId, fullName, email },
+      ]);
+      if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+      const opened = fakeCheckout();
+      const started = await startBookingCheckout(
+        db,
+        {
+          shopId: shop.id,
+          tripId,
+          bookingIds: party.bookings.map((b) => b.bookingId),
+          customerEmail: email,
+          successUrl: "https://diveday.example/return",
+          cancelUrl: "https://diveday.example/cancel",
+          describeLine: ({ tripTitle }) => tripTitle,
+        },
+        fakeCheckout({
+          async createCheckoutSession(request) {
+            const session = await opened.createCheckoutSession(request);
+            if (session.status !== "created") return session;
+            return {
+              ...session,
+              stripeSessionId: sessionId,
+              checkoutUrl: `https://checkout.stripe.com/c/pay/${sessionId}`,
+              expiresAt: new Date(NOW.getTime() + 24 * HOUR_MS),
+            };
+          },
+        }),
+      );
+      if (!started.ok) throw new Error(`checkout start failed: ${started.reason}`);
+      await db
+        .update(bookingCheckouts)
+        .set({ createdAt: new Date(NOW.getTime() - 3 * HOUR_MS) })
+        .where(eq(bookingCheckouts.id, started.checkout.id));
+      return started.checkout.id;
+    }
+    const staleId = await anotherCheckout("Sam Stale", "sam-stale@example.com", "cs_stale");
+    const openId = await anotherCheckout("Olu Open", "olu-open@example.com", "cs_open");
+
+    const byStripe: CheckoutProvider["retrieveCheckoutSession"] = async (account, sessionId) => {
+      if (sessionId === "cs_stale") {
+        const open = await stillOpen(account, sessionId);
+        if (open.status !== "ok") return open;
+        return {
+          ...open,
+          session: { ...open.session, stripeSessionId: sessionId, stripeStatus: "expired" },
+        };
+      }
+      if (sessionId === "cs_open") return stillOpen(account, sessionId);
+      return alreadyPaid(account, sessionId);
+    };
+    const email = fakeEmail();
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(byStripe),
+    });
+
+    expect(summary).toMatchObject({ scanned: 3, resolved: 2, switchedOff: 1, sent: 0 });
+    expect(email.sent).toHaveLength(0);
+    const rows = await db
+      .select({
+        id: bookingCheckouts.id,
+        status: bookingCheckouts.status,
+        sentAt: bookingCheckouts.abandonedRecoverySentAt,
+      })
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.shopId, shop.id));
+    const statusOf = (id: string) => rows.find((r) => r.id === id);
+    expect(statusOf(paidId)).toMatchObject({ status: "completed", sentAt: null });
+    expect(statusOf(staleId)).toMatchObject({ status: "expired", sentAt: null });
+    expect(statusOf(openId)).toMatchObject({ status: "pending", sentAt: null });
   });
 
   /**

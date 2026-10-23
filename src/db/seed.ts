@@ -403,26 +403,15 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // `/api/test/seed-trouble-states?unitsUnconfirmed=1`.
       unitsConfirmedAt: nowDate(),
       // Its desk hours are its own, saved (the default 08:00 to 18:00), so the
-      // storefront footer prints them; and it said yes to "Our year" on its
-      // schedule, so the panel is photographed and exercised.
+      // storefront footer prints them. Every switch on the Features page
+      // ("Our year", the crew schedule, the PADI checks, recap highlights
+      // without a tap, hotel pickups from the Key Largo resorts) starts on for
+      // every shop since 2026-10-23, so the demo photographs and exercises all
+      // of them without naming one here.
       deskHoursConfirmedAt: nowDate(),
-      publicYearEnabled: true,
-      // **Blue Mantis plans its crew in DiveDay** — the setting is off for a
-      // new shop (`shops.crew_schedule_enabled`), and the demo is where every
-      // crew surface is photographed and exercised.
-      crewScheduleEnabled: true,
-      // A Key Largo shop picks divers up from the resorts, so `/ready` asks
-      // "Want a pickup?" here; a new shop runs none until it says so (fourth
-      // UX review, item 8).
-      offersHotelPickup: true,
       // The desk takes cards and cash, and every "due at the shop" says so
       // (fifth-loop ideas, item 21); a new shop says nothing until it chooses.
       deskPayment: "card_and_cash",
-      // **Blue Mantis runs the PADI checks (beta)**, off for a new shop and for
-      // a minted one (`shops.padi_checks_enabled`, H-121): the demo is where
-      // "Check with PADI" and the eLearning check are photographed and
-      // exercised.
-      padiChecksEnabled: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: demoEmail("front.desk"),
@@ -707,9 +696,6 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
           // opposite of the case `shops.address_street`'s comment protects —
           // a *real* shop still fills its own address in and never has one
           // guessed on its behalf.
-          // On, like the canonical demo's: a minted shop is the same cast with
-          // the same roster, and the crew specs run against minted shops.
-          crewScheduleEnabled: true,
           addressStreet: "100 Ocean Drive",
           addressLocality: "Key Largo",
           addressRegion: "FL",

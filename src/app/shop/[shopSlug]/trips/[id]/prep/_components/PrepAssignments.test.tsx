@@ -390,3 +390,28 @@ describe("the set controls once the boat is home", () => {
     expect(screen.queryByRole("button", { name: t("gear.prep.handOver") })).toBeNull();
   });
 });
+
+/**
+ * **A diver's kit as tiles, the diver's acts on the name's line** (Aaron,
+ * 2026-10-23: the surface was "really ugly"). The hand-over sits beside the
+ * name rather than under the last piece, and the kit list holds only pieces,
+ * so the grid of tiles is never broken by a button between them.
+ */
+describe("the diver's row", () => {
+  it("puts the hand-over on the name's line, outside the kit grid", () => {
+    const { container } = renderAssignments(everyPanelPrep());
+    const handOver = screen.getByRole("button", { name: t("gear.prep.handOver") });
+    expect(handOver.closest("dl")).toBeNull();
+    const name = within(container).getByText(
+      everyPanelPrep().assignmentRows[0]?.diver.fullName ?? "",
+    );
+    expect(name.parentElement?.contains(handOver)).toBe(true);
+  });
+
+  it("lays the kit out as a grid of tiles from sm up", () => {
+    const { container } = renderAssignments(everyPanelPrep());
+    const grid = container.querySelector("dl");
+    expect(grid?.className).toContain("sm:grid-cols-2");
+    expect(grid?.className).toContain("lg:grid-cols-3");
+  });
+});

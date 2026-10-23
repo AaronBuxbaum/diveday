@@ -61,11 +61,14 @@ export function ProposedUnit({
 
   return (
     <div className="flex flex-col gap-1" data-hydrated={hydrated ? "true" : undefined}>
-      {/* **One line with its two acts** (UX review 2026-10-10, item 13): the
-          words take what the buttons leave and wrap inside it, so a proposed
-          piece is one 44px row on a phone rather than words over buttons. */}
-      <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 font-medium">{copy.proposed}</span>
+      {/* **One line with its two acts on a phone** (UX review 2026-10-10,
+          item 13): the words take what the buttons leave, so a proposed piece
+          is one 44px row rather than words over buttons. In a desk tile the
+          words get the tile's whole line and the acts sit under them, every
+          proposed tile alike, rather than some squeezing "BCD #5" over an
+          orphaned "· L" and some not. */}
+      <div className="flex items-center gap-x-2 gap-y-1 sm:flex-wrap">
+        <span className="min-w-0 flex-1 font-medium sm:basis-full">{copy.proposed}</span>
         <span className="flex shrink-0 items-center gap-1">
           <button
             type="button"
@@ -116,6 +119,7 @@ export function ConfirmProposals({
   picks,
   confirm,
   copy,
+  className = "",
 }: {
   tripId: string;
   picks: { bookingId: string; gearItemId: string }[];
@@ -130,6 +134,8 @@ export function ConfirmProposals({
     refused: string;
     failed: string;
   };
+  /** Placement from the section's header row. */
+  className?: string;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -137,7 +143,7 @@ export function ConfirmProposals({
   useEffect(() => setHydrated(true), []);
   return (
     <div
-      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 print:hidden"
+      className={`flex flex-wrap items-center gap-x-3 gap-y-1 print:hidden ${className}`}
       data-hydrated={hydrated ? "true" : undefined}
     >
       <button

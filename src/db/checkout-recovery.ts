@@ -63,6 +63,11 @@ export type CheckoutRecoveryRunSummary = {
   unaddressable: number;
   /** Send attempted but failed or no provider configured. */
   failed: number;
+  /**
+   * Stripe confirmed the session open and unpaid, but the shop has checkout
+   * reminders switched off: reconciled, never emailed, left pending.
+   */
+  switchedOff: number;
 };
 
 export type SendDueCheckoutRecoveriesOptions = {
@@ -168,6 +173,7 @@ export async function sendDueCheckoutRecoveries(
     optedOut: 0,
     unaddressable: 0,
     failed: 0,
+    switchedOff: 0,
   };
   if (candidates.length === 0) return summary;
 
@@ -285,7 +291,14 @@ export async function sendDueCheckoutRecoveries(
       summary.resolved += 1;
       continue;
     }
-    // Stripe itself confirms this session is still open and unpaid — safe to nudge.
+    // Stripe itself confirms this session is still open and unpaid — safe to nudge,
+    // unless the shop switched the reminder off. The switch gates only the email:
+    // everything above (Stripe reconciliation, the expiry of stale and
+    // disqualified rows) runs either way (ADR 20261005-optional-shop-features).
+    if (!shop.checkoutRecoveryEnabled) {
+      summary.switchedOff += 1;
+      continue;
+    }
     if (!checkout.checkoutUrl) {
       summary.unreconciled += 1;
       continue;

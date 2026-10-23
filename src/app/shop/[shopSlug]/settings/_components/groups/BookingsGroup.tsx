@@ -49,14 +49,17 @@ export function BookingsGroup({
             themselves on file before they reach the front of the queue.
             A row of this group rather than a bordered card standing above
             it — there is nothing here to configure, so it is the one row
-            that states an address instead of changing one. */}
-        <CounterQrCard
-          url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
-          title={t("settings.main.counterQr.heading")}
-          description={t("settings.main.counterQr.description")}
-          printHref={shopPath(shopSlug, "print", "counter-card")}
-          printLabel={t("print.sheet.door")}
-        />
+            that states an address instead of changing one. Gone while
+            counter sign-up is switched off on Features. */}
+        {shop.selfRegistrationEnabled ? (
+          <CounterQrCard
+            url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
+            title={t("settings.main.counterQr.heading")}
+            description={t("settings.main.counterQr.description")}
+            printHref={shopPath(shopSlug, "print", "counter-card")}
+            printLabel={t("print.sheet.door")}
+          />
+        ) : null}
 
         {/* The DiveDay browser extension (H-105): whether this browser has
             it, where to get it once it is listed, and a try-it disclosure (#2817).

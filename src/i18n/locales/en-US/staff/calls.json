@@ -23,6 +23,7 @@
     "email": "A wait-list entry needs an email address: that is what a freed seat is offered through.",
     "departure": "Choose the departure they asked about.",
     "interest": "Say what they asked about.",
+    "waitlistOff": "The wait list is off, so they can’t join one. Their details are still here: log the day they want instead.",
     "logged": "Call logged"
   }
 }

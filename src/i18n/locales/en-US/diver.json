@@ -605,6 +605,7 @@
     "orGetInTouch": "or get in touch and we will set one.",
     "startsAt": "Starts {time}",
     "joinWaitList": "Join the wait list",
+    "seeFullDate": "See this date",
     "bookThisDate": "Book this date",
     "faqsHeading": "Questions divers ask",
     "howItRunsHeading": "How the course runs",
@@ -836,7 +837,8 @@
     "doneBody": "{shop} has your details. Watch for your release. Sign it before your first dive and you’re set.",
     "invalid": "Something in the form didn’t come through. Check it over and try again.",
     "contactRequired": "Leave an email or a phone number so we can reach you.",
-    "unavailable": "That shop isn’t taking registrations right now."
+    "unavailable": "That shop isn’t taking registrations right now.",
+    "switchedOff": "Ask the crew at the counter to sign you in."
   },
   "packages": {
     "title": "Dive packages",
@@ -1064,6 +1066,8 @@
     "helpAcknowledged": "{name} will help you at {meeting}.",
     "helpAssignedFallback": "{name} will help you on this departure.",
     "helpHandled": "The crew handled this request.",
+    "helpWithdraw": "Withdraw my request",
+    "helpAskShop": "Need a hand on the day? Ask the shop.",
     "carriedHeading": "Still on file for you",
     "carriedWaiver": "Your signed waiver",
     "carriedCertification": "Your certification",
@@ -5650,6 +5654,11 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
+    },
+    "whatsappReopen": {
+      "answerReady": "We have an answer to your message. Reply here and we’ll send it.",
+      "question": "We have a quick question about your message. Reply here when you have a minute.",
+      "followUp": "We’d like to pick up where we left off. Reply here whenever suits you."
     },
     "gearPieces": {
       "bcd": "BCD",

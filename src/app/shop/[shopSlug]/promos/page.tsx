@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -21,7 +21,6 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listShopPromoCodes } from "@/db/shop-promos";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -41,9 +40,10 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { DivePackagesDoor, TripDealsSection } from "./_components/DealsAndPackages";
 import { PromoConnectNotice } from "./_components/PromoConnectNotice";
 import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
-import { PromoCodeLedger, type PromoCodeRow, TripDealLedger } from "./_components/PromoLedger";
+import { PromoCodeLedger, type PromoCodeRow } from "./_components/PromoLedger";
 import { codeOutcomeFact, readPromoOutcomes, tripDealRows } from "./_components/promo-outcomes";
 import {
   createPromoAction,
@@ -186,6 +186,14 @@ export default async function PromosPage({
     allow: canPersonManagePaymentSettings,
     refusal: { notice: "promos-not-authorized" },
   });
+  // **Three prices, three switches** (the Features page): codes, the
+  // last-minute list's deals and dive packages. The tab shows the ones that
+  // are on, and with all three off a direct URL lands on Orders. Nothing is
+  // deleted: a code switched off with the feature waits for it.
+  const codesOn = shop.promoCodesEnabled;
+  const dealsOn = shop.lastMinuteListEnabled;
+  const packagesOn = shop.divePackagesEnabled;
+  if (!codesOn && !dealsOn && !packagesOn) redirect(shopPath(shopSlug, "orders"));
 
   const now = nowDate();
   const [promoPage, stripeAccount, dealPage] = await Promise.all([
@@ -351,10 +359,10 @@ export default async function PromosPage({
       />
       <ShopPageHeader title={t("shared.shopSections.money")} />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="money"
         current="promoCodes"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 
@@ -382,7 +390,7 @@ export default async function PromosPage({
       {/* **A form that cannot submit does not stand open**: unconnected, the
           notice stands in for the composer, here when there are no codes and
           inside "New code" when there are (`PromoConnectNotice`). */}
-      {connected || promoPage.total > 0 || shop.isDemo ? null : (
+      {!codesOn || connected || promoPage.total > 0 || shop.isDemo ? null : (
         <PromoConnectNotice t={t} shopSlug={shopSlug} className="mb-6" />
       )}
 
@@ -397,7 +405,7 @@ export default async function PromosPage({
           `#new-code`. A client navigation to a fragment never runs the
           browser's own reveal, so a plain `<details>` would arrive collapsed
           with the refusal inside it. */}
-      {connected || (promoPage.total > 0 && !shop.isDemo) ? (
+      {codesOn && (connected || (promoPage.total > 0 && !shop.isDemo)) ? (
         <AutoOpenDetails
           id="new-code"
           openOnHash="new-code"
@@ -501,7 +509,7 @@ export default async function PromosPage({
         </AutoOpenDetails>
       ) : null}
 
-      {promos.length === 0 ? (
+      {!codesOn ? null : promos.length === 0 ? (
         <EmptyState
           title={t("promos.empty.heading")}
           body={t("promos.empty.detail")}
@@ -532,61 +540,26 @@ export default async function PromosPage({
           }}
         />
       )}
-      <Pager
-        page={promoPage.page}
-        pageCount={promoPage.pageCount}
-        href={promosHref}
-        total={t("promos.pagination.total", { count: promoPage.total })}
-        words={staffPagerWords(t)}
-      />
+      {codesOn ? (
+        <Pager
+          page={promoPage.page}
+          pageCount={promoPage.pageCount}
+          href={promosHref}
+          total={t("promos.pagination.total", { count: promoPage.total })}
+          words={staffPagerWords(t)}
+        />
+      ) : null}
 
-      {/* One heading over both branches — the list and its empty state stand
-          under the same words, so neither renders a second spelling of them. */}
-      <GroupLabel as="h2" id="trip-deals" className="mt-10">
-        {t("promos.tripDeals.heading")}
-      </GroupLabel>
-      {dealRows.length === 0 ? (
-        // A trip deal is sent from a departure, never from here, so the door is
-        // the board. The one line saying so shows only here, where a reader
-        // needs to know how to make one; a list of deals needs no caption.
-        <>
-          <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
-          <EmptyState
-            titleAs="h3"
-            title={t("promos.tripDeals.empty")}
-            action={
-              <Link
-                href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("promos.tripDeals.emptyAction")}
-              </Link>
-            }
-            className="mt-3"
-          />
-        </>
-      ) : (
-        <TripDealLedger className="mt-3" labelledBy="trip-deals" rows={dealRows} />
-      )}
-      <Pager
-        page={dealPage.page}
-        pageCount={dealPage.pageCount}
-        href={dealsHref}
-        total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
-        words={staffPagerWords(t)}
-      />
-
-      {/* Prepaid packages are the third price this tab holds (ADR
-          20261001-logbook): set up once, so a door rather than a list. */}
-      <GroupLabel as="h2" id="dive-packages" className="mt-10">
-        {t("settings.main.divePackages.heading")}
-      </GroupLabel>
-      <Link
-        href={`/shop/${shopSlug}/promos/packages`}
-        className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
-      >
-        {t("promos.packages.open")}
-      </Link>
+      {dealsOn ? (
+        <TripDealsSection
+          t={t}
+          shopSlug={shopSlug}
+          rows={dealRows}
+          page={dealPage}
+          href={dealsHref}
+        />
+      ) : null}
+      {packagesOn ? <DivePackagesDoor t={t} shopSlug={shopSlug} /> : null}
     </main>
   );
 }

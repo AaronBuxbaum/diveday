@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Fragment } from "react";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
+import { GroupLabel } from "@/components/ui/group-label";
+import { assistDarkReasonFor } from "@/db/assists";
 import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
@@ -15,15 +18,20 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { shopOffers } from "@/lib/shop-features";
-import { type NoticeMessages, noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
-import { saveFeatureAction } from "./actions";
+import { saveFeaturesAction } from "./actions";
 import {
+  darkWhileOnKey,
+  FEATURE_GROUPS,
   FEATURE_ROWS,
   type FeatureRow,
   type FeatureRowGate,
   isOptionalFeature,
+  REPLY_NOTES_ROW,
 } from "./feature-rows";
+import { ReplyNotesForm } from "./ReplyNotesForm";
+import { ROWS_FIELD, switchField } from "./save-plan";
 
 export const instant = true;
 
@@ -73,7 +81,7 @@ function switches(shop: Shop, row: FeatureRow, t: StaffTranslator) {
           name="hasShoreDiving"
           type="checkbox"
           defaultChecked={shop.hasShoreDiving}
-          className="mt-2 text-sm"
+          className="text-sm"
         >
           <span className="block font-medium">{t("boats.shoreDivingLabel")}</span>
           <span className="block text-xs text-muted">{t("boats.shoreDivingDescription")}</span>
@@ -82,7 +90,7 @@ function switches(shop: Shop, row: FeatureRow, t: StaffTranslator) {
           name="hasPoolDiving"
           type="checkbox"
           defaultChecked={shop.hasPoolDiving}
-          className="mt-2 text-sm"
+          className="text-sm"
         >
           <span className="block font-medium">{t("boats.poolDivingLabel")}</span>
           <span className="block text-xs text-muted">{t("boats.poolDivingDescription")}</span>
@@ -106,7 +114,12 @@ function switches(shop: Shop, row: FeatureRow, t: StaffTranslator) {
             description: t(`settings.main.features.${row.id}.description`),
           };
   return (
-    <ChoiceRow name="enabled" type="checkbox" defaultChecked={isOn(shop, row)} className="text-sm">
+    <ChoiceRow
+      name={switchField(row.id)}
+      type="checkbox"
+      defaultChecked={isOn(shop, row)}
+      className="text-sm"
+    >
       <span className="block font-medium">{words.label}</span>
       <span className="block text-xs text-muted">{words.description}</span>
     </ChoiceRow>
@@ -115,20 +128,27 @@ function switches(shop: Shop, row: FeatureRow, t: StaffTranslator) {
 
 /**
  * **Features** — every on/off switch a shop owns, in one list (issue #2814).
- * Nine switches were drawn in seven places; each is a row here with its own
- * gate (`feature-rows.ts`), a sentence and a switch, and a row that has value
+ * Nine switches were drawn in seven places; each is a row here, under a small
+ * group heading, with its own gate (`feature-rows.ts`), a sentence and a switch, and a row that has value
  * settings of its own links to them once it is on. Off hides the feature and
  * deletes nothing it wrote (`shop-features.ts`).
+ *
+ * **One form, one Save** (Aaron 2026-10-23): a staffer flips what they want
+ * and saves once. Each drawn row posts its id in `rows`, so the save writes
+ * those rows and leaves every row this reader was not shown as it was. The
+ * list is taller than a screen, so Save rides the bottom edge
+ * (`StickyFormActions`) with the outcome beside it. The notes for AI, drawn
+ * under the AI row while assists are lit, save with the same Save.
  */
 export default async function FeaturesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; saved?: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, saved } = await searchParams;
+  const { notice } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
@@ -142,50 +162,69 @@ export default async function FeaturesPage({
     gates.add("team");
   }
   const banner = noticeFromParam(notice, noticeMessages(t));
+  // Never the reason the page fails: a read that throws shows no line and no notes box.
+  const dark = await assistDarkReasonFor(db, shop.id).catch(() => "unread" as const);
+  const darkKey = dark === "unread" ? null : darkWhileOnKey(dark);
   const base = `/shop/${session.user.shopSlug}`;
 
   return (
     <main className={settingsPaneClass()}>
-      <FlashParams params={["notice", "saved"]} />
+      <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`${base}/settings`}
         title={t("settings.features.title")}
       />
-      <SectionCard padding="none">
-        <ul className="divide-y divide-border">
-          {FEATURE_ROWS.filter((row) => gates.has(row.gate)).map((row) => (
-            <li key={row.id} id={row.id} className="scroll-mt-8 p-5 sm:p-6">
-              <FieldGrid as="form" action={saveFeatureAction} columns={1}>
-                <input type="hidden" name="row" value={row.id} />
-                <h2 className="text-sm font-semibold">{t(row.headingKey)}</h2>
-                {switches(shop, row, t)}
-                {banner && saved === row.id ? (
-                  <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)}>
-                    {banner.text}
-                  </ShopNotice>
-                ) : null}
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.features.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.features.save")}
-                  </SubmitButton>
-                  {row.link && linkShown(shop, row) ? (
-                    <Link
-                      href={`${base}${row.link.path}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      {t(row.link.labelKey)}
-                    </Link>
-                  ) : null}
-                </FieldActions>
-              </FieldGrid>
-            </li>
-          ))}
-        </ul>
-      </SectionCard>
+      <form action={saveFeaturesAction} className="space-y-8">
+        {FEATURE_GROUPS.map((group) => {
+          const rows = FEATURE_ROWS.filter((row) => row.group === group && gates.has(row.gate));
+          if (rows.length === 0) return null;
+          return (
+            <section key={group} aria-labelledby={`features-${group}`} className="space-y-3">
+              <GroupLabel as="h2" id={`features-${group}`}>
+                {t(`settings.features.groups.${group}`)}
+              </GroupLabel>
+              <SectionCard padding="none">
+                <ul className="divide-y divide-border">
+                  {rows.map((row) => (
+                    <Fragment key={row.id}>
+                      <li id={row.id} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
+                        <input type="hidden" name={ROWS_FIELD} value={row.id} />
+                        <h3 className="text-sm font-semibold">{t(row.headingKey)}</h3>
+                        {switches(shop, row, t)}
+                        {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
+                          <p className="text-xs text-warning">{t(darkKey)}</p>
+                        ) : null}
+                        {row.link && linkShown(shop, row) ? (
+                          <Link
+                            href={`${base}${row.link.path}`}
+                            className="inline-block text-sm font-medium text-primary hover:underline"
+                          >
+                            {t(row.link.labelKey)}
+                          </Link>
+                        ) : null}
+                      </li>
+                      {row.id === "claudeSuggestions" && dark === null ? (
+                        <li id={REPLY_NOTES_ROW} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
+                          <ReplyNotesForm notes={shop.replyNotes} t={t} />
+                        </li>
+                      ) : null}
+                    </Fragment>
+                  ))}
+                </ul>
+              </SectionCard>
+            </section>
+          );
+        })}
+        <StickyFormActions>
+          <SubmitButton pendingLabel={t("settings.main.features.saving")} className={buttonClass()}>
+            {t("settings.main.features.save")}
+          </SubmitButton>
+          <FormStatus tone={banner?.tone} occurrenceKey={notice}>
+            {banner?.text}
+          </FormStatus>
+        </StickyFormActions>
+      </form>
     </main>
   );
 }

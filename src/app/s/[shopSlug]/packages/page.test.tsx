@@ -22,8 +22,11 @@ vi.mock("@/db/shops-cached", () => ({
           timezone: "America/New_York",
           currency: "usd",
           searchListingOptOutAt: null,
+          divePackagesEnabled: true,
         }
-      : null,
+      : slug === "no-packages"
+        ? { id: "shop-2", slug: "no-packages", defaultLocale: "en-US", divePackagesEnabled: false }
+        : null,
   ),
 }));
 vi.mock("@/db/dive-packages", () => ({ listPackagesOnSale: vi.fn(async () => []) }));
@@ -51,6 +54,12 @@ describe("the public packages page with nothing on sale", () => {
   it("is still a 404 for a shop that does not exist", async () => {
     await expect(
       PublicPackagesPage({ params: Promise.resolve({ shopSlug: "nobody" }) }),
+    ).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
+  });
+
+  it("is a 404 for a shop that switched dive packages off", async () => {
+    await expect(
+      PublicPackagesPage({ params: Promise.resolve({ shopSlug: "no-packages" }) }),
     ).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
   });
 });

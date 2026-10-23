@@ -42,14 +42,19 @@ export function vectorLabelsStyleUrl(key: string): string {
 }
 
 /**
- * Every origin the vector labels read from: the style, its vector tiles, its
+ * Every source the vector labels read from: the style, its vector tiles, its
  * glyphs and sprites. Fetched rather than drawn as `<img>`, so these go under
  * `connect-src`, and only when a key is configured.
+ *
+ * The sprites live on `cdn.arcgis.com`, which also serves anyone's published
+ * ArcGIS items. The whole host is allowed anyway, so a style Esri moves to a
+ * new item keeps its sprites (Aaron, 2026-10-23: "let's just use the hostname").
  */
 export const VECTOR_LABEL_HOSTS = [
   "https://basemapstyles-api.arcgis.com",
   "https://basemaps-api.arcgis.com",
   "https://static.arcgis.com",
+  "https://cdn.arcgis.com",
 ] as const;
 
 /**

@@ -73,6 +73,133 @@ discount that does not exist.
   row, the pass-through fee in Money. Schema, defaults and what Off hides are unchanged. ⌘K finds
   each switch by name. This reverses the first alternative below.
 
+- **Amended 2026-10-23 (Aaron): every feature starts on, and the page has one Save.** A new shop
+  gets every switch on the Features page on: `public_year_enabled`, `padi_checks_enabled`,
+  `crew_schedule_enabled` and `recap_assist_auto_approve` now default true like the other four
+  (migration `every-feature-starts-on`), and every seeded shop has all of them on. A shop turns
+  off what it does not want. Existing rows keep the value they hold; nothing is backfilled. Stripe
+  Tax and shore and pool diving keep their defaults pending the owner's call. The page is one form
+  with one Save that writes every row it drew in one statement, and leaves a row the reader may not
+  flip (its gate fails, so the page did not draw it) exactly as it was. The 2026-10-15 amendment's
+  "defaults off" and the "Default off, like the crew schedule" alternative below are history.
+
+- **Amended 2026-10-23 (Aaron: "when you don't use a feature, the rest of the app should adapt";
+  "when we add new features they are considered for the list"): five more switches and a
+  guard.**
+  - `lost_found_enabled`, `work_orders_enabled`, `promo_codes_enabled` and
+    `dive_packages_enabled`, **default true** for every shop, existing ones included, and
+    hotel pickups (`offers_hotel_pickup`, moved here from Dock-day rhythm, default false
+    pending the owner's call, true since the next amendment). The page groups its rows under small headings and keeps one Save.
+  - Off hides every door: the nav, the section tabs, ⌘K, Today's rows, the emails and the cron
+    sends; a staff URL redirects with no error (Lost and found to the schedule, gear servicing to
+    the gear register, Dive packages to Discounts, Discounts to Orders once codes, deals and
+    packages are all off); a diver URL is a 404 (`/packages`). Nothing is deleted.
+  - Gear servicing off stops the ready message and the customer service-due reminders and hides
+    the regulator interval on Rentals; the fleet's own service dates stay, because they are
+    safety. Dive packages off stops selling but keeps redeeming what divers already bought. Promo
+    codes off keeps the booking's code box for a trip's last-minute deal while the last-minute
+    list is on, and refuses a shop-wide code. Hotel pickups off hides the pickup from the roster,
+    Prep, the manifest and every diver page, including one a seat already holds.
+  - **The guard**: `src/lib/feature-coverage.ts` maps every staff destination and every boolean
+    on `shops` to its switch (or to several, `{ anyOf }`, for Money's Discounts tab, which holds
+    three of them) or to `{ core: why }`. A new destination fails typecheck and a new boolean
+    fails `feature-coverage.test.ts` until it is classified, and a destination mapped to a switch
+    leaves every list when the switch is off. The rule is in `.claude/rules/surfaces.md`,
+    `docs/agents/working-rules.md` and the PR template.
+
+- **Amended 2026-10-23 (Aaron: every feature starts on; security and safety reviews).**
+  - Hotel pickups default **true** like every other switch (migration
+    `hotel-pickup-starts-on`); existing shops keep what they chose, and every seeded shop has it
+    on.
+  - **Off withdraws the offer, never a promise.** Hotel pickups off removes the `/ready`
+    question and the roster's pickup form; a pickup a seat already holds still shows on the
+    manifest and its print, Prep's pickup run, the roster, the diver's page and the arrival
+    card, because the crew still has to collect that diver. Gear servicing off keeps Today's late
+    ticket on the shop's own rental unit (fleet safety), opening the unit on the register.
+  - **A switched-off feature's writers refuse.** A page that redirects is not a gate, so every
+    server action behind a switch asks it first (`shopHasFeatureOn`) and writes nothing: work
+    orders and their follow-ups, promo codes, the packages price list, a found item's row, a
+    roster pickup. A diver's package order and a last-minute deal's code refuse in the database
+    reader itself while their switch is off.
+
+- **Amended 2026-10-23 (Aaron: "every feature a shop could run without is a switch"): five more
+  switches**, one migration (`l3-feature-switches`), each **default true** for every shop, existing
+  ones included: `checkout_recovery_enabled`, `buddy_links_enabled`, `sightings_enabled`,
+  `diver_photos_enabled` and `self_registration_enabled`. Off hides and refuses; nothing is deleted.
+  - **Checkout reminders** off: the cron sends no abandoned-checkout email. The scan still runs,
+    so a session Stripe reports paid is recorded and a stale or disqualified one expires; the
+    switch gates only the send, after Stripe confirms the session open and unpaid, and that
+    checkout stays pending.
+  - **Bring a buddy** off: the recap draws no buddy link; an old link still books a seat and
+    credits nobody; Reports' buddy seats and referrers and the diver record's friends count read
+    as none. Every recorded referral is kept.
+  - **Sightings** off: the manifest's Seen group and the dive log's species field go, the
+    shopfront's month shelf and a trip page's site sightings are not read, the recap names no
+    species, and no highlight is drafted from sightings. A chip tap and the sightings assist
+    refuse. **Saving a dive keeps the species already logged** unless the form drew the
+    picker and its `speciesShown` marker (`keepObservedSpecies`), because the save replaces the
+    whole row. Roll call, head count and readiness never change.
+  - **Recap photos** off: no upload from the recap link, the readiness link or the crew's
+    departure album, and the diver's recap shows no photo door or album. Photos already added stay
+    on Today with their Remove so staff can take one down, and media deletions keep running.
+  - **Counter sign-up** off: `/s/<shop>/register` draws no form, only the shop's name, phone and
+    email and a line sending the diver to the crew, since a printed card can stay taped up; the
+    Features row asks owners to take the cards down. A hand-built registration and the
+    card-photo read refuse, the counter card leaves Settings (row, rail, ⌘K) and its print page
+    lands on Settings. Divers who signed themselves up stay, with the divers list's filter.
+- **Amended 2026-10-23 (Aaron: the "Maybe" rows are switches too): seven more**, one migration
+  (`l4-feature-switches`), each **default true** for every shop: `waitlist_enabled`,
+  `past_diver_invites_enabled`, `help_requests_enabled`, `partner_links_enabled`,
+  `week_out_reminder_enabled`, `public_conditions_enabled` and `field_guide_enabled`. Nothing
+  safety-related moves: the 24-hour reminder, the staff conditions panel, the high-wind alert,
+  roll call and readiness stay core.
+  - **Wait list** off: no door offers one (a full trip page draws no join form and its foot bar
+    says Find another trip; a course's full dates say See this date; the deal list stops pointing
+    at a trip's list; the roster's full band, its on-file and typed doors, a new diver's form and
+    the took-a-call outcome, which comes back to Add a booking with the caller's details kept), and
+    `lockFullDeparture` refuses a post that reaches it, after answering that a seat is open when
+    one is. **The list's own sends stop**: the nightly roll's invite and the "Who wants in" offer
+    (`deliverSeatOffer` without `initiatedBy`) fall back to the composer, and the roll **still moves
+    interests** to the next date (bookkeeping). **Nobody already waiting vanishes**: their asks stay
+    on the roster's panel and Today's seat-wanted row until someone handles them, and the no-show
+    desk counts none (it offers the rebooking). **A staffer's own outreach is not the list's**:
+    the roster's Invite, the course ladder, the no-show desk's "Email them this date" and a deal
+    blast pass `initiatedBy: "shop"` and send even to a diver whose row is a wait-list ask.
+  - **Past-diver invites** off: no suggestions on the roster, no invite door on a quiet day's thin
+    boats, and the suggestion's invite (`initiatedBy: "suggestion"`) refuses and sends nothing.
+    An invite a staffer picks themselves (the roster's Invite, the course ladder, the no-show desk)
+    is not a suggestion and still sends `seat_offer_commercial`. **Only suggestions and automatic
+    sends are gated** (review 2026-10-23, item 9), consistent with the wait list above.
+  - **Queued retries ask again**: a seat offer carries `governedBy` (`waitlist` or
+    `pastDiverInvites`) when a switch governs it, and `drainNotificationRetries` refuses it
+    (`switched_off`) while that switch is off; a staffer's own offer carries none and always goes.
+  - **Help requests** off: the ready page asks no help question and `saveHelpRequest` refuses a new
+    or changed ask; the shop's phone and email stand where the question was. **A request already
+    open stays**: the diver still sees where it stands and has one Withdraw button (it posts
+    `none`, the one answer the save still takes), and it stays on Today until the crew handles it,
+    since a diver may be counting on it.
+  - **Partner links** off: Website embed offers no partner link, a booking with an earlier link's
+    cookie records no referral source (the proxy may still set the cookie; the booking ignores it),
+    and Reports counts no referred seat. Seats already credited keep their source.
+  - **Week-out reminder** off: **only the plain hello is silenced** (`reminderEarnsItsSend`'s
+    `weekOutHello`): a 7-day reminder whose checklist is empty is not sent and writes nothing. A
+    diver with anything still on the list (theirs or the shop's: a waiver, a card, a pending
+    physician referral) or course materials due still hears a week out, and no readiness evidence
+    still sends, because the switch never silences a safety message a booked diver needs. A queued
+    retry of a hello (`open` 0, no medical review) is refused while off. The night-before reminder
+    always sends.
+  - **Public conditions** off: **only the automated outlook goes**, and none is fetched. The crew's
+    own read, their conditions updates in the change ledger and a booked diver's "conditions
+    changed since you booked" notice stay for every reader: `/ready` sends a booked diver to that
+    page and a held departure's notice says "see the conditions update above", and the page cannot
+    tell a booked diver from a browser outside the embed. Link previews and structured data never
+    carried a forecast. The conditions hold and every staff surface stay.
+  - **Field guide** off: `listSiteFieldGuides` reads none, so public site and trip pages, the recap
+    and the manifest's species shortlist show none (a site's own prose speaks instead). The site
+    editor draws no field-guide section, and neither the form's save nor a catalog template pull
+    (or its undo) writes the species or the tips heading, so nothing erases the guide. Sites, the
+    CSV import and the export stay.
+
 ## Alternatives considered
 
 - **One "Features" group in Settings listing every switch.** *Rejected at first, adopted

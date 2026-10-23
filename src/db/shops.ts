@@ -10,7 +10,11 @@ import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
-import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
+import {
+  SHOP_FEATURE_COLUMNS,
+  type ShopFeature,
+  type ShopFeatureColumn,
+} from "@/lib/shop-features";
 import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
@@ -453,19 +457,6 @@ export async function setShopCrewLead(db: AppDb, shopId: string, minutes: number
 }
 
 /**
- * Whether the shop runs hotel pickups (fourth UX review, item 8). Only then
- * does `/ready` ask a diver "Want a pickup?".
- */
-export async function setShopOffersHotelPickup(db: AppDb, shopId: string, offers: boolean) {
-  const [shop] = await db
-    .update(shops)
-    .set({ offersHotelPickup: offers })
-    .where(eq(shops.id, shopId))
-    .returning({ id: shops.id, offersHotelPickup: shops.offersHotelPickup });
-  return shop ?? null;
-}
-
-/**
  * Sets the shop's minimum turnaround between departures, in minutes (issue
  * #2141). Advice for the schedule builder's Move panel only; the route narrows
  * the value through `parseMinTurnaroundMinutes`, and the table's CHECK holds
@@ -798,6 +789,56 @@ export async function setShopFeature(
     .set({ [SHOP_FEATURE_COLUMNS[feature]]: enabled })
     .where(eq(shops.id, shopId))
     .returning();
+  return shop ?? null;
+}
+
+/**
+ * Whether the shop has one optional feature on. A server action behind a
+ * switch asks this before it writes, so a hand-built post to a feature the
+ * shop turned off writes nothing (the page that held the form is gone).
+ */
+export async function shopHasFeatureOn(
+  db: DbExecutor,
+  shopId: string,
+  feature: ShopFeature,
+): Promise<boolean> {
+  const [shop] = await db
+    .select({ on: shops[SHOP_FEATURE_COLUMNS[feature]] })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return shop?.on === true;
+}
+
+/**
+ * The on/off columns the Features page writes: the optional features, Stripe
+ * Tax, the crew schedule and the three kinds of diving.
+ */
+export type ShopSwitches = Partial<
+  Pick<
+    typeof shops.$inferSelect,
+    | ShopFeatureColumn
+    | "taxEnabled"
+    | "crewScheduleEnabled"
+    | "hasBoatDiving"
+    | "hasShoreDiving"
+    | "hasPoolDiving"
+  >
+>;
+
+/** Everything one Save of the Features page writes: its switches, and the notes for AI when drawn. */
+export type FeaturesPageWrite = ShopSwitches &
+  Partial<Pick<typeof shops.$inferSelect, "replyNotes">>;
+
+/**
+ * Writes the Features page's switches (and, when the page drew the box, the
+ * notes for AI) in one statement, so a save lands whole or not at all. A
+ * column absent from `switches` is left as it was: only the rows the page
+ * drew, and the reader may flip, are ever named.
+ */
+export async function setShopSwitches(db: AppDb, shopId: string, switches: FeaturesPageWrite) {
+  if (Object.keys(switches).length === 0) return null;
+  const [shop] = await db.update(shops).set(switches).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
 }
 

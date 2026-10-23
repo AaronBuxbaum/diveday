@@ -110,6 +110,7 @@ export function AfterState({
     shoutout,
     photos,
     maxPhotos,
+    photosOn,
     visitCount,
     currency,
     canTip,
@@ -292,16 +293,19 @@ export function AfterState({
           />
         </Door>
 
-        <PhotoDoor
-          t={t}
-          shopName={shop.name}
-          tripTitle={trip.title}
-          photos={photos}
-          maxPhotos={maxPhotos}
-          canShareWithBoat={canShareWithBoat}
-          notice={photoNotice}
-          action={actions.uploadPhoto}
-        />
+        {/* Recap photos switched off on Features: no door at all. */}
+        {photosOn ? (
+          <PhotoDoor
+            t={t}
+            shopName={shop.name}
+            tripTitle={trip.title}
+            photos={photos}
+            maxPhotos={maxPhotos}
+            canShareWithBoat={canShareWithBoat}
+            notice={photoNotice}
+            action={actions.uploadPhoto}
+          />
+        ) : null}
 
         <TipDoor
           t={t}

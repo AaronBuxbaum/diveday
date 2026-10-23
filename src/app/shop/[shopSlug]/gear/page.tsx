@@ -272,10 +272,10 @@ export default async function GearRegisterPage({
       {/* The register is the Gear section's first tab; the bench is the second
           (ADR 20261008-gear-work-orders). */}
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="gear"
         current="gear"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

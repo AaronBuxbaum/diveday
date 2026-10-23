@@ -44,6 +44,7 @@ import {
   orders,
   people,
   personRoles,
+  shops,
   tips,
   tripAssignments,
   tripDives,
@@ -211,6 +212,34 @@ function tallyByDeparture(reads: {
   // the imported slice are the month's figure, to the cent.
   const counterCents = counter.gross - counter.tax - counter.passThrough;
   return { tripMoney, monthMoney, counterCents };
+}
+
+/**
+ * Seats a partner's link brought on this window's live departures, as a count
+ * (issue #1294; `getMonthlyReport` says why never the slug). None while partner
+ * links are off (the Features page); the seats keep their source and count again
+ * once the switch is back on.
+ */
+async function partnerReferredSeatsForWindow(
+  db: DbExecutor,
+  shopId: string,
+  inWindow: SQL | undefined,
+) {
+  const [totals] = await db
+    .select({ seats: count(bookings.id) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, and(eq(shops.id, bookings.shopId), eq(shops.partnerLinksEnabled, true)))
+    .where(
+      and(
+        inWindow,
+        liveTrip(),
+        eq(bookings.shopId, shopId),
+        isNotNull(bookings.referralSource),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    );
+  return totals;
 }
 
 /**
@@ -638,19 +667,7 @@ export async function getMonthlyReport(
   // how many rows could appear; it reserved none of them for a partner the
   // shop knew, so a quiet month with two genuine partners at one booking each
   // was fully displaced by an attacker with two bookings per invented slug.
-  const [referredTotals] = await db
-    .select({ seats: count(bookings.id) })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        inWindow,
-        liveTrip(),
-        eq(bookings.shopId, shopId),
-        isNotNull(bookings.referralSource),
-        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-      ),
-    );
+  const referredTotals = await partnerReferredSeatsForWindow(db, shopId, inWindow);
 
   // **The row lever W adds to the month** (ADR 20260908-one-hand, decision
   // 6): seats a diver's own link brought. Counted on this window's live

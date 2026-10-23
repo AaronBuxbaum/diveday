@@ -105,10 +105,10 @@ export function isCheckableAgency(agency: string): agency is CheckableAgency {
 /**
  * Whether this shop is offered the extension's check for this agency. PADI's
  * checks (DiveChek here, eLearning in `elearning-check.ts`) run in a staffer's
- * browser signed in under the shop's own PADI membership, and have not been
- * tried against the live site yet (#2259), so they wait for the shop's own
- * switch, off by default (`shops.padi_checks_enabled`, H-121). Off, a PADI card
- * keeps its "(member sign-in)" link and nothing offers or accepts a check.
+ * browser signed in under the shop's own PADI membership, behind the shop's
+ * own switch (`shops.padi_checks_enabled`, H-121), on for a new shop since
+ * 2026-10-23. Off, a PADI card keeps its "(member sign-in)" link and nothing
+ * offers or accepts a check.
  */
 export function agencyCheckOffered(agency: string, shop: { padiChecksEnabled: boolean }): boolean {
   // A course's agency is free text: "PADI" and " padi " are PADI.

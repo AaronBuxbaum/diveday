@@ -205,6 +205,38 @@ export function whatsAppReplyWindowOpen(lastInboundAt: Date | null, now: Date): 
   return age >= 0 && age < WHATSAPP_REPLY_WINDOW_MS;
 }
 
+/**
+ * **The approved messages that ask a diver to write back on WhatsApp**, once
+ * the window has closed. Each is a fixed sentence from the diver bundle
+ * (`notifications.whatsappReopen.*`), sent through the shop's one approved
+ * courtesy template, so nothing a staffer types ever goes out as a template:
+ * that is what would get a shop's template paused for misuse. The diver's
+ * answer opens a fresh 24 hours, and the composer comes back.
+ */
+export const WHATSAPP_REOPEN_MESSAGES = ["answer_ready", "question", "follow_up"] as const;
+export type WhatsAppReopenMessage = (typeof WHATSAPP_REOPEN_MESSAGES)[number];
+
+/**
+ * When the shop last asked this diver to write back, or null when it has not
+ * since they last wrote.
+ *
+ * A WhatsApp reply sent a full window or more after the diver's last message
+ * can only have been a template, because a typed one would have been refused,
+ * so this needs no column of its own. One ask per silence: a second would be
+ * the same request again, paid for again, to someone who has not answered the
+ * first.
+ */
+export function whatsAppReopenSentAt(
+  lastInboundAt: Date | null,
+  sentWhatsAppReplies: readonly Date[],
+): Date | null {
+  if (!lastInboundAt) return null;
+  const closesAt = lastInboundAt.getTime() + WHATSAPP_REPLY_WINDOW_MS;
+  const asks = sentWhatsAppReplies.filter((sentAt) => sentAt.getTime() >= closesAt);
+  if (asks.length === 0) return null;
+  return new Date(Math.max(...asks.map((sentAt) => sentAt.getTime())));
+}
+
 /** Bound a body to what the row keeps, marking the cut. */
 export function truncateInboundBody(body: string): string {
   const trimmed = body.replace(/\r\n/g, "\n").trim();

@@ -221,3 +221,21 @@ describe("elevation is earned", () => {
     expect(panel.className).not.toMatch(/\bshadow-(sm|md|lg|xl|2xl)\b/);
   });
 });
+
+describe("the flat strip under a shop name with nothing beside it", () => {
+  it("lays its facts and its button on one row from md up", () => {
+    render(card({ flat: true }));
+
+    const region = screen.getByRole("region", { name: "Next boat with space" });
+    expect(region.className).toContain("md:flex-row");
+    expect(screen.getByRole("link").className).toContain("md:w-auto");
+  });
+
+  it("stays the stacked card by default", () => {
+    render(card());
+
+    const region = screen.getByRole("region", { name: "Next boat with space" });
+    expect(region.className).not.toContain("md:flex-row");
+    expect(screen.getByRole("link").className).not.toContain("md:w-auto");
+  });
+});

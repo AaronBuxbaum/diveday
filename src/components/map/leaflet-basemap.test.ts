@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BASEMAP_IMAGERY_URL, BASEMAP_LABELS_URL, vectorLabelsStyleUrl } from "@/lib/basemap";
-import { createBasemapMap } from "./leaflet-basemap";
+import { createBasemapMap, forgetLabelStyle } from "./leaflet-basemap";
 
 /** The vector label layer, faked: jsdom has no WebGL for MapLibre to draw with. */
 const vectorLabels = vi.hoisted(() => ({
@@ -25,7 +25,22 @@ vi.mock("@maplibre/maplibre-gl-leaflet", async () => {
   };
 });
 
+/** Esri's answer to the label style request. */
+const answer = (status: number, body: unknown) => {
+  const fetchStyle = vi.fn(async () => new Response(JSON.stringify(body), { status }));
+  vi.stubGlobal("fetch", fetchStyle);
+  return fetchStyle;
+};
+/** jsdom has no WebGL; the vector cases pretend the browser does. */
+const withWebGL2 = () =>
+  vi
+    .spyOn(HTMLCanvasElement.prototype, "getContext")
+    .mockImplementation(((kind: string) =>
+      kind === "webgl2" ? ({} as WebGL2RenderingContext) : null) as never);
+const STYLE = { version: 8, sources: {}, layers: [{ id: "place-names", type: "symbol" }] };
+
 afterEach(() => {
+  forgetLabelStyle();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -82,14 +97,17 @@ describe("createBasemapMap", () => {
   it("draws the place names as vector text with a key, and puts the raster labels back if that fails", async () => {
     const L = await import("leaflet");
     vi.stubEnv("NEXT_PUBLIC_ARCGIS_API_KEY", " test-key ");
+    const fetchStyle = answer(200, STYLE);
+    withWebGL2();
     const container = document.createElement("div");
     document.body.append(container);
     const map = createBasemapMap(L, container, { center: [25, -80], zoom: 10 });
     expect(tileUrls(L, map)).toEqual([BASEMAP_IMAGERY_URL]);
 
     await vi.waitFor(() => expect(vectorLabels.options).toHaveLength(1));
+    expect(fetchStyle).toHaveBeenCalledWith(vectorLabelsStyleUrl("test-key"));
     expect(vectorLabels.options[0]).toMatchObject({
-      style: vectorLabelsStyleUrl("test-key"),
+      style: STYLE,
       pane: "basemapLabels",
       interactive: false,
     });
@@ -105,6 +123,69 @@ describe("createBasemapMap", () => {
     expect(tileUrls(L, map)).toEqual([BASEMAP_IMAGERY_URL, BASEMAP_LABELS_URL]);
 
     map.remove();
+    container.remove();
+  });
+
+  // Aaron, 2026-10-23: a key Esri would not take put its error document on the
+  // maps. That answer is the raster labels, with nothing of Esri's shown.
+  it.each([
+    [
+      "a refused key, as an error document",
+      200,
+      { error: { code: 498, message: "Token Invalid.", details: ["The token is invalid."] } },
+    ],
+    ["a refused key, as an error status", 498, { error: { code: 498, message: "Token Invalid." } }],
+    ["an answer that is not a style", 200, { hello: "world" }],
+  ])("draws the raster labels and never hands MapLibre %s", async (_case, status, body) => {
+    const L = await import("leaflet");
+    vi.stubEnv("NEXT_PUBLIC_ARCGIS_API_KEY", "refused-key");
+    answer(status, body);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const container = document.createElement("div");
+    document.body.append(container);
+    const map = createBasemapMap(L, container, { center: [25, -80], zoom: 10 });
+
+    await vi.waitFor(() =>
+      expect(tileUrls(L, map)).toEqual([BASEMAP_IMAGERY_URL, BASEMAP_LABELS_URL]),
+    );
+    expect(vectorLabels.options).toHaveLength(0);
+    // Whoever opens the console learns why, and never sees the key.
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).not.toContain("refused-key");
+
+    map.remove();
+    container.remove();
+  });
+
+  it("asks Esri about a key once for every map on the page", async () => {
+    const L = await import("leaflet");
+    vi.stubEnv("NEXT_PUBLIC_ARCGIS_API_KEY", "test-key");
+    const fetchStyle = answer(200, STYLE);
+    withWebGL2();
+    const containers = [document.createElement("div"), document.createElement("div")];
+    const maps = containers.map((container) => {
+      document.body.append(container);
+      return createBasemapMap(L, container, { center: [25, -80], zoom: 10 });
+    });
+    await vi.waitFor(() => expect(vectorLabels.options).toHaveLength(2));
+    expect(fetchStyle).toHaveBeenCalledTimes(1);
+    for (const map of maps) map.remove();
+    for (const container of containers) container.remove();
+  });
+
+  it("draws the raster labels on a browser without WebGL2, and the map still comes down", async () => {
+    const L = await import("leaflet");
+    vi.stubEnv("NEXT_PUBLIC_ARCGIS_API_KEY", "test-key");
+    answer(200, STYLE);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+    const container = document.createElement("div");
+    document.body.append(container);
+    const map = createBasemapMap(L, container, { center: [25, -80], zoom: 10 });
+    await vi.waitFor(() =>
+      expect(tileUrls(L, map)).toEqual([BASEMAP_IMAGERY_URL, BASEMAP_LABELS_URL]),
+    );
+    expect(vectorLabels.options).toHaveLength(0);
+    expect(() => map.remove()).not.toThrow();
     container.remove();
   });
 });

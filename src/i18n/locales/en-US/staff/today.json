@@ -28,8 +28,7 @@
       "notFound": "That order could not be found. Open the trip to check it.",
       "notOpen": "This order is no longer open. Open the trip to check its status.",
       "notConfigured": "Payments aren’t connected for this shop yet.",
-      "failed": "Still couldn’t resend it. Open the trip to check the order.",
-      "rateLimited": "You have resent a lot this hour. Try again in a little while."
+      "failed": "Still couldn’t resend it. Open the trip to check the order."
     }
   },
   "crewAway": {
@@ -213,6 +212,7 @@
     "boatWork": "{work}",
     "missingSizeNamed": "Missing a rental size.",
     "kitUnaskedNamed": "Not asked about kit.",
+    "kitUnaskedGroup": "Not asked about kit: {names}.",
     "ungatedNitroxNamed": "Wants nitrox, gets air unless a card is verified before the boat leaves.",
     "highWindAlert": "Forecast {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes {, gusts {gusts} kt} other {}}.",
     "instructorMissing": "No instructor assigned.",

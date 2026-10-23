@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
@@ -36,6 +37,8 @@ export default async function CounterCardPage({
 }) {
   const { shopSlug } = await params;
   const { shop } = await requireShopSurface(shopSlug);
+  // Counter sign-up switched off on Features: no card to print, and no error.
+  if (!shop.selfRegistrationEnabled) redirect(shopPath(shopSlug, "settings"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);

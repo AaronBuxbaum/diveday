@@ -152,6 +152,27 @@ export async function countOpenDateInterests(db: DbExecutor, shopId: string): Pr
 }
 
 /**
+ * **What still waits on the shop as a request**, for Today's one unanswered
+ * count and the Requests page's door. A shop that switched date requests off
+ * (`shops.date_requests_enabled`) still hears its course pages' inquiries,
+ * which are how a course converts and never part of that switch, so only
+ * those count then; the shopfront's day asks it no longer takes do not.
+ */
+export async function countWaitingDateInterests(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(interests)
+    .innerJoin(shops, eq(shops.id, interests.shopId))
+    .where(
+      and(
+        openDateInterest(shopId),
+        or(eq(shops.dateRequestsEnabled, true), isNotNull(interests.courseId)),
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+/**
  * One page of this shop's open date interests, ordered by the date they are asking
  * for — soonest first, and the ones that named no date at all last, which is
  * the order the page groups them in.

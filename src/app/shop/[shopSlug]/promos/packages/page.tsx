@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -17,7 +18,7 @@ import { nowDate } from "@/lib/clock";
 import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { formatMoneyScanned } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { createDivePackageAction, deleteDivePackageAction } from "../../settings/package-actions";
 import { divePackageNoticeMessages } from "../../settings/sub-page-notices";
 
@@ -59,6 +60,10 @@ export default async function DivePackagesSettingsPage({
     // them for the same reason.
     refusal: { notice: "promos-not-authorized" },
   });
+  // Switched off on the Features page: nothing is sold, the packages and the
+  // dives already bought are kept, and Discounts is the way back (it lands on
+  // Orders when nothing else there is on).
+  if (!shop.divePackagesEnabled) redirect(shopPath(shopSlug, "promos"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // What the shop still owes in dives (fourth UX review, item 20): sold,

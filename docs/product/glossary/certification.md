@@ -113,9 +113,9 @@
   Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
   Offered only at a shop that turned the **PADI checks** on.
 - **PADI checks** — the shop's own switch, "PADI checks (beta)" in Settings, for both checks run on
-  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-121, H-106). Off by
-  default, because they run under the shop's own PADI membership and have not been tried on the
-  real page; off, a PADI card keeps its "(member sign-in)" link and nothing offers or accepts a
+  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-121, H-106). On for
+  a new shop since 2026-10-23 (Aaron); they run under the membership of the shop's PADI Pro who is
+  signed in. Off, a PADI card keeps its "(member sign-in)" link and nothing offers or accepts a
   check (`agencyCheckOffered`, `shops.padi_checks_enabled`).
 - **Agency-listed certification** — a nitrox or specialty certification an **Agency check** found on
   the same page as the card it matched, and that the staffer chose to add (layer 3 of ADR
@@ -431,6 +431,12 @@
   result of `createBookingRecord` when `admissionGate: "advise"` and the shortfall is a
   declared-level one; the public booking form is the only caller that asks for it. It is advice
   about a *sale*, never about boarding — readiness still clears on a sighted card and nothing else.
+- **Last known dive** — the latest day the shop knows this diver dived, anywhere: the later of the
+  day a staff member recorded on the record (`people.last_dive_on`, off a logbook or a computer) and
+  the diver's own last dive day with the shop (a departure that is back, not a pool session) or a
+  real imported visit (`lastKnownDive`, `src/db/last-dive.ts`). A trip with the shop moves it
+  forward; nothing moves it back. Not **Dive recency**, the diver's own band on a booking, which the
+  record shows beside it only when it is newer. Gates nothing (ADR 20261023-last-known-dive).
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **Assistant Instructor (AI)** — a professional rung between Divemaster and Instructor, and one of

@@ -470,8 +470,8 @@ export default async function ManageTripPage({
                 shopName: shop.name,
                 locale,
                 timezone: shop.timezone,
-                depthUnit: shop.depthUnit,
                 shopRentalItems: shop.rentalItems,
+                offersHotelPickup: shop.offersHotelPickup,
                 tripNotice,
                 pageNotice: rosterPageNotice,
                 noteDeleted:

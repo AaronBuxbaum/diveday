@@ -6,7 +6,7 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { carryInterests, rollSailedSeriesInterests } from "./interest-roll";
-import { courses, interests, trips } from "./schema";
+import { courses, interests, shops, trips } from "./schema";
 import { createTrip, createTripSeries } from "./trips";
 
 /**
@@ -110,6 +110,17 @@ async function nextAfter(
 }
 
 describe("rollSailedSeriesInterests", () => {
+  it("still rolls interests while the wait list is off, and invites nobody", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    const ana = await interest(db, shop.id, first.id, "Ana Offswitch");
+    await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
+
+    expect(await rollSailedSeriesInterests(db, now)).toEqual({ rolled: 1, invited: 0 });
+    expect(await waiting(db, second.id)).toEqual([
+      { personId: ana.id, askedAt: new Date("2030-08-01T12:00:00Z"), offeredAt: null },
+    ]);
+  });
+
   it("rolls uninvited interests onto the next date and invites them while it has seats", async () => {
     const { db, shop, first, second, now } = await saturdays();
     const ana = await interest(db, shop.id, first.id, "Ana Reyes");

@@ -110,7 +110,7 @@ describe("agencyCheckAction with PADI DiveChek", () => {
   ].join("\n");
 
   async function padiCard() {
-    // The seeded demo runs the PADI checks; a new shop does not (H-121).
+    // Every shop starts with the PADI checks on, the seeded demo too (H-121, 2026-10-23).
     const { db, shop, owner, personId } = await context();
     const card = await pendingCard(db, shop.id, personId, {
       agency: "padi",

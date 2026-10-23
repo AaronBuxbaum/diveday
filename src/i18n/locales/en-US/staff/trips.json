@@ -388,6 +388,7 @@
     "summaryNoneRequired": "Nothing to check. Any diver with a seat can board."
   },
   "recapPhotos": {
+    "hiddenFromDivers": "Recap photos are off, so divers don’t see these.",
     "heading": "Diver photos",
     "description": "Shared by divers from their own recap pages.",
     "photoFromAlt": "Photo from {diverName}",
@@ -412,6 +413,7 @@
     "noMatches": "No returning diver matches “{query}”.",
     "nameLabel": "Name",
     "addToWaitlist": "Add to who’s waiting",
+    "addPersonToWaitlist": "Add {name} to who’s waiting",
     "addAsWalkIn": "Add as a walk-in",
     "noMatchesHeading": "No returning diver by that name",
     "addDiver": "Add diver",

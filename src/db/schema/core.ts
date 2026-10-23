@@ -159,12 +159,14 @@ export const shops = pgTable(
      * Off by default: a two-person shop where the owner skippers every boat
      * has no roster to keep, and a page of empty rows and "No crew" warnings
      * is noise it would have to learn to ignore (ADR 20261005-crew-schedule-is-a-setting).
+     * **Amended 2026-10-23 (Aaron): on for a new shop**, like every switch on
+     * the Features page; a shop that keeps no roster turns it off there.
      *
      * Off never loosens a safety cap. A course session still names its
      * instructor on the trip page, because the agency training ratio refuses
      * seats from that count (`src/lib/course-ratios.ts`) whatever this says.
      */
-    crewScheduleEnabled: boolean("crew_schedule_enabled").notNull().default(false),
+    crewScheduleEnabled: boolean("crew_schedule_enabled").notNull().default(true),
     /**
      * **Optional features a shop can switch off** (ADR
      * 20261005-optional-shop-features). Each defaults on, so a new shop sees
@@ -188,22 +190,23 @@ export const shops = pgTable(
     tipsEnabled: boolean("tips_enabled").notNull().default(true),
     /**
      * **"Our year" on the public schedule**: the Reports year card's counts
-     * (divers, boats out, sites) at the foot of the shopfront. The one
-     * optional feature that defaults *off*: it publishes a reading of the
-     * shop's own records, so the shop opts in (Aaron, 2026-10-11). Counts
-     * only, never money (`src/db/public-year.ts`).
+     * (divers, boats out, sites) at the foot of the shopfront. Counts only,
+     * never money (`src/db/public-year.ts`). It defaulted off from 2026-10-11
+     * (the shop opted in to publishing its own counts); since 2026-10-23 every
+     * feature starts on for a new shop (Aaron), and the shop turns it off on
+     * the Features page.
      */
-    publicYearEnabled: boolean("public_year_enabled").notNull().default(false),
+    publicYearEnabled: boolean("public_year_enabled").notNull().default(true),
     /**
      * **PADI checks (beta)**: "Check with PADI" (DiveChek) on a pending PADI
      * card and the PADI eLearning check on a course roster, both run by the
      * DiveDay extension in a staffer's browser signed in to the PADI Pros'
-     * Site under the shop's own membership (H-121, H-106). Off by default and
-     * the shop's own opt-in: the membership and its terms are the shop's, and
-     * neither check has been tried against the live site yet (#2259). Off
-     * keeps the "(member sign-in)" link (`src/lib/agency-check.ts`).
+     * Site under the shop's own membership (H-121, H-106). On for a new shop
+     * since 2026-10-23 (Aaron, amending H-121's opt-in): a shop whose Pros do
+     * not want it turns it off on the Features page. Off keeps the "(member
+     * sign-in)" link (`src/lib/agency-check.ts`).
      */
-    padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(false),
+    padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(true),
     /**
      * **Claude suggestions**: the drafts, sorting and reading Claude offers
      * staff across the app (ADR 20261018-claude-assists). On by default; off,
@@ -214,10 +217,123 @@ export const shops = pgTable(
     /**
      * **Recap highlights without a tap** (the `recap` assist): when a
      * departure's recap goes out and the crew left its note empty, Claude's
-     * two-sentence highlight from the logged sightings fills it. Off by
-     * default, so a crew approves each one by saving it.
+     * two-sentence highlight from the logged sightings fills it. On for a new
+     * shop since 2026-10-23 (Aaron: every feature starts on); off, a crew
+     * approves each one by saving it.
      */
-    recapAssistAutoApprove: boolean("recap_assist_auto_approve").notNull().default(false),
+    recapAssistAutoApprove: boolean("recap_assist_auto_approve").notNull().default(true),
+    /**
+     * **Lost and found**: the register of what crews found aboard, its Today
+     * row, the boat's and arrival desk's found-item panels, and the "we found
+     * your …" email. On by default (ADR 20261005-optional-shop-features,
+     * amended 2026-10-23); off hides every door and deletes no item.
+     */
+    lostFoundEnabled: boolean("lost_found_enabled").notNull().default(true),
+    /**
+     * **Gear servicing (work orders)**: the bench, its Today rows, a diver's
+     * work orders and the customer service reminders and emails. Off hides it
+     * all and deletes no ticket; the rental fleet's own service clocks stay,
+     * because they are safety.
+     */
+    workOrdersEnabled: boolean("work_orders_enabled").notNull().default(true),
+    /**
+     * **Promo codes**: the Money tab and the code box a diver types into. Off,
+     * no code redeems; a last-minute deal's code still does while the
+     * last-minute list is on.
+     */
+    promoCodesEnabled: boolean("promo_codes_enabled").notNull().default(true),
+    /**
+     * **Dive packages**: selling prepaid dives (the staff packages view, the
+     * shopfront's packages page). Off stops selling only: a diver's balance
+     * already paid for still redeems.
+     */
+    divePackagesEnabled: boolean("dive_packages_enabled").notNull().default(true),
+    /**
+     * **Abandoned-checkout emails**: the one nudge a diver gets when a
+     * booking's payment was started and never finished. Off, the cron sends
+     * none; the unpaid booking itself is untouched.
+     */
+    checkoutRecoveryEnabled: boolean("checkout_recovery_enabled").notNull().default(true),
+    /**
+     * **Bring a buddy**: the share link on a diver's ready page and recap, the
+     * credit a booking through it earns, and the referred-seats lines on
+     * Reports and the diver's record. Off hides the link and records no new
+     * credit; credits already earned stay.
+     */
+    buddyLinksEnabled: boolean("buddy_links_enabled").notNull().default(true),
+    /**
+     * **Marine-life sightings**: what the crew saw on a dive (the manifest's
+     * "Seen" group and the dive log's species), the shopfront's month shelf,
+     * a trip page's recent sightings and the recap's field guide. Off hides
+     * every one and erases no sighting; roll call and head count never change.
+     */
+    sightingsEnabled: boolean("sightings_enabled").notNull().default(true),
+    /**
+     * **Recap photos**: divers and crew adding photos to a departure's recap.
+     * Off, no upload is taken and the recap shows no album; photos already
+     * added stay visible to staff so one can still be taken down, and media
+     * deletions keep running.
+     */
+    diverPhotosEnabled: boolean("diver_photos_enabled").notNull().default(true),
+    /**
+     * **Counter QR self-registration**: the printed counter card and the
+     * public sign-up page it opens. Off, the page is gone and the card leaves
+     * Settings; divers who already signed themselves up stay.
+     */
+    selfRegistrationEnabled: boolean("self_registration_enabled").notNull().default(true),
+    /**
+     * **Waitlist**: a diver asking to hear when a seat opens on a full
+     * departure (the public join, the staff doors that add someone to it) and
+     * the list's own seat offers (the nightly roll's invite, the "Who wants
+     * in" offer). Off, nobody new joins and the list sends nothing; divers
+     * already waiting stay on the panel and Today until someone handles them,
+     * a staffer may still email any diver a date themselves, and the roll
+     * still moves sailed interests.
+     */
+    waitlistEnabled: boolean("waitlist_enabled").notNull().default(true),
+    /**
+     * **Invite past divers**: suggestions to invite divers who sailed before
+     * onto a thin boat, the quiet-day invite door, and the seat offer a
+     * suggestion sends. Off, nobody is suggested and a suggestion's invite is
+     * refused; an invite a staffer picks themselves (the roster's Invite, the
+     * course ladder, the no-show desk) is not a suggestion and still sends.
+     */
+    pastDiverInvitesEnabled: boolean("past_diver_invites_enabled").notNull().default(true),
+    /**
+     * **Day-of help requests**: a diver asking the crew for help from their
+     * ready page, and Today's row for it. Off, no new request is taken and the
+     * ready page shows the shop's contact instead; a request already open
+     * stays on Today until the crew handles it, and its diver may withdraw it.
+     */
+    helpRequestsEnabled: boolean("help_requests_enabled").notNull().default(true),
+    /**
+     * **Partner links**: referral links for a hotel or partner, the credit a
+     * booking through one earns and Reports' referred seats. Off, the embed
+     * page offers none and no new credit is recorded; earlier credits stay.
+     */
+    partnerLinksEnabled: boolean("partner_links_enabled").notNull().default(true),
+    /**
+     * **Week-out reminder**: the email a diver gets seven days before a
+     * departure. Off, the plain "see you next week" hello is not sent; a diver
+     * with anything still on their checklist or course materials due still
+     * gets it, and the day-before reminder always sends.
+     */
+    weekOutReminderEnabled: boolean("week_out_reminder_enabled").notNull().default(true),
+    /**
+     * **Public conditions**: the automated marine outlook on a public trip
+     * page, shown when the crew has written no read of their own. Off, no
+     * outlook is fetched or shown; the crew's own read, their conditions
+     * updates in the change ledger, the "changed since you booked" notice, the
+     * staff conditions panel and the high-wind alert never change.
+     */
+    publicConditionsEnabled: boolean("public_conditions_enabled").notNull().default(true),
+    /**
+     * **Field guide**: the species picked for each dive site, shown on its
+     * public page, trip briefings, the recap and the manifest's species
+     * shortlist. Off, it is hidden and kept (a site save writes none of it);
+     * the sites themselves stay.
+     */
+    fieldGuideEnabled: boolean("field_guide_enabled").notNull().default(true),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
@@ -434,12 +550,14 @@ export const shops = pgTable(
      */
     dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
     /**
-     * Whether the shop runs hotel pickups (fourth UX review item 8). Off by
-     * default, because most shops do not: `/ready` asked every diver at every
-     * shop "Want a morning pickup?", a promise the shop never made. Only a
-     * shop that says it offers them has the question asked.
+     * Whether the shop runs hotel pickups (fourth UX review item 8): `/ready`
+     * asks each diver whether they want a pickup and where they are staying,
+     * and the manifest lists who to collect. A Features-page switch since
+     * 2026-10-23 (`hotelPickup`), on for a new shop like every feature (Aaron,
+     * 2026-10-23); a shop that runs no pickups turns it off, and off nobody is
+     * asked. Existing shops keep what they chose.
      */
-    offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
+    offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(true),
     /**
      * How the shop takes money at the desk: card, cash, or both (fifth-loop
      * ideas, item 21). Null until the shop says, and then nothing is added to
@@ -899,6 +1017,23 @@ export const people = pgTable(
      * leave an append-only line on the diver's activity trail (A5).
      */
     drysuitExperienceSeenNote: text("drysuit_experience_seen_note"),
+    /**
+     * **The last dive the shop knows of, anywhere**, as a staff member wrote
+     * it on the diver's record (Aaron, 2026-10-23; ADR
+     * 20261023-last-known-dive). A calendar day, not a band: "14 March 2025
+     * in Bonaire" off a logbook or a computer is a fact that stays true, where
+     * "within a year" goes stale the day after it is said — which is why the
+     * diver's own answer on `/ready` stays a band on the booking
+     * (`bookings.last_dived_band`, ADR 20260821-currency-is-what-catches-people).
+     *
+     * Never read alone. The record shows the later of this and the diver's
+     * own last dive day with the shop (`lastKnownDive`, src/db/last-dive.ts),
+     * so a trip with the shop moves the date forward without anybody typing
+     * it, and nothing moves it back. **Gates nothing**, like the band: a
+     * refresher is a divemaster's conversation, not a refusal. Null is "not
+     * recorded". Erasure takes it; a merge keeps the later of the two.
+     */
+    lastDiveOn: date("last_dive_on", { mode: "string" }),
     /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and

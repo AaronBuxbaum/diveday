@@ -265,21 +265,30 @@
   offer here is worse than one that says nobody is waiting. No branch seats anyone or moves money;
   the money is one sentence and a link to that diver's orders.
 - **Crew schedule** — whether a shop plans its crew in DiveDay (`shops.crew_schedule_enabled`, Settings
-  → Team, **off for a new shop**). On, the shop has the Crew view of Schedule (working shifts, days
+  → Features, **on for a new shop** since 2026-10-23). On, the shop has the Crew view of Schedule (working shifts, days
   away, crew asking for a departure), the crew line on the week, and the nudges measured against
   its **Target diver:divemaster ratio**. Off, all of that is gone. Every departure keeps its crew
   editor either way, because who is aboard is manifest data (the crew roll call, the souls-on-board
   count) and a course session's agency ratio gates enrolment from it (`src/lib/crew-schedule.ts`,
   ADR 20261005-crew-schedule-is-a-setting).
 - **Optional feature** — a feature a shop can switch off on the **Features** page of Settings (`/settings/features`, which also holds the crew schedule, Stripe Tax and the kinds of diving a shop runs): diver reviews, date
-  requests, the last-minute list, tips, "Our year" and the **PADI checks**
-  (`src/lib/shop-features.ts`, one `shops.*_enabled` column each, on for a new shop except "Our
-  year" and the PADI checks, which wait for the shop's own yes). Off hides the feature on every surface that offers it and
-  deletes nothing (ADR 20261005-optional-shop-features). Not every shop switch is one of these:
-  **Hotel pickup** is a service the shop says it runs, off for a new shop.
+  requests, the last-minute list, tips, "Our year", the **PADI checks**, Claude suggestions,
+  recap highlights without a tap, lost and found, gear servicing (work orders), promo codes, dive
+  packages, **Hotel pickup**, checkout reminders (abandoned-checkout emails), bring a buddy,
+  marine-life sightings, recap photos, counter sign-up (QR self-registration), the wait list,
+  past-diver invites, help requests, partner links, the week-out reminder, public conditions and
+  the field guide
+  (`src/lib/shop-features.ts`, one `shops` column each, every one on for a new shop). Off hides the feature on every surface that offers it, redirects
+  its staff pages and deletes nothing (ADR 20261005-optional-shop-features).
+- **Feature coverage** — the one answer, per staff destination and per boolean on `shops`, to "is
+  this something a shop could run without?": its Features switch, or `core` with the reason it
+  is not (`src/lib/feature-coverage.ts`). A new destination or column cannot ship unclassified,
+  and a destination tied to a switch that is off leaves the nav, the section tabs and ⌘K.
 - **Hotel pickup** — whether the shop collects divers from where they are staying
-  (`shops.offers_hotel_pickup`, Settings › Dock-day rhythm, off for a new shop; the demo shop has
-  it on). Only when it is on does a diver's `/ready` ask "Want a pickup?" and where they are
+  (`shops.offers_hotel_pickup`, Settings › Features, on for a new shop and every seeded one
+  since 2026-10-23; a shop that runs none turns it off). Off withdraws the offer only: no diver is
+  asked and the roster has no pickup form, while a pickup a seat already holds still shows to the
+  crew and the diver. Only when it is on does a diver's `/ready` ask "Want a pickup?" and where they are
   staying (`bookings.hotel_pickup_location`, refused by the server otherwise). Staff then set the
   seat's pickup time (`bookings.pickup_time`), and the night-before brief gives that
   time and place instead of the dock arrival time. A **seat move** clears the pickup time.
@@ -1859,6 +1868,15 @@
   and the **SMS channel** otherwise. Any WhatsApp failure — most often a diver who simply isn't on
   WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
   after the boat leaves is worth nothing.
+- **Ask to write back** — the WhatsApp message a staffer sends from a diver's conversation once
+  the diver's last WhatsApp is more than 24 hours old, when WhatsApp no longer carries a typed
+  reply (Meta's customer-service window). One of three fixed sentences from the diver bundle
+  (`notifications.whatsappReopen.*`: an answer is ready, a question, picking up where we left off),
+  in the diver's language, carried by the shop's approved **courtesy message** template. Recorded
+  on `staff_replies` without answering the message, and one per silence: a WhatsApp reply sent a
+  full window after the diver last wrote can only be one, so `whatsAppReopenSentAt`
+  (`src/lib/inbox.ts`) finds it without a column. The diver's answer opens a fresh window and
+  the composer is back. Send path `sendWhatsAppReopen` in `src/db/staff-reply.ts`.
 - **STOP list** — the phone numbers that replied STOP to DiveDay's texting number (`sms_opt_outs`,
   ADR [20261007-sms-stop-and-help](../../architecture/decisions/20261007-sms-stop-and-help.md)). One
   list for the platform, because every shop texts from the one number. A listed number gets no SMS
@@ -1910,7 +1928,9 @@
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
   daily reaper clears minted demos after 7 days. The canonical `isDemo` shop (Blue Mantis) is
   bootstrapped in every environment as the fixture the e2e/visual-regression fleet tests against,
-  and is never reaped. Onboarding a **trial** at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
+  and is never reaped. AI suggestions run in a minted demo under a $1 cap and the demo AI
+  allowance, $10 a month across every minted demo, kept in `claude_demo_spend` so a reaped
+  demo's spend still counts; Blue Mantis keeps a real shop's cap (Aaron, 2026-10-23). Onboarding a **trial** at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
   20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
   **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/lib/trial.ts`), shown to the
@@ -1997,7 +2017,7 @@
 - **Decompression card reminder** — one line per departure, on the staff roster, the roll call at the dock checkpoint, the printed packet and the offline copy, telling crew to check each diver's and guide's decompression card because DiveDay records no technical card ([H-144](../human-decisions/H-144-decompression-departure-reminds-crew-to-check-cards.md)). Shown when the departure is marked `exceeds_no_deco_limits` and someone aboard dives; never on a finished departure's record. It informs and never gates: `needsDecompressionCardReminder` in `src/lib/decompression-reminder.ts`, read by none of readiness, trip admission or the roll-call readiness.
 - **Seat** — the one word for what a diver buys and what a boat holds, said by staff and divers alike ([H-122](../human-decisions/H-122-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
 - **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-126](../human-decisions/H-126-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
-- **Reply notes** — what Claude should know when it drafts a reply to a diver, in the shop's own words: where to park, which wetsuits it rents, what to bring. One box at the foot of the Inbox ("Notes for Claude"), any live staff role may change it, and the `inbox-draft` assist reads it beside the schedule, prices and desk hours, so a time or price written there is one a draft may quote. Never a diver's details. Replaced saved answers and their `{name}`/`{trip}` markers (Aaron, 2026-10-22); the retired `inbox_saved_answers` table is dropped in a later release. Column `shops.reply_notes`, read by `replyFacts` (`src/db/inbox-assists.ts`).
+- **Reply notes** — what AI should know when it drafts a reply to a diver, in the shop's own words: where to park, which wetsuits it rents, what to bring. One box under the AI switch in Settings → Features ("Notes for AI"), drawn only while the shop's AI suggestions are lit, and an owner or manager changes it with the page’s one Save (Aaron, 2026-10-23; it began at the foot of the Inbox); and the `inbox-draft` assist reads it beside the schedule, prices and desk hours, so a time or price written there is one a draft may quote. Never a diver's details. Replaced saved answers and their `{name}`/`{trip}` markers (Aaron, 2026-10-22); the retired `inbox_saved_answers` table is dropped in a later release. Column `shops.reply_notes`, read by `replyFacts` (`src/db/inbox-assists.ts`).
 - **Weather day** — on Reports, a shop-local day with at least one departure the weather called
   off and that stayed called off (`weatherCallsInWindow`, `src/db/blowouts.ts`; fifth loop, item
   27). A departure reinstated after the call and sailed is not counted (dive-domain review F2). One
@@ -2012,8 +2032,8 @@
 - **Assist** — a suggestion Claude makes to staff (a drafted reply, a sorted message, a value read
   off a card or a website), which a person accepts, edits or ignores (ADR 20261018-claude-assists).
   An assist never clears anything, and it never sends, publishes or saves on its own, with one
-  opt-in exception: a shop that turns on "Recap highlights" (`shops.recap_assist_auto_approve`,
-  off by default) lets the recap send fill a highlight the crew left blank, never over the crew's
+  exception: while "Recap highlights" is on (`shops.recap_assist_auto_approve`, on for a new shop
+  since 2026-10-23) the recap send fills a highlight the crew left blank, never over the crew's
   own words and never on a departure with an incident report (the ADR's 2026-10-22 amendment). One
   assist is the diver's: the card photo on the public register page fills the boxes they would
   type, rate limited per address and per shop. An assist is **dark** (offers nothing, says

@@ -1,5 +1,5 @@
 import type { DiverMergeRefusal } from "@/db/diver-merge";
-import type { SendStaffReplyRefusal } from "@/db/staff-reply";
+import type { SendStaffReplyRefusal, SendWhatsAppReopenRefusal } from "@/db/staff-reply";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -60,7 +60,8 @@ type DiverNoticeDefinition = {
  *
  * `reply_` carries every member of `SendStaffReplyRefusal` untouched
  * (`replyToDiverAction`: ``notice = `reply-${result.reason}` ``, kebabed by
- * `noticeUrl`). `merge_` carries `DiverMergeRefusal` minus the two the action
+ * `noticeUrl`), and `reopen_` every member of `SendWhatsAppReopenRefusal`
+ * the same way (`reopenWhatsAppAction`). `merge_` carries `DiverMergeRefusal` minus the two the action
  * translates by hand — `not_authorized` into the page's own
  * `not-authorized-merge`, and `not_found` into `merge-invalid`, which is why
  * neither can be derived from the union.
@@ -76,6 +77,7 @@ type DiverNoticeDefinition = {
  */
 type OwnedDiverNoticeReason =
   | `reply_${SendStaffReplyRefusal}`
+  | `reopen_${SendWhatsAppReopenRefusal}`
   | `merge_${Exclude<DiverMergeRefusal, "not_authorized" | "not_found">}`;
 
 /** Loose in the keys it accepts, exact in the ones it demands. */
@@ -197,6 +199,32 @@ const NOTICE_KEYS: DiverNoticeMap = {
     form: "page",
     tone: "danger",
     key: "divers.notices.notAuthorizedCards",
+  },
+
+  // Last dive (ADR 20261023-last-known-dive). A save is said by the row
+  // itself, which shows the new date, so success is silent.
+  "last-dive-saved": { form: "last-dive", tone: "success", silent: true },
+  "last-dive-cleared": { form: "last-dive", tone: "success", silent: true },
+  "last-dive-invalid": {
+    form: "last-dive",
+    tone: "danger",
+    key: "divers.notices.lastDiveInvalid",
+  },
+  "last-dive-future": {
+    form: "last-dive",
+    tone: "danger",
+    key: "divers.notices.lastDiveFuture",
+  },
+  // Saved, but their later dive with the shop is what the row goes on showing.
+  "last-dive-saved-later-known": {
+    form: "last-dive",
+    tone: "warning",
+    key: "divers.notices.lastDiveSavedLaterKnown",
+  },
+  "not-authorized-last-dive": {
+    form: "last-dive",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedDetails",
   },
 
   // Details editor.
@@ -420,6 +448,27 @@ const NOTICE_KEYS: DiverNoticeMap = {
     key: "inbox.notices.whatsappNotConnected",
   },
   "not-authorized-reply": { form: "reply", tone: "danger", key: "inbox.notices.notAuthorized" },
+  // Asking a diver to write back once the WhatsApp window has closed. Sent
+  // is silent: the ask appears in the thread and the composer says so.
+  "reopen-sent": { form: "reply", tone: "success", silent: true },
+  "reopen-send-failed": { form: "reply", tone: "danger", key: "inbox.notices.reopenFailed" },
+  "reopen-send-limit": { form: "reply", tone: "warning", ...sendLimitWords("replies") },
+  "reopen-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
+  "reopen-whatsapp-window-open": {
+    form: "reply",
+    tone: "warning",
+    key: "inbox.notices.reopenWindowOpen",
+  },
+  "reopen-already-asked": {
+    form: "reply",
+    tone: "warning",
+    key: "inbox.notices.reopenAlreadyAsked",
+  },
+  "reopen-whatsapp-not-connected": {
+    form: "reply",
+    tone: "danger",
+    key: "inbox.notices.whatsappNotConnected",
+  },
 
   // Explicit duplicate resolution. A successful merge lands on the survivor,
   // where the candidate panel may no longer render, so its confirmation is a

@@ -388,6 +388,7 @@
     "summaryNoneRequired": "Nada que verificar. Cualquier buceador con plaza puede embarcar."
   },
   "recapPhotos": {
+    "hiddenFromDivers": "Las fotos del resumen están desactivadas, así que los buceadores no las ven.",
     "heading": "Fotos de buceadores",
     "description": "Compartidas por los buceadores desde sus propias páginas de resumen.",
     "photoFromAlt": "Foto de {diverName}",
@@ -412,6 +413,7 @@
     "noMatches": "Ningún buceador habitual coincide con “{query}”.",
     "nameLabel": "Nombre",
     "addToWaitlist": "Agregar a quienes esperan",
+    "addPersonToWaitlist": "Agregar a {name} a quienes esperan",
     "addAsWalkIn": "Agregar como walk-in",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
     "addDiver": "Agregar buceador",

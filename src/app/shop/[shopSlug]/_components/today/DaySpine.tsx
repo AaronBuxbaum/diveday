@@ -703,7 +703,7 @@ function paymentActionCopy(t: StaffTranslator): PaymentActionCopy {
       notOpen: t("today.paymentAction.errors.notOpen"),
       notConfigured: t("today.paymentAction.errors.notConfigured"),
       failed: t("today.paymentAction.errors.failed"),
-      rateLimited: t("today.paymentAction.errors.rateLimited"),
+      rateLimited: t("shared.limits.sendLimit", { thing: "invoices" }),
     },
   };
 }
@@ -1219,8 +1219,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             <WeekHorizon
               panelClass={HORIZON_PANEL_CLASS}
               jobs={spine.week.jobs}
-              crewAway={weekCrewAway(spine.week.rows, timeZone)}
-              shopSlug={shopSlug}
+              crewAway={weekCrewAway(spine.week.rows)}
               t={t}
             >
               <StationRows rows={spine.week.rows} controls={controls} />

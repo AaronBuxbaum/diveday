@@ -700,6 +700,19 @@ describe("the rail and the pane say the same thing", () => {
    * rows with no section id, so the test above never saw them and the rail
    * never named them.
    */
+  it("draws no counter card while counter sign-up is switched off on Features", async () => {
+    const rendered = renderedSectionIds(
+      await renderSettings("owner", async (db, session) => {
+        await db
+          .update(shops)
+          .set({ selfRegistrationEnabled: false })
+          .where(eq(shops.id, session.user.shopId));
+      }),
+    );
+    expect(rendered).not.toContain("counterCard");
+    expect(rendered).toContain("certCheck");
+  });
+
   it("gives every row the pane renders a section the rail names", async () => {
     const rows = findElements<{ sectionId?: string; heading: string }>(
       await renderSettings("owner", async (db, session) => {

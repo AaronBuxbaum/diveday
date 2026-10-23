@@ -1,6 +1,6 @@
 # H-121: May the extension check a PADI card on DiveChek, behind the shop's own PADI sign-in?
 
-- **Status:** Implemented (amended 2026-10-15, confirmed by Aaron Buxbaum 2026-10-15)
+- **Status:** Implemented (amended 2026-10-15, confirmed by Aaron Buxbaum 2026-10-15; amended by Aaron Buxbaum 2026-10-23)
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -24,6 +24,8 @@ Whether to build it before PADI's member terms are read and before anyone has tr
 
 - **"Beta" comes off** only after each of these has been seen on PADI's real pages: a match, a no record, a several-divers page, a signed-out page, a Junior (or "Jr.") card, a PADI Scuba Diver card, and the date format of a page read by a Pro outside the US (`dates: "mdy"` for PADI in `AGENCY_CHECKS` is a guess).
 - **The default turns on** only after the Pros' Site terms are pasted into this record or PADI answers in writing; that call stays the product owner's. The same change moved the host to `pro.padi.com`, where PADI's own pages send pros (`pros.padi.com` is still read), and added DiveChek's published "Run Report" button.
+
+**Amended 2026-10-23 (Aaron Buxbaum, in the project thread):** the switch starts **on**. Every switch on the Features page defaults on for a new shop, and "PADI checks (beta)" with them (`shops.padi_checks_enabled` default true; every seeded shop has it on; existing shops keep their value). This is the product owner's call the second exit above reserved, made before the Pros' Site terms were read. "Beta" stays until the real pages are seen. A shop whose Pros do not want the check turns it off in Settings, Features, and off still keeps the "(member sign-in)" link.
 
 ## Unblocks / follow-up
 

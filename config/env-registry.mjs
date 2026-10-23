@@ -896,7 +896,8 @@ export const ENV_GROUPS = [
       "Claude assists (ADR 20261018-claude-assists). Unset, every assist is dark and",
       "each feature works exactly as it does without Claude; DIVEDAY_DISABLE_EXTERNAL_HTTP=1",
       "darkens them too. The per-shop monthly cap is in USD (default 15); at the cap a",
-      "shop's assists go dark until the first of the next UTC month.",
+      "shop's assists go dark until the first of the next UTC month. A demo shop's cap",
+      "is 1, and every demo together goes dark at the shared demo allowance (10).",
     ],
     keys: [
       {
@@ -911,6 +912,18 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: LOCAL_AND_VERCEL,
         absent: "each shop's Claude assists are capped at $15 a month",
+      },
+      {
+        key: "DIVEDAY_CLAUDE_DEMO_SHOP_MONTHLY_CAP_USD",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "each demo shop's Claude assists are capped at $1 a month",
+      },
+      {
+        key: "DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "every demo shop together is capped at $10 a month",
       },
     ],
   },

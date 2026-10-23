@@ -6,11 +6,12 @@ import { createBooking } from "./bookings";
 import { deliverSeatOffer } from "./interest-offers";
 import {
   askForDeparture,
+  askForDepartureAsKnownDiver,
   ensureDepartureInterest,
   getDepartureInterestForTrip,
   listDepartureInterests,
 } from "./interests";
-import { bookings, courses, interests, people, shops } from "./schema";
+import { bookings, courses, interests, people, personRoles, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import {
   createTrip,
@@ -131,6 +132,110 @@ describe("askForDeparture (in-memory PGlite)", () => {
     await expect(
       askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
     ).resolves.toEqual({ ok: false, reason: "trip_available" });
+  });
+});
+
+/**
+ * **The desk picks a diver on file for the wait list** (Aaron, 2026-10-23):
+ * the record is reused, never typed again, under the same full/not-full
+ * decision the typed door makes.
+ */
+describe("askForDepartureAsKnownDiver", () => {
+  async function knownDiver() {
+    const { db, shop } = ctx;
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Ines Duarte", email: "ines@example.com" })
+      .returning();
+    if (!person) throw new Error("setup: no person");
+    await db.insert(personRoles).values({ personId: person.id, role: "diver" });
+    return person;
+  }
+
+  it("puts the diver on file on a full trip's list as their own ask, adding nobody", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const person = await knownDiver();
+    const before = await db.select({ id: people.id }).from(people);
+
+    const outcome = await askForDepartureAsKnownDiver(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      personId: person.id,
+    });
+
+    expect(outcome).toMatchObject({ ok: true, personName: "Ines Duarte" });
+    const rows = await listDepartureInterests(db, shop.id, fullTrip.id);
+    const row = rows.find((r) => r.person?.id === person.id);
+    expect(row?.interest.askedBy).toBe("diver");
+    expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
+  });
+
+  it("refuses while a seat is open, as the typed door does", async () => {
+    const { db, shop, openTrip } = await seededContext();
+    const person = await knownDiver();
+    await expect(
+      askForDepartureAsKnownDiver(db, {
+        shopId: shop.id,
+        tripId: openTrip.id,
+        personId: person.id,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "trip_available" });
+  });
+
+  it("makes a cold invitation the diver's own ask, keeping the one row", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const person = await knownDiver();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("setup: no staff");
+    const invited = await ensureDepartureInterest(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      personId: person.id,
+      createdByPersonId: staff.person.id,
+    });
+
+    const outcome = await askForDepartureAsKnownDiver(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      personId: person.id,
+    });
+
+    expect(outcome).toMatchObject({
+      ok: false,
+      reason: "already_waitlisted",
+      interestId: invited?.interestId,
+    });
+    const [row] = await db.select().from(interests).where(eq(interests.personId, person.id));
+    expect(row?.askedBy).toBe("diver");
+  });
+
+  it("refuses someone who is not this shop's live diver", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const person = await knownDiver();
+    await db
+      .update(people)
+      .set({ deletedAt: new Date(nowMs()) })
+      .where(eq(people.id, person.id));
+    await expect(
+      askForDepartureAsKnownDiver(db, {
+        shopId: shop.id,
+        tripId: fullTrip.id,
+        personId: person.id,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("refuses a diver who already holds a seat on the trip", async () => {
+    const { db, shop, fullTrip } = await seededContext();
+    const [seat] = await getTripRoster(db, shop.id, fullTrip.id);
+    if (!seat) throw new Error("setup: empty roster");
+    await expect(
+      askForDepartureAsKnownDiver(db, {
+        shopId: shop.id,
+        tripId: fullTrip.id,
+        personId: seat.booking.personId,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "already_booked" });
   });
 });
 

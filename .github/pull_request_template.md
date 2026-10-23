@@ -12,6 +12,8 @@
 
 <!-- The change, in a few bullets a reviewer can check against the diff. -->
 
+- [ ] A new feature a shop could run without has a Features switch (default on), or a `core` entry in `src/lib/feature-coverage.ts` saying why not; "none" if no feature is new.
+
 ## How
 
 <!-- The approach and the decision that was not obvious. What you ran, and what you did not. -->

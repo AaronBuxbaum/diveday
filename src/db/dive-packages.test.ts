@@ -30,6 +30,7 @@ import {
   divePackageEntitlements,
   orders,
   people,
+  shops,
   trips as tripsTable,
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
@@ -131,6 +132,23 @@ describe("a shop's package price list", () => {
       "Open card",
       "Season card",
     ]);
+  });
+
+  it("sells nothing while dive packages are switched off, and keeps every dive bought", async () => {
+    const { db, shop } = await packageContext();
+    await createDivePackage(db, {
+      shopId: shop.id,
+      name: "Open card",
+      diveCount: 5,
+      priceCents: 40_000,
+      scope: "fun_dives",
+      validUntil: null,
+    });
+    await db.update(shops).set({ divePackagesEnabled: false }).where(eq(shops.id, shop.id));
+    expect(await listPackagesOnSale(db, shop.id)).toEqual([]);
+    expect(await listDivePackages(db, shop.id)).toHaveLength(1);
+    await db.update(shops).set({ divePackagesEnabled: true }).where(eq(shops.id, shop.id));
+    expect(await listPackagesOnSale(db, shop.id)).toHaveLength(1);
   });
 });
 

@@ -101,7 +101,10 @@ describe("the Monday read", () => {
   });
 
   it("says nothing and stores nothing while the shop is dark", async () => {
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+    await ctx.db
+      .update(shops)
+      .set({ claudeSuggestionsEnabled: false })
+      .where(eq(shops.id, ctx.shop.id));
     const provider = answering({ sentences: [{ section: "waivers", text: "Hi." }] });
     expect(await mondayReadFor(ctx.db, input(), { provider, env, now })).toEqual([]);
     expect(provider.requests).toHaveLength(0);
@@ -556,6 +559,16 @@ describe("the recap highlight", () => {
       .where(eq(trips.id, tripId));
     expect(row?.line).toBeNull();
     await ctx.db.delete(incidentReports).where(eq(incidentReports.tripId, tripId));
+  });
+
+  it("has nothing to write from while the shop has sightings switched off", async () => {
+    const { tripId } = await tripWithSightings(["green-sea-turtle"]);
+    await ctx.db.update(shops).set({ sightingsEnabled: false }).where(eq(shops.id, ctx.shop.id));
+    try {
+      expect(await recapLogFor(ctx.db, ctx.shop.id, tripId)).toBeNull();
+    } finally {
+      await ctx.db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, ctx.shop.id));
+    }
   });
 
   it("has nothing to say about a departure with no sightings", async () => {

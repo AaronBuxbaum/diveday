@@ -20,7 +20,7 @@ function action(overrides: Partial<TodayAction> = {}): TodayAction {
 }
 
 describe("groupByDeparture — the emergency reference", () => {
-  it("files a blank emergency reference under the boat it names, above the desk", () => {
+  it("files a blank emergency reference under the desk, not the boat it names", () => {
     const rows = sortStationRows([
       action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
       action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("t1") }),
@@ -28,11 +28,13 @@ describe("groupByDeparture — the emergency reference", () => {
         id: "card",
         kind: "emergency_card_blank",
         subject: "No numbers",
-        departure: boat("t1"),
+        departure: undefined,
       }),
     ]);
     const groups = groupByDeparture(rows);
     expect(groups.map((group) => group.departure?.tripId ?? "desk")).toEqual(["t1", "desk"]);
-    expect(groups[0]?.rows.map((row) => row.id).sort()).toEqual(["card", "prep"]);
+    expect(groups[0]?.rows.map((row) => row.id)).toEqual(["prep"]);
+    // The pressing card leads the desk, above the quieter messages row.
+    expect(groups[1]?.rows.map((row) => row.id)).toEqual(["card", "messages"]);
   });
 });

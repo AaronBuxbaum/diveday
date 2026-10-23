@@ -318,6 +318,14 @@ export function missingFitNamedDetailText(t: StaffTranslator, unasked: boolean):
   return t(unasked ? "today.detail.kitUnaskedNamed" : "today.detail.missingSizeNamed");
 }
 
+/**
+ * A boat's divers nobody has asked about their kit, on one row (Aaron
+ * 2026-10-23). Every name is said: the row has no "and N more" to open.
+ */
+export function kitUnaskedGroupDetailText(t: StaffTranslator, names: readonly string[]): string {
+  return t("today.detail.kitUnaskedGroup", { names: nameListText(t, names, names.length) });
+}
+
 export function ungatedNitroxNamedDetailText(t: StaffTranslator): string {
   return t("today.detail.ungatedNitroxNamed");
 }

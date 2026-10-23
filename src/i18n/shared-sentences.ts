@@ -10,7 +10,7 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  */
 
 /** What a staffer sent too much of this hour; the bundle's select names each. */
-export type SendLimitThing = "replies" | "recaps" | "invites" | "links" | "notes";
+export type SendLimitThing = "replies" | "recaps" | "invites" | "links" | "notes" | "invoices";
 
 /**
  * What only an owner or manager may do; the bundle's select names each.

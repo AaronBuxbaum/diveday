@@ -247,7 +247,7 @@ export function registerRemainingExpandedAuditCaptures(
       await capture(page, "today-tomorrow-horizon-open", "light");
     });
 
-    test("This week opens its work and board door", async ({ page }) => {
+    test("This week opens its work", async ({ page }) => {
       await page.goto("/shop/blue-mantis");
       const week = page
         .locator("details")
@@ -256,7 +256,7 @@ export function registerRemainingExpandedAuditCaptures(
         })
         .first();
       await openIfClosed(week);
-      await week.getByRole("link", { name: staff("shopHome.spine.openBoard") }).waitFor();
+      await expect(week.locator(":scope > div").first()).toBeVisible();
       await capture(page, "today-week-horizon-open", "light");
     });
   });

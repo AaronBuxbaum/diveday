@@ -28,8 +28,7 @@
       "notFound": "No se encontró ese pedido. Abre la salida para revisarlo.",
       "notOpen": "Este pedido ya no está abierto. Abre la salida para verificar su estado.",
       "notConfigured": "Los pagos todavía no están conectados para este centro.",
-      "failed": "Sigue sin poder reenviarse. Abre la salida para revisar el pedido.",
-      "rateLimited": "Has reenviado mucho en esta hora. Vuelve a intentarlo en un rato."
+      "failed": "Sigue sin poder reenviarse. Abre la salida para revisar el pedido."
     }
   },
   "crewAway": {
@@ -213,6 +212,7 @@
     "boatWork": "{work}",
     "missingSizeNamed": "Le falta una talla de alquiler.",
     "kitUnaskedNamed": "Sin preguntar por su equipo.",
+    "kitUnaskedGroup": "Nadie les ha preguntado por su equipo: {names}.",
     "ungatedNitroxNamed": "Quiere nitrox, recibe aire a menos que se verifique una certificación antes de que salga el barco.",
     "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes {, rachas de {gusts} nudos} other {}}.",
     "instructorMissing": "Sin instructor asignado.",

@@ -88,9 +88,19 @@ describe("a message on file", () => {
 describe("a message from a stranger", () => {
   it("shows the address instead of a door, because there is no record to open", () => {
     renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
-    expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Unknown sender")).toBeInTheDocument();
-    expect(screen.getByText(/marta\.keller@example\.net/)).toBeInTheDocument();
+    // The one link on the row starts a reply in the staffer's own mail app.
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "marta.keller@example.net" })).toHaveAttribute(
+      "href",
+      "mailto:marta.keller@example.net",
+    );
+  });
+
+  it("leaves a phone number as words, since a link would dial it", () => {
+    renderRow({ personId: null, channel: "sms", subject: null, fromAddress: "+13055550142" }, null);
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText(/\+13055550142/)).toBeInTheDocument();
   });
 
   it("offers a Delete behind its ⋯, since a stranger's message has no record to live on", async () => {
@@ -154,7 +164,10 @@ describe("where the row sets its date and its acts", () => {
     const glyph = trailing.nextElementSibling;
     expect(glyph?.querySelector("svg")).not.toBeNull();
     expect(glyph).toHaveClass("invisible");
-    expect(screen.queryByRole("link")).toBeNull();
+    // No door: the row's one link is the address's own reply.
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "mailto:marta.keller@example.net",
+    ]);
   });
 });
 

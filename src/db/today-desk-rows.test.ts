@@ -3,11 +3,10 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { groupByDeparture } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat } from "./boats";
 import { countOpenLostItems, openLostItemsByPerson, recordLostItem } from "./lost-items";
 import { lostItems, shops } from "./schema";
 import { getTodayWork } from "./today";
-import { createTrip, getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 /** One database for the file, one rolled-back transaction per test. */
 const ctx = fileScopedShopContext();
@@ -30,46 +29,15 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
     expect(row?.subject).toBe("Your emergency reference has no numbers");
     expect(row?.detail).toMatch(/sails without a chamber or coastguard number on it\.$/);
     expect(row?.href).toBe(`/shop/${shop.slug}/settings/emergency-reference`);
-    // Filed under the boat it names, so it sits in that boat's group with the
-    // boat's own rows rather than below every boat in the desk's.
-    expect(row?.departure?.tripId).toBeDefined();
+    // The shop's card, so a desk row (Aaron 2026-10-23): no boat of its own,
+    // filed under "The desk" with the units question.
+    expect(row?.departure).toBeUndefined();
     const group = groupByDeparture(work.actions).find((candidate) =>
       candidate.rows.some((action) => action.kind === "emergency_card_blank"),
     );
-    expect(group?.departure?.tripId).toBe(row?.departure?.tripId);
+    expect(group?.departure).toBeNull();
     expect(row?.dueAt?.getTime()).toBeGreaterThan(now.getTime() - 60 * 60 * 1000);
     expect((row?.dueAt?.getTime() ?? 0) - now.getTime()).toBeLessThanOrEqual(48 * 60 * 60 * 1000);
-  });
-
-  // Issue #2788: two boats at one minute with the same title hung the row on
-  // whichever trip id sorted first, which is fresh every seed. The boat's name
-  // decides, so the card names the same hull each run.
-  it("files the card under the boat that reads first when two sail at the same minute", async () => {
-    const { db, shop } = ctx;
-    await db.update(shops).set({ emergencyReference: BLANK }).where(eq(shops.id, shop.id));
-    const now = nowDate();
-    const startsAt = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-    startsAt.setSeconds(0, 0);
-    const make = async (boatName: string) => {
-      const boat = await createBoat(db, shop.id, boatName, 12);
-      const trip = await createTrip(db, {
-        shopId: shop.id,
-        title: "Twin charter",
-        startsAt,
-        endsAt: new Date(startsAt.getTime() + 2 * 60 * 60 * 1000),
-        capacity: 6,
-        boatId: boat.id,
-      });
-      if (!trip) throw new Error("trip not created");
-      return trip;
-    };
-    // Created Bravo first, so a creation-order or id tiebreak would pick it.
-    const bravo = await make("Bravo");
-    const alpha = await make("Alpha");
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
-    const row = work.actions.find((action) => action.kind === "emergency_card_blank");
-    expect(row?.departure?.tripId).toBe(alpha.id);
-    expect(row?.departure?.tripId).not.toBe(bravo.id);
   });
 
   it("counts a shore contact or a plan with no number as blank", async () => {
@@ -116,6 +84,26 @@ describe("found items waiting to go home (fifth loop, item 7)", () => {
     const byPerson = await openLostItemsByPerson(db, shop.id, [seat.person.id]);
     // The unclaimed fin is nobody's to be told about.
     expect(byPerson.get(seat.person.id)).toEqual(["Blue mask, black strap"]);
+  });
+
+  it("raises no row while Lost and found is switched off, and keeps every item", async () => {
+    const { db, shop } = ctx;
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("demo needs a trip");
+    await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      description: "One fin",
+      actorPersonId: null,
+    });
+    const kinds = async () =>
+      (await getTodayWork(db, shop.id, shop.slug, shop.timezone, nowDate())).actions.map(
+        (action) => action.kind,
+      );
+    expect(await kinds()).toContain("lost_items_waiting");
+    await db.update(shops).set({ lostFoundEnabled: false }).where(eq(shops.id, shop.id));
+    expect(await kinds()).not.toContain("lost_items_waiting");
+    expect(await countOpenLostItems(db, shop.id, nowDate())).toBe(1);
   });
 
   it("leaves out an unclaimed item older than thirty days, never one somebody owns", async () => {

@@ -25,6 +25,7 @@ describe("AddDiverSection", () => {
           candidates: [],
           addBookingAction: action,
           addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
           addExistingDiverAction: action,
           locale: "en-US",
           timeZone: "America/Cancun",
@@ -47,6 +48,7 @@ describe("AddDiverSection", () => {
       candidates: [],
       addBookingAction: action,
       addToWaitlistAction: action,
+      addKnownToWaitlistAction: action,
       addExistingDiverAction: action,
       locale: "en-US",
       timeZone: "America/Cancun",
@@ -80,6 +82,95 @@ describe("AddDiverSection", () => {
           candidates: [],
           addBookingAction: action,
           addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+        }}
+      />,
+    );
+
+    // Someone new is still one tap away, onto who's waiting.
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1&waitlist=true",
+    );
+  });
+
+  it("says a full boat is full and offers no wait list while the wait list is off", () => {
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: true,
+          query: "Ana",
+          candidates: [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+          waitlistOn: false,
+          confirmName: "Ana",
+          confirmMatches: [{ id: "p-1", fullName: "Ana Reyes" } as SimilarDiver],
+        }}
+      />,
+    );
+    expect(screen.getByText("The boat is full.")).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
+    expect(screen.queryByText("Ana Reyes")).toBeNull();
+  });
+
+  it("puts a returning diver on a full boat's wait list, never a second record", () => {
+    const known = vi.fn();
+    const seat = vi.fn();
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: true,
+          query: "Avery",
+          candidates: [
+            {
+              person: { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+              rentalFit: null,
+            } as unknown as BookableDiver,
+          ],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: known,
+          addExistingDiverAction: seat,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+        }}
+      />,
+    );
+
+    const add = screen.getByRole("button", { name: "Add Avery Diver to who’s waiting" });
+    expect(add).toHaveTextContent("Add to who’s waiting");
+    const form = add.closest("form");
+    expect(form?.querySelector('input[name="personId"]')).toHaveValue("person-1");
+    // No "Offer a seat" on a boat with none to offer.
+    expect(screen.queryByRole("button", { name: /Offer/ })).toBeNull();
+  });
+
+  it("offers someone new onto who's waiting when nobody on file matches a full boat", () => {
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: true,
+          query: "Zed Quill",
+          candidates: [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
           addExistingDiverAction: action,
           locale: "en-US",
           timeZone: "America/Cancun",
@@ -89,7 +180,7 @@ describe("AddDiverSection", () => {
 
     expect(screen.getByRole("link", { name: "Add to who’s waiting" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1&waitlist=true",
+      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=departure&tripId=trip-1&waitlist=true",
     );
   });
 
@@ -104,6 +195,7 @@ describe("AddDiverSection", () => {
           candidates: [],
           addBookingAction: action,
           addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
           addExistingDiverAction: action,
           locale: "en-US",
           timeZone: "America/Cancun",
@@ -134,6 +226,7 @@ describe("AddDiverSection", () => {
           candidates: [candidate],
           addBookingAction: action,
           addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
           addExistingDiverAction: action,
           locale: "en-US",
           timeZone: "America/Cancun",
@@ -182,6 +275,7 @@ describe("AddDiverSection name-match prompt", () => {
           candidates: search.candidates ?? [],
           addBookingAction: action,
           addToWaitlistAction: action,
+          addKnownToWaitlistAction: action,
           addExistingDiverAction: action,
           locale: "en-US",
           timeZone: "America/Cancun",
@@ -339,6 +433,7 @@ describe("AddDiverSection spacing", () => {
             tripId: "trip-1",
             addBookingAction: action,
             addToWaitlistAction: action,
+            addKnownToWaitlistAction: action,
             addExistingDiverAction: action,
             locale: "en-US",
             timeZone: "America/Cancun",

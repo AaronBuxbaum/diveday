@@ -47,6 +47,11 @@ teaching shop unable to enrol anyone.
 - Turning it off deletes nothing. Shifts, days away, requests and assignments are all where they
   were when it comes back on.
 
+**Amended 2026-10-23 (Aaron): default true.** Every switch on the Features page now starts on
+for a new shop ([20261005-optional-shop-features](20261005-optional-shop-features.md), amendment
+of the same day), the crew schedule among them; a shop that keeps no roster turns it off there.
+Existing shops keep their value. The seeded shops no longer set it, since the default does.
+
 ## Alternatives considered
 
 - **Opt in by presence, like the gear register** — show crew UI once a shift or assignment exists.

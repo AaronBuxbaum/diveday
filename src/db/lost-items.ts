@@ -64,9 +64,12 @@ export async function recordLostItem(
 ): Promise<RecordLostItemOutcome> {
   const problem = lostItemDescriptionProblem(input.description);
   if (problem) return { ok: false, reason: problem };
+  // A shop that switched Lost and found off (the Features page) records
+  // nothing new: the door is gone, and a stale form finds nothing to write to.
   const [trip] = await db
     .select({ id: trips.id })
     .from(trips)
+    .innerJoin(shops, and(eq(shops.id, trips.shopId), eq(shops.lostFoundEnabled, true)))
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!trip) return { ok: false, reason: "not_found" };
@@ -168,7 +171,8 @@ export async function tellLostItemOwner(
     .innerJoin(shops, eq(shops.id, lostItems.shopId))
     .where(and(eq(lostItems.id, input.itemId), eq(lostItems.shopId, input.shopId)))
     .limit(1);
-  if (!row) return { ok: false, reason: "not_found" };
+  // Switched off, nobody is told: the email is the feature's.
+  if (!row?.shop.lostFoundEnabled) return { ok: false, reason: "not_found" };
   const { item, trip, shop } = row;
   if (item.status !== "open") return { ok: false, reason: "not_open" };
   if (!item.personId) return { ok: false, reason: "no_owner" };
@@ -312,7 +316,8 @@ export type OpenLostItem = Awaited<ReturnType<typeof listOpenLostItems>>[number]
  * **What is waiting for each of these people** (fifth loop, item 7): their
  * open items, oldest first, keyed by person, so the check-in row and the
  * diver's record can say "Has a blue mask in lost and found" on the visit it
- * can be handed over. Only items the crew tied to a seat have a person.
+ * can be handed over. Only items the crew tied to a seat have a person. Empty
+ * while the shop has Lost and found switched off.
  */
 export async function openLostItemsByPerson(
   db: DbExecutor,
@@ -325,6 +330,8 @@ export async function openLostItemsByPerson(
     .select({ personId: lostItems.personId, description: lostItems.description })
     .from(lostItems)
     .innerJoin(trips, and(eq(trips.id, lostItems.tripId), liveTrip()))
+    // Nothing to hand over while the shop has Lost and found switched off.
+    .innerJoin(shops, and(eq(shops.id, lostItems.shopId), eq(shops.lostFoundEnabled, true)))
     .where(
       and(
         eq(lostItems.shopId, shopId),

@@ -1,6 +1,7 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { unansweredMessagesSubjectText } from "@/i18n/today-labels";
 import { nowDate, nowMs } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import type { TodayAction } from "@/lib/today";
@@ -21,6 +22,7 @@ import {
   interests,
   orders,
   people,
+  shops,
   tripAssignments,
   tripReviews,
 } from "./schema";
@@ -548,6 +550,30 @@ describe("unanswered messages", () => {
     });
     // The demo shop also holds seven open date requests (issue #2658).
     expect(rows[0]?.subject).toBe("3 messages and 7 date requests are waiting on an answer.");
+  });
+
+  it("counts only course inquiries while date requests are switched off", async () => {
+    const { db, shop } = ctx;
+    const courseAsks = await db
+      .select({ id: interests.id })
+      .from(interests)
+      .where(
+        and(
+          eq(interests.shopId, shop.id),
+          eq(interests.scope, "date"),
+          isNull(interests.closedAt),
+          isNotNull(interests.courseId),
+        ),
+      );
+    await db.update(shops).set({ dateRequestsEnabled: false }).where(eq(shops.id, shop.id));
+    const [row] = await unansweredRow();
+    expect(row?.subject).not.toContain("7 date requests");
+    expect(row?.subject).toBe(
+      unansweredMessagesSubjectText(staffTranslator("en-US"), {
+        messages: 3,
+        dateRequests: courseAsks.length,
+      }),
+    );
   });
 
   it("grows by one message and renders nothing once every one is answered", async () => {

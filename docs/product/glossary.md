@@ -45,6 +45,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - In training
 - Intro-session in-water ratio
 - Junior certification
+- Last known dive
 - Levels
 - Minimum extension version
 - Minor
@@ -148,6 +149,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrival lookup
 - Arrivals window
 - Ask to move
+- Ask to write back
 - Assist
 - At sea
 - Automated cancellation refund
@@ -213,6 +215,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Emergency contact
 - Emergency reference
 - Export bundle
+- Feature coverage
 - Fill rate
 - Held
 - Horizon

@@ -3,7 +3,7 @@ import { groupUnitsForSize } from "@/lib/gear";
 import { proposalKey } from "@/lib/gear-proposals";
 import { assignGearUnit } from "../actions";
 import { ProposedUnit } from "./ProposedUnit";
-import { kitLineClass, unitLine } from "./prep-lines";
+import { kitLineOpenClass, unitLine } from "./prep-lines";
 import type { PrepView, WantedItem } from "./prep-view";
 import { RentalUnitPicker } from "./RentalUnitPicker";
 
@@ -117,7 +117,7 @@ export function WantedPiece({
     />
   );
   return (
-    <div className={`${kitLineClass} print:hidden`}>
+    <div className={`${kitLineOpenClass} print:hidden`}>
       <dt className="text-muted">
         {groups.length === 0 ? pieceLabel : <label htmlFor={selectId}>{pieceLabel}</label>}
       </dt>
@@ -125,12 +125,9 @@ export function WantedPiece({
         {groups.length === 0 ? (
           <span className="text-muted">{t("gear.prep.noneFree", { kindLabel })}</span>
         ) : (
-          // The width lives on a wrapper: `controlClass`
-          // carries w-full, and a competing width utility
-          // on the same element loses alphabetically.
-          // A proposal's words and two acts get a wider measure than a
-          // bare select, so "Proposed: BCD #5 · L" holds one line on a desk.
-          <div className={`w-full min-w-0 ${proposal ? "sm:max-w-sm" : "sm:max-w-64"}`}>
+          // The tile is the measure: the picker and a proposal's words
+          // with its two acts both take the tile's width.
+          <div className="w-full min-w-0">
             {/* **No "Assign" beside it.** The pick is the
                                       act; a second tap to confirm it is an
                                       "Edit" button once per row, twenty-one

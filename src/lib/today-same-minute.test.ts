@@ -148,6 +148,21 @@ describe("two departures at the same minute (#2788)", () => {
     expect(reading.count).not.toBe(reading.dueBeforeNext);
   });
 
+  // Aaron 2026-10-23: the blank emergency reference files under the desk but is
+  // due when the boat it names sails, so the sentence still counts it.
+  it("counts a desk row due at the next boat's minute", () => {
+    const card = action({
+      id: "emergency-card-blank",
+      kind: "emergency_card_blank",
+      subject: "No numbers",
+      departure: undefined,
+      dueAt: morning.startsAt,
+    });
+    const reading = read([morning, reef], [clashOn(morning), ...others, card]);
+    expect(reading.dueBeforeNext).toBe(4);
+    expect(reading.count).toBe(5);
+  });
+
   it("treats departures inside one clock minute as the same minute", () => {
     const early = departure({ ...morning, startsAt: new Date(hoursFromNow(1).getTime() + 5_000) });
     const late = departure({ ...reef, startsAt: new Date(hoursFromNow(1).getTime() + 50_000) });

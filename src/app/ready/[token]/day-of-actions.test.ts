@@ -189,6 +189,22 @@ describe("saveDayOfDetailsFromReady", () => {
     expect((await read(bookingId)).hotelPickupLocation).toBeNull();
   });
 
+  it("takes no new help request while help requests are off, and keeps an open one", async () => {
+    const { db, shop, bookingId, token } = await seat();
+    await save(token, { kind: "first_timer" });
+    await db.update(shops).set({ helpRequestsEnabled: false }).where(eq(shops.id, shop.id));
+    // A hand-built post changing the ask is refused and the open request stands.
+    expect(await save(token, { kind: "carry_gear" })).toContain("error=day-of");
+    expect((await read(bookingId)).helpRequest).toMatchObject({
+      kind: "first_timer",
+      status: "requested",
+    });
+    // Withdrawn, a new one is refused too.
+    await save(token, { kind: "none" });
+    expect(await save(token, { kind: "carry_gear" })).toContain("error=day-of");
+    expect((await read(bookingId)).helpRequest).toBeNull();
+  });
+
   it("asks for a lunch preference only on a boat that serves lunch, and clears it with a blank", async () => {
     const { db, bookingId, token } = await seat();
     const [own] = await db

@@ -10,7 +10,7 @@ import {
   retryShopPromoCode,
   setShopPromoEnabled,
 } from "@/db/shop-promos";
-import { getShopById } from "@/db/shops";
+import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import { checkbox, formValue, readForm, text } from "@/lib/form-parse";
 import { majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -35,6 +35,11 @@ async function requirePromoManager() {
   // it builds is escaped (src/lib/staff-notices.ts).
   const promos = shopPath(session.user.shopSlug, "promos");
   if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
+  // Promo codes switched off (the Features page): the codes section is gone,
+  // so a hand-built post lands on Discounts having minted or changed nothing.
+  if (!(await shopHasFeatureOn(await getDb(), session.user.shopId, "promoCodes"))) {
+    revalidateAndRedirect(promos);
+  }
   return { session, promos };
 }
 

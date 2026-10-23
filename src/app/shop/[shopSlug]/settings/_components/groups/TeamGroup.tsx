@@ -41,12 +41,12 @@ export function TeamGroup({ view, canManageTeam }: { view: SettingsView; canMana
           />
         ) : null}
         {canManageTeam ? (
-          /* **Off for a new shop** (ADR 20261005-crew-schedule-is-a-setting):
-             a shop where the owner skippers every boat keeps no roster, and the
-             Crew view, the crew line on the week and every "No crew" nudge would
-             be noise to it. The switch is a row of the Features page (issue
-             #2814); what stays here is the target it is measured against, and
-             only a shop that plans its crew is. */
+          /* **A shop setting** (ADR 20261005-crew-schedule-is-a-setting, on
+             for a new shop since 2026-10-23): a shop where the owner skippers
+             every boat turns it off, and the Crew view, the crew line on the
+             week and every "No crew" nudge go with it. The switch is a row of
+             the Features page (issue #2814); what stays here is the target it
+             is measured against, and only a shop that plans its crew is. */
           <SettingsRow
             heading={t("settings.main.crewSchedule.heading")}
             value={crewScheduleValue}
