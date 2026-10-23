@@ -1013,6 +1013,7 @@ describe("every retention window deletes", () => {
  */
 const OUTSIDE_RETENTION: readonly string[] = [
   "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
+  "claude_call_content_erasures", // one per-shop erasure stamp, overwritten, never a trail
   // The shop's own catalogue and configuration: what a shop sets up, edits,
   // and deletes when it stops being true. Nothing here ages.
   "shops",

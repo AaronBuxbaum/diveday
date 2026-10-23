@@ -326,6 +326,7 @@ const EXCLUDED_TABLES = [
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "website_setup_drafts", // proposals read off the shop's public website, waiting for the owner's tap — a working draft, and what it accepts is exported where it lands
   "claude_usage", // token counts and cost codes for Claude calls — DiveDay's billing ledger, not the shop's records
+  "claude_call_content_erasures", // when the shop last erased anyone, for the content above; machinery, no shop record
   "claude_call_content", // what Claude calls said, kept 30 days for DiveDay's founder to debug; DiveDay's working log, not the shop's records, and never carried out of DiveDay
   "assist_results", // what an assist answered (review chips, themes, the Monday read): derived, and asked again on demand
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported

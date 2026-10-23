@@ -11,10 +11,14 @@ Every call `runAssist` (`src/db/assists.ts`) sends writes two rows:
 | Table | Holds | Kept |
 | --- | --- | --- |
 | `claude_usage` | shop, feature code, model, outcome and error codes, tokens, cost, `latency_ms`, `request_id` | 400 days |
-| `claude_call_content` | `system_text`, `context_text`, `content_text`, `answer_text`, `fetched_urls` | 30 days |
+| `claude_call_content` | `system_text`, `context_text`, `content_text`, `answer_text`, `fetched_urls` | 30 days, deleted daily |
 
 - **Images and documents are never kept.** `content_text` shows each one as a placeholder such as
-  `[image: image/jpeg, 812 KB, not kept]` (`src/lib/claude/transcript.ts`).
+  `[image: image/jpeg, 812 KB, not kept]` (`src/lib/claude/transcript.ts`). What the model read
+  off one is kept in `answer_text`: a card's agency, level and number, or a waiver PDF's text.
+- **The 30 days are real.** The daily privacy cron (`/api/cron/dietary-retention`, 03:09 UTC)
+  deletes rows past 30 days (`drainExpiredClaudeCallContent`); the weekly prune reaches the table
+  too. Its log lines are `cron_claude_content_retention.prune_failed` and `…prune_capped`.
 - **Fetched pages are never kept.** `fetched_urls` lists the pages `web_fetch` read, one per line;
   open the URL to see the page.
 - `answer_text` is the model's last text block as it came back, before validation: empty on a
@@ -24,10 +28,23 @@ Every call `runAssist` (`src/db/assists.ts`) sends writes two rows:
 
 ## Who can read it
 
-The founder only, by SQL in the Neon console. No staff screen, no shop export
-(`src/db/export-shop-files.ts`) and no per-shop backup bundle reads it. Neon's point-in-time
-recovery and the weekly full-cluster dump carry it like every table, until the 30-day prune and
-their own windows age it out ([backup runbook](backup-and-restore-runbook.md)).
+DiveDay only: no staff screen, no shop export (`src/db/export-shop-files.ts`) and no per-shop
+backup bundle reads it. In practice that is whoever holds production database access, today the
+founder, by SQL in the Neon console. The weekly full-cluster dump keeps a copy for up to 35 days
+after it was taken, and Neon's point-in-time recovery for its own window
+([backup runbook](backup-and-restore-runbook.md)); the privacy policy says "up to 35 more days in
+backups".
+
+**Preview databases.** A Neon branch forked from production carries the table like every other.
+Git preview deployments are off (`vercel.json`, `git.deploymentEnabled`), and the build never
+writes to a preview database (ADR 20260718-vercel-neon-hosting), so nothing empties it there
+automatically. Before handing a production fork to anyone or any preview code, run
+`truncate claude_call_content;` on that branch.
+
+**Erasure.** Every erasure path (`anonymizeDiver`, `eraseGuardianEmail`) calls
+`forgetClaudeCallContent`: it deletes the shop's rows and stamps
+`claude_call_content_erasures`. A call whose words were read before that stamp (less 15 minutes)
+keeps nothing, however late it finishes.
 
 The text quotes divers: inbox messages, a duplicate check's names and dates of birth, gear notes,
 reviews. Read it to fix an assist, and copy none of it anywhere else.

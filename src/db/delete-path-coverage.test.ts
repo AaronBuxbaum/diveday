@@ -245,6 +245,9 @@ const RESET_KEEPS: Record<string, string> = {
   // What the shop's Claude calls said, kept 30 days to debug them: it hangs
   // off `claude_usage`, which a reset keeps, and nothing seeds it.
   claude_call_content: "the shop's Claude debugging text, kept with the usage rows it hangs off",
+  // When the shop last erased anyone: must outlive a reset, or a call in
+  // flight across it could keep an erased diver's words.
+  claude_call_content_erasures: "the shop's erasure stamp, which a reset must not forget",
   // The website setup's proposals: the shop's own site read once, not schedule.
   website_setup_drafts: "the shop's website reading, which a schedule reset does not touch",
   // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats):
@@ -300,6 +303,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   weekly_digest_sends: "ON DELETE CASCADE from shops and people clears it",
   claude_usage: "ON DELETE CASCADE from shops clears it",
   claude_call_content: "ON DELETE CASCADE from shops and claude_usage clears it",
+  claude_call_content_erasures: "ON DELETE CASCADE from shops clears it",
   email_bounces: "ON DELETE CASCADE from shops clears it",
   assist_results: "ON DELETE CASCADE from shops clears it",
   website_setup_drafts: "ON DELETE CASCADE from shops clears it",

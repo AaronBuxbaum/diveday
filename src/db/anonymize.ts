@@ -70,6 +70,7 @@ import {
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
+import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
 import {
@@ -94,7 +95,6 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
-  claudeCallContent,
   courseFormRecords,
   customerGearItems,
   emailBounces,
@@ -2907,13 +2907,7 @@ async function scrubClaudeCallContent(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
-  // The lock `keepCallContent` (./assists) writes under: a call still in
-  // flight either lands before this delete, or sees this erasure and keeps
-  // nothing.
-  await tx.execute(
-    sql`select pg_advisory_xact_lock(hashtext('claude_call_content'), hashtext(${ctx.shopId}))`,
-  );
-  await tx.delete(claudeCallContent).where(eq(claudeCallContent.shopId, ctx.shopId));
+  await forgetClaudeCallContent(tx, { shopId: ctx.shopId, now: ctx.now });
   return [];
 }
 

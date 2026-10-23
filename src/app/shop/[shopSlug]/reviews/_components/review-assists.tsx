@@ -11,6 +11,7 @@ import {
 } from "@/db/review-assists";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ReviewFlag } from "@/lib/assists/review-flags";
+import { nowDate } from "@/lib/clock";
 
 /**
  * **Claude's read of the review queue** (ADR 20261018-claude-assists): chips
@@ -31,13 +32,16 @@ export async function loadReviewAssists(
   canManageSettings: boolean,
 ): Promise<ReviewAssists> {
   const shopId = shop.id;
+  // When the page read the waiting comments, near enough: the flags ask
+  // about them later, one at a time, after the response is sent.
+  const readAt = nowDate();
   if (!(await assistsAvailable(db, shopId))) return { flags: new Map(), themes: [] };
   const [flags, themes] = await Promise.all([
     readReviewFlags(db, shopId, waiting),
     canManageSettings ? readReviewThemes(db, shopId) : Promise.resolve([]),
   ]);
   after(async () => {
-    await flagWaitingReviews(db, shopId, waiting);
+    await flagWaitingReviews(db, shopId, waiting, { readAt });
     if (canManageSettings) await refreshReviewThemes(db, shopId, shop.defaultLocale);
   });
   return { flags, themes };

@@ -1,4 +1,4 @@
-# 20261023-claude-call-content — DiveDay keeps what each Claude call said for 30 days, for the founder only
+# 20261023-claude-call-content — DiveDay keeps what each Claude call said for 30 days, readable only by DiveDay
 
 - **Status:** Accepted
 - **Date:** 2026-10-23
@@ -22,14 +22,17 @@ readable by him alone, never images, wiped by erasure, said in the privacy polic
   address is enough to open it again.
 - **Best effort.** The write runs in its own savepoint; a failure logs
   `claude_assist.content_not_kept` and changes no answer.
-- **30 days** on `created_at`. `claude_usage` keeps 400 days and gains `latency_ms` and
-  `request_id`.
-- **Founder only, by SQL** ([runbook](../../engineering/claude-call-content-runbook.md)): no
-  screen, no shop export, no backup bundle. Neon's recovery window and the full-cluster dump carry
-  it like every table.
-- **Erasure deletes the shop's rows.** The text quotes divers but is keyed to none of them, so no
-  match finds one diver's words reliably; a month of debugging text is cheap to lose. The write
-  and the delete share a per-shop lock, and a call that overlaps an erasure keeps nothing.
+- **30 days** on `created_at`, deleted daily by the privacy cron. `claude_usage` keeps 400 days
+  and gains `latency_ms` and `request_id`. What the model read off a photo or PDF is kept as its
+  answer; the file never is.
+- **DiveDay only, by SQL** ([runbook](../../engineering/claude-call-content-runbook.md)): no
+  screen, no shop export, no backup bundle. The full-cluster dump holds it up to 35 days more, and
+  the privacy policy says so. A preview fork is not emptied automatically: builds never write to
+  a preview database.
+- **Every erasure forgets.** `forgetClaudeCallContent` deletes the shop's rows and stamps the
+  shop's erasure time, under a lock the write shares; a call whose words were read (`readAt`)
+  before the stamp, less 15 minutes, keeps nothing. The text is keyed to nobody, so no match finds
+  one person's words reliably.
 
 ## Alternatives considered
 

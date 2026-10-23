@@ -61,8 +61,8 @@ kept here so the ADR stays short.
   updates `models.ts`, Haiku's long-prompt rate included.
 - **What was said, 30 days**: a `claude_call_content` row beside each usage row keeps the
   instructions, shop context, request and answer as text, every image and document a placeholder
-  and every fetched page a URL. The founder reads it by SQL
-  ([runbook](../../engineering/claude-call-content-runbook.md)); erasing a diver deletes the
+  and every fetched page a URL. DiveDay reads it by SQL
+  ([runbook](../../engineering/claude-call-content-runbook.md)); every erasure deletes the
   shop's rows.
 - **Reservations**: each call reserves its likely cost under a per-shop lock, with at most two in
   flight, so concurrent calls overshoot the cap only by how far a call exceeds its reservation. A

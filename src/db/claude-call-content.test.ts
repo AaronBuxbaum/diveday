@@ -7,7 +7,9 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
-import { runAssist } from "./assists";
+import { IN_FLIGHT_WINDOW_MS, runAssist } from "./assists";
+import { ERASURE_OVERLAP_MS } from "./claude-call-content";
+import { flagWaitingReviews } from "./review-assists";
 import { claudeCallContent, claudeUsage, people, personRoles, shops } from "./schema";
 
 /**
@@ -258,6 +260,48 @@ describe("erasing a diver", () => {
     });
     expect(value).toEqual({ number: "12345" });
     expect(await contentRows(ctx.shop.id)).toHaveLength(0);
+  });
+
+  it("keeps nothing from a batch whose words were read before an erasure, however late it asks", async () => {
+    const readAt = nowDate();
+    await anonymizeDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      personId: await personWith("diver"),
+      actorPersonId: await personWith("owner"),
+    });
+    // The tenth review's call starts well past one call's own window.
+    const late = new Date(readAt.getTime() + ERASURE_OVERLAP_MS + IN_FLIGHT_WINDOW_MS);
+    const read = await flagWaitingReviews(
+      ctx.db,
+      ctx.shop.id,
+      [{ id: "00000000-0000-4000-8000-000000000001", comment: "Ana’s comment, erased since" }],
+      {
+        provider: fakeClaude({ reply: () => fakeClaudeMessage({ text: '{"flags":[]}' }) }),
+        env: keyed,
+        now: late,
+        readAt,
+      },
+    );
+    expect(read).toBe(1);
+    expect(await contentRows(ctx.shop.id)).toHaveLength(0);
+  });
+
+  it("keeps a call whose words were read well after the last erasure", async () => {
+    await anonymizeDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      personId: await personWith("diver"),
+      actorPersonId: await personWith("owner"),
+    });
+    const later = new Date(nowDate().getTime() + ERASURE_OVERLAP_MS + 60_000);
+    await runAssist(ctx.db, {
+      shopId: ctx.shop.id,
+      feature: "cert_scan",
+      call: cardCall("12345"),
+      provider: answering("12345"),
+      env: keyed,
+      now: later,
+    });
+    expect(await contentRows(ctx.shop.id)).toHaveLength(1);
   });
 
   it("goes with its shop", async () => {

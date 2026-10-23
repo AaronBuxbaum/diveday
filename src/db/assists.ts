@@ -24,9 +24,10 @@ import {
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { periodBounds } from "@/lib/cost-guardrails";
 import { log } from "@/lib/log";
+import { keepClaudeCallContent } from "./claude-call-content";
 import type { AppDb } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
-import { claudeCallContent, claudeDemoSpend, claudeUsage, people, shops } from "./schema";
+import { claudeDemoSpend, claudeUsage, shops } from "./schema";
 
 /**
  * **Running an assist** (ADR 20261018-claude-assists): the one function every
@@ -68,6 +69,12 @@ export type AssistOptions = {
   readonly provider?: ClaudeProvider;
   readonly env?: AssistEnvironment;
   readonly now?: Date;
+  /**
+   * When the caller read the words it sends, for a caller that reads first and
+   * asks later (a batch). Absent, the call's own start. An erasure after this
+   * instant means the call's words are not kept (`./claude-call-content`).
+   */
+  readonly readAt?: Date;
 };
 
 /** A feature key is a short code (`inbox_draft`), never a sentence or a name. */
@@ -421,72 +428,6 @@ async function settleClaudeUsage(
     .where(eq(claudeUsage.id, usageId));
 }
 
-/**
- * Keeps what the call said for 30 days (`claude_call_content`). Never throws
- * and never changes the answer: a row that cannot be written is a log line
- * with a code, and the assist carries on.
- *
- * **An erasure that overlaps the call wins.** A call can read a diver's words
- * before their erasure commits and finish after it, which would leave those
- * words here for a month after the erasure deleted the shop's rows. So the
- * write and the erasure's delete (`scrubClaudeCallContent` in `./anonymize`)
- * take one per-shop lock, and the write is skipped when anyone at the shop was
- * erased since the call could have started reading: a few minutes of
- * debugging text lost, never an erased diver's words kept.
- */
-async function keepCallContent(
-  db: AppDb,
-  input: { usageId: string; shopId: string; feature: string; now: Date },
-  result: StructuredResult<unknown>,
-): Promise<void> {
-  try {
-    const { transcript } = result;
-    // Its own transaction, a savepoint when the caller is already inside one,
-    // so a failed insert can never abort the caller's work around it.
-    const kept = await db.transaction(async (tx) => {
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtext('claude_call_content'), hashtext(${input.shopId}))`,
-      );
-      const [erased] = await tx
-        .select({ id: people.id })
-        .from(people)
-        // diveday:allow-deleted-people: an erased person is exactly what this looks for.
-        .where(
-          and(
-            eq(people.shopId, input.shopId),
-            gt(people.anonymizedAt, new Date(input.now.getTime() - IN_FLIGHT_WINDOW_MS)),
-          ),
-        )
-        .limit(1);
-      if (erased) return false;
-      await tx.insert(claudeCallContent).values({
-        usageId: input.usageId,
-        shopId: input.shopId,
-        systemText: transcript.system,
-        contextText: transcript.context,
-        contentText: transcript.content,
-        answerText: transcript.answer,
-        fetchedUrls: transcript.fetchedUrls,
-        createdAt: input.now,
-      });
-      return true;
-    });
-    if (!kept) {
-      log("claude_assist.content_not_kept", "info", {
-        feature: input.feature,
-        shopId: input.shopId,
-        reason: "erasure",
-      });
-    }
-  } catch {
-    log("claude_assist.content_not_kept", "warn", {
-      feature: input.feature,
-      shopId: input.shopId,
-      reason: "write_failed",
-    });
-  }
-}
-
 export type RunAssistInput<S extends z.ZodType> = AssistOptions & {
   readonly shopId: string;
   /** The assist's code, recorded on the usage row: `inbox_draft`, `cert_scan`. */
@@ -552,7 +493,11 @@ export async function runAssistOutcome<S extends z.ZodType>(
     }
     const result = await callStructured(provider, input.call);
     await settleClaudeUsage(db, usageId, reserve, result, isDemo ? demoMonth(now) : null);
-    await keepCallContent(db, { usageId, shopId, feature, now }, result);
+    await keepClaudeCallContent(
+      db,
+      { usageId, shopId, feature, now, readAt: input.readAt ?? now },
+      result.transcript,
+    );
     log("claude_assist.call", result.outcome === "error" ? "warn" : "info", {
       shopId,
       feature,

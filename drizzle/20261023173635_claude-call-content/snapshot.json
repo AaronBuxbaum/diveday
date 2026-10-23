@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "568827f6-b43d-43be-b734-a519524eb28d",
+  "id": "9b8d2c59-9874-4e00-8799-a3bee398edff",
   "prevIds": [
     "36dfae6e-069c-413b-bbef-119bd4965797"
   ],
@@ -1389,6 +1389,12 @@
     {
       "isRlsEnabled": false,
       "name": "claude_call_content",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "claude_call_content_erasures",
       "entityType": "tables",
       "schema": "public"
     },
@@ -4043,6 +4049,32 @@
       "entityType": "columns",
       "schema": "public",
       "table": "claude_call_content"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "claude_call_content_erasures"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "erased_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "claude_call_content_erasures"
     },
     {
       "type": "text",
@@ -39882,6 +39914,23 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
+      "name": "claude_call_content_erasures_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "claude_call_content_erasures"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
       "name": "claude_usage_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -47282,6 +47331,16 @@
       "name": "claude_call_content_pkey",
       "schema": "public",
       "table": "claude_call_content",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "shop_id"
+      ],
+      "nameExplicit": false,
+      "name": "claude_call_content_erasures_pkey",
+      "schema": "public",
+      "table": "claude_call_content_erasures",
       "entityType": "pks"
     },
     {

@@ -10,7 +10,15 @@ import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { eraseGuardianEmail, listGuardianEmails } from "./guardian-erasure";
-import { people, personRoles, shops, waiverRecords } from "./schema";
+import {
+  claudeCallContent,
+  claudeCallContentErasures,
+  claudeUsage,
+  people,
+  personRoles,
+  shops,
+  waiverRecords,
+} from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { refileWaiverRecords } from "./waiver-refile";
 import {
@@ -138,6 +146,47 @@ describe("eraseGuardianEmail", () => {
     });
     expect(view?.integrity).toBe("valid");
     expect(view?.guardianEmailErasedAt?.toISOString()).toBe(now.toISOString());
+  });
+
+  it("forgets what the shop's Claude calls said, and stamps the erasure for calls in flight", async () => {
+    const { db, shop, roster, owner } = await fixtures();
+    const [seat] = roster;
+    if (!seat) throw new Error("seat missing");
+    await coSignedRelease(db, shop.id, seat, "jonas@example.com");
+    const [usage] = await db
+      .insert(claudeUsage)
+      .values({
+        shopId: shop.id,
+        feature: "inbox_draft",
+        model: "claude-sonnet-5-5",
+        outcome: "ok",
+      })
+      .returning({ id: claudeUsage.id });
+    if (!usage) throw new Error("insert failed");
+    await db.insert(claudeCallContent).values({
+      usageId: usage.id,
+      shopId: shop.id,
+      systemText: "Draft.",
+      contentText: "From jonas@example.com: is my daughter booked?",
+    });
+
+    await eraseGuardianEmail(db, {
+      shopId: shop.id,
+      personId: seat.person.id,
+      email: "jonas@example.com",
+      actorPersonId: owner,
+      now,
+    });
+
+    expect(
+      await db.select().from(claudeCallContent).where(eq(claudeCallContent.shopId, shop.id)),
+    ).toEqual([]);
+    expect(
+      await db
+        .select({ erasedAt: claudeCallContentErasures.erasedAt })
+        .from(claudeCallContentErasures)
+        .where(eq(claudeCallContentErasures.shopId, shop.id)),
+    ).toEqual([{ erasedAt: now }]);
   });
 
   it("finds and erases an address a guardian typed into a draft and never submitted", async () => {

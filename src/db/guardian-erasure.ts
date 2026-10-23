@@ -8,6 +8,7 @@ import {
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
 import { canPersonErasePersonalData } from "./authz";
+import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb } from "./client";
 import { type WaiverRecord, waiverRecords } from "./schema";
 
@@ -137,6 +138,10 @@ export async function eraseGuardianEmail(
       ...records.map((record) => record.id),
       ...drafts.map((row) => row.id),
     ]);
+    // Every erasure forgets what the shop's Claude calls said: the text is
+    // keyed to nobody, so no match can promise the guardian's words are not
+    // in it (ADR 20261023-claude-call-content).
+    await forgetClaudeCallContent(tx, { shopId: input.shopId, now });
     return { ok: true, erased: touched.size } as const;
   });
 }

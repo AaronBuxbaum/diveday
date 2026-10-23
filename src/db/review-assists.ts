@@ -71,6 +71,11 @@ function storedFlags(value: unknown): ReviewFlag[] {
  * Reads the waiting reviews nobody has asked about yet (or whose comment
  * changed), at most `REVIEW_FLAGS_PER_VISIT`. Run after the queue renders; the
  * next visit shows the chips. A dark assist stores nothing.
+ *
+ * The calls run one after another, so the last may start many minutes after
+ * the comments were read: each carries `readAt`, the caller's read time or
+ * this function's start, so an erasure in between keeps none of their words
+ * (`src/db/claude-call-content.ts`).
  */
 export async function flagWaitingReviews(
   db: AppDb,
@@ -78,6 +83,7 @@ export async function flagWaitingReviews(
   reviews: readonly Commented[],
   options: AssistOptions = {},
 ): Promise<number> {
+  const readAt = options.readAt ?? nowDate();
   const commented = reviews.filter((review): review is { id: string; comment: string } =>
     Boolean(review.comment?.trim()),
   );
@@ -94,6 +100,7 @@ export async function flagWaitingReviews(
   for (const review of unread) {
     const { status, value } = await runAssistOutcome(db, {
       ...options,
+      readAt,
       shopId,
       feature: REVIEW_FLAGS_FEATURE,
       call: reviewFlagsCall(review.comment),

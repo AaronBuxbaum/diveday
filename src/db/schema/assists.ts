@@ -7,6 +7,7 @@ import {
   jsonb,
   pgTable,
   text,
+  timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -73,12 +74,12 @@ export const claudeUsage = pgTable(
  * one URL per line.
  *
  * The text holds divers' words (inbox messages, a duplicate check's names and
- * dates of birth, gear notes, reviews) but no key to a person, so erasing any
- * diver deletes every row for that shop (`src/db/anonymize.ts`). Nothing on
- * screen, no shop export and no backup bundle reads it: the founder reads it by
+ * dates of birth, gear notes, reviews) but no key to a person, so every
+ * erasure deletes every row for that shop (`forgetClaudeCallContent`). Nothing
+ * on screen, no shop export and no backup bundle reads it: DiveDay reads it by
  * SQL (`docs/engineering/claude-call-content-runbook.md`). Rows cascade with
- * their usage row and their shop, and the retention prune takes them at 30
- * days.
+ * their usage row and their shop, and the daily privacy cron deletes them at
+ * 30 days.
  */
 export const claudeCallContent = pgTable(
   "claude_call_content",
@@ -105,6 +106,21 @@ export const claudeCallContent = pgTable(
     index("claude_call_content_created_at_idx").on(table.createdAt),
   ],
 );
+
+/**
+ * **When a shop last erased anyone, as `claude_call_content` needs to know**
+ * (security review, 2026-10-23): one row per shop, moved forward by every
+ * erasure path (`forgetClaudeCallContent`, `src/db/claude-call-content.ts`),
+ * whether or not the person erased has a record. A call whose words were read
+ * before an erasure committed keeps nothing when it finishes after it. A shop
+ * and an instant, no person.
+ */
+export const claudeCallContentErasures = pgTable("claude_call_content_erasures", {
+  shopId: uuid("shop_id")
+    .primaryKey()
+    .references(() => shops.id, { onDelete: "cascade" }),
+  erasedAt: timestamp("erased_at", { withTimezone: true }).notNull(),
+});
 
 /**
  * **What every demo shop together spent on Claude, one row per UTC month**
