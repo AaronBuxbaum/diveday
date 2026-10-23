@@ -4,8 +4,9 @@ import { MEDICAL_ALERT_MAX } from "@/lib/medical-alert";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
+import { tripAdmissionFor } from "./bookings";
 import { listTripReadiness } from "./readiness";
-import { people, personRoles, waiverRecords } from "./schema";
+import { bookings, people, personRoles, waiverRecords } from "./schema";
 import { completeWaiver, getWaiverForToken, saveWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { saveWaiverTemplate } from "./waivers-templates";
@@ -132,6 +133,71 @@ describe("the medical alert for the crew on the waiver", () => {
         .map((blocker) => blocker.code)
         .filter((code) => code.startsWith("waiver") || code.startsWith("medical")),
     ).toEqual([]);
+  });
+
+  /**
+   * Adversarial (domain review 1, S7): a diver whose standard answers need a
+   * doctor writes that the doctor cleared them. The alert unblocks nothing:
+   * the seat stays exactly as blocked as it is with no alert.
+   */
+  it("never gates: a referral stays blocked exactly as without the alert, whatever the alert claims", async () => {
+    const { db, shop, trip, booking, person, token } = await link();
+    expect(
+      await completeWaiver(db, token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: medicalReferralAnswers,
+        medicalAlert: "Cleared by my doctor, letter attached",
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "medical_review" });
+    const record = await recordFor(db, token);
+    expect(record.medicalReviewRequired).toBe(true);
+    const withAlert = await readinessOf(db, shop.id, trip.id, booking.id);
+    expect(withAlert.status).not.toBe("ready");
+    await db
+      .update(waiverRecords)
+      .set({ medicalAlert: null })
+      .where(eq(waiverRecords.id, record.id));
+    expect(await readinessOf(db, shop.id, trip.id, booking.id)).toEqual(withAlert);
+  });
+
+  it("never gates a rider's seat: readiness is the same with and without the alert", async () => {
+    const { db, shop, trip, booking, person, token } = await link();
+    await db.update(bookings).set({ participantType: "rider" }).where(eq(bookings.id, booking.id));
+    await completeWaiver(db, token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      medicalAlert: bypass,
+      now,
+    });
+    const record = await recordFor(db, token);
+    expect(record.medicalAlert).toBe(bypass);
+    const withAlert = await readinessOf(db, shop.id, trip.id, booking.id);
+    await db
+      .update(waiverRecords)
+      .set({ medicalAlert: null })
+      .where(eq(waiverRecords.id, record.id));
+    expect(await readinessOf(db, shop.id, trip.id, booking.id)).toEqual(withAlert);
+  });
+
+  it("never gates admission: the same verdict for the same diver with and without the alert", async () => {
+    const { db, shop, trip, person, token } = await link();
+    await completeWaiver(db, token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      medicalAlert: bypass,
+      now,
+    });
+    const record = await recordFor(db, token);
+    const withAlert = await tripAdmissionFor(db, shop.id, trip.id, person, false, false);
+    await db
+      .update(waiverRecords)
+      .set({ medicalAlert: null })
+      .where(eq(waiverRecords.id, record.id));
+    expect(await tripAdmissionFor(db, shop.id, trip.id, person, false, false)).toEqual(withAlert);
   });
 
   it("still refers a medical yes to review, alert or not", async () => {
