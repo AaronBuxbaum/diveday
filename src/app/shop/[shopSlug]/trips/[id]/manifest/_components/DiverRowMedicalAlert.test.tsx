@@ -5,27 +5,21 @@ import { DiverRowPanel } from "./DiverRowPanel";
 import { DiverRowPrint } from "./DiverRowPrint";
 import { diver, diverContext, renderList, t } from "./diver-roll-call-test-fixtures";
 import { diverRowState } from "./diver-row-state";
-import type { MedicalAlertView } from "./medical-alert-view";
+import type { MedicalAlertResult } from "@/components/MedicalAlertReveal";
+import type { TripManifest } from "@/lib/manifests";
 
 afterEach(cleanup);
 
 const ALERT = "Bee-sting allergy. EpiPen in the blue dry bag.";
 const UNREADABLE = "Only an owner, a manager or this departure’s crew can read it: Keiko Tanaka.";
+const CREW = [{ fullName: "Keiko Tanaka" }] as TripManifest["crew"];
 
-function view(show?: MedicalAlertView["show"]): MedicalAlertView {
-  return {
-    show,
-    unreadable: UNREADABLE,
-    copy: {
-      show: t("manifest.medicalAlertShow"),
-      showing: t("manifest.medicalAlertShowing"),
-      showHint: t("manifest.medicalAlertShowHint"),
-      failed: t("manifest.medicalAlertShowFailed"),
-    },
-  };
-}
+type BindShow = (bookingId: string) => () => Promise<MedicalAlertResult>;
 
-function renderPanel(alertView: MedicalAlertView, overrides: Parameters<typeof diver>[0] = {}) {
+function renderPanel(
+  showMedicalAlert: BindShow | undefined,
+  overrides: Parameters<typeof diver>[0] = {},
+) {
   const row = diver({ bookingId: "b-1", medicalAlert: true, ...overrides });
   return render(
     <DiverRowPanel
@@ -33,7 +27,8 @@ function renderPanel(alertView: MedicalAlertView, overrides: Parameters<typeof d
         checkpoint: "departure",
         isDeparture: true,
         divers: [row],
-        medicalAlert: alertView,
+        crew: CREW,
+        showMedicalAlert,
       })}
       diver={row}
       state={diverRowState(row, "departure", true, "America/New_York")}
@@ -70,7 +65,7 @@ describe("a medical alert on the manifest", () => {
   it("shows the words only after the tap, from the action", async () => {
     const show = vi.fn(async () => ({ ok: true, text: ALERT }) as const);
     const bind = vi.fn((_bookingId: string) => show);
-    renderPanel(view(bind));
+    renderPanel(bind);
     expect(bind).toHaveBeenCalledWith("b-1");
     expect(screen.queryByText(ALERT)).toBeNull();
     expect(screen.getByText(t("manifest.medicalAlertShowHint"))).toBeInTheDocument();
@@ -83,7 +78,7 @@ describe("a medical alert on the manifest", () => {
 
   it("says a refused read failed, and shows nothing", async () => {
     const show = vi.fn(async () => ({ ok: false }) as const);
-    renderPanel(view(() => show));
+    renderPanel(() => show);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: t("manifest.medicalAlertShow") }));
     });
@@ -91,14 +86,14 @@ describe("a medical alert on the manifest", () => {
   });
 
   it("tells a staffer who may not read it who can, with no button", () => {
-    renderPanel(view(undefined));
+    renderPanel(undefined);
     expect(screen.getByText(t("manifest.medicalAlertHeading"))).toBeInTheDocument();
     expect(screen.getByText(UNREADABLE)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: t("manifest.medicalAlertShow") })).toBeNull();
   });
 
   it("draws no block on a seat without one", () => {
-    renderPanel(view(undefined), { medicalAlert: false });
+    renderPanel(undefined, { medicalAlert: false });
     expect(screen.queryByText(t("manifest.medicalAlertHeading"))).toBeNull();
   });
 
