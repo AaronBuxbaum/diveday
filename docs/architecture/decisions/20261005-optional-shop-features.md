@@ -126,8 +126,10 @@ discount that does not exist.
   switches**, one migration (`l3-feature-switches`), each **default true** for every shop, existing
   ones included: `checkout_recovery_enabled`, `buddy_links_enabled`, `sightings_enabled`,
   `diver_photos_enabled` and `self_registration_enabled`. Off hides and refuses; nothing is deleted.
-  - **Checkout reminders** off: the cron sends no abandoned-checkout email; pending checkouts are
-    left as they are.
+  - **Checkout reminders** off: the cron sends no abandoned-checkout email. The scan still runs,
+    so a session Stripe reports paid is recorded and a stale or disqualified one expires; the
+    switch gates only the send, after Stripe confirms the session open and unpaid, and that
+    checkout stays pending.
   - **Bring a buddy** off: the recap draws no buddy link; an old link still books a seat and
     credits nobody; Reports' buddy seats and referrers and the diver record's friends count read
     as none. Every recorded referral is kept.
