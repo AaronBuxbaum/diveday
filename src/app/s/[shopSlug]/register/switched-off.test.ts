@@ -67,9 +67,9 @@ describe("the counter sign-up with the switch off", () => {
 
   it("is still a 404 for a shop that does not exist", async () => {
     vi.mocked(shopBySlugCached).mockResolvedValueOnce(null as never);
-    await expect(
-      RegisterPage({ params: Promise.resolve({ shopSlug: "nobody" }) }),
-    ).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
+    await expect(RegisterPage({ params: Promise.resolve({ shopSlug: "nobody" }) })).rejects.toThrow(
+      /NEXT_HTTP_ERROR_FALLBACK;404/,
+    );
   });
 
   it("puts nobody on file from a hand-built post", async () => {

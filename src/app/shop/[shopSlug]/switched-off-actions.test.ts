@@ -249,9 +249,9 @@ describe("actions behind a switched-off feature", () => {
 
     // The form loaded with sightings on, so it drew the picker and its marker;
     // the switch went off before Save. What the crew picked is saved.
-    expect(
-      await save({ speciesShown: "1", observedSpeciesSlug: "green-sea-turtle" }),
-    ).toEqual({ status: "ok" });
+    expect(await save({ speciesShown: "1", observedSpeciesSlug: "green-sea-turtle" })).toEqual({
+      status: "ok",
+    });
     expect(await species()).toEqual([{ slug: "green-sea-turtle" }]);
 
     // A form drawn with sightings off posts no marker: the species stays.
