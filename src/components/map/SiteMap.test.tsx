@@ -367,6 +367,38 @@ describe("SiteMap labels through Leaflet", () => {
     sessionStorage.clear();
   });
 
+  it("keeps no camera when the map is left before it has fitted its overview", async () => {
+    // A staff member who follows a link the moment the map is created leaves
+    // it holding only its default camera. Kept, that camera came back as a
+    // "restored" view that was never fitted, and the library showed 3 of 8 sites.
+    const L = await import("leaflet");
+    const key = "test-map-left-early";
+    sessionStorage.clear();
+    let leave: (() => void) | undefined;
+    const createPane = L.Map.prototype.createPane;
+    vi.spyOn(L.Map.prototype, "createPane").mockImplementation(function (
+      this: LeafletMap,
+      name: string,
+      container?: HTMLElement,
+    ) {
+      const pane = createPane.call(this, name, container);
+      if (name === "shopStem") queueMicrotask(() => leave?.());
+      return pane;
+    });
+    const view = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" viewportStorageKey={key} />,
+    );
+    const left = new Promise<void>((resolve) => {
+      leave = () => {
+        view.unmount();
+        resolve();
+      };
+    });
+    await left;
+    expect(sessionStorage.getItem(`diveday:map:${key}`)).toBeNull();
+    sessionStorage.clear();
+  });
+
   it("restores the settled camera after unmount without fitting the overview again", async () => {
     const L = await import("leaflet");
     const getContainer = vi.spyOn(L.Map.prototype, "getContainer");

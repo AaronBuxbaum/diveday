@@ -158,9 +158,11 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   test.setTimeout(30_000);
   await openNewTripWithWalkIn(page, "Wait-list Test Trip");
 
-  // Trip is now full — the same section switches to wait-listing.
-  await expect(page.getByRole("link", { name: "Add to who’s waiting" })).toBeVisible();
-  await page.getByRole("link", { name: "Add to who’s waiting" }).click();
+  // Trip is now full — the same section switches to wait-listing: the search
+  // puts a diver on file on the list, and "Add diver" takes someone new there.
+  const addNew = page.locator('a[href*="waitlist=true"]', { hasText: "Add diver" });
+  await expect(addNew).toBeVisible();
+  await addNew.click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Waitlist Wally");
   await page.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
