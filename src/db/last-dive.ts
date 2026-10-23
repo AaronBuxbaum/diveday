@@ -124,6 +124,12 @@ export type RecordLastDiveOutcome =
 
 const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * The earliest day the box takes, enforced here too: the browser's `min` is a
+ * hint, and Postgres refuses year 0 with a 500 (security review, 2026-10-23).
+ */
+export const EARLIEST_LAST_DIVE: CalendarDate = "1950-01-01";
+
 /** A real calendar day, not "2026-02-30" — which Postgres would refuse with a 500. */
 function isRealCalendarDate(value: string): boolean {
   if (!CALENDAR_DATE.test(value)) return false;
@@ -149,7 +155,9 @@ export async function recordLastDive(
     now: Date;
   },
 ): Promise<RecordLastDiveOutcome> {
-  if (input.on !== null && !isRealCalendarDate(input.on)) return { ok: false, reason: "invalid" };
+  if (input.on !== null && (!isRealCalendarDate(input.on) || input.on < EARLIEST_LAST_DIVE)) {
+    return { ok: false, reason: "invalid" };
+  }
   return db.transaction(async (tx) => {
     const [person] = await tx
       .select({ id: people.id })
