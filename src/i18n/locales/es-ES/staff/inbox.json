@@ -90,14 +90,6 @@
     "lateMarked": "Marcado: llega tarde. La lista y el manifiesto lo muestran.",
     "lateClosed": "Ese lugar ya no admite el aviso: hizo el check-in, se canceló o el barco ya salió.",
     "deleted": "Mensaje eliminado",
-    "gone": "Ese mensaje ya no está en la bandeja.",
-    "notesSaved": "Notas guardadas. La IA las lee a partir de ahora."
-  },
-  "replyNotes": {
-    "heading": "Notas para la IA",
-    "label": "¿Qué debe saber la IA sobre tu centro?",
-    "placeholder": "Estaciona detrás del centro, junto a los tanques. El portón abre a las 7:15.",
-    "save": "Guardar notas",
-    "saving": "Guardando…"
+    "gone": "Ese mensaje ya no está en la bandeja."
   }
 }

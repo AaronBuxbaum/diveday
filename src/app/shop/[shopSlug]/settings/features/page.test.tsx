@@ -31,6 +31,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const FeaturesPage = (await import("./page")).default;
 const { darkWhileOnKey } = await import("./feature-rows");
+const { ReplyNotesForm } = await import("./ReplyNotesForm");
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -127,11 +128,30 @@ describe("the Features page", () => {
     expect(lines(on)).toContain(
       "AI isn’t connected on this server yet, so suggestions stay hidden even with this on.",
     );
+    // Dark, the notes for AI would be a box nothing reads.
+    expect(findElements(on, ReplyNotesForm)).toHaveLength(0);
 
     const off = await renderFeatures("owner", (db, shopId) =>
       setShopFeature(db, shopId, "claudeSuggestions", false).then(() => undefined),
     );
     expect(lines(off).join(" ")).not.toMatch(/stay hidden/);
+  });
+});
+
+describe("the notes for AI", () => {
+  it("sit under the AI switch while AI is lit, a demo shop included", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "test-anthropic-key");
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "0");
+    try {
+      const page = await renderFeatures("owner", (db, shopId) =>
+        setShopFeature(db, shopId, "claudeSuggestions", true).then(() => undefined),
+      );
+      const [form] = findElements<{ notes: string | null }>(page, ReplyNotesForm);
+      expect(form?.props.notes).toContain("The gate opens at 7:15.");
+      expect(rowsIn(page).indexOf("claudeSuggestions")).toBeGreaterThan(-1);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
@@ -142,8 +162,8 @@ describe("the line under the AI switch", () => {
     expect(darkWhileOnKey("no_key")).toBe(
       "settings.main.features.claudeSuggestions.dark.noProvider",
     );
-    expect(darkWhileOnKey("demo_shop")).toBe(
-      "settings.main.features.claudeSuggestions.dark.demoShop",
+    expect(darkWhileOnKey("demo_over_cap")).toBe(
+      "settings.main.features.claudeSuggestions.dark.demoOverCap",
     );
     expect(darkWhileOnKey("over_cap")).toBe(
       "settings.main.features.claudeSuggestions.dark.overCap",

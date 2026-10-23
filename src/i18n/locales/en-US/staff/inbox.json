@@ -90,14 +90,6 @@
     "lateMarked": "Marked running late. The roster and the manifest show it.",
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted",
-    "gone": "That message is no longer in the inbox.",
-    "notesSaved": "Notes saved. AI reads them from now on."
-  },
-  "replyNotes": {
-    "heading": "Notes for AI",
-    "label": "What should AI know about your shop?",
-    "placeholder": "Park behind the shop by the tank racks. The gate opens at 7:15.",
-    "save": "Save notes",
-    "saving": "Saving…"
+    "gone": "That message is no longer in the inbox."
   }
 }

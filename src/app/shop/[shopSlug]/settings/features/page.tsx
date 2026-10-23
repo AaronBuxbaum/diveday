@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Fragment } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -18,14 +19,16 @@ import { requireShopSurface } from "@/lib/session";
 import { shopOffers } from "@/lib/shop-features";
 import { type NoticeMessages, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
-import { saveFeatureAction } from "./actions";
+import { saveFeatureAction, saveReplyNotesAction } from "./actions";
 import {
   darkWhileOnKey,
   FEATURE_ROWS,
   type FeatureRow,
   type FeatureRowGate,
   isOptionalFeature,
+  REPLY_NOTES_ROW,
 } from "./feature-rows";
+import { ReplyNotesForm } from "./ReplyNotesForm";
 
 export const instant = true;
 
@@ -35,6 +38,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "feature-saved": { tone: "success", text: t("settings.main.features.saved") },
     "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
+    "notes-saved": { tone: "success", text: t("settings.main.features.replyNotes.saved") },
   };
 }
 
@@ -144,8 +148,15 @@ export default async function FeaturesPage({
     gates.add("team");
   }
   const banner = noticeFromParam(notice, noticeMessages(t));
-  // Never the reason the page fails: a read that throws shows no line.
-  const darkKey = darkWhileOnKey(await assistDarkReasonFor(db, shop.id).catch(() => null));
+  // Never the reason the page fails: a read that throws shows no line and no notes box.
+  const dark = await assistDarkReasonFor(db, shop.id).catch(() => "unread" as const);
+  const darkKey = dark === "unread" ? null : darkWhileOnKey(dark);
+  const bannerFor = (row: string) =>
+    banner && saved === row ? (
+      <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)}>
+        {banner.text}
+      </ShopNotice>
+    ) : null;
   const base = `/shop/${session.user.shopSlug}`;
 
   return (
@@ -159,37 +170,45 @@ export default async function FeaturesPage({
       <SectionCard padding="none">
         <ul className="divide-y divide-border">
           {FEATURE_ROWS.filter((row) => gates.has(row.gate)).map((row) => (
-            <li key={row.id} id={row.id} className="scroll-mt-8 p-5 sm:p-6">
-              <FieldGrid as="form" action={saveFeatureAction} columns={1}>
-                <input type="hidden" name="row" value={row.id} />
-                <h2 className="text-sm font-semibold">{t(row.headingKey)}</h2>
-                {switches(shop, row, t)}
-                {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
-                  <p className="text-xs text-warning">{t(darkKey)}</p>
-                ) : null}
-                {banner && saved === row.id ? (
-                  <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)}>
-                    {banner.text}
-                  </ShopNotice>
-                ) : null}
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.features.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.features.save")}
-                  </SubmitButton>
-                  {row.link && linkShown(shop, row) ? (
-                    <Link
-                      href={`${base}${row.link.path}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      {t(row.link.labelKey)}
-                    </Link>
+            <Fragment key={row.id}>
+              <li id={row.id} className="scroll-mt-8 p-5 sm:p-6">
+                <FieldGrid as="form" action={saveFeatureAction} columns={1}>
+                  <input type="hidden" name="row" value={row.id} />
+                  <h2 className="text-sm font-semibold">{t(row.headingKey)}</h2>
+                  {switches(shop, row, t)}
+                  {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
+                    <p className="text-xs text-warning">{t(darkKey)}</p>
                   ) : null}
-                </FieldActions>
-              </FieldGrid>
-            </li>
+                  {bannerFor(row.id)}
+                  <FieldActions>
+                    <SubmitButton
+                      pendingLabel={t("settings.main.features.saving")}
+                      className={buttonClass({ variant: "secondary" })}
+                    >
+                      {t("settings.main.features.save")}
+                    </SubmitButton>
+                    {row.link && linkShown(shop, row) ? (
+                      <Link
+                        href={`${base}${row.link.path}`}
+                        className="text-sm font-medium text-primary hover:underline"
+                      >
+                        {t(row.link.labelKey)}
+                      </Link>
+                    ) : null}
+                  </FieldActions>
+                </FieldGrid>
+              </li>
+              {row.id === "claudeSuggestions" && dark === null ? (
+                <li id={REPLY_NOTES_ROW} className="scroll-mt-8 p-5 sm:p-6">
+                  <ReplyNotesForm
+                    notes={shop.replyNotes}
+                    t={t}
+                    action={saveReplyNotesAction}
+                    notice={bannerFor(REPLY_NOTES_ROW)}
+                  />
+                </li>
+              ) : null}
+            </Fragment>
           ))}
         </ul>
       </SectionCard>

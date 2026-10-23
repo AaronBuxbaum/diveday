@@ -111,11 +111,14 @@ export function isOptionalFeature(id: FeatureRowId): id is ShopFeature {
 const DARK_WHILE_ON: Record<Exclude<AssistDarkReason, "shop_off">, StaffMessageKey> = {
   no_key: "settings.main.features.claudeSuggestions.dark.noProvider",
   external_http_disabled: "settings.main.features.claudeSuggestions.dark.noProvider",
-  demo_shop: "settings.main.features.claudeSuggestions.dark.demoShop",
   over_cap: "settings.main.features.claudeSuggestions.dark.overCap",
+  demo_over_cap: "settings.main.features.claudeSuggestions.dark.demoOverCap",
 };
 
 /** The line under the AI switch, or null when there is nothing to explain. */
 export function darkWhileOnKey(reason: AssistDarkReason | null): StaffMessageKey | null {
   return reason === null || reason === "shop_off" ? null : DARK_WHILE_ON[reason];
 }
+
+/** The notes-for-AI form's anchor under the AI switch, and its `saved` id. */
+export const REPLY_NOTES_ROW = "replyNotes";

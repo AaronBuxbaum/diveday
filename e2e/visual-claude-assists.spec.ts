@@ -110,22 +110,20 @@ test.describe("light mode — Claude's assists, lit", () => {
     });
   });
 
-  // **Notes for AI** (Aaron, 2026-10-22 and 10-23): drawn only while the
-  // shop's assists are lit. A staffer writes a fact once and saves it.
-  test("the notes for AI on the Inbox", async ({ page, request, privateShop }) => {
+  // **Notes for AI** (Aaron, 2026-10-22 and 10-23): under the AI switch in
+  // Settings, drawn only while the shop's assists are lit. An owner writes a
+  // fact once and saves it.
+  test("the notes for AI under the AI switch", async ({ page, request, privateShop }) => {
     await lit(request, privateShop.slug, async () => {
-      await page.goto(`/shop/${privateShop.slug}/inbox`);
-      const notes = page.getByRole("region", { name: "Notes for AI" });
+      await page.goto(`/shop/${privateShop.slug}/settings/features`);
+      const notes = page.locator("li#replyNotes");
       // i18n-exempt: the shop's own words, typed as a staffer would
       await notes
         .getByLabel("What should AI know about your shop?")
         .fill("Park behind the shop by the tank racks. The gate opens at 7:15.");
       await notes.getByRole("button", { name: "Save notes" }).click();
       await expect(page.getByText(/^Notes saved\./)).toBeVisible();
-      await page
-        .getByRole("region", { name: "Notes for AI" })
-        .getByRole("button", { name: "Save notes" })
-        .scrollIntoViewIfNeeded();
+      await page.locator("li#replyNotes").scrollIntoViewIfNeeded();
       await page.mouse.move(0, 0);
       await capture(page, "assist-reply-notes", "light");
     });

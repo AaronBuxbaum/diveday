@@ -450,9 +450,17 @@
         "description": "Borradores y orden que tu equipo puede editar o ignorar. No se envía ni se guarda nada hasta que alguien de tu equipo lo haga. Lo que lee la IA se envía a Anthropic, el proveedor de IA de DiveDay.",
         "dark": {
           "noProvider": "La IA aún no está conectada en este servidor, así que las sugerencias siguen ocultas aunque esto esté activado.",
-          "demoShop": "Los centros de demostración nunca muestran sugerencias de IA, así que aquí siguen ocultas aunque esto esté activado.",
+          "demoOverCap": "Los centros de demostración comparten una pequeña cuota mensual de IA, y ya se agotó. Las sugerencias vuelven el día 1 (UTC).",
           "overCap": "Este centro ya usó la cuota de IA de este mes. Las sugerencias vuelven el día 1 (UTC)."
         }
+      },
+      "replyNotes": {
+        "heading": "Notas para la IA",
+        "label": "¿Qué debe saber la IA sobre tu centro?",
+        "placeholder": "Estaciona detrás del centro, junto a los tanques. El portón abre a las 7:15.",
+        "save": "Guardar notas",
+        "saving": "Guardando…",
+        "saved": "Notas guardadas. La IA las lee a partir de ahora."
       },
       "recapAutoApprove": {
         "heading": "Resumen del día",

@@ -4,6 +4,8 @@ import { e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import {
   type AssistDarkReason,
   assistDarkReason,
+  demoMonthlyCapMicroUsd,
+  demoShopMonthlyCapMicroUsd,
   externalHttpDisabled,
   shopMonthlyCapMicroUsd,
 } from "@/lib/claude/dark";
@@ -44,7 +46,8 @@ import { claudeUsage, shops } from "./schema";
  * the cap, or when {@link MAX_CALLS_IN_FLIGHT} calls for this shop are already
  * out. So N racing calls cannot all pass a check none of them has paid for
  * yet; the overshoot is bounded by how far a real call can exceed its
- * reservation, not by how many calls a client fires at once.
+ * reservation, not by how many calls a client fires at once. A demo tenant
+ * also reserves against the allowance every demo shares, under one more lock.
  *
  * After the call the row is settled to what the call actually cost. A row
  * that is never settled (the process died, the update failed) keeps its
@@ -115,6 +118,38 @@ export async function claudeSpendUsdBetween(db: AppDb, start: Date, end: Date): 
   return Number(row?.total ?? 0) / 1_000_000;
 }
 
+/** Every demo tenant's recorded Claude spend since the first of this UTC month, in micro-USD. */
+export async function demoClaudeSpendMicroUsd(db: AppDb, now: Date = nowDate()): Promise<number> {
+  const { start, end } = periodBounds("calendar_month", now);
+  const [row] = await db
+    .select({ total: sql<string | null>`sum(${claudeUsage.costMicroUsd})` })
+    .from(claudeUsage)
+    .innerJoin(shops, eq(shops.id, claudeUsage.shopId))
+    .where(
+      and(
+        eq(shops.isDemo, true),
+        gte(claudeUsage.createdAt, start),
+        lt(claudeUsage.createdAt, end),
+      ),
+    );
+  return Number(row?.total ?? 0);
+}
+
+async function shopIsDemo(db: AppDb, shopId: string): Promise<boolean> {
+  const [shop] = await db
+    .select({ isDemo: shops.isDemo })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  // A shop we could not find reserves under the demo allowance: the smaller cap.
+  return shop?.isDemo ?? true;
+}
+
+/** The shop's own monthly cap: the small demo one for a demo tenant. */
+function capFor(isDemo: boolean, env: Readonly<Record<string, string | undefined>>): number {
+  return isDemo ? demoShopMonthlyCapMicroUsd(env) : shopMonthlyCapMicroUsd(env);
+}
+
 /** Why this shop's assists are dark right now, or null when they may run. */
 export async function assistDarkReasonFor(
   db: AppDb,
@@ -144,13 +179,20 @@ export async function assistDarkReasonFor(
     .limit(1);
   if (!shop?.enabled) return "shop_off";
 
+  const now = options.now ?? nowDate();
   return assistDarkReason({
     hasKey,
     externalHttpDisabled: blocked,
     shopEnabled: true,
     shopIsDemo: shop.isDemo,
-    spentMicroUsd: await shopClaudeSpendMicroUsd(db, shopId, options.now ?? nowDate()),
-    capMicroUsd: shopMonthlyCapMicroUsd(env),
+    spentMicroUsd: await shopClaudeSpendMicroUsd(db, shopId, now),
+    capMicroUsd: capFor(shop.isDemo, env),
+    ...(shop.isDemo
+      ? {
+          demoSpentMicroUsd: await demoClaudeSpendMicroUsd(db, now),
+          demoCapMicroUsd: demoMonthlyCapMicroUsd(env),
+        }
+      : {}),
   });
 }
 
@@ -225,6 +267,9 @@ function mayHaveBilled(errorCode: string | undefined): boolean {
  */
 const reservationQueues = new Map<string, Promise<unknown>>();
 
+/** The queue and lock key every demo tenant's reservation shares. */
+const DEMO_QUEUE = "demo-allowance";
+
 function oneAtATime<T>(key: string, run: () => Promise<T>): Promise<T> {
   const previous = reservationQueues.get(key) ?? Promise.resolve();
   const next = previous.then(run, run);
@@ -245,13 +290,41 @@ async function reserveClaudeCall(
   db: AppDb,
   input: { shopId: string; feature: string; model: ClaudeModel; reserve: number; now: Date },
   capMicroUsd: number,
+  /** For a demo tenant, the allowance every demo shares; null for a real shop. */
+  demoCapMicroUsd: number | null,
 ): Promise<string | null> {
-  return oneAtATime(input.shopId, () =>
+  // Every demo reserves through one queue and one lock, taken before the
+  // shop's own, so two demos cannot both fit under the shared allowance. A
+  // real shop never takes it, so the order holds and nothing waits on a demo.
+  const queue = demoCapMicroUsd === null ? input.shopId : DEMO_QUEUE;
+  return oneAtATime(queue, () =>
     db.transaction(async (tx) => {
+      if (demoCapMicroUsd !== null) {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext('claude_usage'), hashtext(${DEMO_QUEUE}))`,
+        );
+      }
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext('claude_usage'), hashtext(${input.shopId}))`,
       );
       const { start, end } = periodBounds("calendar_month", input.now);
+      if (demoCapMicroUsd !== null) {
+        const [demos] = await tx
+          .select({ total: sql<string | null>`sum(${claudeUsage.costMicroUsd})` })
+          .from(claudeUsage)
+          .innerJoin(shops, eq(shops.id, claudeUsage.shopId))
+          .where(
+            and(
+              eq(shops.isDemo, true),
+              gte(claudeUsage.createdAt, start),
+              lt(claudeUsage.createdAt, end),
+            ),
+          );
+        const demoSpent = Number(demos?.total ?? 0);
+        if (!Number.isFinite(demoSpent) || demoSpent + input.reserve > demoCapMicroUsd) {
+          return null;
+        }
+      }
       const [month] = await tx
         .select({ total: sql<string | null>`sum(${claudeUsage.costMicroUsd})` })
         .from(claudeUsage)
@@ -357,6 +430,8 @@ export async function runAssistOutcome<S extends z.ZodType>(
     const provider = providerFor(input);
     if (!provider) return skipped;
     const reserve = reservedMicroUsd(input.call);
+    const env = input.env ?? process.env;
+    const isDemo = await shopIsDemo(db, shopId);
     const usageId = await reserveClaudeCall(
       db,
       {
@@ -366,7 +441,8 @@ export async function runAssistOutcome<S extends z.ZodType>(
         reserve,
         now: input.now ?? nowDate(),
       },
-      shopMonthlyCapMicroUsd(input.env ?? process.env),
+      capFor(isDemo, env),
+      isDemo ? demoMonthlyCapMicroUsd(env) : null,
     );
     if (!usageId) {
       log("claude_assist.dark", "info", { feature, reason: "over_cap" });

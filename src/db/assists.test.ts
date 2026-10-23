@@ -20,8 +20,9 @@ import { setShopFeature } from "./shops";
 
 const ctx = fileScopedShopContext();
 
-// The seeded shop is the canonical demo, and demos are dark (anyone can mint
-// one); these tests are about a real shop, so each starts as one.
+// The seeded shop is the canonical demo, and demos run under their own small
+// caps (anyone can mint one); these tests are about a real shop, so each starts
+// as one, and the demo allowance has its own block below.
 beforeEach(async () => {
   await ctx.db.update(shops).set({ isDemo: false }).where(eq(shops.id, ctx.shop.id));
 });
@@ -195,6 +196,27 @@ describe("runAssist", () => {
     expect(provider.requests).toHaveLength(0);
   });
 
+  it("refuses a demo's call whose reservation would cross the demo allowance", async () => {
+    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+    const other = await otherShop();
+    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, other.id));
+    const reserve = reservedMicroUsd(call);
+    // The allowance has room for the dark check, not for this call's reservation.
+    await spend(other.id, 10_000_000 - reserve + 1, new Date("2026-10-02T00:00:00.000Z"));
+    const provider = replying("unused");
+    expect(
+      await runAssist(ctx.db, {
+        shopId: ctx.shop.id,
+        feature: "inbox_draft",
+        call,
+        provider,
+        env: keyed,
+        now,
+      }),
+    ).toBeNull();
+    expect(provider.requests).toHaveLength(0);
+  });
+
   it("charges at least the reservation for a call that failed after it may have been billed", async () => {
     const provider = fakeClaude({
       reply: () => {
@@ -284,9 +306,33 @@ describe("assistDarkReasonFor", () => {
     ).toBe("shop_off");
   });
 
-  it("is dark for a demo shop, whatever its switch and spend", async () => {
+  it("is lit for a demo shop under its own cap and the demo allowance", async () => {
     await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
-    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env: keyed, now })).toBe("demo_shop");
+    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env: keyed, now })).toBeNull();
+  });
+
+  it("holds a demo shop to the demo cap, not a real shop's", async () => {
+    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+    await spend(ctx.shop.id, 1_000_000, now);
+    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env: keyed, now })).toBe("over_cap");
+  });
+
+  it("darkens every demo once the demos together spent the allowance", async () => {
+    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+    const other = await otherShop();
+    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, other.id));
+    await spend(other.id, 900_000, now);
+    const env = { ...keyed, DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD: "0.9" };
+    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env, now })).toBe("demo_over_cap");
+  });
+
+  it("leaves a real shop out of the demo allowance", async () => {
+    const other = await otherShop();
+    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, other.id));
+    await spend(ctx.shop.id, 5_000_000, now);
+    const env = { ...keyed, DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD: "1" };
+    expect(await assistDarkReasonFor(ctx.db, other.id, { env, now })).toBeNull();
+    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env, now })).toBeNull();
   });
 
   it("takes the cap from the environment", async () => {

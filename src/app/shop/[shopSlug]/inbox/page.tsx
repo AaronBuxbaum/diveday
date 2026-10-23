@@ -16,11 +16,9 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { InboxRow } from "./_components/InboxRow";
-import { ReplyNotesSection } from "./_components/ReplyNotesSection";
 import {
   deleteInboxMessageAction,
   markInboxSenderLateAction,
-  saveReplyNotesAction,
   setInboxMessageDoneAction,
 } from "./actions";
 import { requestFromMessageAction } from "./assist-actions";
@@ -43,7 +41,6 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "late-marked": { tone: "success", key: "inbox.notices.lateMarked" },
   "late-closed": { tone: "warning", key: "inbox.notices.lateClosed" },
   // The notes for Claude's reply drafts, at the foot of the page.
-  "notes-saved": { tone: "success", key: "inbox.notices.notesSaved" },
   // "Make a request" read nothing a request could hold (the `request` assist).
   "request-nothing": { tone: "warning", key: "assistsFront.inbox.requestNothing" },
 };
@@ -207,10 +204,6 @@ export default async function InboxPage({
         total={t("inbox.pagination.total", { count: messages.total })}
         words={staffPagerWords(t)}
       />
-
-      {assists ? (
-        <ReplyNotesSection notes={shop.replyNotes} t={t} action={saveReplyNotesAction} />
-      ) : null}
     </main>
   );
 }

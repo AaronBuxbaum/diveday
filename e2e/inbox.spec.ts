@@ -157,14 +157,3 @@ test("a message about a seat opens it, and its menu opens the seat's move", asyn
   await expect(move.getByLabel("Departure")).toBeVisible();
   await expect(move.getByRole("button", { name: "Move" })).toBeVisible();
 });
-
-/**
- * **Notes for AI** (Aaron, 2026-10-23): with the shop's AI suggestions dark,
- * as every fleet shop is, the box nothing would read is not drawn. The lit box
- * is driven in `visual-claude-assists.spec.ts`.
- */
-test("the Inbox draws no notes box while AI suggestions are dark", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/inbox");
-  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Notes for AI" })).toHaveCount(0);
-});
