@@ -871,9 +871,12 @@ async function recordWrittenTables(
         if (property === "update" || property === "delete" || property === "insert") {
           return (table: Parameters<AppDb["delete"]>[0]) => {
             written.add(getTableName(table));
-            return (inner as unknown as AppDb)[property as "update" | "delete" | "insert"](
-              table as never,
-            ) as unknown;
+            // One signature for all three: drizzle's update/delete/insert
+            // overloads share no callable union since the drizzle-kit bump.
+            const write = (inner as unknown as Record<string, (table: never) => unknown>)[
+              property
+            ];
+            return write.call(inner, table as never);
           };
         }
         if (property === "transaction") {
