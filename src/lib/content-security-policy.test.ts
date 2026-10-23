@@ -121,11 +121,8 @@ describe("the policy", () => {
     expect(withKey).toEqual(expect.arrayContaining([...VECTOR_LABEL_HOSTS]));
     const withoutKey = directives(enforcedPolicy(base)).get("connect-src") ?? [];
     for (const host of VECTOR_LABEL_HOSTS) expect(withoutKey).not.toContain(host);
-    // The sprite folder only: cdn.arcgis.com also serves anyone's published items.
-    expect(withKey).not.toContain("https://cdn.arcgis.com");
-    expect(withKey).toContain(
-      "https://cdn.arcgis.com/sharing/rest/content/items/30d6b8271e1849cd9c3042060001f425/",
-    );
+    // The style's sprites (Aaron, 2026-10-23).
+    expect(withKey).toContain("https://cdn.arcgis.com");
   });
 
   describe("CloudWatch RUM's per-region hosts", () => {

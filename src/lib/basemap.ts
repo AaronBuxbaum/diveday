@@ -47,16 +47,14 @@ export function vectorLabelsStyleUrl(key: string): string {
  * `connect-src`, and only when a key is configured.
  *
  * The sprites live on `cdn.arcgis.com`, which also serves anyone's published
- * ArcGIS items, so the policy names the style's own item folder rather than
- * the host (Aaron, 2026-10-23: the sprite was refused). Should Esri move the
- * style to a new item, its sprite is refused, MapLibre reports an error and
- * the maps draw the raster labels; the CSP report names the new path.
+ * ArcGIS items. The whole host is allowed anyway, so a style Esri moves to a
+ * new item keeps its sprites (Aaron, 2026-10-23: "let's just use the hostname").
  */
 export const VECTOR_LABEL_HOSTS = [
   "https://basemapstyles-api.arcgis.com",
   "https://basemaps-api.arcgis.com",
   "https://static.arcgis.com",
-  "https://cdn.arcgis.com/sharing/rest/content/items/30d6b8271e1849cd9c3042060001f425/",
+  "https://cdn.arcgis.com",
 ] as const;
 
 /**
