@@ -118,6 +118,23 @@ export const ALERTS = {
     prompt:
       "The weekly mutation run (`.github/workflows/mutation.yml`) is red. Read the newest failed run linked in this issue's body and comments, find the failing leg and step, then read `stryker.config.mjs`, `stryker.vitest.config.ts` and `scripts/mutation-issues.mjs`. Reproduce locally with `pnpm test:mutation --mutate src/lib/trip-admission.ts` (the smaller module). Fix the cause, with a failing test first when the fault is in a script. Done is a manual run of the workflow going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
   },
+  "deploy-gate": {
+    title: "Fix the production deploy gate, which failed to deploy a green commit",
+    kind: "risk",
+    effort: "S",
+    touches: [
+      ".github/workflows/deploy-gate.yml",
+      "scripts/deploy-gate.mjs",
+      "scripts/vercel-build.mjs",
+    ],
+    noticed:
+      "The `Deploy gate` workflow failed. With the gate on, it is the only way a commit reaches production, so production is now behind main: the live site is the last commit it did deploy. Each failed run after this one adds a comment with its link; the first successful deploy closes this issue.",
+    why: "It was found by the deploy itself, not by a change anyone was making. The run can fail on its own credentials, on the Vercel half of the switch being unset, or in the Vercel build (a refused migration, a failed `pnpm build`), and only the run log and the Vercel deployment log say which.",
+    proposed:
+      "Read the failed step. A missing secret or Vercel variable is manual action `production-deploy-gate`. A failed Vercel build is read in the deploy and migrations runbook, which says what a database migrated ahead of the live code means. Fix forward, then redeploy with the workflow's Run workflow button and the green sha.",
+    prompt:
+      "The production deploy gate (`.github/workflows/deploy-gate.yml`) failed. Read the newest failed run linked in this issue's body and comments, find the failing step, then read `scripts/deploy-gate.mjs` and the section on the deploy gate in `docs/engineering/deploy-and-migrations-runbook.md`. A configuration failure is for the owner: name the missing setting in a comment here. A build failure is fixed forward on main with a failing test first. Done is a run of the workflow deploying a green commit, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo` on any fix. Close this issue in the PR that lands the fix.",
+  },
 };
 
 /** The issue body for one workflow's alert; the run that opened it is named first. */
