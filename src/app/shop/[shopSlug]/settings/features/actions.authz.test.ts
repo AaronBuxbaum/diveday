@@ -82,28 +82,32 @@ const allOn = () => post(ALL_ROWS, [...ALL_ROWS.filter((id) => id !== "divingOpt
 const FEATURES = "settings/features";
 
 describe("the Features page's save", () => {
-  it("covers the eleven switches, each with a gate", () => {
+  it("covers every switch, each with a gate", () => {
     expect(ALL_ROWS).toEqual([
-      "reviews",
-      "tips",
+      "divingOptions",
+      "hotelPickup",
       "dateRequests",
       "lastMinuteList",
+      "promoCodes",
+      "divePackages",
+      "tips",
+      "tax",
+      "reviews",
       "publicYear",
       "padiChecks",
+      "crewSchedule",
+      "workOrders",
+      "lostFound",
       "claudeSuggestions",
       "recapAutoApprove",
-      "crewSchedule",
-      "tax",
-      "divingOptions",
     ]);
-    // Tips and tax are payment settings; the crew schedule is the team's.
+    // Money switches are payment settings; the crew schedule is the team's.
     const gate = (id: string) => FEATURE_ROWS.find((row) => row.id === id)?.gate;
-    expect([gate("tips"), gate("tax"), gate("crewSchedule"), gate("reviews")]).toEqual([
-      "payments",
-      "payments",
-      "team",
-      "settings",
-    ]);
+    expect(
+      ["tips", "tax", "promoCodes", "divePackages", "crewSchedule", "reviews", "hotelPickup"].map(
+        gate,
+      ),
+    ).toEqual(["payments", "payments", "payments", "payments", "team", "settings", "settings"]);
   });
 
   it("refuses a captain whole, writing nothing", async () => {

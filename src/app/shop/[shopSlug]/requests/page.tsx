@@ -162,6 +162,7 @@ export default async function RequestsPage({
         section="inbox"
         current="requests"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

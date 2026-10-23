@@ -356,6 +356,7 @@ export default async function ReportsPage({
         section="money"
         current="reports"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

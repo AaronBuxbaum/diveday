@@ -181,6 +181,15 @@ runs. Pass args directly. The shell guard refuses the bare form.
   `gh` forms are in [docs/agents/issue-tracker.md](issue-tracker.md). **No comments does
   not mean reviewed clean** — `coderabbitai` reviews nothing here — and a bot's comment is never
   automatically right: these tools do not know this repository's rules.
+- **A new feature a shop could run without gets a Features switch (default on), or a `core`
+  entry saying why not** (Aaron, 2026-10-23). The switch is a `shops` boolean in
+  `SHOP_FEATURES` (`src/lib/shop-features.ts`) with a row on Settings → Features
+  (`settings/features/feature-rows.ts`); off hides every door to it and deletes nothing. The
+  answer is recorded once in `src/lib/feature-coverage.ts`: every staff destination (a
+  `Record`, so an unclassified one fails typecheck) and every boolean on `shops`
+  (`feature-coverage.test.ts` names any it does not know). A destination mapped to a switch
+  leaves the nav, the section tabs and ⌘K while it is off; its page redirects, and every other
+  entry point (Today rows, emails, crons, public pages) reads the same column.
 - **New runtime dependency → ADR** (`pnpm check:adrs`). New domain concept → glossary
   (`pnpm check:glossary`). Invalidated doc → fix in the same PR (`pnpm check:docs`).
 - **Safety-critical surfaces** (manifests, roll call, readiness and cert gating, medical

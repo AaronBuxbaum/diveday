@@ -251,6 +251,7 @@ export default async function ReviewsPage({
         section="inbox"
         current="reviews"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
       <ReviewsAggregateLine aggregate={aggregate} month={monthAggregate} t={t} className="mb-4" />

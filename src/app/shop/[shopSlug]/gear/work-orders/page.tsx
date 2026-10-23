@@ -107,6 +107,7 @@ export default async function WorkOrdersPage({
         section="gear"
         current="workOrders"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

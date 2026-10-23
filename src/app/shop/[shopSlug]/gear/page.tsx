@@ -276,6 +276,7 @@ export default async function GearRegisterPage({
         section="gear"
         current="gear"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

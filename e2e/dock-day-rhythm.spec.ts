@@ -98,14 +98,14 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
 
   // **No pickup the shop never offered** (fourth UX review, item 8). A new
   // shop runs none, so Day-of details asks nothing about one until the shop
-  // says it does, on this same settings page.
+  // says it does, on the Features page.
   const readyUrl = page.url();
   await openThreadStep(page, "dayof");
   await expect(page.getByLabel("Where you’re staying")).toHaveCount(0);
-  await page.goto(`/shop/${SHOP}/settings/dock-day`);
+  await page.goto(`/shop/${SHOP}/settings/features`);
   await page.getByRole("checkbox", { name: /We offer hotel pickup/ }).check();
-  await page.getByRole("button", { name: "Save pickup" }).click();
-  await expect(page.getByRole("status")).toContainText("asked about a pickup");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
   await page.goto(readyUrl);
   await openThreadStep(page, "dayof");
   await expect(page.getByRole("heading", { name: "Want a pickup?" })).toBeVisible();

@@ -17,6 +17,7 @@ import { joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { summarizeMonth } from "@/lib/reporting";
 import { currentShopSeason, type ShopSeason, shopSeasonLabel, shopSeasonOf } from "@/lib/season";
+import type { ShopSwitchFlags } from "@/lib/shop-features";
 import { summarizeShopYear } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
 import { sameMomentYearBefore, shopDaysBounds } from "@/lib/zoned";
@@ -55,7 +56,7 @@ export async function YearView({
   t,
 }: {
   db: DbExecutor;
-  shop: {
+  shop: ShopSwitchFlags & {
     id: string;
     timezone: string;
     currency: string;
@@ -149,7 +150,14 @@ export async function YearView({
           ) : undefined
         }
       />
-      <StaffSectionTabs shopSlug={shopSlug} section="money" current="reports" roles={roles} t={t} />
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="money"
+        current="reports"
+        roles={roles}
+        shop={shop}
+        t={t}
+      />
       <div className="mb-8 flex flex-wrap items-center gap-3">
         <ReportRangeTabs shopSlug={shopSlug} range="year" t={t} />
         {years.length > 1 ? (

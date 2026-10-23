@@ -355,6 +355,7 @@ export default async function PromosPage({
         section="money"
         current="promoCodes"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

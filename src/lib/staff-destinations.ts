@@ -1,4 +1,6 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
+import { destinationSwitch } from "./feature-coverage";
+import { ALL_SWITCHES_ON, type ShopSwitchesOn } from "./shop-features";
 
 /**
  * Every place a staff member can go inside `/shop/<shopSlug>`, in one list.
@@ -115,16 +117,16 @@ export const STAFF_PHONE_TABS = [
  * Sections a shop sees only once it uses them. A shop that teaches no course
  * or keeps no rental fleet would otherwise carry a nav row that opens onto an
  * empty page every day. Both stay in the search, so a shop can start.
+ *
+ * `switches` is the other half: a destination tied to a Features-page switch
+ * (`STAFF_DESTINATION_COVERAGE` in `feature-coverage.ts`) is gone from the nav,
+ * the section tabs and the search while that switch is off, because its page
+ * redirects. One map decides it, never a case per feature here.
  */
 export type StaffNavOffers = {
   courses: boolean;
   gear: boolean;
-  /**
-   * Whether the shop keeps a crew schedule (`shops.crew_schedule_enabled`).
-   * Unlike the two above it is a setting, not a presence: off, the Crew view
-   * is gone from the palette as well, because the page redirects.
-   */
-  crew: boolean;
+  switches: ShopSwitchesOn;
 };
 
 export type StaffDestinationId =
@@ -407,10 +409,14 @@ export const STAFF_SECTION_TAB_LABEL_KEYS: Partial<Record<StaffDestinationId, St
 export function staffSectionTabs(
   section: TabbedStaffSection,
   gates: StaffDestinationGates,
+  switches: ShopSwitchesOn,
 ): readonly StaffDestination[] {
   return STAFF_SECTION_TABS[section]
     .map((id) => staffDestination(id))
-    .filter((destination) => passesGate(destination, gates));
+    .filter(
+      (destination) =>
+        passesGate(destination, gates) && staffDestinationOffered(destination, switches),
+    );
 }
 
 /** The `/shop/<shopSlug>` prefix every destination hangs off. */
@@ -455,6 +461,18 @@ function passesGate(destination: StaffDestination, gates: StaffDestinationGates)
   return destination.gate === undefined || gates[destination.gate];
 }
 
+/**
+ * Whether the shop offers this destination at all: false only when it belongs
+ * to a Features-page switch that is off (`feature-coverage.ts`).
+ */
+export function staffDestinationOffered(
+  destination: StaffDestination,
+  switches: ShopSwitchesOn,
+): boolean {
+  const feature = destinationSwitch(destination.id);
+  return feature === null || switches[feature];
+}
+
 /** Every destination this viewer may see, in registry order. */
 export function visibleStaffDestinations(
   gates: StaffDestinationGates,
@@ -480,7 +498,9 @@ export function staffNavSections(
   gates: StaffDestinationGates,
   offers: StaffNavOffers,
 ): readonly StaffNavItem[] {
-  const visible = visibleStaffDestinations(gates);
+  const visible = visibleStaffDestinations(gates).filter((destination) =>
+    staffDestinationOffered(destination, offers.switches),
+  );
   const items: StaffNavItem[] = [];
   for (const { section, id } of STAFF_NAV_SECTIONS) {
     if ((section === "courses" || section === "gear") && !offers[section]) continue;
@@ -498,10 +518,10 @@ export function staffNavSections(
 /** The "Go to" rows the command palette offers this viewer. */
 export function staffPaletteDestinations(
   gates: StaffDestinationGates,
-  offers: Pick<StaffNavOffers, "crew"> = { crew: true },
+  switches: ShopSwitchesOn = ALL_SWITCHES_ON,
 ): readonly StaffDestination[] {
   return visibleStaffDestinations(gates).filter(
-    (destination) => destination.inPalette && (destination.id !== "staffing" || offers.crew),
+    (destination) => destination.inPalette && staffDestinationOffered(destination, switches),
   );
 }
 

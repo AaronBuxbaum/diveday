@@ -139,6 +139,7 @@ export default async function InboxPage({
         section="inbox"
         current="inbox"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

@@ -457,19 +457,6 @@ export async function setShopCrewLead(db: AppDb, shopId: string, minutes: number
 }
 
 /**
- * Whether the shop runs hotel pickups (fourth UX review, item 8). Only then
- * does `/ready` ask a diver "Want a pickup?".
- */
-export async function setShopOffersHotelPickup(db: AppDb, shopId: string, offers: boolean) {
-  const [shop] = await db
-    .update(shops)
-    .set({ offersHotelPickup: offers })
-    .where(eq(shops.id, shopId))
-    .returning({ id: shops.id, offersHotelPickup: shops.offersHotelPickup });
-  return shop ?? null;
-}
-
-/**
  * Sets the shop's minimum turnaround between departures, in minutes (issue
  * #2141). Advice for the schedule builder's Move panel only; the route narrows
  * the value through `parseMinTurnaroundMinutes`, and the table's CHECK holds

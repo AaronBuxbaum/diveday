@@ -29,6 +29,9 @@ reasoning and the longer form of every row are in
 - **Auth**: `src/lib/auth.ts`, `src/lib/session.ts`; `src/proxy.ts` is convenience, not the
   boundary.
 - **Staff destinations**: `src/lib/staff-destinations.ts`, one registry (ADR 20261001-logbook).
+- **Optional features**: `src/lib/shop-features.ts` (the switches) and
+  `src/lib/feature-coverage.ts` (every destination and `shops` boolean, a switch or a written
+  `core` reason). A new feature a shop could run without gets a switch, default on.
 - **Staff notices**: `noticeUrl`, `noticeFromParam`, `shopPath` in `src/lib/staff-notices.ts`;
   never hand-build the string (notice-code guard).
 - **Feature modules**: `src/features/<feature>/index.ts` is the whole public surface

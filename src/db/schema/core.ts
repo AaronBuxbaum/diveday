@@ -223,6 +223,32 @@ export const shops = pgTable(
      */
     recapAssistAutoApprove: boolean("recap_assist_auto_approve").notNull().default(true),
     /**
+     * **Lost and found**: the register of what crews found aboard, its Today
+     * row, the boat's and arrival desk's found-item panels, and the "we found
+     * your …" email. On by default (ADR 20261005-optional-shop-features,
+     * amended 2026-10-23); off hides every door and deletes no item.
+     */
+    lostFoundEnabled: boolean("lost_found_enabled").notNull().default(true),
+    /**
+     * **Gear servicing (work orders)**: the bench, its Today rows, a diver's
+     * work orders and the customer service reminders and emails. Off hides it
+     * all and deletes no ticket; the rental fleet's own service clocks stay,
+     * because they are safety.
+     */
+    workOrdersEnabled: boolean("work_orders_enabled").notNull().default(true),
+    /**
+     * **Promo codes**: the Money tab and the code box a diver types into. Off,
+     * no code redeems; a last-minute deal's code still does while the
+     * last-minute list is on.
+     */
+    promoCodesEnabled: boolean("promo_codes_enabled").notNull().default(true),
+    /**
+     * **Dive packages**: selling prepaid dives (the staff packages view, the
+     * shopfront's packages page). Off stops selling only: a diver's balance
+     * already paid for still redeems.
+     */
+    divePackagesEnabled: boolean("dive_packages_enabled").notNull().default(true),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not
@@ -441,7 +467,8 @@ export const shops = pgTable(
      * Whether the shop runs hotel pickups (fourth UX review item 8). Off by
      * default, because most shops do not: `/ready` asked every diver at every
      * shop "Want a morning pickup?", a promise the shop never made. Only a
-     * shop that says it offers them has the question asked.
+     * shop that says it offers them has the question asked. A Features-page
+     * switch since 2026-10-23 (`hotelPickup`); its default waits on Aaron.
      */
     offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
     /**

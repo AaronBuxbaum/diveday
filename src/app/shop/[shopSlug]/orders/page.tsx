@@ -380,6 +380,7 @@ export default async function OrdersIndexPage({
         section="money"
         current="orders"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
 

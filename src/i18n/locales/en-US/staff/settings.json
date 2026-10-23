@@ -5,7 +5,6 @@
       "packingSaved": "Packing checklist saved for every trip",
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder",
-      "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
       "deskPaymentSaved": "Saved. Every seat due at the shop says how to pay.",
       "deskPaymentInvalid": "Nothing changed: choose card, cash, card and cash, or don’t say.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
@@ -232,12 +231,6 @@
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
     },
-    "pickup": {
-      "label": "We offer hotel pickup",
-      "description": "When on, each diver’s page asks whether they want a pickup and where they’re staying.",
-      "submit": "Save pickup",
-      "submitting": "Saving…"
-    },
     "deskPayment": {
       "legend": "How divers pay at the desk",
       "description": "Said wherever a seat is due at the shop: the booking form, the confirmation and the diver’s page.",
@@ -453,6 +446,31 @@
         "heading": "Recap highlights",
         "label": "Write the recap highlight when the crew leaves it blank",
         "description": "Claude writes two sentences from the sightings your crew logged, and they go out on the recap. Off, the crew writes or approves each one."
+      },
+      "lostFound": {
+        "heading": "Lost and found",
+        "label": "Keep a lost-and-found list",
+        "description": "What crews find aboard, logged on the departure and listed until it goes home. The diver gets an email when you find something of theirs."
+      },
+      "workOrders": {
+        "heading": "Gear servicing",
+        "label": "Service divers’ own gear",
+        "description": "Work orders for gear divers bring in, their tags, and an email when it’s ready. Divers who ask get a reminder when service is due. Your rental fleet’s service dates stay either way."
+      },
+      "promoCodes": {
+        "heading": "Promo codes",
+        "label": "Take promo codes",
+        "description": "Codes you make under Discounts, typed by divers when they book. A last-minute deal’s code still works while the last-minute list is on."
+      },
+      "divePackages": {
+        "heading": "Dive packages",
+        "label": "Sell dive packages",
+        "description": "Prepaid dives a diver buys up front and spends on later bookings. Off, you stop selling them; divers who already bought one keep using it."
+      },
+      "hotelPickup": {
+        "heading": "Hotel pickups",
+        "label": "We offer hotel pickup",
+        "description": "Each diver’s page asks whether they want a pickup and where they’re staying, and the manifest lists who to collect."
       },
       "door": "Turn features on or off"
     },
@@ -1181,6 +1199,13 @@
   "features": {
     "title": "Features",
     "crewTarget": "Set the divemaster target",
-    "boats": "Your boats"
+    "boats": "Your boats",
+    "groups": {
+      "diving": "Diving",
+      "bookings": "Bookings and money",
+      "divers": "Divers",
+      "crew": "Crew and gear",
+      "claude": "Claude"
+    }
   }
 }

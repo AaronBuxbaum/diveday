@@ -5,7 +5,6 @@
       "packingSaved": "Lista de equipo guardada para todas las salidas",
       "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios",
-      "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
       "deskPaymentSaved": "Guardado. Cada plaza a pagar en el centro dice cómo pagar.",
       "deskPaymentInvalid": "No cambió nada: elige tarjeta, efectivo, tarjeta y efectivo o no decirlo.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
@@ -232,12 +231,6 @@
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
     },
-    "pickup": {
-      "label": "Ofrecemos recogida en el hotel",
-      "description": "Si está activado, la página de cada buceador pregunta si quiere que lo recojan y dónde se aloja.",
-      "submit": "Guardar recogida",
-      "submitting": "Guardando…"
-    },
     "deskPayment": {
       "legend": "Cómo pagan los buceadores en el mostrador",
       "description": "Se dice dondequiera que una plaza se paga en el centro: el formulario de reserva, la confirmación y la página del buceador.",
@@ -453,6 +446,31 @@
         "heading": "Resumen del día",
         "label": "Escribir el resumen del día cuando la tripulación lo deja vacío",
         "description": "Claude escribe dos frases con los avistamientos que anotó tu tripulación, y salen en el resumen. Desactivado, la tripulación escribe o aprueba cada uno."
+      },
+      "lostFound": {
+        "heading": "Objetos perdidos",
+        "label": "Llevar una lista de objetos perdidos",
+        "description": "Lo que la tripulación encuentra a bordo, anotado en la salida y en la lista hasta que vuelve a su dueño. El buceador recibe un correo cuando encuentras algo suyo."
+      },
+      "workOrders": {
+        "heading": "Mantenimiento de equipo",
+        "label": "Hacer el mantenimiento del equipo de los buceadores",
+        "description": "Órdenes de trabajo para el equipo que traen los buceadores, sus etiquetas y un correo cuando está listo. Quien lo pide recibe un aviso cuando le toca la revisión. Las fechas de revisión de tu equipo de alquiler se mantienen en cualquier caso."
+      },
+      "promoCodes": {
+        "heading": "Códigos promocionales",
+        "label": "Aceptar códigos promocionales",
+        "description": "Códigos que creas en Descuentos y que los buceadores escriben al reservar. El código de una oferta de última hora sigue funcionando mientras la lista de última hora esté activada."
+      },
+      "divePackages": {
+        "heading": "Paquetes de inmersiones",
+        "label": "Vender paquetes de inmersiones",
+        "description": "Inmersiones prepagadas que el buceador compra por adelantado y usa en reservas posteriores. Desactivado, dejas de venderlos; quien ya compró uno lo sigue usando."
+      },
+      "hotelPickup": {
+        "heading": "Recogida en el hotel",
+        "label": "Ofrecemos recogida en el hotel",
+        "description": "La página de cada buceador pregunta si quiere que lo recojan y dónde se aloja, y el manifiesto muestra a quién recoger."
       },
       "door": "Activar o desactivar funciones"
     },
@@ -1181,6 +1199,13 @@
   "features": {
     "title": "Funciones",
     "crewTarget": "Fijar el objetivo por divemaster",
-    "boats": "Tus barcos"
+    "boats": "Tus barcos",
+    "groups": {
+      "diving": "Buceo",
+      "bookings": "Reservas y dinero",
+      "divers": "Buceadores",
+      "crew": "Tripulación y equipo",
+      "claude": "Claude"
+    }
   }
 }
