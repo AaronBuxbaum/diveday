@@ -497,6 +497,14 @@ export async function sendDueReminders(
       summary.skipped += 1;
       continue;
     }
+    // **The week-out reminder is a Features switch; the night-before one is
+    // not** (ADR 20261005-optional-shop-features, amendment 2026-10-23). Off,
+    // the 7-day bucket passes unsent and writes nothing, and the 24-hour
+    // reminder still comes due in its own bucket.
+    if (cadence.kind === "trip_reminder_7d" && !row.shop.weekOutReminderEnabled) {
+      summary.skipped += 1;
+      continue;
+    }
     // **A held seat waits for staff** (#2082). Until someone confirms the
     // booker is the diver record the seat was matched to, the address on that
     // record may be somebody else's, and a reminder would hand them this
