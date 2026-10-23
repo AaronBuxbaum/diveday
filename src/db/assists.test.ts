@@ -9,13 +9,14 @@ import {
   assistDarkReasonFor,
   assistsAvailable,
   claudeSpendUsdBetween,
+  demoClaudeSpendMicroUsd,
   IN_FLIGHT_WINDOW_MS,
   MAX_CALLS_IN_FLIGHT,
   reservedMicroUsd,
   runAssist,
   shopClaudeSpendMicroUsd,
 } from "./assists";
-import { claudeUsage, shops } from "./schema";
+import { claudeDemoSpend, claudeUsage, shops } from "./schema";
 import { setShopFeature } from "./shops";
 
 const ctx = fileScopedShopContext();
@@ -54,6 +55,13 @@ async function otherShop() {
     .values({ name: "Other Reef", slug: "other-reef", timezone: "UTC" })
     .returning();
   if (!shop) throw new Error("insert failed");
+  return shop;
+}
+
+/** A demo minted from the public door: not the canonical one. */
+async function mintedDemo() {
+  const shop = await otherShop();
+  await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, shop.id));
   return shop;
 }
 
@@ -197,16 +205,16 @@ describe("runAssist", () => {
   });
 
   it("refuses a demo's call whose reservation would cross the demo allowance", async () => {
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
-    const other = await otherShop();
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, other.id));
+    const demo = await mintedDemo();
     const reserve = reservedMicroUsd(call);
     // The allowance has room for the dark check, not for this call's reservation.
-    await spend(other.id, 10_000_000 - reserve + 1, new Date("2026-10-02T00:00:00.000Z"));
+    await ctx.db
+      .insert(claudeDemoSpend)
+      .values({ month: "2026-10-01", spentMicroUsd: 10_000_000 - reserve + 1 });
     const provider = replying("unused");
     expect(
       await runAssist(ctx.db, {
-        shopId: ctx.shop.id,
+        shopId: demo.id,
         feature: "inbox_draft",
         call,
         provider,
@@ -215,6 +223,27 @@ describe("runAssist", () => {
       }),
     ).toBeNull();
     expect(provider.requests).toHaveLength(0);
+  });
+
+  it("keeps a deleted demo's spend in the allowance", async () => {
+    const demo = await mintedDemo();
+    const provider = replying("Yes.");
+    await runAssist(ctx.db, {
+      shopId: demo.id,
+      feature: "inbox_draft",
+      call,
+      provider,
+      env: keyed,
+      now,
+    });
+    const [usage] = await ctx.db
+      .select({ cost: claudeUsage.costMicroUsd })
+      .from(claudeUsage)
+      .where(eq(claudeUsage.shopId, demo.id));
+    expect(usage?.cost).toBeGreaterThan(0);
+    // The reaper and the mint cap delete demos; their usage rows cascade.
+    await ctx.db.delete(shops).where(eq(shops.id, demo.id));
+    expect(await demoClaudeSpendMicroUsd(ctx.db, now)).toBe(usage?.cost);
   });
 
   it("charges at least the reservation for a call that failed after it may have been billed", async () => {
@@ -306,33 +335,28 @@ describe("assistDarkReasonFor", () => {
     ).toBe("shop_off");
   });
 
-  it("is lit for a demo shop under its own cap and the demo allowance", async () => {
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
-    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env: keyed, now })).toBeNull();
+  it("is lit for a minted demo under its own cap and the demo allowance", async () => {
+    const demo = await mintedDemo();
+    expect(await assistDarkReasonFor(ctx.db, demo.id, { env: keyed, now })).toBeNull();
   });
 
-  it("holds a demo shop to the demo cap, not a real shop's", async () => {
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
-    await spend(ctx.shop.id, 1_000_000, now);
-    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env: keyed, now })).toBe("over_cap");
+  it("holds a minted demo to the demo cap, not a real shop's", async () => {
+    const demo = await mintedDemo();
+    await spend(demo.id, 1_000_000, now);
+    expect(await assistDarkReasonFor(ctx.db, demo.id, { env: keyed, now })).toBe("over_cap");
   });
 
-  it("darkens every demo once the demos together spent the allowance", async () => {
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
-    const other = await otherShop();
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, other.id));
-    await spend(other.id, 900_000, now);
-    const env = { ...keyed, DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD: "0.9" };
-    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env, now })).toBe("demo_over_cap");
+  it("darkens every minted demo once the demo ledger reaches the allowance", async () => {
+    const demo = await mintedDemo();
+    await ctx.db.insert(claudeDemoSpend).values({ month: "2026-10-01", spentMicroUsd: 10_000_000 });
+    expect(await assistDarkReasonFor(ctx.db, demo.id, { env: keyed, now })).toBe("demo_over_cap");
   });
 
-  it("leaves a real shop out of the demo allowance", async () => {
-    const other = await otherShop();
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, other.id));
+  it("keeps the canonical demo on a real shop's cap, outside the allowance", async () => {
+    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+    await ctx.db.insert(claudeDemoSpend).values({ month: "2026-10-01", spentMicroUsd: 10_000_000 });
     await spend(ctx.shop.id, 5_000_000, now);
-    const env = { ...keyed, DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD: "1" };
-    expect(await assistDarkReasonFor(ctx.db, other.id, { env, now })).toBeNull();
-    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env, now })).toBeNull();
+    expect(await assistDarkReasonFor(ctx.db, ctx.shop.id, { env: keyed, now })).toBeNull();
   });
 
   it("takes the cap from the environment", async () => {

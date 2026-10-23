@@ -25,7 +25,8 @@ import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { periodBounds } from "@/lib/cost-guardrails";
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
-import { claudeUsage, shops } from "./schema";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { claudeDemoSpend, claudeUsage, shops } from "./schema";
 
 /**
  * **Running an assist** (ADR 20261018-claude-assists): the one function every
@@ -118,34 +119,45 @@ export async function claudeSpendUsdBetween(db: AppDb, start: Date, end: Date): 
   return Number(row?.total ?? 0) / 1_000_000;
 }
 
-/** Every demo tenant's recorded Claude spend since the first of this UTC month, in micro-USD. */
-export async function demoClaudeSpendMicroUsd(db: AppDb, now: Date = nowDate()): Promise<number> {
-  const { start, end } = periodBounds("calendar_month", now);
-  const [row] = await db
-    .select({ total: sql<string | null>`sum(${claudeUsage.costMicroUsd})` })
-    .from(claudeUsage)
-    .innerJoin(shops, eq(shops.id, claudeUsage.shopId))
-    .where(
-      and(
-        eq(shops.isDemo, true),
-        gte(claudeUsage.createdAt, start),
-        lt(claudeUsage.createdAt, end),
-      ),
-    );
-  return Number(row?.total ?? 0);
+/** The demo ledger's key for the UTC month holding `now`: `YYYY-MM-01`. */
+function demoMonth(now: Date): string {
+  return periodBounds("calendar_month", now).start.toISOString().slice(0, 10);
 }
 
-async function shopIsDemo(db: AppDb, shopId: string): Promise<boolean> {
+/**
+ * What every pooled demo together spent this UTC month, in micro-USD, from the
+ * ledger that outlives deleted demos (`claude_demo_spend`).
+ */
+export async function demoClaudeSpendMicroUsd(db: AppDb, now: Date = nowDate()): Promise<number> {
+  const [row] = await db
+    .select({ spent: claudeDemoSpend.spentMicroUsd })
+    .from(claudeDemoSpend)
+    .where(eq(claudeDemoSpend.month, demoMonth(now)))
+    .limit(1);
+  return Number(row?.spent ?? 0);
+}
+
+/**
+ * Whether a shop runs under the demo caps: a minted demo. The canonical demo
+ * (`DEMO_SHOP_SLUG`) is one shop, not a mint, so it keeps a real shop's cap and
+ * stays out of the shared allowance: a visitor who spends the minted demos'
+ * allowance does not turn AI off where everyone looks first.
+ */
+function pooledDemo(shop: { isDemo: boolean; slug: string }): boolean {
+  return shop.isDemo && shop.slug !== DEMO_SHOP_SLUG;
+}
+
+async function shopIsPooledDemo(db: AppDb, shopId: string): Promise<boolean> {
   const [shop] = await db
-    .select({ isDemo: shops.isDemo })
+    .select({ isDemo: shops.isDemo, slug: shops.slug })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
   // A shop we could not find reserves under the demo allowance: the smaller cap.
-  return shop?.isDemo ?? true;
+  return shop ? pooledDemo(shop) : true;
 }
 
-/** The shop's own monthly cap: the small demo one for a demo tenant. */
+/** The shop's own monthly cap: the small demo one for a minted demo. */
 function capFor(isDemo: boolean, env: Readonly<Record<string, string | undefined>>): number {
   return isDemo ? demoShopMonthlyCapMicroUsd(env) : shopMonthlyCapMicroUsd(env);
 }
@@ -173,7 +185,7 @@ export async function assistDarkReasonFor(
   if (early) return early;
 
   const [shop] = await db
-    .select({ enabled: shops.claudeSuggestionsEnabled, isDemo: shops.isDemo })
+    .select({ enabled: shops.claudeSuggestionsEnabled, isDemo: shops.isDemo, slug: shops.slug })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
@@ -184,10 +196,10 @@ export async function assistDarkReasonFor(
     hasKey,
     externalHttpDisabled: blocked,
     shopEnabled: true,
-    shopIsDemo: shop.isDemo,
+    shopIsDemo: pooledDemo(shop),
     spentMicroUsd: await shopClaudeSpendMicroUsd(db, shopId, now),
-    capMicroUsd: capFor(shop.isDemo, env),
-    ...(shop.isDemo
+    capMicroUsd: capFor(pooledDemo(shop), env),
+    ...(pooledDemo(shop)
       ? {
           demoSpentMicroUsd: await demoClaudeSpendMicroUsd(db, now),
           demoCapMicroUsd: demoMonthlyCapMicroUsd(env),
@@ -309,18 +321,11 @@ async function reserveClaudeCall(
       );
       const { start, end } = periodBounds("calendar_month", input.now);
       if (demoCapMicroUsd !== null) {
-        const [demos] = await tx
-          .select({ total: sql<string | null>`sum(${claudeUsage.costMicroUsd})` })
-          .from(claudeUsage)
-          .innerJoin(shops, eq(shops.id, claudeUsage.shopId))
-          .where(
-            and(
-              eq(shops.isDemo, true),
-              gte(claudeUsage.createdAt, start),
-              lt(claudeUsage.createdAt, end),
-            ),
-          );
-        const demoSpent = Number(demos?.total ?? 0);
+        const [ledger] = await tx
+          .select({ spent: claudeDemoSpend.spentMicroUsd })
+          .from(claudeDemoSpend)
+          .where(eq(claudeDemoSpend.month, demoMonth(input.now)));
+        const demoSpent = Number(ledger?.spent ?? 0);
         if (!Number.isFinite(demoSpent) || demoSpent + input.reserve > demoCapMicroUsd) {
           return null;
         }
@@ -359,19 +364,44 @@ async function reserveClaudeCall(
           createdAt: input.now,
         })
         .returning({ id: claudeUsage.id });
+      if (row && demoCapMicroUsd !== null) {
+        await addDemoSpend(tx, demoMonth(input.now), input.reserve);
+      }
       return row?.id ?? null;
     }),
   );
 }
 
-/** Settles a call's row to what it actually cost. */
+/** Adds to the demo ledger's month; a negative amount gives back an over-reservation. */
+async function addDemoSpend(
+  db: AppDb | Parameters<Parameters<AppDb["transaction"]>[0]>[0],
+  month: string,
+  microUsd: number,
+): Promise<void> {
+  if (microUsd === 0) return;
+  await db
+    .insert(claudeDemoSpend)
+    .values({ month, spentMicroUsd: microUsd })
+    .onConflictDoUpdate({
+      target: claudeDemoSpend.month,
+      set: { spentMicroUsd: sql`${claudeDemoSpend.spentMicroUsd} + ${microUsd}` },
+    });
+}
+
+/**
+ * Settles a call's row to what it actually cost, and a minted demo's ledger
+ * month (`demoMonthKey`, null for any other shop) by the same difference.
+ */
 async function settleClaudeUsage(
   db: AppDb,
   usageId: string,
   reserve: number,
   result: StructuredResult<unknown>,
+  demoMonthKey: string | null,
 ): Promise<void> {
   const billedFloor = result.outcome === "error" && mayHaveBilled(result.errorCode) ? reserve : 0;
+  const cost = Math.max(result.costMicroUsd, billedFloor);
+  if (demoMonthKey !== null) await addDemoSpend(db, demoMonthKey, cost - reserve);
   await db
     .update(claudeUsage)
     .set({
@@ -381,7 +411,7 @@ async function settleClaudeUsage(
       cacheWriteTokens: result.usage.cacheWriteTokens,
       cacheReadTokens: result.usage.cacheReadTokens,
       outputTokens: result.usage.outputTokens,
-      costMicroUsd: Math.max(result.costMicroUsd, billedFloor),
+      costMicroUsd: cost,
     })
     .where(eq(claudeUsage.id, usageId));
 }
@@ -431,7 +461,8 @@ export async function runAssistOutcome<S extends z.ZodType>(
     if (!provider) return skipped;
     const reserve = reservedMicroUsd(input.call);
     const env = input.env ?? process.env;
-    const isDemo = await shopIsDemo(db, shopId);
+    const isDemo = await shopIsPooledDemo(db, shopId);
+    const now = input.now ?? nowDate();
     const usageId = await reserveClaudeCall(
       db,
       {
@@ -439,7 +470,7 @@ export async function runAssistOutcome<S extends z.ZodType>(
         feature,
         model: CLAUDE_MODELS[input.call.model],
         reserve,
-        now: input.now ?? nowDate(),
+        now,
       },
       capFor(isDemo, env),
       isDemo ? demoMonthlyCapMicroUsd(env) : null,
@@ -449,7 +480,7 @@ export async function runAssistOutcome<S extends z.ZodType>(
       return skipped;
     }
     const result = await callStructured(provider, input.call);
-    await settleClaudeUsage(db, usageId, reserve, result);
+    await settleClaudeUsage(db, usageId, reserve, result, isDemo ? demoMonth(now) : null);
     log("claude_assist.call", result.outcome === "error" ? "warn" : "info", {
       feature,
       model: result.model,

@@ -443,6 +443,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
   stripe_webhook_events: "the platform's delivery ledger, pruned by retention; no payload",
+  claude_demo_spend:
+    "a month and what every minted demo together spent on Claude; no shop, no person",
   sms_opt_outs:
     "a phone number that replied STOP, and nothing else. Keeping it after an erasure is what keeps the promise: removing it would let a later booking with that number text someone who said stop",
   media_deletion_attempts:
