@@ -80,3 +80,28 @@ events, and conflict tests. The first release intentionally has no cross-device 
 background-sync dependency. Revisit the retention window and freshness thresholds after dock and
 boat field tests; changing them is a policy update, while changing the encrypted record version
 requires a migration or deliberate device-cache reset.
+
+## Amendment, 2026-10-23: medical alert words on a device copy (H-153)
+
+The threat boundary above accepts that encryption cannot protect an unlocked device. That was
+decided for a copy every staffer may read. A diver's **medical alert for the crew** has a narrower
+audience (the owner, a manager, crew a manager put on the departure), so its words follow stricter
+rules than the rest of the copy (H-153, amendment of 2026-10-23):
+
+- No server payload carries the words: not the manifest page's offline payload, not
+  `/api/offline-manifests/upcoming`, not the service worker's refresh. Every copy carries the fact of
+  an alert.
+- The words reach a copy only on an explicit save by a permitted reader on that one departure:
+  `POST /api/offline-manifests/[tripId]/medical-alerts` records `medical_alert_saved_offline` per
+  diver, and `saveOfflineMedicalAlerts` writes the words and `medicalAlertsSavedBy` (who, when) into
+  the same encrypted record. `saveOfflineManifest` drops any words a payload carries and keeps
+  saved words through later background saves for divers the board still flags.
+- `wipeOfflineMedicalAlerts` takes the words off every copy, keeping the rest (queued events
+  included): on sign-out (`forgetThisDevice`, which the sign-in page also runs) and whenever an
+  `/upcoming` answer names a different person than the one who saved them. A body that names nobody
+  wipes them all.
+- A crew member removed from the departure after saving keeps the words on their own device until
+  sign-out, another person's sign-in, or the copy's expiry. That is accepted: the boat may already
+  be at sea, and the read was recorded when the words were handed out.
+
+Optional and additive: no `OFFLINE_MANIFEST_RECORD_VERSION` bump.
