@@ -20,6 +20,7 @@ import {
   setTripStageAction,
   teamUpPartiesAction,
 } from "../actions";
+import { showSeatMedicalAlertAction } from "../medical-alert-action";
 
 /**
  * **Every mutation on this page, bound once to the departure and checkpoint it
@@ -40,6 +41,8 @@ export function bindManifestActions(
     mayStartIncidentReport: boolean;
     /** Seats and crew whose owners were alerted and who are not found yet (issue #2694). */
     alerted?: ReadonlySet<string>;
+    /** Whether the reader may read the medical alerts on this departure (issue #2960). */
+    mayReadMedicalAlerts?: boolean;
   } = { mayStartIncidentReport: false },
 ) {
   const { shopSlug, tripId } = actionContext;
@@ -78,6 +81,11 @@ export function bindManifestActions(
         : null,
       missingAlerted: reader.alerted ?? new Set<string>(),
     },
+    // One seat's "Show the alert", only for a reader allowed the words here;
+    // the action re-checks and records the read before it answers.
+    showMedicalAlert: reader.mayReadMedicalAlerts
+      ? (bookingId: string) => showSeatMedicalAlertAction.bind(null, shopSlug, tripId, bookingId)
+      : undefined,
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {
       formBuddyTeamAction: formBuddyTeamAction.bind(null, actionContext),

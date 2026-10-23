@@ -42,7 +42,6 @@ import {
 import { readManifestPage } from "./_components/manifest-reads";
 import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
-import { medicalAlertView } from "./_components/medical-alert-view";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { openCheckpoint } from "./_components/open-checkpoint";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
@@ -123,8 +122,7 @@ export default async function TripManifestPage({
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
-    missingDiverReader,
-    medicalAlerts,
+    reader,
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
@@ -142,10 +140,9 @@ export default async function TripManifestPage({
   // which counted booked divers only — so a checkpoint could read complete with
   // a divemaster still in the water.
   const completeness = manifest.completeness;
-  const rollCallComplete = completeness.complete;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext, missingDiverReader);
+  const actions = bindManifestActions(actionContext, reader);
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -250,7 +247,7 @@ export default async function TripManifestPage({
         idPrefix={idPrefix}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
-        rollCallComplete={rollCallComplete}
+        rollCallComplete={completeness.complete}
         completeness={completeness}
         summary={manifest.summary}
         {...headCountView({ manifest, checkpoint, isDeparture })}
@@ -327,14 +324,7 @@ export default async function TripManifestPage({
             missingDiver: actions.missingDiver,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
-            medicalAlert: medicalAlertView({
-              mayRead: medicalAlerts.mayRead,
-              shopSlug,
-              tripId,
-              crew: manifest.crew,
-              locale,
-              t,
-            }),
+            showMedicalAlert: actions.showMedicalAlert,
             t,
           }}
         />
@@ -450,10 +440,9 @@ export default async function TripManifestPage({
           payload={offlineManifestPayload({
             completeManifests,
             shop: { ...shop, emergencyReference },
-            shopSlug,
             ...boatCheck,
             boatSafety,
-            medicalAlertTexts: medicalAlerts.offlineTexts,
+            medicalAlertTexts: reader.medicalAlertTexts,
             locale,
             t,
           })}
@@ -480,7 +469,7 @@ export default async function TripManifestPage({
         tripId={tripId}
         checkpoint={checkpoint}
         summary={manifest.summary}
-        complete={rollCallComplete}
+        complete={completeness.complete}
         t={t}
       />
     </div>

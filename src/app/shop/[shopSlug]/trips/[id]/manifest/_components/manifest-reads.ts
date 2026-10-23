@@ -170,12 +170,16 @@ export async function readManifestPage(
     // The crew's latest word and the run's windows, read together (`stageStripProps`).
     stageStrip: { stage, meetingWindows },
     meetingPoint,
-    // Who may start a report here, and whose owners were alerted (issue #2694).
-    missingDiverReader: {
+    // What this reader may do here: start a report, and whose owners were
+    // alerted (issue #2694); read the medical alerts, and their words for this
+    // reader's own offline copy (issue #2960).
+    reader: {
       mayStartIncidentReport,
       alerted: new Set(
         missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
       ),
+      mayReadMedicalAlerts,
+      medicalAlertTexts: offlineMedicalAlertTexts,
     },
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
@@ -189,6 +193,5 @@ export async function readManifestPage(
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
-    medicalAlerts: { mayRead: mayReadMedicalAlerts, offlineTexts: offlineMedicalAlertTexts },
   };
 }

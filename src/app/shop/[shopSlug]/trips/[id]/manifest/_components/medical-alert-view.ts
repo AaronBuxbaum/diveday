@@ -2,43 +2,37 @@ import type { MedicalAlertResult, MedicalAlertRevealCopy } from "@/components/Me
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { TripManifest } from "@/lib/manifests";
-import { showSeatMedicalAlertAction } from "../medical-alert-action";
 
-/** What a diver row's medical alert block needs, built once for the departure. */
+/** What a diver row's medical alert block needs. */
 export type MedicalAlertView = {
-  /** One seat's bound reveal, for a reader allowed the words on this departure. */
-  show?: (bookingId: string) => () => Promise<MedicalAlertResult>;
+  /** The seat's bound reveal, for a reader allowed the words on this departure. */
+  show?: () => Promise<MedicalAlertResult>;
   /** Said to a reader who may not read it: that one exists, and who can. */
   unreadable: string;
   copy: MedicalAlertRevealCopy;
 };
 
 /**
- * **The medical alert on this manifest, for this reader** (issue #2960). Every
- * staffer sees the chip; `show` is bound only when `canPersonReadMedicalAlertOnTrip`
- * admitted the reader, and each tap re-checks on the server. Others are told
- * who on this departure's crew can read it, by name.
+ * **The medical alert on this row, for this reader** (issue #2960). Every
+ * staffer sees the chip; `show` is bound (`bindManifestActions`) only when
+ * `canPersonReadMedicalAlertOnTrip` admitted the reader, and each tap
+ * re-checks on the server. Others are told who on this departure's crew can
+ * read it, by name.
  */
 export function medicalAlertView({
-  mayRead,
-  shopSlug,
-  tripId,
+  show,
   crew,
   locale,
   t,
 }: {
-  mayRead: boolean;
-  shopSlug: string;
-  tripId: string;
+  show?: () => Promise<MedicalAlertResult>;
   crew: TripManifest["crew"];
   locale: string;
   t: StaffTranslator;
 }): MedicalAlertView {
   const names = crew.map((member) => member.fullName);
   return {
-    show: mayRead
-      ? (bookingId) => showSeatMedicalAlertAction.bind(null, shopSlug, tripId, bookingId)
-      : undefined,
+    show,
     unreadable:
       names.length > 0
         ? t("manifest.medicalAlertReadersCrew", {

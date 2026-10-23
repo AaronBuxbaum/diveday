@@ -9,6 +9,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import type { DiverRowState } from "./diver-row-state";
+import { medicalAlertView } from "./medical-alert-view";
 import { MissingDiverControls } from "./missing-diver-controls";
 import {
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -50,7 +51,7 @@ export function DiverRowPanel({
     missingDiver,
     rollCallButtonCopy,
     rollCallClosed,
-    medicalAlert,
+    showMedicalAlert,
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
@@ -137,16 +138,12 @@ export function DiverRowPanel({
             {t("manifest.medicalAlertHeading")}
           </h3>
           <MedicalAlertReveal
-            show={medicalAlert?.show?.(diver.bookingId)}
-            unreadable={medicalAlert?.unreadable ?? t("manifest.medicalAlertReadersOffline")}
-            copy={
-              medicalAlert?.copy ?? {
-                show: t("manifest.medicalAlertShow"),
-                showing: t("manifest.medicalAlertShowing"),
-                showHint: t("manifest.medicalAlertShowHint"),
-                failed: t("manifest.medicalAlertShowFailed"),
-              }
-            }
+            {...medicalAlertView({
+              show: showMedicalAlert?.(diver.bookingId),
+              crew: context.crew,
+              locale,
+              t,
+            })}
           />
         </section>
       ) : null}

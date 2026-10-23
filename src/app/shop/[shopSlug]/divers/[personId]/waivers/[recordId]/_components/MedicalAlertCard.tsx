@@ -24,7 +24,7 @@ export function MedicalAlertCard({
   show?: () => Promise<MedicalAlertResult>;
   identityHeld: boolean;
   erasedAt: Date | null;
-  signatureMethod: string;
+  signatureMethod: string | null;
   locale: string;
   timezone: string;
   t: StaffTranslator;
