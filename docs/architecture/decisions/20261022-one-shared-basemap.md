@@ -27,17 +27,26 @@ and CARTO now refuses unkeyed requests (#2930). A route is stored as percentages
    OpenStreetMap embed, since it has an address and no coordinates.
 4. **Tests never fetch a tile**: `e2e/fixtures.ts` answers every basemap host with one flat sea
    tile, so CI needs no key and captures do not change when the provider re-renders a coast.
+5. **Place names are vector text when there is a key** (#2943): raster labels blur on a retina
+   screen. With `NEXT_PUBLIC_ARCGIS_API_KEY`, Esri's `arcgis/imagery/labels` vector style draws
+   through MapLibre (`maplibre-gl`, `@maplibre/maplibre-gl-leaflet`, new runtime dependencies
+   loaded only then) between the imagery and the markers; the CSP names its hosts only then. No
+   key, or any MapLibre error, draws the raster labels.
 
 ## Alternatives considered
 
 - **CARTO Voyager with a key** — blue water, still flat; needs a key in every build.
 - **Esri World Ocean Base** — real bathymetry, but sparse past level 13, where routes are drawn.
 - **OpenStreetMap standard tiles** — open, but flat water and a tile policy against app traffic.
+- **Esri's keyed static tiles** for the labels — still raster, still soft.
+- **`esri-leaflet-vector`** — the same layer plus an `esri-leaflet` dependency.
 
 ## Consequences
 
 - One style and one code path for every map; a basemap change is one file.
-- The keyless endpoint carries no usage guarantee; #2943 asks for an ArcGIS Location Platform
-  key, which swaps the URLs in `src/lib/basemap.ts` only.
+- The keyless imagery endpoint carries no usage guarantee; moving the imagery onto the key is
+  a URL change in `src/lib/basemap.ts`.
+- The key is public in the browser; a referrer restriction in the ArcGIS dashboard guards it.
+- CI runs keyless, so vector labels are checked on a deploy with the key.
 - Imagery is darker than the brand surfaces; pins, the shop's stem and the cards carry their own
   light edges.

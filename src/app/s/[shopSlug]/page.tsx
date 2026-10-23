@@ -36,6 +36,7 @@ import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { EmbedFooter } from "./_components/EmbedFooter";
+import { identityBand, monthRailSides } from "./_components/identity-band";
 import { MonthRail } from "./_components/MonthRail";
 import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { MoreWaysRows } from "./_components/MoreWaysRows";
@@ -290,14 +291,11 @@ export default async function SchedulePage({
     hideAboveFilter,
     activeLens,
   });
-  /**
-   * How many panels the identity band has to lay out. Counted rather than
-   * inferred from the rendered children, because a grid wrapper around three
-   * conditionals still draws its own top margin when every one of them is
-   * false — an empty 24px band above the schedule on the commonest shop of
-   * all, the one with no next boat.
-   */
-  const identityPanels = (quiet.quiet ? 1 : 0) + (nextBoat ? 1 : 0);
+  const { identityPanels, panelsBeside, nextBoatFlat } = identityBand(
+    quiet.quiet,
+    !!nextBoat,
+    shop,
+  );
 
   const { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey } = scheduleMonthRail({
     range,
@@ -395,13 +393,13 @@ export default async function SchedulePage({
               phone keeps the stack: one column is all it has. */}
           <div
             className={`min-w-0 flex-1 ${
-              identityPanels > 0
+              panelsBeside
                 ? "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6"
                 : ""
             }`}
           >
             <ShopfrontHero
-              beside={identityPanels > 0}
+              beside={panelsBeside}
               name={shop.name}
               tagline={shop.tagline}
               description={shop.description}
@@ -428,7 +426,11 @@ export default async function SchedulePage({
                 is the reading order it has always been: the quiet, the boat
                 that is out, the next one with space. */}
             {identityPanels > 0 ? (
-              <div className="mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col lg:mt-0 lg:grid-flow-row">
+              <div
+                className={`mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col ${
+                  panelsBeside ? "lg:mt-0 lg:grid-flow-row" : ""
+                }`}
+              >
                 {/* **The quiet, before the boat** (N-45). A shop with nothing on
                     the water for a month leads with that fact rather than with a
                     departure seven weeks out, which a visitor would otherwise have
@@ -456,6 +458,7 @@ export default async function SchedulePage({
                         : undefined
                     }
                     filtered={filteredView}
+                    flat={nextBoatFlat}
                     t={t}
                   />
                 ) : null}
@@ -506,35 +509,24 @@ export default async function SchedulePage({
             </div>
           )}
 
-          {hasUpcoming && !isEmbed && (prevMonthKey || nextMonthKey || explicitMonth) ? (
-            <MonthRail
-              aria-label={t("schedule.monthNav")}
-              month={monthLabel(currentMonth, locale)}
-              previous={
-                prevMonthKey
-                  ? {
-                      href: `${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`,
-                      label: t("schedule.previousMonth"),
-                    }
-                  : null
-              }
-              next={
-                nextMonthKey
-                  ? {
-                      href: `${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`,
-                      label: t("schedule.nextMonth"),
-                    }
-                  : null
-              }
-            />
-          ) : null}
+          {/* The month and its days share one line from `sm` up: stacked,
+              each took a full row of blank before the first boat. */}
+          <div className="sm:flex sm:flex-wrap sm:items-center sm:gap-x-6">
+            {hasUpcoming && !isEmbed && (prevMonthKey || nextMonthKey || explicitMonth) ? (
+              <MonthRail
+                aria-label={t("schedule.monthNav")}
+                month={monthLabel(currentMonth, locale)}
+                {...monthRailSides(shopSlug, prevMonthKey, nextMonthKey, filterSuffix, t)}
+              />
+            ) : null}
 
-          {/* The week's days, one tap from each (UX audit #18): under the
-              month rail, the other date control, and above the lens rail and
-              the filter form, which must stay directly before the list. */}
-          {showsWeekLedger && !isEmbed ? (
-            <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
-          ) : null}
+            {/* The week's days, one tap from each (UX audit #18): under the
+                month rail, the other date control, and above the lens rail and
+                the filter form, which must stay directly before the list. */}
+            {showsWeekLedger && !isEmbed ? (
+              <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
+            ) : null}
+          </div>
 
           {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2
               (issue #1162): the shop's trip tags, as a row

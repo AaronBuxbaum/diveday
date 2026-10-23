@@ -478,7 +478,7 @@ for (const scheme of ["light", "dark"] as const) {
         // only once it is on screen (`MapFrame`), so bring it there first, or
         // the state stays "waiting" and the line never shows. Then back to the
         // top, where every other capture starts.
-        await page.locator("iframe[data-map-state]").first().scrollIntoViewIfNeeded();
+        await page.locator("[data-map-state]").first().scrollIntoViewIfNeeded();
         await page.getByText("is not loading.").waitFor();
         await page.evaluate(() => window.scrollTo(0, 0));
         await capture(page, "dive-site-page", scheme);
