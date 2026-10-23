@@ -64,6 +64,14 @@ export function offlineRecorders({
   setMessage: Dispatch<SetStateAction<string>>;
   reconcile: () => Promise<void>;
 }) {
+  // **A tap is done once it is on this phone.** Each one below asks for a sync
+  // and does not wait for it: on a link that carries nothing a sync takes its
+  // whole deadline, and the row used to sit busy for those ten seconds while
+  // the mark was already safe here (captain review S2). `reconcile` runs one
+  // pass at a time and folds every tap made meanwhile into the next, so a
+  // boat counted back aboard is one POST in flight, not one per name. A row
+  // clears only its own busy mark, never the next row's.
+
   /**
    * Queue one result on this device, for a diver or a crew member. One
    * function, because everything a captain relies on here — the expiry stop
@@ -118,11 +126,11 @@ export function offlineRecorders({
       }
       dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
-      if (navigator.onLine) await reconcile();
+      if (navigator.onLine) void reconcile();
     } catch (error) {
       setMessage(refusalMessage(t, error));
     } finally {
-      setBusyBooking(null);
+      setBusyBooking((busy) => (busy === subjectId ? null : busy));
     }
   }
 
@@ -155,11 +163,11 @@ export function offlineRecorders({
       });
       dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
-      if (navigator.onLine) await reconcile();
+      if (navigator.onLine) void reconcile();
     } catch (error) {
       setMessage(refusalMessage(t, error));
     } finally {
-      setBusyChecklistItem(null);
+      setBusyChecklistItem((busy) => (busy === checklistItemId ? null : busy));
     }
   }
 
@@ -190,11 +198,11 @@ export function offlineRecorders({
       });
       dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
-      if (navigator.onLine) await reconcile();
+      if (navigator.onLine) void reconcile();
     } catch (error) {
       setMessage(refusalMessage(t, error));
     } finally {
-      setBusyArrival(null);
+      setBusyArrival((busy) => (busy === bookingId ? null : busy));
     }
   }
 

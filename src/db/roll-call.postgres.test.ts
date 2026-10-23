@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seatIsHeld } from "@/lib/no-show";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
@@ -11,6 +12,7 @@ import {
   recordRollCall,
 } from "./manifests";
 import { markBookingNoShow } from "./no-show";
+import { CLIENT_EVENT_CONFLICT } from "./offline-replay";
 import { getBookingReadiness } from "./readiness";
 import { bookings, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
@@ -263,5 +265,242 @@ describePostgres("the counter's mark and the crew's tap, racing for a staffer's 
     // are legitimate. Desk first and the boarding takes the seat back; rail
     // first and the mark is refused.
     if (!deskResult.ok) expect(deskResult.reason).toBe("already_boarded");
+  });
+});
+
+/**
+ * **A resent offline sync, overlapping the request it gave up on** (layer 1
+ * review, 2026-10-23: captain S1, auditor S1).
+ *
+ * The device abandons a sync at `SYNC_TIMEOUT_MS` and resends the same
+ * `clientEventId`s; the abandoned request is still running here. The writers
+ * used to ask "is this id recorded?" only before taking the seat lock, while
+ * the first request was still uncommitted. The replay then waited on the lock,
+ * and once it had it the first request's row was the newest one standing: a
+ * replayed `cleared` was refused as `retraction_superseded` (a false
+ * missing-diver alarm the device keeps for good), and a replayed mark failed
+ * on the unique index with a 500.
+ *
+ * **The gate.** A third connection holds the recorder's `people` row
+ * `FOR UPDATE`. The first request inserts its event and then parks on that
+ * row in the insert's own foreign-key check, so its row is written but not
+ * committed, and it holds the trip lock. The replay is started only after
+ * that, and released only once Postgres reports it parked too.
+ */
+const MINUTE_MS = 60_000;
+
+async function firstSeatOnTheReef(db: AppDb) {
+  await seedDemo(db);
+  const shop = await getShopBySlug(db, "blue-mantis");
+  if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
+  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+  if (!reef) throw new Error("demo reef trip missing");
+  const [seat] = await getTripRoster(db, shop.id, reef.id);
+  if (!seat) throw new Error("demo reef trip has nobody on it");
+  const [staff] = await listStaff(db, shop.id);
+  if (!staff) throw new Error("demo staff missing");
+  return {
+    shopId: shop.id,
+    tripId: reef.id,
+    bookingId: seat.booking.id,
+    staffId: staff.person.id,
+    otherTripIds: trips.filter((trip) => trip.id !== reef.id).map((trip) => trip.id),
+  };
+}
+
+/** An offline event's own fields, made a minute apart from a saved copy. */
+function offlineEvent(minutesAfterSave: number) {
+  const savedAt = new Date(nowMs() - 10 * MINUTE_MS);
+  return {
+    source: "offline" as const,
+    clientEventId: crypto.randomUUID(),
+    offlineSnapshotSavedAt: savedAt,
+    occurredAt: new Date(savedAt.getTime() + minutesAfterSave * MINUTE_MS),
+  };
+}
+
+async function rowsCarrying(db: AppDb, clientEventId: string): Promise<number> {
+  const result = await db.execute(
+    sql`select (select count(*) from roll_call_events where client_event_id = ${clientEventId})
+             + (select count(*) from roll_call_crew_events where client_event_id = ${clientEventId})
+             as n`,
+  );
+  const rows = Array.isArray(result)
+    ? result
+    : (result as unknown as { rows: Array<{ n: unknown }> }).rows;
+  return Number(rows[0]?.n);
+}
+
+/** Runs `write` twice over: the first parked after its insert, the replay behind it. */
+async function overlapAReplay<T>(
+  pg: Awaited<ReturnType<typeof postgresTestDb>>,
+  recorderId: string,
+  write: (db: AppDb) => Promise<T>,
+): Promise<[T, T]> {
+  const gate = await holdRowLock(
+    pg,
+    sql`select id from people where id = ${recorderId} for update`,
+  );
+  const first = write(pg.connect());
+  await waitForLockWaiters(pg.db, 1);
+  const replay = write(pg.connect());
+  await waitForLockWaiters(pg.db, 2);
+  await gate.release();
+  return Promise.all([first, replay]);
+}
+
+describePostgres("a resent offline sync overlapping the request it gave up on", () => {
+  it("answers a replayed retraction as a duplicate, never as superseded", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, bookingId, staffId } = await firstSeatOnTheReef(pg.db);
+    const common = { shopId, tripId, bookingId, recordedByPersonId: staffId };
+    const missing = offlineEvent(1);
+    await expect(
+      recordRollCall(pg.db, {
+        ...common,
+        ...missing,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    const found = {
+      ...common,
+      ...offlineEvent(2),
+      status: "cleared" as const,
+      checkpoint: "after_dive_1" as const,
+      retractsClientEventId: missing.clientEventId,
+    };
+
+    const [first, replay] = await overlapAReplay(pg, staffId, (db) => recordRollCall(db, found));
+
+    expect(first).toMatchObject({ ok: true });
+    expect(first.ok && first.duplicate).toBeFalsy();
+    expect(replay).toEqual({ ok: true, eventId: first.ok ? first.eventId : "", duplicate: true });
+    expect(await rowsCarrying(pg.db, found.clientEventId)).toBe(1);
+  });
+
+  it("answers a replayed mark as a duplicate rather than failing the batch", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, bookingId, staffId } = await firstSeatOnTheReef(pg.db);
+    const mark = {
+      shopId,
+      tripId,
+      bookingId,
+      recordedByPersonId: staffId,
+      ...offlineEvent(1),
+      status: "not_boarded" as const,
+      checkpoint: "after_dive_1" as const,
+    };
+
+    const [first, replay] = await overlapAReplay(pg, staffId, (db) => recordRollCall(db, mark));
+
+    expect(first).toMatchObject({ ok: true });
+    expect(replay).toEqual({ ok: true, eventId: first.ok ? first.eventId : "", duplicate: true });
+    expect(await rowsCarrying(pg.db, mark.clientEventId)).toBe(1);
+  });
+
+  it("answers a replayed crew retraction as a duplicate too", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, staffId } = await crewMemberWithASeat(pg.db);
+    const common = { shopId, tripId, personId: staffId, recordedByPersonId: staffId };
+    const missing = offlineEvent(1);
+    await expect(
+      recordCrewRollCall(pg.db, {
+        ...common,
+        ...missing,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    const found = {
+      ...common,
+      ...offlineEvent(2),
+      status: "cleared" as const,
+      checkpoint: "after_dive_1" as const,
+      retractsClientEventId: missing.clientEventId,
+    };
+
+    const [first, replay] = await overlapAReplay(pg, staffId, (db) =>
+      recordCrewRollCall(db, found),
+    );
+
+    expect(first).toMatchObject({ ok: true });
+    expect(replay).toEqual({ ok: true, eventId: first.ok ? first.eventId : "", duplicate: true });
+    expect(await rowsCarrying(pg.db, found.clientEventId)).toBe(1);
+  });
+
+  /**
+   * The last line: a collision on `roll_call_events_shop_client_event_unique`
+   * that no lock lined up. Two seats on two departures share no lock, so the
+   * second request reaches its insert while the first is uncommitted, waits
+   * on the index, and gets 23505 once the first commits. One id on two
+   * subjects is a device bug. Never a 500 that fails the batch, and never a
+   * `duplicate` either: that would mark a tap applied that wrote nothing about
+   * its own seat, which on a missing-diver mark is the quiet direction
+   * (re-review N9). It is refused as a conflict, out loud.
+   */
+  it("refuses a collision on the client-event index from another seat as a conflict", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, bookingId, staffId, otherTripIds } = await firstSeatOnTheReef(pg.db);
+    let elsewhere: { tripId: string; bookingId: string } | undefined;
+    for (const otherTripId of otherTripIds) {
+      const [seat] = await getTripRoster(pg.db, shopId, otherTripId);
+      if (seat) {
+        elsewhere = { tripId: otherTripId, bookingId: seat.booking.id };
+        break;
+      }
+    }
+    if (!elsewhere) throw new Error("no second demo departure with a diver on it");
+    const shared = offlineEvent(1);
+    const mark = (seat: { tripId: string; bookingId: string }) => ({
+      shopId,
+      ...seat,
+      recordedByPersonId: staffId,
+      ...shared,
+      status: "not_boarded" as const,
+      checkpoint: "after_dive_1" as const,
+    });
+    const gate = await holdRowLock(pg, sql`select id from people where id = ${staffId} for update`);
+    const first = recordRollCall(pg.connect(), mark({ tripId, bookingId }));
+    await waitForLockWaiters(pg.db, 1);
+    const second = recordRollCall(pg.connect(), mark(elsewhere));
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(firstResult).toMatchObject({ ok: true });
+    expect(secondResult).toEqual({ ok: false, reason: CLIENT_EVENT_CONFLICT });
+    expect(await rowsCarrying(pg.db, shared.clientEventId)).toBe(1);
+  });
+
+  it("refuses an id already recorded for another seat, before any lock", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, staffId } = await firstSeatOnTheReef(pg.db);
+    const [first, second] = await getTripRoster(pg.db, shopId, tripId);
+    if (!first || !second) throw new Error("demo reef trip needs two divers");
+    const shared = offlineEvent(1);
+    const mark = (bookingId: string) => ({
+      shopId,
+      tripId,
+      bookingId,
+      recordedByPersonId: staffId,
+      ...shared,
+      status: "not_boarded" as const,
+      checkpoint: "after_dive_1" as const,
+    });
+
+    const written = await recordRollCall(pg.db, mark(first.booking.id));
+    const replayedOnAnotherSeat = await recordRollCall(pg.db, mark(second.booking.id));
+    const replayedOnItsOwnSeat = await recordRollCall(pg.db, mark(first.booking.id));
+
+    expect(written).toMatchObject({ ok: true });
+    expect(replayedOnAnotherSeat).toEqual({ ok: false, reason: CLIENT_EVENT_CONFLICT });
+    expect(replayedOnItsOwnSeat).toEqual({
+      ok: true,
+      eventId: written.ok ? written.eventId : "",
+      duplicate: true,
+    });
+    expect(await rowsCarrying(pg.db, shared.clientEventId)).toBe(1);
   });
 });
