@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import type { AppDb } from "./client";
 import { getTripManifest } from "./manifests";
 import {
   medicalAlertForSeat,
@@ -18,6 +19,7 @@ const fileCtx = fileScopedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 
 const alert = "Bee-sting allergy. EpiPen in the blue dry bag.";
+let seq = 0;
 
 /** The demo seat, signed with `medicalAlert`. */
 async function signedWith(medicalAlert: string) {
@@ -125,52 +127,59 @@ describe("the medical alert on the boat (issue #2960)", () => {
 });
 
 /**
- * Domain reviews S3/S4: a fresh link starts from the alert the same person
- * left on their latest signed release here, so re-signing never drops it
- * without the diver seeing it.
+ * Domain reviews S3/S4, security review 2 L-1/L-2: a fresh link never carries
+ * an earlier release's words (the link is a bearer capability that may not be
+ * in the diver's hands). It says only that the person's latest signed release
+ * here carried an alert, so the diver writes it again if it still applies.
  */
 describe("medicalAlertPrefill", () => {
-  async function freshLinkAfterSigning(medicalAlert: string) {
-    const context = await signedWith(medicalAlert);
-    const { db, person } = context;
-    // A new release for the same person, not yet signed: what the shop's
-    // next "Send waiver" opens.
+  /** A new release for the person, not yet signed: what the shop's next "Send waiver" opens. */
+  async function pendingFor(db: AppDb, personId: string) {
     const [signed] = await db
       .select()
       .from(waiverRecords)
-      .where(eq(waiverRecords.personId, person.id));
+      .where(eq(waiverRecords.personId, personId))
+      .limit(1);
     if (!signed) throw new Error("signed record missing");
+    seq += 1;
     const [record] = await db
       .insert(waiverRecords)
       .values({
         shopId: signed.shopId,
         bookingId: null,
-        personId: person.id,
+        personId,
         templateId: signed.templateId,
         templateTitle: signed.templateTitle,
         templateVersion: signed.templateVersion,
         templateGeneration: signed.templateGeneration,
         templateBody: signed.templateBody,
         status: "pending",
-        tokenHash: `prefill-${signed.id}`,
+        tokenHash: `prefill-${seq}-${signed.id}`,
         expiresAt: signed.expiresAt,
       })
       .returning();
     if (!record) throw new Error("fresh record missing");
-    return { ...context, record };
+    return record;
   }
 
-  it("fills a fresh link from the person's latest signed release here that carries one", async () => {
+  async function freshLinkAfterSigning(medicalAlert: string) {
+    const context = await signedWith(medicalAlert);
+    return { ...context, record: await pendingFor(context.db, context.person.id) };
+  }
+
+  it("says the latest signed release here carried an alert, and never carries its words", async () => {
     const { db, record } = await freshLinkAfterSigning(alert);
     expect(record.medicalAlert).toBeNull();
-    expect(await medicalAlertPrefill(db, record)).toEqual({ text: alert, earlier: true });
+    const prefill = await medicalAlertPrefill(db, record);
+    expect(prefill).toEqual({ draft: null, earlierAlert: true });
+    expect(JSON.stringify(prefill)).not.toContain("EpiPen");
   });
 
-  it("prefers the link's own draft, even a blank one the diver saved", async () => {
+  it("prefers the link's own draft, even a blank one the diver saved, and adds no note", async () => {
     const { db, record } = await freshLinkAfterSigning(alert);
     expect(
       await medicalAlertPrefill(db, { ...record, draftMedicalAlert: "Inhaler in my BCD pocket." }),
-    ).toEqual({ text: "Inhaler in my BCD pocket.", earlier: false });
+    ).toEqual({ draft: "Inhaler in my BCD pocket.", earlierAlert: false });
     // A saved draft with the box cleared stays cleared.
     expect(
       await medicalAlertPrefill(db, {
@@ -178,10 +187,43 @@ describe("medicalAlertPrefill", () => {
         draftMedicalAlert: null,
         draftMedicalAnswers: clearAnswers,
       }),
-    ).toEqual({ text: null, earlier: false });
+    ).toEqual({ draft: null, earlierAlert: false });
   });
 
-  it("reads the record's person at render, so a link moved to someone else never shows the first person's alert", async () => {
+  it("reads only the latest signed release: an alert the diver cleared on purpose stays cleared", async () => {
+    const { db, shop, booking, person, template } = await signedWith(alert);
+    await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: `${template.body}\n\nNew terms.`,
+      material: true,
+    });
+    const again = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!again.ok) throw new Error("expected a fresh link");
+    const cleared = await completeWaiver(db, again.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      medicalAlert: "",
+      now: new Date(now.getTime() + 60_000),
+    });
+    if (!cleared.ok) throw new Error(`expected a signature, got ${cleared.reason}`);
+    const pending = await pendingFor(db, person.id);
+    expect(await medicalAlertPrefill(db, pending)).toEqual({ draft: null, earlierAlert: false });
+  });
+
+  it("says nothing on a held seat's link (defense in depth: the page renders no form there)", async () => {
+    const { db, booking, record } = await freshLinkAfterSigning(alert);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now })
+      .where(eq(bookings.id, booking.id));
+    expect(await medicalAlertPrefill(db, { ...record, bookingId: booking.id })).toEqual({
+      draft: null,
+      earlierAlert: false,
+    });
+  });
+
+  it("reads the record's person at render, so a link moved to someone else says nothing", async () => {
     const { db, shop, record } = await freshLinkAfterSigning(alert);
     const [someoneElse] = await db
       .insert(people)
@@ -194,7 +236,6 @@ describe("medicalAlertPrefill", () => {
       .where(eq(waiverRecords.id, record.id));
     const [moved] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
     if (!moved) throw new Error("moved record missing");
-    expect(await medicalAlertPrefill(db, moved)).toEqual({ text: null, earlier: false });
-    expect(JSON.stringify(await medicalAlertPrefill(db, moved))).not.toContain("EpiPen");
+    expect(await medicalAlertPrefill(db, moved)).toEqual({ draft: null, earlierAlert: false });
   });
 });

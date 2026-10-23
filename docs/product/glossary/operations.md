@@ -1621,8 +1621,10 @@
   roll call or count, nobody reviews it, and it is never evidence of fitness to dive or a
   replacement for the questionnaire; the diver page and every staff surface that shows the words
   say so. The alert that counts is the one on the diver's current standing release; signing again
-  replaces it, and the box on a new link starts from the same person's last signed alert at the
-  shop, so a re-signature only drops it if the diver clears it. A paper or imported release carries
+  replaces it. A new link never shows an earlier release's words (the link is a bearer capability):
+  when the same person's latest signed release at the shop carried an alert, the box starts empty
+  and the page says so and asks them to write it again if it still applies; an alert the diver
+  cleared on purpose stays cleared. A paper or imported release carries
   none, and erasure clears it. Every staffer who opens the manifest or roll call sees a "Medical
   alert" chip on the row (the fact). The words are read by an owner or manager, and by crew **a
   manager put on** the departure the diver is booked on: the assignment counts only while the

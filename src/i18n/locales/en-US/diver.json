@@ -1246,7 +1246,7 @@
     "medicalAlertIntroMinor": "Anything the crew should know about {name} if something goes wrong on the boat: an allergy and where the medicine is, diabetes, an inhaler. Leave it blank if there’s nothing.",
     "medicalAlertNotQuestionnaire": "This does not replace the medical questions above. Nobody reviews it to decide who can dive.",
     "medicalAlertReaders": "The shop’s owner, its managers and the crew on your boat can read it; tell the crew at the briefing as well.",
-    "medicalAlertFromEarlier": "From the last waiver signed here. Change it or clear it.",
+    "medicalAlertEarlier": "Your last waiver here had a medical alert for the crew. If it still applies, write it again.",
     "medicalAlertCounterOne": "1 character left",
     "medicalAlertCounterOther": "{count} characters left",
     "medicalAlertLabel": "What the crew should know",

@@ -1246,7 +1246,7 @@
     "medicalAlertIntroMinor": "Lo que la tripulación debe saber sobre {name} si algo sale mal en el barco: una alergia y dónde está su medicamento, diabetes, un inhalador. Déjalo en blanco si no hay nada.",
     "medicalAlertNotQuestionnaire": "Esto no reemplaza las preguntas médicas de arriba. Nadie lo revisa para decidir quién puede bucear.",
     "medicalAlertReaders": "Pueden leerla el propietario del centro, sus gerentes y la tripulación de tu barco; díselo también a la tripulación en el briefing.",
-    "medicalAlertFromEarlier": "Viene de la última exención firmada aquí. Puedes cambiar el texto o borrarlo.",
+    "medicalAlertEarlier": "Tu última exención aquí tenía una alerta médica para la tripulación. Si sigue siendo válida, vuelve a escribirla.",
     "medicalAlertCounterOne": "Queda 1 carácter",
     "medicalAlertCounterOther": "Quedan {count} caracteres",
     "medicalAlertLabel": "Lo que la tripulación debe saber",

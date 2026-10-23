@@ -19,9 +19,11 @@ export const MEDICAL_ALERT_ANCHOR = "medicalAlert";
  * who reads it and to tell the crew at the briefing too, and to leave it
  * blank if there is nothing (a bare "N/A" is stored as none anyway).
  *
- * The box starts from the link's draft or, with none, from the same person's
- * last signed release here (`medicalAlertPrefill`), saying so, so signing
- * again never drops an alert the diver did not see (H-153 amendment).
+ * The box starts from the link's own draft. With none, and when the same
+ * person's latest signed release here carried an alert, it says so and asks
+ * them to write it again if it still applies (`medicalAlertPrefill`), so
+ * signing again never drops an alert unseen. Never the earlier words: the
+ * link is a bearer capability (H-153, security review 2, L-1).
  */
 export function MedicalAlertSection({
   prefill,
@@ -29,8 +31,8 @@ export function MedicalAlertSection({
   error,
   t,
 }: {
-  /** What the box starts with (`medicalAlertPrefill`): a draft, or the last signed alert. */
-  prefill: { text: string | null; earlier: boolean };
+  /** What the box starts with (`medicalAlertPrefill`): the link's draft, and whether the last release here had an alert. */
+  prefill: { draft: string | null; earlierAlert: boolean };
   /** The diver's name on a minor's release, where a guardian is writing about them. */
   minorName: string | null;
   /** The words for a refused box, shown beside it. */
@@ -47,8 +49,8 @@ export function MedicalAlertSection({
       </p>
       <p className="mt-1 text-sm text-muted">{t("waiver.medicalAlertNotQuestionnaire")}</p>
       <p className="mt-1 text-sm text-muted">{t("waiver.medicalAlertReaders")}</p>
-      {prefill.earlier && prefill.text ? (
-        <p className="mt-3 text-sm font-medium">{t("waiver.medicalAlertFromEarlier")}</p>
+      {prefill.earlierAlert ? (
+        <p className="mt-3 text-sm font-medium">{t("waiver.medicalAlertEarlier")}</p>
       ) : null}
       <FieldGrid columns={1} className="mt-4">
         <MedicalAlertBox
@@ -56,7 +58,7 @@ export function MedicalAlertSection({
           label={t("waiver.medicalAlertLabel")}
           hint={t("common.optional")}
           error={error}
-          defaultValue={prefill.text ?? ""}
+          defaultValue={prefill.draft ?? ""}
           counter={{
             one: t.raw("waiver.medicalAlertCounterOne"),
             other: t.raw("waiver.medicalAlertCounterOther"),

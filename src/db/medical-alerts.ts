@@ -205,14 +205,21 @@ export async function medicalAlertForSeat(
 }
 
 /**
- * **What the diver's box starts with on their own waiver page** (domain
- * reviews S3/S4, H-153 amendment): the link's own draft when there is one
+ * **What the diver's box starts with on their own waiver page** (H-153
+ * amendments): the link's own draft when there is one
  * (`draft_medical_answers` set means the diver saved, and a cleared box stays
- * cleared); otherwise the alert on the **same person's** most recent signed
- * release at this shop that carries one, marked `earlier` so the page says
- * where it came from. The person is the record's `person_id` as it reads now,
- * so a link moved to someone else never shows the first person's words. The
- * diver can edit or clear it; clearing signs with nothing, as before.
+ * cleared). Otherwise the box starts empty, and `earlierAlert` says whether
+ * the same person's **latest** signed release at this shop carried an alert,
+ * so the page can tell them to write it again if it still applies.
+ *
+ * Never the earlier words (security review 2, L-1): the link is a bearer
+ * capability that may not be in the diver's hands (a forwarded link, a party
+ * lead signing for someone), the same reason `getEmergencyContactForBearer`
+ * keeps person-level data off it. Only the latest release counts (L-2), so an
+ * alert the diver cleared on purpose stays cleared. The person is the
+ * record's `person_id` as it reads now, so a link moved to someone else says
+ * nothing about the first person. A held seat's page renders no form, and
+ * this says nothing there either, as defense in depth.
  */
 export async function medicalAlertPrefill(
   db: DbExecutor,
@@ -220,15 +227,25 @@ export async function medicalAlertPrefill(
     id: string;
     shopId: string;
     personId: string;
+    bookingId: string | null;
     draftMedicalAlert: string | null;
     draftMedicalAnswers: unknown;
   },
-): Promise<{ text: string | null; earlier: boolean }> {
+): Promise<{ draft: string | null; earlierAlert: boolean }> {
   if (record.draftMedicalAlert !== null || record.draftMedicalAnswers !== null) {
-    return { text: record.draftMedicalAlert, earlier: false };
+    return { draft: record.draftMedicalAlert, earlierAlert: false };
   }
-  const [earlier] = await db
-    .select({ text: waiverRecords.medicalAlert })
+  const nothing = { draft: null, earlierAlert: false };
+  if (record.bookingId) {
+    const [booking] = await db
+      .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt })
+      .from(bookings)
+      .where(and(eq(bookings.id, record.bookingId), eq(bookings.shopId, record.shopId)))
+      .limit(1);
+    if (booking?.identityUnconfirmedAt) return nothing;
+  }
+  const [latest] = await db
+    .select({ hasAlert: sql<boolean>`${waiverRecords.medicalAlert} is not null` })
     .from(waiverRecords)
     .where(
       and(
@@ -236,12 +253,13 @@ export async function medicalAlertPrefill(
         eq(waiverRecords.personId, record.personId),
         ne(waiverRecords.id, record.id),
         isNotNull(waiverRecords.signedAt),
-        isNotNull(waiverRecords.medicalAlert),
+        isNull(waiverRecords.supersededAt),
+        isNull(waiverRecords.anonymizedAt),
       ),
     )
     .orderBy(desc(waiverRecords.signedAt))
     .limit(1);
-  return earlier?.text ? { text: earlier.text, earlier: true } : { text: null, earlier: false };
+  return latest?.hasAlert ? { draft: null, earlierAlert: true } : nothing;
 }
 
 /**

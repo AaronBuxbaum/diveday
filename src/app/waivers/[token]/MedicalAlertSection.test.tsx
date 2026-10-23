@@ -9,7 +9,7 @@ import { WAIVER_FIELD_ERROR } from "./waiver-fields";
 afterEach(cleanup);
 
 const t = diverTranslator("en-US");
-const NONE = { text: null, earlier: false };
+const NONE = { draft: null, earlierAlert: false };
 
 /** Issue #2960: one optional box for the crew, after the questionnaire. */
 describe("MedicalAlertSection", () => {
@@ -31,7 +31,7 @@ describe("MedicalAlertSection", () => {
   it("fills in what Save and finish later kept", () => {
     render(
       <MedicalAlertSection
-        prefill={{ text: "Bee-sting allergy. EpiPen in the blue dry bag.", earlier: false }}
+        prefill={{ draft: "Bee-sting allergy. EpiPen in the blue dry bag.", earlierAlert: false }}
         minorName={null}
         error={undefined}
         t={t}
@@ -40,23 +40,21 @@ describe("MedicalAlertSection", () => {
     expect(screen.getByRole("textbox")).toHaveValue(
       "Bee-sting allergy. EpiPen in the blue dry bag.",
     );
-    expect(screen.queryByText(t("waiver.medicalAlertFromEarlier"))).toBeNull();
+    expect(screen.queryByText(t("waiver.medicalAlertEarlier"))).toBeNull();
   });
 
-  it("starts from the last waiver signed here, and says so, for the diver to keep, change or clear", () => {
+  it("says the last waiver here had an alert, with an empty box and none of its words", () => {
     render(
       <MedicalAlertSection
-        prefill={{ text: "Bee-sting allergy.", earlier: true }}
+        prefill={{ draft: null, earlierAlert: true }}
         minorName={null}
         error={undefined}
         t={t}
       />,
     );
-    const box = screen.getByRole("textbox");
-    expect(box).toHaveValue("Bee-sting allergy.");
-    expect(screen.getByText(t("waiver.medicalAlertFromEarlier"))).toBeInTheDocument();
-    fireEvent.change(box, { target: { value: "" } });
-    expect(box).toHaveValue("");
+    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(screen.getByText(t("waiver.medicalAlertEarlier"))).toBeInTheDocument();
+    expect(t("waiver.medicalAlertEarlier")).toMatch(/write it again/);
   });
 
   it("says who reads it and to tell the crew at the briefing", () => {
@@ -69,7 +67,7 @@ describe("MedicalAlertSection", () => {
   it("counts down to the 500-character limit as the diver types", () => {
     render(
       <MedicalAlertSection
-        prefill={{ text: "Asthma.", earlier: false }}
+        prefill={{ draft: "Asthma.", earlierAlert: false }}
         minorName={null}
         error={undefined}
         t={t}

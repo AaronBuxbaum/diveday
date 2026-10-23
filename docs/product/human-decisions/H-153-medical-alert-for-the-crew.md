@@ -23,6 +23,13 @@ Accepted by the steering thread after the security review and two `dive-domain-e
 - **Who reads.** A crew assignment counts only while the person who made it is a live owner or manager of the shop (security review 2, M-1): crew who rostered themselves, or whom another instructor or divemaster rostered, do not count, and a manager demoted, disabled or removed since stops vouching for what they assigned. Owner and manager read however they got on the roster.
 - **Read events.** At most one `medical_alert_read` per reader, diver and departure in ten minutes; every tap still shows the words.
 
+## Amendment, 2026-10-23: security review 2
+
+Accepted by the steering thread after the second security review of the build.
+
+- **Who reads.** See the first amendment's "Who reads": only an assignment a live owner or manager made counts (M-1).
+- **The diver page never shows an earlier release's words** (L-1, L-2). A waiver link is a bearer capability that may not be in the diver's hands, so it carries no person-level medical text from another record. When the link has no draft and the same person's **latest** signed release at this shop carried an alert, the box starts empty and the page says: their last waiver here had a medical alert for the crew, and to write it again if it still applies. Only the latest release counts, so an alert the diver cleared on purpose stays cleared. The link's own draft still restores as before. A held seat's link says nothing.
+
 Not in this amendment, filed as decisions for the product owner: printing the words (paper keeps the flag and says who can read it in DiveDay), and an emergency logged read for staff who are not on the crew.
 
 ## What ships
