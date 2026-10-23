@@ -272,14 +272,18 @@
   count) and a course session's agency ratio gates enrolment from it (`src/lib/crew-schedule.ts`,
   ADR 20261005-crew-schedule-is-a-setting).
 - **Optional feature** — a feature a shop can switch off on the **Features** page of Settings (`/settings/features`, which also holds the crew schedule, Stripe Tax and the kinds of diving a shop runs): diver reviews, date
-  requests, the last-minute list, tips, "Our year" and the **PADI checks**
-  (`src/lib/shop-features.ts`, one `shops.*_enabled` column each, on for a new shop except "Our
-  year" and the PADI checks, which wait for the shop's own yes). Off hides the feature on every surface that offers it and
-  deletes nothing (ADR 20261005-optional-shop-features). Not every shop switch is one of these:
-  **Hotel pickup** is a service the shop says it runs, off for a new shop.
+  requests, the last-minute list, tips, "Our year", the **PADI checks**, Claude suggestions,
+  recap highlights without a tap, lost and found, gear servicing (work orders), promo codes, dive
+  packages and **Hotel pickup** (`src/lib/shop-features.ts`, one `shops` column each, on for a new
+  shop except hotel pickup). Off hides the feature on every surface that offers it, redirects
+  its staff pages and deletes nothing (ADR 20261005-optional-shop-features).
+- **Feature coverage** — the one answer, per staff destination and per boolean on `shops`, to "is
+  this something a shop could run without?": its Features switch, or `core` with the reason it
+  is not (`src/lib/feature-coverage.ts`). A new destination or column cannot ship unclassified,
+  and a destination tied to a switch that is off leaves the nav, the section tabs and ⌘K.
 - **Hotel pickup** — whether the shop collects divers from where they are staying
-  (`shops.offers_hotel_pickup`, Settings › Dock-day rhythm, off for a new shop; the demo shop has
-  it on). Only when it is on does a diver's `/ready` ask "Want a pickup?" and where they are
+  (`shops.offers_hotel_pickup`, Settings › Features, off for a new shop; the demo shop has
+  it on; off, no surface shows a pickup). Only when it is on does a diver's `/ready` ask "Want a pickup?" and where they are
   staying (`bookings.hotel_pickup_location`, refused by the server otherwise). Staff then set the
   seat's pickup time (`bookings.pickup_time`), and the night-before brief gives that
   time and place instead of the dock arrival time. A **seat move** clears the pickup time.

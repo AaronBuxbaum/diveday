@@ -188,7 +188,8 @@ runs. Pass args directly. The shell guard refuses the bare form.
   answer is recorded once in `src/lib/feature-coverage.ts`: every staff destination (a
   `Record`, so an unclassified one fails typecheck) and every boolean on `shops`
   (`feature-coverage.test.ts` names any it does not know). A destination mapped to a switch
-  leaves the nav, the section tabs and ⌘K while it is off; its page redirects, and every other
+  (or to several, `{ anyOf }`, when one page holds more than one feature) leaves the nav, the
+  section tabs and ⌘K while it is off; its page redirects, and every other
   entry point (Today rows, emails, crons, public pages) reads the same column.
 - **New runtime dependency → ADR** (`pnpm check:adrs`). New domain concept → glossary
   (`pnpm check:glossary`). Invalidated doc → fix in the same PR (`pnpm check:docs`).

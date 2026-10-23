@@ -83,6 +83,30 @@ discount that does not exist.
   flip (its gate fails, so the page did not draw it) exactly as it was. The 2026-10-15 amendment's
   "defaults off" and the "Default off, like the crew schedule" alternative below are history.
 
+- **Amended 2026-10-23 (Aaron: "when you don't use a feature, the rest of the app should adapt";
+  "when we add new features they are considered for the list"): five more switches and a
+  guard.**
+  - `lost_found_enabled`, `work_orders_enabled`, `promo_codes_enabled` and
+    `dive_packages_enabled`, **default true** for every shop, existing ones included, and
+    hotel pickups (`offers_hotel_pickup`, moved here from Dock-day rhythm, **default false**
+    pending the owner's call). The page groups its rows under small headings and keeps one Save.
+  - Off hides every door: the nav, the section tabs, ⌘K, Today's rows, the emails and the cron
+    sends; a staff URL redirects with no error (Lost and found to the schedule, gear servicing to
+    the gear register, Dive packages to Discounts, Discounts to Orders once codes, deals and
+    packages are all off); a diver URL is a 404 (`/packages`). Nothing is deleted.
+  - Gear servicing off stops the ready message and the customer service-due reminders and hides
+    the regulator interval on Rentals; the fleet's own service dates stay, because they are
+    safety. Dive packages off stops selling but keeps redeeming what divers already bought. Promo
+    codes off keeps the booking's code box for a trip's last-minute deal while the last-minute
+    list is on, and refuses a shop-wide code. Hotel pickups off hides the pickup from the roster,
+    Prep, the manifest and every diver page, including one a seat already holds.
+  - **The guard**: `src/lib/feature-coverage.ts` maps every staff destination and every boolean
+    on `shops` to its switch (or to several, `{ anyOf }`, for Money's Discounts tab, which holds
+    three of them) or to `{ core: why }`. A new destination fails typecheck and a new boolean
+    fails `feature-coverage.test.ts` until it is classified, and a destination mapped to a switch
+    leaves every list when the switch is off. The rule is in `.claude/rules/surfaces.md`,
+    `docs/agents/working-rules.md` and the PR template.
+
 ## Alternatives considered
 
 - **One "Features" group in Settings listing every switch.** *Rejected at first, adopted
