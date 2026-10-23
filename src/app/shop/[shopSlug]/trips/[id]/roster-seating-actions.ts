@@ -194,7 +194,13 @@ async function inviteOneDiver(
   }
   let delivery: SeatOfferDelivery | null = null;
   if (interestId) {
-    delivery = await deliverSeatOffer(db, { shopId: s.user.shopId, shopSlug, tripId, interestId });
+    delivery = await deliverSeatOffer(db, {
+      shopId: s.user.shopId,
+      shopSlug,
+      tripId,
+      interestId,
+      initiatedBy: "shop",
+    });
   }
   revalidatePath(guests);
   redirect(

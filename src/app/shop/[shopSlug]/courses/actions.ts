@@ -55,7 +55,13 @@ export async function inviteToCourseSessionAction(shopSlug: string, formData: Fo
   if (outcome.status === "unavailable") redirect(noticeUrl(back, "invite-unavailable"));
   const delivery =
     outcome.status === "created"
-      ? await deliverSeatOffer(db, { shopId, shopSlug, tripId, interestId: outcome.interestId })
+      ? await deliverSeatOffer(db, {
+          shopId,
+          shopSlug,
+          tripId,
+          interestId: outcome.interestId,
+          initiatedBy: "shop",
+        })
       : null;
   revalidatePath(back);
   redirect(

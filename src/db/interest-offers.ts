@@ -173,6 +173,15 @@ export async function deliverSeatOffer(
     sailedStartsAt?: Date;
     /** The deal this offer carries, when it is the blast of one (`offerSeats`). */
     deal?: OfferDeal;
+    /**
+     * `"shop"` when a staffer reached out to this one diver themselves (a
+     * direct invite, the course ladder, the no-show desk's "Email them this
+     * date", a deal blast): the wait-list switch never refuses that, even when
+     * the diver's row is a wait-list ask (`ensureDepartureInterest` reuses it).
+     * Left out, the send is the wait list's own (the nightly roll, the "Who
+     * wants in" offer) and the switch governs it.
+     */
+    initiatedBy?: "shop";
     now?: Date;
   },
   provider?: NotificationProvider,
@@ -180,10 +189,12 @@ export async function deliverSeatOffer(
   const context = await getOfferContext(db, input.shopId, input.tripId, input.interestId);
   if (!context) return "fallback";
   // A diver's wait-list ask (their own, or carried or rolled from another date)
-  // gets no seat offer while the shop's wait list is off (the Features page):
-  // nothing is stamped or sent, whatever page posted it. A date request's reply
-  // and a last-minute list row are their own features'.
+  // gets no seat offer from the wait list while the shop's wait list is off
+  // (the Features page): nothing is stamped or sent. A staffer's own outreach
+  // to the diver is not the wait list's (review 2026-10-23, item 4), and a date
+  // request's reply and a last-minute list row are their own features'.
   if (
+    input.initiatedBy !== "shop" &&
     context.interest.askedBy === "diver" &&
     (context.parentScope === null || context.parentScope === "departure") &&
     !context.shop.waitlistEnabled
@@ -473,7 +484,13 @@ async function deliverTargets(
       interestId,
       delivery: await deliverSeatOffer(
         db,
-        { ...input, interestId: row, ...(carried ? { deal: carried.deal } : {}) },
+        {
+          ...input,
+          interestId: row,
+          // A deal is the shop's own blast; without one, this is the "Who
+          // wants in" offer, the wait list's send.
+          ...(carried ? { deal: carried.deal, initiatedBy: "shop" as const } : {}),
+        },
         provider,
       ),
     });
@@ -1005,6 +1022,7 @@ export async function offerDepartureToDiver(
       shopSlug: input.shopSlug,
       tripId: input.tripId,
       interestId: interest.interestId,
+      initiatedBy: "shop",
     },
     provider,
   );

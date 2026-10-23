@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import {
   createDiveSite,
@@ -9,7 +10,7 @@ import {
   updateDiveSiteForForm,
 } from "./dive-sites";
 import { upsertExecutedDive } from "./executed-dives";
-import { deliverSeatOffer } from "./interest-offers";
+import { deliverSeatOffer, offerDepartureToDiver } from "./interest-offers";
 import { askForDeparture } from "./interests";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import {
@@ -324,6 +325,43 @@ describe("wait list switched off", () => {
       .from(interests)
       .where(eq(interests.id, joined.interestId));
     expect(row?.offeredAt).toBeNull();
+  });
+
+  it("still lets a staffer email a waiting diver this date themselves", async () => {
+    // Review 2026-10-23, item 4: the direct invite and the no-show desk's
+    // "Email them this date" reuse the diver's wait-list row; the switch
+    // governs the wait list's own sends, never a staffer's outreach.
+    const { db, shop, trip } = await fullBoat();
+    const joined = await askForDeparture(db, ask(shop.id, trip.id, "wren-direct@example.com"));
+    if (!joined.ok) throw new Error("join failed");
+    await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
+    await db.update(trips).set({ capacity: 2 }).where(eq(trips.id, trip.id));
+    const [waiting] = await db
+      .select({ personId: interests.personId })
+      .from(interests)
+      .where(eq(interests.id, joined.interestId));
+    const [staff] = await listStaff(db, shop.id);
+    if (!waiting?.personId || !staff) throw new Error("fixture missing");
+    const email = fakeEmail();
+
+    expect(
+      await offerDepartureToDiver(
+        db,
+        {
+          shopId: shop.id,
+          shopSlug: shop.slug,
+          tripId: trip.id,
+          personId: waiting.personId,
+          createdByPersonId: staff.person.id,
+        },
+        email.provider,
+      ),
+    ).toBe("sent");
+    const [row] = await db
+      .select({ offeredAt: interests.offeredAt })
+      .from(interests)
+      .where(eq(interests.id, joined.interestId));
+    expect(row?.offeredAt).not.toBeNull();
   });
 });
 
