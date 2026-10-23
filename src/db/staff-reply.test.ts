@@ -1,10 +1,12 @@
+import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { getInboundMessage, personThread, recordInboundMessage } from "./inbound-messages";
 import { inboundMessages, people, personRoles, staffReplies } from "./schema";
-import { sendStaffReply } from "./staff-reply";
+import { sendStaffReply, sendWhatsAppReopen } from "./staff-reply";
+import { connectShopWhatsAppAccount } from "./whatsapp-accounts";
 
 /**
  * What a reply promises (ADR 20260907-two-way-inbox, decision 6): it goes out
@@ -421,5 +423,154 @@ describe("what cannot be answered", () => {
         now: NOW,
       }),
     ).toEqual({ status: "refused", reason: "whatsapp_not_connected" });
+  });
+});
+
+describe("asking a diver to write back on WhatsApp", () => {
+  const key = randomBytes(32);
+  const HOUR = 60 * 60 * 1000;
+
+  function metaFetch() {
+    return vi
+      .fn()
+      .mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ messages: [{ id: "wamid.ASK" }] }), { status: 200 }),
+      );
+  }
+
+  async function staleWhatsApp(hoursAgo = 30) {
+    const context = await shopContext();
+    const recorded = await recordInboundMessage(context.db, {
+      senderAuthenticated: true,
+      shopId: context.shop.id,
+      channel: "whatsapp",
+      fromAddress: context.diver.phone,
+      body: "Do you rent 5mm suits?",
+      receivedAt: new Date(NOW.getTime() - hoursAgo * HOUR),
+      providerMessageId: `wa-${hoursAgo}`,
+    });
+    if (recorded.status !== "recorded") throw new Error("seed message not recorded");
+    return { ...context, messageId: recorded.id };
+  }
+
+  async function connect(shopId: string) {
+    const db = ctx.db;
+    const connected = await connectShopWhatsAppAccount(
+      db,
+      {
+        shopId,
+        phoneNumberId: "1234567890",
+        accessToken: "EAAG-shop-access-token",
+        templateName: "diveday_courtesy_update",
+        templateLanguage: "en_US",
+      },
+      { key },
+    );
+    if (connected.status !== "connected") throw new Error("account not connected");
+  }
+
+  it("sends a fixed sentence through the approved template, and leaves the message waiting", async () => {
+    const { db, shop, diver, staff, messageId } = await staleWhatsApp();
+    await db.update(people).set({ locale: "es-ES" }).where(eq(people.id, diver.id));
+    await connect(shop.id);
+    const fetchImpl = metaFetch();
+
+    const result = await sendWhatsAppReopen(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      messageId,
+      message: "answer_ready",
+      sentByPersonId: staff.id,
+      now: NOW,
+      whatsApp: { key, fetchImpl },
+    });
+
+    expect(result.status).toBe("sent");
+    const request = JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body));
+    expect(request.type).toBe("template");
+    expect(request.template.name).toBe("diveday_courtesy_update");
+    expect(request.template.components[0].parameters[1].text).toBe(
+      "Tenemos respuesta a tu mensaje. Contesta aquí y te la enviamos.",
+    );
+    const message = await getInboundMessage(db, shop.id, messageId);
+    expect(message?.answeredAt).toBeNull();
+    const [reply] = await db
+      .select()
+      .from(staffReplies)
+      .where(eq(staffReplies.inboundMessageId, messageId));
+    expect(reply).toMatchObject({ channel: "whatsapp", status: "sent", sentByPersonId: staff.id });
+  });
+
+  it("asks once per silence", async () => {
+    const { db, shop, diver, staff, messageId } = await staleWhatsApp();
+    await connect(shop.id);
+    const input = {
+      shopId: shop.id,
+      personId: diver.id,
+      messageId,
+      message: "question" as const,
+      sentByPersonId: staff.id,
+      now: NOW,
+      whatsApp: { key, fetchImpl: metaFetch() },
+    };
+    expect((await sendWhatsAppReopen(db, input)).status).toBe("sent");
+    expect(await sendWhatsAppReopen(db, { ...input, now: new Date(NOW.getTime() + HOUR) })).toEqual(
+      { status: "refused", reason: "already_asked" },
+    );
+  });
+
+  it("sends a typed reply inside the window to the diver's number", async () => {
+    const { db, shop, diver, staff, messageId } = await staleWhatsApp(2);
+    await connect(shop.id);
+    const fetchImpl = metaFetch();
+    const result = await sendStaffReply(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      messageId,
+      body: "We do, in every size.",
+      sentByPersonId: staff.id,
+      now: NOW,
+      whatsApp: { key, fetchImpl },
+    });
+    expect(result.status).toBe("sent");
+    const request = JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body));
+    expect(request).toMatchObject({ type: "text", text: { body: "We do, in every size." } });
+  });
+
+  it("refuses while a typed reply can still go", async () => {
+    const { db, shop, diver, staff, messageId } = await staleWhatsApp(2);
+    await connect(shop.id);
+    expect(
+      await sendWhatsAppReopen(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        messageId,
+        message: "follow_up",
+        sentByPersonId: staff.id,
+        now: NOW,
+        whatsApp: { key, fetchImpl: metaFetch() },
+      }),
+    ).toEqual({ status: "refused", reason: "whatsapp_window_open" });
+  });
+
+  it("refuses a shop with no WhatsApp sender, and an email message", async () => {
+    const { db, shop, diver, staff, messageId } = await staleWhatsApp();
+    const input = {
+      shopId: shop.id,
+      personId: diver.id,
+      message: "follow_up" as const,
+      sentByPersonId: staff.id,
+      now: NOW,
+    };
+    expect(await sendWhatsAppReopen(db, { ...input, messageId })).toEqual({
+      status: "refused",
+      reason: "whatsapp_not_connected",
+    });
+    const emailId = await inboundEmail(db, shop.id, diver.email);
+    expect(await sendWhatsAppReopen(db, { ...input, messageId: emailId })).toEqual({
+      status: "refused",
+      reason: "message_not_found",
+    });
   });
 });

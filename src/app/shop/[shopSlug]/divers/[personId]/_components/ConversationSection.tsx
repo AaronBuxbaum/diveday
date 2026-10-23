@@ -6,17 +6,28 @@ import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, textareaClassFor } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { ThreadEntry } from "@/db/inbound-messages";
+import { diverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import {
   inboxMessageAnchor,
   REPLY_BODY_MAX_LENGTH,
   replyDestination,
+  WHATSAPP_REOPEN_MESSAGES,
+  type WhatsAppReopenMessage,
+  whatsAppReopenSentAt,
   whatsAppReplyWindowOpen,
 } from "@/lib/inbox";
-import { replyToDiverAction } from "../details-actions";
+import { reopenWhatsAppAction, replyToDiverAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+
+/** Where each approved ask's words live in the diver bundle. */
+const REOPEN_MESSAGE_KEY = {
+  answer_ready: "notifications.whatsappReopen.answerReady",
+  question: "notifications.whatsappReopen.question",
+  follow_up: "notifications.whatsappReopen.followUp",
+} as const satisfies Record<WhatsAppReopenMessage, string>;
 
 /** The reply box's id, for the assists that fill it. */
 const REPLY_FIELD_ID = "reply-body";
@@ -47,10 +58,11 @@ export type ConversationAssist = {
  *
  * The composer answers **the diver's latest message**, in the channel it came
  * on, because that is the thread the answer belongs to and the address the
- * shop knows reaches them. Outside Meta's 24-hour window it is replaced by the
- * one sentence that explains why: a WhatsApp business account may not open a
- * conversation with free text, and a composer that took the words and refused
- * them afterwards would be worse than not offering them.
+ * shop knows reaches them. Outside Meta's 24-hour window it is replaced by
+ * why (a WhatsApp business account may not open a conversation with free text,
+ * and a composer that took the words and refused them afterwards would be
+ * worse than not offering them) and by what to do instead: the approved asks
+ * that bring the diver back, each button reading the words the diver gets.
  */
 export function ConversationSection({
   entries,
@@ -108,6 +120,21 @@ export function ConversationSection({
   // Nothing to answer *on*: SMS is recorded and cannot be answered yet, and a
   // closed WhatsApp window is the case worth a sentence.
   const closedWhatsApp = Boolean(latest && latest.message.channel === "whatsapp" && !whatsAppOpen);
+  const reopenSentAt = closedWhatsApp
+    ? whatsAppReopenSentAt(
+        latestWhatsApp?.message.receivedAt ?? null,
+        entries.flatMap((entry) =>
+          entry.direction === "outbound" &&
+          entry.reply.channel === "whatsapp" &&
+          entry.reply.status === "sent"
+            ? [entry.reply.sentAt]
+            : [],
+        ),
+      )
+    : null;
+  // The asks read in the staffer's language; the diver gets the same sentence
+  // in theirs.
+  const reopenWords = diverTranslator(locale);
 
   return (
     <DiverFileGroupDisclosure
@@ -256,8 +283,43 @@ export function ConversationSection({
             // Before the WhatsApp arm on purpose: a removed diver on a stale
             // thread gets the removal sentence, which is the truer of the two.
             <p className="text-sm text-muted">{t("inbox.reply.diverRemoved")}</p>
-          ) : closedWhatsApp ? (
-            <p className="text-sm text-muted">{t("inbox.reply.windowClosed")}</p>
+          ) : closedWhatsApp && latest ? (
+            <div className="grid gap-3">
+              <p className="text-sm text-muted">
+                {t("inbox.reply.windowClosed", { name: diverName })}
+              </p>
+              {reopenSentAt ? (
+                <p className="text-sm">
+                  {t("inbox.reply.reopenSent", {
+                    name: diverName,
+                    date: formatDateTimeTz(reopenSentAt, locale, timezone),
+                  })}
+                </p>
+              ) : (
+                <form
+                  action={reopenWhatsAppAction.bind(null, shopSlug, personId)}
+                  className="grid gap-2"
+                >
+                  <input type="hidden" name="messageId" value={latest.message.id} />
+                  <p className="text-sm">{t("inbox.reply.reopenLead", { name: diverName })}</p>
+                  {WHATSAPP_REOPEN_MESSAGES.map((message) => (
+                    <SubmitButton
+                      key={message}
+                      name="message"
+                      value={message}
+                      pendingLabel={t("inbox.reply.sending")}
+                      className={buttonClass({
+                        variant: "secondary",
+                        size: "sm",
+                        className: "h-auto justify-self-start whitespace-normal py-2 text-start",
+                      })}
+                    >
+                      {reopenWords(REOPEN_MESSAGE_KEY[message])}
+                    </SubmitButton>
+                  ))}
+                </form>
+              )}
+            </div>
           ) : null}
           {/* A booking ask in the latest message, read into the call form for
               a staffer to check: the request is recorded there, not here. */}

@@ -10,17 +10,20 @@
  * - `external_http_disabled`: `DIVEDAY_DISABLE_EXTERNAL_HTTP=1`, which
  *   Playwright sets fleet-wide, so every browser test runs dark.
  * - `shop_off`: the shop switched "Claude suggestions" off in Features.
- * - `demo_shop`: a demo tenant. Anyone can mint one from the public demo
- *   door, so a per-shop cap would be no cap at all: each visitor would get a
- *   fresh $15 of somebody else's money.
- * - `over_cap`: the shop's spend this UTC calendar month reached its cap.
+ * - `over_cap`: the shop's spend this UTC calendar month reached its cap. A
+ *   demo tenant's cap is the small demo one (`DEFAULT_DEMO_SHOP_MONTHLY_CAP_USD`).
+ * - `demo_over_cap`: a demo tenant, and every demo together spent the demo
+ *   allowance this month. Anyone can mint a demo from the public demo door,
+ *   so a per-shop cap alone would be no cap at all: each visitor would get a
+ *   fresh allowance of somebody else's money. Demos were dark outright until
+ *   Aaron lit them under this shared allowance (2026-10-23).
  */
 export const ASSIST_DARK_REASONS = [
   "no_key",
   "external_http_disabled",
   "shop_off",
-  "demo_shop",
   "over_cap",
+  "demo_over_cap",
 ] as const;
 export type AssistDarkReason = (typeof ASSIST_DARK_REASONS)[number];
 
@@ -32,7 +35,11 @@ export type AssistConditions = {
   readonly shopIsDemo?: boolean;
   /** The shop's recorded spend this calendar month. */
   readonly spentMicroUsd: number;
+  /** The shop's own cap: the demo one for a demo tenant. */
   readonly capMicroUsd: number;
+  /** Every demo tenant's spend this calendar month; read only for a demo. */
+  readonly demoSpentMicroUsd?: number;
+  readonly demoCapMicroUsd?: number;
 };
 
 /** Why the assist is dark, or null when it may run. */
@@ -40,12 +47,19 @@ export function assistDarkReason(conditions: AssistConditions): AssistDarkReason
   if (!conditions.hasKey) return "no_key";
   if (conditions.externalHttpDisabled) return "external_http_disabled";
   if (!conditions.shopEnabled) return "shop_off";
-  if (conditions.shopIsDemo) return "demo_shop";
-  const spent = conditions.spentMicroUsd;
-  // A spend we could not read is not a spend of zero: the cap fails closed.
-  if (!Number.isFinite(spent) || spent < 0) return "over_cap";
-  if (spent >= conditions.capMicroUsd) return "over_cap";
+  // A spend we could not read is not a spend of zero: each cap fails closed.
+  if (spentOrOver(conditions.spentMicroUsd, conditions.capMicroUsd)) return "over_cap";
+  if (
+    conditions.shopIsDemo &&
+    spentOrOver(conditions.demoSpentMicroUsd ?? Number.NaN, conditions.demoCapMicroUsd ?? 0)
+  ) {
+    return "demo_over_cap";
+  }
   return null;
+}
+
+function spentOrOver(spent: number, cap: number): boolean {
+  return !Number.isFinite(spent) || spent < 0 || spent >= cap;
 }
 
 /**
@@ -56,6 +70,39 @@ export function assistDarkReason(conditions: AssistConditions): AssistDarkReason
 export const DEFAULT_SHOP_MONTHLY_CAP_USD = 15;
 
 /**
+ * A demo tenant's own monthly cap, in USD: enough for a visitor to try a few
+ * drafts and a card scan, small enough that one visitor cannot empty the
+ * allowance every demo shares.
+ */
+export const DEFAULT_DEMO_SHOP_MONTHLY_CAP_USD = 1;
+
+/** What every demo tenant together may spend in a month, in USD. */
+export const DEFAULT_DEMO_MONTHLY_CAP_USD = 10;
+
+function capFromEnv(raw: string | undefined, fallbackUsd: number): number {
+  const trimmed = raw?.trim();
+  const parsed = trimmed && /^\d+(\.\d+)?$/.test(trimmed) ? Number(trimmed) : Number.NaN;
+  return Math.round((Number.isFinite(parsed) ? parsed : fallbackUsd) * 1_000_000);
+}
+
+/** A demo tenant's own cap in micro-USD, overridden by `DIVEDAY_CLAUDE_DEMO_SHOP_MONTHLY_CAP_USD`. */
+export function demoShopMonthlyCapMicroUsd(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): number {
+  return capFromEnv(
+    env.DIVEDAY_CLAUDE_DEMO_SHOP_MONTHLY_CAP_USD,
+    DEFAULT_DEMO_SHOP_MONTHLY_CAP_USD,
+  );
+}
+
+/** Every demo's shared cap in micro-USD, overridden by `DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD`. */
+export function demoMonthlyCapMicroUsd(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): number {
+  return capFromEnv(env.DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD, DEFAULT_DEMO_MONTHLY_CAP_USD);
+}
+
+/**
  * The cap in micro-USD, overridden for every shop by
  * `DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD` (dollars); an override that is not a
  * plain non-negative number is ignored.
@@ -63,10 +110,7 @@ export const DEFAULT_SHOP_MONTHLY_CAP_USD = 15;
 export function shopMonthlyCapMicroUsd(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): number {
-  const raw = env.DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD?.trim();
-  const parsed = raw && /^\d+(\.\d+)?$/.test(raw) ? Number(raw) : Number.NaN;
-  const usd = Number.isFinite(parsed) ? parsed : DEFAULT_SHOP_MONTHLY_CAP_USD;
-  return Math.round(usd * 1_000_000);
+  return capFromEnv(env.DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD, DEFAULT_SHOP_MONTHLY_CAP_USD);
 }
 
 /** True when this process must not call Claude (the same switch every provider seam honours). */

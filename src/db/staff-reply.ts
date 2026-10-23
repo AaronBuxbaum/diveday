@@ -1,15 +1,28 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
-import { type InboundChannel, REPLY_BODY_MAX_LENGTH, whatsAppReplyWindowOpen } from "@/lib/inbox";
+import {
+  type InboundChannel,
+  REPLY_BODY_MAX_LENGTH,
+  replyDestination,
+  WHATSAPP_REPLY_WINDOW_MS,
+  type WhatsAppReopenMessage,
+  whatsAppReopenSentAt,
+  whatsAppReplyWindowOpen,
+} from "@/lib/inbox";
 import { log } from "@/lib/log";
 import type { NotificationProvider } from "@/lib/notifications";
 import { recipientLocale, threadableMessageId } from "@/lib/notifications/kinds";
 import type { AppDb } from "./client";
 import { getInboundMessage, lastInboundAt, recordStaffReply } from "./inbound-messages";
 import { sendNotification } from "./notifications";
-import { people, shops } from "./schema";
-import { getShopWhatsAppAccount, whatsAppTextSenderForAccount } from "./whatsapp-accounts";
+import { people, shops, staffReplies } from "./schema";
+import {
+  getShopWhatsAppAccount,
+  type WhatsAppSenderOptions,
+  whatsAppProviderForAccount,
+  whatsAppTextSenderForAccount,
+} from "./whatsapp-accounts";
 
 /**
  * **Answering a diver** — the one consequence path behind the reply composer
@@ -51,6 +64,8 @@ export type SendStaffReplyInput = {
   now?: Date;
   /** Tests inject a fake; production resolves SES from the environment. */
   provider?: NotificationProvider;
+  /** Tests supply a key and a fake fetch; production reads the environment. */
+  whatsApp?: WhatsAppSenderOptions;
 };
 
 /**
@@ -184,9 +199,14 @@ export async function sendStaffReply(
       return { status: "refused", reason: "whatsapp_window_closed" };
     }
     const account = await getShopWhatsAppAccount(db, input.shopId);
-    const sender = account ? whatsAppTextSenderForAccount(account) : null;
+    const sender = account ? whatsAppTextSenderForAccount(account, input.whatsApp) : null;
     if (!sender) return { status: "refused", reason: "whatsapp_not_connected" };
-    const delivery = await sender.sendText({ to: message.fromAddress, body });
+    // Stored digits-only; the sender dials only an E.164 number, so the `+`
+    // goes back first or every reply fails as `invalid_recipient`.
+    const delivery = await sender.sendText({
+      to: replyDestination("whatsapp", message.fromAddress),
+      body,
+    });
     await recordStaffReply(db, {
       ...common,
       delivery:
@@ -272,4 +292,171 @@ export async function sendStaffReply(
     replyId,
     reason: delivery.status === "not_configured" ? "not_configured" : "send_failed",
   };
+}
+
+/**
+ * How long the one Meta call behind an ask may take. It runs under the
+ * diver's lock, which holds a pooled connection, so it is bounded the way the
+ * signup's Graph calls are (`GRAPH_REQUEST_TIMEOUT_MS`).
+ */
+const REOPEN_SEND_TIMEOUT_MS = 10_000;
+
+/** The diver-bundle key each approved ask is written under. */
+const REOPEN_MESSAGE_KEY = {
+  answer_ready: "notifications.whatsappReopen.answerReady",
+  question: "notifications.whatsappReopen.question",
+  follow_up: "notifications.whatsappReopen.followUp",
+} as const satisfies Record<WhatsAppReopenMessage, string>;
+
+export type SendWhatsAppReopenInput = {
+  shopId: string;
+  personId: string;
+  /** The WhatsApp message the diver is waiting on an answer to. */
+  messageId: string;
+  message: WhatsAppReopenMessage;
+  sentByPersonId: string;
+  now?: Date;
+  /** Tests supply a key and a fake fetch; production reads the environment. */
+  whatsApp?: WhatsAppSenderOptions;
+};
+
+/**
+ * Why an ask did not go. `whatsapp_window_open` is the composer's business,
+ * not this one's: a diver who has written in the last day gets a typed answer.
+ */
+export type SendWhatsAppReopenRefusal =
+  | "message_not_found"
+  | "whatsapp_window_open"
+  | "already_asked"
+  | "whatsapp_not_connected";
+
+export type SendWhatsAppReopenResult =
+  | { status: "sent"; replyId: string }
+  | { status: "refused"; reason: SendWhatsAppReopenRefusal }
+  | { status: "failed"; replyId: string };
+
+/**
+ * **Ask a diver to write back on WhatsApp**, once Meta's 24-hour window has
+ * closed and a typed answer can no longer go.
+ *
+ * The words are one of {@link REOPEN_MESSAGE_KEY}'s fixed sentences in the
+ * diver's language, carried by the shop's approved courtesy template, the same
+ * one trip reminders use. When the diver answers, their message opens a fresh
+ * window and the composer is back.
+ *
+ * Recorded like any reply, so the thread shows what was sent, but it **does
+ * not answer** the diver's message: they are still waiting on the real
+ * answer. One ask per silence ({@link whatsAppReopenSentAt}).
+ */
+export async function sendWhatsAppReopen(
+  db: AppDb,
+  input: SendWhatsAppReopenInput,
+): Promise<SendWhatsAppReopenResult> {
+  const message = await getInboundMessage(db, input.shopId, input.messageId);
+  if (!message || message.personId !== input.personId || message.channel !== "whatsapp") {
+    return { status: "refused", reason: "message_not_found" };
+  }
+  const [shop] = await db
+    .select({ name: shops.name, defaultLocale: shops.defaultLocale })
+    .from(shops)
+    .where(eq(shops.id, input.shopId))
+    .limit(1);
+  const [person] = await db
+    .select({ locale: people.locale })
+    .from(people)
+    .where(
+      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
+    )
+    .limit(1);
+  if (!shop || !person) return { status: "refused", reason: "message_not_found" };
+
+  const now = input.now ?? nowDate();
+  // One ask per silence holds under a double tap or two staffers at once: the
+  // check, the send and the record happen under one lock on this diver. The
+  // send is bounded (one attempt, {@link REOPEN_SEND_TIMEOUT_MS}) because the
+  // lock holds a pooled connection; a failed ask does not count, so the
+  // staffer simply presses again.
+  const outcome = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('whatsapp_reopen'), hashtext(${`${input.shopId}:${input.personId}`}))`,
+    );
+    const lastAt = await lastInboundAt(tx, input.shopId, input.personId, "whatsapp");
+    if (whatsAppReplyWindowOpen(lastAt, now)) {
+      return { status: "refused", reason: "whatsapp_window_open" } as const;
+    }
+    if (lastAt) {
+      const sentSince = await tx
+        .select({ sentAt: staffReplies.sentAt })
+        .from(staffReplies)
+        .where(
+          and(
+            eq(staffReplies.shopId, input.shopId),
+            eq(staffReplies.personId, input.personId),
+            eq(staffReplies.channel, "whatsapp"),
+            eq(staffReplies.status, "sent"),
+            isNull(staffReplies.deletedAt),
+            gte(staffReplies.sentAt, new Date(lastAt.getTime() + WHATSAPP_REPLY_WINDOW_MS)),
+          ),
+        );
+      if (
+        whatsAppReopenSentAt(
+          lastAt,
+          sentSince.map((row) => row.sentAt),
+        )
+      ) {
+        return { status: "refused", reason: "already_asked" } as const;
+      }
+    }
+
+    const account = await getShopWhatsAppAccount(tx, input.shopId);
+    const baseFetch = input.whatsApp?.fetchImpl ?? fetch;
+    const provider = account
+      ? whatsAppProviderForAccount(account, {
+          ...input.whatsApp,
+          fetchImpl: (url, init) =>
+            baseFetch(url, { ...init, signal: AbortSignal.timeout(REOPEN_SEND_TIMEOUT_MS) }),
+          providerOptions: { ...input.whatsApp?.providerOptions, maxAttempts: 1 },
+        })
+      : null;
+    if (!provider) return { status: "refused", reason: "whatsapp_not_connected" } as const;
+
+    const locale = recipientLocale(person.locale, shop.defaultLocale);
+    const body = diverTranslator(locale)(REOPEN_MESSAGE_KEY[input.message]);
+    const replyId = crypto.randomUUID();
+    const delivery = await provider.send({
+      to: replyDestination("whatsapp", message.fromAddress),
+      body,
+      shopName: shop.name,
+    });
+    await recordStaffReply(tx, {
+      id: replyId,
+      shopId: input.shopId,
+      personId: input.personId,
+      inboundMessageId: message.id,
+      channel: "whatsapp",
+      toAddress: message.fromAddress,
+      body,
+      locale,
+      sentByPersonId: input.sentByPersonId,
+      marksAnswered: false,
+      sentAt: now,
+      delivery:
+        delivery.status === "sent"
+          ? { status: "sent", providerMessageId: delivery.providerMessageId }
+          : delivery.status === "not_configured"
+            ? { status: "not_configured" }
+            : { status: "failed", errorCode: delivery.errorCode, detail: delivery.detail },
+    });
+    return { status: "attempted", replyId, delivery } as const;
+  });
+  if (outcome.status === "refused") return outcome;
+  const { replyId, delivery } = outcome;
+  if (delivery.status === "sent") return { status: "sent", replyId };
+  log("inbox.reopen_send_failed", "warn", {
+    shopId: input.shopId,
+    replyId,
+    status: delivery.status,
+    errorCode: delivery.status === "failed" ? delivery.errorCode : undefined,
+  });
+  return { status: "failed", replyId };
 }

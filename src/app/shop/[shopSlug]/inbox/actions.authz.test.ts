@@ -51,12 +51,8 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  deleteInboxMessageAction,
-  markInboxSenderLateAction,
-  saveReplyNotesAction,
-  setInboxMessageDoneAction,
-} = await import("./actions");
+const { deleteInboxMessageAction, markInboxSenderLateAction, setInboxMessageDoneAction } =
+  await import("./actions");
 
 /** The seeded row from an address nobody on the roster holds (`src/db/seed-inbox.ts`). */
 async function strangerMessageId(db: AppDb, shopId: string): Promise<string> {
@@ -429,44 +425,5 @@ describe("marking a message's sender running late", () => {
       .from(bookings)
       .where(and(eq(bookings.shopId, shop.id), isNotNull(bookings.runningLateAt)));
     expect(anyMark.filter((row) => row.id === other.id)).toEqual([]);
-  });
-});
-
-describe("saving the shop's notes for Claude's reply drafts", () => {
-  async function notesOf(db: AppDb, shopId: string): Promise<string | null> {
-    const [row] = await db
-      .select({ replyNotes: shops.replyNotes })
-      .from(shops)
-      .where(eq(shops.id, shopId));
-    return row?.replyNotes ?? null;
-  }
-
-  function notesForm(notes: string): FormData {
-    const formData = new FormData();
-    formData.set("notes", notes);
-    return formData;
-  }
-
-  it("writes the trimmed words for any staff role, and an empty box clears them", async () => {
-    const { db, shop, captain } = await context();
-    signIn(shop, captain);
-
-    const to = await redirectedTo(() => saveReplyNotesAction(notesForm("  Gate opens at 7:15.  ")));
-    expect(to).toBe(`/shop/${shop.slug}/inbox?notice=notes-saved#reply-notes`);
-    expect(await notesOf(db, shop.id)).toBe("Gate opens at 7:15.");
-
-    await redirectedTo(() => saveReplyNotesAction(notesForm("   ")));
-    expect(await notesOf(db, shop.id)).toBeNull();
-  });
-
-  it("404s a session whose claimed shop is not the acting person's, and writes nothing", async () => {
-    const { db, shop, owner } = await context();
-    const before = await notesOf(db, shop.id);
-    signIn({ id: "00000000-0000-4000-8000-000000000000", slug: "other-shop" }, owner);
-
-    await expect(saveReplyNotesAction(notesForm("Someone else's words"))).rejects.toThrow(
-      "NOT_FOUND",
-    );
-    expect(await notesOf(db, shop.id)).toBe(before);
   });
 });

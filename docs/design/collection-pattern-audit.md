@@ -27,7 +27,7 @@ records the shared grammar.
 | Settings hub and team | Existing settings rows/inset groups and disclosed role/contact controls are the precedent |
 | Profile, dock-day rhythm and rentals | Singleton settings or a fixed catalog matrix with one approved save, rather than independently added records |
 | Billing, connections, security, calendar, import/export and backups | Connection, credential, action or status workflows rather than arbitrary object CRUD |
-| Requests, reviews and inbox | Disposition and responsibility queues; the notes for Claude at the foot of the Inbox are one box, not a collection |
+| Requests, reviews and inbox | Disposition and responsibility queues |
 | Lost-and-found | Shared object rows; creation belongs to the departure that found the item |
 | Waiver/course forms | Versioned legal editors retain their impact warnings and existing disclosed edit/add |
 | FAQs, day-by-day, site landmarks and field guides | Unsaved repeating fields inside one parent document save |

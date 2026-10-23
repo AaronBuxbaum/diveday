@@ -4,6 +4,8 @@ import { e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import {
   type AssistDarkReason,
   assistDarkReason,
+  demoMonthlyCapMicroUsd,
+  demoShopMonthlyCapMicroUsd,
   externalHttpDisabled,
   shopMonthlyCapMicroUsd,
 } from "@/lib/claude/dark";
@@ -23,7 +25,8 @@ import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { periodBounds } from "@/lib/cost-guardrails";
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
-import { claudeUsage, shops } from "./schema";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { claudeDemoSpend, claudeUsage, shops } from "./schema";
 
 /**
  * **Running an assist** (ADR 20261018-claude-assists): the one function every
@@ -44,7 +47,8 @@ import { claudeUsage, shops } from "./schema";
  * the cap, or when {@link MAX_CALLS_IN_FLIGHT} calls for this shop are already
  * out. So N racing calls cannot all pass a check none of them has paid for
  * yet; the overshoot is bounded by how far a real call can exceed its
- * reservation, not by how many calls a client fires at once.
+ * reservation, not by how many calls a client fires at once. A demo tenant
+ * also reserves against the allowance every demo shares, under one more lock.
  *
  * After the call the row is settled to what the call actually cost. A row
  * that is never settled (the process died, the update failed) keeps its
@@ -115,6 +119,49 @@ export async function claudeSpendUsdBetween(db: AppDb, start: Date, end: Date): 
   return Number(row?.total ?? 0) / 1_000_000;
 }
 
+/** The demo ledger's key for the UTC month holding `now`: `YYYY-MM-01`. */
+function demoMonth(now: Date): string {
+  return periodBounds("calendar_month", now).start.toISOString().slice(0, 10);
+}
+
+/**
+ * What every pooled demo together spent this UTC month, in micro-USD, from the
+ * ledger that outlives deleted demos (`claude_demo_spend`).
+ */
+export async function demoClaudeSpendMicroUsd(db: AppDb, now: Date = nowDate()): Promise<number> {
+  const [row] = await db
+    .select({ spent: claudeDemoSpend.spentMicroUsd })
+    .from(claudeDemoSpend)
+    .where(eq(claudeDemoSpend.month, demoMonth(now)))
+    .limit(1);
+  return Number(row?.spent ?? 0);
+}
+
+/**
+ * Whether a shop runs under the demo caps: a minted demo. The canonical demo
+ * (`DEMO_SHOP_SLUG`) is one shop, not a mint, so it keeps a real shop's cap and
+ * stays out of the shared allowance: a visitor who spends the minted demos'
+ * allowance does not turn AI off where everyone looks first.
+ */
+function pooledDemo(shop: { isDemo: boolean; slug: string }): boolean {
+  return shop.isDemo && shop.slug !== DEMO_SHOP_SLUG;
+}
+
+async function shopIsPooledDemo(db: AppDb, shopId: string): Promise<boolean> {
+  const [shop] = await db
+    .select({ isDemo: shops.isDemo, slug: shops.slug })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  // A shop we could not find reserves under the demo allowance: the smaller cap.
+  return shop ? pooledDemo(shop) : true;
+}
+
+/** The shop's own monthly cap: the small demo one for a minted demo. */
+function capFor(isDemo: boolean, env: Readonly<Record<string, string | undefined>>): number {
+  return isDemo ? demoShopMonthlyCapMicroUsd(env) : shopMonthlyCapMicroUsd(env);
+}
+
 /** Why this shop's assists are dark right now, or null when they may run. */
 export async function assistDarkReasonFor(
   db: AppDb,
@@ -138,19 +185,26 @@ export async function assistDarkReasonFor(
   if (early) return early;
 
   const [shop] = await db
-    .select({ enabled: shops.claudeSuggestionsEnabled, isDemo: shops.isDemo })
+    .select({ enabled: shops.claudeSuggestionsEnabled, isDemo: shops.isDemo, slug: shops.slug })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
   if (!shop?.enabled) return "shop_off";
 
+  const now = options.now ?? nowDate();
   return assistDarkReason({
     hasKey,
     externalHttpDisabled: blocked,
     shopEnabled: true,
-    shopIsDemo: shop.isDemo,
-    spentMicroUsd: await shopClaudeSpendMicroUsd(db, shopId, options.now ?? nowDate()),
-    capMicroUsd: shopMonthlyCapMicroUsd(env),
+    shopIsDemo: pooledDemo(shop),
+    spentMicroUsd: await shopClaudeSpendMicroUsd(db, shopId, now),
+    capMicroUsd: capFor(pooledDemo(shop), env),
+    ...(pooledDemo(shop)
+      ? {
+          demoSpentMicroUsd: await demoClaudeSpendMicroUsd(db, now),
+          demoCapMicroUsd: demoMonthlyCapMicroUsd(env),
+        }
+      : {}),
   });
 }
 
@@ -225,6 +279,9 @@ function mayHaveBilled(errorCode: string | undefined): boolean {
  */
 const reservationQueues = new Map<string, Promise<unknown>>();
 
+/** The queue and lock key every demo tenant's reservation shares. */
+const DEMO_QUEUE = "demo-allowance";
+
 function oneAtATime<T>(key: string, run: () => Promise<T>): Promise<T> {
   const previous = reservationQueues.get(key) ?? Promise.resolve();
   const next = previous.then(run, run);
@@ -245,13 +302,34 @@ async function reserveClaudeCall(
   db: AppDb,
   input: { shopId: string; feature: string; model: ClaudeModel; reserve: number; now: Date },
   capMicroUsd: number,
+  /** For a demo tenant, the allowance every demo shares; null for a real shop. */
+  demoCapMicroUsd: number | null,
 ): Promise<string | null> {
-  return oneAtATime(input.shopId, () =>
+  // Every demo reserves through one queue and one lock, taken before the
+  // shop's own, so two demos cannot both fit under the shared allowance. A
+  // real shop never takes it, so the order holds and nothing waits on a demo.
+  const queue = demoCapMicroUsd === null ? input.shopId : DEMO_QUEUE;
+  return oneAtATime(queue, () =>
     db.transaction(async (tx) => {
+      if (demoCapMicroUsd !== null) {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext('claude_usage'), hashtext(${DEMO_QUEUE}))`,
+        );
+      }
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext('claude_usage'), hashtext(${input.shopId}))`,
       );
       const { start, end } = periodBounds("calendar_month", input.now);
+      if (demoCapMicroUsd !== null) {
+        const [ledger] = await tx
+          .select({ spent: claudeDemoSpend.spentMicroUsd })
+          .from(claudeDemoSpend)
+          .where(eq(claudeDemoSpend.month, demoMonth(input.now)));
+        const demoSpent = Number(ledger?.spent ?? 0);
+        if (!Number.isFinite(demoSpent) || demoSpent + input.reserve > demoCapMicroUsd) {
+          return null;
+        }
+      }
       const [month] = await tx
         .select({ total: sql<string | null>`sum(${claudeUsage.costMicroUsd})` })
         .from(claudeUsage)
@@ -286,19 +364,44 @@ async function reserveClaudeCall(
           createdAt: input.now,
         })
         .returning({ id: claudeUsage.id });
+      if (row && demoCapMicroUsd !== null) {
+        await addDemoSpend(tx, demoMonth(input.now), input.reserve);
+      }
       return row?.id ?? null;
     }),
   );
 }
 
-/** Settles a call's row to what it actually cost. */
+/** Adds to the demo ledger's month; a negative amount gives back an over-reservation. */
+async function addDemoSpend(
+  db: AppDb | Parameters<Parameters<AppDb["transaction"]>[0]>[0],
+  month: string,
+  microUsd: number,
+): Promise<void> {
+  if (microUsd === 0) return;
+  await db
+    .insert(claudeDemoSpend)
+    .values({ month, spentMicroUsd: microUsd })
+    .onConflictDoUpdate({
+      target: claudeDemoSpend.month,
+      set: { spentMicroUsd: sql`${claudeDemoSpend.spentMicroUsd} + ${microUsd}` },
+    });
+}
+
+/**
+ * Settles a call's row to what it actually cost, and a minted demo's ledger
+ * month (`demoMonthKey`, null for any other shop) by the same difference.
+ */
 async function settleClaudeUsage(
   db: AppDb,
   usageId: string,
   reserve: number,
   result: StructuredResult<unknown>,
+  demoMonthKey: string | null,
 ): Promise<void> {
   const billedFloor = result.outcome === "error" && mayHaveBilled(result.errorCode) ? reserve : 0;
+  const cost = Math.max(result.costMicroUsd, billedFloor);
+  if (demoMonthKey !== null) await addDemoSpend(db, demoMonthKey, cost - reserve);
   await db
     .update(claudeUsage)
     .set({
@@ -308,7 +411,7 @@ async function settleClaudeUsage(
       cacheWriteTokens: result.usage.cacheWriteTokens,
       cacheReadTokens: result.usage.cacheReadTokens,
       outputTokens: result.usage.outputTokens,
-      costMicroUsd: Math.max(result.costMicroUsd, billedFloor),
+      costMicroUsd: cost,
     })
     .where(eq(claudeUsage.id, usageId));
 }
@@ -357,6 +460,9 @@ export async function runAssistOutcome<S extends z.ZodType>(
     const provider = providerFor(input);
     if (!provider) return skipped;
     const reserve = reservedMicroUsd(input.call);
+    const env = input.env ?? process.env;
+    const isDemo = await shopIsPooledDemo(db, shopId);
+    const now = input.now ?? nowDate();
     const usageId = await reserveClaudeCall(
       db,
       {
@@ -364,16 +470,17 @@ export async function runAssistOutcome<S extends z.ZodType>(
         feature,
         model: CLAUDE_MODELS[input.call.model],
         reserve,
-        now: input.now ?? nowDate(),
+        now,
       },
-      shopMonthlyCapMicroUsd(input.env ?? process.env),
+      capFor(isDemo, env),
+      isDemo ? demoMonthlyCapMicroUsd(env) : null,
     );
     if (!usageId) {
       log("claude_assist.dark", "info", { feature, reason: "over_cap" });
       return skipped;
     }
     const result = await callStructured(provider, input.call);
-    await settleClaudeUsage(db, usageId, reserve, result);
+    await settleClaudeUsage(db, usageId, reserve, result, isDemo ? demoMonth(now) : null);
     log("claude_assist.call", result.outcome === "error" ? "warn" : "info", {
       feature,
       model: result.model,

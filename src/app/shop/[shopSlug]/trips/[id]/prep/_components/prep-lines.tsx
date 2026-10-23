@@ -236,14 +236,26 @@ export const sizeCell = (t: StaffTranslator, piece: PrepPiece) => {
 };
 
 /**
- * One kit line: the piece on the left, what it resolves to — a tagged unit
- * or the picker for one — on the right, on one line at every width (UX review
+ * One kit line. On a phone it is a row: the piece on the left, what it
+ * resolves to (a tagged unit or the picker for one) on the right (UX review
  * 2026-10-10, item 13: stacked on a phone, a five-piece diver was ten lines
- * and a page of them ran to 7,000px). A diver's pieces line up down the row
- * rather than each finding its own indent.
+ * and a page of them ran to 7,000px). From `sm` up it is a tile in the diver's
+ * grid, the piece over its unit: a 1,152px desk drew every piece as a 50px
+ * row down the left third with the rest of the card empty (Aaron, 2026-10-23:
+ * "really ugly"), and three tiles a row put a diver's kit on two lines.
  */
 export const kitLineClass =
-  "grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-x-3";
+  "grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 sm:flex sm:min-w-0 sm:flex-col sm:items-stretch sm:justify-between sm:gap-1.5 sm:rounded-inset sm:border sm:p-3";
+
+/** A piece with its unit on it: settled, so it sits back in a sunken tile. */
+export const kitLineSettledClass = `${kitLineClass} sm:border-transparent sm:bg-surface-sunken`;
+
+/** A piece still to pick: the tile with an edge, where the work is. */
+export const kitLineOpenClass = `${kitLineClass} sm:border-border sm:bg-surface`;
+
+/** The grid a diver's kit lines sit in: rows on a phone, tiles from `sm`. */
+export const kitGridClass =
+  "mt-2 flex flex-col gap-1 text-sm sm:grid sm:grid-cols-2 sm:gap-2 lg:grid-cols-3";
 
 /**
  * **A packing line on a phone: one row, three facts** (UX review 2026-10-10,

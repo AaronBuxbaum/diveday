@@ -5630,6 +5630,11 @@
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
     },
+    "whatsappReopen": {
+      "answerReady": "Tenemos respuesta a tu mensaje. Contesta aquí y te la enviamos.",
+      "question": "Tenemos una pregunta rápida sobre tu mensaje. Contesta aquí cuando tengas un momento.",
+      "followUp": "Nos gustaría retomar la conversación. Contesta aquí cuando te venga bien."
+    },
     "gearPieces": {
       "bcd": "chaleco",
       "regulator": "regulador",

@@ -61,6 +61,7 @@ export function NextBoatCard({
   skipped = 0,
   firstSkippedTime,
   filtered = false,
+  flat = false,
   t,
 }: {
   /** The trip page's booking anchor. */
@@ -89,6 +90,12 @@ export function NextBoatCard({
    * view*, not the shop's next. The eyebrow says so.
    */
   filtered?: boolean;
+  /**
+   * Full width, under a shop name with nothing beside it: the facts on the
+   * left and the button on the right from `md` up, one strip rather than a
+   * 230px card stretched across the page.
+   */
+  flat?: boolean;
   t: DiverTranslator;
 }) {
   // One derivation, used for the region's accessible name and for the visible
@@ -97,7 +104,11 @@ export function NextBoatCard({
     filtered ? "schedule.nextWithSpace.eyebrowFiltered" : "schedule.nextWithSpace.eyebrow",
   );
   return (
-    <SectionCard as="section" ariaLabel={eyebrow} className="flex h-full flex-col gap-4">
+    <SectionCard
+      as="section"
+      ariaLabel={eyebrow}
+      className={`flex h-full flex-col gap-4 ${flat ? "md:flex-row md:items-center md:gap-8" : ""}`}
+    >
       <div className="min-w-0 flex-1">
         {/* The rung the Right now and In season panels beside it use; the
             lagoon ink is this card's, the page's subject. */}
@@ -105,12 +116,21 @@ export function NextBoatCard({
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead
             render as figures). */}
-        <p className={`mt-2 ${FIGURE_LARGE_CLASS}`}>
-          {time}
-          <span className="ms-2 text-lg font-medium text-muted">{when}</span>
-        </p>
-        <h2 className="mt-1 text-lg font-medium text-pretty">{title}</h2>
-        {description ? <p className="mt-2 line-clamp-2 text-sm text-muted">{description}</p> : null}
+        {/* Flat, the time and the boat's name share one line: the strip's
+            job is to be short enough that the schedule under it starts on
+            the first screen. */}
+        <div className={flat ? "mt-1 flex flex-wrap items-baseline gap-x-4" : undefined}>
+          <p className={`${flat ? "" : "mt-2 "}${FIGURE_LARGE_CLASS}`}>
+            {time}
+            <span className="ms-2 text-lg font-medium text-muted">{when}</span>
+          </p>
+          <h2 className={`${flat ? "" : "mt-1 "}text-lg font-medium text-pretty`}>{title}</h2>
+        </div>
+        {description ? (
+          <p className={`${flat ? "mt-1 line-clamp-1" : "mt-2 line-clamp-2"} text-sm text-muted`}>
+            {description}
+          </p>
+        ) : null}
         {/* Each dot is an element of its own, with the row's gap before it
             and its fact's same gap after; opening the fact with "· " put the
             gap before the dot and one space after. The dot and its fact are
@@ -149,7 +169,13 @@ export function NextBoatCard({
           ) : null}
         </p>
       </div>
-      <Link href={href} className={buttonClass({ variant: "primary", className: "w-full" })}>
+      <Link
+        href={href}
+        className={buttonClass({
+          variant: "primary",
+          className: flat ? "w-full md:w-auto md:shrink-0 md:px-8" : "w-full",
+        })}
+      >
         {t("schedule.shopfront.bookThisBoat")}
       </Link>
     </SectionCard>
