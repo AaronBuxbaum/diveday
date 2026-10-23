@@ -673,13 +673,15 @@ export const ENV_GROUPS = [
       "APP_SECRET_SEED. Never rotate it in one step: put the old value in",
       "SECRET_ENCRYPTION_KEY_PREVIOUS first, which opens what the old key sealed while the",
       "new one seals everything written from then on. The rotation runbook is in",
-      "docs/engineering/infrastructure-runbook.md.",
+      "docs/engineering/infrastructure-runbook.md. A production deploy without it fails",
+      "at build (`pnpm check:env` under VERCEL_ENV=production); previews are not asked.",
     ],
     keys: [
       {
         key: "SECRET_ENCRYPTION_KEY",
         from: "derived",
         targets: LOCAL_AND_VERCEL,
+        requiredInProduction: true,
         absent:
           "every staffer who turned on two-factor is locked out: sign-in demands the second " +
           "factor, and neither the authenticator code nor a recovery code can be checked without " +

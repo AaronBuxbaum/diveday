@@ -1237,7 +1237,8 @@ For `infra/`, `config/`, `.env.example` and the deploy scripts; the rules themse
   in `.env.manual` is refused, not ignored. Add a variable there and nowhere else (ADR
   20260812-env-provenance-registry). `pnpm check:env` states the two structural facts and reports
   which manual values are unset — a report, never a failure — except that with
-  `VERCEL_ENV=production` it fails on any unset `requiredInProduction` row (the Upstash pair).
+  `VERCEL_ENV=production` it fails on any unset `requiredInProduction` row (the Upstash pair and
+  `SECRET_ENCRYPTION_KEY`).
 - **AWS credentials, and what deploying still leaves for a human**: one Secrets Manager secret
   holding a filled-in `.env.example` (§16 of `infra/lib/infra-stack.ts`), and one registry of manual
   steps (§17, `infra/lib/manual-actions.ts`) that renders to both stack outputs and the generated
