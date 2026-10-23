@@ -1,4 +1,6 @@
 import { MINTED_DEMO_BRAND_COLOR } from "../src/db/seed-identifiers";
+import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
+import { diverTranslator } from "../src/i18n/messages";
 import { deriveBrandTheme, deriveDarkBrandTheme } from "../src/lib/brand";
 import { expectNoA11yViolations } from "./a11y-scan";
 import { expect, test } from "./fixtures";
@@ -25,6 +27,33 @@ test.describe("the storefront wears the shop's brand", () => {
     await expect(page.getByText("Since 1998")).toBeVisible();
     await expect(page.getByText("PADI 5 Star Dive Center")).toBeVisible();
     await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeVisible();
+  });
+
+  /**
+   * **The real photos load** (H-157). Every visual capture answers the strip's
+   * photos with one flat tile (`tileShopPhotos`, e2e/visual-harness.ts), so
+   * this is the one test that sees the files themselves: each decodes to a
+   * real size and carries its alt attribute, empty because the strip is
+   * decorative (`ShopPhotoStrip`).
+   */
+  test("the photo strip's real photos load, each at a size and with its alt", async ({ page }) => {
+    test.setTimeout(45_000);
+    await page.goto("/s/blue-mantis");
+    const strip = page.getByRole("list", { name: diverTranslator("en-US")("schedule.shopPhotos") });
+    const photos = strip.locator("img");
+    await expect(photos).toHaveCount(DEMO_SHOP_BRAND.shopfrontPhotoUrls.length);
+    for (const photo of await photos.all()) {
+      await photo.scrollIntoViewIfNeeded();
+      await expect(photo).toHaveAttribute("alt", "");
+      await expect(photo).toHaveJSProperty("complete", true);
+      const size = await photo.evaluate((image: HTMLImageElement) => ({
+        src: image.currentSrc,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      }));
+      expect(size.width, size.src).toBeGreaterThan(64);
+      expect(size.height, size.src).toBeGreaterThan(64);
+    }
   });
 
   test.describe("a shop with a color of its own", () => {
