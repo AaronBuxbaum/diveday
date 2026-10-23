@@ -23,8 +23,8 @@ vi.mock("better-auth/cookies", () => ({
 
 import { proxy } from "@/proxy";
 
-function request(url: string, headers?: Record<string, string>): NextRequest {
-  return new NextRequest(`http://127.0.0.1${url}`, { headers });
+function request(url: string, headers?: Record<string, string>, method = "GET"): NextRequest {
+  return new NextRequest(`http://127.0.0.1${url}`, { headers, method });
 }
 
 async function run(req: NextRequest): Promise<Response> {
@@ -98,5 +98,23 @@ describe("the pricing arm (ADR 20261022-pricing-ab-test)", () => {
     );
     expect(res.headers.get(ARM_HEADER)).toBe("");
     expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("draws a new arm only on GET and HEAD, never on the set-up form's POST", async () => {
+    vi.stubEnv("PRICING_TEST", "on");
+    vi.stubEnv("PRICING_PERCENT_SPLIT", "100");
+    // The form's POST without the cookie the GET set: no arm is invented, so
+    // the set-up request records "saw no arm" rather than one never shown.
+    const bare = await run(
+      request("/get-set-up", { "x-diveday-pricing-arm": "flat_monthly" }, "POST"),
+    );
+    expect(bare.headers.get("set-cookie") ?? "").not.toContain("dd_pricing");
+    expect(bare.headers.get(ARM_HEADER) ?? "").toBe("");
+    // With the cookie, the arm it names is passed on.
+    const kept = await run(request("/get-set-up", { cookie: "dd_pricing=flat_monthly" }, "POST"));
+    expect(kept.headers.get(ARM_HEADER)).toBe("flat_monthly");
+    expect(kept.headers.get("set-cookie") ?? "").not.toContain("dd_pricing");
+    const head = await run(request("/pricing", {}, "HEAD"));
+    expect(head.headers.get(ARM_HEADER)).toBe("percent_of_volume");
   });
 });
