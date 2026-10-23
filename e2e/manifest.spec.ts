@@ -685,11 +685,14 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
   await context.setOffline(true);
   await page.goto("/");
   // The root path's own failed navigation redirects here instead of the
-  // browser's offline error, listing every trip already saved.
-  await expect(page).toHaveURL(/\/offline-manifest$/);
+  // browser's offline error, listing every trip already saved. The redirect
+  // names why (`fallback=failed`), and the list keeps that on the trip it
+  // opens, so the trip screen knows it is the saved copy too.
+  await expect(page).toHaveURL(/\/offline-manifest\?fallback=failed$/);
   await expect(page.getByRole("heading", { name: "Saved on this device" })).toBeVisible();
   await expect(page.getByText("Two-Tank Reef — Molasses & French")).toBeVisible();
   await page.getByText("Two-Tank Reef — Molasses & French").click();
+  await expect(page).toHaveURL(/\/offline-manifest\?trip=[^&]+&fallback=failed$/);
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
 
   await context.setOffline(false);
