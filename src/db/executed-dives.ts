@@ -41,6 +41,13 @@ export type ExecutedDiveInput = {
    */
   observedSpeciesSlug?: string | null;
   /**
+   * Leave the stored species exactly as it is, whatever `observedSpeciesSlug`
+   * says: the shop has sightings switched off, so the form drew no species
+   * field, and a save of the dive must not erase what was logged before
+   * (ADR 20261005-optional-shop-features). A new row starts with none.
+   */
+  keepObservedSpecies?: boolean;
+  /**
    * Why the actual site is not the planned one (issue #1184). Absent or null
    * clears it, like every other field on this replacing upsert.
    */
@@ -509,7 +516,7 @@ export async function upsertExecutedDive(
           )
         : null,
       notRecorded: [...new Set(input.notRecorded ?? [])].filter((value) => value === "depth"),
-      observedSpeciesSlug: observedSpeciesSlug ?? null,
+      observedSpeciesSlug: input.keepObservedSpecies ? null : (observedSpeciesSlug ?? null),
       planChangeReason: planChangeReasonCode,
       // A note cannot outlive the reason it explains: clearing the reason
       // clears it, which is the same rule the table's own check states.
@@ -530,7 +537,7 @@ export async function upsertExecutedDive(
       .onConflictDoUpdate({
         target: [executedDives.tripId, executedDives.diveNumber],
         targetWhere: isNull(executedDives.deletedAt),
-        set: values,
+        set: input.keepObservedSpecies ? withoutObservedSpecies(values) : values,
       })
       .returning();
     // The upsert targets a partial unique index and always writes a row; a
@@ -553,4 +560,12 @@ export async function upsertExecutedDive(
     }
     return { ok: true, dive: row };
   });
+}
+
+/** An upsert's values minus the species, for a save that must leave it alone. */
+function withoutObservedSpecies<T extends { observedSpeciesSlug: unknown }>(
+  values: T,
+): Omit<T, "observedSpeciesSlug"> {
+  const { observedSpeciesSlug: _kept, ...rest } = values;
+  return rest;
 }

@@ -31,6 +31,8 @@ export async function matchSightingsAction(
   const said = typeof rawSaid === "string" ? rawSaid.trim().slice(0, SIGHTINGS_MAX_SAID) : "";
   if (!said) return null;
   const { db, shop } = await requireShopSurface(ctx.shopSlug);
+  // Sightings switched off: nothing to match against, and nothing is sent.
+  if (!shop.sightingsEnabled) return null;
   const locale = await requestLocale(shop.defaultLocale);
   const offered = new Set(offeredSlugs);
   const chips = marineLifeCatalogCards(diverTranslator(locale))

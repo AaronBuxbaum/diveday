@@ -144,19 +144,23 @@ export default async function TripManifestPage({
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
   const actions = bindManifestActions(actionContext, missingDiverReader);
-  const seen = seenGroupView({
-    checkpoint,
-    actionContext,
-    departureStartsAt: departureManifest.trip.startsAt,
-    executedDives,
-    plannedDives,
-    loggedSightings,
-    shopPickedSpecies,
-    catalogSpecies,
-    speciesBySite,
-    canAssist: checkpoint !== "departure" && (await assistsAvailable(db, shop.id)),
-    t,
-  });
+  // Sightings switched off on Features: no Seen group and no species in the
+  // dive log; nothing logged is erased, and roll call never changes.
+  const seen = !shop.sightingsEnabled
+    ? null
+    : seenGroupView({
+        checkpoint,
+        actionContext,
+        departureStartsAt: departureManifest.trip.startsAt,
+        executedDives,
+        plannedDives,
+        loggedSightings,
+        shopPickedSpecies,
+        catalogSpecies,
+        speciesBySite,
+        canAssist: checkpoint !== "departure" && (await assistsAvailable(db, shop.id)),
+        t,
+      });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
   const checklist = preDepartureCheckView({
     ...boatCheck,
@@ -387,6 +391,7 @@ export default async function TripManifestPage({
             })}
             action={actions.saveExecutedDive}
             checkpoint={checkpoint}
+            sightingsOn={shop.sightingsEnabled}
           />
         ) : null}
 

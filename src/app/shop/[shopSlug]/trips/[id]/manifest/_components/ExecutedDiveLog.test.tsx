@@ -65,7 +65,7 @@ const labels: ExecutedDiveLabels = {
   },
 };
 
-function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = []) {
+function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = [], sightingsOn = true) {
   return render(
     <ExecutedDiveLog
       planned={[
@@ -89,6 +89,7 @@ function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = []) {
       timeZone="America/New_York"
       depthUnit="meters"
       checkpoint="after_dive_1"
+      sightingsOn={sightingsOn}
     />,
   );
 }
@@ -188,5 +189,38 @@ describe("the species picker", () => {
     expect(
       (document.querySelector('select[name="observedSpeciesSlug"]') as HTMLSelectElement).value,
     ).toBe("spotted-eagle-ray");
+  });
+});
+
+/**
+ * **Sightings switched off** (ADR 20261005-optional-shop-features): the dive
+ * log draws no species field, and the species logged before rides along in
+ * the form so saving the dive's times and depth never erases it.
+ */
+describe("the dive log with sightings switched off", () => {
+  it("hides the species picker and carries the logged species unchanged", () => {
+    const logged = {
+      executed: {
+        diveNumber: 1,
+        actualSiteId: "site-1",
+        enteredAt: null,
+        exitedAt: null,
+        maxDepthMeters: null,
+        observedConditions: null,
+        notRecorded: [],
+        observedSpeciesSlug: "spotted-eagle-ray",
+        planChangeReason: null,
+        planChangeNote: null,
+      } as unknown as ExecutedDive,
+      actualSite: { id: "site-1", name: "Molasses Reef" },
+    };
+    renderLog("Dive 1 — Molasses Reef", [logged], false);
+
+    expect(document.querySelector('select[name="observedSpeciesSlug"]')).toBeNull();
+    expect(screen.queryByText("Seen on this dive")).toBeNull();
+    const carried = document.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="observedSpeciesSlug"]',
+    );
+    expect(carried?.value).toBe("spotted-eagle-ray");
   });
 });

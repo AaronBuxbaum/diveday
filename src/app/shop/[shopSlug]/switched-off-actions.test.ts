@@ -1,7 +1,17 @@
 import { count, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { recordLostItem } from "@/db/lost-items";
-import { divePackages, lostItems, people, shopPromoCodes, shops, workOrders } from "@/db/schema";
+import {
+  diveSites,
+  divePackages,
+  lostItems,
+  people,
+  shopPromoCodes,
+  shops,
+  tripSightings,
+  workOrders,
+} from "@/db/schema";
+import { getShopById } from "@/db/shops";
 import { createTrip } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import type { ShopFeature } from "@/lib/shop-features";
@@ -34,15 +44,18 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn(), requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession, requireShopSurface } = await import("@/lib/session");
 const { createWorkOrderAction } = await import("./gear/work-orders/actions");
 const { resendReadyNoticeAction } = await import("./gear/work-orders/follow-up-actions");
 const { createPromoAction } = await import("./promos/actions");
 const { createDivePackageAction } = await import("./settings/package-actions");
 const { lostItemRowAction } = await import("@/app/actions/lost-items");
+const { recordSightingAction, deleteSightingAction } = await import(
+  "./trips/[id]/manifest/actions"
+);
 
 async function asOwnerWith(feature: ShopFeature) {
   const { db, shop } = ctx;
@@ -149,5 +162,51 @@ describe("actions behind a switched-off feature", () => {
       .from(lostItems)
       .where(eq(lostItems.id, found.item.id));
     expect(item?.status).toBe("open");
+  });
+
+  it("logs and takes back no sighting while sightings are off, and logs one once on", async () => {
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() - 6 * 3_600_000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Switched-off sightings",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+      capacity: 8,
+    });
+    if (!trip) throw new Error("trip not created");
+    const [site] = await db
+      .select({ id: diveSites.id })
+      .from(diveSites)
+      .where(eq(diveSites.shopId, shop.id))
+      .limit(1);
+    if (!site) throw new Error("seeded dive site missing");
+    const { owner } = await asOwnerWith("sightings");
+    const surface = async () => ({
+      db,
+      shop: await getShopById(db, shop.id),
+      session: staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: owner }),
+    });
+    vi.mocked(requireShopSurface).mockImplementation((async () => surface()) as never);
+    const sightingCtx = {
+      shopSlug: shop.slug,
+      tripId: trip.id,
+      checkpoint: "after_dive_1" as const,
+      diveSiteId: site.id,
+    };
+    const tap = form({ speciesSlug: "green-sea-turtle" });
+    const logged = () =>
+      db
+        .select({ id: tripSightings.id })
+        .from(tripSightings)
+        .where(eq(tripSightings.tripId, trip.id));
+
+    expect(await recordSightingAction(sightingCtx, undefined, tap)).toEqual({ status: "error" });
+    expect(await deleteSightingAction(sightingCtx, undefined, tap)).toEqual({ status: "error" });
+    expect(await logged()).toEqual([]);
+
+    await db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, shop.id));
+    expect(await recordSightingAction(sightingCtx, undefined, tap)).toEqual({ status: "ok" });
+    expect(await logged()).toHaveLength(1);
   });
 });

@@ -323,6 +323,34 @@ describe("upsertExecutedDive — the observed species", () => {
     });
     expect(cleared).toMatchObject({ ok: true, dive: { observedSpeciesSlug: null } });
   });
+
+  it("keeps the logged species when the shop has sightings switched off", async () => {
+    const { db, shop, owner, trip } = await logFixture();
+    const [species] = MARINE_LIFE_CATALOG;
+    if (!species) throw new Error("the catalog is empty");
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      observedSpeciesSlug: species.slug,
+      recordedByPersonId: owner.id,
+    });
+    // The form drew no species field; a save of the depth must not erase it,
+    // even from a post that sends an empty one.
+    const resaved = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      maxDepthMeters: 21,
+      observedSpeciesSlug: null,
+      keepObservedSpecies: true,
+      recordedByPersonId: owner.id,
+    });
+    expect(resaved).toMatchObject({
+      ok: true,
+      dive: { maxDepthMeters: 21, observedSpeciesSlug: species.slug },
+    });
+  });
 });
 
 /**

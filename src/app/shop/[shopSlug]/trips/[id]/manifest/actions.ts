@@ -26,7 +26,7 @@ import {
   isDeviceSubscribedAnywhere,
   savePushSubscription,
 } from "@/db/push-subscriptions";
-import { getShopById } from "@/db/shops";
+import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import { deleteTripSighting, recordTripSighting } from "@/db/trip-sightings";
 import { recordTripStage } from "@/db/trip-stages";
 import { trackEvent } from "@/lib/analytics";
@@ -239,6 +239,9 @@ export async function saveExecutedDiveAction(
     },
     notRecorded,
     observedSpeciesSlug: parsed.data.observedSpeciesSlug || null,
+    // Sightings switched off: the form drew no species, and the save keeps
+    // the one logged before rather than erasing it.
+    keepObservedSpecies: !shop.sightingsEnabled,
     planChangeReason: parsed.data.planChangeReason || null,
     planChangeNote: parsed.data.planChangeNote || null,
     recordedByPersonId: staff.user.personId,
@@ -286,6 +289,10 @@ export async function recordSightingAction(
   const staff = await manifestStaff(ctx);
   const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error" };
+  // Sightings switched off: the Seen group is gone, so a tap is a hand-built post.
+  if (!(await shopHasFeatureOn(await getDb(), staff.user.shopId, "sightings"))) {
+    return { status: "error" };
+  }
   const saved = await recordTripSighting(await getDb(), {
     shopId: staff.user.shopId,
     tripId: ctx.tripId,
@@ -307,6 +314,9 @@ export async function deleteSightingAction(
   const staff = await manifestStaff(ctx);
   const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error" };
+  if (!(await shopHasFeatureOn(await getDb(), staff.user.shopId, "sightings"))) {
+    return { status: "error" };
+  }
   const removed = await deleteTripSighting(await getDb(), {
     shopId: staff.user.shopId,
     tripId: ctx.tripId,
