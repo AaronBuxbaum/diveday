@@ -120,7 +120,7 @@ export default function SiteMap({
       isCancelled = true;
       if (mapRef.current) {
         if (viewportStorageKey)
-          persistMapView(mapRef.current, viewportStorageKey, lastFitRef.current);
+          persistMapView(mapRef.current, viewportStorageKey, lastFitRef, restoredViewRef);
         mapRef.current.remove();
         markersRef.current.clear();
         mapRef.current = null;
@@ -503,7 +503,7 @@ function useOverviewAndCamera({
     // A fit without animation ends its move before it is recorded as the
     // overview, so the camera is settled again once it is: a fit is never kept.
     const settle = viewportStorageKey
-      ? () => persistMapView(mapInstance, viewportStorageKey, lastFitRef.current)
+      ? () => persistMapView(mapInstance, viewportStorageKey, lastFitRef, restoredViewRef)
       : undefined;
     return keepOverviewFitted(mapInstance, allCoordinates, zoom, lastFitRef, markers, settle);
   }, [allCoordinates, lastFitRef, mapInstance, markers, restoredViewRef, viewportStorageKey, zoom]);
@@ -512,7 +512,7 @@ function useOverviewAndCamera({
     if (!mapInstance || !viewportStorageKey) return;
     const saveView = () => {
       if (mapRef.current === mapInstance) {
-        persistMapView(mapInstance, viewportStorageKey, lastFitRef.current);
+        persistMapView(mapInstance, viewportStorageKey, lastFitRef, restoredViewRef);
       }
     };
     saveView();
@@ -521,7 +521,7 @@ function useOverviewAndCamera({
       saveView();
       mapInstance.off("moveend", saveView);
     };
-  }, [lastFitRef, mapInstance, mapRef, viewportStorageKey]);
+  }, [lastFitRef, mapInstance, mapRef, restoredViewRef, viewportStorageKey]);
 }
 
 /**
@@ -531,7 +531,17 @@ function useOverviewAndCamera({
  * shop's sites sat outside it. An untouched overview clears what an earlier
  * camera left, so the next visit fits its own container.
  */
-function persistMapView(map: LeafletMap, key: string, overview: FittedOverview | null) {
+function persistMapView(
+  map: LeafletMap,
+  key: string,
+  lastFit: { current: FittedOverview | null },
+  restoredView: { current: boolean },
+) {
+  const overview = lastFit.current;
+  // A map left before it has fitted holds only its default camera, which nobody
+  // chose; kept, it would come back "restored", never be fitted, and show the
+  // few sites near that default. Only a restored camera has no overview to match.
+  if (!overview && !restoredView.current) return;
   if (showsOverview(map, overview)) {
     clearMapViewport(key);
     return;
