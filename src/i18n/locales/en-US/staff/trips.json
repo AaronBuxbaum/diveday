@@ -388,6 +388,7 @@
     "summaryNoneRequired": "Nothing to check. Any diver with a seat can board."
   },
   "recapPhotos": {
+    "hiddenFromDivers": "Recap photos are off, so divers don’t see these.",
     "heading": "Diver photos",
     "description": "Shared by divers from their own recap pages.",
     "photoFromAlt": "Photo from {diverName}",

@@ -220,6 +220,12 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
         </div>
       </form>
 
+      {/* Recap photos switched off: divers see none of these, while staff keep
+          each one here so it can be removed. Said once, above both galleries. */}
+      {!photosOn && (crewPhotos.length > 0 || photos.length > 0) ? (
+        <p className="mt-6 text-sm text-muted">{t("trips.recapPhotos.hiddenFromDivers")}</p>
+      ) : null}
+
       {/* The crew's photos, then the divers' own. Tiles are a gallery's
           thumbnails, six to a row on a desk, so an empty gallery is one small
           dashed tile rather than a 220px box. A count only once there is

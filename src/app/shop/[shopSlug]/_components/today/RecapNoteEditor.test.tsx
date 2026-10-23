@@ -224,6 +224,8 @@ describe("the recap's photos with recap photos switched off", () => {
     // What is there stays, so staff can still take one down.
     expect(screen.getByRole("img", { name: "Crew photo from this departure" })).toBeInTheDocument();
     expect(document.querySelectorAll('input[name="photoId"]').length).toBeGreaterThanOrEqual(2);
+    // Said once, above the galleries: divers see none of these.
+    expect(screen.getAllByText(t("trips.recapPhotos.hiddenFromDivers"))).toHaveLength(1);
   });
 
   it("draws no empty crew gallery to add to", () => {
@@ -241,6 +243,8 @@ describe("the recap's photos with recap photos switched off", () => {
       />,
     );
     expect(screen.queryByText(t("closeout.crewPhotos.heading"))).not.toBeInTheDocument();
+    // No photos, nothing hidden: the line has nothing to say.
+    expect(screen.queryByText(t("trips.recapPhotos.hiddenFromDivers"))).not.toBeInTheDocument();
   });
 });
 
