@@ -76,6 +76,12 @@ export function createBasemapMap(
  *
  * Any failure (no WebGL, the style refused, a blocked host) puts the raster
  * labels back, once, rather than leave a map with no place names.
+ *
+ * The style is read here before MapLibre sees it. Esri answers a key it
+ * will not take with an error document, not a style (Aaron, 2026-10-23: the
+ * maps showed `{"error":{"code":498,"message":"Token Invalid."}}`), and that
+ * answer is the raster labels, quietly, with one console line for whoever
+ * looks: never Esri's error.
  */
 function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): void {
   const pane = map.createPane("basemapLabels");
@@ -101,11 +107,14 @@ function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): vo
     fallBack();
   };
 
-  import("@maplibre/maplibre-gl-leaflet")
-    .then(({ maplibreGL }) => {
+  Promise.all([labelLayerModule(), labelStyle(key)])
+    .then(([{ maplibreGL }, style]) => {
       if (removed) return;
+      // MapLibre needs WebGL2, and a layer that fails while being added stays
+      // half-registered on the map and throws when the map is taken down.
+      if (!style || !hasWebGL2()) return recover();
       const labels = maplibreGL({
-        style: vectorLabelsStyleUrl(key),
+        style,
         pane: "basemapLabels",
         interactive: false,
       } as Parameters<typeof maplibreGL>[0]);
@@ -114,4 +123,64 @@ function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): vo
       labels.getMaplibreMap().on("error", recover);
     })
     .catch(recover);
+}
+
+let labelLayerImport: Promise<typeof import("@maplibre/maplibre-gl-leaflet")> | null = null;
+
+/** MapLibre and its Leaflet layer, fetched once, by the first map with a key. */
+function labelLayerModule() {
+  labelLayerImport ??= import("@maplibre/maplibre-gl-leaflet");
+  return labelLayerImport;
+}
+
+/**
+ * The label style, read once per page and per key: every map on a page shares
+ * the answer, so a key Esri refuses is asked about once. Null when the answer
+ * is not a style.
+ */
+let labelStyleRead: { key: string; style: Promise<object | null> } | null = null;
+
+function labelStyle(key: string): Promise<object | null> {
+  if (labelStyleRead?.key !== key) {
+    labelStyleRead = { key, style: readLabelStyle(key) };
+  }
+  return labelStyleRead.style;
+}
+
+async function readLabelStyle(key: string): Promise<object | null> {
+  try {
+    const response = await fetch(vectorLabelsStyleUrl(key));
+    const body: unknown = await response.json();
+    if (response.ok && isStyle(body)) return body;
+    // The code and message only: the request URL carries the key.
+    const error = (body as { error?: { code?: unknown; message?: unknown } } | null)?.error;
+    console.warn(
+      `Esri refused the place-label style (${String(error?.code ?? response.status)} ${String(error?.message ?? "")}); drawing the raster labels.`,
+    );
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function isStyle(body: unknown): body is object {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    !("error" in body) &&
+    Array.isArray((body as { layers?: unknown }).layers)
+  );
+}
+
+function hasWebGL2(): boolean {
+  try {
+    return document.createElement("canvas").getContext("webgl2") !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** Tests only: forget the page's label style answer. */
+export function forgetLabelStyle(): void {
+  labelStyleRead = null;
 }
