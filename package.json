@@ -129,7 +129,7 @@
     "@aws-sdk/client-sesv2": "^3.1156.0",
     "@aws-sdk/client-sns": "^3.1156.0",
     "@electric-sql/pglite": "^0.5.11",
-    "@maplibre/maplibre-gl-leaflet": "0.1.4",
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@sentry/nextjs": "^11.9.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
