@@ -60,8 +60,8 @@ function featureArmCopy(t: DiverTranslator, key: FeaturePageKey, offer: PlanTerm
   return {
     ...(key === "payments"
       ? {
-          note3: t("marketing.featurePages.payments.percentArm.note3", params),
-          faq1A: t("marketing.featurePages.payments.percentArm.faq1A", params),
+          note3: t("marketing.featureChrome.percentArm.paymentsNote3", params),
+          faq1A: t("marketing.featureChrome.percentArm.paymentsFaq1A", params),
         }
       : own),
     includedPrice: t("marketing.featureChrome.percentArm.includedPrice", params),

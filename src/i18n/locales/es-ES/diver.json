@@ -4943,7 +4943,9 @@
       "demoNote": "La demo se abre en {place}. Es un centro de muestra en funcionamiento, sin registro y sin tarjeta.",
       "percentArm": {
         "includedPrice": "Cada línea de esta lista entra en el único plan, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}.",
-        "closePrice": "Todas las funciones incluidas, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}."
+        "closePrice": "Todas las funciones incluidas, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}.",
+        "paymentsNote3": "Ninguna fila lleva una comisión de DiveDay. El {percent} de DiveDay se te cobra una vez al mes, en una factura aparte.",
+        "paymentsFaq1A": "Sí. La tarifa es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, no {} other {, más {base} al mes}}, cobrada una vez al mes. Las propinas, los impuestos y el dinero cobrado en el mostrador nunca cuentan, y no se suma nada al precio de tu cliente. Stripe cobra sus propias comisiones de tarjeta en tu cuenta de Stripe."
       }
     },
     "featurePages": {
@@ -5257,11 +5259,7 @@
         "faq3Q": "¿Funciona con mi contabilidad?",
         "faq3A": "Los pedidos pagados y reembolsados se envían a QuickBooks como recibos, y el informe se descarga como hoja de cálculo.",
         "closeTitle": "Repasa un día de pedidos en la demo",
-        "demoPlace": "los pedidos del día, como propietario",
-        "percentArm": {
-          "note3": "Ninguna fila lleva una comisión de DiveDay. El {percent} de DiveDay se te cobra una vez al mes, en una factura aparte.",
-          "faq1A": "Sí. La tarifa es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, no {} other {, más {base} al mes}}, cobrada una vez al mes. Las propinas, los impuestos y el dinero cobrado en el mostrador nunca cuentan, y no se suma nada al precio de tu cliente. Stripe cobra sus propias comisiones de tarjeta en tu cuenta de Stripe."
-        }
+        "demoPlace": "los pedidos del día, como propietario"
       }
     },
     "setUp": {

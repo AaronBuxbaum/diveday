@@ -4943,7 +4943,9 @@
       "demoNote": "The demo opens on {place}. It’s a working sample shop, with no sign-up and no card.",
       "percentArm": {
         "includedPrice": "Every line here is in the one plan, at {percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {}}.",
-        "closePrice": "{percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {}}, with every feature in it."
+        "closePrice": "{percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {}}, with every feature in it.",
+        "paymentsNote3": "No row carries a DiveDay fee. DiveDay’s {percent} is billed to you once a month, on an invoice of its own.",
+        "paymentsFaq1A": "Yes. The fee is {percent} of the card money taken through DiveDay{hasBase, select, yes {, plus {base} a month} other {}}, billed once a month. Tips, tax and money taken at the counter never count, and nothing is added to your guest’s price. Stripe charges its own card fees in your Stripe account."
       }
     },
     "featurePages": {
@@ -5257,11 +5259,7 @@
         "faq3Q": "Does it work with my accounting?",
         "faq3A": "Paid and refunded orders post to QuickBooks as receipts, and the report downloads as a spreadsheet.",
         "closeTitle": "Look over a day of demo orders",
-        "demoPlace": "the day’s orders, as the owner",
-        "percentArm": {
-          "note3": "No row carries a DiveDay fee. DiveDay’s {percent} is billed to you once a month, on an invoice of its own.",
-          "faq1A": "Yes. The fee is {percent} of the card money taken through DiveDay{hasBase, select, yes {, plus {base} a month} other {}}, billed once a month. Tips, tax and money taken at the counter never count, and nothing is added to your guest’s price. Stripe charges its own card fees in your Stripe account."
-        }
+        "demoPlace": "the day’s orders, as the owner"
       }
     },
     "setUp": {
