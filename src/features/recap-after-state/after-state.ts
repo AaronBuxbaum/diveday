@@ -18,6 +18,8 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { handoffHref } from "@/lib/booking-handoff";
 import type { BrandDisplayFontCode } from "@/lib/brand";
+import { BUDDY_PARAM } from "@/lib/buddy-links";
+import { buddyReferralId } from "@/lib/buddy-tokens";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
@@ -32,8 +34,6 @@ import {
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
-import { BUDDY_PARAM } from "@/lib/buddy-links";
-import { buddyReferralId } from "@/lib/buddy-tokens";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
