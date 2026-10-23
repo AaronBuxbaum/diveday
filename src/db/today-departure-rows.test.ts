@@ -207,7 +207,9 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(row?.offer?.bookingPath).toBe(`/s/${shop.slug}/trips/${reef.id}`);
   });
 
-  it("draws no wait-list row while the wait list is off, and keeps who asked", async () => {
+  it("keeps a diver already waiting on Today after the wait list is switched off", async () => {
+    // Review 2026-10-23, item 8: switched off, nobody new joins, but whoever
+    // was already waiting stays in front of the desk until someone handles them.
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -229,8 +231,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
-    expect(row?.offer).toBeUndefined();
-    expect(row?.detail ?? "").not.toContain("Ola");
+    expect(row?.offer?.personName).toBe("Ola Offswitch");
     expect(await db.select().from(interests).where(eq(interests.personId, waiter.id))).toHaveLength(
       1,
     );

@@ -510,7 +510,7 @@
       "waitlist": {
         "heading": "Wait list",
         "label": "Keep a wait list for full departures",
-        "description": "Divers ask to hear when a seat opens on a full boat, and you offer it by email. Off, nobody new joins and no offer goes out; divers already waiting stay on file."
+        "description": "Divers ask to hear when a seat opens on a full boat, and you offer it by email. Off, nobody new joins and the list sends nothing on its own; divers already waiting stay on Today until you handle them, and you can still email any diver a date yourself."
       },
       "pastDiverInvites": {
         "heading": "Invite past divers",

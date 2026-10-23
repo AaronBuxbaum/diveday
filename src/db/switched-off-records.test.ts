@@ -286,7 +286,7 @@ describe("wait list switched off", () => {
     email,
   });
 
-  it("takes no join, and keeps and hides an interest already on file", async () => {
+  it("takes no join, and keeps an interest already on file in view until it is handled", async () => {
     const { db, shop, trip } = await fullBoat();
     const before = await askForDeparture(db, ask(shop.id, trip.id, "wren-before@example.com"));
     expect(before.ok).toBe(true);
@@ -303,8 +303,8 @@ describe("wait list switched off", () => {
     if (!row) throw new Error("shop missing");
     const guests = await getTripGuests(db, row, trip.id);
     expect(guests?.waitlistOn).toBe(false);
-    expect(guests?.interests).toEqual([]);
-    expect(guests?.waitlist).toEqual([]);
+    // Review 2026-10-23, item 8: a diver already waiting never vanishes.
+    expect(guests?.interests.map(({ interest }) => interest.id)).toEqual([before.ok ? before.interestId : ""]);
   });
 
   it("still answers that a seat is open before saying the list is off", async () => {

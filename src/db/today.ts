@@ -1060,9 +1060,10 @@ async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
     })
     .from(interests)
     .innerJoin(people, eq(people.id, interests.personId))
-    // Nobody waits while the wait list is off (the Features page); the row
-    // still offers the last-minute list's divers, which is that list's.
-    .innerJoin(shops, and(eq(shops.id, interests.shopId), eq(shops.waitlistEnabled, true)))
+    // **Read whatever the wait list's switch says** (review 2026-10-23, item
+    // 8): a diver already waiting when the shop turned it off stays on Today
+    // until someone handles them. The one tap's email is the wait list's own
+    // send, so off it falls back to the composer and staff write by hand.
     .where(
       and(
         eq(interests.scope, "departure"),

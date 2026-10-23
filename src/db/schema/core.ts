@@ -283,10 +283,12 @@ export const shops = pgTable(
     selfRegistrationEnabled: boolean("self_registration_enabled").notNull().default(true),
     /**
      * **Waitlist**: a diver asking to hear when a seat opens on a full
-     * departure (the public join, the staff inbox's wait-list door), the "Who
-     * wants in" panel, Today's seat-wanted row and the seat-offer and
-     * received emails. Off, nobody new joins and no offer is sent; interests
-     * already on file stay, and the cron's cleanup of sailed ones keeps running.
+     * departure (the public join, the staff doors that add someone to it) and
+     * the list's own seat offers (the nightly roll's invite, the "Who wants
+     * in" offer). Off, nobody new joins and the list sends nothing; divers
+     * already waiting stay on the panel and Today until someone handles them,
+     * a staffer may still email any diver a date themselves, and the roll
+     * still moves sailed interests.
      */
     waitlistEnabled: boolean("waitlist_enabled").notNull().default(true),
     /**

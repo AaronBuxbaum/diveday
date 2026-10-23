@@ -115,24 +115,6 @@ function lastMinuteRecipientsOf<M extends { person: { id: string } }>(input: {
   return { courseTarget, recipients };
 }
 
-/**
- * A diver's own ask is the wait list's, so it is not drawn while the shop's wait
- * list is off (the Features page): the panel, the demand banner and the deal list
- * all read none. The interests stay, and the shop's own outreach
- * (`asked_by = 'shop'`) still shows. A seated diver's interest is hidden either way.
- */
-function visibleInterests<T extends { interest: { askedBy: string; personId: string | null } }>(
-  rows: T[],
-  seatedPersonIds: Set<string>,
-  waitlistOn: boolean,
-): T[] {
-  return rows.filter(
-    ({ interest }) =>
-      (waitlistOn || interest.askedBy !== "diver") &&
-      (interest.personId === null || !seatedPersonIds.has(interest.personId)),
-  );
-}
-
 export type TripGuests = NonNullable<Awaited<ReturnType<typeof getTripGuests>>>;
 
 export async function getTripGuests(
@@ -228,7 +210,13 @@ export async function getTripGuests(
       .filter(({ booking }) => booking.status !== "cancelled")
       .map(({ booking }) => booking.personId),
   );
-  const interests = visibleInterests(departureInterests, seatedPersonIds, shop.waitlistEnabled);
+  // A seated diver's interest is hidden. **The wait list's switch hides
+  // nobody** (review 2026-10-23, item 8): a diver already waiting when it went
+  // off, and a reply to a date request (that feature's own row), stay on the
+  // panel until someone handles them; only joining is closed.
+  const interests = departureInterests.filter(
+    ({ interest }) => interest.personId === null || !seatedPersonIds.has(interest.personId),
+  );
   const dateInterests = dateInterestsInReach.filter(
     (r) => !r.personId || !seatedPersonIds.has(r.personId),
   );
