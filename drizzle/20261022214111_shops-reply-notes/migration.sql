@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "reply_notes" text;

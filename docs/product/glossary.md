@@ -163,6 +163,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Boat papers
 - Booked as
 - Booking checkout
+- Bounce record
 - Buddy team
 - Cancellation window
 - Certificate passenger limit
@@ -272,6 +273,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Rehearsal
 - Reminder cadence
 - Reply keyword
+- Reply notes
 - Reschedule notice
 - Retention window
 - Review reply
@@ -284,7 +286,6 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
-- Saved answer
 - Seat
 - Seat claim
 - Seat held

@@ -3,7 +3,6 @@ import type { SendStaffReplyRefusal } from "@/db/staff-reply";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { SAVED_ANSWERS_MAX } from "@/lib/saved-answers";
 import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
@@ -410,10 +409,6 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // There *is* an address; the reply cannot be built into something sendable,
   // so nothing was attempted and a retry would do the same thing again.
   "reply-cannot-be-sent": { form: "reply", tone: "danger", key: "inbox.notices.cannotBeSent" },
-  // "Save this answer" under a sent reply (fifth loop, item 15).
-  "answer-saved": { form: "reply", tone: "success", key: "inbox.notices.answerSaved" },
-  "answer-duplicate": { form: "reply", tone: "warning", key: "inbox.notices.answerDuplicate" },
-  "answers-full": { form: "reply", tone: "warning", key: "inbox.notices.answersFull" },
   "reply-whatsapp-window-closed": {
     form: "reply",
     tone: "danger",
@@ -788,9 +783,7 @@ export function resolveDiverNotice({
             ? t("divers.notices.bookedConfirmedNoInvoice")
             : notice === "merge-booking-conflict" && conflictDeparture
               ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
-              : notice === "answers-full"
-                ? t("inbox.notices.answersFull", { count: SAVED_ANSWERS_MAX })
-                : t(banner.key as StaffMessageKey, banner.values),
+              : t(banner.key as StaffMessageKey, banner.values),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

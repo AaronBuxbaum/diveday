@@ -4832,6 +4832,7 @@
         "intro": "The shop’s own records are kept while the shop is using DiveDay, and go when the shop deletes them or ends its account. Most append-only trails have fixed windows, and these are the real numbers the system prunes on:",
         "activity": "Staff activity history: 3 years.",
         "delivery": "Message delivery attempts: 400 days. These hold provider identifiers and error codes rather than message bodies, though a provider’s own error text sometimes quotes the address it failed to reach.",
+        "bounces": "Email that bounced or was marked as spam: 90 days. Each record holds the address, the reason the receiving server gave, which email it was, and who sent it, so we can fix delivery problems.",
         "payments": "Payment event history: 7 years, matching the ordinary horizon for financial records. The orders and payments themselves are the shop’s records and stay until the shop removes them.",
         "webhooks": "Payment-processor event records: 400 days. These hold no diver data at all.",
         "tokens": "Expired sign-in and reset tokens: 90 days past their own expiry. A live one is never pruned.",

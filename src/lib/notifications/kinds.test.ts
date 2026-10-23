@@ -452,6 +452,7 @@ describe("operator_alert: one kind, five events, the keys the five kinds had", (
         setupRequests: [],
         unnotifiedSetupRequests: 0,
         stalls: [],
+        bounces: { total: 0, lines: [] },
       },
     ].map((alert) => notificationIdempotencyKey(notificationSchema.parse({ ...base, ...alert })));
     expect(keys).toEqual([

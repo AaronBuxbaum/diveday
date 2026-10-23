@@ -1365,7 +1365,58 @@ type FounderDigestEmailInput = {
     since: CalendarDate;
     waitingFor: ShopMilestone;
   }>;
+  bounces: {
+    total: number;
+    lines: Array<{
+      occurredAt: Date;
+      event: "bounce" | "complaint";
+      recipient: string;
+      bounceType: string | null;
+      bounceSubType: string | null;
+      smtpStatus: string | null;
+      complaintType: string | null;
+      kind: string | null;
+      purpose: string | null;
+      shopName: string | null;
+      shopSlug: string | null;
+      sentByName: string | null;
+    }>;
+  };
 };
+
+/**
+ * One bounce as the founder reads it: when (UTC), the masked address, why,
+ * which email, the shop, who sent it.
+ */
+function bounceLine(line: FounderDigestEmailInput["bounces"]["lines"][number]): string {
+  const why =
+    line.event === "complaint"
+      ? `complaint${line.complaintType ? ` (${line.complaintType})` : ""}`
+      : [
+          [line.bounceType, line.bounceSubType].filter(Boolean).join(" / ") || "bounce",
+          line.smtpStatus,
+        ]
+          .filter(Boolean)
+          .join(", ");
+  const email = line.kind
+    ? `${line.kind}${line.purpose ? ` (${line.purpose})` : ""}`
+    : "unknown email";
+  const shop = line.shopName ? `${line.shopName} (/shop/${line.shopSlug})` : "no shop";
+  const by = line.sentByName ? `sent by ${line.sentByName}` : "sent automatically";
+  const at = `${line.occurredAt.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  return `${at}: ${maskedAddress(line.recipient)}, ${why}. ${email}, ${shop}, ${by}`;
+}
+
+/**
+ * `no***@example.com`: enough to recognize a typo'd domain or a pattern, not
+ * the address itself. A mailbox outlives the table's 90 days and any erasure,
+ * so the full address stays in `email_bounces`, where both reach it.
+ */
+export function maskedAddress(address: string): string {
+  const at = address.lastIndexOf("@");
+  if (at <= 0) return "***";
+  return `${address.slice(0, Math.min(2, at))}***${address.slice(at)}`;
+}
 
 /** Each activation step as the founder reads it. */
 const milestoneWords: Record<ShopMilestone, string> = {
@@ -1379,8 +1430,8 @@ const milestoneWords: Record<ShopMilestone, string> = {
 
 /**
  * The founder's Monday digest (ADR 20261007-founder-metrics). Internal and
- * English. Four short sections in a fixed order — the north star, the demo,
- * set-up requests, stalled shops — each saying "none" rather than vanishing,
+ * English. Five short sections in a fixed order — the north star, the demo,
+ * set-up requests, stalled shops, bounced email — each saying "none" rather than vanishing,
  * so a quiet week reads as quiet rather than as a broken mail. Dates are
  * calendar dates printed as they are: no zone to name, because a week of
  * shops' own local days has none.
@@ -1419,6 +1470,15 @@ export function founderDigestEmail(input: FounderDigestEmailInput): Notification
         (stall) =>
           `${stall.shopName} (/shop/${stall.shopSlug}): ${milestoneWords[stall.lastReached]} on ${stall.since}, waiting for ${milestoneWords[stall.waitingFor]}`,
       ),
+    },
+    {
+      title: `Bounced or complained email: ${input.bounces.total}`,
+      lines: [
+        ...input.bounces.lines.map(bounceLine),
+        ...(input.bounces.total > input.bounces.lines.length
+          ? [`and ${input.bounces.total - input.bounces.lines.length} more; read email_bounces`]
+          : []),
+      ],
     },
   ];
 

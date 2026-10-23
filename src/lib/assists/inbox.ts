@@ -142,6 +142,9 @@ export const ReplyDraft = z.object({
   confidence: z.number(),
 });
 
+/** The longest notes a shop keeps for reply drafts: a page, not a manual. */
+export const REPLY_NOTES_MAX_LENGTH = 4_000;
+
 /** How much of a thread a draft reads: the latest few messages carry the question. */
 export const DRAFT_THREAD_LINES = 6;
 const DRAFT_LINE_MAX = 2_000;
@@ -150,6 +153,7 @@ export const DRAFT_SYSTEM = `You draft replies for the staff of a scuba diving s
 
 Rules:
 - Answer the diver's latest message in <thread>, in the language it is written in, warmly and briefly, the way a person at the shop's desk writes. No subject line, no signature block, no placeholders in brackets.
+- <facts> may end with notes the shop wrote for replies, such as where to park or what it rents. Use them when they answer the question.
 - Every date, time, seat count and price you mention must be copied exactly from <facts>, in digits as the facts write them. A number only the diver wrote is not a fact. If the facts do not answer the question, say a staff member will confirm, and do not guess. Never promise a seat: say how many are open.
 - <window> says today's date and which departures <facts> covers. For a date outside it, or a departure <facts> does not list, say a staff member will confirm: never say there is no trip.
 - Never confirm a cancellation, a refund or a change to a booking. Say the staff will take care of it.

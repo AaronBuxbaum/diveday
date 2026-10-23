@@ -601,6 +601,20 @@ export async function setShopRentalTerms(db: AppDb, shopId: string, rentalTerms:
 }
 
 /**
+ * Replaces the notes Claude reads when it drafts a reply (`shops.reply_notes`).
+ * The action trims and caps the box first, so what arrives is text within
+ * `REPLY_NOTES_MAX_LENGTH`, or `null` for none.
+ */
+export async function setShopReplyNotes(db: AppDb, shopId: string, replyNotes: string | null) {
+  const [shop] = await db
+    .update(shops)
+    .set({ replyNotes })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id });
+  return shop ?? null;
+}
+
+/**
  * Sets how often the shop services a customer's regulator (12 or 24 months),
  * the interval a customer regulator's suggested next-due date counts from.
  */

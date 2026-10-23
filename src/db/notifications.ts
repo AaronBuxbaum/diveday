@@ -43,6 +43,7 @@ import {
 } from "@/lib/notifications";
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
+import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
@@ -426,8 +427,42 @@ export async function shopSenderFor(
  */
 async function withShopSender(
   db: AppDb,
-  input: Notification,
+  notification: Notification,
   cache: Map<string, NotificationSender | undefined> = new Map(),
+): Promise<Notification> {
+  // Who sent it rides on `sender` without being a sender profile: set aside,
+  // so a send that carries only that still gets the shop's profile, and put
+  // back on whatever comes out.
+  const sentByPersonId = notification.sender?.sentByPersonId;
+  const input = sentByPersonId ? withoutSentBy(notification) : notification;
+  const resolved = await withShopProfile(db, input, cache);
+  return sentByPersonId
+    ? { ...resolved, sender: { ...resolved.sender, sentByPersonId } }
+    : resolved;
+}
+
+function withoutSentBy(notification: Notification): Notification {
+  const { sentByPersonId: _, ...profile } = notification.sender ?? {};
+  return Object.keys(profile).length > 0
+    ? { ...notification, sender: profile }
+    : { ...notification, sender: undefined };
+}
+
+/**
+ * Stamp the staff member whose request is sending (`currentSendActor`) on mail
+ * for their own shop, unless it already names one. Done before the first
+ * attempt, so a queued retry still names them.
+ */
+function withSentBy(input: Notification, actor: SendActor | null): Notification {
+  if (input.sender?.sentByPersonId) return input;
+  const sentByPersonId = sentByFor(actor, input);
+  return sentByPersonId ? { ...input, sender: { ...input.sender, sentByPersonId } } : input;
+}
+
+async function withShopProfile(
+  db: AppDb,
+  input: Notification,
+  cache: Map<string, NotificationSender | undefined>,
 ): Promise<Notification> {
   if (!("shopId" in input)) return input;
   // A caller that brought its own sender profile cannot vouch for the shop's
@@ -448,9 +483,10 @@ async function withShopSender(
 /** Send immediately and retain retryable failures for the next worker pass. */
 export async function sendNotification(
   db: AppDb,
-  input: Notification,
+  notification: Notification,
   provider?: NotificationProvider,
 ): Promise<NotificationDelivery> {
+  const input = withSentBy(notification, await currentSendActor());
   // Checked here rather than left to `notify`'s own hard `parse` below. A
   // notification the schema refuses never reached a provider, so reporting it
   // as `provider_error` names the wrong thing — and, because that code is
@@ -511,8 +547,11 @@ export async function sendNotificationBatch(
   const resolved = notificationProviderForDb(provider);
   const deliveries: NotificationDelivery[] = [];
   const senders = new Map<string, NotificationSender | undefined>();
-  for (let offset = 0; offset < inputs.length; offset += 100) {
-    const batch = inputs.slice(offset, offset + 100);
+  // One session read for the fan-out, not one per member.
+  const actor = await currentSendActor();
+  const stamped = inputs.map((input) => withSentBy(input, actor));
+  for (let offset = 0; offset < stamped.length; offset += 100) {
+    const batch = stamped.slice(offset, offset + 100);
     const results: (NotificationDelivery | undefined)[] = new Array(batch.length);
 
     // **Partition before the send, or one bad member costs ninety-nine good

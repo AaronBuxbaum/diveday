@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSesEmailEvent, smtpStatusOf } from "./ses-events";
+import { parseSesBounceReports, parseSesEmailEvent, smtpStatusOf } from "./ses-events";
 
 const now = new Date("2026-08-02T18:00:00.000Z");
 
@@ -241,5 +241,91 @@ describe("smtpStatusOf", () => {
 
   it("is null for a diagnostic with no code, so the bounce's classification is kept instead", () => {
     expect(smtpStatusOf("Amazon SES has suppressed sending to nora@example.com")).toBeNull();
+  });
+});
+
+describe("parseSesBounceReports", () => {
+  it("reports every bounced recipient with the classification, codes and tags", () => {
+    const reports = parseSesBounceReports(
+      JSON.stringify({
+        eventType: "Bounce",
+        mail: {
+          messageId: "ses-msg-9",
+          tags: {
+            diveday_shop: ["3f2504e0-4f89-41d3-9a0c-0305e82c3302"],
+            diveday_kind: ["address_confirmation"],
+            diveday_purpose: ["account"],
+            diveday_sender: ["not-a-uuid"],
+          },
+        },
+        bounce: {
+          timestamp: "2026-08-02T17:05:00.000Z",
+          bounceType: "Permanent",
+          bounceSubType: "NoEmail",
+          bouncedRecipients: [
+            {
+              emailAddress: " Nora@Example.com ",
+              diagnosticCode: "smtp; 550 5.1.1 <nora@example.com>",
+            },
+            { emailAddress: "ida@example.com" },
+          ],
+        },
+      }),
+      now,
+    );
+    expect(reports).toEqual([
+      {
+        providerMessageId: "ses-msg-9",
+        event: "bounce",
+        recipient: "nora@example.com",
+        bounceType: "Permanent",
+        bounceSubType: "NoEmail",
+        smtpStatus: "550 5.1.1",
+        complaintType: null,
+        kind: "address_confirmation",
+        purpose: "account",
+        shopId: "3f2504e0-4f89-41d3-9a0c-0305e82c3302",
+        sentByPersonId: null,
+        occurredAt: new Date("2026-08-02T17:05:00.000Z"),
+      },
+      expect.objectContaining({ recipient: "ida@example.com", smtpStatus: null }),
+    ]);
+  });
+
+  it("falls back to the message's destinations for a complaint that names nobody", () => {
+    const reports = parseSesBounceReports(
+      JSON.stringify({
+        eventType: "Complaint",
+        mail: { messageId: "ses-msg-10", destination: ["nora@example.com"] },
+        complaint: { complaintFeedbackType: "abuse" },
+      }),
+      now,
+    );
+    expect(reports).toEqual([
+      expect.objectContaining({
+        event: "complaint",
+        recipient: "nora@example.com",
+        complaintType: "abuse",
+        kind: null,
+        shopId: null,
+        occurredAt: now,
+      }),
+    ]);
+  });
+
+  it("reports nothing for a delivery, a reject or bad JSON", () => {
+    const delivery = JSON.stringify({
+      eventType: "Delivery",
+      mail: { messageId: "ses-msg-11", destination: ["nora@example.com"] },
+      delivery: {},
+    });
+    const reject = JSON.stringify({
+      eventType: "Reject",
+      mail: { messageId: "ses-msg-12" },
+      reject: { reason: "Bad content" },
+    });
+    expect(parseSesBounceReports(delivery, now)).toEqual([]);
+    expect(parseSesBounceReports(reject, now)).toEqual([]);
+    expect(parseSesBounceReports("{", now)).toEqual([]);
   });
 });

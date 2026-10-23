@@ -173,6 +173,7 @@ export type RetainedTable =
   | "notification_send_queue"
   | "waiver_deliveries"
   | "setup_requests"
+  | "email_bounces"
   | "incident_reports"
   | "lost_items"
   | "departure_notes";
@@ -453,6 +454,14 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * `interests` keep the product owner's 2026-08-14 decision above.
    */
   setup_requests: 365,
+  /**
+   * 90 days, measured on when SES reported it. A row is an address in clear
+   * beside the reason its mail bounced or was complained about, kept so
+   * DiveDay can debug its own delivery. A quarter is long enough to see a
+   * pattern and to ask a shop about one; SES's own suppression list, not this
+   * table, is what stops the next send to a hard-bounced address.
+   */
+  email_bounces: 90,
   /**
    * 2555 days (7 years), measured from when the incident happened (a draft
    * that never said when is measured from when it was started). A record, not
