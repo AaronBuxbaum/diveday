@@ -22,6 +22,7 @@ export function offlineManifestPayload({
   checklistChecks,
   boatSafety,
   snags,
+  medicalAlertTexts,
   locale,
   t,
 }: {
@@ -33,6 +34,11 @@ export function offlineManifestPayload({
   boatSafety: BoatSafetySection | null;
   /** `openSnagsForTrip`: carried and this crew's own, in the reader's order. */
   snags: readonly OpenSnag[];
+  /**
+   * The medical alert texts by booking id, only for a reader allowed them on
+   * this departure (issue #2960); absent, the copy carries the fact alone.
+   */
+  medicalAlertTexts?: ReadonlyMap<string, string>;
   locale: string;
   t: StaffTranslator;
 }) {
@@ -62,5 +68,6 @@ export function offlineManifestPayload({
         };
       }),
     },
+    medicalAlertTexts,
   );
 }

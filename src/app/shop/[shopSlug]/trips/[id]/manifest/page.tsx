@@ -42,6 +42,7 @@ import {
 import { readManifestPage } from "./_components/manifest-reads";
 import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
+import { medicalAlertView } from "./_components/medical-alert-view";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { openCheckpoint } from "./_components/open-checkpoint";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
@@ -123,6 +124,7 @@ export default async function TripManifestPage({
     loggedSightings,
     shopPickedSpecies,
     missingDiverReader,
+    medicalAlerts,
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
@@ -325,6 +327,14 @@ export default async function TripManifestPage({
             missingDiver: actions.missingDiver,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
+            medicalAlert: medicalAlertView({
+              mayRead: medicalAlerts.mayRead,
+              shopSlug,
+              tripId,
+              crew: manifest.crew,
+              locale,
+              t,
+            }),
             t,
           }}
         />
@@ -443,6 +453,7 @@ export default async function TripManifestPage({
             shopSlug,
             ...boatCheck,
             boatSafety,
+            medicalAlertTexts: medicalAlerts.offlineTexts,
             locale,
             t,
           })}

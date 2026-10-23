@@ -1,3 +1,4 @@
+import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
 import { departureKitRecord } from "@/db/boat-safety";
 import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
@@ -9,6 +10,7 @@ import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-reports";
 import { getTripManifests, rollCallOpenOnTrip } from "@/db/manifests";
+import { medicalAlertTextsForTrip } from "@/db/medical-alerts";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { lastAtSites } from "@/db/site-history";
@@ -56,6 +58,7 @@ export async function readManifestPage(
     partyPlan,
     rollCallOpen,
     missingAlerts,
+    mayReadMedicalAlerts,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -107,6 +110,9 @@ export async function readManifestPage(
     rollCallOpenOnTrip(db, shopId, tripId),
     // Who the owners were alerted about and are not found yet: their rows offer Found.
     openMissingAlerts(db, shopId, tripId),
+    // Whether this reader may open a medical alert's words here (issue
+    // #2960): the owner, a manager, or this departure's crew right now.
+    canPersonReadMedicalAlertOnTrip(db, shopId, personId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -141,6 +147,14 @@ export async function readManifestPage(
   const meetingWindows = dockTrip
     ? (await meetingWindowsByTrip(db, [dockTrip])).get(tripId)
     : undefined;
+  // The words ride only into this reader's own offline copy, and only when
+  // they may read them on this departure and some seat carries an alert. The
+  // live page never renders them: a recorded tap does (issue #2960).
+  const anyAlert = completeManifests?.[0]?.divers.some((diver) => diver.medicalAlert) ?? false;
+  const offlineMedicalAlertTexts =
+    mayReadMedicalAlerts && anyAlert
+      ? await medicalAlertTextsForTrip(db, shopId, tripId)
+      : undefined;
   return {
     completeManifests,
     buddyTeamsList,
@@ -175,5 +189,6 @@ export async function readManifestPage(
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
+    medicalAlerts: { mayRead: mayReadMedicalAlerts, offlineTexts: offlineMedicalAlertTexts },
   };
 }

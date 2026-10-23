@@ -1,7 +1,17 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { people, personRoles, shops, userAccounts } from "@/db/schema";
+import { standingReleaseByBooking } from "@/db/medical-alerts";
+import { listTripReadiness } from "@/db/readiness";
+import {
+  people,
+  personRoles,
+  shops,
+  tripAssignments,
+  trips,
+  userAccounts,
+  waiverRecords,
+} from "@/db/schema";
 import { createTrip } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
@@ -346,5 +356,72 @@ describe("GET /api/offline-manifests/upcoming", () => {
       await db.delete(personRoles).where(eq(personRoles.personId, person));
       expect((await GET()).status).toBe(401);
     });
+  });
+});
+
+/**
+ * **The medical alert on a primed copy** (issue #2960): the fact rides for
+ * every staffer, the words only for a caller allowed them on that departure.
+ */
+describe("GET /api/offline-manifests/upcoming — the medical alert for the crew", () => {
+  const ALERT = "Bee-sting allergy. EpiPen in the blue dry bag.";
+  const TITLE = "Two-Tank Reef — Molasses & French";
+
+  type Body = {
+    payloads: Array<{
+      manifests: Array<{
+        trip: { id: string; title: string };
+        divers: Array<{ bookingId: string; medicalAlert?: { text?: string } }>;
+      }>;
+    }>;
+  };
+
+  /** Writes an alert onto one seat's standing release on the demo departure. */
+  async function alertOnDemoSeat(db: AppDb, shopId: string) {
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shopId), eq(trips.title, TITLE)))
+      .limit(1);
+    if (!trip) throw new Error("demo departure missing");
+    const releases = standingReleaseByBooking(await listTripReadiness(db, shopId, trip.id));
+    const [bookingId, recordId] = [...releases][0] ?? [];
+    if (!bookingId || !recordId) throw new Error("expected a seat with a standing release");
+    await db
+      .update(waiverRecords)
+      .set({ medicalAlert: ALERT })
+      .where(eq(waiverRecords.id, recordId));
+    return { tripId: trip.id, bookingId };
+  }
+
+  async function seatOnCopy(bookingId: string) {
+    const response = await GET();
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Body;
+    const manifest = body.payloads
+      .flatMap((payload) => payload.manifests)
+      .find((candidate) => candidate.trip.title === TITLE);
+    return manifest?.divers.find((diver) => diver.bookingId === bookingId);
+  }
+
+  it("carries the words for the owner", async () => {
+    const { db, shop, personId } = await staffContext();
+    const { bookingId } = await alertOnDemoSeat(db, shop.id);
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+    expect((await seatOnCopy(bookingId))?.medicalAlert).toEqual({ text: ALERT });
+  });
+
+  it("carries the fact alone for a divemaster off the crew, and the words once on it", async () => {
+    const { db, shop } = await staffContext();
+    const { tripId, bookingId } = await alertOnDemoSeat(db, shop.id);
+    const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, divemaster, ["divemaster"]));
+    const off = await seatOnCopy(bookingId);
+    expect(off?.medicalAlert).toEqual({});
+    expect(JSON.stringify(off)).not.toContain("EpiPen");
+    await db.insert(tripAssignments).values({ tripId, personId: divemaster });
+    expect((await seatOnCopy(bookingId))?.medicalAlert).toEqual({ text: ALERT });
   });
 });

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MedicalAlertReveal } from "@/components/MedicalAlertReveal";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { Badge } from "@/components/ui/badge";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -49,6 +50,7 @@ export function DiverRowPanel({
     missingDiver,
     rollCallButtonCopy,
     rollCallClosed,
+    medicalAlert,
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
@@ -124,6 +126,29 @@ export function DiverRowPanel({
           <StatusMark variant="warning" size="md" />
           <span>{depthWarningText(t, diver.depthAdvisory)}</span>
         </p>
+      ) : null}
+      {/* **The diver's medical alert for the crew** (issue #2960), above the
+        contact facts it sits beside in an emergency: the words behind a
+        recorded tap for the owner, a manager and this departure's crew, and
+        for anyone else who can read them. Never on a held seat. */}
+      {diver.medicalAlert && !diver.identityWithheld ? (
+        <section className="mb-3 flex flex-col gap-2 rounded-lg bg-primary-tint px-3 py-2">
+          <h3 className="text-base font-semibold text-primary">
+            {t("manifest.medicalAlertHeading")}
+          </h3>
+          <MedicalAlertReveal
+            show={medicalAlert?.show?.(diver.bookingId)}
+            unreadable={medicalAlert?.unreadable ?? t("manifest.medicalAlertReadersOffline")}
+            copy={
+              medicalAlert?.copy ?? {
+                show: t("manifest.medicalAlertShow"),
+                showing: t("manifest.medicalAlertShowing"),
+                showHint: t("manifest.medicalAlertShowHint"),
+                failed: t("manifest.medicalAlertShowFailed"),
+              }
+            }
+          />
+        </section>
       ) : null}
       <DiverFacts
         diver={diver}

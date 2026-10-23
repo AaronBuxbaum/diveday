@@ -5,6 +5,7 @@ import type {
 import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import type { MedicalAlertView } from "./medical-alert-view";
 import type { MissingDiverRowActions } from "./missing-diver-controls";
 import type { PersonTrailEntry } from "./PersonSheet";
 import type { ManifestNote } from "./StaffNotes";
@@ -56,5 +57,11 @@ export type DiverRollCallContext = {
    */
   rollCallButtonCopy: (bookingId: string) => RollCallButtonCopy;
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
+  /**
+   * The medical alert for the crew on a row that carries one (issue #2960):
+   * the reveal for a reader allowed the words, otherwise who can read it.
+   * Absent, a flagged row still wears its chip and says who can read it.
+   */
+  medicalAlert?: MedicalAlertView;
   t: StaffTranslator;
 };

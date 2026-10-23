@@ -171,4 +171,43 @@ describe("OfflineDiverRollCall", () => {
     const notHere = container.querySelector("#offline-roll-call-b-marcus")?.textContent ?? "";
     expect(notHere).toContain("Not here when saved");
   });
+
+  /** Issue #2960: the words ride only for a reader allowed them; everyone else, the fact. */
+  it("shows a medical alert's words to a reader allowed them, and the fact to everyone else", () => {
+    const alert = "Bee-sting allergy. EpiPen in the blue dry bag.";
+    for (const [medicalAlert, words] of [
+      [{ text: alert }, true],
+      [{}, false],
+    ] as const) {
+      const copy = savedCopy();
+      const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+      if (!first) throw new Error("fixture diver missing");
+      first.medicalAlert = medicalAlert;
+      const trip = offlineTripView(copy, "departure");
+      if (!trip) throw new Error("the fixture carries a manifest");
+      const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+      const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+      expect(row).toContain("Medical alert");
+      if (words) expect(row).toContain(alert);
+      else {
+        expect(row).not.toContain(alert);
+        expect(row).toContain("Only an owner, a manager or this departure’s crew can read it.");
+      }
+      cleanup();
+    }
+  });
+
+  it("shows no medical alert on a held seat", () => {
+    const copy = savedCopy();
+    const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first) throw new Error("fixture diver missing");
+    first.identityWithheld = true;
+    first.medicalAlert = { text: "Bee-sting allergy." };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(row).not.toContain("Medical alert");
+    expect(row).not.toContain("Bee-sting");
+  });
 });
