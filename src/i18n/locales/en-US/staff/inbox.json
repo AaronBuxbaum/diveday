@@ -90,17 +90,6 @@
     "lateMarked": "Marked running late. The roster and the manifest show it.",
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted",
-    "gone": "That message is no longer in the inbox.",
-    "notesSaved": "Notes saved. Claude reads them in the next draft."
-  },
-  "replyNotes": {
-    "heading": "Notes for Claude",
-    "label": "What should a reply draft know?",
-    "hint": "Parking, rentals, what to bring. Claude reads these with your schedule, prices and desk hours when it drafts a reply on a diver’s record. Leave out divers’ names and numbers. Nothing goes out until someone sends it.",
-    "placeholder": "Park behind the shop by the tank racks. The gate opens at 7:15.",
-    "off": "Claude suggestions are off for this shop.",
-    "turnOn": "Turn them on in Settings",
-    "save": "Save notes",
-    "saving": "Saving…"
+    "gone": "That message is no longer in the inbox."
   }
 }

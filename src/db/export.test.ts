@@ -288,6 +288,7 @@ const EXCLUDED_TABLES = [
   "shop_subscriptions",
   "pricing_volume_statements",
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
+  "claude_demo_spend", // what every minted demo together spent on Claude; no shop's record
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
   "sms_opt_outs", // the platform texting number's STOP list, not one shop's record (ADR 20261007-sms-stop-and-help)
   "media_deletion_attempts", // internal reconciliation ledger, not a shop record (CR-012)
@@ -341,8 +342,7 @@ const EXCLUDED_TABLES = [
   // the shop (ADR 20260804-shop-owned-backup-export).
   "shop_backup_destinations",
   // Delivery outcomes for those bundles — operational plumbing about the
-  // export process, not a shop record; same reasoning as
-  // notification_deliveries.
+  // export process, not a shop record; same reasoning as notification_deliveries.
   "shop_backup_deliveries",
   // Integration provider credentials, OAuth state, delivery retries, and
   // external-id mappings are operational machinery rather than shop records.

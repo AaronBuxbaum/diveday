@@ -11,8 +11,6 @@ import {
   reopenInboundMessage,
 } from "@/db/inbound-messages";
 import { markMessageRunningLate } from "@/db/running-late";
-import { setShopReplyNotes } from "@/db/shops";
-import { REPLY_NOTES_MAX_LENGTH } from "@/lib/assists/inbox";
 import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -168,29 +166,4 @@ export async function markInboxSenderLateAction(formData: FormData): Promise<voi
     inbox,
     noticeUrl(inbox, outcome.status === "closed" ? "late-closed" : "late-marked"),
   );
-}
-
-const replyNotesForm = z.object({ notes: z.string().default("") });
-
-/**
- * **Save the shop's notes for Claude's reply drafts** (Aaron, 2026-10-22): the
- * box at the foot of the Inbox, which replaced saved answers. The notes are
- * the shop's own words, trimmed and capped; an empty box clears them.
- *
- * Same gate and tenant binding as the acts above: any live staff role may
- * answer a diver, so any may say what a draft should know. The write is scoped
- * by the session's shop, never a posted one.
- */
-export async function saveReplyNotesAction(formData: FormData): Promise<void> {
-  const session = await requireStaffSession();
-  const inbox = shopPath(session.user.shopSlug, "inbox");
-  const db = await getDb();
-  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
-
-  const parsed = parseForm(replyNotesForm, formData);
-  // A form that did not parse changes nothing, rather than clearing the notes.
-  if (!parsed.ok) revalidateAndRedirect(inbox, `${inbox}#reply-notes`);
-  const notes = parsed.data.notes.trim().slice(0, REPLY_NOTES_MAX_LENGTH);
-  await setShopReplyNotes(db, session.user.shopId, notes || null);
-  revalidateAndRedirect(inbox, noticeUrl(`${inbox}#reply-notes`, "notes-saved"));
 }

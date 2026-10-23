@@ -7,14 +7,21 @@ import {
   setShopCrewScheduleEnabled,
   setShopDivingOptions,
   setShopFeature,
+  setShopReplyNotes,
   setShopTaxEnabled,
 } from "@/db/shops";
-import { checkbox, formValue, readForm } from "@/lib/form-parse";
+import { REPLY_NOTES_MAX_LENGTH } from "@/lib/assists/inbox";
+import { checkbox, formValue, parseForm, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { paymentSettingsBlock, settingsBlock } from "../action-helpers";
-import { type FeatureRowGate, isOptionalFeature, parseFeatureRow } from "./feature-rows";
+import {
+  type FeatureRowGate,
+  isOptionalFeature,
+  parseFeatureRow,
+  REPLY_NOTES_ROW,
+} from "./feature-rows";
 
 const featureForm = z.object({
   row: formValue(),
@@ -82,4 +89,32 @@ export async function saveFeatureAction(formData: FormData) {
   }
 
   revalidateAndRedirect(page, noticeUrl(page, "feature-saved", { saved: row.id }));
+}
+
+const replyNotesForm = z.object({ notes: z.string().default("") });
+
+/**
+ * **Save the shop's notes for AI** (Aaron, 2026-10-22 and 10-23): the box under
+ * the AI switch on the Features page, which replaced saved answers. The notes
+ * are the shop's own words, trimmed and capped; an empty box clears them.
+ * Settings work, so the switches' own gate; the write is scoped by the
+ * session's shop, never a posted one.
+ */
+export async function saveReplyNotesAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const page = shopPath(session.user.shopSlug, "settings", "features");
+  await settingsBlock(session);
+
+  const parsed = parseForm(replyNotesForm, formData);
+  // A form that did not parse changes nothing, rather than clearing the notes.
+  if (!parsed.ok) {
+    revalidateAndRedirect(page, `${page}#${REPLY_NOTES_ROW}`);
+    return;
+  }
+  const notes = parsed.data.notes.trim().slice(0, REPLY_NOTES_MAX_LENGTH);
+  await setShopReplyNotes(await getDb(), session.user.shopId, notes || null);
+  revalidateAndRedirect(
+    page,
+    noticeUrl(`${page}#${REPLY_NOTES_ROW}`, "notes-saved", { saved: REPLY_NOTES_ROW }),
+  );
 }
