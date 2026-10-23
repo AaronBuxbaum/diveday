@@ -1323,7 +1323,7 @@ test("a departure's crew opens a diver's medical alert, and the read is on their
   try {
     const instructor = makeActivitySafe(await instructorContext.newPage());
     const sheet = await openAlertSheet(instructor);
-    await expect(sheet.getByText(/^Only an owner, a manager or this departure/)).toBeVisible();
+    await expect(sheet.getByText(staff("manifest.medicalAlertReaders"))).toBeVisible();
     await expect(
       sheet.getByRole("button", { name: staff("manifest.medicalAlertShow") }),
     ).toHaveCount(0);
@@ -1344,6 +1344,7 @@ test("a departure's crew opens a diver's medical alert, and the read is on their
     await expect(sheet.getByText(staff("manifest.medicalAlertShowHint"))).toBeVisible();
     await sheet.getByRole("button", { name: staff("manifest.medicalAlertShow") }).click();
     await expect(sheet.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
+    await expect(sheet.getByText(staff("manifest.medicalAlertNotReviewed"))).toBeVisible();
   } finally {
     await crewContext.close();
   }

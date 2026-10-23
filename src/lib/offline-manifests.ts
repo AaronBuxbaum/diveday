@@ -462,13 +462,13 @@ export type OfflineManifestPayload = {
           /**
            * **The diver's medical alert for the crew** (glossary *Medical
            * alert for the crew*, issue #2960). The fact rides on every copy,
-           * so a deckhand with no signal still sees the chip; `text` rides
-           * only on a copy saved by a reader `canReadMedicalAlert` admits for
-           * this departure (owner, manager, its crew), so the divemaster at
-           * sea can open it. No read event is written offline: the copy was
-           * already this reader's to hold. Inside the same encrypted,
-           * expiring record as the emergency contact, never on a held seat,
-           * and it gates nothing.
+           * so a deckhand with no signal still sees the chip. `text` is never
+           * in a payload the server builds (H-153 amendment): it is written on
+           * the device by `saveOfflineMedicalAlerts`, after a permitted
+           * reader's explicit save, which the server records per diver, and
+           * wiped on sign-out or another person's sign-in. Opening it at sea
+           * writes no event. Inside the same encrypted, expiring record as
+           * the emergency contact, never on a held seat, and it gates nothing.
            *
            * Optional and additive (no `OFFLINE_MANIFEST_RECORD_VERSION` bump;
            * a bump purges unsynced roll calls). Absent when the diver wrote
