@@ -16,7 +16,7 @@ trip_series_skips.csv 1 rows 07cb44cb77d674e3 [series_id,series_title,occurrence
 trip_schedule_days.csv 83 rows 30589d0e6e9b85e7 [trip_id,trip_title,day_number,starts_at,ends_at]
 trip_dives.csv 151 rows cab13f75ff7e572c [trip_id,trip_title,dive_number,title,dive_site_id,dive_site_name,description,travel_minutes]
 trip_requirements.csv 122 rows 33898caf760a8e3f [trip_id,trip_title,trip_starts_at,requires_waiver,minimum_certification_level,required_specialties,requires_nitrox,requires_payment,updated_at]
-trip_assignments.csv 283 rows 96cf3a108e40ace1 [trip_id,trip_title,trip_starts_at,person_id,person_name,roles,trip_role,assigned_by_person_id,assigned_by_name]
+trip_assignments.csv 283 rows aac51dfaf39607f3 [trip_id,trip_title,trip_starts_at,person_id,person_name,roles,trip_role,assigned_by_person_id,assigned_by_name]
 staff_shifts.csv 12 rows cde3982646e5b083 [id,person_id,person_name,starts_at,ends_at,note,created_by_person_id,created_by_name,created_at]
 crew_availability_blocks.csv 1 rows a2dd1b383de32d8a [id,person_id,person_name,starts_on,ends_on,note,created_by_person_id,created_by_name,created_at]
 crew_away_acknowledgements.csv 0 rows 3241465faae3b7ea [id,trip_id,trip_title,person_id,person_name,acknowledged_by_person_id,acknowledged_by_name,created_at,deleted_at,cleared_by_person_id,cleared_by_name]
