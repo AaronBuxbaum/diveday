@@ -1,4 +1,4 @@
-import { BASEMAP_TILE_HOSTS } from "./basemap";
+import { BASEMAP_TILE_HOSTS, VECTOR_LABEL_HOSTS } from "./basemap";
 import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "./maps";
 
 /**
@@ -319,6 +319,12 @@ export type CspOptions = {
    */
   metaSignup?: boolean;
   /**
+   * True when `NEXT_PUBLIC_ARCGIS_API_KEY` is set, so the maps fetch Esri's
+   * vector place labels ({@link VECTOR_LABEL_HOSTS}). Without a key no map
+   * asks those hosts, and the policy does not name them.
+   */
+  vectorLabels?: boolean;
+  /**
    * React uses `eval` in development to reconstruct server stacks in the
    * browser, and Next's own CSP guide says so. Automation test harnesses (E2E)
    * also evaluate scripts dynamically. Never true in production deployments.
@@ -390,6 +396,7 @@ export function enforcedPolicy(options: CspOptions): string {
         ...SENTRY_INGEST_HOSTS,
         ...rumConnectHosts(options.rumRegion, options.rumIdentityPoolId),
         ...(options.metaSignup ? META_SIGNUP_CONNECT_HOSTS : []),
+        ...(options.vectorLabels ? VECTOR_LABEL_HOSTS : []),
       ],
     ],
     // `'self'` for the staff embed generator's live preview

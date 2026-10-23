@@ -787,17 +787,17 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "ArcGIS Location Platform key for the shared basemap (ADR 20261022-one-shared-basemap,",
-      "issue #2943). Public by design: the browser sends it with every tile request, so it",
-      "is NEXT_PUBLIC_ and is never a secret. Vercel",
-      "needs it in Production and Preview, since a preview build inlines it too.",
+      "ArcGIS location services -- the maps' place names drawn as sharp vector text",
+      "(src/lib/basemap.ts). NEXT_PUBLIC_ because the browser sends it with every",
+      "label request; restrict the key to DiveDay's domains in the ArcGIS dashboard.",
+      "Vercel needs it in Production and Preview: a preview build inlines it too.",
     ],
     keys: [
       {
         key: "NEXT_PUBLIC_ARCGIS_API_KEY",
         from: "manual",
         targets: LOCAL_AND_VERCEL,
-        absent: "maps draw the keyless Esri imagery tiles, as they do today",
+        absent: "the maps keep Esri's raster place labels, which blur on a retina screen",
       },
     ],
   },
