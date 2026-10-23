@@ -1,10 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c0090096-2521-4014-b6eb-87108fe8a6f0",
+  "id": "bff16c92-e624-48bf-8754-135d242aa12e",
   "prevIds": [
-    "5410e6bb-96fe-4a2f-9ed9-c24d94ce47dd",
-    "d182dab3-4070-47ba-aabf-21352fbeac6a"
+    "47932827-7bd0-462f-ad87-53cd1e8c48d3"
   ],
   "ddl": [
     {
@@ -1384,6 +1383,12 @@
     {
       "isRlsEnabled": false,
       "name": "assist_results",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "claude_demo_spend",
       "entityType": "tables",
       "schema": "public"
     },
@@ -3915,6 +3920,32 @@
       "entityType": "columns",
       "schema": "public",
       "table": "assist_results"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "month",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "claude_demo_spend"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "spent_micro_usd",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "claude_demo_spend"
     },
     {
       "type": "uuid",
@@ -46728,6 +46759,16 @@
       "name": "assist_results_pkey",
       "schema": "public",
       "table": "assist_results",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "month"
+      ],
+      "nameExplicit": false,
+      "name": "claude_demo_spend_pkey",
+      "schema": "public",
+      "table": "claude_demo_spend",
       "entityType": "pks"
     },
     {
