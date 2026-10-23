@@ -793,6 +793,24 @@ export async function setShopFeature(
 }
 
 /**
+ * Whether the shop has one optional feature on. A server action behind a
+ * switch asks this before it writes, so a hand-built post to a feature the
+ * shop turned off writes nothing (the page that held the form is gone).
+ */
+export async function shopHasFeatureOn(
+  db: DbExecutor,
+  shopId: string,
+  feature: ShopFeature,
+): Promise<boolean> {
+  const [shop] = await db
+    .select({ on: shops[SHOP_FEATURE_COLUMNS[feature]] })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return shop?.on === true;
+}
+
+/**
  * The on/off columns the Features page writes: the optional features, Stripe
  * Tax, the crew schedule and the three kinds of diving.
  */

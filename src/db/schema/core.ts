@@ -464,13 +464,14 @@ export const shops = pgTable(
      */
     dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
     /**
-     * Whether the shop runs hotel pickups (fourth UX review item 8). Off by
-     * default, because most shops do not: `/ready` asked every diver at every
-     * shop "Want a morning pickup?", a promise the shop never made. Only a
-     * shop that says it offers them has the question asked. A Features-page
-     * switch since 2026-10-23 (`hotelPickup`); its default waits on Aaron.
+     * Whether the shop runs hotel pickups (fourth UX review item 8): `/ready`
+     * asks each diver whether they want a pickup and where they are staying,
+     * and the manifest lists who to collect. A Features-page switch since
+     * 2026-10-23 (`hotelPickup`), on for a new shop like every feature (Aaron,
+     * 2026-10-23); a shop that runs no pickups turns it off, and off nobody is
+     * asked. Existing shops keep what they chose.
      */
-    offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
+    offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(true),
     /**
      * How the shop takes money at the desk: card, cash, or both (fifth-loop
      * ideas, item 21). Null until the shop says, and then nothing is added to

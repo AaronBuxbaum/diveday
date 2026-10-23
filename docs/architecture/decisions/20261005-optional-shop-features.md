@@ -88,8 +88,8 @@ discount that does not exist.
   guard.**
   - `lost_found_enabled`, `work_orders_enabled`, `promo_codes_enabled` and
     `dive_packages_enabled`, **default true** for every shop, existing ones included, and
-    hotel pickups (`offers_hotel_pickup`, moved here from Dock-day rhythm, **default false**
-    pending the owner's call). The page groups its rows under small headings and keeps one Save.
+    hotel pickups (`offers_hotel_pickup`, moved here from Dock-day rhythm, default false
+    pending the owner's call, true since the next amendment). The page groups its rows under small headings and keeps one Save.
   - Off hides every door: the nav, the section tabs, ⌘K, Today's rows, the emails and the cron
     sends; a staff URL redirects with no error (Lost and found to the schedule, gear servicing to
     the gear register, Dive packages to Discounts, Discounts to Orders once codes, deals and
@@ -106,6 +106,21 @@ discount that does not exist.
     fails `feature-coverage.test.ts` until it is classified, and a destination mapped to a switch
     leaves every list when the switch is off. The rule is in `.claude/rules/surfaces.md`,
     `docs/agents/working-rules.md` and the PR template.
+
+- **Amended 2026-10-23 (Aaron: every feature starts on; security and safety reviews).**
+  - Hotel pickups default **true** like every other switch (migration
+    `hotel-pickup-starts-on`); existing shops keep what they chose, and every seeded shop has it
+    on.
+  - **Off withdraws the offer, never a promise.** Hotel pickups off removes the `/ready`
+    question and the roster's pickup form; a pickup a seat already holds still shows on the
+    manifest and its print, Prep's pickup run, the roster, the diver's page and the arrival
+    card, because the crew still has to collect that diver. Gear servicing off keeps Today's late
+    ticket on the shop's own rental unit (fleet safety), opening the unit on the register.
+  - **A switched-off feature's writers refuse.** A page that redirects is not a gate, so every
+    server action behind a switch asks it first (`shopHasFeatureOn`) and writes nothing: work
+    orders and their follow-ups, promo codes, the packages price list, a found item's row, a
+    roster pickup. A diver's package order and a last-minute deal's code refuse in the database
+    reader itself while their switch is off.
 
 ## Alternatives considered
 

@@ -40,15 +40,9 @@ describe("a new shop", () => {
   it("starts with every feature on, and the crew schedule too (Aaron, 2026-10-23)", async () => {
     const { shops } = await import("@/db/schema");
     for (const feature of SHOP_FEATURES) {
-      if (feature === "hotelPickup") continue;
       expect(shops[SHOP_FEATURE_COLUMNS[feature]].default, feature).toBe(true);
     }
     expect(shops.crewScheduleEnabled.default).toBe(true);
-  });
-
-  it("keeps hotel pickups off until Aaron decides (most shops do not run them)", async () => {
-    const { shops } = await import("@/db/schema");
-    expect(shops.offersHotelPickup.default).toBe(false);
   });
 
   it("keeps Stripe Tax off until the shop's owner decides otherwise", async () => {

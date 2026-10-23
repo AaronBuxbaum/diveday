@@ -25,6 +25,7 @@ import { getBookingPayment } from "@/db/payments";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
 import { recordShopActivity } from "@/db/shop-activity";
+import { shopHasFeatureOn } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { blankAsAbsent, parseForm, readForm, single, text } from "@/lib/form-parse";
@@ -535,6 +536,9 @@ export async function updateBookingPickupAction(
     redirect(noticeUrl(back, "pickup-invalid", { bid: bookingId }));
   }
   const db = await getDb();
+  // Hotel pickups switched off (the Features page): the roster draws no form,
+  // so a hand-built post sets nothing. A pickup already set stays.
+  if (!(await shopHasFeatureOn(db, s.user.shopId, "hotelPickup"))) redirect(back);
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   const pickupTime = parsed.data.pickupTime ? parsed.data.pickupTime.trim() || null : null;
   const hotelPickupLocation = parsed.data.hotelPickupLocation

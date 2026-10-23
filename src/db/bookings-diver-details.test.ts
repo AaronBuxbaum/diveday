@@ -81,9 +81,10 @@ describe("booking detail public seam", () => {
       carriedFactsConfirmedAt: nowDate(),
     });
     expect(await getBookingPickupTime(db, input.shopId, booking.id)).toBe("08:30");
-    // Hotel pickups switched off (the Features page): the time is kept, unsaid.
+    // Hotel pickups switched off (the Features page) stops the offer only: a
+    // pickup already set is still said on the arrival card.
     await db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, input.shopId));
-    expect(await getBookingPickupTime(db, input.shopId, booking.id)).toBeNull();
+    expect(await getBookingPickupTime(db, input.shopId, booking.id)).toBe("08:30");
   });
   it("refuses every setter for another tenant and for cancelled seats", async () => {
     const { db, booking, input } = await seat();

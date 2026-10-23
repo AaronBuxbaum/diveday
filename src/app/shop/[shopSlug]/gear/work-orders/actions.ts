@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
+import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import {
   addCustomerGearItem,
   addWorkOrderLine,
@@ -56,6 +56,11 @@ const kindValues = [...GEAR_KIND_ORDER] as [GearItemKind, ...GearItemKind[]];
 
 async function requireWorkOrderSurface() {
   const session = await requireStaffSession();
+  // Gear servicing switched off (the Features page): every bench page lands on
+  // the gear register, and so does a hand-built post, having written nothing.
+  if (!(await shopHasFeatureOn(await getDb(), session.user.shopId, "workOrders"))) {
+    revalidateAndRedirect(shopPath(session.user.shopSlug, "gear"));
+  }
   return {
     session,
     board: shopPath(session.user.shopSlug, "gear", "work-orders"),

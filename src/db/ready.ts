@@ -121,7 +121,6 @@ export async function getBookedCard(
       timezone: shops.timezone,
       defaultLocale: shops.defaultLocale,
       dockCallMinutes: shops.dockCallMinutes,
-      offersHotelPickup: shops.offersHotelPickup,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -150,10 +149,9 @@ export async function getBookedCard(
     },
     trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
     greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : row.personName,
-    // Only while the shop offers hotel pickups (the Features page).
-    pickup: row.offersHotelPickup
-      ? { time: row.pickupTime, location: row.hotelPickupLocation }
-      : { time: null, location: null },
+    // Said even after the shop stops offering hotel pickups (the Features
+    // page): a pickup already promised still happens.
+    pickup: { time: row.pickupTime, location: row.hotelPickupLocation },
     bookingCancelled: row.status === "cancelled",
     departureCancelled: row.tripStatus !== "scheduled",
     milestone,
@@ -785,10 +783,11 @@ export async function getReadyPageData(
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
-    // Only while the shop offers hotel pickups (the Features page); the
-    // masthead then names the dock call, not a pickup.
-    hotelPickupLocation: row.offersHotelPickup ? row.hotelPickupLocation : null,
-    pickupTime: row.offersHotelPickup ? row.pickupTime : null,
+    // Said even after the shop stops offering hotel pickups (the Features
+    // page): only the question goes (`offersHotelPickup`), and a pickup
+    // already promised still happens.
+    hotelPickupLocation: row.hotelPickupLocation,
+    pickupTime: row.pickupTime,
     canPay,
     offersHotelPickup: row.offersHotelPickup,
     lunchAboard: row.tripLunchAboard,

@@ -6,7 +6,7 @@ import { cleanDietaryNote } from "@/lib/lunch-aboard";
 import type { ReEntryAsk } from "@/lib/re-entry";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
-import { bookings, shops, trips } from "./schema";
+import { bookings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -222,12 +222,11 @@ export async function getBookingPickupTime(
   shopId: string,
   bookingId: string,
 ): Promise<string | null> {
-  // Only while the shop offers hotel pickups (the Features page); off, the
-  // card names the dock call.
+  // Said even after the shop stops offering hotel pickups (the Features
+  // page): a pickup already promised still happens.
   const [row] = await db
     .select({ pickupTime: bookings.pickupTime })
     .from(bookings)
-    .innerJoin(shops, and(eq(shops.id, bookings.shopId), eq(shops.offersHotelPickup, true)))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   return row?.pickupTime?.trim() || null;

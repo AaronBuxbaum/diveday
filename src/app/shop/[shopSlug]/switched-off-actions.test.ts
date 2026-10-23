@@ -1,0 +1,153 @@
+import { count, eq } from "drizzle-orm";
+import { describe, expect, it, vi } from "vitest";
+import { recordLostItem } from "@/db/lost-items";
+import { divePackages, lostItems, people, shopPromoCodes, shops, workOrders } from "@/db/schema";
+import { createTrip } from "@/db/trips";
+import { nowDate } from "@/lib/clock";
+import type { ShopFeature } from "@/lib/shop-features";
+import { SHOP_FEATURE_COLUMNS } from "@/lib/shop-features";
+import { fileScopedShopContext } from "@/test/db";
+import {
+  redirectedTo,
+  SEEDED_OWNER_EMAIL,
+  seededStaffPersonId,
+  staffSession,
+} from "@/test/staff-session";
+
+/**
+ * **A switched-off feature's actions write nothing** (the Features page).
+ * Its pages redirect and its forms are gone, but a hand-built post still
+ * reaches the action, so each one asks the switch before it writes. These run
+ * the real actions as the owner, who passes every role gate, so the switch is
+ * the only thing refusing.
+ */
+
+const ctx = fileScopedShopContext();
+
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn((to: string) => {
+    throw new Error(`REDIRECT:${to}`);
+  }),
+}));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/db/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/client")>();
+  return { ...actual, getDb: vi.fn() };
+});
+vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+
+const { getDb } = await import("@/db/client");
+const { requireStaffSession } = await import("@/lib/session");
+const { createWorkOrderAction } = await import("./gear/work-orders/actions");
+const { resendReadyNoticeAction } = await import("./gear/work-orders/follow-up-actions");
+const { createPromoAction } = await import("./promos/actions");
+const { createDivePackageAction } = await import("./settings/package-actions");
+const { lostItemRowAction } = await import("@/app/actions/lost-items");
+
+async function asOwnerWith(feature: ShopFeature) {
+  const { db, shop } = ctx;
+  vi.mocked(getDb).mockResolvedValue(db);
+  const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+  vi.mocked(requireStaffSession).mockResolvedValue(
+    staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: owner }),
+  );
+  await db
+    .update(shops)
+    .set({ [SHOP_FEATURE_COLUMNS[feature]]: false })
+    .where(eq(shops.id, shop.id));
+  return { db, shop, owner };
+}
+
+function form(fields: Record<string, string>) {
+  const data = new FormData();
+  for (const [key, value] of Object.entries(fields)) data.set(key, value);
+  return data;
+}
+
+describe("actions behind a switched-off feature", () => {
+  it("opens no ticket and sends no ready message while gear servicing is off", async () => {
+    const { db, shop } = await asOwnerWith("workOrders");
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id));
+    if (!diver) throw new Error("seeded diver missing");
+    const [before] = await db.select({ n: count() }).from(workOrders);
+
+    expect(
+      await redirectedTo(() =>
+        createWorkOrderAction(form({ personId: diver.id, reportedProblem: "Free flows" })),
+      ),
+    ).toBe(`/shop/${shop.slug}/gear`);
+    expect(
+      await redirectedTo(() =>
+        resendReadyNoticeAction(form({ workOrderId: "00000000-0000-4000-8000-000000000001" })),
+      ),
+    ).toBe(`/shop/${shop.slug}/gear`);
+
+    const [after] = await db.select({ n: count() }).from(workOrders);
+    expect(after?.n).toBe(before?.n);
+  });
+
+  it("mints no promo code while promo codes are off", async () => {
+    const { db, shop } = await asOwnerWith("promoCodes");
+    const to = await redirectedTo(() =>
+      createPromoAction(form({ code: "HANDBUILT", description: "", discount: "10", scope: "all" })),
+    );
+    expect(to).toBe(`/shop/${shop.slug}/promos`);
+    const made = await db
+      .select({ id: shopPromoCodes.id })
+      .from(shopPromoCodes)
+      .where(eq(shopPromoCodes.code, "HANDBUILT"));
+    expect(made).toEqual([]);
+  });
+
+  it("adds no package to the price list while dive packages are off", async () => {
+    const { db, shop } = await asOwnerWith("divePackages");
+    const to = await redirectedTo(() =>
+      createDivePackageAction(
+        form({ name: "Hand-built card", diveCount: "5", priceDollars: "100", scope: "all" }),
+      ),
+    );
+    expect(to).toBe(`/shop/${shop.slug}/promos/packages`);
+    const made = await db
+      .select({ id: divePackages.id })
+      .from(divePackages)
+      .where(eq(divePackages.name, "Hand-built card"));
+    expect(made).toEqual([]);
+  });
+
+  it("changes no found item while lost and found is off, and keeps it", async () => {
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() - 6 * 3_600_000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Switched-off lost and found",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+      capacity: 8,
+    });
+    if (!trip) throw new Error("trip not created");
+    const found = await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      description: "Blue mask",
+      actorPersonId: null,
+    });
+    if (!found.ok) throw new Error(found.reason);
+    await asOwnerWith("lostFound");
+
+    const outcome = await lostItemRowAction(
+      trip.id,
+      undefined,
+      form({ itemId: found.item.id, intent: "returned" }),
+    );
+
+    expect(outcome).toEqual({ status: "refused", reason: "not_found" });
+    const [item] = await db
+      .select({ status: lostItems.status })
+      .from(lostItems)
+      .where(eq(lostItems.id, found.item.id));
+    expect(item?.status).toBe("open");
+  });
+});

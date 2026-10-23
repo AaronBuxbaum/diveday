@@ -18,6 +18,7 @@ import {
   gearReservations,
   gearServiceEvents,
   rentalFitProfiles,
+  shops,
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
@@ -155,9 +156,9 @@ describe("getTripPrep", () => {
     expect(await getTripPrep(db, shop, "00000000-0000-4000-8000-000000000000")).toBeNull();
   });
 
-  // Hotel pickups switched off (the Features page): Prep lists no pickup run,
-  // and what a seat holds is kept for when it is switched back on.
-  it("lists hotel pickups only while the shop offers them", async () => {
+  // Hotel pickups switched off (the Features page) stops new ones only: a
+  // diver already promised a pickup is still on Prep's pickup run.
+  it("still lists a pickup already set after the shop stops offering them", async () => {
     const ctx = await context();
     const [seat] = await ctx.db
       .select({ id: bookings.id })
@@ -169,10 +170,9 @@ describe("getTripPrep", () => {
       .update(bookings)
       .set({ hotelPickupLocation: "Harbor Inn", pickupTime: "07:15" })
       .where(eq(bookings.id, seat.id));
-    const on = await getTripPrep(ctx.db, { ...ctx.shop, offersHotelPickup: true }, ctx.tripId);
-    expect(on?.hotelPickups.length).toBeGreaterThan(0);
-    const off = await getTripPrep(ctx.db, { ...ctx.shop, offersHotelPickup: false }, ctx.tripId);
-    expect(off?.hotelPickups).toEqual([]);
+    await ctx.db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, ctx.shop.id));
+    const prep = await getTripPrep(ctx.db, ctx.shop, ctx.tripId);
+    expect(prep?.hotelPickups.map((stop) => stop.hotelPickupLocation)).toContain("Harbor Inn");
   });
 
   /**

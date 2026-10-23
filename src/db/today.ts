@@ -2073,9 +2073,16 @@ export async function getTodayWork(
   // A feature the shop switched off on the Features page raises no row: the
   // reads above ran beside the shop row that says so, and what they found is
   // still there for when it is switched back on (`shop-features.ts`).
+  // Gear servicing off keeps the shop's own units' late tickets: their service
+  // is fleet safety, and the row opens the unit on the register instead.
   const wave =
     waveRead.shopUnits?.workOrdersEnabled === false
-      ? { ...waveRead, workOrdersNeedingAttention: [] }
+      ? {
+          ...waveRead,
+          workOrdersNeedingAttention: waveRead.workOrdersNeedingAttention
+            .filter((row) => row.fleetUnitId !== null)
+            .map((row) => ({ ...row, benchClosed: true as const })),
+        }
       : waveRead;
   const lostItemsWaiting = waveRead.shopUnits?.lostFoundEnabled === false ? 0 : lostItemsFound;
   const {

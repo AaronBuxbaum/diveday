@@ -639,9 +639,9 @@ describe("getBookedCard", () => {
     expect(card.departureCancelled).toBe(false);
   });
 
-  // Hotel pickups switched off (the Features page): a pickup a seat already
-  // holds is kept, and neither read says it, so the masthead names the dock.
-  it("says no pickup while the shop does not offer hotel pickups", async () => {
+  // Hotel pickups switched off (the Features page) stops the question only: a
+  // pickup a seat already holds still happens, so both reads still say it.
+  it("still says a pickup already set after the shop stops offering them", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
     await db
       .update(bookings)
@@ -655,9 +655,10 @@ describe("getBookedCard", () => {
     await db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, shop.id));
     expect(
       (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.pickup,
-    ).toEqual({ time: null, location: null });
+    ).toEqual({ time: "07:15", location: "Harbor Inn" });
     const data = await getReadyPageData(db, bookingId);
-    expect([data?.hotelPickupLocation, data?.pickupTime]).toEqual([null, null]);
+    expect([data?.hotelPickupLocation, data?.pickupTime]).toEqual(["Harbor Inn", "07:15"]);
+    expect(data?.offersHotelPickup).toBe(false);
   });
 
   it("says when the seat or the departure is gone, so the page can decline the fast path", async () => {
