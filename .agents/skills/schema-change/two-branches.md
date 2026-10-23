@@ -4,15 +4,15 @@ Part of the **schema-change** skill ([SKILL.md](SKILL.md)). Read it when your br
 
 ## Two branches, two migrations
 
-`drizzle/` is a **DAG, not a list.** Each migration folder carries a full `snapshot.json` naming its
+`drizzle/` is a **DAG, not a list.** Each migration folder carries a `snapshot.json` naming its
 parents in `prevIds` (drizzle-kit 1.0 dropped `journal.json`, which is why nothing conflicts in git
 any more). A branch cut from main today generates a migration whose `prevIds` point at whatever
 main's head was *then* — so two sessions that each add a migration and each merge cleanly leave the
 graph with **two open heads**.
 
-`drizzle-kit check` walks every fork point and compares the branches hanging below it. Two heads
-that touch different tables are fine and stay quiet. Two heads that touch the same object — two
-columns on `shops`, which this repo does most weeks — are refused, and the same walk runs inside
+`drizzle-kit check` compares every pair of open heads by the footprints their snapshots record.
+Two heads that write different objects — even two new columns on `shops` — are fine and stay quiet.
+Two heads that write the same object — one column added twice, or altered both ways — are refused, and the same walk runs inside
 `drizzle-kit migrate`, i.e. **inside the production build**. On 2026-08-22 that is exactly how it
 was found: `main` deployed, died at 11:58 printing a tree diagram, and the offending change was
 already merged.
@@ -24,26 +24,17 @@ pnpm db:merge
 ```
 
 That writes one migration folder whose SQL is empty and whose snapshot names every open head as a
-parent, closing the diamond — a fork whose branches reach a common leaf is skipped by the walk
-entirely. Commit it alongside whatever provoked it. `drizzle/20260822212616_merge-migration-heads`
+parent, closing the diamond — drizzle compares open heads only, and this leaves one. drizzle-kit
+1.0.0-rc.5 refuses `generate --ignore-conflicts`, and its `--fix-conflicts` deletes migrations
+production already ran, so the script writes the folder itself. Commit it alongside whatever provoked it. `drizzle/20260822212616_merge-migration-heads`
 is the worked example, and its SQL comment explains itself to whoever opens it next.
 
-`pnpm db:merge` also **repairs its own snapshot**, and that is not decoration.
-`drizzle-kit generate --custom` writes the merge folder's snapshot as *one head's
-state whole* — losing the other's — whenever the two open heads **share a
-parent**, which is the ordinary shape once a repository has merged a few times.
-This repository shipped one: the merge closing `shop-units-confirmed` and
-`dive-package-line-item` kept `dive_packages` and dropped
-`shops.units_confirmed_at`, so the next `pnpm db:generate` re-emitted that column
-as a fresh `ADD COLUMN` against a database that already had it (issue #852).
-
-That failure is invisible where it is cheap to find — the merge folder's SQL is
-empty either way, a fresh database applies the chain in order and is fine, and
-every test passes. It fails against a database that already ran the original,
-which is the `real-postgres` job or production. So the script now probes with a
-plain `generate` afterwards, adopts that snapshot's state if anything was lost,
-and says so on stdout. If it reports a repair, nothing is wrong with your change;
-read the SQL it prints to see what had gone missing.
+`pnpm db:merge` then **probes with a plain `generate`**, and that is not decoration. A merge
+folder once kept one head's state whole when the two heads **shared a parent**, and the next
+`pnpm db:generate` re-emitted the lost column as a fresh `ADD COLUMN` against a database that
+already had it (issue #852). A version-9 merge snapshot carries no state — drizzle rebuilds it from
+the parents — so the probe must find nothing to write; if it finds SQL, the script prints it and
+fails, and either your schema has pending changes or the rebuild lost a head.
 
 Two things to hold on to:
 

@@ -238,21 +238,21 @@ the plan, and the escape hatch is gone. Do not let that transition happen silent
 
 The guard below is about what a migration *says*. This one is about where it *sits*.
 
-drizzle-kit 1.0 keeps a full `snapshot.json` in every migration folder, naming its parents in
+drizzle-kit 1.0 keeps a `snapshot.json` in every migration folder, naming its parents in
 `prevIds` — so `drizzle/` is a **directed graph**, not the linear chain the old `journal.json`
 made it. A branch cut from `main` generates a migration whose `prevIds` point at main's head *at
 that moment*. Two sessions each adding a migration, each merging cleanly with no git conflict
 anywhere, therefore leave the graph with **two open heads**.
 
-`drizzle-kit migrate` walks that graph before applying anything, comparing the branches below every
-fork. Two heads touching different tables pass silently. Two heads touching the same object — two
-new columns on `shops`, which happens here most weeks — are refused, *inside the production build*,
+`drizzle-kit migrate` walks that graph before applying anything, comparing every pair of open heads
+by the objects their statements write. Two heads writing different objects pass silently. Two heads
+writing the same object — one column added twice, or altered both ways — are refused, *inside the production build*,
 after the change is already on `main`. That is not hypothetical: it is how this section came to
 exist, on 2026-08-22, when a deploy died at 11:58 printing a tree diagram and nothing else.
 
 **The fix is `pnpm db:merge`, and it rewrites nothing.** It writes one migration folder whose SQL is
-empty and whose snapshot names every open head as a parent; a fork whose branches reach a common
-leaf is skipped by the walk entirely. `drizzle/20260822212616_merge-migration-heads` is the worked
+empty and whose snapshot names every open head as a parent; drizzle compares open heads only, and
+this leaves one. `drizzle/20260822212616_merge-migration-heads` is the worked
 example. The one case where it is the wrong answer is when the two branches genuinely add the same
 column — then the merge folder quiets the check and the second `ADD COLUMN` still fails against a
 real server, which the `real-postgres` job is what catches.

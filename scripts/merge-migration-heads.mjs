@@ -8,25 +8,24 @@
 // whose divergent heads touch the same object -- inside the production build.
 //
 // The repair is one migration folder with no SQL in it whose snapshot names
-// every open head as a parent, because drizzle skips a fork whose branches
-// reach a common leaf. That is what `drizzle-kit generate --custom` already
-// produces; this script exists for the three things around it.
+// every open head as a parent, because drizzle only compares open heads, and a
+// merge node leaves one. drizzle-kit 1.0.0-rc.5 no longer writes that folder:
+// `generate --ignore-conflicts` is refused for postgresql, and the only remedy
+// it offers, `generate --fix-conflicts`, deletes the conflicting migrations --
+// which production has already applied. So this writes the folder itself, in
+// the same version-9 shape `generate --custom` gives a node with no changes,
+// and does the three things around it:
 //
-//  1. **It refuses to run when the graph is already converged.** Left as a bare
-//     `drizzle-kit generate --custom`, this command silently writes an empty
-//     migration folder every time anyone runs it speculatively, and those
-//     accumulate forever with nothing to say they were pointless.
-//  2. **It writes the folder's own explanation into its SQL**, replacing
-//     drizzle's "put your code below!" placeholder. An empty migration is
-//     exactly the thing a future reader will try to delete.
-//  3. **It re-runs the check afterwards**, so the command's exit code means
-//     "the graph converged" rather than "a folder was written".
-//
-// `--ignore-conflicts` is passed to the generate step and only to it: without
-// it, generate refuses for the very reason it is being run. The check on either
-// side of it is what keeps that honest.
+//  1. **It refuses to run when the graph is already converged**, so a
+//     speculative run never leaves a pointless empty folder behind.
+//  2. **It writes the folder's own explanation into its SQL.** An empty
+//     migration is exactly the thing a future reader will try to delete.
+//  3. **It re-runs the check afterwards and then probes with a plain
+//     `generate`**, so the exit code means "the graph converged and its state
+//     is `src/db/schema/`" rather than "a folder was written".
 
-import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
@@ -35,10 +34,9 @@ import { fileURLToPath } from "node:url";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 // The repository, unless a test points this at a throwaway drizzle project.
-// That escape hatch is the only way to exercise the snapshot repair below: the
-// shape that provokes it needs seven migration folders in a deliberate
-// arrangement, and building that inside `drizzle/` is not a thing to do to a
-// real tree.
+// That escape hatch is the only way to exercise the merge end to end: the shape
+// that provokes it needs seven migration folders in a deliberate arrangement,
+// and building that inside `drizzle/` is not a thing to do to a real tree.
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.DIVEDAY_DB_MERGE_ROOT ?? path.join(SCRIPTS, "..");
 const MIGRATIONS_DIR = path.join(ROOT, "drizzle");
@@ -79,84 +77,60 @@ function migrationFolders() {
 }
 
 /**
- * **`generate --custom` writes a merge snapshot that can silently lose a head.**
+ * **The merge node's state must be both heads, not one** (issue #852).
  *
- * When the two open heads share a parent — each also having a parent the other
- * lacks, which is the ordinary shape once a repository has merged a few times —
- * drizzle writes the merge folder's snapshot as *one head's state whole*
- * instead of the union. This repository shipped one: the merge closing
- * `shop-units-confirmed` and `dive-package-line-item` kept `dive_packages` and
- * dropped `shops.units_confirmed_at`, and the next `pnpm db:generate` re-emitted
- * that column as a brand-new `ADD COLUMN` against a database that already had
- * it (issue #852).
+ * Before snapshot version 9 a merge snapshot carried a whole schema, and
+ * `generate --custom` wrote one head's state into it when the two heads shared
+ * a parent; the next `generate` re-emitted the lost column as a fresh
+ * `ADD COLUMN` against a database that already had it. A version-9 merge node
+ * carries no state: drizzle rebuilds it from its parents. This proves that
+ * rebuild against `src/db/schema/`, which after both branches are on `main` is
+ * the merged truth: a plain `generate` must find nothing to write.
  *
- * **It is invisible where it is cheap to find.** The merge folder's SQL is
- * empty either way; a fresh database applies the whole chain in order and is
- * fine; every test passes. It fails against a database that already ran the
- * original — the `real-postgres` job, or production, where migrations run
- * inside the build while the previous release is still serving.
- *
- * The repair is a plain `generate`. That one derives its snapshot from
- * `src/db/schema/`, which after both branches are on `main` *is* the merged
- * truth — so whatever it emits is exactly what the merge snapshot had lost, and
- * its own snapshot is the state the merge folder should have carried. Adopting
- * that is also correct for a column one branch **dropped**, which a naive union
- * of the two parents would wrongly resurrect.
- *
- * Returns the recovered SQL when there was any, or `null` when the snapshot was
- * already whole.
+ * Returns the SQL the probe wrote, or `null` when the merge state is whole.
  */
-function repairLostState(mergeFolder) {
+function probeMergedState() {
   const before = migrationFolders();
   const probe = drizzle(
     ["generate", "--name", "db-merge-probe"],
     SUBPROCESS_TIMEOUTS.drizzleKitCheck,
   );
+  const [probeFolder] = [...migrationFolders()].filter((entry) => !before.has(entry));
   if (probe.status !== 0) {
+    if (probeFolder)
+      rmSync(path.join(MIGRATIONS_DIR, probeFolder), { recursive: true, force: true });
     console.error(
-      "\ndb:merge: could not verify the merge snapshot — the probe generate failed (see above). The folder is written; check it by hand before committing.",
+      "\ndb:merge: could not verify the merge folder -- the probe generate failed (see above). The folder is written; check it by hand before committing.",
     );
     process.exit(probe.status ?? 1);
   }
-  const [probeFolder] = [...migrationFolders()].filter((entry) => !before.has(entry));
-  // Nothing written means the merge snapshot already describes the schema, and
-  // there is nothing to recover.
   if (!probeFolder) return null;
-
   const probeDir = path.join(MIGRATIONS_DIR, probeFolder);
   const sql = readFileSync(path.join(probeDir, "migration.sql"), "utf8").trim();
-  if (!sql) {
-    rmSync(probeDir, { recursive: true, force: true });
-    return null;
-  }
-
-  const mergeSnapshotPath = path.join(MIGRATIONS_DIR, mergeFolder, "snapshot.json");
-  const merge = JSON.parse(readFileSync(mergeSnapshotPath, "utf8"));
-  const probeSnapshot = JSON.parse(readFileSync(path.join(probeDir, "snapshot.json"), "utf8"));
-  // The merge folder keeps its own identity and both parents; only the state it
-  // claims is replaced.
-  writeFileSync(
-    mergeSnapshotPath,
-    `${JSON.stringify({ ...merge, ddl: probeSnapshot.ddl, renames: probeSnapshot.renames }, null, 2)}\n`,
-  );
   rmSync(probeDir, { recursive: true, force: true });
+  return sql || null;
+}
 
-  // Prove the repair rather than assume it: a second probe must now find
-  // nothing to write.
-  const after = migrationFolders();
-  const confirm = drizzle(
-    ["generate", "--name", "db-merge-confirm"],
-    SUBPROCESS_TIMEOUTS.drizzleKitCheck,
+/** Every snapshot id that no other snapshot names as a parent. */
+function openHeads() {
+  const snapshots = [...migrationFolders()]
+    .map((folder) => path.join(MIGRATIONS_DIR, folder, "snapshot.json"))
+    .filter((file) => existsSync(file))
+    .map((file) => JSON.parse(readFileSync(file, "utf8")));
+  const parents = new Set(snapshots.flatMap((snapshot) => snapshot.prevIds ?? []));
+  return snapshots.map((snapshot) => snapshot.id).filter((id) => !parents.has(id));
+}
+
+/** `YYYYMMDDHHMMSS`, UTC, a second after the newest folder if the clock is behind it. */
+function folderPrefix() {
+  const newest = Math.max(
+    0,
+    ...[...migrationFolders()].map((folder) => {
+      const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(folder);
+      return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) + 1000 : 0;
+    }),
   );
-  const [leftover] = [...migrationFolders()].filter((entry) => !after.has(entry));
-  if (leftover) rmSync(path.join(MIGRATIONS_DIR, leftover), { recursive: true, force: true });
-  if (confirm.status !== 0 || leftover) {
-    console.error(
-      `\ndb:merge: repaired drizzle/${mergeFolder}'s snapshot and it still does not describe src/db/schema/. That means the schema has pending changes of its own, which need their own migration — commit or revert those first, delete drizzle/${mergeFolder}, and rerun.`,
-    );
-    process.exit(1);
-  }
-  return sql;
+  return new Date(Math.max(Date.now(), newest)).toISOString().replace(/\D/g, "").slice(0, 14);
 }
 
 if (graphIsConverged()) {
@@ -166,26 +140,24 @@ if (graphIsConverged()) {
   process.exit(0);
 }
 
-const before = migrationFolders();
-
-const generated = drizzle(
-  ["generate", "--custom", "--name", "merge-migration-heads", "--ignore-conflicts"],
-  SUBPROCESS_TIMEOUTS.drizzleKitCheck,
+const folder = `${folderPrefix()}_merge-migration-heads`;
+mkdirSync(path.join(MIGRATIONS_DIR, folder));
+writeFileSync(
+  path.join(MIGRATIONS_DIR, folder, "snapshot.json"),
+  `${JSON.stringify(
+    {
+      type: "diff",
+      version: "9",
+      dialect: "postgres",
+      id: randomUUID(),
+      prevIds: openHeads(),
+      footprints: [],
+      deltas: [],
+    },
+    null,
+    2,
+  )}\n`,
 );
-if (generated.status !== 0) {
-  console.error("\ndb:merge: drizzle-kit could not write the merge folder (see above).");
-  process.exit(generated.status ?? 1);
-}
-
-const written = [...migrationFolders()].filter((folder) => !before.has(folder));
-if (written.length !== 1) {
-  console.error(
-    `\ndb:merge: expected drizzle-kit to write exactly one folder, saw ${written.length}. Nothing has been edited; check \`git status drizzle\` before rerunning.`,
-  );
-  process.exit(1);
-}
-
-const [folder] = written;
 writeFileSync(
   path.join(MIGRATIONS_DIR, folder, "migration.sql"),
   `-- Deliberately empty. This migration exists for its snapshot, not its SQL.
@@ -195,9 +167,9 @@ writeFileSync(
 -- branches touch the same object. drizzle refuses that tree, and the walk that
 -- refuses it also runs inside the production build.
 --
--- This snapshot names both heads as its parents, which closes the diamond: a
--- fork whose branches reach a common leaf is skipped by the walk. Nothing is
--- applied and nothing changes shape. Written by \`pnpm db:merge\`; see
+-- This snapshot names both heads as its parents, which closes the diamond:
+-- drizzle compares open heads only, and this leaves one. Nothing is applied and
+-- nothing changes shape. Written by \`pnpm db:merge\`; see
 -- scripts/check-migration-graph.mjs and the schema-change skill.
 `,
 );
@@ -209,14 +181,17 @@ if (!graphIsConverged()) {
   process.exit(1);
 }
 
-const recovered = repairLostState(folder);
-
-console.log(`\ndb:merge: wrote drizzle/${folder}. Commit it with the change that provoked it.`);
-if (recovered) {
-  console.log(
-    `db:merge: its snapshot had lost state from one head, and that has been repaired in place.\n${recovered
+const pending = probeMergedState();
+if (pending) {
+  console.error(
+    `\ndb:merge: wrote drizzle/${folder}, and a plain generate still finds SQL to write against it:\n${pending
       .split("\n")
       .map((line) => `  ${line}`)
-      .join("\n")}`,
+      .join(
+        "\n",
+      )}\nEither src/db/schema/ has pending changes of its own, which need their own migration (commit or revert those first), or drizzle rebuilt the merge state without one head's changes. Delete drizzle/${folder} and rerun once the schema is clean.`,
   );
+  process.exit(1);
 }
+
+console.log(`\ndb:merge: wrote drizzle/${folder}. Commit it with the change that provoked it.`);

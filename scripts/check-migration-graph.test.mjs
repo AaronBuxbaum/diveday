@@ -26,30 +26,63 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "check-migration-graph.mjs");
 
-/** A snapshot holding one table with the given columns, plus its parents. */
-function snapshot({ id, prevIds, columns }) {
+const ORIGIN = "00000000-0000-0000-0000-000000000000";
+
+/** One `text` column of `widgets`, as drizzle-kit 1.0's snapshot rows spell it. */
+const column = (name) => ({
+  entityType: "columns",
+  schema: "public",
+  table: "widgets",
+  name,
+  type: "text",
+  typeSchema: null,
+  notNull: false,
+  dimensions: 0,
+  default: null,
+  generated: null,
+  identity: null,
+});
+
+/**
+ * What drizzle-kit records about an `ADD COLUMN`: the names it writes and reads.
+ * Since snapshot version 9 the commutativity walk compares these, not tables, so
+ * two heads collide only when they write the same column.
+ */
+const addColumn = (name) => ({
+  statementType: "add_column",
+  statementTarget: ["column", "public", "widgets", name],
+  writes: [
+    `s|col|public.widgets.${name}`,
+    `n|col|public.widgets.${name}`,
+    `e|col|public.widgets.${name}`,
+  ],
+  reads: ["n|tbl|public.widgets", "n|sch|public"],
+});
+
+/**
+ * A snapshot in drizzle-kit 1.0's version-9 shape. The root is a `base` holding
+ * the whole `widgets` table; every other node is a `diff` holding only the
+ * columns it adds, so a merge node (`adds: []`) is exactly what `pnpm db:merge`
+ * writes: parents and nothing else.
+ */
+function snapshot({ id, prevIds, columns = [], adds = [] }) {
+  const header = { version: "9", dialect: "postgres", id, prevIds };
+  if (prevIds.every((parent) => parent === ORIGIN)) {
+    return {
+      type: "base",
+      ...header,
+      footprints: [],
+      ddl: [
+        { entityType: "tables", schema: "public", name: "widgets", isRlsEnabled: false },
+        ...columns.map(column),
+      ],
+    };
+  }
   return {
-    version: "8",
-    dialect: "postgres",
-    id,
-    prevIds,
-    ddl: [
-      { entityType: "tables", schema: "public", name: "widgets", isRlsEnabled: false },
-      ...columns.map((name) => ({
-        entityType: "columns",
-        schema: "public",
-        table: "widgets",
-        name,
-        type: "text",
-        typeSchema: null,
-        notNull: false,
-        dimensions: 0,
-        default: null,
-        generated: null,
-        identity: null,
-      })),
-    ],
-    renames: [],
+    type: "diff",
+    ...header,
+    footprints: adds.map(addColumn),
+    deltas: adds.map((name) => ({ op: "create", row: column(name) })),
   };
 }
 
@@ -88,7 +121,7 @@ describe("check-migration-graph", () => {
     const { status, output } = check(
       graph({
         "20260101000000_base": base,
-        "20260102000000_colour": { id: "colour", prevIds: ["base"], columns: ["id", "colour"] },
+        "20260102000000_colour": { id: "colour", prevIds: ["base"], adds: ["colour"] },
       }),
     );
 
@@ -100,8 +133,8 @@ describe("check-migration-graph", () => {
     const { status, output } = check(
       graph({
         "20260101000000_base": base,
-        "20260102000000_left": { id: "left", prevIds: ["base"], columns: ["id", "colour"] },
-        "20260103000000_right": { id: "right", prevIds: ["base"], columns: ["id", "colour"] },
+        "20260102000000_left": { id: "left", prevIds: ["base"], adds: ["colour"] },
+        "20260103000000_right": { id: "right", prevIds: ["base"], adds: ["colour"] },
       }),
     );
 
@@ -113,17 +146,17 @@ describe("check-migration-graph", () => {
   });
 
   it("accepts those same two heads once a merge node names both as parents", () => {
-    // What `pnpm db:merge` writes, and the reason it works: a fork whose
-    // branches reach a common leaf is skipped by drizzle's walk entirely.
+    // What `pnpm db:merge` writes, and the reason it works: drizzle compares
+    // open heads only, and a merge node leaves one.
     const { status } = check(
       graph({
         "20260101000000_base": base,
-        "20260102000000_left": { id: "left", prevIds: ["base"], columns: ["id", "colour"] },
-        "20260103000000_right": { id: "right", prevIds: ["base"], columns: ["id", "colour"] },
+        "20260102000000_left": { id: "left", prevIds: ["base"], adds: ["colour"] },
+        "20260103000000_right": { id: "right", prevIds: ["base"], adds: ["colour"] },
         "20260104000000_merge": {
           id: "merge",
           prevIds: ["left", "right"],
-          columns: ["id", "colour"],
+          adds: [],
         },
       }),
     );
@@ -139,8 +172,8 @@ describe("check-migration-graph", () => {
     const { status } = check(
       graph({
         "20260101000000_base": base,
-        "20260102000000_left": { id: "left", prevIds: ["base"], columns: ["id", "colour"] },
-        "20260103000000_right": { id: "right", prevIds: ["base"], columns: ["id", "weight"] },
+        "20260102000000_left": { id: "left", prevIds: ["base"], adds: ["colour"] },
+        "20260103000000_right": { id: "right", prevIds: ["base"], adds: ["weight"] },
       }),
     );
 
@@ -220,8 +253,8 @@ describe("check-migration-graph, when it has nothing to check", () => {
     const { status, output } = check(
       graph({
         "20260101000000_base": base,
-        "20260102000000_left": { id: "left", prevIds: ["base"], columns: ["id", "colour"] },
-        "20260103000000_right": { id: "right", prevIds: ["base"], columns: ["id", "colour"] },
+        "20260102000000_left": { id: "left", prevIds: ["base"], adds: ["colour"] },
+        "20260103000000_right": { id: "right", prevIds: ["base"], adds: ["colour"] },
       }),
     );
 
@@ -232,17 +265,17 @@ describe("check-migration-graph, when it has nothing to check", () => {
 
 /**
  * A dangling parent is the trace a rebase leaves when it drops a migration
- * folder and keeps the one written on top of it. drizzle-kit's walk only looks
- * at fork points it can reach, so a `prevIds` entry naming an id that no folder
- * carries is skipped, not refused, and the tree passes here while migrate-time
- * code has a graph it cannot walk back to its root.
+ * folder and keeps the one written on top of it. drizzle-kit 1.0.0-rc.5 refuses
+ * it too, but a refusal followed by the `pnpm db:merge` remedy sends the reader
+ * to a fix that cannot work, so the guard names the folder and the missing id
+ * before drizzle-kit runs.
  */
 describe("check-migration-graph, when a parent is missing", () => {
   it("refuses a snapshot whose prevIds names an id no folder carries, naming both", () => {
     const { status, output } = check(
       graph({
         "20260101000000_base": base,
-        "20260103000000_orphan": { id: "orphan", prevIds: ["dropped"], columns: ["id", "colour"] },
+        "20260103000000_orphan": { id: "orphan", prevIds: ["dropped"], adds: ["colour"] },
       }),
     );
 
@@ -255,11 +288,11 @@ describe("check-migration-graph, when a parent is missing", () => {
     const { status, output } = check(
       graph({
         "20260101000000_base": base,
-        "20260102000000_left": { id: "left", prevIds: ["base"], columns: ["id", "colour"] },
+        "20260102000000_left": { id: "left", prevIds: ["base"], adds: ["colour"] },
         "20260104000000_merge": {
           id: "merge",
           prevIds: ["left", "right"],
-          columns: ["id", "colour"],
+          adds: [],
         },
       }),
     );
@@ -277,7 +310,7 @@ describe("check-migration-graph, when a parent is missing", () => {
           ...base,
           prevIds: ["00000000-0000-0000-0000-000000000000"],
         },
-        "20260102000000_colour": { id: "colour", prevIds: ["base"], columns: ["id", "colour"] },
+        "20260102000000_colour": { id: "colour", prevIds: ["base"], adds: ["colour"] },
       }),
     );
 
