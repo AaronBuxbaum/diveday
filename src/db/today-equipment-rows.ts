@@ -230,7 +230,10 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
         ? workOrderLateDetailText(t, { promisedOn: formatCalendarDate(row.since, locale) })
         : workOrderUncollectedDetailText(t, { readyOn: formatCalendarDate(row.since, locale) }),
       actionLabel: openWorkOrderActionText(t),
-      href: `/shop/${shopSlug}/gear/work-orders/${row.workOrderId}`,
+      href:
+        row.benchClosed && row.fleetUnitId
+          ? `/shop/${shopSlug}/gear/${row.fleetUnitId}`
+          : `/shop/${shopSlug}/gear/work-orders/${row.workOrderId}`,
       dueAt: localMidnight(row.since, late ? 1 : 0),
     });
   }

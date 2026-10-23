@@ -159,10 +159,8 @@ export function DiverFile({
       <WorkOrdersGroup
         shopSlug={shop.slug}
         timezone={shop.timezone}
-        reminders={gear.reminders}
         personId={personId}
-        pieces={gear.ownPieces}
-        orders={gear.workOrders}
+        gear={gear}
         locale={locale}
         t={t}
         status={noticeForForm(notice, "work-orders")}

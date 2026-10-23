@@ -20,6 +20,7 @@ import {
   bookingCheckouts,
   interests,
   people,
+  shops,
   type TripLastMinutePromo,
   tripLastMinutePromos,
   trips,
@@ -199,9 +200,15 @@ export async function getActiveTripPromoByCode(
 ): Promise<TripLastMinutePromo | null> {
   const code = input.code.trim().toUpperCase();
   if (!code) return null;
+  // A deal already sent stops applying once the shop switches the last-minute
+  // list off (the Features page); the row is kept for when it comes back on.
   const [row] = await db
-    .select()
+    .select({ promo: tripLastMinutePromos })
     .from(tripLastMinutePromos)
+    .innerJoin(
+      shops,
+      and(eq(shops.id, tripLastMinutePromos.shopId), eq(shops.lastMinuteListEnabled, true)),
+    )
     .where(
       and(
         eq(tripLastMinutePromos.shopId, input.shopId),
@@ -212,7 +219,7 @@ export async function getActiveTripPromoByCode(
       ),
     )
     .limit(1);
-  return row ?? null;
+  return row?.promo ?? null;
 }
 
 /** Trip ids among `tripIds` that have never had a `sent` last-minute-deal blast. */

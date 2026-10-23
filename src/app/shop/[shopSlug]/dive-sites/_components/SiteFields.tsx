@@ -26,9 +26,9 @@ import { SiteForecastFields } from "./SiteForecastFields";
 import { SitePhotoFields } from "./SitePhotoFields";
 import {
   SITE_FORM_SECTION_IDS,
-  SITE_FORM_SECTION_ORDER,
   type SiteFormSection,
   siteFormSectionLabels,
+  siteFormSectionOrder,
 } from "./site-form-sections";
 
 /**
@@ -124,6 +124,7 @@ export function SiteFields({
   locale,
   timezone,
   briefAssist,
+  fieldGuideOn = true,
 }: {
   t: StaffTranslator;
   /** How this shop reads depth; the stored figure is always metres. */
@@ -156,6 +157,8 @@ export function SiteFields({
   timezone: string;
   /** Claude's "Draft from these fields" (site-brief), inside this form; absent while dark. */
   briefAssist?: ReactNode;
+  /** The shop's field-guide switch (the Features page); off, its section is not drawn. */
+  fieldGuideOn?: boolean;
 }) {
   const labels = siteFormSectionLabels(t);
 
@@ -390,7 +393,7 @@ export function SiteFields({
 
   return (
     <>
-      {SITE_FORM_SECTION_ORDER.map((section, index) => {
+      {siteFormSectionOrder(fieldGuideOn).map((section, index) => {
         const parts = sections[section];
         return (
           <EditorSection

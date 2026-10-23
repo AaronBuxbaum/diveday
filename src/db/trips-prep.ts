@@ -165,6 +165,8 @@ export async function getTripPrep(
     offeredKinds: shop.rentalItems,
   });
 
+  // Listed whether or not the shop still offers hotel pickups (the Features
+  // page): a diver already promised one is still collected.
   const hotelPickups = buildHotelPickupList(divers);
 
   // The gear register's half of the page (ADR 20260815-minimal-gear-register).

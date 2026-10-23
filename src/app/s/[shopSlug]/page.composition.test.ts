@@ -21,3 +21,24 @@ describe("the public schedule's Our year panel", () => {
     expect(positionOf("<OurYearSection")).toBeGreaterThan(positionOf("<ScheduleReviewsSection"));
   });
 });
+
+/**
+ * Sightings switched off on Features (ADR 20261005-optional-shop-features):
+ * the month's "Seen here" shelf is not read or drawn, and a trip page's day
+ * plan gets no sightings beat. Nothing logged is erased.
+ */
+describe("the public pages with sightings switched off", () => {
+  it("draws no month shelf on the schedule", () => {
+    expect(SOURCE).toContain("<MonthSightingsSection shop={shop}");
+    expect(routeSource(import.meta.dirname, "MonthSightingsShelf.tsx")).toContain(
+      "if (!shop.sightingsEnabled) return null;",
+    );
+  });
+
+  it("reads no site sightings for a trip page", () => {
+    const reads = routeSource(`${import.meta.dirname}/trips/[id]`, "_lib/page-reads.ts");
+    expect(reads).toContain(
+      "shop.sightingsEnabled ? siteSightings(db, shop.id, siteIds) : new Map()",
+    );
+  });
+});

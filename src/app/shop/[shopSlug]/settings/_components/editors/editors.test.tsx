@@ -465,6 +465,15 @@ describe("the Rentals form", () => {
     expect(html.match(/type="submit"/g)).toHaveLength(1);
   });
 
+  it("leaves out the regulator interval while gear servicing is switched off", async () => {
+    const { shop } = await demoShop();
+    const html = renderToStaticMarkup(
+      <RentalsForm shop={{ ...shop, workOrdersEnabled: false }} t={t} locale="en-US" />,
+    );
+    expect(html).toContain('name="rentalTerms"');
+    expect(html).not.toContain('name="regulatorServiceMonths"');
+  });
+
   it("says nothing when no fit asks for a dropped piece", async () => {
     const { shop } = await demoShop();
     const html = renderToStaticMarkup(

@@ -457,19 +457,6 @@ export async function setShopCrewLead(db: AppDb, shopId: string, minutes: number
 }
 
 /**
- * Whether the shop runs hotel pickups (fourth UX review, item 8). Only then
- * does `/ready` ask a diver "Want a pickup?".
- */
-export async function setShopOffersHotelPickup(db: AppDb, shopId: string, offers: boolean) {
-  const [shop] = await db
-    .update(shops)
-    .set({ offersHotelPickup: offers })
-    .where(eq(shops.id, shopId))
-    .returning({ id: shops.id, offersHotelPickup: shops.offersHotelPickup });
-  return shop ?? null;
-}
-
-/**
  * Sets the shop's minimum turnaround between departures, in minutes (issue
  * #2141). Advice for the schedule builder's Move panel only; the route narrows
  * the value through `parseMinTurnaroundMinutes`, and the table's CHECK holds
@@ -803,6 +790,24 @@ export async function setShopFeature(
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
+}
+
+/**
+ * Whether the shop has one optional feature on. A server action behind a
+ * switch asks this before it writes, so a hand-built post to a feature the
+ * shop turned off writes nothing (the page that held the form is gone).
+ */
+export async function shopHasFeatureOn(
+  db: DbExecutor,
+  shopId: string,
+  feature: ShopFeature,
+): Promise<boolean> {
+  const [shop] = await db
+    .select({ on: shops[SHOP_FEATURE_COLUMNS[feature]] })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return shop?.on === true;
 }
 
 /**

@@ -65,7 +65,7 @@ const labels: ExecutedDiveLabels = {
   },
 };
 
-function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = []) {
+function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = [], sightingsOn = true) {
   return render(
     <ExecutedDiveLog
       planned={[
@@ -89,6 +89,7 @@ function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = []) {
       timeZone="America/New_York"
       depthUnit="meters"
       checkpoint="after_dive_1"
+      sightingsOn={sightingsOn}
     />,
   );
 }
@@ -171,6 +172,14 @@ describe("the species picker", () => {
     expect(speciesOptions()).toContain("spotted-eagle-ray");
   });
 
+  it("draws the speciesShown marker beside the picker, so the save writes what it posts", () => {
+    renderLog("Dive 1 — not recorded yet");
+
+    const marker = document.querySelector<HTMLInputElement>('input[name="speciesShown"]');
+    expect(marker?.type).toBe("hidden");
+    expect(marker?.value).toBe("1");
+  });
+
   it("keeps a chosen species when the crew changes the site", async () => {
     // A sighting is a claim about a moment, not about a row in the site
     // library, so re-picking the site reorders the list and drops nothing.
@@ -188,5 +197,36 @@ describe("the species picker", () => {
     expect(
       (document.querySelector('select[name="observedSpeciesSlug"]') as HTMLSelectElement).value,
     ).toBe("spotted-eagle-ray");
+  });
+});
+
+/**
+ * **Sightings switched off** (ADR 20261005-optional-shop-features): the dive
+ * log draws no species field and no `speciesShown` marker, and the save keeps
+ * the species logged before because the marker is absent.
+ */
+describe("the dive log with sightings switched off", () => {
+  it("hides the species picker and posts neither a species nor the marker", () => {
+    const logged = {
+      executed: {
+        diveNumber: 1,
+        actualSiteId: "site-1",
+        enteredAt: null,
+        exitedAt: null,
+        maxDepthMeters: null,
+        observedConditions: null,
+        notRecorded: [],
+        observedSpeciesSlug: "spotted-eagle-ray",
+        planChangeReason: null,
+        planChangeNote: null,
+      } as unknown as ExecutedDive,
+      actualSite: { id: "site-1", name: "Molasses Reef" },
+    };
+    renderLog("Dive 1 — Molasses Reef", [logged], false);
+
+    expect(document.querySelector('select[name="observedSpeciesSlug"]')).toBeNull();
+    expect(screen.queryByText("Seen on this dive")).toBeNull();
+    expect(document.querySelector('[name="observedSpeciesSlug"]')).toBeNull();
+    expect(document.querySelector('[name="speciesShown"]')).toBeNull();
   });
 });

@@ -653,3 +653,26 @@ describe("BookSpotSection on the demo's test-mode checkout", () => {
     expect(screen.queryByText(/4242/)).toBeNull();
   });
 });
+
+/** The wait list is a Features switch: off, a full boat offers no list to join. */
+describe("TripFullSection with the wait list off", () => {
+  it("draws no join form, and still points at another trip", () => {
+    renderDiver(
+      <TripFullSection
+        shopSlug="reef-shop"
+        trip={trip({ booked: 8 })}
+        tripRef={tripRef}
+        offerWaitlist={false}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Join the wait list" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Find another trip" })).toBeInTheDocument();
+  });
+
+  it("draws the join form while on", () => {
+    renderDiver(
+      <TripFullSection shopSlug="reef-shop" trip={trip({ booked: 8 })} tripRef={tripRef} />,
+    );
+    expect(screen.getByRole("button", { name: "Join the wait list" })).toBeInTheDocument();
+  });
+});

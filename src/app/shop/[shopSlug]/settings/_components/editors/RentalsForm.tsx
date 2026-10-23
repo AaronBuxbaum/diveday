@@ -141,22 +141,24 @@ export function RentalsForm({
             className={textareaClassFor(4)}
           />
         </Field>
-        <Field
-          label={t("settings.main.rentals.regulator.label")}
-          description={t("settings.main.rentals.regulator.hint")}
-        >
-          <select
-            name="regulatorServiceMonths"
-            defaultValue={String(shop.customerRegulatorServiceMonths)}
-            className={controlClass}
+        {shop.workOrdersEnabled ? (
+          <Field
+            label={t("settings.main.rentals.regulator.label")}
+            description={t("settings.main.rentals.regulator.hint")}
           >
-            {CUSTOMER_REGULATOR_SERVICE_MONTHS.map((months) => (
-              <option key={months} value={months}>
-                {t("settings.main.rentals.regulator.months", { months })}
-              </option>
-            ))}
-          </select>
-        </Field>
+            <select
+              name="regulatorServiceMonths"
+              defaultValue={String(shop.customerRegulatorServiceMonths)}
+              className={controlClass}
+            >
+              {CUSTOMER_REGULATOR_SERVICE_MONTHS.map((months) => (
+                <option key={months} value={months}>
+                  {t("settings.main.rentals.regulator.months", { months })}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
         <FieldActions>
           <SubmitButton
             pendingLabel={t("settings.main.rentals.submitting")}

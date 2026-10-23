@@ -18,8 +18,7 @@ export function MoreWaysRows({
   shopSlug,
   quiet,
   promotedAsk,
-  dateRequestsEnabled,
-  lastMinuteListEnabled,
+  switches: { dateRequestsEnabled, lastMinuteListEnabled, waitlistEnabled },
   everHadDeparture,
   t,
 }: {
@@ -28,8 +27,12 @@ export function MoreWaysRows({
   quiet: boolean;
   /** `PromotedDateAsk` carries the date request above, at the board's end. */
   promotedAsk: boolean;
-  dateRequestsEnabled: boolean;
-  lastMinuteListEnabled: boolean;
+  /** The shop's Features switches these rows follow (the shop row itself). */
+  switches: {
+    dateRequestsEnabled: boolean;
+    lastMinuteListEnabled: boolean;
+    waitlistEnabled: boolean;
+  };
   /** The shop has run a departure at some point (`everHadDepartureRead`). */
   everHadDeparture: boolean;
   t: DiverTranslator;
@@ -78,7 +81,7 @@ export function MoreWaysRows({
             `everHadDeparture`, not `hasUpcoming`: see above. */}
       {/* Nor for a shop that switched the list off. */}
       {everHadDeparture && lastMinuteListEnabled ? (
-        <LastMinuteListForm shopSlug={shopSlug} />
+        <LastMinuteListForm shopSlug={shopSlug} waitlistOn={waitlistEnabled} />
       ) : null}
       {/* Same gate, same reason: a shop that has never had a departure
             cannot have a real booking to recover (issue #723). */}

@@ -8,12 +8,10 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import type { RecapSite } from "@/db/recap";
 import { recapPageStateCached } from "@/db/recap-cached";
-import { buildAfterStateProps } from "@/features/recap-after-state";
+import { buildAfterStateProps, recapBuddyLinkUrl } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
-import { BUDDY_PARAM } from "@/lib/buddy-links";
-import { buddyReferralId } from "@/lib/buddy-tokens";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicAppUrl } from "@/lib/notifications";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -234,18 +232,9 @@ export default async function DiveRecapPage({
     },
   });
 
-  // **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W). The
-  // recap's own page and nowhere else: `/ready` renders this same component
-  // before the dive, and "bring a buddy next time" is a thing to say after one.
-  //
-  // Absolute, because the errand is to send it to somebody — a shop with no
-  // canonical origin configured gets no card rather than a path nobody can
-  // follow out of a message. The id is signed and non-secret
-  // (`src/lib/buddy-tokens.ts`); it names this booking and authorizes nothing.
-  const origin = publicAppUrl();
-  const buddyLinkUrl = origin
-    ? `${new URL(publicSchedulePath(data.shop.slug), `${origin}/`).toString()}?${BUDDY_PARAM}=${buddyReferralId(bookingId)}`
-    : null;
+  // **The buddy seat**: the recap's own page and nowhere else, since `/ready`
+  // renders this same component before the dive (`recapBuddyLinkUrl`).
+  const buddyLinkUrl = recapBuddyLinkUrl(data.shop, bookingId, publicAppUrl());
 
   return (
     <DiverIntlProvider

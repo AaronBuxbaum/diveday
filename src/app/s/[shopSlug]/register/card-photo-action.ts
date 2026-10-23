@@ -45,7 +45,7 @@ export async function readCardPhotoAtShopAction(
     return null;
   }
   const shop = await shopBySlugCached(shopSlug);
-  if (!shop) return null;
+  if (!shop?.selfRegistrationEnabled) return null;
   // A daily slice of the shop's monthly cap, keyed on the shop itself: the
   // public can never spend more of the staff's budget than this.
   if (

@@ -56,9 +56,12 @@ export function TookACallFields({
   copy,
   departures,
   defaultOutcome = null,
+  waitlistOn = true,
 }: {
   copy: TookACallCopy;
   departures: readonly CallDeparture[];
+  /** The shop keeps a wait list (the Features page); off, a call cannot end on one. */
+  waitlistOn?: boolean;
   /** What the last submission chose, so a refusal comes back on the same branch. */
   defaultOutcome?: CallOutcome | null;
 }) {
@@ -81,7 +84,7 @@ export function TookACallFields({
           if (isCallOutcome(target.value)) setOutcome(target.value);
         }}
       >
-        {CALL_OUTCOMES.map((option) => (
+        {CALL_OUTCOMES.filter((option) => waitlistOn || option !== "waitlist").map((option) => (
           <ChoicePill
             key={option}
             type="radio"

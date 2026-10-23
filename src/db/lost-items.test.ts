@@ -10,6 +10,7 @@ import {
   listOpenLostItems,
   listTripLostItems,
   lostItemDescriptionProblem,
+  openLostItemsByPerson,
   recordLostItem,
   setLostItemStatus,
   tellLostItemOwner,
@@ -402,5 +403,50 @@ describe("tellLostItemOwner", () => {
       ),
     ).toEqual({ ok: false, reason: "not_open" });
     expect(email.sent).toEqual([]);
+  });
+});
+
+/**
+ * **Lost and found switched off** (the Features page): nothing new is
+ * recorded, nobody is emailed, and no counter or record says "has a mask
+ * waiting"; every item is still there for when it is switched back on.
+ */
+describe("with Lost and found switched off", () => {
+  it("records nothing, tells nobody, hands nothing over, and keeps every item", async () => {
+    const { db, shop } = ctx;
+    const { trip, booked } = await sailedWithSeat(db, shop.id, { email: "owner-off@example.com" });
+    const kept = await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: booked.bookingId,
+      description: "Yellow snorkel",
+      actorPersonId: null,
+    });
+    if (!kept.ok) throw new Error(kept.reason);
+    const personId = kept.item.personId as string;
+    expect((await openLostItemsByPerson(db, shop.id, [personId])).get(personId)).toEqual([
+      "Yellow snorkel",
+    ]);
+
+    await db.update(shops).set({ lostFoundEnabled: false }).where(eq(shops.id, shop.id));
+    expect(
+      await recordLostItem(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        description: "One fin",
+        actorPersonId: null,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    const email = fakeEmail();
+    expect(
+      await tellLostItemOwner(
+        db,
+        { shopId: shop.id, itemId: kept.item.id },
+        { emailProvider: email.provider },
+      ),
+    ).toEqual({ ok: false, reason: "not_found" });
+    expect(email.sent).toEqual([]);
+    expect((await openLostItemsByPerson(db, shop.id, [personId])).size).toBe(0);
+    expect((await listOpenLostItems(db, shop.id)).map((item) => item.id)).toContain(kept.item.id);
   });
 });

@@ -3,7 +3,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { settingsShortcutsFor } from "./settings-groups";
 
 const t = staffTranslator("en-US");
-const shop = { hasBoatDiving: true, isDemo: false };
+const shop = { hasBoatDiving: true, isDemo: false, selfRegistrationEnabled: true };
 
 /** ⌘K reaches a setting: the rail's rows, for a reader inside the settings gate. */
 describe("settingsShortcutsFor", () => {
@@ -40,5 +40,20 @@ describe("settingsShortcutsFor", () => {
     expect(demo.map((row) => row.id)).not.toContain("billing");
     const shore = settingsShortcutsFor({ ...shop, hasBoatDiving: false }, ["owner"], "x", t);
     expect(shore.map((row) => row.id)).not.toContain("boats");
+  });
+
+  it("hides the counter card while counter sign-up is switched off", () => {
+    expect(settingsShortcutsFor(shop, ["owner"], "x", t).map((row) => row.id)).toContain(
+      "counterCard",
+    );
+    const off = settingsShortcutsFor(
+      { ...shop, selfRegistrationEnabled: false },
+      ["owner"],
+      "x",
+      t,
+    );
+    expect(off.map((row) => row.id)).not.toContain("counterCard");
+    // Its switch is still found by name.
+    expect(off.map((row) => row.id)).toContain("selfRegistration");
   });
 });

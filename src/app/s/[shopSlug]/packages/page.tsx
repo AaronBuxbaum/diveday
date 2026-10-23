@@ -57,7 +57,9 @@ export default async function PublicPackagesPage({
   const { shopSlug } = await params;
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
-  if (!shop) notFound();
+  // Switched off on the Features page: no price list, like any other page a
+  // shop does not offer.
+  if (!shop?.divePackagesEnabled) notFound();
   const packages = await listPackagesOnSale(db, shop.id);
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);

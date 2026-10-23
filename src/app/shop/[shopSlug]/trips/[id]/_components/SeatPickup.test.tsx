@@ -34,9 +34,18 @@ describe("SeatPickup", () => {
     expect(screen.getByText(t("trips.roster.setPickup"))).toBeTruthy();
   });
 
-  it("offers no form to a reader with no way to save one", () => {
+  // Hotel pickups switched off (the Features page): the roster passes no
+  // action. The form goes, but a pickup already set is still said, because the
+  // crew still collects that diver.
+  it("still says a pickup already set, with no form, while hotel pickups are off", () => {
     render(<SeatPickup booking={booking({ pickupTime: "07:15" })} t={t} />);
     expect(screen.getByText(`${t("trips.roster.hotelNotSpecified")} · 07:15`)).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText(t("trips.roster.setPickup"))).toBeNull();
+  });
+
+  it("draws nothing for a seat with no pickup while hotel pickups are off", () => {
+    const { container } = render(<SeatPickup booking={booking({})} t={t} />);
+    expect(container.innerHTML).toBe("");
   });
 });

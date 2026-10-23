@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
-import { canPersonManageShopSettings, canPersonReadPrivateRecapPulse } from "@/db/authz";
+import { canPersonManageShopSettings } from "@/db/authz";
 import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
 import {
   countStaffReviewGroups,
@@ -45,6 +45,7 @@ import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
 import { loadReviewAssists, ReviewThemes, reviewFlagWords } from "./_components/review-assists";
 import { reviewReplyContext } from "./_components/review-reply-context";
 import { reviewRowCopy } from "./_components/review-row-copy";
+import { pulseReaderOrInbox } from "./_lib/pulse-reader";
 import { markPulseAddressedAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — this segment's
@@ -128,14 +129,8 @@ export default async function ReviewsPage({
   const { page, notice, show } = await searchParams;
   const narrow = staffReviewNarrow(show);
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  // **Who on the crew may read the private pulses** (issue #1410, the reasoning on
-  // `canReadPrivateRecapPulse` in src/lib/authz.ts). Checked live against the database rather than
-  // the JWT, so a demoted manager loses the panel immediately.
-  //
-  // Awaited on its own, ahead of the parallel block, rather than folded into it: folding it in
-  // would read a diver's private words for a staffer this gate exists to keep them from, and one
-  // round trip is the price of not doing that.
-  const canReadPulses = await canPersonReadPrivateRecapPulse(db, shop.id, session.user.personId);
+  // Who may read the private pulses, and the way out while reviews are off.
+  const canReadPulses = await pulseReaderOrInbox(db, shop, session.user.personId);
   const canManageSettings = await canPersonManageShopSettings(db, shop.id, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
@@ -247,10 +242,10 @@ export default async function ReviewsPage({
         }
       />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="inbox"
         current="reviews"
         roles={session.user.roles}
+        shop={shop}
         t={t}
       />
       <ReviewsAggregateLine aggregate={aggregate} month={monthAggregate} t={t} className="mb-4" />

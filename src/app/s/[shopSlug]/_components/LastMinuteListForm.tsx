@@ -19,7 +19,14 @@ const INITIAL_STATE: LastMinuteListFormState = {};
  * asks under the board (`DisclosureRowList`), which is also what opens it when
  * a trip page deep-links to `#last-minute-list`.
  */
-export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
+export function LastMinuteListForm({
+  shopSlug,
+  waitlistOn = true,
+}: {
+  shopSlug: string;
+  /** The shop keeps per-trip wait lists (the Features page), so the line pointing at one is true. */
+  waitlistOn?: boolean;
+}) {
   const t = useTranslations();
   const [state, formAction] = useActionState(askAnytimeAction.bind(null, shopSlug), INITIAL_STATE);
 
@@ -34,7 +41,9 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
   return (
     <DisclosureRow id="last-minute-list" heading={t("lastMinute.heading")}>
       <p className="text-sm text-muted">{t("lastMinute.body")}</p>
-      <p className="mt-1 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
+      {waitlistOn ? (
+        <p className="mt-1 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
+      ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <FieldGrid columns={2}>
           <Field label={t("common.name")}>

@@ -19,7 +19,7 @@ import { customerGearDueDates } from "@/lib/work-order-follow-up";
  */
 export async function loadDiverGear(
   db: AppDb,
-  shop: { id: string; timezone: string },
+  shop: { id: string; timezone: string; workOrdersEnabled: boolean },
   personId: string,
   { removed }: { removed: boolean },
 ) {
@@ -39,5 +39,15 @@ export async function loadDiverGear(
     shop.id,
     ownPieces.filter((piece) => customerGearDueDates(piece).length > 0).map((piece) => piece.id),
   );
-  return { ownPieces, workOrders, counterRentals, hasFleet: fleetSize > 0, reminders, canAssist };
+  return {
+    ownPieces,
+    workOrders,
+    // Gear servicing switched off (the Features page): the group is not drawn,
+    // and the pieces and tickets are kept for when it is on.
+    workOrdersOffered: shop.workOrdersEnabled,
+    counterRentals,
+    hasFleet: fleetSize > 0,
+    reminders,
+    canAssist,
+  };
 }

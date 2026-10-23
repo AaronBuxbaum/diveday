@@ -11,6 +11,7 @@ import { saveRentalFit } from "./rental-fit";
 import {
   boats as boatsTable,
   bookings as bookingsTable,
+  shops as shopsTable,
   trips as tripsTable,
   workOrders as workOrdersTable,
 } from "./schema";
@@ -458,6 +459,12 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       nextDueOn: shiftCalendarDate(today, -5),
     });
 
+    // Gear servicing switched off on the Features page: no bench row, no ticket lost.
+    await db.update(shopsTable).set({ workOrdersEnabled: false }).where(eq(shopsTable.id, shop.id));
+    const off = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(off.actions.filter((action) => action.kind.startsWith("work_order_"))).toEqual([]);
+    await db.update(shopsTable).set({ workOrdersEnabled: true }).where(eq(shopsTable.id, shop.id));
+
     const otherWork = await getTodayWork(
       db,
       "00000000-0000-4000-8000-000000000000",
@@ -543,6 +550,48 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       shop.timezone,
     );
     expect(otherWork.actions.filter((action) => action.kind.startsWith("work_order_"))).toEqual([]);
+  });
+
+  // Gear servicing off (the Features page) is about divers' own gear: a late
+  // ticket on the shop's own rental unit is fleet safety and stays, opening
+  // the unit on the register because the bench pages are gone.
+  it("keeps a fleet unit's late ticket while gear servicing is off, and drops a customer's", async () => {
+    const { db, shop } = ctx;
+    const today = calendarDateInTimezone(nowDate(), shop.timezone);
+    const booking = await anySeededBooking(db, shop.id);
+    const piece = await addCustomerGearItem(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      kind: "regulator",
+      brandModel: "",
+      serviceDueOn: "",
+    });
+    const unit = await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #91" });
+    if (!piece.ok || !unit.ok) throw new Error("subject refused");
+    const customer = await createWorkOrder(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      customerGearItemIds: [piece.item.id],
+      reportedProblem: "Free-flows",
+      promisedOn: shiftCalendarDate(today, -2),
+    });
+    const fleet = await createWorkOrder(db, {
+      shopId: shop.id,
+      gearItemId: unit.item.id,
+      reportedProblem: "Second stage leaks",
+      promisedOn: shiftCalendarDate(today, -2),
+    });
+    if (!customer.ok || !fleet.ok) throw new Error("ticket refused");
+
+    await db.update(shopsTable).set({ workOrdersEnabled: false }).where(eq(shopsTable.id, shop.id));
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(work.actions.some((a) => a.id === `work-order-late:${customer.workOrder.id}`)).toBe(
+      false,
+    );
+    expect(
+      work.actions.find((a) => a.id === `work-order-late:${fleet.workOrder.id}`),
+    ).toMatchObject({ kind: "work_order_late", href: `/shop/${shop.slug}/gear/${unit.item.id}` });
   });
 });
 

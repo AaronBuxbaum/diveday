@@ -1183,9 +1183,12 @@ export async function createDiverPackageOrder(
   },
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<DiverPackageOrderOutcome> {
-  const [pkg] = await db
-    .select()
+  // A shop that switched dive packages off (the Features page) sells none,
+  // whatever a hand-built post names.
+  const [row] = await db
+    .select({ pkg: divePackages })
     .from(divePackages)
+    .innerJoin(shops, and(eq(shops.id, divePackages.shopId), eq(shops.divePackagesEnabled, true)))
     .where(
       and(
         eq(divePackages.id, input.packageId),
@@ -1194,6 +1197,7 @@ export async function createDiverPackageOrder(
       ),
     )
     .limit(1);
+  const pkg = row?.pkg;
   if (!pkg || !packageOnSale(pkg)) return { ok: false, reason: "not_on_sale" };
 
   // Before a person row exists: a shop that cannot take money must not collect

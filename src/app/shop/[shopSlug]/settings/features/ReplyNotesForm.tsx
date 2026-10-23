@@ -19,7 +19,7 @@ export function ReplyNotesForm({ notes, t }: { notes: string | null; t: StaffTra
   return (
     <>
       <input type="hidden" name={REPLY_NOTES_DRAWN_FIELD} value="on" />
-      <h2 className="text-sm font-semibold">{t("settings.main.features.replyNotes.heading")}</h2>
+      <h3 className="text-sm font-semibold">{t("settings.main.features.replyNotes.heading")}</h3>
       <Field label={t("settings.main.features.replyNotes.label")}>
         <textarea
           name={REPLY_NOTES_FIELD}

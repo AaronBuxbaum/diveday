@@ -60,6 +60,10 @@ Each rule names what enforces it; the reasoning, the ADRs and the longer form of
 - **Delete says Delete**: the `softDelete` lint rule (ADR 20260820-every-delete-is-soft).
 - **A trouble state is photographed through `/api/test/seed-trouble-states`**, never seeded into
   the demo shop.
+- **A new feature a shop could run without gets a Features switch (default on), or a `core`
+  entry saying why not**, in `src/lib/feature-coverage.ts`; off, its page redirects with no
+  error and every door to it is gone: `feature-coverage.test.ts`, typecheck
+  ([working-rules.md](../../docs/agents/working-rules.md#hard-rules)).
 - **Look at what you changed**: `node scripts/screenshot.mjs`, the **design-review** skill, an
   `e2e/` spec and a visual capture (`pnpm check:route-coverage`); safety surfaces get
   `dive-domain-expert`.

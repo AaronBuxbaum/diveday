@@ -356,6 +356,23 @@ async function nightBeforeFlySafe(
 }
 
 /**
+ * `reminderEarnsItsSend` for one seat, with the shop's week-out switch: off, it
+ * silences only the plain hello, never a to-do or materials due (ADR
+ * 20261005-optional-shop-features, review 2026-10-23 item 2).
+ */
+function seatEarnsItsSend(
+  kind: ReminderKind,
+  checklist: Parameters<typeof reminderEarnsItsSend>[1],
+  courseMaterialsDue: boolean,
+  shop: { weekOutReminderEnabled: boolean },
+): boolean {
+  return reminderEarnsItsSend(kind, checklist, {
+    courseMaterialsDue,
+    weekOutHello: shop.weekOutReminderEnabled,
+  });
+}
+
+/**
  * Send every pre-trip reminder that has come due since the last run, across all
  * shops. Idempotent by construction: a booking's reminder is deduped by a
  * `notification_deliveries` row keyed on (booking, cadence kind), so re-running
@@ -591,11 +608,7 @@ export async function sendDueReminders(
     // and no phone is counted settled rather than failed. Nothing is written:
     // the un-sent cadence is what re-arms the nudge if a card lapses later in
     // the same week-wide bucket.
-    if (
-      !reminderEarnsItsSend(cadence.kind, checklist, {
-        courseMaterialsDue: materialsDue.length > 0,
-      })
-    ) {
+    if (!seatEarnsItsSend(cadence.kind, checklist, materialsDue.length > 0, shop)) {
       summary.settled += 1;
       continue;
     }

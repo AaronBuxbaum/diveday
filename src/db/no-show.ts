@@ -23,6 +23,7 @@ import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
+import { shopHasFeatureOn } from "./shops";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
@@ -464,8 +465,13 @@ export async function noShowSalvage(
   // (code review 2026-10-13, item 13): the desk used to run this whole chain
   // once per diver who missed, one after another. The wait list and the trip
   // go out together; the board only when nobody is waiting.
+  // **A wait list switched off counts nobody** (the Features page; review
+  // 2026-10-23, item 5): its offer could not be sent, so the desk is shown the
+  // rebooking instead of a list it cannot use.
   const [waitlist, [trip]] = await Promise.all([
-    listDepartureInterests(db, input.shopId, input.tripId),
+    shopHasFeatureOn(db, input.shopId, "waitlist").then((on) =>
+      on ? listDepartureInterests(db, input.shopId, input.tripId) : [],
+    ),
     db
       .select({ id: trips.id, courseId: trips.courseId, diveSiteId: trips.diveSiteId })
       .from(trips)

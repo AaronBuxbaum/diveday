@@ -406,6 +406,14 @@ const seatOfferBase = z.object({
   bookingUrl: z.url().max(2_000),
   /** The offer timestamp, so each deliberate re-offer is a distinct send. */
   offeredAt: z.date(),
+  /**
+   * The Features switch this offer is the send of, when it is one: the wait
+   * list's own offer, or a past-diver suggestion's invite. The retry drain
+   * refuses a queued one while that switch is off (ADR
+   * 20261005-optional-shop-features). Absent, a staffer reached out to this
+   * diver themselves and no switch governs it.
+   */
+  governedBy: z.enum(["waitlist", "pastDiverInvites"]).optional(),
 });
 
 const seatOfferSchema = seatOfferBase.extend({

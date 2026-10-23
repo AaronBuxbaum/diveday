@@ -222,6 +222,8 @@ export async function getBookingPickupTime(
   shopId: string,
   bookingId: string,
 ): Promise<string | null> {
+  // Said even after the shop stops offering hotel pickups (the Features
+  // page): a pickup already promised still happens.
   const [row] = await db
     .select({ pickupTime: bookings.pickupTime })
     .from(bookings)

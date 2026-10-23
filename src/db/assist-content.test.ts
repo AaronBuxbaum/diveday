@@ -561,6 +561,16 @@ describe("the recap highlight", () => {
     await ctx.db.delete(incidentReports).where(eq(incidentReports.tripId, tripId));
   });
 
+  it("has nothing to write from while the shop has sightings switched off", async () => {
+    const { tripId } = await tripWithSightings(["green-sea-turtle"]);
+    await ctx.db.update(shops).set({ sightingsEnabled: false }).where(eq(shops.id, ctx.shop.id));
+    try {
+      expect(await recapLogFor(ctx.db, ctx.shop.id, tripId)).toBeNull();
+    } finally {
+      await ctx.db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, ctx.shop.id));
+    }
+  });
+
   it("has nothing to say about a departure with no sightings", async () => {
     const { tripId } = await tripWithSightings([]);
     expect(await recapLogFor(ctx.db, ctx.shop.id, tripId)).toBeNull();
