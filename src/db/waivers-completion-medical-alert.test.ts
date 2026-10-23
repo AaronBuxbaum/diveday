@@ -163,10 +163,37 @@ describe("the medical alert for the crew on the waiver", () => {
       reason: "invalid_medical_alert",
     });
     expect(await sign("Asthma\u0000")).toEqual({ ok: false, reason: "invalid_medical_alert" });
-    expect(await sign("Asthma\tinhaler")).toEqual({ ok: false, reason: "invalid_medical_alert" });
     expect(await getWaiverForToken(db, token, now)).toMatchObject({ state: "available" });
     expect((await recordFor(db, token)).medicalAlert).toBeNull();
     expect(await sign("a".repeat(MEDICAL_ALERT_MAX))).toMatchObject({ ok: true });
+  });
+
+  it("signs a pasted tab as a space, never refusing the release for it", async () => {
+    const { db, person, token } = await link();
+    expect(
+      await completeWaiver(db, token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        medicalAlert: "Asthma\tinhaler",
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+    expect((await recordFor(db, token)).medicalAlert).toBe("Asthma inhaler");
+  });
+
+  it("stores a bare 'N/A' as no alert", async () => {
+    const { db, person, token } = await link();
+    expect(
+      await completeWaiver(db, token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        medicalAlert: "N/A",
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+    expect((await recordFor(db, token)).medicalAlert).toBeNull();
   });
 
   it("keeps the draft through Save and finish later, leaves it alone when the field is absent, and clears it on signing", async () => {

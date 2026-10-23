@@ -30,9 +30,64 @@ describe("readMedicalAlert (glossary *Medical alert for the crew*)", () => {
     expect(readMedicalAlert(`  ${"a".repeat(MEDICAL_ALERT_MAX)}  `).ok).toBe(true);
   });
 
-  it("refuses every control character but a newline, tab included", () => {
-    for (const raw of ["Asthma\u0000", "Asthma\tinhaler", "a\u0007b", "a\u007fb", "a\u001bb"]) {
+  it("turns tabs into spaces and never refuses for one", () => {
+    expect(readMedicalAlert("Asthma\tinhaler in my BCD pocket")).toEqual({
+      ok: true,
+      value: "Asthma inhaler in my BCD pocket",
+    });
+    expect(readMedicalAlert("Allergies:\tPenicillin, bees")).toEqual({
+      ok: true,
+      value: "Allergies: Penicillin, bees",
+    });
+  });
+
+  it("strips zero-width and direction characters, so the crew read exactly what was typed", () => {
+    // A right-to-left override would make "EpiPen in bag on ton" read as
+    // "EpiPen in bag not no".
+    expect(readMedicalAlert("EpiPen in bag \u202Eon ton\u202C")).toEqual({
+      ok: true,
+      value: "EpiPen in bag on ton",
+    });
+    expect(readMedicalAlert("Dia\u200Bbetic\u2066\uFEFF")).toEqual({ ok: true, value: "Diabetic" });
+    // Nothing left once they go: no alert, so no chip that opens to nothing.
+    expect(readMedicalAlert("\u200B\u2060\uFEFF")).toEqual({ ok: true, value: null });
+  });
+
+  it("refuses the remaining control characters", () => {
+    for (const raw of ["Asthma\u0000", "a\u0007b", "a\u007fb", "a\u001bb", "a\u0085b"]) {
       expect(readMedicalAlert(raw)).toEqual({ ok: false, reason: "control_character" });
+    }
+  });
+
+  it("reads a 'nothing' answer, in English or Spanish, as no alert", () => {
+    for (const raw of [
+      "none",
+      "None.",
+      "N/A",
+      "n/a.",
+      "NA",
+      "No",
+      "nothing",
+      "Nil",
+      "  none  ",
+      "Ninguna",
+      "ninguno.",
+      "Nada",
+      "No aplica",
+    ]) {
+      expect(readMedicalAlert(raw), raw).toEqual({ ok: true, value: null });
+    }
+  });
+
+  it("keeps anything more than a bare 'nothing'", () => {
+    for (const raw of [
+      "No known allergies but carry inhaler",
+      "None, but I carry an EpiPen",
+      "No.\nInhaler in my bag",
+      "nada de cacahuetes",
+    ]) {
+      expect(readMedicalAlert(raw).ok, raw).toBe(true);
+      expect(readMedicalAlert(raw), raw).not.toEqual({ ok: true, value: null });
     }
   });
 
@@ -52,6 +107,7 @@ describe("readDraftMedicalAlert", () => {
     expect(readDraftMedicalAlert("")).toBeNull();
     expect(readDraftMedicalAlert("\u0000")).toBeNull();
     // A pasted tab becomes a space; the mended draft would sign.
+    expect(readDraftMedicalAlert("N/A")).toBeNull();
     const mended = readDraftMedicalAlert("EpiPen\tin the blue bag\u0000");
     expect(mended).toBe("EpiPen in the blue bag");
     expect(readMedicalAlert(mended)).toEqual({ ok: true, value: mended });

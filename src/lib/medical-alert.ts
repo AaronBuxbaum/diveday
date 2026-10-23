@@ -17,12 +17,55 @@ export const MEDICAL_ALERT_MAX = 500;
 export const MEDICAL_ALERT_FIELD = "medical_alert";
 
 /**
- * Any C0 control character other than newline, or DEL. Postgres text cannot
- * hold U+0000, and none of the others belongs in a sentence for the crew.
- * Carriage returns are folded into newlines before this is asked.
+ * Any C0 control character other than newline, DEL, or a C1 control. Postgres
+ * text cannot hold U+0000, and none of the others belongs in a sentence for
+ * the crew. Asked after `fold`, so a tab, a vertical tab, a form feed and a
+ * carriage return are already gone and never refuse anything.
  */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: finding control characters is this pattern's whole job.
-const CONTROL_CHARACTER = /[\u0000-\u0009\u000b-\u001f\u007f]/;
+const CONTROL_CHARACTER = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/;
+
+/**
+ * Unicode format characters (category Cf): zero-width spaces and joiners, the
+ * byte-order mark, and the bidi overrides and isolates that can make "on ton"
+ * display as "not no" (security review L1). Stripped, never refused: the
+ * diver cannot see them to take them out.
+ */
+const FORMAT_CHARACTER = /\p{Cf}/gu;
+
+/**
+ * **"Nothing" answers** (domain review 2, S3): what divers write in every box
+ * on a paper form. Stored as no alert, so the chip on the manifest always
+ * means there is something to read. One short list per locale, matched
+ * against all of them (a diver may answer in either language on either
+ * page), case-insensitively, after trimming and dropping one final period.
+ * Only the whole answer: "None, but I carry an EpiPen" is kept.
+ */
+export const MEDICAL_ALERT_NOTHING_ANSWERS = {
+  "en-US": ["none", "n/a", "na", "no", "nothing", "nil"],
+  "es-ES": ["ninguna", "ninguno", "nada", "no", "no aplica", "n/a"],
+} as const satisfies Record<string, readonly string[]>;
+
+const NOTHING_ANSWERS: ReadonlySet<string> = new Set(
+  Object.values(MEDICAL_ALERT_NOTHING_ANSWERS).flat(),
+);
+
+function saysNothing(value: string): boolean {
+  return NOTHING_ANSWERS.has(value.replace(/\.$/, "").trim().toLocaleLowerCase("en-US"));
+}
+
+/**
+ * What every reading does before it asks anything: line breaks folded to
+ * `\n` (CRLF, CR, U+2028, U+2029), tabs, vertical tabs and form feeds to a
+ * space, format characters stripped, NFC.
+ */
+function fold(raw: string | null | undefined): string {
+  return (raw ?? "")
+    .replace(/\r\n?|[\u2028\u2029]/g, "\n")
+    .replace(/[\t\v\f]/g, " ")
+    .replace(FORMAT_CHARACTER, "")
+    .normalize("NFC");
+}
 
 export type MedicalAlertRefusal = "too_long" | "control_character";
 
@@ -31,13 +74,13 @@ export type MedicalAlertReading =
   | { ok: false; reason: MedicalAlertRefusal };
 
 /**
- * One raw form value read as an alert: newlines folded, NFC, trimmed. Blank
- * is `null`, never `""`, so the seal's conditional key is present exactly
- * when there is something to say.
+ * One raw form value read as an alert: folded (`fold`), trimmed. Blank, or a
+ * bare "nothing" answer, is `null`, never `""`, so the seal's conditional key
+ * is present exactly when there is something to say.
  */
 export function readMedicalAlert(raw: string | null | undefined): MedicalAlertReading {
-  const value = (raw ?? "").replace(/\r\n?/g, "\n").normalize("NFC").trim();
-  if (value === "") return { ok: true, value: null };
+  const value = fold(raw).trim();
+  if (value === "" || saysNothing(value)) return { ok: true, value: null };
   if (CONTROL_CHARACTER.test(value)) return { ok: false, reason: "control_character" };
   if (value.length > MEDICAL_ALERT_MAX) return { ok: false, reason: "too_long" };
   return { ok: true, value };
@@ -53,11 +96,9 @@ export function readMedicalAlert(raw: string | null | undefined): MedicalAlertRe
 export function readDraftMedicalAlert(raw: string | null | undefined): string | null {
   const reading = readMedicalAlert(raw);
   if (reading.ok) return reading.value;
-  const mended = (raw ?? "")
-    .replace(/\r\n?/g, "\n")
+  const mended = fold(raw)
     .replace(new RegExp(CONTROL_CHARACTER.source, "g"), " ")
-    .normalize("NFC")
     .slice(0, MEDICAL_ALERT_MAX)
     .trim();
-  return mended === "" ? null : mended;
+  return mended === "" || saysNothing(mended) ? null : mended;
 }
