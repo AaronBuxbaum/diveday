@@ -34,9 +34,10 @@ describe("SeatPickup", () => {
     expect(screen.getByText(t("trips.roster.setPickup"))).toBeTruthy();
   });
 
-  it("offers no form to a reader with no way to save one", () => {
-    render(<SeatPickup booking={booking({ pickupTime: "07:15" })} t={t} />);
-    expect(screen.getByText(`${t("trips.roster.hotelNotSpecified")} · 07:15`)).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+  // Hotel pickups switched off (the Features page): the roster passes no
+  // action, and the seat says nothing about pickups, even one already set.
+  it("draws nothing while the shop does not offer hotel pickups", () => {
+    const { container } = render(<SeatPickup booking={booking({ pickupTime: "07:15" })} t={t} />);
+    expect(container.innerHTML).toBe("");
   });
 });

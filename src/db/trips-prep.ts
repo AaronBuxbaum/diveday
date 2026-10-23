@@ -39,6 +39,8 @@ export type TripPrepShop = {
   id: string;
   timezone: string;
   rentalItems: string[];
+  /** The shop offers hotel pickups (the Features page); off, Prep lists none. */
+  offersHotelPickup: boolean;
 };
 
 export type TripPrep = {
@@ -165,7 +167,7 @@ export async function getTripPrep(
     offeredKinds: shop.rentalItems,
   });
 
-  const hotelPickups = buildHotelPickupList(divers);
+  const hotelPickups = shop.offersHotelPickup ? buildHotelPickupList(divers) : [];
 
   // The gear register's half of the page (ADR 20260815-minimal-gear-register).
   // Opt-in by presence: a shop with no units on the register sees none of it.

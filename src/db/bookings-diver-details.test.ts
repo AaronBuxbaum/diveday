@@ -12,7 +12,7 @@ import {
   setBookingPickupDetails,
   setBookingReEntryAsk,
 } from "./bookings";
-import { bookings, tripDeskEvents, trips } from "./schema";
+import { bookings, shops, tripDeskEvents, trips } from "./schema";
 
 // No transaction or concurrency semantics are under test: each test rolls back its writes.
 const ctx = fileScopedShopContext();
@@ -81,6 +81,9 @@ describe("booking detail public seam", () => {
       carriedFactsConfirmedAt: nowDate(),
     });
     expect(await getBookingPickupTime(db, input.shopId, booking.id)).toBe("08:30");
+    // Hotel pickups switched off (the Features page): the time is kept, unsaid.
+    await db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, input.shopId));
+    expect(await getBookingPickupTime(db, input.shopId, booking.id)).toBeNull();
   });
   it("refuses every setter for another tenant and for cancelled seats", async () => {
     const { db, booking, input } = await seat();

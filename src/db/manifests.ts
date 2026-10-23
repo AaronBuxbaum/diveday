@@ -1321,8 +1321,10 @@ export async function getTripManifests(
         tripEndsAt: trip.endsAt,
       }),
       depthAdvisory: depthByBooking.get(booking.id),
-      hotelPickupLocation: booking.hotelPickupLocation,
-      pickupTime: booking.pickupTime,
+      // Only while the shop offers hotel pickups (the Features page); what a
+      // seat holds is kept for when it is switched back on.
+      hotelPickupLocation: shop.offersHotelPickup ? booking.hotelPickupLocation : null,
+      pickupTime: shop.offersHotelPickup ? booking.pickupTime : null,
       // The lunch note (item 56): where the crew actually look, as well as
       // Prep. A meal preference for the galley, never an allergy record.
       dietaryNote: booking.dietaryNote,

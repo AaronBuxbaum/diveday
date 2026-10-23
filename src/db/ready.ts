@@ -121,6 +121,7 @@ export async function getBookedCard(
       timezone: shops.timezone,
       defaultLocale: shops.defaultLocale,
       dockCallMinutes: shops.dockCallMinutes,
+      offersHotelPickup: shops.offersHotelPickup,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -149,7 +150,10 @@ export async function getBookedCard(
     },
     trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
     greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : row.personName,
-    pickup: { time: row.pickupTime, location: row.hotelPickupLocation },
+    // Only while the shop offers hotel pickups (the Features page).
+    pickup: row.offersHotelPickup
+      ? { time: row.pickupTime, location: row.hotelPickupLocation }
+      : { time: null, location: null },
     bookingCancelled: row.status === "cancelled",
     departureCancelled: row.tripStatus !== "scheduled",
     milestone,
@@ -781,8 +785,10 @@ export async function getReadyPageData(
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
-    hotelPickupLocation: row.hotelPickupLocation,
-    pickupTime: row.pickupTime,
+    // Only while the shop offers hotel pickups (the Features page); the
+    // masthead then names the dock call, not a pickup.
+    hotelPickupLocation: row.offersHotelPickup ? row.hotelPickupLocation : null,
+    pickupTime: row.offersHotelPickup ? row.pickupTime : null,
     canPay,
     offersHotelPickup: row.offersHotelPickup,
     lunchAboard: row.tripLunchAboard,
