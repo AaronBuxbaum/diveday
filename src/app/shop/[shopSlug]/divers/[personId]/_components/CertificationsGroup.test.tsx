@@ -398,7 +398,85 @@ describe("a card gap on the certification records door", () => {
       } as unknown as Partial<DiverProfile>),
       missingLevel,
     );
-    expect(door()).toHaveTextContent("No certification is on file for this trip.");
+    expect(door()).toHaveTextContent("Not certified for this trip.");
+    expect(door()).not.toHaveTextContent("No certification is on file for this trip.");
+    expect(screen.getByText("A certification card. None on file.")).toBeInTheDocument();
+  });
+
+  /**
+   * Aaron, 2026-10-23: three run-on sentences under the row collapse to one
+   * fact, and the reasons wait behind the door, one line each. The row keeps
+   * its danger ink and its departure, so the block is never quieter.
+   */
+  it("says only Not certified, with each missing card one line behind the door", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          {
+            id: "c1",
+            agency: "padi",
+            level: "open_water",
+            status: "verified",
+            identifier: "1234",
+            selfDeclaredAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+      {
+        ...missingLevel,
+        sentence: {
+          blocker: {
+            code: "certification_insufficient" as const,
+            params: {
+              requiredLevel: "advanced_open_water" as const,
+              heldLevel: "open_water" as const,
+            },
+          },
+        },
+        alsoBlockers: [
+          { code: "specialty_missing" as const, params: { specialty: "deep" as const } },
+          { code: "nitrox_missing" as const },
+        ],
+      },
+    );
+    expect(door()).toHaveTextContent(
+      "Not certified for this trip. Can’t board Fri, Oct 9 · 6:30 AM.",
+    );
+    expect(door()).not.toHaveTextContent("highest certified card");
+    expect(screen.getByTestId("diver-file-group-certifications")).not.toHaveAttribute("open");
+    const needs = screen.getByText("What this trip needs").closest("li");
+    expect(needs).toHaveTextContent(
+      "Advanced Open Water or higher. Their highest card is Open Water.",
+    );
+    expect(needs).toHaveTextContent("Deep specialty. None on file.");
+    expect(needs).toHaveTextContent("Nitrox. None on file.");
+    expect(needs?.querySelector("ul")).toHaveClass("text-danger-strong");
+  });
+
+  it("keeps a card waiting for a look off the collapse, with the door open", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          {
+            id: "c1",
+            agency: "padi",
+            level: "advanced_open_water",
+            status: "pending",
+            identifier: "1234",
+            selfDeclaredAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+      {
+        ...missingLevel,
+        sentence: {
+          blocker: { code: "specialty_pending" as const, params: { specialty: "deep" as const } },
+        },
+      },
+    );
+    expect(door()).not.toHaveTextContent("Not certified for this trip");
+    expect(screen.queryByText("What this trip needs")).not.toBeInTheDocument();
+    expect(screen.getByTestId("diver-file-group-certifications")).toHaveAttribute("open");
   });
 });
 

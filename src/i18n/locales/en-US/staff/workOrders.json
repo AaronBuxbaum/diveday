@@ -150,18 +150,15 @@
     "phone": "Call {phone}"
   },
   "diver": {
-    "heading": "Their own gear",
-    "gearHeading": "Gear on file",
-    "ordersHeading": "Service history",
+    "heading": "Gear they own",
     "gearEmpty": "Nothing on file",
-    "ordersEmpty": "None yet",
     "onTheBench": "{count, plural, one {# on the bench} other {# on the bench}}",
-    "piecesOnFile": "{count, plural, one {# piece on file} other {# pieces on file}}",
     "deletePiece": "Delete {label}",
     "deletePieceShort": "Delete",
     "deletingPiece": "Deleting…",
     "newOrder": "New work order",
-    "orderLink": "#{number}: {problem}"
+    "orderLink": "#{number}: {problem}",
+    "serial": "Serial {serial}"
   },
   "notice": {
     "opened": "Work order opened",

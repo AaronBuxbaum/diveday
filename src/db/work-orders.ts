@@ -1605,6 +1605,8 @@ export type DiverWorkOrderRow = {
   promisedOn: CalendarDate | null;
   late: boolean;
   receivedAt: Date;
+  /** The diver's own pieces on this ticket, so the record files it under them. */
+  pieceIds: string[];
 };
 
 /** One diver's own tickets, newest first — their section of the diver record. */
@@ -1627,8 +1629,27 @@ export async function listWorkOrdersForPerson(
     .where(and(eq(workOrders.shopId, shopId), eq(workOrders.personId, personId), liveWorkOrder()))
     .orderBy(desc(workOrders.receivedAt), asc(workOrders.reportedProblem), asc(workOrders.id))
     .limit(options.limit ?? 10);
+  const pieces =
+    rows.length === 0
+      ? []
+      : await db
+          .select({
+            workOrderId: workOrderItems.workOrderId,
+            pieceId: workOrderItems.customerGearItemId,
+          })
+          .from(workOrderItems)
+          .where(
+            and(
+              eq(workOrderItems.shopId, shopId),
+              inArray(
+                workOrderItems.workOrderId,
+                rows.map((row) => row.id),
+              ),
+            ),
+          );
   return rows.map((row) => ({
     ...row,
+    pieceIds: pieces.filter((piece) => piece.workOrderId === row.id).map((piece) => piece.pieceId),
     late: workOrderIsLate({
       status: row.status,
       promisedOn: row.promisedOn,

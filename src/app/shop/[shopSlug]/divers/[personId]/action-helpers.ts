@@ -29,6 +29,7 @@ import { diverRecordIsClear } from "./_lib/status-load";
  */
 export const FORM_ANCHORS: Record<string, string> = {
   cards: "#certifications",
+  "last-dive": "#last-dive",
   waiver: "#waiver",
   fit: "#gear",
   shelf: "#shelf",

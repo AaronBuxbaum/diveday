@@ -33,6 +33,7 @@ import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { NoCertificationRows } from "./NoCertificationRows";
 import type { DiverNotice } from "./NoticeBanner";
+import { saysNotCertified, TripNeedsRow, tripNeedsLines } from "./trip-needs";
 import {
   AGENCY_KEYS,
   type CardAwaitingKind,
@@ -407,11 +408,18 @@ export function CertificationsGroup({
     diver.specialtyCertifications.length === 0;
 
   const onFile = cardsOnFile(diver, t, noCertificationDeclared);
+  // A card the diver does not hold reads as one fact on the row, and the
+  // reasons wait behind the door (Aaron, 2026-10-23). The row stays in danger
+  // ink with the departure it keeps them off, so the block is never quieter;
+  // only the paragraph explaining it moved.
+  const factSaysIt = summarySaysGap(gap, onFile.tone, diver);
+  const notCertified = !factSaysIt && saysNotCertified(gap);
   const missing = fileGap(gap, {
     t,
     locale,
     timezone: shop.timezone,
-    factSaysIt: summarySaysGap(gap, onFile.tone, diver),
+    factSaysIt,
+    says: notCertified ? t("divers.file.notCertified") : undefined,
   });
 
   // The first row anybody has to act on takes the ledger's anchor. Counted the
@@ -653,7 +661,7 @@ export function CertificationsGroup({
       summary={onFile.text}
       summaryTone={missing?.tone ?? onFile.tone}
       detail={missing?.detail}
-      open={Boolean(status) || Boolean(missing?.open)}
+      open={Boolean(status) || (Boolean(missing?.open) && !notCertified)}
       stacked
     >
       <InsetGroup
@@ -663,6 +671,7 @@ export function CertificationsGroup({
         // `<div>`s cannot give it.
         bodyAs="ul"
       >
+        {notCertified ? <TripNeedsRow t={t} lines={tripNeedsLines(t, gap)} /> : null}
         {rows}
         <NoCertificationRows
           diver={diver}

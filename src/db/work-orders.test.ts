@@ -1366,6 +1366,8 @@ describe("the board", () => {
 
     const rows = await listWorkOrdersForPerson(db, shop.id, maya.id, { todayLocal: TODAY });
     expect(rows.map((row) => row.id)).toEqual([ticket.id]);
+    // Filed under the piece it is about, on the diver's record.
+    expect(rows[0]?.pieceIds).toEqual([mine.id]);
   });
 
   it("keeps one shop's board out of another's", async () => {

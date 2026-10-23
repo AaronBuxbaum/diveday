@@ -122,7 +122,15 @@
     "noCertificationRestated": "Staff cleared this answer once before and it has been given again on a public form since. Anyone who knows this diver’s name and email can leave it.",
     "cardLabel": "Certification",
     "cardKindLevel": "Level",
-    "cardKindSpecialty": "Specialty"
+    "cardKindSpecialty": "Specialty",
+    "tripNeeds": {
+      "heading": "What this trip needs",
+      "levelHeld": "{level} or higher. Their highest card is {held}.",
+      "level": "{level} or higher.",
+      "card": "A certification card. None on file.",
+      "specialty": "{specialty} specialty. None on file.",
+      "nitrox": "Nitrox. None on file."
+    }
   },
   "page": {
     "title": "Divers",
@@ -546,7 +554,10 @@
     "guardianEmailErased": "Guardian’s email erased from every release at this shop that carried it. Each one is marked as redacted.",
     "guardianEmailMismatch": "The email you typed doesn’t match, so nothing was erased. Type it exactly as it appears above.",
     "guardianEmailNotFound": "Nothing erased: that email is no longer on this diver’s releases.",
-    "notAuthorizedGuardianEmail": "Erasing a guardian’s email is limited to the shop owner. Ask them to do it."
+    "notAuthorizedGuardianEmail": "Erasing a guardian’s email is limited to the shop owner. Ask them to do it.",
+    "lastDiveInvalid": "Enter the day they last dived.",
+    "lastDiveFuture": "That day hasn’t come yet.",
+    "lastDiveBeforeKnown": "They’ve dived with you since that day, so the record keeps the later one."
   },
   "export": {
     "downloadButton": {
@@ -615,7 +626,8 @@
     "noSizes": "No sizes on file",
     "editSizes": "Edit",
     "neededFor": "Needed for {when}",
-    "cantBoard": "Can’t board {when}."
+    "cantBoard": "Can’t board {when}.",
+    "notCertified": "Not certified for this trip."
   },
   "waiver": {
     "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",
@@ -631,5 +643,19 @@
     "summaryEmergencyNoPhone": "Emergency contact: {name}, no phone number",
     "summaryEmergencyNoName": "Emergency contact: {phone}, no name",
     "summaryNoEmergency": "No emergency contact"
+  },
+  "lastDive": {
+    "heading": "Last dive",
+    "notKnown": "Not known",
+    "monthsAgo": "{count, plural, =0 {this month} one {# month ago} other {# months ago}}",
+    "yearsAgo": "{count, plural, one {# year ago} other {# years ago}}",
+    "fromShop": "Their last dive with you.",
+    "fromImport": "From the visits you imported.",
+    "theySaid": "For their {date} trip: {said}",
+    "fieldLabel": "Last dive anywhere",
+    "save": "Save",
+    "saving": "Saving…",
+    "clear": "Clear",
+    "clearing": "Clearing…"
   }
 }

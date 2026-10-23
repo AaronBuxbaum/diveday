@@ -7,12 +7,14 @@ import { diverPackageBalance } from "@/db/dive-packages";
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
 import { listGuardianEmails } from "@/db/guardian-erasure";
+import { lastKnownDive } from "@/db/last-dive";
 import { personThread } from "@/db/inbound-messages";
 import { openLostItemsByPerson } from "@/db/lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
 import { diverStanding } from "@/lib/diver-standing";
@@ -33,6 +35,7 @@ import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
 import { FoundItemLine } from "./_components/FoundItemLine";
 import { GearAndSizes } from "./_components/GearAndSizes";
+import { LastDiveGroup } from "./_components/LastDiveGroup";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { WaiverGroup } from "./_components/WaiverGroup";
@@ -179,7 +182,7 @@ export default async function DiverDetailPage({
   });
   // Reads that need the gates above, so they could not ride the `Promise.all`
   // that produced them; concurrent with each other instead of serial.
-  const [mergeCandidates, status, departures, guardianEmails, found] = await Promise.all([
+  const [mergeCandidates, status, departures, guardianEmails, found, lastDive] = await Promise.all([
     canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
     // The readiness of the departure this diver is next on, read through the
     // entry the Today queue and the manifest already use — never a second
@@ -190,6 +193,13 @@ export default async function DiverDetailPage({
     // one on the guardian's request (H-103). Nobody else is shown them here.
     canErase ? listGuardianEmails(db, shop.id, personId) : [],
     openLostItemsByPerson(db, shop.id, [personId]), // found items, under the header
+    lastKnownDive(db, {
+      shopId: shop.id,
+      personId,
+      timezone: shop.timezone,
+      now,
+      recorded: diver.person.lastDiveOn,
+    }),
   ]);
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
@@ -349,6 +359,20 @@ export default async function DiverDetailPage({
             status={cardsStatus}
             gap={gaps.file.certification}
             canAssist={gear.canAssist}
+          />
+          {/* When they last dived, beside what they are certified to do:
+              the two facts a desk reads before it sells a deep dive. */}
+          <LastDiveGroup
+            diver={diver}
+            known={lastDive}
+            shopSlug={shopSlug}
+            personId={personId}
+            today={calendarDateInTimezone(now, shop.timezone)}
+            timezoneDay={(date) => calendarDateInTimezone(date, shop.timezone)}
+            locale={locale}
+            t={t}
+            removed={removed}
+            status={noticeForForm(diverNotice, "last-dive")}
           />
           <DiverDetailsGroup
             diver={diver}

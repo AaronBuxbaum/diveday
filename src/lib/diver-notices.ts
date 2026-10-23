@@ -199,6 +199,31 @@ const NOTICE_KEYS: DiverNoticeMap = {
     key: "divers.notices.notAuthorizedCards",
   },
 
+  // Last dive (ADR 20261023-last-known-dive). A save is said by the row
+  // itself, which shows the new date, so success is silent.
+  "last-dive-saved": { form: "last-dive", tone: "success", silent: true },
+  "last-dive-cleared": { form: "last-dive", tone: "success", silent: true },
+  "last-dive-invalid": {
+    form: "last-dive",
+    tone: "danger",
+    key: "divers.notices.lastDiveInvalid",
+  },
+  "last-dive-future": {
+    form: "last-dive",
+    tone: "danger",
+    key: "divers.notices.lastDiveFuture",
+  },
+  "last-dive-before-known": {
+    form: "last-dive",
+    tone: "danger",
+    key: "divers.notices.lastDiveBeforeKnown",
+  },
+  "not-authorized-last-dive": {
+    form: "last-dive",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedDetails",
+  },
+
   // Details editor.
   "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },
   // Issue #2167: "They're 18 or older" ticked beside a date that was kept or
