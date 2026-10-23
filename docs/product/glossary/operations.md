@@ -1625,8 +1625,10 @@
   shop, so a re-signature only drops it if the diver clears it. A paper or imported release carries
   none, and erasure clears it. Every staffer who opens the manifest or roll call sees a "Medical
   alert" chip on the row (the fact). The words are read by an owner or manager, and by crew **a
-  manager put on** the departure the diver is booked on (a crew member who rostered themselves does
-  not count), and only through "Show the alert", whose action writes `medical_alert_read` to the
+  manager put on** the departure the diver is booked on: the assignment counts only while the
+  person who made it is a live owner or manager of the shop, so a crew member who rostered
+  themselves, or whom another instructor rostered, does not count, and a manager demoted or
+  removed stops vouching for what they assigned, and only through "Show the alert", whose action writes `medical_alert_read` to the
   diver's trail (at most one per reader, diver and departure in ten minutes) before it returns the
   text. No page carries the words in its render or payload. Anyone else is told who can read it and
   to ask one of them. The **offline copy** carries the fact for everyone; the words reach a device

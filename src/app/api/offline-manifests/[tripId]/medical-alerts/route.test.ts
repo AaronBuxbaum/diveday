@@ -127,7 +127,7 @@ describe("POST /api/offline-manifests/[tripId]/medical-alerts (H-153 amendment)"
     expect(lines[0]?.params.departure).toBe(tripId);
   });
 
-  it("hands them to crew a manager put on the departure, and refuses crew who rostered themselves", async () => {
+  it("hands them to crew the owner or a manager put on the departure, and refuses crew who rostered themselves or whom an instructor rostered", async () => {
     const { db, shop, tripId, bookingId, diverId, owner } = await alerted();
     const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
     vi.mocked(auth).mockResolvedValue(session(shop.id, divemaster, ["divemaster"]));
@@ -137,6 +137,13 @@ describe("POST /api/offline-manifests/[tripId]/medical-alerts (H-153 amendment)"
     await db
       .insert(tripAssignments)
       .values({ tripId, personId: divemaster, assignedByPersonId: divemaster });
+    expect((await call(tripId)).status).toBe(403);
+    // On it by an instructor's hand (security review 2, M-1): still refused.
+    const instructor = await makeStaff(db, shop.id, ["instructor"]);
+    await db
+      .update(tripAssignments)
+      .set({ assignedByPersonId: instructor })
+      .where(and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, divemaster)));
     expect((await call(tripId)).status).toBe(403);
     expect(await savedLines(db, diverId)).toEqual([]);
     // Put there by the owner.

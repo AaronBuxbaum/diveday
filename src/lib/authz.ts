@@ -368,8 +368,8 @@ export function canReadShopAnswers(roles: readonly Role[] | undefined): boolean 
  * Who reads the **text of a diver's medical alert for the crew** (glossary
  * *Medical alert for the crew*, issue #2960, option 1 as Aaron chose it on
  * 2026-10-23): the owner and a manager always, and any other staff role only
- * for a diver booked on a departure someone else put them on the crew of
- * (`trip_assignments`, never a row they wrote themselves), on that
+ * for a diver booked on a departure a live owner or manager put them on the
+ * crew of (`trip_assignments`, never a row they or another instructor wrote), on that
  * departure's manifest and roll call. The crew are the people who need to
  * know where the EpiPen is; the rest of the staff see that an alert exists
  * and who can read it, never what it says.

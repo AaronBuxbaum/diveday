@@ -271,15 +271,18 @@ export const canPersonReadShopAnswers = (db: DbExecutor, shopId: string, personI
 /**
  * The live check behind the **text of a medical alert for the crew** on one
  * departure's manifest and roll call (`canReadMedicalAlert`, issue #2960):
- * live roles, and whether someone else put this person on that departure's
- * crew (`trip_assignments`, shop-scoped through the live trip). A row the
- * person wrote for themselves, or one that names nobody, does not count: the
- * same rule as `src/db/training-mark-resolve.ts`, because anyone who can
- * configure trips could otherwise roster themselves into the text. The owner
- * and a manager read it however they got on the roster. A crew member taken
- * off the boat this morning loses the text online with the assignment (a copy
- * saved for offline keeps it until it expires, H-153). The caller still
- * confirms the diver is booked on `tripId`.
+ * live roles, and whether **a live owner or manager of this shop** put this
+ * person on that departure's crew (`trip_assignments`, shop-scoped through
+ * the live trip). Anyone who can configure trips can write a roster, so an
+ * assignment counts only through who made it: not one the person wrote for
+ * themselves, not one that names nobody, and not one another instructor made
+ * (security review 2, M-1). The assigner's roles are read live, so a manager
+ * demoted, disabled or removed since stops vouching for what they assigned.
+ * The owner and a manager read it however they got on the roster. A crew
+ * member taken off the boat this morning loses the text online with the
+ * assignment (a copy saved for offline drops it at the next refresh, or
+ * keeps it until it expires at sea, H-153). The caller still confirms the
+ * diver is booked on `tripId`.
  */
 export async function canPersonReadMedicalAlertOnTrip(
   db: DbExecutor,
@@ -291,7 +294,7 @@ export async function canPersonReadMedicalAlertOnTrip(
   if (roles === null) return false;
   if (canReadMedicalAlert(roles, { crewsDiversDeparture: false })) return true;
   const [assigned] = await db
-    .select({ personId: tripAssignments.personId })
+    .select({ assignedBy: tripAssignments.assignedByPersonId })
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .where(
@@ -305,7 +308,11 @@ export async function canPersonReadMedicalAlertOnTrip(
       ),
     )
     .limit(1);
-  return canReadMedicalAlert(roles, { crewsDiversDeparture: Boolean(assigned) });
+  if (!assigned?.assignedBy) return false;
+  const assignerRoles = await loadActiveStaffRoles(db, shopId, assigned.assignedBy);
+  const vouched =
+    assignerRoles !== null && canReadMedicalAlert(assignerRoles, { crewsDiversDeparture: false });
+  return canReadMedicalAlert(roles, { crewsDiversDeparture: vouched });
 }
 
 /**
