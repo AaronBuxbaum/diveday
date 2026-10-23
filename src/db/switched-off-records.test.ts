@@ -388,4 +388,41 @@ describe("past-diver invites switched off", () => {
     const guests = await getTripGuests(db, { ...row, pastDiverInvitesEnabled: false }, open.id);
     expect(guests?.inviteSuggestions).toBeNull();
   });
+
+  it("sends a suggestion's invite nothing while off, and a staffer's own invite still goes", async () => {
+    // Review 2026-10-23, items 9 and 10: the switch governs the suggestion's
+    // send; the roster's Invite, the course ladder and the no-show desk are a
+    // staffer's own choice of diver.
+    const { db, shop } = ctx;
+    const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const open = upcoming.find((trip) => trip.booked < trip.capacity);
+    const [staff] = await listStaff(db, shop.id);
+    const [someone] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Pat Past", email: "pat-past@example.com" })
+      .returning({ id: people.id });
+    if (!open || !staff || !someone) throw new Error("fixture missing");
+    const [row] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "shop",
+        tripId: open.id,
+        personId: someone.id,
+        createdByPersonId: staff.person.id,
+        partySize: 1,
+      })
+      .returning({ id: interests.id });
+    if (!row) throw new Error("interest insert failed");
+    await db.update(shops).set({ pastDiverInvitesEnabled: false }).where(eq(shops.id, shop.id));
+    const offer = (initiatedBy: "suggestion" | "shop") =>
+      deliverSeatOffer(
+        db,
+        { shopId: shop.id, shopSlug: shop.slug, tripId: open.id, interestId: row.id, initiatedBy },
+        fakeEmail().provider,
+      );
+    expect(await offer("suggestion")).toBe("fallback");
+    expect(await offer("shop")).not.toBe("fallback");
+  });
 });

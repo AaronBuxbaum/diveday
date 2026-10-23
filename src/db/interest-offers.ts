@@ -31,6 +31,7 @@ import type { PromotionProvider } from "@/lib/payments/promotions";
 import { type PromoDiscount, promoDiscountColumns } from "@/lib/promo-codes";
 import { publicTripPath } from "@/lib/public-routes";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import { SHOP_FEATURE_COLUMNS } from "@/lib/shop-features";
 import { hasSailed, spotsRemaining } from "@/lib/trips";
 import { courseStudentSeatCap, tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
@@ -129,6 +130,29 @@ async function getOfferContext(db: AppDb, shopId: string, tripId: string, intere
 
 type OfferContext = NonNullable<Awaited<ReturnType<typeof getOfferContext>>>;
 
+/** Who started a seat offer, when it was not the wait list itself (`deliverSeatOffer`). */
+export type OfferInitiator = "shop" | "suggestion";
+
+/**
+ * **The Features switch a seat offer is the send of**, or null when a staffer
+ * reached out themselves (review 2026-10-23, items 4 and 10). A past-diver
+ * suggestion's invite is that switch's. A diver's own wait-list ask (their own
+ * row, or one carried or rolled from another date) offered by the wait list
+ * itself, the nightly roll or the "Who wants in" offer, is the wait list's. A
+ * date request's reply and a last-minute list row are their own features'.
+ */
+function offerGovernedBy(
+  initiatedBy: OfferInitiator | undefined,
+  context: OfferContext,
+): "waitlist" | "pastDiverInvites" | undefined {
+  if (initiatedBy === "suggestion") return "pastDiverInvites";
+  if (initiatedBy === "shop") return undefined;
+  const waitListAsk =
+    context.interest.askedBy === "diver" &&
+    (context.parentScope === null || context.parentScope === "departure");
+  return waitListAsk ? "waitlist" : undefined;
+}
+
 /**
  * Stamp one interest as offered and email the diver — as service mail or as
  * commercial mail, by `offerMailClass` (Aaron, 2026-10-06, issue #1953):
@@ -178,29 +202,22 @@ export async function deliverSeatOffer(
      * direct invite, the course ladder, the no-show desk's "Email them this
      * date", a deal blast): the wait-list switch never refuses that, even when
      * the diver's row is a wait-list ask (`ensureDepartureInterest` reuses it).
-     * Left out, the send is the wait list's own (the nightly roll, the "Who
-     * wants in" offer) and the switch governs it.
+     * `"suggestion"` for the invite a past-diver suggestion sends, governed by
+     * that switch. Left out, the send is the wait list's own (the nightly roll,
+     * the "Who wants in" offer) and the wait list's switch governs it.
      */
-    initiatedBy?: "shop";
+    initiatedBy?: OfferInitiator;
     now?: Date;
   },
   provider?: NotificationProvider,
 ): Promise<SeatOfferDelivery> {
   const context = await getOfferContext(db, input.shopId, input.tripId, input.interestId);
   if (!context) return "fallback";
-  // A diver's wait-list ask (their own, or carried or rolled from another date)
-  // gets no seat offer from the wait list while the shop's wait list is off
-  // (the Features page): nothing is stamped or sent. A staffer's own outreach
-  // to the diver is not the wait list's (review 2026-10-23, item 4), and a date
-  // request's reply and a last-minute list row are their own features'.
-  if (
-    input.initiatedBy !== "shop" &&
-    context.interest.askedBy === "diver" &&
-    (context.parentScope === null || context.parentScope === "departure") &&
-    !context.shop.waitlistEnabled
-  ) {
-    return "fallback";
-  }
+  // The switch this send belongs to, if any, is asked before anything is
+  // stamped, and rides on the queued mail so a retry asks it again.
+  const governedBy = offerGovernedBy(input.initiatedBy, context);
+  if (governedBy && !context.shop[SHOP_FEATURE_COLUMNS[governedBy]]) return "fallback";
+  const send = { ...input, governedBy };
   const mailClass = offerMailClass({
     scope: context.interest.scope,
     askedBy: context.interest.askedBy,
@@ -210,7 +227,7 @@ export async function deliverSeatOffer(
   if (mailClass === "commercial") {
     const claim = await claimOfferSend(db, input.shopId, input.interestId, input.now);
     if (!claim) return "already_sent";
-    return sendClaimedOffer(db, input, context, claim, provider);
+    return sendClaimedOffer(db, send, context, claim, provider);
   }
   const offeredAt = input.now ?? nowDate();
   const [stamped] = await db
@@ -219,7 +236,7 @@ export async function deliverSeatOffer(
     .where(and(eq(interests.id, input.interestId), eq(interests.shopId, input.shopId)))
     .returning({ id: interests.id });
   if (!stamped) return "fallback";
-  return (await sendOffer(db, input, context, offeredAt, provider)).delivery;
+  return (await sendOffer(db, send, context, offeredAt, provider)).delivery;
 }
 
 /** What the deal a held offer carried did: sent under a code, or why nothing went. */
@@ -603,6 +620,7 @@ async function sendClaimedOffer(
     interestId: string;
     sailedStartsAt?: Date;
     deal?: OfferDeal;
+    governedBy?: "waitlist" | "pastDiverInvites";
   },
   context: OfferContext,
   claim: OfferSendClaim,
@@ -625,7 +643,13 @@ type OfferSend = { delivery: SeatOfferDelivery; queued: boolean };
 /** The send itself, once the stamp (and for a commercial offer, the claim) is written. */
 async function sendOffer(
   db: AppDb,
-  input: { shopId: string; shopSlug: string; sailedStartsAt?: Date; deal?: OfferDeal },
+  input: {
+    shopId: string;
+    shopSlug: string;
+    sailedStartsAt?: Date;
+    deal?: OfferDeal;
+    governedBy?: "waitlist" | "pastDiverInvites";
+  },
   context: OfferContext,
   offeredAt: Date,
   provider: NotificationProvider | undefined,
@@ -649,6 +673,7 @@ async function sendOffer(
     timezone: shop.timezone,
     bookingUrl: new URL(publicTripPath(input.shopSlug, trip.id), `${origin}/`).toString(),
     offeredAt,
+    ...(input.governedBy ? { governedBy: input.governedBy } : {}),
   };
   const mailClass = offerMailClass({
     scope: interest.scope,

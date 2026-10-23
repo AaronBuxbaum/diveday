@@ -173,6 +173,9 @@ async function inviteOneDiver(
     createdByPersonId: s.user.personId,
   };
   let interestId: string | null;
+  // A suggestion's invite is past-diver invites' send; any other is a
+  // staffer's own reach-out, which no switch refuses (ADR 20261005-optional-shop-features).
+  const initiatedBy = rule.cooldown ? ("suggestion" as const) : ("shop" as const);
   if (rule.cooldown) {
     // A suggestion is past-diver invites' (the Features page): off, the list
     // is not drawn and a post from a page left open invites nobody.
@@ -199,7 +202,7 @@ async function inviteOneDiver(
       shopSlug,
       tripId,
       interestId,
-      initiatedBy: "shop",
+      initiatedBy,
     });
   }
   revalidatePath(guests);

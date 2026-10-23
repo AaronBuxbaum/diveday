@@ -65,6 +65,7 @@ import {
   waiverDeliveries,
   waiverRecords,
 } from "./schema";
+import { shopHasFeatureOn } from "./shops";
 
 const RETRY_QUEUE_LIMIT = 100;
 
@@ -776,6 +777,34 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
   return Boolean(rows[0]?.at);
 }
 
+/**
+ * **Whether a Features switch turned off since this was queued now refuses it**
+ * (review 2026-10-23, item 10). The first send asked the switch; a retry asks
+ * again, as it asks the opt-out:
+ *
+ * - a seat offer the wait list or a past-diver suggestion sent (`governedBy`)
+ *   while that switch is off. A staffer's own offer carries no `governedBy`
+ *   and always goes;
+ * - a week-out reminder with nothing on it (`open` 0, no medical review), the
+ *   plain hello, while the week-out reminder is off. One that still lists
+ *   something to finish goes either way, as its first send would.
+ */
+async function switchedOffSinceQueued(db: AppDb, notification: Notification): Promise<boolean> {
+  switch (notification.kind) {
+    case "seat_offer":
+    case "seat_offer_commercial":
+      return notification.governedBy
+        ? !(await shopHasFeatureOn(db, notification.shopId, notification.governedBy))
+        : false;
+    case "trip_reminder_7d":
+      return notification.open === 0 && !notification.medicalReview
+        ? !(await shopHasFeatureOn(db, notification.shopId, "weekOutReminder"))
+        : false;
+    default:
+      return false;
+  }
+}
+
 /** Drain durable transient failures; safe for overlapping cron invocations. */
 export async function drainNotificationRetries(
   db: AppDb,
@@ -989,9 +1018,10 @@ export async function drainNotificationRetries(
     }
 
     const notification = reviveQueuedNotification(opened);
-    if (await courtesyRecipientOptedOut(db, notification)) {
+    const switchedOff = await switchedOffSinceQueued(db, notification);
+    if (switchedOff || (await courtesyRecipientOptedOut(db, notification))) {
       // Finished, so it drops its handles like every other finished write. Not
-      // a `send_abandoned` loss: the diver asked for exactly this.
+      // a `send_abandoned` loss: the diver, or the shop's switch, asked for this.
       await db
         .update(notificationSendQueue)
         .set({
@@ -1003,12 +1033,12 @@ export async function drainNotificationRetries(
           bookingId: null,
           lockedUntil: null,
           httpStatus: null,
-          errorCode: "opted_out",
+          errorCode: switchedOff ? "switched_off" : "opted_out",
           lastError: null,
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
-      log("notification.retry_dropped_opted_out", "info", {
+      log(switchedOff ? "notification.retry_dropped_switched_off" : "notification.retry_dropped_opted_out", "info", {
         shopId: claimed.shopId,
         kind: notification.kind,
       });
