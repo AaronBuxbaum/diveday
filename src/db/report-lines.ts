@@ -236,6 +236,46 @@ async function moneyByLine(
   endUtc: Date,
   shopMoney: { currency: string; timeZone: string },
 ): Promise<Array<{ line: RevenueLine; cents: number }>> {
+  return revenueByLine(await moneyParts(db, shopId, startUtc, endUtc, { shopMoney }));
+}
+
+/**
+ * **Card money the shop took through DiveDay in the window** (ADR
+ * 20261022-pricing-ab-test): the percent plan's volume. The same parts and the
+ * same rules as the month's money by line, narrowed to what moved through the
+ * shop's Stripe account by way of DiveDay: invoices DiveDay sent and Stripe
+ * collected, and booking checkouts. Left out, each by the rule that already
+ * leaves it off a line or by the narrowing: tax and pass-through fees, money
+ * taken at the counter (cash, the shop's own card machine, a room charge, a
+ * booking marked paid by hand) and imported history. Tips are never orders,
+ * so they are never here. A refund recorded against an invoice or checkout
+ * comes off it pro rata.
+ */
+export async function cardMoneyThroughDiveDayCents(
+  db: DbExecutor,
+  shopId: string,
+  startUtc: Date,
+  endUtc: Date,
+): Promise<number> {
+  const lines = revenueByLine(await moneyParts(db, shopId, startUtc, endUtc, { shopMoney: null }));
+  return lines.reduce((sum, line) => sum + line.cents, 0);
+}
+
+/**
+ * Every charge paid in the window, as parts for `revenueByLine`. With
+ * `shopMoney` null, only card money taken through DiveDay: invoices Stripe
+ * collected and booking checkouts, with no counter money, no hand-marked
+ * payments and no imported history.
+ */
+async function moneyParts(
+  db: DbExecutor,
+  shopId: string,
+  startUtc: Date,
+  endUtc: Date,
+  scope: { shopMoney: { currency: string; timeZone: string } | null },
+): Promise<RevenueLinePart[]> {
+  const { shopMoney } = scope;
+  const throughDiveDayOnly = shopMoney === null;
   // Every line of every invoice paid in the window. Whether the invoice bills
   // a gear-bench job, and whether its booking's departure is a course session,
   // decide the line; each line's kept share is the order's own.
@@ -261,6 +301,7 @@ async function moneyByLine(
         inArray(orders.status, [...KEPT_ORDER_STATUSES]),
         gte(orders.paidAt, startUtc),
         lt(orders.paidAt, endUtc),
+        throughDiveDayOnly ? eq(orders.collection, "stripe_invoice") : undefined,
       ),
     );
 
@@ -303,51 +344,61 @@ async function moneyByLine(
   // counted through its checkout or invoice above, and a prepaid package dive
   // was money on the day the package sold. `amount_cents` is what the booking
   // still holds, so a part refund is already off it.
-  const markedSeats = await db
-    .select({
-      amountCents: bookingPayments.amountCents,
-      courseTrip: sql<boolean>`${trips.courseId} is not null`,
-    })
-    .from(bookingPayments)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, bookingPayments.bookingId), eq(bookings.shopId, shopId)),
-    )
-    // diveday:allow-deleted-trips: a departure with a booking cannot be deleted (`deleteTrip`'s `has_roster`), and money marked is money taken; a cleared rehearsal is left out by `notRehearsal()`.
-    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), notRehearsal()))
-    .where(
-      and(
-        eq(bookingPayments.shopId, shopId),
-        isNull(bookingPayments.provider),
-        inArray(bookingPayments.status, [...MARKED_PAYMENT_STATUSES]),
-        isNotNull(bookingPayments.amountCents),
-        gte(bookingPayments.updatedAt, startUtc),
-        lt(bookingPayments.updatedAt, endUtc),
-      ),
-    );
+  const markedSeats = throughDiveDayOnly
+    ? []
+    : await db
+        .select({
+          amountCents: bookingPayments.amountCents,
+          courseTrip: sql<boolean>`${trips.courseId} is not null`,
+        })
+        .from(bookingPayments)
+        .innerJoin(
+          bookings,
+          and(eq(bookings.id, bookingPayments.bookingId), eq(bookings.shopId, shopId)),
+        )
+        // diveday:allow-deleted-trips: a departure with a booking cannot be deleted (`deleteTrip`'s `has_roster`), and money marked is money taken; a cleared rehearsal is left out by `notRehearsal()`.
+        .innerJoin(
+          trips,
+          and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), notRehearsal()),
+        )
+        .where(
+          and(
+            eq(bookingPayments.shopId, shopId),
+            isNull(bookingPayments.provider),
+            inArray(bookingPayments.status, [...MARKED_PAYMENT_STATUSES]),
+            isNotNull(bookingPayments.amountCents),
+            gte(bookingPayments.updatedAt, startUtc),
+            lt(bookingPayments.updatedAt, endUtc),
+          ),
+        );
 
   // History carried from the shop's previous system, net of its refunds, on
   // the rule the month's Revenue already counts it by (`getMonthlyReport`):
   // only amounts the import could read in the shop's own currency, on the
   // shop's own calendar days. It names no line of its own, so it is one.
-  const [importedNet] = await db
-    .select({
-      cents: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'payment' then ${importedPaymentHistory.amountCents} else -${importedPaymentHistory.amountCents} end), 0)`,
-    })
-    .from(importedPaymentHistory)
-    .where(
-      and(
-        eq(importedPaymentHistory.shopId, shopId),
-        eq(importedPaymentHistory.currency, shopMoney.currency),
-        isNotNull(importedPaymentHistory.amountCents),
-        inArray(importedPaymentHistory.direction, ["payment", "refund"]),
-        gte(
-          importedPaymentHistory.occurredOn,
-          calendarDateInTimezone(startUtc, shopMoney.timeZone),
-        ),
-        lt(importedPaymentHistory.occurredOn, calendarDateInTimezone(endUtc, shopMoney.timeZone)),
-      ),
-    );
+  const [importedNet] = !shopMoney
+    ? []
+    : await db
+        .select({
+          cents: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'payment' then ${importedPaymentHistory.amountCents} else -${importedPaymentHistory.amountCents} end), 0)`,
+        })
+        .from(importedPaymentHistory)
+        .where(
+          and(
+            eq(importedPaymentHistory.shopId, shopId),
+            eq(importedPaymentHistory.currency, shopMoney.currency),
+            isNotNull(importedPaymentHistory.amountCents),
+            inArray(importedPaymentHistory.direction, ["payment", "refund"]),
+            gte(
+              importedPaymentHistory.occurredOn,
+              calendarDateInTimezone(startUtc, shopMoney.timeZone),
+            ),
+            lt(
+              importedPaymentHistory.occurredOn,
+              calendarDateInTimezone(endUtc, shopMoney.timeZone),
+            ),
+          ),
+        );
 
   const parts: RevenueLinePart[] = [];
   for (const row of orderLines) {
@@ -379,7 +430,7 @@ async function moneyByLine(
     });
   }
   parts.push({ line: "imported", cents: Number(importedNet?.cents ?? 0), keptRatio: 1 });
-  return revenueByLine(parts);
+  return parts;
 }
 
 /**

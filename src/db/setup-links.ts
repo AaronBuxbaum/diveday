@@ -89,15 +89,17 @@ export async function spendSetupLink(
 
 /**
  * Record which shop a spent link opened, in the transaction that spent it and
- * created the shop.
+ * created the shop, and answer the set-up request the link was minted for.
  */
 export async function recordSetupLinkShop(
   db: DbExecutor,
   token: string,
   shopId: string,
-): Promise<void> {
-  await db
+): Promise<{ setupRequestId: string } | null> {
+  const [row] = await db
     .update(shopSetupLinks)
     .set({ spentByShopId: shopId })
-    .where(eq(shopSetupLinks.tokenHash, hashAccountToken(token)));
+    .where(eq(shopSetupLinks.tokenHash, hashAccountToken(token)))
+    .returning({ setupRequestId: shopSetupLinks.setupRequestId });
+  return row ?? null;
 }

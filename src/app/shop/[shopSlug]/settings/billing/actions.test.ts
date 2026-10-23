@@ -152,6 +152,65 @@ describe("Add a card", () => {
     expect(checkoutBody.get("success_url")).toBe(
       "https://dive.day/shop/blue-mantis/settings/billing?notice=card-added",
     );
+    // Today's price, on the one existing price, snapshotted for the subscription.
+    expect(checkoutBody.get("line_items[0][price]")).toBe("price_monthly");
+    expect(checkoutBody.get("line_items[0][quantity]")).toBe("1");
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      pricingPlan: "flat_monthly",
+      planMonthlyCents: 9_900,
+      planBasisPoints: 0,
+    });
+  });
+
+  it("refuses the percent plan while its metered price is not configured", async () => {
+    const { db, shop, owner, signIn } = await context();
+    configure();
+    vi.stubEnv("PRICING_TEST", "on");
+    signIn(owner);
+    await db.insert(shopSubscriptions).values({
+      shopId: shop.id,
+      pricingPlan: "percent_of_volume",
+      pricingPlanSource: "assigned",
+    });
+    expect(await redirectedTo(() => startBillingCheckoutAction())).toBe(
+      "/shop/blue-mantis/settings/billing?notice=not-configured",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sells the percent plan on its metered price and snapshots its rate", async () => {
+    const { db, shop, owner, signIn } = await context();
+    configure();
+    vi.stubEnv("PRICING_TEST", "on");
+    vi.stubEnv("PRICING_PERCENT_BASIS_POINTS", "250");
+    vi.stubEnv("BILLING_STRIPE_PERCENT_PRICE_ID", "price_metered");
+    vi.stubEnv("BILLING_STRIPE_PERCENT_METER_EVENT", "diveday_fee_cents");
+    signIn(owner);
+    await db.insert(shopSubscriptions).values({
+      shopId: shop.id,
+      pricingPlan: "percent_of_volume",
+      pricingPlanSource: "assigned",
+    });
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "cus_new" }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "cs_1", url: "https://checkout.stripe.com/c/1" }), {
+          status: 200,
+        }),
+      );
+    expect(await redirectedTo(() => startBillingCheckoutAction())).toBe(
+      "https://checkout.stripe.com/c/1",
+    );
+    const checkoutBody = new URLSearchParams(String(fetchMock.mock.calls[1]?.[1]?.body));
+    expect(checkoutBody.get("line_items[0][price]")).toBe("price_metered");
+    expect(checkoutBody.has("line_items[0][quantity]")).toBe(false);
+    expect(checkoutBody.has("line_items[1][price]")).toBe(false);
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      pricingPlan: "percent_of_volume",
+      pricingPlanSource: "assigned",
+      planMonthlyCents: 0,
+      planBasisPoints: 250,
+    });
   });
 
   it("says Stripe did not answer, rather than throwing, when the customer call fails", async () => {

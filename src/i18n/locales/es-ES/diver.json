@@ -3954,7 +3954,11 @@
       "contactTitle": "Pregúntanos primero",
       "contactBody": "Escríbenos con lo que te haría decidir.",
       "contactCta": "Escribir a {email}",
-      "stepLink": "{name} →"
+      "stepLink": "{name} →",
+      "percentArm": {
+        "heroPriceLine": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes, sin cuota de alta.} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay, sin cuota mensual.}}",
+        "priceLine": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes, congelado dos años para los centros fundadores.} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay, congelado dos años para los centros fundadores.}}"
+      }
     },
     "common": {
       "gettingReady": "Preparando tu centro…",
@@ -4726,7 +4730,16 @@
       "closingTitle": "Ese es el precio completo",
       "closingBody": "{price} {cadence}, mes a mes, y la exportación funciona cualquier día.",
       "stillQuestion": "Lo que esta página no haya respondido, escríbelo por correo. Lo lee una persona real.",
-      "emailCta": "Escribe a {email}"
+      "emailCta": "Escribe a {email}",
+      "percentArm": {
+        "cadence": "{hasBase, select, yes {del dinero cobrado con tarjeta a través de DiveDay, más {base} al mes} other {del dinero cobrado con tarjeta a través de DiveDay, cada mes}}",
+        "invoiceFeeLabel": "La tarifa de DiveDay",
+        "invoiceFeeValue": "{percent} del dinero cobrado con tarjeta a través de DiveDay",
+        "ours": "{hasBase, select, yes {DiveDay cobra {base} al mes más el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.} other {DiveDay no tiene cuota mensual. Su tarifa es el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.}} No se suma nada al precio de tu cliente.",
+        "closingBody": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay}}, mes a mes, y la exportación funciona cualquier día.",
+        "whatCountsQuestion": "¿Qué cuenta para el {percent}?",
+        "whatCountsAnswer": "El dinero que tu centro cobra con tarjeta a través de DiveDay: las reservas hechas por internet, y las facturas y los paquetes que los buceadores pagan con tarjeta. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el dinero cobrado en el mostrador y el historial importado del sistema que usabas antes nunca cuentan. Un reembolso registrado antes de que cierre el mes se descuenta de ese mes."
+      }
     },
     "privacy": {
       "eyebrow": "Cómo trata los datos DiveDay",

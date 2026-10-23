@@ -7,22 +7,30 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { canPersonManageBilling } from "@/db/authz";
+import { latestPricingStatement, processedVolumeCents } from "@/db/pricing-volume";
 import {
   getShopSubscription,
   holdsLiveSubscription,
+  shopPricing,
   subscriptionSnapshot,
 } from "@/db/shop-subscriptions";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { type BillingStatus, billingStanding } from "@/lib/billing/standing";
-import { billingConfigFromEnvironment } from "@/lib/billing/stripe-billing";
-import { formatCalendarDate } from "@/lib/calendar-date";
+import { planCopyParams, planMoney } from "@/lib/billing/plan-display";
+import { percentFeeCents } from "@/lib/billing/pricing-plans";
+import { type BillingStatus, billingStanding, freeTimeEndsAt } from "@/lib/billing/standing";
+import {
+  billingConfigFromEnvironment,
+  percentBillingFromEnvironment,
+} from "@/lib/billing/stripe-billing";
+import { formatCalendarDate, formatCalendarMonth } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatDateWithYear } from "@/lib/format";
-import { earlyAccessPrice } from "@/lib/marketing";
+import { formatDateWithYear, formatMoneyCents } from "@/lib/format";
+import { pricingConfig } from "@/lib/pricing-flags";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { trialDaysRemaining, trialEndsAt } from "@/lib/trial";
+import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { billingNoticeMessages } from "../sub-page-notices";
 import { openBillingPortalAction, startBillingCheckoutAction } from "./actions";
@@ -81,10 +89,15 @@ export default async function BillingSettingsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, billingNoticeMessages(t));
-  const configured = billingConfigFromEnvironment() !== null;
-
   const row = await getShopSubscription(db, shop.id);
   const now = nowDate();
+  // The shop's plan and numbers (ADR 20261022-pricing-ab-test): today's flat
+  // price for everyone while the pricing test is off. The percent plan is
+  // sellable only once its metered price and meter are configured too.
+  const terms = shopPricing(shop.id, row, pricingConfig());
+  const percentPlan = terms.plan === "percent_of_volume";
+  const billingOn = billingConfigFromEnvironment() !== null;
+  const configured = billingOn && (!percentPlan || percentBillingFromEnvironment() !== null);
   const standing = billingStanding({
     now,
     timeZone: shop.timezone,
@@ -115,7 +128,47 @@ export default async function BillingSettingsPage({
     ? t("billing.demo")
     : configured
       ? undefined
-      : t("billing.notConfigured");
+      : billingOn
+        ? t("billing.plan.percentNotConfigured")
+        : t("billing.notConfigured");
+
+  // The percent plan's running month and its last closed one, in the shop's zone.
+  const money = (cents: number) => formatMoneyCents(cents, "usd", locale);
+  let percentFacts: {
+    volumeCents: number;
+    feeCents: number;
+    last: { month: string; volumeCents: number; feeCents: number } | null;
+  } | null = null;
+  if (percentPlan && !shop.isDemo) {
+    const wall = utcToWallTime(now, shop.timezone);
+    const month = { year: wall.year, month: wall.month };
+    const [volumeCents, statement] = await Promise.all([
+      processedVolumeCents(
+        db,
+        shop.id,
+        month,
+        shop.timezone,
+        freeTimeEndsAt({
+          now: shopMonthBounds(month, shop.timezone).from,
+          timeZone: shop.timezone,
+          trialEndsAt: trialEndsAt(shop.createdAt),
+          freeTermEndsOn: row?.freeTermEndsOn ?? null,
+        }),
+      ),
+      latestPricingStatement(db, shop.id),
+    ]);
+    percentFacts = {
+      volumeCents,
+      feeCents: percentFeeCents(volumeCents, terms.basisPoints),
+      last: statement
+        ? {
+            month: formatCalendarMonth(statement.month, locale),
+            volumeCents: statement.volumeCents,
+            feeCents: statement.feeCents,
+          }
+        : null,
+    };
+  }
   const canAct = configured && !shop.isDemo;
   const canCancel = standing.hasSubscription && standing.nextChargeAt !== null;
   // Which button, decided on the row as the actions decide it: a subscription
@@ -147,7 +200,36 @@ export default async function BillingSettingsPage({
           shop.isDemo ? null : <Badge tone={STATUS_TONE[standing.status]}>{statusText}</Badge>
         }
       >
-        <p className="text-sm">{t("billing.plan.price", { price: earlyAccessPrice.price })}</p>
+        <p className="text-sm">
+          {percentPlan
+            ? t("billing.plan.percentPrice", planCopyParams(terms, locale))
+            : t("billing.plan.price", { price: planMoney(terms.monthlyCents, locale) })}
+        </p>
+        {percentFacts ? (
+          <div className="mt-4 space-y-3 text-sm">
+            {[
+              { heading: t("billing.plan.thisMonth"), ...percentFacts },
+              ...(percentFacts.last
+                ? [
+                    {
+                      heading: t("billing.plan.lastMonth", { month: percentFacts.last.month }),
+                      ...percentFacts.last,
+                    },
+                  ]
+                : []),
+            ].map((fact) => (
+              <div key={fact.heading}>
+                <p className="font-medium">{fact.heading}</p>
+                <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
+                  <dt className="text-muted">{t("billing.plan.volume")}</dt>
+                  <dd>{money(fact.volumeCents)}</dd>
+                  <dt className="text-muted">{t("billing.plan.fee")}</dt>
+                  <dd>{money(fact.feeCents)}</dd>
+                </dl>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {dateFact && !shop.isDemo ? (
           <dl className="mt-3 text-sm">
             <dt className="text-muted">{dateFact.label}</dt>

@@ -1,6 +1,9 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -8,6 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { PRICING_PLAN_SOURCES, PRICING_PLANS } from "@/lib/billing/pricing-plans";
 import { STRIPE_SUBSCRIPTION_STATUSES } from "@/lib/billing/standing";
 import { appNowTimestamp } from "./columns";
 import { shops } from "./core";
@@ -17,6 +21,12 @@ export const stripeSubscriptionStatus = pgEnum(
   "stripe_subscription_status",
   STRIPE_SUBSCRIPTION_STATUSES,
 );
+
+/** The pricing A/B test's two plans (src/lib/billing/pricing-plans.ts, ADR 20261022-pricing-ab-test). */
+export const pricingPlan = pgEnum("pricing_plan", PRICING_PLANS);
+
+/** Who stored a shop's plan: the arm it was assigned, or a person by hand. */
+export const pricingPlanSource = pgEnum("pricing_plan_source", PRICING_PLAN_SOURCES);
 
 /**
  * What a shop pays **DiveDay** — the subscription on DiveDay's own Stripe
@@ -64,11 +74,83 @@ export const shopSubscriptions = pgTable(
     stripeCheckoutSessionId: text("stripe_checkout_session_id"),
     freeTermEndsOn: date("free_term_ends_on", { mode: "string" }),
     firstPaidAt: timestamp("first_paid_at", { withTimezone: true }),
+    /**
+     * The pricing A/B test's plan (ADR 20261022-pricing-ab-test). Null until
+     * one is stored: at signup (the arm the set-up request saw), at "Add a
+     * card" (the plan Checkout sold), or by `pnpm billing:pricing-plan`. Read
+     * only through `effectivePricing` (src/lib/billing/pricing-plans.ts).
+     */
+    pricingPlan: pricingPlan("pricing_plan"),
+    pricingPlanSource: pricingPlanSource("pricing_plan_source"),
+    pricingPlanSetAt: timestamp("pricing_plan_set_at", { withTimezone: true }),
+    /**
+     * The arm the shop was assigned, kept apart from `pricing_plan` so an
+     * override can be undone (`billing:pricing-plan <slug> auto`) back to it.
+     */
+    assignedPricingPlan: pricingPlan("assigned_pricing_plan"),
+    /**
+     * **The numbers this shop was sold** (grandfathering): the monthly fee and,
+     * on the percent plan, the basis points, snapshotted when Checkout opens
+     * or a deal is set by hand. A live subscription keeps them whatever the
+     * `PRICING_*` environment says later.
+     */
+    planMonthlyCents: integer("plan_monthly_cents"),
+    planBasisPoints: integer("plan_basis_points"),
+    /**
+     * Every paid invoice's `amount_paid`, summed by the billing webhook: what
+     * this shop has paid DiveDay, the test's revenue per shop. The event
+     * ledger makes each invoice count once.
+     */
+    paidTotalCents: integer("paid_total_cents").notNull().default(0),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("shop_subscriptions_stripe_customer_unique").on(table.stripeCustomerId),
     uniqueIndex("shop_subscriptions_stripe_subscription_unique").on(table.stripeSubscriptionId),
+    check(
+      "shop_subscriptions_pricing_plan_source_check",
+      sql`(${table.pricingPlan} is null) = (${table.pricingPlanSource} is null)`,
+    ),
+    check(
+      "shop_subscriptions_plan_numbers_check",
+      sql`(${table.planMonthlyCents} is null or ${table.planMonthlyCents} between 0 and 100000) and (${table.planBasisPoints} is null or ${table.planBasisPoints} between 0 and 1000)`,
+    ),
+  ],
+);
+
+/**
+ * **One closed month of a percent-plan shop** (ADR 20261022-pricing-ab-test):
+ * the card money it took through DiveDay in its own calendar month
+ * (`processedVolumeCents`), the fee on it, and whether that fee has reached
+ * Stripe as a meter event.
+ *
+ * Written by the monthly cron alone (`src/db/pricing-volume.ts`). The unique `(shop_id, month)` is the
+ * month's idempotency: a re-run finds the row and, once `reported_at` is set,
+ * does nothing; a run that wrote the row but failed to report retries the
+ * report with the same figures and the same `stripe_meter_identifier`, which
+ * Stripe also deduplicates on. `month` is the first day of the month, as a
+ * calendar date in the shop's own zone.
+ */
+export const pricingVolumeStatements = pgTable(
+  "pricing_volume_statements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    month: date("month", { mode: "string" }).notNull(),
+    volumeCents: integer("volume_cents").notNull(),
+    /** The rate the fee was computed at: the shop's snapshot when the month closed. */
+    basisPoints: integer("basis_points").notNull(),
+    feeCents: integer("fee_cents").notNull(),
+    /** `diveday-fee-<shopId>-<yyyy-mm>`: the meter event's own identifier. */
+    stripeMeterIdentifier: text("stripe_meter_identifier").notNull(),
+    reportedAt: timestamp("reported_at", { withTimezone: true }),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("pricing_volume_statements_shop_month_unique").on(table.shopId, table.month),
+    check("pricing_volume_statements_fee_check", sql`${table.feeCents} >= 0`),
   ],
 );

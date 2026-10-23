@@ -253,6 +253,10 @@ describe("POST /api/webhooks/billing — applies what Stripe says, once", () => 
     });
     expect((await deliver(payload, signed(payload))).status).toBe(200);
     expect((await getShopSubscription(db, shopId))?.firstPaidAt).toBeInstanceOf(Date);
+    expect((await getShopSubscription(db, shopId))?.paidTotalCents).toBe(9_900);
+    // A redelivery of the same invoice event adds nothing: the ledger claims it once.
+    expect((await deliver(payload, signed(payload))).status).toBe(200);
+    expect((await getShopSubscription(db, shopId))?.paidTotalCents).toBe(9_900);
   });
 
   it("asks Stripe to retry a paid invoice that beat its subscription, and counts it then", async () => {
@@ -271,10 +275,12 @@ describe("POST /api/webhooks/billing — applies what Stripe says, once", () => 
     });
     expect((await deliver(paid, signed(paid))).status).toBe(503);
     expect((await getShopSubscription(db, shopId))?.firstPaidAt).toBeNull();
+    expect((await getShopSubscription(db, shopId))?.paidTotalCents).toBe(0);
     const linked = subscriptionEvent("evt_link_late", { status: "active" });
     await deliver(linked, signed(linked));
     // Stripe's retry: the claim was given back, so it is handled, not a duplicate.
     expect((await deliver(paid, signed(paid))).status).toBe(200);
     expect((await getShopSubscription(db, shopId))?.firstPaidAt).toBeInstanceOf(Date);
+    expect((await getShopSubscription(db, shopId))?.paidTotalCents).toBe(9_900);
   });
 });

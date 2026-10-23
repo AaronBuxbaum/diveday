@@ -1,5 +1,14 @@
 import { and, eq, inArray, isNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import type { BillingEventEffect } from "@/lib/billing/events";
+import {
+  effectivePricing,
+  type PlanTerms,
+  type PricingConfig,
+  type PricingPlan,
+  type PricingPlanSource,
+  type StoredPricing,
+  termsFor,
+} from "@/lib/billing/pricing-plans";
 import type { SubscriptionSnapshot } from "@/lib/billing/standing";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -10,7 +19,7 @@ import { shopSubscriptions, shops } from "./schema";
 
 /**
  * A shop's subscription to DiveDay, as this database knows it (ADR
- * 20261007-subscription-billing). Three writers and no more:
+ * 20261007-subscription-billing). These writers and no more:
  *
  * - `ensureShopBillingCustomer` — the Billing page's "Add a card", before
  *   Checkout opens, records the Stripe Customer DiveDay minted for the shop.
@@ -18,6 +27,10 @@ import { shopSubscriptions, shops } from "./schema";
  *   subscription's state.
  * - `setShopFreeTerm` — `pnpm billing:free-term`, a person granting free
  *   months by hand.
+ * - `setShopPricingPlan` and `snapshotShopPricing` — the pricing test's plan
+ *   (ADR 20261022-pricing-ab-test): a person by hand, and "Add a card"
+ *   recording the numbers Checkout sells. Sign-up writes the assigned arm in
+ *   `createSignedUpShop`.
  *
  * Every read and write is keyed by the shop (from the session) or by the
  * Stripe customer id (from a signed event) — never by an id an event merely
@@ -279,34 +292,46 @@ export async function applyBillingEffect(
       }
       case "invoice_paid": {
         // A $0 invoice — the one Stripe issues when a deferred subscription
-        // starts — is not a paid month.
+        // starts — is not a paid month, and adds nothing.
         if (effect.amountPaid <= 0) return "zero_amount";
-        // Only an invoice of the subscription this shop holds is its paid
-        // month. One that beats its own subscription's events here (a card
-        // charged at once) is answered "not linked", and the webhook has
-        // Stripe retry it once the link has landed.
-        if (row.firstPaidAt) return "already_paid";
+        // Only an invoice of the subscription this shop holds is its money.
+        // One that beats its own subscription's events here (a card charged
+        // at once) is answered "not linked", and the webhook has Stripe retry
+        // it once the link has landed.
         if (row.stripeSubscriptionId === null) return "subscription_not_linked";
         if (row.stripeSubscriptionId !== effect.subscriptionId) return "foreign_subscription";
-        const [first] = await db
-          .update(shopSubscriptions)
-          .set({ firstPaidAt: effect.paidAt, updatedAt: now })
-          .where(
-            and(
-              sameCustomer,
-              eq(shopSubscriptions.stripeSubscriptionId, effect.subscriptionId),
-              isNull(shopSubscriptions.firstPaidAt),
-            ),
-          )
-          .returning({ shopId: shopSubscriptions.shopId });
-        if (!first) return "already_paid";
-        // The funnel's activation step (ADR 20261007-founder-metrics).
-        await recordShopMilestone(db, {
-          shopId: first.shopId,
-          milestone: "first_paid_month",
-          at: effect.paidAt,
+        const sameSubscription = and(
+          sameCustomer,
+          eq(shopSubscriptions.stripeSubscriptionId, effect.subscriptionId),
+        );
+        // What the shop has paid DiveDay, the pricing test's revenue (ADR
+        // 20261022-pricing-ab-test). Every paid invoice adds once: the
+        // webhook's event ledger claims each delivery before this runs, and
+        // the writes share one transaction, so a failure after the increment
+        // rolls it back before the claim is released for Stripe's retry.
+        return await db.transaction(async (tx) => {
+          await tx
+            .update(shopSubscriptions)
+            .set({
+              paidTotalCents: sql`${shopSubscriptions.paidTotalCents} + ${effect.amountPaid}`,
+              updatedAt: now,
+            })
+            .where(sameSubscription);
+          if (row.firstPaidAt) return "already_paid" as const;
+          const [first] = await tx
+            .update(shopSubscriptions)
+            .set({ firstPaidAt: effect.paidAt, updatedAt: now })
+            .where(and(sameSubscription, isNull(shopSubscriptions.firstPaidAt)))
+            .returning({ shopId: shopSubscriptions.shopId });
+          if (!first) return "already_paid" as const;
+          // The funnel's activation step (ADR 20261007-founder-metrics).
+          await recordShopMilestone(tx, {
+            shopId: first.shopId,
+            milestone: "first_paid_month",
+            at: effect.paidAt,
+          });
+          return "first_paid" as const;
         });
-        return "first_paid";
       }
     }
   } catch (error) {
@@ -357,4 +382,153 @@ export async function setShopFreeTerm(
     row.stripeStatus !== null &&
     !(ENDED_STATUSES as readonly string[]).includes(row.stripeStatus);
   return { status: "set", shopId: shop.id, hasLiveSubscription: live };
+}
+
+/** The stored plan fields `effectivePricing` reads, off a row (or none). */
+export function storedPricing(row: ShopSubscriptionRow | null): StoredPricing | null {
+  if (!row) return null;
+  return {
+    plan: row.pricingPlan,
+    source: row.pricingPlanSource,
+    monthlyCents: row.planMonthlyCents,
+    basisPoints: row.planBasisPoints,
+  };
+}
+
+/** The plan and numbers this shop is on now (ADR 20261022-pricing-ab-test). */
+export function shopPricing(
+  shopId: string,
+  row: ShopSubscriptionRow | null,
+  config: PricingConfig,
+): PlanTerms {
+  return effectivePricing({
+    stored: storedPricing(row),
+    shopId,
+    config,
+    hasLiveSubscription: holdsLiveSubscription(row),
+  });
+}
+
+/**
+ * Snapshot the numbers Checkout is about to sell (grandfathering): the plan
+ * and its fee and rate, so a later change to the `PRICING_*` environment never
+ * moves what a subscriber pays. An arm already stored keeps its source.
+ */
+export async function snapshotShopPricing(
+  db: AppDb,
+  shopId: string,
+  terms: PlanTerms,
+): Promise<void> {
+  const now = nowDate();
+  await db
+    .insert(shopSubscriptions)
+    .values({
+      shopId,
+      pricingPlan: terms.plan,
+      pricingPlanSource: "assigned",
+      planMonthlyCents: terms.monthlyCents,
+      planBasisPoints: terms.basisPoints,
+      pricingPlanSetAt: now,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: shopSubscriptions.shopId,
+      set: {
+        pricingPlan: terms.plan,
+        pricingPlanSource: sql`coalesce(${shopSubscriptions.pricingPlanSource}, 'assigned')`,
+        planMonthlyCents: terms.monthlyCents,
+        planBasisPoints: terms.basisPoints,
+        pricingPlanSetAt: now,
+        updatedAt: now,
+      },
+    });
+}
+
+export type SetPricingPlanOutcome =
+  | { status: "set"; terms: PlanTerms }
+  | { status: "no_such_shop" }
+  | { status: "demo_shop" }
+  | { status: "live_subscription"; current: PlanTerms };
+
+/**
+ * `pnpm billing:pricing-plan`: put a shop on a plan by hand (`override`),
+ * optionally with its own numbers, or (`plan: null`, "auto") back on the arm
+ * it was assigned.
+ *
+ * Refused while the shop holds a live subscription and the change would move
+ * its plan or its monthly fee: Stripe is billing that subscription on the
+ * numbers it was sold, so it has to be canceled first. A new rate on a live
+ * percent subscription is allowed, because DiveDay computes the fee itself and
+ * reports it in cents.
+ */
+export async function setShopPricingPlan(
+  db: AppDb,
+  input: {
+    shopSlug: string;
+    plan: PricingPlan | null;
+    monthlyCents: number | null;
+    basisPoints: number | null;
+  },
+  config: PricingConfig,
+): Promise<SetPricingPlanOutcome> {
+  const [shop] = await db
+    .select({ id: shops.id, isDemo: shops.isDemo })
+    .from(shops)
+    .where(eq(shops.slug, input.shopSlug))
+    .limit(1);
+  if (!shop) return { status: "no_such_shop" };
+  if (shop.isDemo) return { status: "demo_shop" };
+  const row = await getShopSubscription(db, shop.id);
+  const live = holdsLiveSubscription(row);
+  const current = shopPricing(shop.id, row, config);
+
+  let next: {
+    pricingPlan: PricingPlan | null;
+    pricingPlanSource: PricingPlanSource | null;
+    planMonthlyCents: number | null;
+    planBasisPoints: number | null;
+  };
+  if (input.plan === null) {
+    const assigned = row?.assignedPricingPlan ?? null;
+    next = {
+      pricingPlan: assigned,
+      pricingPlanSource: assigned ? "assigned" : null,
+      // A live subscription keeps the numbers it was sold.
+      planMonthlyCents: live ? (row?.planMonthlyCents ?? null) : null,
+      planBasisPoints: live ? (row?.planBasisPoints ?? null) : null,
+    };
+  } else {
+    const base = termsFor(input.plan, config);
+    next = {
+      pricingPlan: input.plan,
+      pricingPlanSource: "override",
+      planMonthlyCents: input.monthlyCents ?? base.monthlyCents,
+      planBasisPoints:
+        input.plan === "percent_of_volume" ? (input.basisPoints ?? base.basisPoints) : 0,
+    };
+  }
+
+  const after = effectivePricing({
+    stored: {
+      plan: next.pricingPlan,
+      source: next.pricingPlanSource,
+      monthlyCents: next.planMonthlyCents,
+      basisPoints: next.planBasisPoints,
+    },
+    shopId: shop.id,
+    config,
+    hasLiveSubscription: live,
+  });
+  if (live && (after.plan !== current.plan || after.monthlyCents !== current.monthlyCents)) {
+    return { status: "live_subscription", current };
+  }
+
+  const now = nowDate();
+  const values = { ...next, pricingPlanSetAt: now, updatedAt: now };
+  await db
+    .insert(shopSubscriptions)
+    .values({ shopId: shop.id, ...values, createdAt: now })
+    .onConflictDoUpdate({ target: shopSubscriptions.shopId, set: values });
+  return { status: "set", terms: after };
 }

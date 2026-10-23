@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { BillingEventEffect } from "@/lib/billing/events";
+import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { shopMilestones, shops } from "./schema";
+import { shopMilestones, shopSubscriptions, shops } from "./schema";
 import {
   applyBillingEffect,
   ensureShopBillingCustomer,
@@ -11,6 +12,9 @@ import {
   holdsLiveSubscription,
   recordShopCheckoutSession,
   setShopFreeTerm,
+  setShopPricingPlan,
+  shopPricing,
+  snapshotShopPricing,
   subscriptionSnapshot,
 } from "./shop-subscriptions";
 
@@ -317,6 +321,28 @@ describe("applyBillingEffect", () => {
     expect((await getShopSubscription(db, shop.id))?.firstPaidAt).toEqual(later(100));
   });
 
+  it("adds every paid invoice of the held subscription to what the shop has paid", async () => {
+    const { db, shop } = ctx;
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    const paid = (subscriptionId: string, amountPaid: number): BillingEventEffect => ({
+      kind: "invoice_paid",
+      customerId: "cus_a",
+      subscriptionId,
+      amountPaid,
+      paidAt: T0,
+    });
+    // Not linked yet: retried later, nothing added.
+    expect(await applyBillingEffect(db, paid("sub_a", 9_900))).toBe("subscription_not_linked");
+    expect((await getShopSubscription(db, shop.id))?.paidTotalCents).toBe(0);
+    await applyBillingEffect(db, completed(shop.id));
+    expect(await applyBillingEffect(db, paid("sub_a", 0))).toBe("zero_amount");
+    expect(await applyBillingEffect(db, paid("sub_a", 9_900))).toBe("first_paid");
+    expect(await applyBillingEffect(db, paid("sub_a", 3_150))).toBe("already_paid");
+    // Another subscription's invoice is not this shop's money.
+    expect(await applyBillingEffect(db, paid("sub_other", 5_000))).toBe("foreign_subscription");
+    expect((await getShopSubscription(db, shop.id))?.paidTotalCents).toBe(13_050);
+  });
+
   it("records the funnel's first_paid_month milestone for a real shop", async () => {
     const { db, shop } = ctx;
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
@@ -334,6 +360,30 @@ describe("applyBillingEffect", () => {
       .from(shopMilestones)
       .where(eq(shopMilestones.shopId, shop.id));
     expect(milestones).toContainEqual({ milestone: "first_paid_month", reachedAt: later(100) });
+  });
+
+  it("adds nothing when the paid invoice's writes fail, so Stripe's retry counts it once", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await applyBillingEffect(db, completed(shop.id));
+    const paid: BillingEventEffect = {
+      kind: "invoice_paid",
+      customerId: "cus_a",
+      subscriptionId: "sub_a",
+      amountPaid: 9_900,
+      paidAt: later(100),
+    };
+    // The milestone insert fails after the increment ran.
+    await db.execute(sql`alter table shop_milestones rename to shop_milestones_away`);
+    try {
+      await expect(applyBillingEffect(db, paid)).rejects.toThrow();
+    } finally {
+      await db.execute(sql`alter table shop_milestones_away rename to shop_milestones`);
+    }
+    expect((await getShopSubscription(db, shop.id))?.paidTotalCents).toBe(0);
+    expect(await applyBillingEffect(db, paid)).toBe("first_paid");
+    expect((await getShopSubscription(db, shop.id))?.paidTotalCents).toBe(9_900);
   });
 
   it("passes ignored and malformed events through without a read", async () => {
@@ -375,5 +425,137 @@ describe("setShopFreeTerm", () => {
     expect(await setShopFreeTerm(db, { shopSlug: shop.slug, endsOn: "2027-02-30" })).toEqual({
       status: "invalid_date",
     });
+  });
+});
+
+describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
+  const ON = { ...DEFAULT_PRICING_CONFIG, test: true };
+
+  async function slugOf(db: AppDb, shopId: string): Promise<string> {
+    const [row] = await db.select({ slug: shops.slug }).from(shops).where(eq(shops.id, shopId));
+    if (!row) throw new Error("no shop");
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shopId));
+    return row.slug;
+  }
+
+  it("sets a deal by hand and undoes it back to the assigned arm", async () => {
+    const { db, shop } = ctx;
+    const slug = await slugOf(db, shop.id);
+    await db.insert(shopSubscriptions).values({
+      shopId: shop.id,
+      pricingPlan: "flat_monthly",
+      pricingPlanSource: "assigned",
+      assignedPricingPlan: "flat_monthly",
+    });
+    expect(
+      await setShopPricingPlan(
+        db,
+        { shopSlug: slug, plan: "percent_of_volume", monthlyCents: 1_500, basisPoints: null },
+        ON,
+      ),
+    ).toEqual({
+      status: "set",
+      terms: { plan: "percent_of_volume", monthlyCents: 1_500, basisPoints: 300 },
+    });
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      pricingPlan: "percent_of_volume",
+      pricingPlanSource: "override",
+      assignedPricingPlan: "flat_monthly",
+      planMonthlyCents: 1_500,
+      planBasisPoints: 300,
+    });
+    expect(
+      await setShopPricingPlan(
+        db,
+        { shopSlug: slug, plan: null, monthlyCents: null, basisPoints: null },
+        ON,
+      ),
+    ).toMatchObject({ status: "set", terms: { plan: "flat_monthly", monthlyCents: 9_900 } });
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      pricingPlan: "flat_monthly",
+      pricingPlanSource: "assigned",
+      planMonthlyCents: null,
+    });
+  });
+
+  it("refuses to move a live subscription to another plan or fee", async () => {
+    const { db, shop } = ctx;
+    const slug = await slugOf(db, shop.id);
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await snapshotShopPricing(db, shop.id, {
+      plan: "flat_monthly",
+      monthlyCents: 9_900,
+      basisPoints: 0,
+    });
+    await applyBillingEffect(db, changed());
+    const outcome = await setShopPricingPlan(
+      db,
+      { shopSlug: slug, plan: "percent_of_volume", monthlyCents: null, basisPoints: null },
+      ON,
+    );
+    expect(outcome).toEqual({
+      status: "live_subscription",
+      current: { plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 },
+    });
+    expect((await getShopSubscription(db, shop.id))?.pricingPlanSource).toBe("assigned");
+  });
+
+  it("lets a live percent subscription take a new rate, which the fee is computed at", async () => {
+    const { db, shop } = ctx;
+    const slug = await slugOf(db, shop.id);
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await snapshotShopPricing(db, shop.id, {
+      plan: "percent_of_volume",
+      monthlyCents: 0,
+      basisPoints: 300,
+    });
+    await applyBillingEffect(db, changed());
+    expect(
+      await setShopPricingPlan(
+        db,
+        { shopSlug: slug, plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 },
+        ON,
+      ),
+    ).toEqual({
+      status: "set",
+      terms: { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 },
+    });
+  });
+
+  it("keeps a subscriber on what Checkout sold when the environment moves", async () => {
+    const { db, shop } = ctx;
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await snapshotShopPricing(db, shop.id, {
+      plan: "percent_of_volume",
+      monthlyCents: 0,
+      basisPoints: 300,
+    });
+    await applyBillingEffect(db, changed());
+    const raised = { ...ON, percent: { basisPoints: 600, monthlyCents: 2_000 } };
+    expect(shopPricing(shop.id, await getShopSubscription(db, shop.id), raised)).toEqual({
+      plan: "percent_of_volume",
+      monthlyCents: 0,
+      basisPoints: 300,
+    });
+  });
+
+  it("refuses an unknown shop and a demo shop", async () => {
+    const { db, shop } = ctx;
+    expect(
+      await setShopPricingPlan(
+        db,
+        { shopSlug: "no-such-shop", plan: "flat_monthly", monthlyCents: null, basisPoints: null },
+        ON,
+      ),
+    ).toEqual({ status: "no_such_shop" });
+    const [row] = await db.select({ slug: shops.slug }).from(shops).where(eq(shops.id, shop.id));
+    await db.update(shops).set({ isDemo: true }).where(eq(shops.id, shop.id));
+    expect(
+      await setShopPricingPlan(
+        db,
+        { shopSlug: row?.slug ?? "", plan: "flat_monthly", monthlyCents: null, basisPoints: null },
+        ON,
+      ),
+    ).toEqual({ status: "demo_shop" });
   });
 });

@@ -35,6 +35,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.9") }));
+vi.mock("@/lib/pricing-arm-request", () => ({
+  requestVisitorArm: vi.fn(async (): Promise<string | null> => null),
+}));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   return { ...actual, checkRateLimit: vi.fn() };
@@ -124,6 +127,20 @@ describe("submitSetupRequestAction", () => {
       source: "pricing-close",
       sender: { replyTo: "ana@reefline.example" },
     });
+  });
+
+  it("records no pricing arm while the test is off", async () => {
+    await submit(setUpForm());
+    const [row] = await db.select().from(setupRequests);
+    expect(row?.pricingPlan).toBeNull();
+  });
+
+  it("records the pricing arm the reader was shown (ADR 20261022-pricing-ab-test)", async () => {
+    const { requestVisitorArm } = await import("@/lib/pricing-arm-request");
+    vi.mocked(requestVisitorArm).mockResolvedValueOnce("percent_of_volume");
+    await submit(setUpForm());
+    const [row] = await db.select().from(setupRequests);
+    expect(row?.pricingPlan).toBe("percent_of_volume");
   });
 
   /**

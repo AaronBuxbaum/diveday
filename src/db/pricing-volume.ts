@@ -1,0 +1,175 @@
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
+import { percentFeeCents } from "@/lib/billing/pricing-plans";
+import { type MonthRef, monthKey } from "@/lib/calendar";
+import { nowDate } from "@/lib/clock";
+import { shopMonthBounds } from "@/lib/zoned";
+import type { AppDb, DbExecutor } from "./client";
+import { realShop } from "./founder-metrics";
+import { cardMoneyThroughDiveDayCents } from "./report-lines";
+import { pricingVolumeStatements, shopSubscriptions, shops } from "./schema";
+
+/**
+ * **The percent plan's volume and its monthly statements** (ADR
+ * 20261022-pricing-ab-test).
+ *
+ * Volume is card money the shop took through DiveDay in its own calendar
+ * month, by the rules the Reports page's money-by-line already applies
+ * (`cardMoneyThroughDiveDayCents` in `./report-lines.ts`): never tips, tax,
+ * pass-through fees, money taken at the counter or imported history, and net
+ * of the refunds recorded by the time it is read. Money taken while the shop
+ * was still in its free time is not billed, so a month is read from the later
+ * of its first instant and the end of the shop's free time.
+ */
+
+export type PricingStatement = typeof pricingVolumeStatements.$inferSelect;
+
+/** The shop-local month as UTC bounds, its start moved past the shop's free time. */
+export function billableWindow(
+  month: MonthRef,
+  timeZone: string,
+  freeUntil: Date | null,
+): { from: Date; to: Date } {
+  const bounds = shopMonthBounds(month, timeZone);
+  const from = freeUntil && freeUntil.getTime() > bounds.from.getTime() ? freeUntil : bounds.from;
+  return { from: from.getTime() < bounds.to.getTime() ? from : bounds.to, to: bounds.to };
+}
+
+/**
+ * Card money paid through DiveDay in the shop's calendar month, in cents,
+ * from `freeUntil` on when the month began inside the shop's free time. A
+ * window that has not started (a month entirely free) is zero.
+ */
+export async function processedVolumeCents(
+  db: DbExecutor,
+  shopId: string,
+  month: MonthRef,
+  timeZone: string,
+  freeUntil: Date | null = null,
+): Promise<number> {
+  const window = billableWindow(month, timeZone, freeUntil);
+  if (window.from.getTime() >= window.to.getTime()) return 0;
+  return cardMoneyThroughDiveDayCents(db, shopId, window.from, window.to);
+}
+
+/** The meter event's identifier: one per shop per month, so Stripe deduplicates a retry too. */
+export function meterIdentifier(shopId: string, month: MonthRef): string {
+  return `diveday-fee-${shopId}-${monthKey(month)}`;
+}
+
+/** The month as the statement's `month` column holds it: its first day. */
+export function statementMonth(month: MonthRef): string {
+  return `${monthKey(month)}-01`;
+}
+
+/**
+ * Close one month for one shop: the statement, written once. A second call
+ * for the same month returns the row the first wrote, figures unchanged, so a
+ * re-run never re-reads a month whose late refund would move its fee after
+ * Stripe was told.
+ */
+export async function closePricingMonth(
+  db: AppDb,
+  input: {
+    shopId: string;
+    month: MonthRef;
+    timeZone: string;
+    terms: PlanTerms;
+    freeUntil: Date | null;
+  },
+): Promise<PricingStatement> {
+  const month = statementMonth(input.month);
+  const existing = await getPricingStatement(db, input.shopId, month);
+  if (existing) return existing;
+  const volumeCents = await processedVolumeCents(
+    db,
+    input.shopId,
+    input.month,
+    input.timeZone,
+    input.freeUntil,
+  );
+  const now = nowDate();
+  await db
+    .insert(pricingVolumeStatements)
+    .values({
+      shopId: input.shopId,
+      month,
+      volumeCents,
+      basisPoints: input.terms.basisPoints,
+      feeCents: percentFeeCents(volumeCents, input.terms.basisPoints),
+      stripeMeterIdentifier: meterIdentifier(input.shopId, input.month),
+      createdAt: now,
+    })
+    .onConflictDoNothing({
+      target: [pricingVolumeStatements.shopId, pricingVolumeStatements.month],
+    });
+  const row = await getPricingStatement(db, input.shopId, month);
+  if (!row) throw new Error("closePricingMonth: statement missing after insert");
+  return row;
+}
+
+export async function getPricingStatement(
+  db: DbExecutor,
+  shopId: string,
+  month: string,
+): Promise<PricingStatement | null> {
+  const [row] = await db
+    .select()
+    .from(pricingVolumeStatements)
+    .where(
+      and(eq(pricingVolumeStatements.shopId, shopId), eq(pricingVolumeStatements.month, month)),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/** The shop's most recent closed month, for Settings > Billing. */
+export async function latestPricingStatement(
+  db: DbExecutor,
+  shopId: string,
+): Promise<PricingStatement | null> {
+  const [row] = await db
+    .select()
+    .from(pricingVolumeStatements)
+    .where(eq(pricingVolumeStatements.shopId, shopId))
+    .orderBy(desc(pricingVolumeStatements.month))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Stamp a statement as reported to Stripe. Only an unstamped row is stamped,
+ * so the first report's instant is the one kept.
+ */
+export async function markPricingStatementReported(
+  db: AppDb,
+  statementId: string,
+  at: Date,
+): Promise<void> {
+  await db
+    .update(pricingVolumeStatements)
+    .set({ reportedAt: at })
+    .where(
+      and(eq(pricingVolumeStatements.id, statementId), isNull(pricingVolumeStatements.reportedAt)),
+    );
+}
+
+/**
+ * Real shops (not a demo, not a seeded row nobody can sign into) that hold a
+ * Stripe customer: the candidates the monthly close reads. Which of them is on
+ * the percent plan is `effectivePricing`'s call, made by the caller.
+ */
+export async function listBillableShops(db: DbExecutor) {
+  return db
+    .select({
+      shop: {
+        id: shops.id,
+        timezone: shops.timezone,
+        createdAt: shops.createdAt,
+      },
+      subscription: shopSubscriptions,
+    })
+    .from(shopSubscriptions)
+    .innerJoin(shops, eq(shops.id, shopSubscriptions.shopId))
+    .where(and(realShop(), isNotNull(shopSubscriptions.stripeCustomerId)));
+}

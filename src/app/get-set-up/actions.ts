@@ -11,6 +11,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import { formValue, parseForm } from "@/lib/form-parse";
 import { eventSource, SET_UP_SENT_PATH } from "@/lib/funnel";
 import { log } from "@/lib/log";
+import { requestVisitorArm } from "@/lib/pricing-arm-request";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import {
@@ -122,6 +123,9 @@ export async function submitSetupRequestAction(
     source: eventSource(form.data.source),
     locale: await requestLocale(),
     receiptPending: true,
+    // The pricing arm this reader was shown (ADR 20261022-pricing-ab-test),
+    // so the shop the request becomes is put on it. Null while the test is off.
+    pricingPlan: await requestVisitorArm(),
   });
   after(() => announceSetupRequest(row));
   after(() => sendSetupRequestReceipt(row.id));

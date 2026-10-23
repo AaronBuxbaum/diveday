@@ -462,6 +462,67 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "The pricing A/B test (ADR 20261022-pricing-ab-test): flat monthly fee vs a share",
+      "of the card money a shop takes through DiveDay. Every value is optional; changing",
+      "one is an edit here and a redeploy. PRICING_TEST=on turns the percent arm on",
+      "(anything else is off). PRICING_PERCENT_SPLIT 0-100 (default 50) is the percent",
+      "of new visitors and shops put in the percent arm. PRICING_FLAT_MONTHLY_CENTS",
+      "0-100000 (default 9900). PRICING_PERCENT_BASIS_POINTS 0-1000 (default 300, i.e.",
+      "3%). PRICING_PERCENT_MONTHLY_CENTS 0-100000 (default 0) is a base fee on top of",
+      "the percent. One invalid value sends all five back to their defaults, test off.",
+      "A subscriber keeps the numbers Checkout sold it whatever these say later.",
+      "BILLING_STRIPE_PERCENT_PRICE_ID is a metered price on a Stripe Billing Meter at",
+      "$0.01 a unit, and BILLING_STRIPE_PERCENT_METER_EVENT that meter's event name:",
+      "both or neither. Without them a percent-plan shop's Billing page says billing for",
+      "its plan is not on, and the monthly close writes statements but reports nothing.",
+    ],
+    keys: [
+      {
+        key: "PRICING_TEST",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the test is off: every visitor and shop sees and pays the flat plan",
+      },
+      {
+        key: "PRICING_PERCENT_SPLIT",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "half of new visitors and shops are put in the percent arm while the test is on",
+      },
+      {
+        key: "PRICING_FLAT_MONTHLY_CENTS",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the flat plan is today's published price",
+      },
+      {
+        key: "PRICING_PERCENT_BASIS_POINTS",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the percent plan is 3% of the month's card money through DiveDay",
+      },
+      {
+        key: "PRICING_PERCENT_MONTHLY_CENTS",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the percent plan has no monthly base fee",
+      },
+      {
+        key: "BILLING_STRIPE_PERCENT_PRICE_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the percent plan cannot be sold yet; its Billing page offers no button",
+      },
+      {
+        key: "BILLING_STRIPE_PERCENT_METER_EVENT",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the percent plan cannot be sold yet, and no month's fee is reported to Stripe",
+      },
+    ],
+  },
+  {
+    doc: [
       "Courtesy SMS reminders through AWS SNS (ADR 20260802-sns-sms-adapter). A",
       "distinct IAM user from SES_AWS_* (least privilege: sns:Publish only).",
       "SNS_SENDER_ID is an optional alphanumeric sender label, not supported in every",

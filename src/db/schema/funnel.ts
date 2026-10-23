@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import type { SetupReceiptError, SetupReceiptStatus } from "@/lib/setup-request-receipts";
+import { pricingPlan } from "./billing";
 import { appNowTimestamp } from "./columns";
 import { shops } from "./core";
 
@@ -71,6 +72,12 @@ export const setupRequests = pgTable(
     receiptClaimedAt: timestamp("receipt_claimed_at", { withTimezone: true }),
     receiptProviderMessageId: varchar("receipt_provider_message_id", { length: 256 }),
     receiptErrorCode: text("receipt_error_code").$type<SetupReceiptError>(),
+    /**
+     * The pricing arm this reader was shown (ADR 20261022-pricing-ab-test),
+     * read from their `dd_pricing` cookie when the request was sent. Null
+     * while the test is off. The shop this request becomes is assigned it.
+     */
+    pricingPlan: pricingPlan("pricing_plan"),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [

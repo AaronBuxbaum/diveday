@@ -4,7 +4,13 @@
     "heading": "Tu plan",
     "price": "DiveDay, {price} al mes",
     "nextCharge": "Próximo cobro",
-    "endsOn": "Termina"
+    "endsOn": "Termina",
+    "percentPrice": "{hasBase, select, yes {DiveDay, el {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes} other {DiveDay, el {percent} del dinero cobrado con tarjeta a través de DiveDay}}",
+    "percentNotConfigured": "La facturación de este plan todavía no está activada, así que no se cobra nada.",
+    "thisMonth": "Este mes hasta hoy",
+    "volume": "Dinero cobrado con tarjeta a través de DiveDay",
+    "fee": "Tarifa",
+    "lastMonth": "Último mes cerrado, {month}"
   },
   "status": {
     "trialing": "Prueba gratuita, {count, plural, one {queda # día} other {quedan # días}}",

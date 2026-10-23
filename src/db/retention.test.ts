@@ -1130,9 +1130,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "payment_disputes",
   // A payout to the shop's bank, one row per Stripe payout (ADR 20261012-payouts-reach-diveday).
   "stripe_payouts",
-  // A refund Stripe reported failed after accepting it (issue #2291): one row per
-  // Stripe refund, owed until it is refunded again. The shop's books, not a trail.
+  // A refund Stripe reported failed after accepting it (issue #2291), owed until refunded again: books, not a trail.
   "stripe_refund_failures",
+  "pricing_volume_statements", // a percent-plan shop's closed month, the books behind a fee (ADR 20261022-pricing-ab-test)
   "dive_package_entitlements",
   "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or

@@ -4,7 +4,13 @@
     "heading": "Your plan",
     "price": "DiveDay, {price} a month",
     "nextCharge": "Next charge",
-    "endsOn": "Ends"
+    "endsOn": "Ends",
+    "percentPrice": "{hasBase, select, yes {DiveDay, {percent} of card money taken through DiveDay plus {base} a month} other {DiveDay, {percent} of card money taken through DiveDay}}",
+    "percentNotConfigured": "Billing for this plan isn’t turned on yet, so nothing is charged.",
+    "thisMonth": "This month so far",
+    "volume": "Card money through DiveDay",
+    "fee": "Fee",
+    "lastMonth": "Last closed month, {month}"
   },
   "status": {
     "trialing": "Free trial, {count, plural, one {# day} other {# days}} left",
