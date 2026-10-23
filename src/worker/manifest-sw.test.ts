@@ -11,6 +11,7 @@ import {
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
   syncOfflineManifest,
+  wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_RECORD_VERSION,
@@ -25,6 +26,7 @@ vi.mock("@/lib/offline-manifest-store", () => ({
   purgeOfflineManifestsExceptShop: vi.fn(),
   saveOfflineManifest: vi.fn(),
   syncOfflineManifest: vi.fn(),
+  wipeOfflineMedicalAlerts: vi.fn(),
 }));
 
 // Fixed strings rather than the frozen clock: nothing under test reads the
@@ -295,6 +297,12 @@ describe("refreshSavedManifests (the push event)", () => {
     expect(purgeOfflineManifestsExceptShop).toHaveBeenCalledWith("blue-mantis");
     expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
     expect(vi.mocked(purgeOfflineManifestsExceptShop).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
+    );
+    // Medical alert words go before the board is written (H-153): this body
+    // names nobody, so all of them.
+    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined);
+    expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
   });
