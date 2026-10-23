@@ -90,10 +90,10 @@ describe("lastKnownDive", () => {
     const db = await unseededTestDb();
     const shopId = await freshShop(db);
     const personId = await diver(db, shopId);
-    // 01:30 UTC on the 2nd is still the evening of the 1st in New York.
-    await seat(db, shopId, personId, new Date("2031-09-02T01:30:00Z"));
+    // Back at 23:30 on the 1st in New York, which is already the 2nd in UTC.
+    await seat(db, shopId, personId, new Date("2031-09-01T00:30:00Z"));
     expect(await known(db, shopId, personId, "2031-03-14")).toMatchObject({
-      on: "2031-09-01",
+      on: "2031-08-31",
       source: "with_shop",
       recorded: "2031-03-14",
     });
@@ -108,6 +108,38 @@ describe("lastKnownDive", () => {
       on: "2031-10-01",
       source: "recorded",
     });
+  });
+
+  it("counts a departure once it is back, on the day it came back", async () => {
+    const db = await unseededTestDb();
+    const shopId = await freshShop(db);
+    const personId = await diver(db, shopId);
+    // Left at 10:00 New York on the 14th and not back until 13:00: not yet.
+    await seat(db, shopId, personId, new Date("2031-10-14T14:00:00Z"));
+    expect((await known(db, shopId, personId)).withShop).toBeNull();
+  });
+
+  it("does not count a pool session as a last dive", async () => {
+    const db = await unseededTestDb();
+    const shopId = await freshShop(db);
+    const personId = await diver(db, shopId);
+    await seat(db, shopId, personId, new Date("2031-09-01T13:00:00Z"));
+    const [pool] = await db
+      .insert(trips)
+      .values({
+        shopId,
+        title: "Refresher — pool",
+        diveMode: "pool",
+        startsAt: new Date("2031-10-01T13:00:00Z"),
+        endsAt: new Date("2031-10-01T16:00:00Z"),
+        capacity: 6,
+      })
+      .returning();
+    if (!pool) throw new Error("trip insert failed");
+    await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId, tripId: pool.id, personId, status: "booked" });
+    expect((await known(db, shopId, personId)).withShop).toBe("2031-09-01");
   });
 
   it("counts only days they dived: not a cancelled, no-show, snorkel or future seat", async () => {
@@ -136,6 +168,15 @@ describe("lastKnownDive", () => {
       dedupeKey: "visit-1",
       importedAt: NOW,
     });
+    // A later visit the old system says was cancelled is no dive.
+    await db.insert(priorVisits).values({
+      shopId,
+      personId,
+      visitedOn: "2030-06-01",
+      statusLabel: "Cancelled",
+      dedupeKey: "visit-2",
+      importedAt: NOW,
+    });
     expect(await known(db, shopId, personId)).toMatchObject({
       on: "2030-03-10",
       source: "imported",
@@ -161,15 +202,18 @@ describe("recordLastDive", () => {
     expect(await stored()).toBeNull();
   });
 
-  it("refuses a day before the shop's own evidence, naming that day", async () => {
+  it("keeps a day before the shop's own evidence, and says the later day still shows", async () => {
     const db = await unseededTestDb();
     const shopId = await freshShop(db);
     const personId = await diver(db, shopId);
     await seat(db, shopId, personId, new Date("2031-09-01T13:00:00Z"));
     expect(await record(db, shopId, personId, "2031-08-31")).toEqual({
-      ok: false,
-      reason: "before_known",
-      known: "2031-09-01",
+      ok: true,
+      laterWithShop: "2031-09-01",
+    });
+    expect(await known(db, shopId, personId, "2031-08-31")).toMatchObject({
+      on: "2031-09-01",
+      recorded: "2031-08-31",
     });
     expect(await record(db, shopId, personId, "2031-09-01")).toEqual({ ok: true });
   });

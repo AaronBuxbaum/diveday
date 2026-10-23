@@ -33,7 +33,6 @@ import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { NoCertificationRows } from "./NoCertificationRows";
 import type { DiverNotice } from "./NoticeBanner";
-import { saysNotCertified, TripNeedsRow, tripNeedsLines } from "./trip-needs";
 import {
   AGENCY_KEYS,
   type CardAwaitingKind,
@@ -41,6 +40,7 @@ import {
   type DiverProfile,
   type Shop,
 } from "./shared";
+import { onlyNotHeld, saysNotCertified, TripNeedsRow, tripNeedsLines } from "./trip-needs";
 
 /**
  * **Every card this diver holds, as one group** (ADR 20260827-people-not-lists,
@@ -412,13 +412,16 @@ export function CertificationsGroup({
   // reasons wait behind the door (Aaron, 2026-10-23). The row stays in danger
   // ink with the departure it keeps them off, so the block is never quieter;
   // only the paragraph explaining it moved.
-  const factSaysIt = summarySaysGap(gap, onFile.tone, diver);
-  const notCertified = !factSaysIt && saysNotCertified(gap);
+  // A card the fact already names (an empty file's "None on file") keeps the
+  // fact alone; any other card not held makes the row say "Not certified",
+  // even beside a card waiting for a look — that look clears only its own card.
+  const summarySays = summarySaysGap(gap, onFile.tone, diver);
+  const notCertified = saysNotCertified(gap) && !(summarySays && onlyNotHeld(gap));
   const missing = fileGap(gap, {
     t,
     locale,
     timezone: shop.timezone,
-    factSaysIt,
+    factSaysIt: summarySays && !notCertified,
     says: notCertified ? t("divers.file.notCertified") : undefined,
   });
 
@@ -661,7 +664,7 @@ export function CertificationsGroup({
       summary={onFile.text}
       summaryTone={missing?.tone ?? onFile.tone}
       detail={missing?.detail}
-      open={Boolean(status) || (Boolean(missing?.open) && !notCertified)}
+      open={Boolean(status) || (Boolean(missing?.open) && !(notCertified && onlyNotHeld(gap)))}
       stacked
     >
       <InsetGroup

@@ -32,11 +32,11 @@ export async function saveLastDiveAction(shopSlug: string, personId: string, for
   const notice = outcome.ok
     ? clear
       ? "last-dive-cleared"
-      : "last-dive-saved"
+      : outcome.laterWithShop
+        ? "last-dive-saved-later-known"
+        : "last-dive-saved"
     : outcome.reason === "future"
       ? "last-dive-future"
-      : outcome.reason === "before_known"
-        ? "last-dive-before-known"
-        : "last-dive-invalid";
+      : "last-dive-invalid";
   revalidateAndRedirect(base, backTo(base, notice, "last-dive"));
 }

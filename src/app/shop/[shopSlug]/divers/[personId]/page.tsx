@@ -7,14 +7,13 @@ import { diverPackageBalance } from "@/db/dive-packages";
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
 import { listGuardianEmails } from "@/db/guardian-erasure";
-import { lastKnownDive } from "@/db/last-dive";
 import { personThread } from "@/db/inbound-messages";
+import { lastKnownDive } from "@/db/last-dive";
 import { openLostItemsByPerson } from "@/db/lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
 import { diverStanding } from "@/lib/diver-standing";
@@ -22,24 +21,15 @@ import { splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { counterRentalFormPath } from "../../gear/rentals/rental-form";
-import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
-import { CertificationsGroup } from "./_components/CertificationsGroup";
-import { ConversationWithAssists } from "./_components/ConversationWithAssists";
-import { DiverDetailsGroup } from "./_components/DiverDetailsGroup";
+import { DiverFile } from "./_components/DiverFile";
 import { DiverHeader } from "./_components/DiverHeader";
-import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
 import { FoundItemLine } from "./_components/FoundItemLine";
-import { GearAndSizes } from "./_components/GearAndSizes";
-import { LastDiveGroup } from "./_components/LastDiveGroup";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
-import { WaiverGroup } from "./_components/WaiverGroup";
-import { WorkOrdersGroup } from "./_components/WorkOrdersGroup";
 import { loadBookingDepartures } from "./_lib/book-activity";
 import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
@@ -330,126 +320,27 @@ export default async function DiverDetailPage({
           own door, rather than a ledger line pointing at a row below a long
           story. */}
       <div className="mt-10 space-y-10">
-        {/* **The file is one list.** Every group below is a row that shares
-            its hairline with the next (`DiverFileGroupDisclosure`), so they
-            stack flush rather than on the section rhythm above. */}
-        <div>
-          {/* **The gates first, worst first.** Waiver (medical holds live
-              here), then cards, then who to call: the order a gap that keeps
-              a diver off the boat is ranked in (glossary — readiness), so the
-              first red under the masthead is the one that matters most. */}
-          <WaiverGroup
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            t={t}
-            timezone={shop.timezone}
-            canOpenClearance={canOpenClearance}
-            status={noticeForForm(diverNotice, "waiver")}
-            gap={gaps.file.waiver}
-          />
-          <CertificationsGroup
-            diver={diver}
-            shop={shop}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            t={t}
-            status={cardsStatus}
-            gap={gaps.file.certification}
-            canAssist={gear.canAssist}
-          />
-          {/* When they last dived, beside what they are certified to do:
-              the two facts a desk reads before it sells a deep dive. */}
-          <LastDiveGroup
-            diver={diver}
-            known={lastDive}
-            shopSlug={shopSlug}
-            personId={personId}
-            today={calendarDateInTimezone(now, shop.timezone)}
-            timezoneDay={(date) => calendarDateInTimezone(date, shop.timezone)}
-            locale={locale}
-            t={t}
-            removed={removed}
-            status={noticeForForm(diverNotice, "last-dive")}
-          />
-          <DiverDetailsGroup
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            t={t}
-            locale={locale}
-            timezone={shop.timezone}
-            country={shop.addressCountry}
-            status={detailsStatus}
-            gap={gaps.file.contact}
-            // \`edit=1\` is only ever set by the roster's "Add a diver" form, which
-            // lands here with a name and little else. \`FlashParams\` strips it
-            // from the URL straight away, so a reload or a shared link is the
-            // ordinary collapsed page. A refused save keeps the group open so the
-            // staffer can correct the fields in place.
-            open={edit === "1" || detailsStatus?.tone === "danger"}
-          />
-          {/* What the diver said, after the paperwork that decides whether
-            they board. Renders nothing for a diver who has never written. */}
-          <ConversationWithAssists
-            entries={thread}
-            diverName={diver.person.fullName}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            timezone={shop.timezone}
-            now={now}
-            // `removed` alone, never `removed || anonymizedAt`: the CHECK
-            // `people_anonymized_stays_removed` makes an anonymized person removed
-            // by construction, so the second term could never add a case.
-            removed={removed}
-            t={t}
-            status={noticeForForm(diverNotice, "reply")}
-          />
-          <GearAndSizes
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            rentalItems={shop.rentalItems}
-            counterRentals={gear.counterRentals}
-            rentGearHref={gear.hasFleet ? counterRentalFormPath(shopSlug, { personId }) : undefined}
-            canOverride={canOverrideFit}
-            locale={locale}
-            t={t}
-            status={noticeForForm(diverNotice, "fit")}
-            canAssist={gear.canAssist}
-          />
-          <WorkOrdersGroup
-            shopSlug={shop.slug}
-            timezone={shop.timezone}
-            reminders={gear.reminders}
-            personId={personId}
-            pieces={gear.ownPieces}
-            orders={gear.workOrders}
-            locale={locale}
-            t={t}
-            status={noticeForForm(diverNotice, "work-orders")}
-          />
-          <DiverNotesSection
-            notes={notes}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            timezone={shop.timezone}
-            t={t}
-            status={notesStatus}
-          />
-          <ActivitySection
-            page={activityPage}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            timezone={shop.timezone}
-            t={t}
-          />
-        </div>
+        {/* **The file is one list**, one row per group (`DiverFile`). */}
+        <DiverFile
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
+          now={now}
+          removed={removed}
+          edit={edit}
+          notice={diverNotice}
+          statuses={{ cards: cardsStatus, details: detailsStatus, notes: notesStatus }}
+          gaps={gaps}
+          gates={{ canOpenClearance, canOverrideFit }}
+          gear={gear}
+          thread={thread}
+          notes={notes}
+          activityPage={activityPage}
+          lastDive={lastDive}
+        />
         <DiverStory
           diver={diver}
           shop={shop}

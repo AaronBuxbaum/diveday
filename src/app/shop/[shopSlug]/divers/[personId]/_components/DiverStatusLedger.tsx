@@ -7,6 +7,7 @@ import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { DiverStatusKind, DiverStatusRow, DiverStatusTarget } from "@/lib/diver-status";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { cardAwaitingAnchor } from "./shared";
+import { saysNotCertified, TripNeedsDisclosure, tripNeedsLines } from "./trip-needs";
 
 /**
  * **The status ledger — what is open about this diver, and the one fix each.**
@@ -169,7 +170,9 @@ export function DiverStatusLedger({
   return (
     <ul className="mt-8" aria-label={t("divers.status.ariaLabel")}>
       {rows.map((row) => {
-        const sentence = statusRowText(t, row);
+        // "Not certified for this trip", with the reasons folded beneath it.
+        const notCertified = row.kind === "certification" && saysNotCertified(row);
+        const sentence = notCertified ? t("divers.file.notCertified") : statusRowText(t, row);
         return (
           <LedgerRow
             key={`${row.kind}-${row.tone}`}
@@ -196,6 +199,7 @@ export function DiverStatusLedger({
             }
           >
             <p className="text-base">{sentence}</p>
+            {notCertified ? <TripNeedsDisclosure t={t} lines={tripNeedsLines(t, row)} /> : null}
             {row.tripContext ? (
               <p className="text-sm text-muted">
                 {t("divers.status.onDeparture", {

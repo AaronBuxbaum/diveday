@@ -125,7 +125,7 @@
     "cardKindSpecialty": "Especialidad",
     "tripNeeds": {
       "heading": "Lo que pide esta salida",
-      "levelHeld": "{level} o superior. Su certificación más alta es {held}.",
+      "levelHeld": "{level} o superior. Su certificación verificada más alta es {held}.",
       "level": "{level} o superior.",
       "card": "Una certificación. No hay ninguna registrada.",
       "specialty": "Especialidad {specialty}. No hay ninguna registrada.",
@@ -557,7 +557,7 @@
     "notAuthorizedGuardianEmail": "Borrar el correo de un tutor está limitado al propietario del centro. Pídeselo a esa persona.",
     "lastDiveInvalid": "Indica el día de su última inmersión.",
     "lastDiveFuture": "Ese día todavía no ha llegado.",
-    "lastDiveBeforeKnown": "Ha buceado en una de tus salidas después de ese día, así que la ficha conserva la fecha más reciente."
+    "lastDiveSavedLaterKnown": "Guardado. Ha buceado en una de tus salidas después de ese día, así que la ficha muestra esa fecha más reciente."
   },
   "export": {
     "downloadButton": {
@@ -647,7 +647,7 @@
   "lastDive": {
     "heading": "Última inmersión",
     "notKnown": "No se sabe",
-    "monthsAgo": "{count, plural, =0 {este mes} one {hace # mes} other {hace # meses}}",
+    "monthsAgo": "{count, plural, =0 {hace menos de un mes} one {hace # mes} other {hace # meses}}",
     "yearsAgo": "{count, plural, one {hace # año} other {hace # años}}",
     "fromShop": "Su última inmersión en una de tus salidas.",
     "fromImport": "De las visitas que importaste.",

@@ -14,8 +14,11 @@ afterEach(cleanup);
 const t = staffTranslator("en-US");
 const day = (date: Date) => date.toISOString().slice(0, 10);
 
-function seat(startsAt: string, band: string | null, status = "booked") {
-  return { booking: { lastDivedBand: band, status }, trip: { startsAt: new Date(startsAt) } };
+function seat(startsAt: string, band: string | null, status = "booked", held = false) {
+  return {
+    booking: { lastDivedBand: band, status, identityUnconfirmedAt: held ? new Date() : null },
+    trip: { startsAt: new Date(startsAt) },
+  };
 }
 
 function diver(bookings: ReturnType<typeof seat>[] = []) {
@@ -73,9 +76,10 @@ describe("newerSaid", () => {
     expect(newerSaid(profile, null, day)?.band).toBe("this_season");
   });
 
-  it("ignores a cancelled seat's answer and a seat with none", () => {
+  it("ignores a cancelled seat's answer, a held seat's, and a seat with none", () => {
     const profile = diver([
       seat("2026-10-20T13:00:00Z", "never", "cancelled"),
+      seat("2026-10-22T13:00:00Z", "this_season", "booked", true),
       seat("2026-10-21T13:00:00Z", null),
     ]);
     expect(newerSaid(profile, null, day)).toBeNull();
@@ -86,7 +90,13 @@ describe("the Last dive row", () => {
   it("puts the date and how long ago on the closed row", () => {
     renderGroup(diver(), known({ on: "2024-03-14", source: "recorded", recorded: "2024-03-14" }));
     expect(screen.getByText("Mar 14, 2024 · 2 years ago")).toBeInTheDocument();
+    expect(screen.getByText("Mar 14, 2024 · 2 years ago").className).not.toMatch(/warning/);
     expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
+  });
+
+  it("wears warning ink at five years and more, and gates nothing", () => {
+    renderGroup(diver(), known({ on: "2020-06-01", source: "recorded", recorded: "2020-06-01" }));
+    expect(screen.getByText("Jun 1, 2020 · 6 years ago").className).toMatch(/warning/);
   });
 
   it("says Not known, and offers no Clear for a date nobody recorded", () => {

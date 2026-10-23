@@ -125,7 +125,7 @@
     "cardKindSpecialty": "Specialty",
     "tripNeeds": {
       "heading": "What this trip needs",
-      "levelHeld": "{level} or higher. Their highest card is {held}.",
+      "levelHeld": "{level} or higher. Their highest verified card is {held}.",
       "level": "{level} or higher.",
       "card": "A certification card. None on file.",
       "specialty": "{specialty} specialty. None on file.",
@@ -557,7 +557,7 @@
     "notAuthorizedGuardianEmail": "Erasing a guardian’s email is limited to the shop owner. Ask them to do it.",
     "lastDiveInvalid": "Enter the day they last dived.",
     "lastDiveFuture": "That day hasn’t come yet.",
-    "lastDiveBeforeKnown": "They’ve dived with you since that day, so the record keeps the later one."
+    "lastDiveSavedLaterKnown": "Saved. They’ve dived with you since then, so the row shows that later day."
   },
   "export": {
     "downloadButton": {
@@ -647,7 +647,7 @@
   "lastDive": {
     "heading": "Last dive",
     "notKnown": "Not known",
-    "monthsAgo": "{count, plural, =0 {this month} one {# month ago} other {# months ago}}",
+    "monthsAgo": "{count, plural, =0 {less than a month ago} one {# month ago} other {# months ago}}",
     "yearsAgo": "{count, plural, one {# year ago} other {# years ago}}",
     "fromShop": "Their last dive with you.",
     "fromImport": "From the visits you imported.",

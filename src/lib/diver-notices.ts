@@ -213,10 +213,11 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.lastDiveFuture",
   },
-  "last-dive-before-known": {
+  // Saved, but their later dive with the shop is what the row goes on showing.
+  "last-dive-saved-later-known": {
     form: "last-dive",
-    tone: "danger",
-    key: "divers.notices.lastDiveBeforeKnown",
+    tone: "warning",
+    key: "divers.notices.lastDiveSavedLaterKnown",
   },
   "not-authorized-last-dive": {
     form: "last-dive",

@@ -1,7 +1,9 @@
-import { and, eq, isNull, lt, max } from "drizzle-orm";
+import { and, eq, isNull, lt, max, ne } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import { priorVisitStanding } from "@/lib/prior-visits";
 import type { AppDb, DbExecutor } from "./client";
 import { numberedDiveDay } from "./dive-days";
+import { queryAll } from "./query-helpers";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { livePerson } from "./trips-live";
 
@@ -47,34 +49,50 @@ export function latestKnownDive(
   return best;
 }
 
-/** The shop's own evidence: the last dive day with it, and the last imported visit. */
+/**
+ * The shop's own evidence: the last dive day with it, and the last imported
+ * visit that happened.
+ *
+ * A departure counts once it is back (`ends_at` has passed), on the day it
+ * came back, so a seat nobody has checked in is not "today" at the dock and a
+ * liveaboard counts its last day, not its first (dive-domain review, F5). A
+ * pool session is not open water, so it never stands in for a last dive (F4).
+ * An imported visit whose status says it never happened is no dive either:
+ * the importer's own reading, `priorVisitStanding` (F2).
+ */
 async function shopEvidence(
   db: DbExecutor,
   input: { shopId: string; personId: string; timezone: string; now: Date },
 ): Promise<Pick<LastKnownDive, "withShop" | "imported">> {
-  const [[dived], [visited]] = await Promise.all([
-    db
-      .select({ startsAt: max(trips.startsAt) })
-      .from(bookings)
-      .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
-      .where(
-        and(
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.personId, input.personId),
-          lt(trips.startsAt, input.now),
-          numberedDiveDay(),
+  const [[dived], visits] = await queryAll(db, [
+    () =>
+      db
+        .select({ endsAt: max(trips.endsAt) })
+        .from(bookings)
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+        .where(
+          and(
+            eq(bookings.shopId, input.shopId),
+            eq(bookings.personId, input.personId),
+            lt(trips.endsAt, input.now),
+            ne(trips.diveMode, "pool"),
+            numberedDiveDay(),
+          ),
         ),
-      ),
-    db
-      .select({ visitedOn: max(priorVisits.visitedOn) })
-      .from(priorVisits)
-      .where(and(eq(priorVisits.shopId, input.shopId), eq(priorVisits.personId, input.personId))),
+    () =>
+      db
+        .select({ visitedOn: priorVisits.visitedOn, statusLabel: priorVisits.statusLabel })
+        .from(priorVisits)
+        .where(and(eq(priorVisits.shopId, input.shopId), eq(priorVisits.personId, input.personId))),
   ]);
+  const imported = visits
+    .filter((visit) => priorVisitStanding(visit.statusLabel) === "recorded")
+    .map((visit) => visit.visitedOn)
+    .sort()
+    .at(-1);
   return {
-    withShop: dived?.startsAt
-      ? calendarDateInTimezone(new Date(dived.startsAt), input.timezone)
-      : null,
-    imported: visited?.visitedOn ?? null,
+    withShop: dived?.endsAt ? calendarDateInTimezone(new Date(dived.endsAt), input.timezone) : null,
+    imported: imported ?? null,
   };
 }
 
@@ -97,9 +115,12 @@ export async function lastKnownDive(
 }
 
 export type RecordLastDiveOutcome =
-  | { ok: true }
-  | { ok: false; reason: "not_found" | "invalid" | "future" }
-  | { ok: false; reason: "before_known"; known: CalendarDate };
+  | {
+      ok: true;
+      /** The shop's own later day, which the record goes on showing over the one saved. */
+      laterWithShop?: CalendarDate;
+    }
+  | { ok: false; reason: "not_found" | "invalid" | "future" };
 
 const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -113,11 +134,11 @@ function isRealCalendarDate(value: string): boolean {
 /**
  * **Write a diver's last dive anywhere**, or clear it with `on: null`.
  *
- * Refuses a day in the future (in the shop's zone) and a day before the
- * shop's own evidence: the record would go on showing the later trip, so the
- * save would change nothing on screen and read as though it had failed. A day
- * before an earlier *recorded* one is allowed — that is a staffer correcting
- * a typo, and the record is theirs to correct.
+ * Refuses a day in the future (in the shop's zone). A day before the shop's
+ * own evidence is still stored — it is a true fact, and if that evidence is
+ * later withdrawn (a late no-show mark) the record falls back to it rather
+ * than to nothing (dive-domain review, F3) — and the answer says so, because
+ * the row goes on showing the later trip.
  */
 export async function recordLastDive(
   db: AppDb,
@@ -156,9 +177,10 @@ export async function recordLastDive(
       }
       const evidence = await shopEvidence(tx, { ...input, timezone: shop.timezone });
       const known = latestKnownDive({ recorded: null, ...evidence }).on;
-      if (known && input.on < known) return { ok: false, reason: "before_known", known } as const;
+      await tx.update(people).set({ lastDiveOn: input.on }).where(eq(people.id, person.id));
+      return known && input.on < known ? { ok: true, laterWithShop: known } : { ok: true };
     }
-    await tx.update(people).set({ lastDiveOn: input.on }).where(eq(people.id, person.id));
+    await tx.update(people).set({ lastDiveOn: null }).where(eq(people.id, person.id));
     return { ok: true } as const;
   });
 }

@@ -258,10 +258,10 @@ describe("a level the diver does not hold", () => {
         },
       },
     ]);
+    // One fact on the row, the card they hold one tap in (Aaron, 2026-10-23).
+    expect(screen.getByText("Not certified for this trip.")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Not certified for this trip. It needs Advanced Open Water or higher, and the highest certified card on file is Open Water.",
-      ),
+      screen.getByText("Advanced Open Water or higher. Their highest verified card is Open Water."),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open the booking" })).toHaveAttribute(
       "href",

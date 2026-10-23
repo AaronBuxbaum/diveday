@@ -31,7 +31,13 @@ export function newerSaid(
   timezoneDay: (date: Date) => CalendarDate,
 ) {
   const answered = diver.bookings
-    .filter((entry) => entry.booking.lastDivedBand !== null && entry.booking.status !== "cancelled")
+    // A seat matched to them on a guess may be somebody else's answer.
+    .filter(
+      (entry) =>
+        entry.booking.lastDivedBand !== null &&
+        entry.booking.status !== "cancelled" &&
+        !entry.booking.identityUnconfirmedAt,
+    )
     .map((entry) => ({ band: entry.booking.lastDivedBand, day: timezoneDay(entry.trip.startsAt) }))
     .sort((left, right) => (left.day < right.day ? 1 : -1))[0];
   if (!answered?.band) return null;
@@ -96,6 +102,9 @@ export function LastDiveGroup({
       id="last-dive"
       label={t("divers.lastDive.heading")}
       summary={summary}
+      // Five years and more, the gap the `/ready` band already marks
+      // (`diveRecencyIsNotable`): ink only, it gates nothing.
+      summaryTone={months !== null && months >= 60 ? "warning" : "muted"}
       open={Boolean(status && !status.silent)}
     >
       <div className="space-y-4">

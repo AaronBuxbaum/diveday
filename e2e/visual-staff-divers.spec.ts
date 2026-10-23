@@ -213,8 +213,8 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`a diver's own gear renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Tom Okafor", "Tom Okafor");
-        await page.getByRole("region", { name: "Their own gear" }).waitFor();
-        await openDiverFileGroup(page, "Their own gear");
+        await page.getByRole("region", { name: "Gear they own" }).waitFor();
+        await openDiverFileGroup(page, "Gear they own");
         await capture(page, "diver-record-bench", scheme);
       });
 
