@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
@@ -22,7 +21,6 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listShopPromoCodes } from "@/db/shop-promos";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -42,9 +40,10 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { DivePackagesDoor, TripDealsSection } from "./_components/DealsAndPackages";
 import { PromoConnectNotice } from "./_components/PromoConnectNotice";
 import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
-import { PromoCodeLedger, type PromoCodeRow, TripDealLedger } from "./_components/PromoLedger";
+import { PromoCodeLedger, type PromoCodeRow } from "./_components/PromoLedger";
 import { codeOutcomeFact, readPromoOutcomes, tripDealRows } from "./_components/promo-outcomes";
 import {
   createPromoAction,
@@ -360,7 +359,6 @@ export default async function PromosPage({
       />
       <ShopPageHeader title={t("shared.shopSections.money")} />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="money"
         current="promoCodes"
         roles={session.user.roles}
@@ -553,60 +551,15 @@ export default async function PromosPage({
       ) : null}
 
       {dealsOn ? (
-        <>
-          {/* One heading over both branches — the list and its empty state stand
-          under the same words, so neither renders a second spelling of them. */}
-          <GroupLabel as="h2" id="trip-deals" className="mt-10">
-            {t("promos.tripDeals.heading")}
-          </GroupLabel>
-          {dealRows.length === 0 ? (
-            // A trip deal is sent from a departure, never from here, so the door is
-            // the board. The one line saying so shows only here, where a reader
-            // needs to know how to make one; a list of deals needs no caption.
-            <>
-              <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
-              <EmptyState
-                titleAs="h3"
-                title={t("promos.tripDeals.empty")}
-                action={
-                  <Link
-                    href={`/shop/${shopSlug}/schedule/board`}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {t("promos.tripDeals.emptyAction")}
-                  </Link>
-                }
-                className="mt-3"
-              />
-            </>
-          ) : (
-            <TripDealLedger className="mt-3" labelledBy="trip-deals" rows={dealRows} />
-          )}
-          <Pager
-            page={dealPage.page}
-            pageCount={dealPage.pageCount}
-            href={dealsHref}
-            total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
-            words={staffPagerWords(t)}
-          />
-        </>
+        <TripDealsSection
+          t={t}
+          shopSlug={shopSlug}
+          rows={dealRows}
+          page={dealPage}
+          href={dealsHref}
+        />
       ) : null}
-
-      {/* Prepaid packages are the third price this tab holds (ADR
-          20261001-logbook): set up once, so a door rather than a list. */}
-      {packagesOn ? (
-        <>
-          <GroupLabel as="h2" id="dive-packages" className="mt-10">
-            {t("settings.main.divePackages.heading")}
-          </GroupLabel>
-          <Link
-            href={`/shop/${shopSlug}/promos/packages`}
-            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
-          >
-            {t("promos.packages.open")}
-          </Link>
-        </>
-      ) : null}
+      {packagesOn ? <DivePackagesDoor t={t} shopSlug={shopSlug} /> : null}
     </main>
   );
 }

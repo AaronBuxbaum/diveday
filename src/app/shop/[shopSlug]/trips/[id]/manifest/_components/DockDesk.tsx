@@ -20,27 +20,25 @@ import { LostItemsSection } from "./LostItemsSection";
  */
 export function DockDesk({
   t,
-  shopId,
+  shop,
   tripId,
   isDeparture,
   trip,
-  timeZone,
   stage,
   seats,
-  lostFound,
 }: {
   t: StaffTranslator;
-  shopId: string;
+  /**
+   * The shop: its zone says which day a crew word was said on, and Lost and
+   * found shows only while the shop keeps that list (the Features page).
+   */
+  shop: { id: string; timezone: string; lostFoundEnabled: boolean };
   tripId: string;
   isDeparture: boolean;
   trip: { startsAt: Date; endsAt: Date; cancelled?: boolean };
-  /** The shop's zone, which says which day a crew word was said on. */
-  timeZone: string;
   /** The crew's newest word, whatever its age (`latestTripStage`). */
   stage: { stage: TripStage; recordedAt: Date } | null;
   seats: readonly { bookingId: string; fullName: string }[];
-  /** Whether the shop keeps a lost-and-found list (`shops.lost_found_enabled`). */
-  lostFound: boolean;
 }) {
   const now = nowDate();
   const cancelled = trip.cancelled === true;
@@ -82,12 +80,12 @@ export function DockDesk({
           }}
         />
       ) : null}
-      {lostFound ? (
+      {shop.lostFoundEnabled ? (
         <LostItemsSection
           t={t}
-          shopId={shopId}
+          shopId={shop.id}
           tripId={tripId}
-          open={leftAboardOpen({ ...trip, now, timeZone, stage, cancelled })}
+          open={leftAboardOpen({ ...trip, now, timeZone: shop.timezone, stage, cancelled })}
           seats={seats.map((seat) => ({ bookingId: seat.bookingId, name: seat.fullName }))}
         />
       ) : null}

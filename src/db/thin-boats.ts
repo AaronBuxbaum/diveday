@@ -8,6 +8,7 @@ import {
   thinBoatNeed,
 } from "@/lib/thin-boats";
 import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import { bookings, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
@@ -45,41 +46,41 @@ export async function listThinBoats(
 ): Promise<{ shown: ThinBoat[]; total: number }> {
   // The deal door is the last-minute list's: a shop that switched the list
   // off on the Features page sends no deals (`shops.last_minute_list_enabled`).
-  const dealsRead = db
-    .select({ on: shops.lastMinuteListEnabled })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .then(([row]) => row?.on ?? false);
-  const [deals, rows] = await Promise.all([
+  const dealsRead = async () =>
+    (
+      await db.select({ on: shops.lastMinuteListEnabled }).from(shops).where(eq(shops.id, shopId))
+    )[0]?.on ?? false;
+  const [deals, rows] = await queryAll(db, [
     dealsRead,
-    db
-      .select({
-        id: trips.id,
-        title: trips.title,
-        startsAt: trips.startsAt,
-        capacity: trips.capacity,
-        minimumBookings: trips.minimumBookings,
-        minimumDecisionHours: trips.minimumDecisionHours,
-        diveSiteId: trips.diveSiteId,
-        courseId: trips.courseId,
-        certifiedPassengers: tripBoatCertifiedPassengers(),
-        booked: count(bookings.id),
-      })
-      .from(trips)
-      .leftJoin(bookings, liveBookingJoin)
-      .where(
-        and(
-          eq(trips.shopId, shopId),
-          liveTrip(),
-          notRehearsal(),
-          eq(trips.status, "scheduled"),
-          eq(trips.isPrivate, false),
-          gt(trips.startsAt, now),
-          lte(trips.startsAt, new Date(now.getTime() + THIN_BOATS_HORIZON_MS)),
-        ),
-      )
-      .groupBy(trips.id)
-      .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id)),
+    () =>
+      db
+        .select({
+          id: trips.id,
+          title: trips.title,
+          startsAt: trips.startsAt,
+          capacity: trips.capacity,
+          minimumBookings: trips.minimumBookings,
+          minimumDecisionHours: trips.minimumDecisionHours,
+          diveSiteId: trips.diveSiteId,
+          courseId: trips.courseId,
+          certifiedPassengers: tripBoatCertifiedPassengers(),
+          booked: count(bookings.id),
+        })
+        .from(trips)
+        .leftJoin(bookings, liveBookingJoin)
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            liveTrip(),
+            notRehearsal(),
+            eq(trips.status, "scheduled"),
+            eq(trips.isPrivate, false),
+            gt(trips.startsAt, now),
+            lte(trips.startsAt, new Date(now.getTime() + THIN_BOATS_HORIZON_MS)),
+          ),
+        )
+        .groupBy(trips.id)
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id)),
   ]);
 
   const thin = rows.flatMap((row) => {

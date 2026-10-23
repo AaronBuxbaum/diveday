@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -9,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
-import { canPersonManageShopSettings, canPersonReadPrivateRecapPulse } from "@/db/authz";
+import { canPersonManageShopSettings } from "@/db/authz";
 import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
 import {
   countStaffReviewGroups,
@@ -46,6 +45,7 @@ import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
 import { loadReviewAssists, ReviewThemes, reviewFlagWords } from "./_components/review-assists";
 import { reviewReplyContext } from "./_components/review-reply-context";
 import { reviewRowCopy } from "./_components/review-row-copy";
+import { pulseReaderOrInbox } from "./_lib/pulse-reader";
 import { markPulseAddressedAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — this segment's
@@ -129,24 +129,9 @@ export default async function ReviewsPage({
   const { page, notice, show } = await searchParams;
   const narrow = staffReviewNarrow(show);
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  // **Who on the crew may read the private pulses** (issue #1410, the reasoning on
-  // `canReadPrivateRecapPulse` in src/lib/authz.ts). Checked live against the database rather than
-  // the JWT, so a demoted manager loses the panel immediately.
-  //
-  // Awaited on its own, ahead of the parallel block, rather than folded into it: folding it in
-  // would read a diver's private words for a staffer this gate exists to keep them from, and one
-  // round trip is the price of not doing that.
-  const canReadPulses = await canPersonReadPrivateRecapPulse(db, shop.id, session.user.personId);
+  // Who may read the private pulses, and the way out while reviews are off.
+  const canReadPulses = await pulseReaderOrInbox(db, shop, session.user.personId);
   const canManageSettings = await canPersonManageShopSettings(db, shop.id, session.user.personId);
-  // Reviews switched off (the Features page): the tab is gone, and so is the
-  // page, unless a diver's private pulse still waits on a reader who may act
-  // on it. Pulses are not reviews and keep arriving (src/db/recap-pulses.ts).
-  if (
-    !shop.reviewsEnabled &&
-    (!canReadPulses || (await listOpenRecapPulses(db, shop.id)).length === 0)
-  ) {
-    redirect(shopPath(shopSlug, "inbox"));
-  }
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means
@@ -257,7 +242,6 @@ export default async function ReviewsPage({
         }
       />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="inbox"
         current="reviews"
         roles={session.user.roles}

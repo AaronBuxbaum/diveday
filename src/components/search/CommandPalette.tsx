@@ -10,7 +10,6 @@ import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
 import { motionMs } from "@/lib/motion";
-import { ALL_SWITCHES_ON, type ShopSwitchesOn } from "@/lib/shop-features";
 import {
   type StaffDestinationGates,
   type StaffDestinationLabels,
@@ -184,7 +183,7 @@ function paletteGroups({
   boatBoardingHref: string | undefined;
   root: string;
   gates: StaffDestinationGates;
-  switches: ShopSwitchesOn;
+  switches: Parameters<typeof staffPaletteDestinations>[1];
   copy: CommandPaletteCopy;
   languages: readonly LanguageChoice[];
   locale: string;
@@ -401,7 +400,7 @@ function gotoItems({
   root: string;
   boatBoardingHref: string | undefined;
   gates: StaffDestinationGates;
-  switches: ShopSwitchesOn;
+  switches: Parameters<typeof staffPaletteDestinations>[1];
   settingsShortcuts: readonly SettingsShortcut[];
   copy: CommandPaletteCopy;
 }): PaletteItem[] {
@@ -482,7 +481,7 @@ export function CommandPalette({
   shopSlug,
   boatBoardingHref,
   gates,
-  switches = ALL_SWITCHES_ON,
+  switches,
   locale,
   languages,
   setLocaleAction,
@@ -508,7 +507,7 @@ export function CommandPalette({
    */
   gates: StaffDestinationGates;
   /** Which Features-page switches are on; a switched-off feature's doors are not offered. */
-  switches?: ShopSwitchesOn;
+  switches?: Parameters<typeof staffPaletteDestinations>[1];
   /** The language this render was written in; it is not offered as a choice. */
   locale: string;
   /** Every language DiveDay carries, each named in itself. */

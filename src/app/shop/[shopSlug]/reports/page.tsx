@@ -352,7 +352,6 @@ export default async function ReportsPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader title={t("shared.shopSections.money")} />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="money"
         current="reports"
         roles={session.user.roles}

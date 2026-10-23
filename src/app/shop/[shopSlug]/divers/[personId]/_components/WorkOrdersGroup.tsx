@@ -35,26 +35,30 @@ import { ServiceReminderToggle } from "./ServiceReminderToggle";
 export function WorkOrdersGroup({
   shopSlug,
   personId,
-  pieces,
-  orders,
+  gear,
   locale,
   timezone,
-  reminders,
   t,
   status,
 }: {
   shopSlug: string;
   personId: string;
-  pieces: CustomerGearItem[];
-  orders: DiverWorkOrderRow[];
+  gear: {
+    ownPieces: CustomerGearItem[];
+    workOrders: DiverWorkOrderRow[];
+    /** Each piece with a due date the reminder pass reads, and its switch. */
+    reminders: Map<string, ServiceReminderState>;
+    /** Gear servicing is on (the Features page); off, nothing is drawn. */
+    workOrdersOffered: boolean;
+  };
   locale: string;
   timezone: string;
-  /** Each piece with a due date the reminder pass reads, and its switch. */
-  reminders: Map<string, ServiceReminderState>;
   t: StaffTranslator;
   /** This group's own outcome, beside the acts that earned it. */
   status?: DiverNotice;
 }) {
+  if (!gear.workOrdersOffered) return null;
+  const { ownPieces: pieces, workOrders: orders, reminders } = gear;
   const open = orders.filter((order) => isOpenWorkOrderStatus(order.status));
   const summary =
     open.length > 0

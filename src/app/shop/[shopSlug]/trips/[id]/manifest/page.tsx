@@ -351,14 +351,12 @@ export default async function TripManifestPage({
         />
         <DockDesk
           t={t}
-          shopId={shop.id}
+          shop={shop}
           tripId={tripId}
           isDeparture={isDeparture}
           trip={departureManifest.trip}
-          timeZone={shop.timezone}
           stage={stageStrip.stage}
           seats={manifest.divers}
-          lostFound={shop.lostFoundEnabled}
         />
 
         {/* **The plan** (issue #1184, D24).

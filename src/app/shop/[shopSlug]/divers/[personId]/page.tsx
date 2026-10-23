@@ -397,21 +397,15 @@ export default async function DiverDetailPage({
             status={noticeForForm(diverNotice, "fit")}
             canAssist={gear.canAssist}
           />
-          {/* Gear servicing switched off (the Features page): the diver's own
-              pieces and tickets are kept, and shown again when it is on. */}
-          {shop.workOrdersEnabled ? (
-            <WorkOrdersGroup
-              shopSlug={shop.slug}
-              timezone={shop.timezone}
-              reminders={gear.reminders}
-              personId={personId}
-              pieces={gear.ownPieces}
-              orders={gear.workOrders}
-              locale={locale}
-              t={t}
-              status={noticeForForm(diverNotice, "work-orders")}
-            />
-          ) : null}
+          <WorkOrdersGroup
+            shopSlug={shop.slug}
+            timezone={shop.timezone}
+            personId={personId}
+            gear={gear}
+            locale={locale}
+            t={t}
+            status={noticeForForm(diverNotice, "work-orders")}
+          />
           <DiverNotesSection
             notes={notes}
             shopSlug={shopSlug}

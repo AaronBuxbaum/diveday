@@ -19,22 +19,20 @@ import {
  * the nav would hide, and each tab says what the nav's search calls that page.
  */
 export function StaffSectionTabs({
-  shopSlug,
   section,
   current,
   roles,
   shop,
   t,
 }: {
-  shopSlug: string;
   section: TabbedStaffSection;
   current: StaffDestinationId;
   roles: readonly Role[] | undefined;
-  /** The shop's Features-page switches: a tab whose feature is off is absent. */
-  shop: ShopSwitchFlags;
+  /** The shop, for its slug and its Features-page switches: a tab whose feature is off is absent. */
+  shop: ShopSwitchFlags & { slug: string };
   t: (key: StaffMessageKey) => string;
 }) {
-  const root = staffShopRoot(shopSlug);
+  const root = staffShopRoot(shop.slug);
   return (
     <SectionTabs
       label={t(`shared.shopSections.${section}`)}

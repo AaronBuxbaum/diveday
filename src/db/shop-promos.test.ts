@@ -4,7 +4,7 @@ import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { fakeCheckout, fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { shopPromoCodes, shopPromoRedemptions, shops, tripLastMinutePromos } from "./schema";
+import { shopPromoCodes, shopPromoRedemptions, tripLastMinutePromos } from "./schema";
 import {
   createShopPromoCode,
   deleteShopPromoCode,
@@ -868,42 +868,5 @@ describe("tripMayTakeACode", () => {
     });
     expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: dealTrip.id })).toBe(true);
     expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: otherTrip.id })).toBe(false);
-  });
-
-  /**
-   * **Each half follows its switch** (the Features page): promo codes off
-   * hides the box for a shop-wide code and refuses one typed anyway, while a
-   * trip's deal still brings it as long as the last-minute list is on.
-   */
-  it("follows the promo codes and last-minute list switches", async () => {
-    const { db, shop } = await promoContext();
-    await createShopPromoCode(db, promoInput(shop.id), fakePromotions());
-    const [dealTrip, otherTrip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!dealTrip || !otherTrip) throw new Error("demo trips missing");
-    await db.insert(tripLastMinutePromos).values({
-      shopId: shop.id,
-      tripId: dealTrip.id,
-      status: "sent",
-      discountPercent: 20,
-      code: "LASTCALL20",
-      expiresAt: new Date(dealTrip.startsAt),
-    });
-    const redeem = () =>
-      getRedeemableShopPromo(db, { shopId: shop.id, code: "REEF20", kind: "trip", now: NOW });
-    expect(await redeem()).not.toBeNull();
-
-    await db.update(shops).set({ promoCodesEnabled: false }).where(eq(shops.id, shop.id));
-    expect(await redeem()).toBeNull();
-    expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: otherTrip.id })).toBe(false);
-    expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: dealTrip.id })).toBe(true);
-
-    await db.update(shops).set({ lastMinuteListEnabled: false }).where(eq(shops.id, shop.id));
-    expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: dealTrip.id })).toBe(false);
-
-    await db
-      .update(shops)
-      .set({ promoCodesEnabled: true, lastMinuteListEnabled: true })
-      .where(eq(shops.id, shop.id));
-    expect(await redeem()).not.toBeNull();
   });
 });

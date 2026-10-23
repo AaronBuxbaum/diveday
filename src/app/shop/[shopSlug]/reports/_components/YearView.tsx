@@ -58,6 +58,7 @@ export async function YearView({
   db: DbExecutor;
   shop: ShopSwitchFlags & {
     id: string;
+    slug: string;
     timezone: string;
     currency: string;
     seasonStartMonth: number;
@@ -150,14 +151,7 @@ export async function YearView({
           ) : undefined
         }
       />
-      <StaffSectionTabs
-        shopSlug={shopSlug}
-        section="money"
-        current="reports"
-        roles={roles}
-        shop={shop}
-        t={t}
-      />
+      <StaffSectionTabs section="money" current="reports" roles={roles} shop={shop} t={t} />
       <div className="mb-8 flex flex-wrap items-center gap-3">
         <ReportRangeTabs shopSlug={shopSlug} range="year" t={t} />
         {years.length > 1 ? (

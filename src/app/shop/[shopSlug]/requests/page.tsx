@@ -166,7 +166,6 @@ export default async function RequestsPage({
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader title={t("shared.shopSections.inbox")} />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="inbox"
         current="requests"
         roles={session.user.roles}

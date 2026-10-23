@@ -107,7 +107,6 @@ export default async function WorkOrdersPage({
         }
       />
       <StaffSectionTabs
-        shopSlug={shopSlug}
         section="gear"
         current="workOrders"
         roles={session.user.roles}
