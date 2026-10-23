@@ -237,7 +237,7 @@ export default async function TripDetailPage({
     );
   }
   const crewLanguagesLine = crewLanguagesSentence(crewLanguages, locale);
-  // Neither forecast while public conditions are off (`publicForecast`).
+  // Public conditions off drops only the automated outlook (`publicForecast`).
   const { crewPrediction, automatedForecast } = publicForecast(shop, trip);
   const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
     handoff: handoffToken,
@@ -404,7 +404,6 @@ export default async function TripDetailPage({
               revealArrivalDetails={false}
             />
             {confirmed &&
-            shop.publicConditionsEnabled &&
             conditionsChangedSinceBooking(
               trip.conditionsUpdatedAt,
               confirmed.booking.conditionsBriefedAt,

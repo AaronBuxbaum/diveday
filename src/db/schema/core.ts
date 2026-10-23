@@ -313,11 +313,11 @@ export const shops = pgTable(
      */
     weekOutReminderEnabled: boolean("week_out_reminder_enabled").notNull().default(true),
     /**
-     * **Public conditions**: the forecast line on a public trip page (the
-     * crew's read or the automated outlook) and the crew's conditions updates
-     * in its change ledger. Off, neither shows and no outlook is fetched; a
-     * booked diver's ready page, the staff conditions panel and the high-wind
-     * alert never change.
+     * **Public conditions**: the automated marine outlook on a public trip
+     * page, shown when the crew has written no read of their own. Off, no
+     * outlook is fetched or shown; the crew's own read, their conditions
+     * updates in the change ledger, the "changed since you booked" notice, the
+     * staff conditions panel and the high-wind alert never change.
      */
     publicConditionsEnabled: boolean("public_conditions_enabled").notNull().default(true),
     /**

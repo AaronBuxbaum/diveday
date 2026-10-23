@@ -534,8 +534,8 @@
       },
       "publicConditions": {
         "heading": "Condiciones públicas",
-        "label": "Mostrar el pronóstico a los buceadores",
-        "description": "La línea de agua, mar y viento en cada página de salida, con las actualizaciones de condiciones de la tripulación. Quienes ya reservaron las siguen viendo en su página de preparación, y las condiciones de tu tripulación y la alerta de viento fuerte se quedan de todos modos."
+        "label": "Mostrar el pronóstico automático a los buceadores",
+        "description": "El pronóstico de agua, mar y viento en cada página de salida cuando tu tripulación no escribió el suyo. Desactivado, desaparece; las condiciones y actualizaciones de tu tripulación se siguen mostrando, y la alerta de viento fuerte se queda de todos modos."
       },
       "fieldGuide": {
         "heading": "Guía de campo",

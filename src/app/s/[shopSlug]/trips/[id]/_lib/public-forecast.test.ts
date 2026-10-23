@@ -43,11 +43,20 @@ describe("publicForecast", () => {
     expect(await forecast.automatedForecast).toEqual({ waterTemperatureC: 26 });
   });
 
-  it("says nothing about the weather while public conditions are off", async () => {
+  it("keeps the crew's read while public conditions are off, for the diver who booked", async () => {
+    // Review 2026-10-23, item 1: the switch hides the automated outlook; the
+    // crew's own read is what /ready and a hold notice point a diver at.
     const forecast = publicForecast(
       { publicConditionsEnabled: false },
       tripWith({ conditionsSummary: "Flat calm", waterTemperatureC: 27 }),
     );
+    expect(forecast.crewPrediction).toBe(true);
+    expect(await forecast.automatedForecast).toBeNull();
+    expect(outlook).not.toHaveBeenCalled();
+  });
+
+  it("never asks for the outlook while public conditions are off", async () => {
+    const forecast = publicForecast({ publicConditionsEnabled: false }, tripWith({}));
     expect(forecast.crewPrediction).toBe(false);
     expect(await forecast.automatedForecast).toBeNull();
     expect(outlook).not.toHaveBeenCalled();
