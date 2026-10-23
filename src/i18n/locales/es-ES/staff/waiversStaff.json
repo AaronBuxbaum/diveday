@@ -108,7 +108,18 @@
     "shopAnswersNotOnRelease": "Se pregunta ahora, no en esta exención",
     "shopAnswersNotOnReleaseLead": "Tus preguntas actuales que la versión {version} no hacía. No forman parte de esta exención firmada.",
     "shopAnswersErased": "Las respuestas se borraron con los datos personales del buceador el {date}.",
-    "shopAnswersMissing": "La versión {version} hacía preguntas, pero esta exención no tiene respuestas."
+    "shopAnswersMissing": "La versión {version} hacía preguntas, pero esta exención no tiene respuestas.",
+    "medicalAlertHeading": "Alerta médica para la tripulación",
+    "medicalAlertNone": "El buceador no dejó ninguna alerta médica en esta exención.",
+    "medicalAlertPaper": "No registrado en DiveDay: esta exención se firmó en papel.",
+    "medicalAlertImported": "No registrado en DiveDay: esta exención se importó.",
+    "medicalAlertHeld": "La alerta queda oculta hasta que alguien confirme quién ocupa esta plaza.",
+    "medicalAlertErased": "La alerta se borró con los datos personales del buceador el {date}.",
+    "medicalAlertOnFile": "El buceador dejó una alerta médica para la tripulación. Aquí solo la puede leer un propietario o un gerente; la tripulación de la salida la lee en el manifiesto.",
+    "medicalAlertShow": "Mostrar la alerta",
+    "medicalAlertShowing": "Mostrando…",
+    "medicalAlertShowHint": "Abrirla queda anotado en su ficha.",
+    "medicalAlertShowFailed": "No se pudo mostrar la alerta. Vuelve a intentarlo."
   },
   "courseForms": {
     "heading": "Formularios del curso",
@@ -162,7 +173,7 @@
     "moveUp": "Subir",
     "moveDown": "Bajar",
     "delete": "Eliminar",
-    "healthWarning": "Las preguntas de salud van en el cuestionario médico estándar, que deriva al buceador a un médico cuando hace falta. Una respuesta aquí nunca se revisa, nunca se muestra a la tripulación como alerta médica y todo el personal puede leerla.",
+    "healthWarning": "Las preguntas de salud van en el cuestionario médico estándar, que deriva al buceador a un médico cuando hace falta. Para lo que la tripulación debe saber en una emergencia, cada exención ya pide una alerta médica para la tripulación. Una respuesta aquí nunca se revisa, nunca se muestra a la tripulación como alerta médica y todo el personal puede leerla.",
     "questionLabel": "Pregunta {number}",
     "standardSummary": "El cuestionario médico estándar",
     "standardStays": "No cambia. Cada buceador lo responde antes de tus preguntas.",

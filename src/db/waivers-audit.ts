@@ -369,6 +369,8 @@ export async function getSignedWaiverForDiver(
      */
     medicalAlertOnFile: medicalAlert !== null,
     medicalAlert: input.readsMedicalAlert && !input.withholdAnswers ? medicalAlert : null,
+    /** When the diver's personal data was erased from this record, which nulls the alert. */
+    erasedAt: record.anonymizedAt,
   };
 }
 

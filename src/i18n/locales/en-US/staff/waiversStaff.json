@@ -108,7 +108,18 @@
     "shopAnswersNotOnRelease": "Asked now, not on this release",
     "shopAnswersNotOnReleaseLead": "Your current questions that version {version} did not ask. They are not part of this signed record.",
     "shopAnswersErased": "The answers were erased with the diver’s personal data on {date}.",
-    "shopAnswersMissing": "Version {version} asked questions, but no answers are on this record."
+    "shopAnswersMissing": "Version {version} asked questions, but no answers are on this record.",
+    "medicalAlertHeading": "Medical alert for the crew",
+    "medicalAlertNone": "The diver left no medical alert on this release.",
+    "medicalAlertPaper": "Not recorded in DiveDay: this release was signed on paper.",
+    "medicalAlertImported": "Not recorded in DiveDay: this release was imported.",
+    "medicalAlertHeld": "The alert stays hidden until someone confirms who is in this seat.",
+    "medicalAlertErased": "The alert was erased with the diver’s personal data on {date}.",
+    "medicalAlertOnFile": "The diver left a medical alert for the crew. Only an owner or a manager can read it here; the departure’s crew reads it on the manifest.",
+    "medicalAlertShow": "Show the alert",
+    "medicalAlertShowing": "Showing…",
+    "medicalAlertShowHint": "Opening it is noted on their record.",
+    "medicalAlertShowFailed": "The alert couldn’t be shown. Try again."
   },
   "courseForms": {
     "heading": "Course forms",
@@ -162,7 +173,7 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "delete": "Delete",
-    "healthWarning": "Health questions belong on the standard medical questionnaire, which refers a diver to a doctor when needed. An answer here is never checked, never shown to the crew as a medical alert, and every staff member can read it.",
+    "healthWarning": "Health questions belong on the standard medical questionnaire, which refers a diver to a doctor when needed. For what the crew should know in an emergency, every release already asks for a medical alert for the crew. An answer here is never checked, never shown to the crew as a medical alert, and every staff member can read it.",
     "questionLabel": "Question {number}",
     "standardSummary": "The standard medical questionnaire",
     "standardStays": "It stays as it is. Every diver answers it before your questions.",
