@@ -787,6 +787,21 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "ArcGIS location services -- the maps' place names drawn as sharp vector text",
+      "(src/lib/basemap.ts). NEXT_PUBLIC_ because the browser sends it with every",
+      "label request; restrict the key to DiveDay's domains in the ArcGIS dashboard.",
+    ],
+    keys: [
+      {
+        key: "NEXT_PUBLIC_ARCGIS_API_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the maps keep Esri's raster place labels, which blur on a retina screen",
+      },
+    ],
+  },
+  {
+    doc: [
       "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
       "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
       "plan caps crons at daily; the cadence buckets are >=24h wide so a daily run",
