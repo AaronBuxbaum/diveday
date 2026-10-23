@@ -759,8 +759,7 @@ export default async function SchedulePage({
               shopSlug={shopSlug}
               quiet={quiet.quiet}
               promotedAsk={runningLines.length > 0}
-              dateRequestsEnabled={shop.dateRequestsEnabled}
-              lastMinuteListEnabled={shop.lastMinuteListEnabled}
+              switches={shop}
               everHadDeparture={everHadDeparture}
               t={t}
             />

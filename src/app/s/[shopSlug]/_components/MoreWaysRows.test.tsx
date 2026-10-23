@@ -6,21 +6,29 @@ import { MoreWaysRows } from "./MoreWaysRows";
 
 vi.mock("@/app/actions/inquiry", () => ({ submitInquiryAction: async () => {} }));
 vi.mock("@/components/DateRequestForm", () => ({ DateRequestForm: () => <li>date-request</li> }));
-vi.mock("./LastMinuteListForm", () => ({ LastMinuteListForm: () => <li>deal-list</li> }));
+vi.mock("./LastMinuteListForm", () => ({
+  LastMinuteListForm: ({ waitlistOn }: { waitlistOn: boolean }) => (
+    <li>{waitlistOn ? "deal-list" : "deal-list-no-wait-list"}</li>
+  ),
+}));
 vi.mock("./FindMyBookingForm", () => ({ FindMyBookingForm: () => <li>find-booking</li> }));
 
 const t = diverTranslator("en-US");
 
 afterEach(cleanup);
 
-function show(over: Partial<React.ComponentProps<typeof MoreWaysRows>> = {}) {
+const ALL_ON = { dateRequestsEnabled: true, lastMinuteListEnabled: true, waitlistEnabled: true };
+
+function show(
+  over: Partial<React.ComponentProps<typeof MoreWaysRows>> = {},
+  switches: Partial<typeof ALL_ON> = {},
+) {
   render(
     <MoreWaysRows
       shopSlug="blue-mantis"
       quiet={false}
       promotedAsk={false}
-      dateRequestsEnabled
-      lastMinuteListEnabled
+      switches={{ ...ALL_ON, ...switches }}
       everHadDeparture
       t={t}
       {...over}
@@ -53,8 +61,13 @@ describe("MoreWaysRows", () => {
   });
 
   it("drops the deal list a shop switched off", () => {
-    show({ lastMinuteListEnabled: false });
+    show({}, { lastMinuteListEnabled: false });
     expect(screen.queryByText("deal-list")).toBeNull();
     expect(screen.getByText("find-booking")).toBeTruthy();
+  });
+
+  it("points the deal list at no trip's wait list while the wait list is off", () => {
+    show({}, { waitlistEnabled: false });
+    expect(screen.getByText("deal-list-no-wait-list")).toBeTruthy();
   });
 });

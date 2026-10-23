@@ -316,6 +316,15 @@ async function lockFullDeparture(
   if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
     return { ok: false, reason: "trip_unavailable" };
   }
+  // **The wait list is a Features switch.** Off, no door anywhere offers it
+  // (the public trip page, the roster, a new diver's form), and a post that
+  // reaches here anyway finds no list to join. Interests already on file stay.
+  const [shop] = await tx
+    .select({ on: shops.waitlistEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop?.on) return { ok: false, reason: "trip_unavailable" };
   // The form offers "up to the boat's seats"; the server keeps that promise,
   // so a hand-posted party cannot claim more demand than the boat holds.
   const partySize = Math.max(1, Math.min(askedParty, trip.capacity));

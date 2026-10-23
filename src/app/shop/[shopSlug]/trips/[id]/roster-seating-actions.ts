@@ -174,6 +174,11 @@ async function inviteOneDiver(
   };
   let interestId: string | null;
   if (rule.cooldown) {
+    // A suggestion is past-diver invites' (the Features page): off, the list
+    // is not drawn and a post from a page left open invites nobody.
+    if (!(await shopHasFeatureOn(db, s.user.shopId, "pastDiverInvites"))) {
+      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
+    }
     // A suggestion: the cooldown and the departure's own gate, re-checked
     // under one lock for a page left open (H-130; review F1, N2).
     const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });

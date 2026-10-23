@@ -50,6 +50,7 @@ import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPit
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
+import { fullFootLabel } from "./_lib/foot-bar-label";
 import { bookingFormTrip, publicTripRecord, readTripPage } from "./_lib/page-reads";
 import { publicForecast } from "./_lib/public-forecast";
 import { readinessDoorPath } from "./_lib/readiness-door";
@@ -447,6 +448,7 @@ export default async function TripDetailPage({
                   contactPhone={shop.contactPhone}
                   alternatives={alternatives}
                   offerLastMinuteList={shop.lastMinuteListEnabled}
+                  offerWaitlist={shop.waitlistEnabled}
                   requirement={requirementSentence}
                   terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
                 />
@@ -499,7 +501,7 @@ export default async function TripDetailPage({
             wait-list form each carry it. */}
         {!confirmed && !inPast && !trip.conditionsHold ? (
           <PhoneFootBar href="#book">
-            {full ? t("booking.waitlistHeading") : t("booking.bookVerb")}
+            {t(full ? fullFootLabel(shop) : "booking.bookVerb")}
           </PhoneFootBar>
         ) : null}
       </main>

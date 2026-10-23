@@ -61,7 +61,12 @@ import type { TripSharedReads } from "./trips-shared-reads";
  */
 
 /** `padiChecksEnabled`: whether PADI's eLearning check is offered here (H-121). */
-export type TripGuestsShop = { id: string; timezone: string; padiChecksEnabled: boolean };
+export type TripGuestsShop = {
+  id: string;
+  timezone: string;
+  padiChecksEnabled: boolean;
+  pastDiverInvitesEnabled: boolean;
+};
 
 export type TripGuestsFilters = {
   /** The returning-diver picker's query. Blank means the picker is closed. */
@@ -166,8 +171,10 @@ export async function getTripGuests(
       day: calendarDateInTimezone(trip.startsAt, shop.timezone),
     }),
     // Past divers of this departure's site worth asking (H-130), only while
-    // it has a seat to offer.
-    isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
+    // it has a seat to offer and the shop invites past divers (the Features page).
+    isFull(trip) || !shop.pastDiverInvitesEnabled
+      ? null
+      : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
     listOpenAnytimeInterests(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),

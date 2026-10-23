@@ -46,12 +46,16 @@ export async function listThinBoats(
 ): Promise<{ shown: ThinBoat[]; total: number }> {
   // The deal door is the last-minute list's: a shop that switched the list
   // off on the Features page sends no deals (`shops.last_minute_list_enabled`).
-  const dealsRead = async () =>
+  // The invite door is past-diver invites' (`shops.past_diver_invites_enabled`).
+  const switchesRead = async () =>
     (
-      await db.select({ on: shops.lastMinuteListEnabled }).from(shops).where(eq(shops.id, shopId))
-    )[0]?.on ?? false;
-  const [deals, rows] = await queryAll(db, [
-    dealsRead,
+      await db
+        .select({ deals: shops.lastMinuteListEnabled, invites: shops.pastDiverInvitesEnabled })
+        .from(shops)
+        .where(eq(shops.id, shopId))
+    )[0] ?? { deals: false, invites: false };
+  const [switches, rows] = await queryAll(db, [
+    switchesRead,
     () =>
       db
         .select({
@@ -95,9 +99,9 @@ export async function listThinBoats(
             booked: row.booked,
             capacity,
             need,
-            invitesPastDivers: row.diveSiteId !== null && row.courseId === null,
+            invitesPastDivers: switches.invites && row.diveSiteId !== null && row.courseId === null,
             isCourseSession: row.courseId !== null,
-            dealOpen: deals && thinBoatDealOpen(row.startsAt, now),
+            dealOpen: switches.deals && thinBoatDealOpen(row.startsAt, now),
           },
         ]
       : [];
