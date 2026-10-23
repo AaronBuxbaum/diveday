@@ -540,7 +540,7 @@
       "fieldGuide": {
         "heading": "Field guide",
         "label": "Keep a field guide for each site",
-        "description": "What lives at each dive site, on its public page, in briefings and on print. Off, it’s hidden and kept; your sites stay."
+        "description": "The species you pick for each dive site, shown on its public page, in trip briefings and on the recap. Off, they’re hidden and kept; your sites stay."
       },
       "door": "Turn features on or off"
     },

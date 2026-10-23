@@ -540,7 +540,7 @@
       "fieldGuide": {
         "heading": "Guía de campo",
         "label": "Llevar una guía de campo para cada sitio",
-        "description": "Lo que vive en cada sitio de buceo, en su página pública, en los briefings y en lo impreso. Desactivado, se oculta y se guarda; tus sitios se quedan."
+        "description": "Las especies que eliges para cada sitio de buceo, en su página pública, en los briefings de las salidas y en el resumen. Desactivado, se ocultan y se guardan; tus sitios se quedan."
       },
       "door": "Activar o desactivar funciones"
     },

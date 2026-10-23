@@ -321,9 +321,10 @@ export const shops = pgTable(
      */
     publicConditionsEnabled: boolean("public_conditions_enabled").notNull().default(true),
     /**
-     * **Field guide**: what lives at each dive site, written by the crew and
-     * shown on public site pages, briefings and print. Off, it is hidden and
-     * kept; the sites themselves stay.
+     * **Field guide**: the species picked for each dive site, shown on its
+     * public page, trip briefings, the recap and the manifest's species
+     * shortlist. Off, it is hidden and kept (a site save writes none of it);
+     * the sites themselves stay.
      */
     fieldGuideEnabled: boolean("field_guide_enabled").notNull().default(true),
     /**
