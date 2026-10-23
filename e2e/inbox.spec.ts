@@ -159,44 +159,30 @@ test("a message about a seat opens it, and its menu opens the seat's move", asyn
 });
 
 /**
- * **Saved answers** (fifth loop, item 15): a reply the desk just wrote is
- * kept with "Save this answer", with the diver's name taken out; it comes back
- * as a chip above the reply box, filled for whoever the record is; and the
- * Inbox lists it with a soft Delete and Put back.
+ * **Notes for Claude** (Aaron, 2026-10-22): the shop writes what a reply draft
+ * should know once, at the foot of the Inbox, and a reply draft reads it.
  */
-test("a staffer saves an answer, uses it as a chip, and deletes it softly", async ({ page }) => {
-  test.setTimeout(45_000);
-  await page.goto("/shop/blue-mantis/inbox");
-  await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
-  const conversation = page.getByRole("region", { name: "Conversation" });
+test("a staffer keeps the shop's notes for Claude's reply drafts", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/inbox#reply-notes");
+  const section = page.getByRole("region", { name: "Notes for Claude" });
+  const box = section.getByLabel("What should a reply draft know?");
+  const seeded = await box.inputValue();
+  expect(seeded).toContain("The gate opens at 7:15.");
 
-  const composer = page.getByLabel("Reply by email to priya.sharma@mail.example", { exact: true });
-  await composer.fill("Hi Priya, the gate opens at 7:10 on dive days.");
-  await page.getByRole("button", { name: "Send", exact: true }).click();
-  await expect(conversation.getByText(/the gate opens at 7:10/)).toBeVisible();
-
-  await page.getByRole("button", { name: "Save this answer" }).click();
-  await expect(page.getByText(/^Saved\. It’s above the reply box now/)).toBeVisible();
-
-  // The chip, named from the answer without the diver's name in it.
-  const chips = page.getByRole("group", { name: "Saved answers" });
-  const chip = chips.getByRole("button", { name: "Hi, the gate opens at 7:10 on dive days." });
-  await expect(chip).toBeVisible();
-  await chip.click();
-  await expect(composer).toHaveValue("Hi Priya, the gate opens at 7:10 on dive days.");
-
-  await page.goto("/shop/blue-mantis/inbox#saved-answers");
-  const saved = page.getByRole("region", { name: "Saved answers" });
-  await expect(saved.getByText(/^Hi \{name\}, the gate opens at 7:10/)).toBeVisible();
+  await box.fill(`${seeded}\nBring your own mask if you have one.`);
+  await section.getByRole("button", { name: "Save notes" }).click();
+  await expect(page.getByText(/^Notes saved\./)).toBeVisible();
   await expect(
-    saved.getByRole("link", { name: "Choose a diver to save an answer" }),
-  ).toHaveAttribute("href", "/shop/blue-mantis/divers");
-  await saved
-    .getByRole("button", { name: "Delete Hi, the gate opens at 7:10 on dive days." })
-    .click();
-  await expect(page.getByText("Saved answer deleted")).toBeVisible();
+    page
+      .getByRole("region", { name: "Notes for Claude" })
+      .getByLabel("What should a reply draft know?"),
+  ).toHaveValue(/Bring your own mask/);
+
+  // The seed's words back, for the capture that reads them.
   await page
-    .getByRole("button", { name: "Put back Hi, the gate opens at 7:10 on dive days." })
-    .click();
-  await expect(page.getByText("Saved answer put back")).toBeVisible();
+    .getByRole("region", { name: "Notes for Claude" })
+    .getByLabel("What should a reply draft know?")
+    .fill(seeded);
+  await page.getByRole("button", { name: "Save notes" }).click();
+  await expect(page.getByText(/^Notes saved\./)).toBeVisible();
 });

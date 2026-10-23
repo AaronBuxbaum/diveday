@@ -594,7 +594,7 @@
     "src/app/ready/[token]/page.tsx": 654,
     "src/app/s/[shopSlug]/page.tsx": 878,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 510,
-    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 468,
+    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 459,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,

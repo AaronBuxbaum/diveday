@@ -8,7 +8,6 @@ import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
 import { listGuardianEmails } from "@/db/guardian-erasure";
 import { personThread } from "@/db/inbound-messages";
-import { listSavedAnswers } from "@/db/inbox-saved-answers";
 import { openLostItemsByPerson } from "@/db/lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -22,7 +21,6 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { counterRentalFormPath } from "../../gear/rentals/rental-form";
-import { saveAnswerFromReplyAction } from "../../inbox/actions";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationsGroup } from "./_components/CertificationsGroup";
@@ -44,7 +42,6 @@ import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { loadDiverRecordGates } from "./_lib/record-gates";
 import { DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
-import { savedAnswerFillFor } from "./_lib/saved-answer-fill";
 import { diverStatusRows } from "./_lib/status-load";
 import { restoreCardAction } from "./card-actions";
 import { restoreDiverNoteAction } from "./note-actions";
@@ -182,21 +179,18 @@ export default async function DiverDetailPage({
   });
   // Reads that need the gates above, so they could not ride the `Promise.all`
   // that produced them; concurrent with each other instead of serial.
-  const [mergeCandidates, status, departures, guardianEmails, found, savedAnswers] =
-    await Promise.all([
-      canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
-      // The readiness of the departure this diver is next on, read through the
-      // entry the Today queue and the manifest already use — never a second
-      // detector (`_lib/status-load.ts`).
-      diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
-      loadBookingDepartures(db, shop.id, personId, bookingPage, now),
-      // The co-signing guardians' addresses, for the owner's control that erases
-      // one on the guardian's request (H-103). Nobody else is shown them here.
-      canErase ? listGuardianEmails(db, shop.id, personId) : [],
-      openLostItemsByPerson(db, shop.id, [personId]), // found items, under the header
-      // Chips above the reply box, only when there is a conversation to answer.
-      thread.length > 0 && !removed ? listSavedAnswers(db, shop.id) : [],
-    ]);
+  const [mergeCandidates, status, departures, guardianEmails, found] = await Promise.all([
+    canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
+    // The readiness of the departure this diver is next on, read through the
+    // entry the Today queue and the manifest already use — never a second
+    // detector (`_lib/status-load.ts`).
+    diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
+    loadBookingDepartures(db, shop.id, personId, bookingPage, now),
+    // The co-signing guardians' addresses, for the owner's control that erases
+    // one on the guardian's request (H-103). Nobody else is shown them here.
+    canErase ? listGuardianEmails(db, shop.id, personId) : [],
+    openLostItemsByPerson(db, shop.id, [personId]), // found items, under the header
+  ]);
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
    * words belong beside. Each group is handed its own below with
@@ -389,9 +383,6 @@ export default async function DiverDetailPage({
             removed={removed}
             t={t}
             status={noticeForForm(diverNotice, "reply")}
-            savedAnswers={savedAnswers}
-            fill={savedAnswerFillFor(diver, now, t, locale, shop.timezone)}
-            saveAnswerAction={saveAnswerFromReplyAction}
           />
           <GearAndSizes
             diver={diver}
