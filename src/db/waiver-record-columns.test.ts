@@ -13,6 +13,7 @@ describe("waiver record column sets", () => {
     "draftSignerName",
     "draftMedicalAnswers",
     "draftGuardian",
+    "draftShopAnswers",
   ];
 
   it("keeps the bearer token and the unsigned draft out of the sealed read", () => {
@@ -20,13 +21,19 @@ describe("waiver record column sets", () => {
     for (const column of neverRead) expect(sealed).not.toContain(column);
     // What a seal covers and the seal itself are there.
     expect(sealed).toEqual(
-      expect.arrayContaining(["templateBody", "signedName", "integrityHash", "integrityVersion"]),
+      expect.arrayContaining([
+        "templateBody",
+        "signedName",
+        "shopAnswers",
+        "integrityHash",
+        "integrityVersion",
+      ]),
     );
   });
 
   it("keeps the release text and the seal out of the status read", () => {
     const state = Object.keys(WAIVER_STATE_COLUMNS);
-    for (const column of [...neverRead, "templateBody", "integrityHash"]) {
+    for (const column of [...neverRead, "templateBody", "shopAnswers", "integrityHash"]) {
       expect(state).not.toContain(column);
     }
   });

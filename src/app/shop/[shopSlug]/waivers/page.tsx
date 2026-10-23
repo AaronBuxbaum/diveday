@@ -27,6 +27,7 @@ import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
 import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
 import { ReleasePdfDraft } from "./_components/ReleasePdfDraft";
+import { ShopQuestionsPanel } from "./_components/ShopQuestionsPanel";
 import { SignedRecordsSection } from "./_components/SignedRecordsSection";
 import { saveWaiverAction } from "./actions";
 
@@ -167,17 +168,21 @@ export default async function WaiversPage({
         ? t("waiversStaff.banner.invalid")
         : notice === "waiver-materiality-required"
           ? t("waiversStaff.banner.materialityRequired")
-          : notice === "waiver-unchanged"
-            ? t("waiversStaff.banner.unchanged")
-            : Number.isFinite(resigning) && resigning > 0
-              ? t("waiversStaff.banner.resigning", { count: resigning })
-              : undefined;
+          : notice === "waiver-questions-invalid"
+            ? t("waiversStaff.banner.questionsInvalid")
+            : notice === "waiver-unchanged"
+              ? t("waiversStaff.banner.unchanged")
+              : Number.isFinite(resigning) && resigning > 0
+                ? t("waiversStaff.banner.resigning", { count: resigning })
+                : undefined;
   // Warning, not success, for the same reason `requirements-blocking` is: the
   // save worked and there is nothing to undo, but the shop now owes those
   // divers a link. "Unchanged" is neutral — nothing happened, which is the
   // whole message.
   const bannerTone: NoticeTone =
-    notice === "invalid" || notice === "waiver-materiality-required"
+    notice === "invalid" ||
+    notice === "waiver-materiality-required" ||
+    notice === "waiver-questions-invalid"
       ? "danger"
       : notice === "waiver-resigning"
         ? "warning"
@@ -299,6 +304,11 @@ export default async function WaiversPage({
               </Field>
             </FieldGrid>
             <ReleasePdfDraft shopId={shop.id} fieldId="release-body" t={t} />
+            <ShopQuestionsPanel
+              jurisdiction={shop.jurisdiction}
+              questions={current?.questions ?? []}
+              t={t}
+            />
             <PublishRelease copy={publishCopy} standingSignatures={atRisk.divers > 0} />
             {/* Beside the form, never a banner at the top of the page: the
               release is a fourteen-row textarea, so the top of this page is a

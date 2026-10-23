@@ -15,10 +15,34 @@ import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/l
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { parseShopQuestions, type ShopQuestion } from "@/lib/waiver-questions";
 
 const templateSchema = z.object({
   body: z.string().trim().min(40).max(12_000),
 });
+
+/**
+ * The editor's "Your questions" list, posted as one JSON field and read by
+ * `parseShopQuestions`, the rule of record. Absent (a POST that never met the
+ * editor) carries the current list forward, as the title does; present and
+ * unreadable is a refusal, never a silent empty list that would publish a
+ * version asking nothing.
+ */
+function readQuestions(
+  formData: FormData,
+): { ok: true; questions?: ShopQuestion[] } | { ok: false } {
+  const raw = formData.get("questions");
+  if (raw === null) return { ok: true };
+  if (typeof raw !== "string") return { ok: false };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { ok: false };
+  }
+  const questions = parseShopQuestions(parsed);
+  return questions.ok ? { ok: true, questions: questions.questions } : { ok: false };
+}
 
 /**
  * Publish a new version of the shop's waiver — its legal instrument, and the
@@ -40,6 +64,8 @@ export async function saveWaiverAction(formData: FormData) {
   const waivers = shopPath(staff.user.shopSlug, "waivers");
   const parsed = templateSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(waivers, "invalid"));
+  const questions = readQuestions(formData);
+  if (!questions.ok) redirect(noticeUrl(waivers, "waiver-questions-invalid"));
   // Counted *before* the save, because after it the number is zero by
   // construction: the new version is current and nothing is signed against it
   // yet. This is the same act `saveRequirementsAction` performs for one
@@ -77,6 +103,7 @@ export async function saveWaiverAction(formData: FormData) {
   const { versioned } = await saveWaiverTemplate(editor, {
     shopId: staff.user.shopId,
     body: parsed.data.body,
+    questions: questions.questions,
     material: isMaterial,
     actorPersonId: staff.user.personId,
   });

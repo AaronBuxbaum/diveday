@@ -11,7 +11,10 @@ export type WaiverInvalidField =
   | "guardianNameIsDiver"
   | "guardianRelationship"
   | "guardianEmail"
-  | "guardianAcknowledged";
+  | "guardianAcknowledged"
+  /** A shop question (glossary *Shop question*): required and left blank, or an answer its kind cannot hold. */
+  | "shopQuestionRequired"
+  | "shopQuestionInvalid";
 
 /** Copy and same-page anchor for each field a fallback submit can name as missing. */
 export const WAIVER_FIELD_ERROR: Record<
@@ -48,6 +51,11 @@ export const WAIVER_FIELD_ERROR: Record<
     textKey: "waiver.errorGuardianAgreement",
     anchor: "guardianAcknowledged",
   },
+  // A shop question, refused on the question itself: the page swaps this
+  // section anchor for the named question's own (`?q=`), when it is one the
+  // record's version asks.
+  shopQuestionRequired: { textKey: "waiver.errorShopQuestionRequired", anchor: "shop-questions" },
+  shopQuestionInvalid: { textKey: "waiver.errorShopQuestionInvalid", anchor: "shop-questions" },
 };
 
 /** One refused field's copy and anchor, as the page and its cards receive it. */

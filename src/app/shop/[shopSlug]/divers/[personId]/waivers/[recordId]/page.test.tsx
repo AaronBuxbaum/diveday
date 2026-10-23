@@ -7,6 +7,7 @@ import { getShopBySlug } from "@/db/shops";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import type { ShopAnswer } from "@/lib/waiver-questions";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import {
@@ -33,6 +34,7 @@ const { auth } = (await import("@/lib/auth")) as unknown as {
 };
 const SignedWaiverPage = (await import("./page")).default;
 const { MedicalAnswers } = await import("./_components/MedicalAnswers");
+const { ShopAnswersCard } = await import("./_components/ShopAnswersCard");
 
 /** The seeded refusal (`seed-medical-review.ts`) names this physician. */
 const PHYSICIAN = "Dr. Imani Reyes";
@@ -69,6 +71,24 @@ function showActionIn(node: unknown): (() => Promise<ShowMedicalAnswersResult>) 
   return showActionIn(node.props.children);
 }
 
+/**
+ * The words the shop-answers card says: a server component the tree only
+ * names, so it is called with the props the page gave it.
+ */
+function shopAnswersTextIn(node: unknown): string | undefined {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = shopAnswersTextIn(child);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  if (!isValidElement<{ children?: unknown }>(node)) return undefined;
+  if (node.type === ShopAnswersCard)
+    return textIn(ShopAnswersCard(node.props as Parameters<typeof ShopAnswersCard>[0])).join("\n");
+  return shopAnswersTextIn(node.props.children);
+}
+
 async function renderAs(
   viewerRoles: Role[],
   options: {
@@ -76,6 +96,8 @@ async function renderAs(
     sessionRoles?: Role[];
     /** Move the record to another shop first: the id is then that shop's, not this one's. */
     recordInAnotherShop?: boolean;
+    /** Columns to write onto the record first: the shop's answers, a paper signature. */
+    recordPatch?: Partial<typeof waiverRecords.$inferInsert>;
   } = {},
 ) {
   if (!FLAGGED || !UNFLAGGED) throw new Error("questionnaire changed shape");
@@ -100,6 +122,10 @@ async function renderAs(
     .update(waiverRecords)
     .set({ medicalAnswers: answers })
     .where(eq(waiverRecords.id, record.id));
+
+  if (options.recordPatch) {
+    await db.update(waiverRecords).set(options.recordPatch).where(eq(waiverRecords.id, record.id));
+  }
 
   const email = viewerRoles.includes("owner") ? SEEDED_OWNER_EMAIL : SEEDED_CAPTAIN_EMAIL;
   const viewer = await seededStaffPersonId(db, shop.id, email);
@@ -134,7 +160,11 @@ async function renderAs(
       recordId: record.id,
     }),
   });
-  return { text: textIn(tree).join("\n"), show: showActionIn(tree) };
+  return {
+    text: textIn(tree).join("\n"),
+    show: showActionIn(tree),
+    shopAnswersText: shopAnswersTextIn(tree) ?? "",
+  };
 }
 
 describe("a signed release's medical answers", () => {
@@ -191,5 +221,56 @@ describe("a signed release's medical answers, against a session that claims too 
     await expect(renderAs(["owner"], { recordInAnotherShop: true })).rejects.toThrow(
       /NEXT_HTTP_ERROR_FALLBACK;404/,
     );
+  });
+});
+
+/**
+ * The shop's own questions (glossary *Shop question*): every staff role reads
+ * the answers, as they read the release, and three states never blur
+ * (dive-domain review C5): answered, left blank, and not asked.
+ */
+describe("a signed release's answers to the shop's questions", () => {
+  const ANSWERS: ShopAnswer[] = [
+    {
+      id: "demodives01",
+      kind: "number",
+      prompt: "Dives logged so far",
+      required: false,
+      answer: 40,
+    },
+    {
+      id: "demoheard01",
+      kind: "choice",
+      prompt: "How did you hear about us?",
+      required: false,
+      options: ["A friend", "Online search"],
+      answer: null,
+    },
+  ];
+
+  it.each([["crew"], ["owner"]] as const)(
+    "a %s reads what the diver wrote, the blank, and the question this version did not ask",
+    async (role) => {
+      const { shopAnswersText: text } = await renderAs([role], {
+        recordPatch: { shopAnswers: ANSWERS, signatureMethod: "typed_consent" },
+      });
+      expect(text).toContain("Answers to your questions");
+      expect(text).toContain("What the diver wrote. DiveDay does not check these answers.");
+      expect(text).toContain("Dives logged so far");
+      expect(text).toMatch(/40, as of /);
+      expect(text).toContain("How did you hear about us?");
+      expect(text).toContain("Left blank");
+      // The seeded current version also asks about insurance, which the
+      // snapshot above never did.
+      expect(text).toMatch(/Not asked \(signed on version \d+\)/);
+    },
+  );
+
+  it("says a paper release records no answers, rather than inventing any", async () => {
+    const { shopAnswersText: text } = await renderAs(["owner"], {
+      recordPatch: { signatureMethod: "in_person_attested" },
+    });
+    expect(text).toContain("Not recorded in DiveDay: this release was signed on paper.");
+    expect(text).not.toContain("Not asked (signed");
   });
 });

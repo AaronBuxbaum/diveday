@@ -168,6 +168,46 @@ describe("publishing a waiver template", () => {
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 
+  it("publishes a questions-only edit as a new version, with the same body", async () => {
+    const { db, shop, owner } = await context();
+    const before = await getCurrentWaiverTemplate(db, shop.id);
+    if (!before) throw new Error("seeded template missing");
+    signIn(shop, owner);
+    const formData = withBody(before.body, "non-material");
+    const questions = [
+      { id: "insurance01", kind: "yes_no", prompt: "Do you carry DAN insurance?", required: true },
+    ];
+    formData.set("questions", JSON.stringify(questions));
+
+    const to = await redirectedTo(() => saveWaiverAction(formData));
+
+    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=saved`);
+    const after = await getCurrentWaiverTemplate(db, shop.id);
+    expect(after?.version).toBe(before.version + 1);
+    expect(after?.body).toBe(before.body);
+    expect(after?.questions).toEqual(questions);
+    expect(after?.materialGeneration).toBe(before.materialGeneration);
+  });
+
+  it("refuses a question list the server cannot read, without touching the current version", async () => {
+    const { db, shop, owner } = await context();
+    const before = await currentTemplate(db, shop.id);
+    signIn(shop, owner);
+    for (const questions of [
+      "not json",
+      JSON.stringify([{ id: "bad id", kind: "yes_no", prompt: "Insured?", required: false }]),
+      JSON.stringify([
+        { id: "choice00001", kind: "choice", prompt: "Pick", required: false, options: ["One"] },
+      ]),
+    ]) {
+      const formData = withBody(NEW_BODY);
+      formData.set("questions", questions);
+      const to = await redirectedTo(() => saveWaiverAction(formData));
+      expect(to).toBe(`/shop/${shop.slug}/waivers?notice=waiver-questions-invalid`);
+    }
+    expect(await currentTemplate(db, shop.id)).toEqual(before);
+  });
+
   it("refuses a body too short to be a release, without touching the current one", async () => {
     const { db, shop, owner } = await context();
     const before = await currentTemplate(db, shop.id);

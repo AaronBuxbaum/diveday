@@ -1233,7 +1233,13 @@
     "railMedical": "Medical",
     "railSign": "Sign",
     "railProgressOne": "{done} of {total} done",
-    "railProgressOther": "{done} of {total} done"
+    "railProgressOther": "{done} of {total} done",
+    "railQuestions": "Questions",
+    "shopQuestionsHeading": "Questions from {shop}",
+    "shopQuestionsIntro": "{shop} keeps your answers with this waiver.",
+    "shopQuestionsIntroMinor": "Answer these about {name}. {shop} keeps the answers with this waiver.",
+    "errorShopQuestionRequired": "Answer this question to sign.",
+    "errorShopQuestionInvalid": "That answer doesn’t fit this question. Check it and try again."
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",

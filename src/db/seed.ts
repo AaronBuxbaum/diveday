@@ -178,6 +178,7 @@ import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
 import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
+import { seedWaiverQuestions } from "./seed-waiver-questions";
 import { seedWaiverVersions } from "./seed-waiver-versions";
 import { seedWeeklyRun } from "./seed-weekly-run";
 import { seedWorkOrders } from "./seed-work-orders";
@@ -1310,6 +1311,7 @@ export async function seedDemoSchedule(
     await seedLenses(db, shopId);
   }
 
+  await seedWaiverQuestions(db, shopId); // the shop's questions and one release answering them
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated
   // across the weeks divers actually signed in rather than all at this instant,

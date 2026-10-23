@@ -5,6 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   WAIVER_RAIL_TEST_ID,
+  type WaiverRailLabels,
   type WaiverRailSegmentId,
   WaiverStepRail,
   waiverRailProgress,
@@ -12,7 +13,7 @@ import {
 
 afterEach(cleanup);
 
-const LABELS: Record<WaiverRailSegmentId, string> = {
+const LABELS: WaiverRailLabels = {
   release: "Release",
   medical: "Medical",
   sign: "Sign",
@@ -131,6 +132,117 @@ describe("the rail's counting rule", () => {
     expect(
       waiverRailProgress({ medicalAnswered: 0, medicalTotal: 0, signed: false }),
     ).toMatchObject({ medical: false, done: 0 });
+  });
+});
+
+/**
+ * The shop's own questions (glossary *Shop question*) add a fourth step, only
+ * on a release whose version asks any. It settles on being answered, never on
+ * an answer, and nothing in it counts toward Medical (dive-domain review C4).
+ */
+describe("the rail with the shop's questions", () => {
+  it("keeps three steps when the release asks none", () => {
+    expect(
+      waiverRailProgress({ medicalAnswered: 0, medicalTotal: ELEVEN, signed: false }),
+    ).toMatchObject({ questions: null, total: 3 });
+  });
+
+  it("opens at 0 of 4 when the release asks the shop's questions", () => {
+    expect(
+      waiverRailProgress({
+        medicalAnswered: 0,
+        medicalTotal: ELEVEN,
+        signed: false,
+        shopQuestions: { requiredRemaining: 1 },
+      }),
+    ).toMatchObject({ questions: false, done: 0, total: 4 });
+  });
+
+  it("settles Questions only after Medical, once nothing required is blank", () => {
+    const base = { medicalTotal: ELEVEN, signed: false } as const;
+    // Every shop question answered, the questionnaire not: still open, so the
+    // rail never reads as if the medical form were further along than it is.
+    expect(
+      waiverRailProgress({
+        ...base,
+        medicalAnswered: 3,
+        shopQuestions: { requiredRemaining: 0 },
+      }).questions,
+    ).toBe(false);
+    expect(
+      waiverRailProgress({
+        ...base,
+        medicalAnswered: ELEVEN,
+        shopQuestions: { requiredRemaining: 1 },
+      }),
+    ).toMatchObject({ medical: true, questions: false, done: 2 });
+    expect(
+      waiverRailProgress({
+        ...base,
+        medicalAnswered: ELEVEN,
+        shopQuestions: { requiredRemaining: 0 },
+      }),
+    ).toMatchObject({ medical: true, questions: true, done: 3, total: 4 });
+  });
+
+  it("never lets the shop's questions settle Medical", () => {
+    expect(
+      waiverRailProgress({
+        medicalAnswered: ELEVEN - 1,
+        medicalTotal: ELEVEN,
+        signed: false,
+        shopQuestions: { requiredRemaining: 0 },
+      }).medical,
+    ).toBe(false);
+  });
+
+  it("reads 4 of 4 signed, and 3 of 4 on a release the shop is still holding", () => {
+    expect(
+      waiverRailProgress({
+        medicalAnswered: 0,
+        medicalTotal: 0,
+        signed: true,
+        shopQuestions: { requiredRemaining: 0 },
+      }),
+    ).toMatchObject({ done: 4, total: 4 });
+    expect(
+      waiverRailProgress({
+        medicalAnswered: 0,
+        medicalTotal: 0,
+        medicalStillOpen: true,
+        signed: true,
+        shopQuestions: { requiredRemaining: 0 },
+      }),
+    ).toMatchObject({ medical: false, questions: true, done: 3, total: 4 });
+  });
+
+  it("draws the Questions step between Medical and Sign, and only when asked", () => {
+    const progress = waiverRailProgress({
+      medicalAnswered: ELEVEN,
+      medicalTotal: ELEVEN,
+      signed: false,
+      shopQuestions: { requiredRemaining: 0 },
+    });
+    const { getByTestId } = render(
+      <WaiverStepRail
+        progress={progress}
+        labels={{ ...LABELS, questions: "Questions" }}
+        doneLabel="3 of 4 done"
+      />,
+    );
+    const text = getByTestId(WAIVER_RAIL_TEST_ID).textContent ?? "";
+    expect(text.indexOf("Medical")).toBeLessThan(text.indexOf("Questions"));
+    expect(text.indexOf("Questions")).toBeLessThan(text.indexOf("Sign"));
+    cleanup();
+    const plain = waiverRailProgress({ medicalAnswered: 0, medicalTotal: ELEVEN, signed: false });
+    const { getByTestId: again } = render(
+      <WaiverStepRail
+        progress={plain}
+        labels={{ ...LABELS, questions: "Questions" }}
+        doneLabel="0 of 3 done"
+      />,
+    );
+    expect(again(WAIVER_RAIL_TEST_ID).textContent).not.toContain("Questions");
   });
 });
 

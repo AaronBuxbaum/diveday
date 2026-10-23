@@ -7,7 +7,7 @@ import { medicalQuestionField, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
 import { WaiverPacing } from "./WaiverPacing";
-import { WAIVER_RAIL_TEST_ID, type WaiverRailSegmentId } from "./WaiverStepRail";
+import { WAIVER_RAIL_TEST_ID, type WaiverRailLabels } from "./WaiverStepRail";
 
 afterEach(cleanup);
 
@@ -24,7 +24,7 @@ afterEach(cleanup);
  * progress than the diver had.
  */
 
-const LABELS: Record<WaiverRailSegmentId, string> = {
+const LABELS: WaiverRailLabels = {
   release: "Release",
   medical: "Medical",
   sign: "Sign",

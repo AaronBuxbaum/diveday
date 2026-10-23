@@ -106,6 +106,7 @@ export const WAIVER_SEALED_FIELDS = [
   "signedAt",
   "medicalAnswers",
   "medicalReviewRequired",
+  "shopAnswers",
   "guardianName",
   "guardianRelationship",
   "guardianEmail",
@@ -166,9 +167,29 @@ export function signedIntegrityVersionFor(
  * set plus the clearance columns, re-sealed inside `recordMedicalClearance`'s
  * transaction, with the two fields that survive erasure added to
  * `erasedMetadata` as well (security review M4).
+ *
+ * **One conditional key: `shopAnswers`** (glossary *Shop question*). The
+ * shop's own questions, as asked, with the diver's answers, join this set
+ * **only when the record has them** (`shop_answers` not null). Every record
+ * signed before the column existed, and every record whose template asked
+ * nothing, has no such key, so its digest stays byte-for-byte what it was;
+ * a record that has them cannot lose or gain them without reading `invalid`.
+ * This bends the rule above that a new field set is a new version number, on
+ * purpose: a version 5 for "version 1 plus answers" would have had to be
+ * threaded through refiling (3) and the guardian redaction (4), which inherit
+ * this set by spreading it and so carry the key without a word of their own.
+ * The erased set (2) leaves it out: erasure destroys the answers. The writer
+ * keeps the key honest by never writing `[]` and never leaving null under a
+ * template that asked something (`buildShopAnswers`). Recorded as an
+ * amendment to ADR 20260729-staffing-waiver-audit-and-localized-copy.
  */
 function signedMetadata(record: WaiverSealedFields): { [key: string]: IntegrityValue } {
   return {
+    // Spread first and only when present: an absent key, not a null one, is
+    // what keeps a seal written before shop questions existed verifying.
+    ...(record.shopAnswers != null
+      ? { shopAnswers: record.shopAnswers as unknown as IntegrityValue }
+      : {}),
     id: record.id,
     shopId: record.shopId,
     bookingId: record.bookingId,

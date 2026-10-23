@@ -92,8 +92,8 @@ export function WaiverCompleted({
       <WaiverStepRail
         className="mt-8"
         progress={signedRail}
-        labels={railLabels(t)}
-        doneLabel={railDoneLabel(t, locale, signedRail.done)}
+        labels={railLabels(t, signedRail.questions !== null)}
+        doneLabel={railDoneLabel(t, locale, signedRail.done, signedRail.total)}
       />
 
       <DiveSitesPeek

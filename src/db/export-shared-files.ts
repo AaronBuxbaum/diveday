@@ -816,6 +816,16 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
       in: "shop",
       value: (row) => (row.medicalAnswers ? JSON.stringify(row.medicalAnswers) : null),
     },
+    // The shop's own questions as asked, with the diver's answers
+    // (glossary *Shop question*). Inside the v1 seal when present, so a
+    // destination re-verifying the hash needs them; the diver's own words,
+    // so their bundle carries them too. Not medical answers: shop questions
+    // never stand in for the questionnaire.
+    {
+      header: "shop_answers",
+      in: "both",
+      value: (row) => (row.shopAnswers ? JSON.stringify(row.shopAnswers) : null),
+    },
     // The physician clearance that ends a medical hold (issue #1252).
     // Its *document* is deliberately not here — see EXCLUDED_COLUMNS in
     // src/db/export.test.ts — but the fact and its accountable staff

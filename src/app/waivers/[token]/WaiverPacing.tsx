@@ -3,8 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { fill, pluralForm } from "@/i18n/fill";
 import { MEDICAL_FIELD_PREFIX } from "@/lib/medical";
+import { SHOP_ANSWER_FIELD_PREFIX } from "@/lib/waiver-questions";
 import {
-  WAIVER_RAIL_TOTAL,
+  type WaiverRailLabels,
   type WaiverRailSegmentId,
   WaiverStepRail,
   waiverRailProgress,
@@ -56,6 +57,12 @@ const PRIMARY_RADIOS = `input[type="radio"][name^="${MEDICAL_FIELD_PREFIX}"][dat
  * applicable set — no second copy of `applicableMedicalQuestions` here.
  */
 const FOLLOW_UP_RADIOS = `input[type="radio"][name^="${MEDICAL_FIELD_PREFIX}"][data-question-scope="follow-up"]`;
+/**
+ * The shop's own required questions (glossary *Shop question*), every
+ * control of each. What the Questions step waits on: a required question is
+ * answered once any of its radios is chosen or its box holds something.
+ */
+const REQUIRED_SHOP_ANSWERS = `[name^="${SHOP_ANSWER_FIELD_PREFIX}"][data-shop-question-required]`;
 
 /**
  * The live count, for a component rendered under {@link WaiverPacing}. Returns
@@ -75,11 +82,12 @@ export function WaiverPacing({
   medicalTotal,
   initialAnswered,
   initialFollowUpsRemaining,
+  shopQuestions,
   locale,
   children,
 }: {
-  /** The three rail segment names, already translated. */
-  labels: Record<WaiverRailSegmentId, string>;
+  /** The rail segment names, already translated; Questions only when the shop asks any. */
+  labels: WaiverRailLabels;
   /**
    * `waiver.railProgressOne` / `…Other` as raw templates (`t.raw`), filled here
    * with the live figures — this page has no `DiverIntlProvider`, so a client
@@ -101,6 +109,12 @@ export function WaiverPacing({
   initialAnswered: readonly string[];
   /** Blank follow-ups the saved draft's own answers put on the page. */
   initialFollowUpsRemaining: number;
+  /**
+   * The shop's own questions, when the release asks any: how many required
+   * ones the saved draft leaves blank, for the first paint. Absent, the rail
+   * has three steps.
+   */
+  shopQuestions?: { initialRequiredRemaining: number };
   locale: string;
   children: React.ReactNode;
 }) {
@@ -108,6 +122,9 @@ export function WaiverPacing({
   const [answered, setAnswered] = useState<Set<string>>(() => new Set(initialAnswered));
   const [questionTotal, setQuestionTotal] = useState(medicalTotal);
   const [followUpsRemaining, setFollowUpsRemaining] = useState(initialFollowUpsRemaining);
+  const [shopRequiredRemaining, setShopRequiredRemaining] = useState(
+    shopQuestions?.initialRequiredRemaining ?? 0,
+  );
 
   const refreshFromDom = useCallback(() => {
     const container = containerRef.current;
@@ -147,6 +164,18 @@ export function WaiverPacing({
       if (!settled) open += 1;
     }
     setFollowUpsRemaining(open);
+    // The shop's required questions, by field name: answered when any radio
+    // of the group is chosen, or the box is not blank.
+    const shopRequired = new Map<string, boolean>();
+    for (const control of container.querySelectorAll<HTMLInputElement>(REQUIRED_SHOP_ANSWERS)) {
+      const answered = control.type === "radio" ? control.checked : control.value.trim() !== "";
+      shopRequired.set(control.name, (shopRequired.get(control.name) ?? false) || answered);
+    }
+    let shopOpen = 0;
+    for (const answered of shopRequired.values()) {
+      if (!answered) shopOpen += 1;
+    }
+    setShopRequiredRemaining(shopOpen);
   }, [medicalTotal]);
 
   useEffect(() => {
@@ -159,6 +188,12 @@ export function WaiverPacing({
 
   function handleChange(event: React.ChangeEvent<HTMLDivElement>) {
     const target = event.target;
+    // A shop question's answer moves only the Questions step: a rescan
+    // re-reads every required one, whatever kind of control it is.
+    if (target instanceof HTMLInputElement && target.name.startsWith(SHOP_ANSWER_FIELD_PREFIX)) {
+      queueMicrotask(refreshFromDom);
+      return;
+    }
     if (
       !(target instanceof HTMLInputElement) ||
       target.type !== "radio" ||
@@ -185,11 +220,12 @@ export function WaiverPacing({
     medicalTotal: questionTotal,
     medicalFollowUpsRemaining: followUpsRemaining,
     signed: false,
+    shopQuestions: shopQuestions ? { requiredRemaining: shopRequiredRemaining } : undefined,
   });
 
   const doneLabel = fill(
     pluralForm(progress.done, { one: progressOne, other: progressOther }, locale),
-    { done: progress.done, total: WAIVER_RAIL_TOTAL },
+    { done: progress.done, total: progress.total },
   );
 
   return (

@@ -55,3 +55,29 @@ meaning of course or waiver records.
 - Existing seed and imported waiver records can be unsealed until they are re-created or a later
   backfill seals them from trusted source evidence.
 - Translation management and per-copy locale editing remain follow-up work.
+
+## Amendment 2026-10-23 — shop questions join the seal, conditionally
+
+A release version can now carry the shop's own **shop questions** (glossary *Shop question*), and a
+signed record keeps the diver's answers as a snapshot, `waiver_records.shop_answers`: each
+question's id, kind, prompt, whether it was required, a choice's options and the answer. The
+snapshot is what was asked and answered, so it is signed evidence and the seal covers it.
+
+- **The key is conditional.** `shopAnswers` joins the version 1 field set in `signedMetadata`
+  (`src/lib/waiver-integrity.ts`) only when the column is not null. A release signed before shops
+  could ask anything, and any release whose version asked nothing, has a null snapshot and hashes
+  exactly the bytes it was sealed with, so every existing digest still verifies with no backfill
+  and no new version number. A record whose version asked questions always has a non-null snapshot
+  (an unanswered optional question is an entry with a null answer, never a missing one), so
+  stripping the snapshot from such a record changes the digest and reads `invalid`.
+- **Versions 3 and 4 inherit it** by spreading the version 1 set, as they inherit every other
+  field. **Version 2 (erased) excludes it**: erasure strips the answers with the rest of the
+  diver's own words and re-seals without them.
+- `shopAnswers` is in `WAIVER_SEALED_FIELDS`, so the integrity readers (`WAIVER_SEALED_COLUMNS`)
+  select it. The unsigned draft, `draft_shop_answers`, is never sealed, never exported and is
+  cleared on signing.
+- The snapshot is built on the server from the record's own `template_id`, never from what the
+  form posted, so a prompt or option the browser altered never reaches the seal.
+
+Rejected: a new seal version for the answers. It would have split the verifier on a fact the
+column's own null already says, and left every pre-existing record on a version it does not need.

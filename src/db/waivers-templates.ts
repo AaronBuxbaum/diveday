@@ -3,9 +3,23 @@
  * history, saving a new version, and what a change would expose. Imported
  * through the `./waivers` barrel.
  */
-import { and, countDistinct, desc, eq, gt, gte, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  countDistinct,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
+import { type ShopAnswer, type ShopQuestion, shopQuestionsEqual } from "@/lib/waiver-questions";
 import { DEFAULT_WAIVER_TITLE, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import {
@@ -35,6 +49,12 @@ export type SaveWaiverTemplateInput = {
    */
   title?: string;
   body: string;
+  /**
+   * The shop's own questions for this version, already through
+   * `parseShopQuestions`. Omitted, the current version's list carries forward,
+   * as the title does: a caller with no list in hand cannot mean "remove them".
+   */
+  questions?: ShopQuestion[];
   /** Explicit human answer for an edit that may affect existing signatures. */
   material?: boolean;
   /** Staff member who made the materiality assertion. Required by the UI path. */
@@ -169,7 +189,17 @@ export async function saveWaiverTemplate(
     // equivalence*, so the rendered legal text is the same document — this is
     // not inferring materiality from a diff.
     const body = input.body.replace(/\r\n?/g, "\n").normalize("NFC").trim();
-    if (current && current.title === title && current.body === body) {
+    const questions = input.questions ?? current?.questions ?? [];
+    // The questions are part of the version, so a changed list is a new one,
+    // through the same materiality choice a body edit takes; an identical
+    // list (compared deep, after the body's own normalisation) is not, for
+    // the same reason an identical body is not (#720).
+    if (
+      current &&
+      current.title === title &&
+      current.body === body &&
+      shopQuestionsEqual(current.questions, questions)
+    ) {
       return { template: current, versioned: false };
     }
     const material = input.material ?? true;
@@ -181,6 +211,7 @@ export async function saveWaiverTemplate(
         shopId: input.shopId,
         title,
         body,
+        questions,
         version: nextVersion,
         materialGeneration,
       })
@@ -381,4 +412,75 @@ export async function shopTimezone(tx: DbExecutor, shopId: string): Promise<stri
     .limit(1);
   if (!shop) throw new Error(`waivers: shop ${shopId} not found`);
   return shop.timezone;
+}
+
+/**
+ * The shop questions one template version asked, read by the version's own
+ * id: what a pending link is answered and sealed against (`completeWaiver`,
+ * the bearer page), never the shop's current list, exactly as the link signs
+ * the body it was issued under. Deleted versions included on purpose: a link
+ * issued under a version stays answerable under it. Empty for a version that
+ * asked nothing, or an id that is not this shop's.
+ */
+export async function getWaiverTemplateQuestions(
+  db: DbExecutor,
+  shopId: string,
+  templateId: string,
+): Promise<ShopQuestion[]> {
+  const [row] = await db
+    .select({ questions: waiverTemplates.questions })
+    .from(waiverTemplates)
+    .where(and(eq(waiverTemplates.id, templateId), eq(waiverTemplates.shopId, shopId)))
+    .limit(1);
+  return row?.questions ?? [];
+}
+
+/**
+ * **The shop's questions on one signed record**, for its staff page: the
+ * snapshot sealed into the record, and the questions the shop's current
+ * version asks, so a question added since reads "Not asked" rather than as
+ * left blank (dive-domain review C5). Scoped by shop *and* by the diver the
+ * URL names, signed records only, like `getSignedWaiverForDiver`. A seat
+ * still held over who is in it (H-13) shows no answers at all: they may not
+ * be this diver's.
+ *
+ * The caller decides who reads it (`canPersonReadShopAnswers`); nothing
+ * here aggregates answers across records, and the snapshot's own prompt is
+ * the only label a reader may show (C6).
+ */
+export async function getSignedRecordShopAnswers(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; recordId: string },
+): Promise<{
+  shopAnswers: ShopAnswer[] | null;
+  identityHeld: boolean;
+  currentQuestions: ShopQuestion[];
+} | null> {
+  const [row] = await db
+    .select({
+      shopAnswers: waiverRecords.shopAnswers,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+    })
+    .from(waiverRecords)
+    .leftJoin(
+      bookings,
+      and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+    )
+    .where(
+      and(
+        eq(waiverRecords.id, input.recordId),
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.personId, input.personId),
+        inArray(waiverRecords.status, ["completed", "medical_review"]),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  const identityHeld = Boolean(row.identityUnconfirmedAt);
+  const current = await getCurrentWaiverTemplate(db, input.shopId);
+  return {
+    shopAnswers: identityHeld ? null : row.shopAnswers,
+    identityHeld,
+    currentQuestions: current?.questions ?? [],
+  };
 }

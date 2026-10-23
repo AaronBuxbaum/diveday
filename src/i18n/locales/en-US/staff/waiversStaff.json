@@ -8,7 +8,8 @@
     "materialityRequired": "That didn’t publish. Say whether this is a correction or a material change, then publish again.",
     "unchanged": "No change. The release is exactly as it was, so nothing was published and no signature was affected.",
     "resigningSendLink": "Send them by departure",
-    "resigning": "{count, plural, one {New version published. # diver signs again before boarding.} other {New version published. # divers sign again before boarding.}}"
+    "resigning": "{count, plural, one {New version published. # diver signs again before boarding.} other {New version published. # divers sign again before boarding.}}",
+    "questionsInvalid": "That didn’t publish. Each question needs a prompt, and a choice needs 2 to 8 different options, one per line."
   },
   "publish": {
     "choiceLegend": "This edit is",
@@ -88,7 +89,15 @@
     "showAnswersFailed": "The answers couldn’t be shown. Try again.",
     "answerYes": "Yes",
     "answerNo": "No",
-    "releaseHeading": "What they signed"
+    "releaseHeading": "What they signed",
+    "shopAnswersHeading": "Answers to your questions",
+    "shopAnswersLead": "What the diver wrote. DiveDay does not check these answers.",
+    "shopAnswerBlank": "Left blank",
+    "shopAnswerNotAsked": "Not asked (signed on version {version})",
+    "shopAnswerAsOf": "{answer}, as of {date}",
+    "shopAnswersPaper": "Not recorded in DiveDay: this release was signed on paper.",
+    "shopAnswersImported": "Not recorded in DiveDay: this release was imported.",
+    "shopAnswersHeld": "Answers stay hidden until someone confirms who is in this seat."
   },
   "courseForms": {
     "heading": "Course forms",
@@ -118,5 +127,35 @@
     "needsTextDescription": "Paste the agency’s wording for this form. No student is asked to sign it until it has its text.",
     "resignImpact": "{students, plural, one {Saving a change asks # student} other {Saving a change asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign again.",
     "placeholdersHint": "Write '{shopName}', '{courseTitle}' or '{instructorNames}' where the form leaves a blank for them; each is filled in when a student signs."
+  },
+  "questions": {
+    "heading": "Your questions",
+    "intro": "Divers answer these after the medical questionnaire, before they sign. The answers go on the signed waiver and never hold anyone back from diving.",
+    "alreadyAsked": "DiveDay already asks for date of birth, an emergency contact, the certification card and agency, and a guardian for a minor. When they last dived is asked on each booking.",
+    "optionalAdvice": "Most questions work best optional: each required one is another step on a phone at the dock.",
+    "empty": "No questions yet.",
+    "add": "Add a question",
+    "full": "{max, plural, one {A waiver asks at most # question.} other {A waiver asks at most # questions.}}",
+    "promptLabel": "Question",
+    "kindLabel": "Answer",
+    "kind": {
+      "yesNo": "Yes or no",
+      "text": "Short text",
+      "number": "Whole number",
+      "date": "Date",
+      "choice": "One of a list"
+    },
+    "requiredLabel": "Must be answered to sign",
+    "optionsLabel": "Options, one per line",
+    "optionsHint": "From 2 to 8.",
+    "optionsCount": "A list needs 2 to 8 different options, one per line.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "delete": "Delete",
+    "healthWarning": "Health questions are asked by the standard medical questionnaire, which refers a diver to a doctor when needed. An answer here is never checked.",
+    "questionLabel": "Question {number}",
+    "standardSummary": "The standard medical questionnaire",
+    "standardStays": "It stays as it is. Every diver answers it before your questions.",
+    "healthWords": "medic*, condition*, health, doctor*, physician*, allerg*, asthma, heart, cardi*, pregnan*, surger*, injur*, diabet*, epilep*, seizure*, blood pressure"
   }
 }
