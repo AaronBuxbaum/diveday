@@ -102,52 +102,9 @@ export async function askForDeparture(db: AppDb, req: DepartureAsk): Promise<Dep
   );
 
   return db.transaction(async (tx): Promise<DepartureAskOutcome> => {
-    // Same trip-row lock as createBooking: the full/not-full decision must be
-    // serialized against concurrent bookings, or a waitlist join can race a
-    // booking into the wrong outcome.
-    const [trip] = await tx
-      .select()
-      .from(trips)
-      // A rehearsal has no wait list (ADR 20261012-rehearsal-departures).
-      .where(
-        and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip(), notRehearsal()),
-      )
-      .limit(1)
-      .for("update");
-    if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
-      return { ok: false, reason: "trip_unavailable" };
-    }
-    // The form offers "up to the boat's seats"; the server keeps that promise,
-    // so a hand-posted party cannot claim more demand than the boat holds.
-    const partySize = Math.max(1, Math.min(askedParty, trip.capacity));
-
-    // `heldSeatCounts`, the same counts `createBookingRecord` reads — this
-    // decision has to be the one the booking door would make, or the two
-    // disagree about the same boat. A seat a staffer released at the counter
-    // is free, so the honest answer to "can I join the wait list?" is
-    // `trip_available`: go and book it (issue #1209).
-    //
-    // A wait list is for a diver's seat, so "available" means a diver could
-    // book one: a boat with room aboard but every diver's seat taken is still
-    // full for this person (ADR 20261007-participant-types).
-    // Measured against the certificate-capped seats, as the booking door is
-    // (H-107): an over-limit departure is full at its certificate.
-    //
-    // A party waits until the whole party fits (ADR 20260719-trip-waitlist,
-    // amended): its last diver must fit beside the others, so the counts are
-    // read as if the rest were already aboard.
-    const capacity = await sellableCapacity(tx, trip);
-    const held = await heldSeatCounts(tx, req.shopId, trip.id);
-    const withParty = { aboard: held.aboard + partySize - 1, divers: held.divers + partySize - 1 };
-    // A course session also seats its students at the crew's ratio, as the
-    // sale and the roll measure it (issue #2679): full at the ratio is full.
-    const ratioCap = await courseStudentSeatCap(tx, trip);
-    if (
-      seatRefusal("diver", { ...trip, capacity }, withParty) === null &&
-      courseRatioRefusal(withParty.divers, ratioCap) === null
-    ) {
-      return { ok: false, reason: "trip_available" };
-    }
+    const locked = await lockFullDeparture(tx, req.shopId, req.tripId, askedParty);
+    if (!locked.ok) return locked;
+    const { trip, partySize } = locked;
 
     const { person, nameMatches } = await findOrCreatePerson(tx, {
       shopId: req.shopId,
@@ -241,6 +198,156 @@ export async function askForDeparture(db: AppDb, req: DepartureAsk): Promise<Dep
     if (!interest) throw new Error("askForDeparture: interest insert returned no row");
     return { ok: true, interestId: interest.id, personName: person.fullName };
   });
+}
+
+/**
+ * **The desk puts a diver already on file on a full trip's wait list** (Aaron,
+ * 2026-10-23): the staffer picks the record instead of typing the diver again,
+ * so the list never grows a second person row. It is the diver asking, by
+ * phone or at the counter, so the entry is theirs (`askedBy: "diver"`) exactly
+ * as a typed one is, and a cold invitation already on the list becomes theirs
+ * too. No declaration is recorded: the desk said nothing about cards.
+ *
+ * `not_found` when the person is not one of this shop's live divers.
+ */
+export async function askForDepartureAsKnownDiver(
+  db: AppDb,
+  req: { shopId: string; tripId: string; personId: string },
+): Promise<DepartureAskOutcome | { ok: false; reason: "not_found" }> {
+  return db.transaction(async (tx) => {
+    const locked = await lockFullDeparture(tx, req.shopId, req.tripId, 1);
+    if (!locked.ok) return locked;
+    const { trip } = locked;
+
+    const [person] = await tx
+      .select({ id: people.id, fullName: people.fullName })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        and(
+          eq(people.id, req.personId),
+          eq(people.shopId, req.shopId),
+          eq(personRoles.role, "diver"),
+          livePerson(),
+        ),
+      )
+      .limit(1);
+    if (!person) return { ok: false as const, reason: "not_found" as const };
+
+    const [booking] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.tripId, trip.id),
+          eq(bookings.personId, person.id),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .limit(1);
+    if (booking) return { ok: false as const, reason: "already_booked" as const };
+
+    const [existing] = await tx
+      .select({ id: interests.id, askedBy: interests.askedBy })
+      .from(interests)
+      .where(
+        and(
+          eq(interests.scope, "departure"),
+          eq(interests.tripId, trip.id),
+          eq(interests.personId, person.id),
+        ),
+      )
+      .limit(1);
+    if (existing) {
+      if (existing.askedBy !== "diver") {
+        await tx
+          .update(interests)
+          .set({ askedBy: "diver" })
+          .where(and(eq(interests.id, existing.id), eq(interests.shopId, req.shopId)));
+      }
+      return {
+        ok: false as const,
+        reason: "already_waitlisted" as const,
+        interestId: existing.id,
+        personName: person.fullName,
+      };
+    }
+
+    const [interest] = await tx
+      .insert(interests)
+      .values({
+        shopId: req.shopId,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: person.id,
+        partySize: 1,
+      })
+      .returning({ id: interests.id });
+    if (!interest) throw new Error("askForDepartureAsKnownDiver: interest insert returned no row");
+    return { ok: true as const, interestId: interest.id, personName: person.fullName };
+  });
+}
+
+/**
+ * The departure, locked, when it is full for a party of `askedParty`: the one
+ * full/not-full decision both wait-list writers share, under the booking
+ * door's own trip-row lock. A refusal says why there is no list to join.
+ */
+async function lockFullDeparture(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  askedParty: number,
+): Promise<
+  | { ok: true; trip: typeof trips.$inferSelect; partySize: number }
+  | { ok: false; reason: "trip_unavailable" | "trip_available" }
+> {
+  // Same trip-row lock as createBooking: the full/not-full decision must be
+  // serialized against concurrent bookings, or a waitlist join can race a
+  // booking into the wrong outcome.
+  const [trip] = await tx
+    .select()
+    .from(trips)
+    // A rehearsal has no wait list (ADR 20261012-rehearsal-departures).
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip(), notRehearsal()))
+    .limit(1)
+    .for("update");
+  if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
+    return { ok: false, reason: "trip_unavailable" };
+  }
+  // The form offers "up to the boat's seats"; the server keeps that promise,
+  // so a hand-posted party cannot claim more demand than the boat holds.
+  const partySize = Math.max(1, Math.min(askedParty, trip.capacity));
+
+  // `heldSeatCounts`, the same counts `createBookingRecord` reads — this
+  // decision has to be the one the booking door would make, or the two
+  // disagree about the same boat. A seat a staffer released at the counter
+  // is free, so the honest answer to "can I join the wait list?" is
+  // `trip_available`: go and book it (issue #1209).
+  //
+  // A wait list is for a diver's seat, so "available" means a diver could
+  // book one: a boat with room aboard but every diver's seat taken is still
+  // full for this person (ADR 20261007-participant-types).
+  // Measured against the certificate-capped seats, as the booking door is
+  // (H-107): an over-limit departure is full at its certificate.
+  //
+  // A party waits until the whole party fits (ADR 20260719-trip-waitlist,
+  // amended): its last diver must fit beside the others, so the counts are
+  // read as if the rest were already aboard.
+  const capacity = await sellableCapacity(tx, trip);
+  const held = await heldSeatCounts(tx, shopId, trip.id);
+  const withParty = { aboard: held.aboard + partySize - 1, divers: held.divers + partySize - 1 };
+  // A course session also seats its students at the crew's ratio, as the
+  // sale and the roll measure it (issue #2679): full at the ratio is full.
+  const ratioCap = await courseStudentSeatCap(tx, trip);
+  if (
+    seatRefusal("diver", { ...trip, capacity }, withParty) === null &&
+    courseRatioRefusal(withParty.divers, ratioCap) === null
+  ) {
+    return { ok: false, reason: "trip_available" };
+  }
+  return { ok: true, trip, partySize };
 }
 
 /** The people columns an interest row renders: a name and the address an offer goes to. */

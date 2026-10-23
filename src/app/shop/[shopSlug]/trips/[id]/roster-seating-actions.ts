@@ -14,7 +14,12 @@ import {
 import { getDb } from "@/db/client";
 import { deliverSeatOffer, type SeatOfferDelivery } from "@/db/interest-offers";
 import { carryInterests } from "@/db/interest-roll";
-import { askForDeparture, type DepartureAskOutcome, ensureDepartureInterest } from "@/db/interests";
+import {
+  askForDeparture,
+  askForDepartureAsKnownDiver,
+  type DepartureAskOutcome,
+  ensureDepartureInterest,
+} from "@/db/interests";
 import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
 import { getBookingPayment } from "@/db/payments";
 import { refundBookingOnCancellation } from "@/db/refunds";
@@ -94,6 +99,33 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
     await trackEvent({ name: "waitlist_joined", source: "staff" });
     revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
   }
+  redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));
+}
+
+/**
+ * **A diver already on file joins the full boat's wait list** (Aaron,
+ * 2026-10-23): picked from the search, so the list reuses their record. The
+ * same outcomes as a typed entry, plus a record that is not this shop's diver.
+ */
+export async function addKnownDiverToWaitlistAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const parsed = parseForm(offerToDiverSchema, formData);
+  if (!uuidParam(tripId) || !parsed.ok) redirect(noticeUrl(back, "diver-invalid"));
+  const outcome = await askForDepartureAsKnownDiver(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    personId: parsed.data.personId,
+  });
+  if (outcome.ok || outcome.reason === "already_waitlisted") {
+    await trackEvent({ name: "waitlist_joined", source: "staff" });
+    revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
+  }
+  if (outcome.reason === "not_found") redirect(noticeUrl(back, "diver-invalid"));
   redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));
 }
 

@@ -172,13 +172,18 @@ describe("getTripGuests", () => {
       expect(guests.diverCandidates).toEqual([]);
     });
 
-    it("does not offer to book anyone onto a full boat", async () => {
-      const ctx = await context();
-      const guests = await guestsFor(ctx, { diverQuery: "a" });
-      // The picker only books; a full boat wait-lists instead.
-      if (guests.trip.booked >= guests.trip.capacity) {
-        expect(guests.diverCandidates).toEqual([]);
-      }
+    it("finds returning divers on a full boat too, to wait-list them", async () => {
+      const { db, shop } = fileCtx;
+      const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+      const full = trips.find((entry) => entry.title === "Wreck Trip — Spiegel Grove");
+      if (!full) throw new Error("demo full trip missing");
+      const guests = await guestsFor({ db, shop, tripId: full.id }, { diverQuery: "a" });
+      expect(guests.trip.booked).toBeGreaterThanOrEqual(guests.trip.capacity);
+      expect(guests.diverCandidates.length).toBeGreaterThan(0);
+      // A full boat's picker puts the diver on who's waiting (Aaron, 2026-10-23),
+      // and still never offers someone already holding a seat.
+      const seated = new Set(guests.roster.map((row) => row.booking.personId));
+      expect(guests.diverCandidates.some((c) => seated.has(c.person.id))).toBe(false);
     });
 
     it("looks for similar divers only when a name needs confirming", async () => {
