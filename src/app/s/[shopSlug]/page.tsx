@@ -697,7 +697,9 @@ export default async function SchedulePage({
           </ul>
         </section>
       )}
-      {isEmbed ? null : <MonthSightingsSection shopId={shop.id} tz={tz} locale={locale} t={t} />}
+      {isEmbed || !shop.sightingsEnabled ? null : (
+        <MonthSightingsSection shopId={shop.id} tz={tz} locale={locale} t={t} />
+      )}
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget
           (docs ADR 20260726-schedule-embed), and staff moderate from /shop/[shopSlug]/reviews
           rather than reading them here. The published-review list streams in behind the shell and

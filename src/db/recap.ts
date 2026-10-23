@@ -854,14 +854,18 @@ async function loadRecapPageData(
   // one the crew reached for. The log leads because it is per dive and
   // therefore ordered; the taps follow, most-seen first, and a species already
   // named is not repeated.
+  //
+  // A shop with sightings switched off on Features names none: the line is
+  // simply absent, and every sighting stays logged.
   const observedSpecies: string[] = [];
-  for (const { executed } of [...livedDives].sort(
-    (a, b) => a.executed.diveNumber - b.executed.diveNumber,
-  )) {
+  const logged = row.sightingsEnabled
+    ? [...livedDives].sort((a, b) => a.executed.diveNumber - b.executed.diveNumber)
+    : [];
+  for (const { executed } of logged) {
     const slug = executed.observedSpeciesSlug;
     if (slug && !observedSpecies.includes(slug)) observedSpecies.push(slug);
   }
-  for (const tapped of tappedSightings) {
+  for (const tapped of row.sightingsEnabled ? tappedSightings : []) {
     if (!observedSpecies.includes(tapped.speciesSlug)) observedSpecies.push(tapped.speciesSlug);
   }
 

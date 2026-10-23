@@ -32,7 +32,7 @@ export async function recapEditorsFor({
   t,
 }: {
   db: AppDb;
-  shop: { id: string; timezone: string };
+  shop: { id: string; timezone: string; sightingsEnabled: boolean };
   closeout: { departures: readonly Departure[] };
   noted?: string;
   now: Date;
@@ -42,9 +42,12 @@ export async function recapEditorsFor({
   const { departures } = closeout;
   const timeZone = shop.timezone;
   // Claude's "Draft it" on the highlight (`recap`): only once a boat is back,
-  // and only while assists are not dark.
+  // only while assists are not dark, and only while sightings are on, since
+  // the line is written from them.
   const canAssist =
-    departures.some((departure) => departure.ended) && (await assistsAvailable(db, shop.id));
+    shop.sightingsEnabled &&
+    departures.some((departure) => departure.ended) &&
+    (await assistsAvailable(db, shop.id));
   const recapEditors = new Map<string, React.ReactNode>();
   for (const departure of departures) {
     // Only a returned boat: a trip still out has no day to write about yet,
