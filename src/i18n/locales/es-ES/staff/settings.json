@@ -430,7 +430,7 @@
       "publicYear": {
         "heading": "Nuestro año",
         "label": "Mostrar “Nuestro año” en tu calendario",
-        "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
+        "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero."
       },
       "padiChecks": {
         "heading": "Verificación con PADI (beta)",
