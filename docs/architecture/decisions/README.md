@@ -413,5 +413,6 @@ script again.
 | 20261021-setup-request-receipts | Bound requester receipts to saved… |
 | 20261022-one-shared-basemap | Draw every map on one… (proposed) |
 | 20261022-pricing-ab-test | Test a percent-of-volume plan against… (proposed) |
+| 20261023-last-known-dive | A diver's last known dive… |
 
 <!-- adr-index:end -->

@@ -149,10 +149,10 @@ test.describe("staff", () => {
 
     // A file group like the others on the record, opened the way the rest of
     // the diver specs open one.
-    await openDiverFileGroup(page, "Their own gear");
-    await expect(page.getByRole("heading", { name: "Gear on file" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Service history" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Inflator sticks open/ })).toBeVisible();
+    await openDiverFileGroup(page, "Gear they own");
+    // The ticket sits under the piece it is for (Aaron, 2026-10-23).
+    const bcd = page.getByRole("listitem").filter({ hasText: "BCD" }).first();
+    await expect(bcd.getByRole("link", { name: /Inflator sticks open/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "New work order" })).toBeVisible();
   });
 

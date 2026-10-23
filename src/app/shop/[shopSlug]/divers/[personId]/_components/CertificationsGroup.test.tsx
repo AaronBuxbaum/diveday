@@ -398,7 +398,9 @@ describe("a card gap on the certification records door", () => {
       } as unknown as Partial<DiverProfile>),
       missingLevel,
     );
-    expect(door()).toHaveTextContent("No certification is on file for this trip.");
+    expect(door()).toHaveTextContent("Not certified for this trip.");
+    expect(door()).not.toHaveTextContent("No certification is on file for this trip.");
+    expect(screen.getByText("A certification card. None on file.")).toBeInTheDocument();
   });
 });
 

@@ -122,7 +122,15 @@
     "noCertificationRestated": "El personal ya corrigió esta respuesta una vez y desde entonces se ha vuelto a dar en un formulario público. Cualquiera que sepa el nombre y el correo de este buceador puede dejarla.",
     "cardLabel": "Certificación",
     "cardKindLevel": "Nivel",
-    "cardKindSpecialty": "Especialidad"
+    "cardKindSpecialty": "Especialidad",
+    "tripNeeds": {
+      "heading": "Lo que pide esta salida",
+      "levelHeld": "{level} o superior. Su certificación verificada más alta es {held}.",
+      "level": "{level} o superior.",
+      "card": "Una certificación. No hay ninguna registrada.",
+      "specialty": "Especialidad {specialty}. No hay ninguna registrada.",
+      "nitrox": "Nitrox. No hay ninguna registrada."
+    }
   },
   "page": {
     "title": "Buceadores",
@@ -546,7 +554,10 @@
     "guardianEmailErased": "Correo del tutor borrado de todas las exenciones de este centro que lo tenían. Cada una queda marcada como censurada.",
     "guardianEmailMismatch": "El correo que escribiste no coincide, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
     "guardianEmailNotFound": "No se borró nada: ese correo ya no está en las exenciones de este buceador.",
-    "notAuthorizedGuardianEmail": "Borrar el correo de un tutor está limitado al propietario del centro. Pídeselo a esa persona."
+    "notAuthorizedGuardianEmail": "Borrar el correo de un tutor está limitado al propietario del centro. Pídeselo a esa persona.",
+    "lastDiveInvalid": "Indica el día de su última inmersión.",
+    "lastDiveFuture": "Ese día todavía no ha llegado.",
+    "lastDiveSavedLaterKnown": "Guardado. Ha buceado en una de tus salidas después de ese día, así que la ficha muestra esa fecha más reciente."
   },
   "export": {
     "downloadButton": {
@@ -615,7 +626,8 @@
     "noSizes": "Sin tallas archivadas",
     "editSizes": "Editar",
     "neededFor": "Hace falta para el {when}.",
-    "cantBoard": "No puede embarcar el {when}."
+    "cantBoard": "No puede embarcar el {when}.",
+    "notCertified": "Sin la certificación para esta salida."
   },
   "waiver": {
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
@@ -631,5 +643,19 @@
     "summaryEmergencyNoPhone": "Contacto de emergencia: {name}, sin teléfono",
     "summaryEmergencyNoName": "Contacto de emergencia: {phone}, sin nombre",
     "summaryNoEmergency": "Sin contacto de emergencia"
+  },
+  "lastDive": {
+    "heading": "Última inmersión",
+    "notKnown": "No se sabe",
+    "monthsAgo": "{count, plural, =0 {hace menos de un mes} one {hace # mes} other {hace # meses}}",
+    "yearsAgo": "{count, plural, one {hace # año} other {hace # años}}",
+    "fromShop": "Su última inmersión en una de tus salidas.",
+    "fromImport": "De las visitas que importaste.",
+    "theySaid": "Para su salida del {date}: {said}",
+    "fieldLabel": "Última inmersión, en cualquier sitio",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "clear": "Quitar",
+    "clearing": "Quitando…"
   }
 }

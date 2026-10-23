@@ -431,6 +431,12 @@
   result of `createBookingRecord` when `admissionGate: "advise"` and the shortfall is a
   declared-level one; the public booking form is the only caller that asks for it. It is advice
   about a *sale*, never about boarding — readiness still clears on a sighted card and nothing else.
+- **Last known dive** — the latest day the shop knows this diver dived, anywhere: the later of the
+  day a staff member recorded on the record (`people.last_dive_on`, off a logbook or a computer) and
+  the diver's own last dive day with the shop (a departure that is back, not a pool session) or a
+  real imported visit (`lastKnownDive`, `src/db/last-dive.ts`). A trip with the shop moves it
+  forward; nothing moves it back. Not **Dive recency**, the diver's own band on a booking, which the
+  record shows beside it only when it is newer. Gates nothing (ADR 20261023-last-known-dive).
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **Assistant Instructor (AI)** — a professional rung between Divemaster and Instructor, and one of
