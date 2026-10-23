@@ -94,6 +94,7 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  claudeCallContent,
   courseFormRecords,
   customerGearItems,
   emailBounces,
@@ -2896,6 +2897,27 @@ async function scrubIncidentReports(
 }
 
 /**
+ * What Claude calls said for this shop (`claude_call_content`): 30 days of
+ * debugging text that quotes divers (an inbox message, a duplicate check's
+ * names and dates of birth, a gear note, a review) without a key to any of
+ * them. No reliable match finds one diver's words in it, so every row for the
+ * shop goes: losing a month of debugging text costs nothing a diver is owed.
+ */
+async function scrubClaudeCallContent(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  // The lock `keepCallContent` (./assists) writes under: a call still in
+  // flight either lands before this delete, or sees this erasure and keeps
+  // nothing.
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtext('claude_call_content'), hashtext(${ctx.shopId}))`,
+  );
+  await tx.delete(claudeCallContent).where(eq(claudeCallContent.shopId, ctx.shopId));
+  return [];
+}
+
+/**
  * Every sweep of the erasure, in the order it runs. Each takes the transaction
  * and the diver's context and hands back the Stripe objects it found standing
  * for them, which `scrub` raises as one ledger write at the end.
@@ -2926,6 +2948,7 @@ const SCRUB_SECTIONS = [
   scrubInterests,
   scrubInbox,
   scrubIncidentReports,
+  scrubClaudeCallContent,
 ] as const;
 
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {

@@ -789,6 +789,25 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.claudeUsage.id }),
     ),
+  claude_call_content: async ({ db, shop }, at) => {
+    const usageId = idOf(
+      await db
+        .insert(schema.claudeUsage)
+        .values({
+          shopId: shop.id,
+          feature: "inbox_sort",
+          model: "claude-haiku-5-5",
+          outcome: "ok",
+        })
+        .returning({ id: schema.claudeUsage.id }),
+    );
+    return idOf(
+      await db
+        .insert(schema.claudeCallContent)
+        .values({ usageId, shopId: shop.id, systemText: "Sort.", contentText: "Hi", createdAt: at })
+        .returning({ id: schema.claudeCallContent.id }),
+    );
+  },
   assist_results: async ({ db, shop }, at, n) =>
     idOf(
       await db

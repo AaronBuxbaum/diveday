@@ -219,6 +219,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
             p("keep.webhooks"),
             p("keep.tokens"),
             p("keep.push"),
+            p("keep.assists"),
           ]}
         />
         <p>{p("keep.safety")}</p>

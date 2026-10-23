@@ -197,6 +197,7 @@ export function fakeClaudeMessage({
   stopReason = "end_turn",
   usage = {},
   model = "claude-haiku-5-5",
+  requestId,
 }: {
   text: string;
   stopReason?: ClaudeMessage["stop_reason"];
@@ -207,8 +208,10 @@ export function fakeClaudeMessage({
     >
   >;
   model?: string;
+  /** What the SDK attaches as `_request_id` from the `request-id` header. */
+  requestId?: string;
 }): ClaudeMessage {
-  return {
+  const message = {
     id: "msg_fake",
     type: "message",
     role: "assistant",
@@ -231,6 +234,9 @@ export function fakeClaudeMessage({
       ...usage,
     },
   } as ClaudeMessage;
+  // The SDK defines it the same way: present, but not enumerable.
+  if (requestId) Object.defineProperty(message, "_request_id", { value: requestId });
+  return message;
 }
 
 /**

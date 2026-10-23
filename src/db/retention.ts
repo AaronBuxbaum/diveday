@@ -19,6 +19,7 @@ import {
   bookingCapabilities,
   bookingPaymentEvents,
   bookings,
+  claudeCallContent,
   claudeUsage,
   crewNotices,
   demoEntries,
@@ -351,6 +352,12 @@ export const PRUNE_ARMS = {
     from: claudeUsage,
     id: claudeUsage.id,
     clock: claudeUsage.createdAt,
+  },
+  // What a Claude call said, on its own age: 30 days of debugging text.
+  claude_call_content: {
+    from: claudeCallContent,
+    id: claudeCallContent.id,
+    clock: claudeCallContent.createdAt,
   },
   // What an assist answered, on the age of its last answer: a row nobody asked
   // again for a season and a year is about reviews and weeks long gone.

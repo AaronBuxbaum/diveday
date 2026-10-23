@@ -167,6 +167,7 @@ export type RetainedTable =
   | "staff_replies"
   | "weekly_digest_sends"
   | "claude_usage"
+  | "claude_call_content"
   | "assist_results"
   | "website_setup_drafts"
   | "crew_notices"
@@ -399,6 +400,15 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * month's bill with last year's same month, and nothing reads further back.
    */
   claude_usage: 400,
+  /**
+   * 30 days, measured on `created_at`. A row is what one Claude call said:
+   * the instructions, the shop context, the request with every image and
+   * document a placeholder, and the answer (Aaron, 2026-10-23). It holds
+   * divers' words, kept only so the founder can find out why an assist
+   * answered what it did; a problem is found within a month or not by reading
+   * old prompts. The cost row beside it (`claude_usage`) keeps its 400 days.
+   */
+  claude_call_content: 30,
   /**
    * 400 days, measured on `updated_at`. A row is one assist's answer about
    * the shop (review chip codes, a month's review themes, a week's Monday

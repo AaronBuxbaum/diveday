@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import Anthropic from "@anthropic-ai/sdk";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import type { ClaudeRequest } from "./provider";
@@ -68,7 +69,7 @@ describe("callStructured", () => {
         }),
     });
     const result = await callStructured(provider, call);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       value: { tag: "move", confidence: 0.9 },
       outcome: "ok",
       model: "claude-haiku-5-5",
@@ -159,5 +160,116 @@ describe("callStructured", () => {
       value: null,
       outcome: "truncated",
     });
+  });
+});
+
+describe("callStructured's record of the call", () => {
+  it("hands back the instructions, the context, the message and the answer as text", async () => {
+    const answer = JSON.stringify({ tag: "move", confidence: 0.9 });
+    const provider = fakeClaude({
+      reply: () => fakeClaudeMessage({ text: answer, requestId: "req_011CTest" }),
+    });
+    const result = await callStructured(provider, call);
+    expect(result.transcript).toEqual({
+      system: "Sort the message.",
+      context: "Shop: Blue Reef Divers.",
+      content: "Can I move my Saturday dive to Sunday?",
+      answer,
+      fetchedUrls: null,
+    });
+    expect(result.requestId).toBe("req_011CTest");
+  });
+
+  it("times the whole call, every resumed turn included", async () => {
+    let clock = 1_000;
+    const now = vi.spyOn(performance, "now").mockImplementation(() => clock);
+    try {
+      let turn = 0;
+      const provider = fakeClaude({
+        reply: () => {
+          turn += 1;
+          clock += turn === 1 ? 300 : 430;
+          return turn === 1
+            ? fakeClaudeMessage({ text: "Reading.", stopReason: "pause_turn", requestId: "req_a" })
+            : fakeClaudeMessage({
+                text: JSON.stringify({ tag: "other", confidence: 1 }),
+                requestId: "req_b",
+              });
+        },
+      });
+      const result = await callStructured(provider, call);
+      expect(result.latencyMs).toBe(730);
+      // The last response's id: the one that answered.
+      expect(result.requestId).toBe("req_b");
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("keeps the request id an API error carries, and no answer", async () => {
+    const provider = fakeClaude({
+      reply: () => {
+        throw new Anthropic.InternalServerError(
+          500,
+          { type: "error" },
+          "Overloaded: Can I move my Saturday dive",
+          new Headers({ "request-id": "req_failed1" }),
+        );
+      },
+    });
+    const result = await callStructured(provider, call);
+    expect(result).toMatchObject({ outcome: "error", errorCode: "http_500" });
+    expect(result.requestId).toBe("req_failed1");
+    expect(result.transcript.answer).toBeNull();
+    expect(result.transcript.content).toBe("Can I move my Saturday dive to Sunday?");
+  });
+
+  it("refuses a request id shaped like words", async () => {
+    const provider = fakeClaude({
+      reply: () => fakeClaudeMessage({ text: "{}", requestId: "Ana Diaz wrote this" }),
+    });
+    expect((await callStructured(provider, call)).requestId).toBeNull();
+  });
+
+  it("keeps the URLs web_fetch read, never the pages", async () => {
+    let turn = 0;
+    const page = "PAGE BODY: Ana Diaz, 555-0100";
+    const fetchTurn = (url: string, id: string) => [
+      { type: "server_tool_use", id, name: "web_fetch", input: { url } },
+      {
+        type: "web_fetch_tool_result",
+        tool_use_id: id,
+        content: {
+          type: "web_fetch_result",
+          url,
+          content: {
+            type: "document",
+            source: { type: "text", media_type: "text/plain", data: page },
+          },
+        },
+      },
+    ];
+    const provider = fakeClaude({
+      reply: () => {
+        turn += 1;
+        const message = fakeClaudeMessage({
+          text: turn === 1 ? "Reading." : JSON.stringify({ tag: "other", confidence: 1 }),
+          stopReason: turn === 1 ? "pause_turn" : "end_turn",
+        });
+        const fetched =
+          turn === 1
+            ? fetchTurn("https://bluereef.example/prices", "srvtoolu_1")
+            : [
+                ...fetchTurn("https://bluereef.example/courses", "srvtoolu_2"),
+                ...fetchTurn("https://bluereef.example/prices", "srvtoolu_3"),
+              ];
+        return { ...message, content: [...fetched, ...message.content] } as typeof message;
+      },
+    });
+    const result = await callStructured(provider, call);
+    expect(result.transcript.fetchedUrls).toBe(
+      "https://bluereef.example/prices\nhttps://bluereef.example/courses",
+    );
+    expect(JSON.stringify(result.transcript)).not.toContain("PAGE BODY");
   });
 });
