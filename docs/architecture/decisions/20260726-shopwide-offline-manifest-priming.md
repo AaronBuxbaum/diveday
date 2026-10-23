@@ -41,6 +41,9 @@ navigation handler for `/` (root only — the marketing home page, exactly the t
 -all, which would swallow failures on pages (settings, booking) that have no business showing a
 manifest.
 
+**Amended 2026-10-23:** "a fetch failure" now includes no answer within four seconds when the device
+has the shell saved ([20260718](20260718-offline-manifest-snapshots.md), amendment of the same day).
+
 **Every trip in a 48-hour rolling window auto-saves, not just the one page open.** A new client
 component (`OfflineManifestAutoSave`) mounts in the staff shop layout — present on *every* `/shop/**`
 page a signed-in staff member visits, not only the manifest page — and fetches

@@ -19,7 +19,8 @@
  * `requiredInProduction` must be set in this process's environment. Those are
  * the values whose absence is a security gap rather than a switched-off feature
  * -- today the Upstash pair, without which every rate limit is per serverless
- * instance. Nowhere else can this be asked: a value Vercel's own integration
+ * instance, and SECRET_ENCRYPTION_KEY, without which every two-factor staffer
+ * is locked out. Nowhere else can this be asked: a value Vercel's own integration
  * provisions never passes through `.env.manual`. The same run refuses a row
  * marked `forbiddenInProduction` that *is* set: the e2e harness's switches.
  *

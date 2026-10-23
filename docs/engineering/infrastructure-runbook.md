@@ -604,7 +604,8 @@ So:
   is still blank and what each one switches off — every line may legitimately stay empty. The one
   exception is a Vercel production build: `scripts/vercel-build.mjs` runs `pnpm check:env` before
   the migrations, and it refuses the deploy when a registry row marked `requiredInProduction` (the
-  Upstash pair today) is unset on the project, so provision those before the next production deploy.
+  Upstash pair and `SECRET_ENCRYPTION_KEY` today) is unset on the project, so provision those
+  before the next production deploy.
 - **`.env.local` is generated and overwritten on every deploy.** An edit there is lost; make it in
   `.env.manual`.
 - **A value the stack mints has no local override**, and putting one in `.env.manual` is refused

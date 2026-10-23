@@ -1,5 +1,5 @@
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { isRollCallCheckpoint, type RollCallCheckpoint } from "@/lib/manifests";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/lib/offline-manifest-store";
 import {
   type OfflineManifestEnvelope,
+  offlineFallbackReason,
   pendingOfflineEventCount,
   rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
@@ -86,6 +87,14 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
    */
   const [discarded, setDiscarded] = useState<DiscardedOfflineRecord[]>([]);
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
+  // The service worker sent the captain here because DiveDay did not answer
+  // (`OFFLINE_FALLBACK_PARAM`), not because they opened the saved copy. While
+  // the device reads "online" that is the misleading case: a copy minutes old
+  // would read "Online · Fresh copy · current" (captain review B1). Offline,
+  // the ordinary wording already says "No signal", so it is used as is.
+  const deviceOnline = useDeviceOnline();
+  const fallback = useMemo(() => offlineFallbackReason(searchParams), [searchParams]);
+  const servedWithoutAnswer = fallback !== null && deviceOnline;
   // Freshness (current/aging/stale) is computed inline at render time from
   // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
   // this component as the wall clock crosses the 15-minute or 4-hour
@@ -109,7 +118,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       .catch(() => {});
   }, []);
 
-  const reconcile = useCallback(async () => {
+  const reconcileOnce = useCallback(async () => {
     if (!tripId || !navigator.onLine) return;
     // Same rule `reconcileList` applies to the device-wide list, and it belongs
     // here at least as much (security review, 2026-08-06): a foreign shop's
@@ -144,6 +153,39 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }
   }, [tripId, t, resolveTenant]);
+
+  // **One sync at a time, and at most one waiting** (captain review S2). Every
+  // tap asks for a pass, and a pass on a link that carries nothing takes the
+  // whole `SYNC_TIMEOUT_MS`; unserialized, ten taps counting a boat back
+  // aboard were ten overlapping POSTs of the same pending events. Taps made
+  // while a pass runs fold into the one queued behind it, which sends
+  // everything pending by the time it starts. The same pattern
+  // `useOfflineManifestSync` keeps for the live page.
+  const reconcileInFlight = useRef<Promise<void> | null>(null);
+  const reconcileQueued = useRef(false);
+  const reconcile = useCallback(async () => {
+    if (reconcileInFlight.current) {
+      reconcileQueued.current = true;
+      return reconcileInFlight.current;
+    }
+    // The pass lets go in the same step that finds nothing queued, with no
+    // await between them: an ask can only find a pass still running, which
+    // takes it, or none, and starts one (re-review N10). Letting go after
+    // `await run` left a microtask or two where an ask joined a pass that had
+    // already finished, and sat pending until the next tap.
+    const run = (async () => {
+      try {
+        do {
+          reconcileQueued.current = false;
+          await reconcileOnce();
+        } while (reconcileQueued.current);
+      } finally {
+        reconcileInFlight.current = null;
+      }
+    })();
+    reconcileInFlight.current = run;
+    await run;
+  }, [reconcileOnce]);
 
   // Reconciles every saved trip that still has a pending roll-call event, not
   // just the one a captain happens to open next — otherwise a change recorded
@@ -316,5 +358,22 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     discarded,
     acknowledgeDiscarded,
     reconcile,
+    fallback,
+    servedWithoutAnswer,
   };
+}
+
+/** `navigator.onLine`, kept current. This view renders only on the device. */
+function useDeviceOnline(): boolean {
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const sync = () => setOnline(navigator.onLine);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+    };
+  }, []);
+  return online;
 }

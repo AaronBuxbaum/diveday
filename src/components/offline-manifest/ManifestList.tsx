@@ -10,8 +10,10 @@ import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages
 import { cachedFormatter } from "@/lib/intl-cache";
 import {
   isOfflineManifestExpired,
+  type OfflineFallbackReason,
   type OfflineManifestEnvelope,
   offlineManifestFreshness,
+  offlineTripHref,
 } from "@/lib/offline-manifests";
 import { deviceLocale, relativeAge } from "./shared";
 
@@ -26,6 +28,7 @@ export function OfflineManifestList({
   list,
   message,
   discardNotice,
+  fallback = null,
   readFailed = false,
 }: {
   t: OfflineManifestTranslator;
@@ -34,6 +37,11 @@ export function OfflineManifestList({
   list: OfflineManifestEnvelope[] | null;
   message: string;
   discardNotice: ReactNode;
+  /**
+   * Why the worker opened this list, when it did: carried onto each trip's
+   * link so the trip screen says the same (re-review R2).
+   */
+  fallback?: OfflineFallbackReason | null;
   /**
    * The store read threw (dive-domain review D4): copies may well exist, so
    * the page says it could not open them, never that nothing is saved.
@@ -134,7 +142,7 @@ export function OfflineManifestList({
                   className="first:rounded-t-panel last:rounded-b-panel"
                 >
                   <a
-                    href={`/offline-manifest?trip=${tripManifest.trip.id}`}
+                    href={offlineTripHref(tripManifest.trip.id, fallback)}
                     className="flex min-h-14 flex-col gap-2 rounded-[inherit] p-4 transition-colors hover:bg-surface-sunken focus-visible:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:items-center sm:justify-between sm:p-5"
                   >
                     <div>

@@ -154,6 +154,16 @@ saved trip through the real `syncOfflineManifest` when connectivity returns — 
 partial failure rethrows, which is what asks the browser to retry the tag rather than treating an
 incomplete flush as done.
 
+**Amended 2026-10-23: a flush gives up after ten seconds.** Both outbound paths here, the `sync`
+handler and the push handler's flush, call `syncOfflineManifest`, which now abandons a POST that has
+not answered within `SYNC_TIMEOUT_MS`
+([20260718](20260718-offline-manifest-snapshots.md), amendment of the same day). A timed-out trip
+counts as failed, so the `sync` handler still rethrows and the browser keeps the tag; each give-up
+spends one of the retries Chrome allows a tag, and the events stay pending on the device for the
+page's own triggers once those run out. The push handler swallows it as before and goes on to the
+refresh and the notification. A resend that overlaps the abandoned request on the server is answered
+as a duplicate, so neither path can double a row or have a correction refused by its own first copy.
+
 **It is an upgrade, never a dependency.** Background Sync does not exist in Safari or Firefox, and
 Chrome can refuse a registration; every one of those paths is a silent no-op that leaves the page's own
 reconnect, visibility and interval triggers exactly as they were.

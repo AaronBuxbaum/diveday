@@ -19,8 +19,8 @@ this covers what happens to it after you merge.
 `node scripts/check-env.mjs`, then `node scripts/check-migrations.mjs`, then
 `node scripts/check-migration-graph.mjs`, then `pnpm db:migrate`; then, always, run `pnpm build`.
 The first step refuses the build when a `config/env-registry.mjs` row marked `requiredInProduction`
-is unset on the Vercel project (today the Upstash pair), naming the keys and what each one switches
-off, so a missing security-relevant value fails the deploy loudly instead of the feature failing
+is unset on the Vercel project (today the Upstash pair and `SECRET_ENCRYPTION_KEY`), naming the
+keys and what each one switches off, so a missing security-relevant value fails the deploy loudly instead of the feature failing
 quietly in production (decided 2026-10-07, issue #2244). Previews are not asked.
 `pnpm db:migrate` is `drizzle-kit migrate --config drizzle.config.prod.ts`, applying committed
 `drizzle/` SQL against `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a

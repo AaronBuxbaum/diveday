@@ -36,7 +36,7 @@ history we cannot produce.
 | --- | --- | --- | --- |
 | Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema/` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump in `diveday-database-dumps` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles in `diveday-backups` under `exports/` |
 | AWS S3 Media Bucket (`diveday-media`) | Recap photos, course/dive-site media, shop logos, imported waiver source documents | S3-managed storage (versioned/retained) | The `photos/` directory inside each export bundle (see the gap below) |
-| Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, Stripe/AWS keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
+| Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `SECRET_ENCRYPTION_KEY`, Stripe/AWS keys | Not backed up by design — secrets never enter the repo | Owner's password manager — **Aaron, first run with an agent** (§2's secrets note, §4's checklist) |
 
 ## 1. Neon point-in-time recovery
 
@@ -46,7 +46,8 @@ history we cannot produce.
 > [ADR 20260812-platform-database-dump](../architecture/decisions/20260812-platform-database-dump.md).
 > Read the first row of the table below as the operative one.
 >
-> `TODO(owner)` — **still record the exact number.** Neon console → the DiveDay project →
+> **Aaron, first run with an agent** (§4's first-run checklist, step 1) — **still record the exact
+> number.** Neon console → the DiveDay project →
 > **Settings → Storage** (labelled *History retention* / *Restore window*). Write the days here, next
 > to the plan name, and the date you checked it. **Do not guess it** — every procedure below is scoped
 > by it, and a wrong value in a runbook is worse than an absent one because it will be trusted during
@@ -267,11 +268,15 @@ AWS_PROFILE=diveday-admin aws lambda invoke \
 It answers `{"status":"ok"|"stale"|"empty"|"never_run"|"census_missing"|"incomplete", ...}` and
 only emails on the last five.
 
-> `TODO(owner)` — **Record where production secrets are backed up.** `AUTH_SECRET`, `CRON_SECRET`,
-> and the Stripe/AWS SES/Twilio keys exist only in Vercel's project settings.
-> Losing the Vercel account loses them, and `AUTH_SECRET` in particular is not regenerable without
-> invalidating every outstanding session and every `recap-links.ts`-signed token. Name the password
-> manager or vault holding them, and the date last verified.
+> **Aaron, first run with an agent** (§4's first-run checklist, step 2) — **Record where production
+> secrets are backed up.** `AUTH_SECRET`, `CRON_SECRET`, `SECRET_ENCRYPTION_KEY` and the Stripe/AWS
+> SES/Twilio keys exist only in Vercel's project settings. Losing the Vercel account loses them, and
+> `AUTH_SECRET` in particular is not regenerable without invalidating every outstanding session and
+> every `recap-links.ts`-signed token; losing `SECRET_ENCRYPTION_KEY` locks out every two-factor
+> staffer and every sealed shop credential. The first three are derived from `APP_SECRET_SEED`
+> (`scripts/distribute-env.mjs`), so that one value is what has to be in the vault, beside the
+> Stripe pair the [infrastructure runbook](infrastructure-runbook.md) already says lives in
+> 1Password. Name the password manager or vault holding them, and the date last verified.
 
 ## 2b. Shop-owned weekly backup (running since 2026-08-04)
 
@@ -460,10 +465,127 @@ The app already does the *deletion* side carefully: orphan-media cleanup is queu
 through `retryPendingMediaDeletions` on the daily cron rather than deleted inline, so a transient
 provider failure does not lose track of an object. That is a consistency mechanism, not a backup.
 
-## 4. Quarterly restore test
+## 4. Restore tests
 
-A backup nobody has restored is a hypothesis. Run this once a quarter and record the result in the
-log below. It should take under an hour.
+A backup nobody has restored is a hypothesis. Three things prove one, in this order: the first run
+below (once, by hand), the monthly drill (automated), and the quarterly test (by hand, the parts a
+drill cannot do). Every run goes in the log at the end of this section.
+
+### First run: Aaron, with an agent holding this runbook
+
+Aaron's call ([H-154](../product/human-decisions/README.md)): he runs the first restore himself, the
+week of 2026-10-23, with an agent reading this runbook beside him; the monthly drill follows. The
+agent reads each step out, runs the commands Aaron approves, and writes the results into this file
+in the same session. Budget an hour. The agent never pastes a connection string, a password or a row
+into the chat or the log.
+
+1. **Record the Neon restore window.** Neon console → the DiveDay project → **Settings → Storage**
+   (*History retention* / *Restore window*). The agent writes the days, the plan name and today's
+   date into §1's note, replacing its "Aaron, first run with an agent" line, and fills the *Neon
+   window* column of the log row.
+2. **Record where the secrets are backed up.** Aaron opens the password manager and confirms it
+   holds `APP_SECRET_SEED` (from which `AUTH_SECRET`, `CRON_SECRET` and `SECRET_ENCRYPTION_KEY` are
+   derived), the Stripe pair, and the AWS admin profile's recovery. The agent writes the vault's
+   name and today's date into §2's secrets note, replacing its "Aaron, first run with an agent" line.
+   No secret value is read aloud or written down.
+3. **Confirm production carries `SECRET_ENCRYPTION_KEY`.** Since 2026-10-23 a production deploy
+   without it fails at build (`pnpm check:env`, [deploy runbook](deploy-and-migrations-runbook.md)).
+   `pnpm exec vercel env ls production` lists it by name; if it is missing, `pnpm infra:deploy`
+   distributes it before the next merge to `main`.
+4. **Run the drill by hand, from Aaron's machine.** Docker running, the admin profile signed in, and
+   a Neon API key in the shell (Neon console → **Account settings → API keys**; delete it after the
+   session if the drill's own key is not made yet):
+
+   ```bash
+   AWS_PROFILE=diveday-admin NEON_PROJECT_ID=<project id> NEON_API_KEY=<key> node scripts/restore-drill.mjs
+   ```
+
+   It is the same script the monthly workflow runs: newest dump, scratch branch, empty database,
+   `pg_restore`, the seeded owner's sign-in, tomorrow's manifest, branch deleted. It prints a log row
+   at the end when `GITHUB_STEP_SUMMARY` names a file; otherwise the agent writes the row from the
+   printed timings. If it reports a branch it did **not** delete, delete that `restore-drill-*`
+   branch in the Neon console now.
+5. **Do what the drill cannot.** On a branch restored by §2c's procedure (the drill deletes its
+   own): sign in to a local `pnpm dev` pointed at the restore with a real staff password
+   (the drill's seeded owner signs in through the demo bypass, never a bcrypt compare), and open one
+   signed waiver to check its `integrity_hash` still verifies. Then delete the branch.
+6. **Set the drill up to run alone.** In GitHub → Settings → Environments, create `restore-drill`.
+   Under **Deployment branches and tags**, choose **Selected branches and tags** and add `main` only;
+   tick **Required reviewers** and add Aaron. Without the branch rule, any pushed branch can name
+   the environment and get its Neon key and its AWS role, and agents push branches all day. Then
+   give it what the next section lists. Run the workflow once from its **Run workflow** button on
+   `main`, approve it, and watch it go green.
+7. **Write the log row** below, replacing the `_never_` row, with anything that surprised you, and
+   mark [H-154](../product/human-decisions/README.md) Implemented.
+
+### Monthly restore drill (`.github/workflows/restore-drill.yml`)
+
+On the 2nd of each month at 07:00 UTC, and on demand from the workflow's **Run workflow** button,
+`scripts/restore-drill.mjs`:
+
+1. lists `s3://diveday-database-dumps/dumps/`, takes the newest `diveday.dump.gz`, and refuses one
+   under 4 KiB (the watchdog's floor, §2c);
+2. creates a Neon branch named `restore-drill-<UTC minute>-<run id>` and a new, empty database
+   `restore_drill` on it;
+3. restores the dump into that database with `pg_restore --no-owner --no-privileges
+   --exit-on-error`, in the dump job's own Postgres major (`postgres:17-alpine`, pinned by digest
+   in `POSTGRES_IMAGE`), printing only each error's SQLSTATE and object name, because a Postgres
+   `DETAIL` or `CONTEXT` line quotes row values;
+4. runs `scripts/restore-drill-verify.ts` against it: the seeded owner signs in through
+   `verifyCredentials`, the function sign-in calls, and every departure tomorrow in that shop's zone
+   loads its manifest through `getTripManifest` (the next departure after now when tomorrow has
+   none; no departure at all is a failure). It opens its own connection rather than `getDb()`,
+   because `getDb()` seeds the demo shop and would repair a restore before checking it;
+5. deletes the branch, and writes the timings and a log row to the run's step summary.
+
+The branch is created with a Neon expiry three hours out, and the workflow's `if: always()` step
+(`node scripts/restore-drill.mjs --sweep`) deletes this run's branch and any `restore-drill-*`
+branch over an hour old, through the same default-and-protected check. So a run killed by a
+timeout or a **Cancel workflow**, or a branch create that timed out after Neon made it, does not
+leave a copy of production behind. Every step has a timeout, the drill step's is above the
+script's own worst case, and they add up to less than the job's (`scripts/restore-drill.test.mjs`).
+
+**It never touches the production branch.** It restores into a database it created on a branch it
+created, never into the copy of production that branch starts with, and it deletes only the branch
+id it created after checking that branch is named `restore-drill-*` and is neither the default nor a
+protected branch (`scratchBranchProblem`, tested in `scripts/restore-drill.test.mjs`). Neon refuses
+to delete a default branch anyway; the check is the second lock. A red run on `main` opens a
+`ci-red` issue (`scripts/workflow-alert.mjs`); a run that could not or would not delete its branch
+is red and leaves the name in the log.
+
+What it needs, all on the `restore-drill` GitHub environment. **The environment must admit
+deployment branch `main` only, with a required reviewer** (first-run step 6). `workflow_dispatch`
+runs the workflow file as the chosen ref has it, so on an environment without that rule a pushed
+branch can rewrite the drill's guards, or add a workflow naming `restore-drill`, and read
+everything below; a Neon branch also inherits production's role passwords. The job's `if` on the
+default branch is a second lock only, since a branch can edit it. The required reviewer also
+approves each monthly scheduled run before it starts. Subprocesses get a short env allowlist
+(`SUBPROCESS_ENV_KEYS`), which stops the keys being inherited or printed, not a hostile dependency.
+
+| Name | Kind | Where it comes from |
+| --- | --- | --- |
+| `NEON_API_KEY` | secret | Neon console → **Organization (or Account) settings → API keys**. A project-scoped key on the DiveDay project when the plan offers one; it creates and deletes branches and databases |
+| `NEON_PROJECT_ID` | variable | Neon console → the DiveDay project → **Settings → General → Project ID** |
+| `RESTORE_DRILL_ROLE_ARN` | variable | An IAM role trusting GitHub's OIDC provider (`GitHubActionsOidcProvider`, `infra/lib/infra-stack.ts` §18) for `repo:AaronBuxbaum/diveday:environment:restore-drill` only, allowed `s3:ListBucket` on `diveday-database-dumps` (prefix `dumps/`) and `s3:GetObject` on `dumps/*`, nothing else. **Not in the stack yet**: until it is, the workflow stops at its first step naming it, and the drill runs by hand as in the first-run checklist |
+| `DUMP_BUCKET` | variable, optional | Only when the stack was deployed with `--context dumpBucketName=...`; defaults to `diveday-database-dumps` |
+
+The dump holds every password hash and medical answer in the platform. On the runner it lives for
+the length of the job in a temporary directory the script removes, nothing uploads it as an
+artifact, the connection string is masked in the log, and the scripts print counts and ids only.
+The role can read every dump. Its trust policy names the `restore-drill` environment, and only the
+environment's branch rule keeps that to `main`: by default an environment admits every branch.
+The verify step gets a minimal environment (`subprocessEnv`): no Neon key, AWS session or GitHub
+token, which lives on the two alert steps only.
+
+The Postgres image is pinned by digest, read from ECR Public and Docker Hub on 2026-10-23.
+Dependabot does not read `POSTGRES_IMAGE`, so a Postgres minor or an Alpine fix is a by-hand bump
+of the digest there.
+
+### Quarterly restore test
+
+The by-hand test of everything the drill does not reach: the bundles, the import path, a real
+password, a waiver's integrity hash. Run it once a quarter and record the result in the log below.
+It should take under an hour.
 
 1. **Pick a target** — a timestamp roughly 24 hours ago, one shop's most recent export bundle from
    `s3://diveday-backups/exports/`, and the most recent dump from `s3://diveday-database-dumps/dumps/`
@@ -494,12 +616,12 @@ log below. It should take under an hour.
 
 | Date run | Who | Neon window at the time | Branch-available time (RTO) | Bundle verified | Dump restored + sign-in | Findings |
 | --- | --- | --- | --- | --- | --- | --- |
-| _never_ | — | — | — | — | — | `TODO(owner)` — no restore has ever been tested. The first run is also the first evidence any of this works. |
+| _never_ | — | — | — | — | — | **Aaron, first run with an agent**, week of 2026-10-23 (H-154): no restore has ever been tested. The first run is also the first evidence any of this works; replace this row with it. |
 
 ## What this runbook does not cover
 
 - **§2's scheduled export runs weekly since 2026-08-12, but nobody has restored from one.** The
-  quarterly restore-test log below still reads `never`. A backup nobody has restored is a
+  restore-test log above still reads `never` until Aaron's first run (§4). A backup nobody has restored is a
   hypothesis; what changed is that there is now evidence it is being *written* (the watchdog), not
   evidence it can be *read*. Run the test in §4 before describing recovery as proven.
 - **The export's credential gap is now covered elsewhere, not fixed in the export.** §2c's
@@ -509,8 +631,8 @@ log below. It should take under an hour.
 - **The photo gap is unchanged, by either layer.** A photo that fails to fetch is still dropped
   silently from a bundle (§2), and the dump carries blob *URLs*, not bytes — so the bundles' `photos/`
   directories remain the only copy of an image.
-- **Nobody has restored a dump either.** The layer is written and watched; §4's step 6 is what will
-  turn it from a hypothesis into evidence.
+- **Nobody has restored a dump either.** The layer is written and watched; §4's first run, then the
+  monthly drill, are what will turn it from a hypothesis into evidence.
 - **No cross-region or cross-account copy.** Backups sit in the same AWS account as everything else
   in `infra/lib/infra-stack.ts`. Losing that account loses them. Versioning plus `RETAIN` plus a
   write-only uploader is the mitigation, and it is a partial one.
