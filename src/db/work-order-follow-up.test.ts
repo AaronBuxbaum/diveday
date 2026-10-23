@@ -726,6 +726,7 @@ describe("what Today asks about the bench", () => {
         status: "received",
         subject: "Maya Late",
         since: "2026-07-18",
+        fleetUnitId: null,
       },
     ]);
 
