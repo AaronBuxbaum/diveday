@@ -196,7 +196,7 @@ function TicketList({
               number: order.number,
               problem: order.reportedProblem,
             })}
-            className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-focus"
+            className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-sunken"
           >
             <span className="min-w-0">
               <span className="text-muted tabular-nums">
