@@ -367,10 +367,12 @@ export async function bookSpot(
   // **Every seat of a party carries it**, the organizer's included. One person
   // booking four seats through a hotel's link is four divers that hotel sent,
   // which is the number a shop counting its partners means.
-  const referralSource = partnerFromReferralCookie(
-    (await cookies()).get(REFERRAL_COOKIE)?.value,
-    shopSlug,
-  );
+  //
+  // **Partner links are a Features switch.** Off, a cookie from a link handed
+  // out earlier books like any unreferred visit and credits nobody.
+  const referralSource = shopNow.partnerLinksEnabled
+    ? partnerFromReferralCookie((await cookies()).get(REFERRAL_COOKIE)?.value, shopSlug)
+    : null;
 
   // A held boat refuses a waiter after five seconds: a crowd, worded "try again".
   const outcome = await createBookingParty(

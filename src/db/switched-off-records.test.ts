@@ -13,7 +13,8 @@ import {
   getRecapPageData,
   listRecapPhotosForTrips,
 } from "./recap";
-import { executedDives, people, personRoles, shops, trips } from "./schema";
+import { getMonthlyReport } from "./reporting";
+import { bookings, executedDives, people, personRoles, shops, trips } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -150,5 +151,33 @@ describe("recap photos switched off", () => {
 
     await db.update(shops).set({ diverPhotosEnabled: true }).where(eq(shops.id, shop.id));
     expect(await canAddRecapPhoto(db, bookingId)).toEqual({ ok: true });
+  });
+});
+
+describe("partner links switched off", () => {
+  it("counts no referred seat on Reports, and keeps every seat's source", async () => {
+    const { db, shop } = ctx;
+    const [seat] = await db
+      .select({ id: bookings.id, startsAt: trips.startsAt })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.status, "booked")))
+      .limit(1);
+    if (!seat) throw new Error("seed has no booked seat");
+    await db
+      .update(bookings)
+      .set({ referralSource: "harbor-hotel" })
+      .where(eq(bookings.id, seat.id));
+    const from = new Date(seat.startsAt.getTime() - 60 * 60 * 1000);
+    const to = new Date(seat.startsAt.getTime() + 60 * 60 * 1000);
+
+    expect((await getMonthlyReport(db, shop.id, from, to)).partnerReferredSeats).toBeGreaterThan(0);
+    await db.update(shops).set({ partnerLinksEnabled: false }).where(eq(shops.id, shop.id));
+    expect((await getMonthlyReport(db, shop.id, from, to)).partnerReferredSeats).toBe(0);
+    const [kept] = await db
+      .select({ referralSource: bookings.referralSource })
+      .from(bookings)
+      .where(eq(bookings.id, seat.id));
+    expect(kept?.referralSource).toBe("harbor-hotel");
   });
 });

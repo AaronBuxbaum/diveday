@@ -44,6 +44,7 @@ import {
   orders,
   people,
   personRoles,
+  shops,
   tips,
   tripAssignments,
   tripDives,
@@ -638,10 +639,13 @@ export async function getMonthlyReport(
   // how many rows could appear; it reserved none of them for a partner the
   // shop knew, so a quiet month with two genuine partners at one booking each
   // was fully displaced by an attacker with two bookings per invented slug.
+  // None while partner links are off (the Features page); the seats keep
+  // their source and count again once the switch is back on.
   const [referredTotals] = await db
     .select({ seats: count(bookings.id) })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, and(eq(shops.id, bookings.shopId), eq(shops.partnerLinksEnabled, true)))
     .where(
       and(
         inWindow,
