@@ -1066,6 +1066,8 @@
     "helpAcknowledged": "{name} te ayudará en {meeting}.",
     "helpAssignedFallback": "{name} te ayudará en esta salida.",
     "helpHandled": "La tripulación ha atendido esta solicitud.",
+    "helpWithdraw": "Retirar mi solicitud",
+    "helpAskShop": "¿Necesitas una mano ese día? Pregúntale al centro.",
     "carriedHeading": "Sigue archivado a tu nombre",
     "carriedWaiver": "Tu exención firmada",
     "carriedCertification": "Tu certificación",

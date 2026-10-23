@@ -530,7 +530,7 @@
       "helpRequests": {
         "heading": "Help requests",
         "label": "Let divers ask for help on the day",
-        "description": "A question on their ready page that puts the request on Today. Off, the question is gone; requests already open stay on Today until you handle them."
+        "description": "A question on their ready page that puts the request on Today. Off, divers see your phone and email there instead; a request already open stays on Today until you handle it, and the diver can still withdraw it."
       },
       "publicConditions": {
         "heading": "Public conditions",

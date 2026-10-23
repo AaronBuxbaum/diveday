@@ -1,3 +1,4 @@
+import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -94,6 +95,7 @@ export function DayOfDetails({
   ]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
+  const shopReachable = Boolean(data.shop.contactPhone || data.shop.contactEmail);
   return (
     <form action={saveDayOfDetailsFromReady.bind(null, token)}>
       {/* The gear step's own "Saved.", for the same reason: the redirect
@@ -251,9 +253,11 @@ export function DayOfDetails({
           </div>
         ) : null}
         {/* Help requests switched off (the Features page) take no new ask: the
-            question goes, and a request already open still says where it
-            stands until the crew handles it. */}
-        {data.helpRequestsOn || data.helpRequest ? (
+            question goes, a request already open still says where it stands
+            and can be withdrawn, and the shop's own contact stands in for the
+            question so a diver who needs a hand still knows who to ask
+            (review 2026-10-23, item 3). */}
+        {data.helpRequestsOn || data.helpRequest || shopReachable ? (
           <div className="py-5">
             <h3 className="text-base font-semibold">{t("ready.helpHeading")}</h3>
             {data.helpRequestsOn ? (
@@ -310,8 +314,30 @@ export function DayOfDetails({
                       : t("ready.helpSent")}
                   </p>
                 ) : null}
+                {/* Off, the radios are gone, so withdrawing is its own button:
+                    it posts the one answer the save still takes. */}
+                {data.helpRequest && !data.helpRequestsOn ? (
+                  <button
+                    type="submit"
+                    name="kind"
+                    value="none"
+                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+                  >
+                    {t("ready.helpWithdraw")}
+                  </button>
+                ) : null}
               </>
             )}
+            {!data.helpRequestsOn && shopReachable ? (
+              <>
+                <p className="mt-3 text-sm text-muted">{t("ready.helpAskShop")}</p>
+                <ShopContactLinks
+                  phone={data.shop.contactPhone}
+                  email={data.shop.contactEmail}
+                  className="text-sm"
+                />
+              </>
+            ) : null}
           </div>
         ) : null}
         {/* **A word to the crew** (issue #1182, delight report D22). Rendered

@@ -297,8 +297,9 @@ export const shops = pgTable(
     pastDiverInvitesEnabled: boolean("past_diver_invites_enabled").notNull().default(true),
     /**
      * **Day-of help requests**: a diver asking the crew for help from their
-     * ready page, and Today's row for it. Off, no new request is taken;
-     * requests already open stay on Today until the crew handles them.
+     * ready page, and Today's row for it. Off, no new request is taken and the
+     * ready page shows the shop's contact instead; a request already open
+     * stays on Today until the crew handles it, and its diver may withdraw it.
      */
     helpRequestsEnabled: boolean("help_requests_enabled").notNull().default(true),
     /**
