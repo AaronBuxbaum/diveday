@@ -535,7 +535,7 @@
       "publicConditions": {
         "heading": "Public conditions",
         "label": "Show divers the forecast",
-        "description": "The wind and sea line on your schedule, trip pages and their link previews. Your crew’s conditions and the high-wind alert stay either way."
+        "description": "The water, sea and wind line on each trip page, with the crew’s conditions updates. Divers already booked still see them on their ready page, and your crew’s conditions and the high-wind alert stay either way."
       },
       "fieldGuide": {
         "heading": "Field guide",

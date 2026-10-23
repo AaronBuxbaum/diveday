@@ -17,7 +17,6 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { formatShortDate } from "@/lib/format";
-import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-forecast";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -52,6 +51,7 @@ import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
 import { bookingFormTrip, publicTripRecord, readTripPage } from "./_lib/page-reads";
+import { publicForecast } from "./_lib/public-forecast";
 import { readinessDoorPath } from "./_lib/readiness-door";
 import { requirementSentenceFor } from "./_lib/requirement-sentence";
 import { offerHandoff } from "./actions";
@@ -236,11 +236,8 @@ export default async function TripDetailPage({
     );
   }
   const crewLanguagesLine = crewLanguagesSentence(crewLanguages, locale);
-  const crewPrediction = hasCrewPrediction(trip);
-  // Started, never awaited: ConditionsLine streams it in its own `<Suspense>`.
-  const automatedForecast = crewPrediction
-    ? Promise.resolve(null)
-    : automatedForecastForDeparture(trip.diveSite, trip.startsAt);
+  // Neither forecast while public conditions are off (`publicForecast`).
+  const { crewPrediction, automatedForecast } = publicForecast(shop, trip);
   const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
     handoff: handoffToken,
     blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
@@ -406,6 +403,7 @@ export default async function TripDetailPage({
               revealArrivalDetails={false}
             />
             {confirmed &&
+            shop.publicConditionsEnabled &&
             conditionsChangedSinceBooking(
               trip.conditionsUpdatedAt,
               confirmed.booking.conditionsBriefedAt,

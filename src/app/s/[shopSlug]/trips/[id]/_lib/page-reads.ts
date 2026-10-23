@@ -168,7 +168,11 @@ export async function readTripPage(
     // has switched nothing on, which is every shop until somebody does. Marked
     // away as /ready marks them, so both diver doors say "to be confirmed".
     tripRead.then((found) => (found ? diverCrewWithAway(db, shop.id, found, shop.timezone) : [])),
-    listTripChangeEvents(db, shop.id, tripId),
+    // A crew's conditions update is the public forecast too, so it leaves the
+    // ledger while public conditions are off; meeting-point changes stay.
+    listTripChangeEvents(db, shop.id, tripId).then((events) =>
+      shop.publicConditionsEnabled ? events : events.filter((e) => e.kind !== "conditions"),
+    ),
     // **The door remembers who opened it** (ADR 20260906-before-you-ask,
     // decision 3). Facts reach this page through a handoff and nothing else: a
     // cold request, an embed, and an unverifiable token all read as null, and

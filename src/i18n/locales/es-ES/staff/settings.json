@@ -535,7 +535,7 @@
       "publicConditions": {
         "heading": "Condiciones públicas",
         "label": "Mostrar el pronóstico a los buceadores",
-        "description": "La línea de viento y mar en tu calendario, las páginas de salidas y sus vistas previas de enlace. Las condiciones de tu tripulación y la alerta de viento fuerte se quedan de todos modos."
+        "description": "La línea de agua, mar y viento en cada página de salida, con las actualizaciones de condiciones de la tripulación. Quienes ya reservaron las siguen viendo en su página de preparación, y las condiciones de tu tripulación y la alerta de viento fuerte se quedan de todos modos."
       },
       "fieldGuide": {
         "heading": "Guía de campo",
