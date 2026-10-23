@@ -88,10 +88,14 @@ async function alerted() {
   return { db, shop, tripId: trip.id, bookingId, diverId: record.personId, owner };
 }
 
-const call = (tripId: string) =>
-  POST(new Request(`https://diveday.test/api/offline-manifests/${tripId}/medical-alerts`), {
-    params: Promise.resolve({ tripId }),
-  });
+const call = (tripId: string, headers: Record<string, string> = {}) =>
+  POST(
+    new Request(`https://diveday.test/api/offline-manifests/${tripId}/medical-alerts`, {
+      method: "POST",
+      headers,
+    }),
+    { params: Promise.resolve({ tripId }) },
+  );
 
 async function savedLines(db: AppDb, diverId: string) {
   return db
@@ -167,5 +171,26 @@ describe("POST /api/offline-manifests/[tripId]/medical-alerts (H-153 amendment)"
     expect((await call("not-a-uuid")).status).toBe(404);
     expect((await call("00000000-0000-4000-8000-000000000000")).status).toBe(404);
     expect(await savedLines(db, diverId)).toEqual([]);
+  });
+
+  it("refuses a request from another origin before reading anything (security review 2, L5)", async () => {
+    const { db, shop, tripId, diverId, owner } = await alerted();
+    vi.mocked(auth).mockResolvedValue(session(shop.id, owner, ["owner"]));
+    for (const headers of [
+      { Origin: "https://evil.example" },
+      { Origin: "null" },
+      { "Sec-Fetch-Site": "cross-site" },
+    ]) {
+      const response = await call(tripId, headers);
+      expect(response.status, JSON.stringify(headers)).toBe(403);
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    }
+    expect(await savedLines(db, diverId)).toEqual([]);
+    // The page's own fetch: same origin.
+    const own = await call(tripId, {
+      Origin: "https://diveday.test",
+      "Sec-Fetch-Site": "same-origin",
+    });
+    expect(own.status).toBe(200);
   });
 });

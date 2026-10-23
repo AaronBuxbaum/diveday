@@ -133,6 +133,11 @@ export const MEDICAL_ALERT_READ_WINDOW_MS = 10 * MINUTE_MS;
  * True when the trail holds the line, newly written or already there; false
  * when the trail refused it (`recordDiverActivity`), so the caller shows
  * nothing.
+ *
+ * The check and the insert run under one advisory lock on (shop, code,
+ * reader, diver, departure), so parallel taps or parallel offline saves write
+ * one line, not one each (security review 2, L5;
+ * `medical-alerts.postgres.test.ts`).
  */
 export async function recordMedicalAlertTrailLine(
   db: DbExecutor,
@@ -143,6 +148,24 @@ export async function recordMedicalAlertTrailLine(
     code: "medical_alert_read" | "medical_alert_saved_offline";
     departureId: string | null;
   },
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('medical_alert_trail'), hashtext(${[
+        input.shopId,
+        input.code,
+        input.actorPersonId,
+        input.personId,
+        input.departureId ?? "",
+      ].join(":")}))`,
+    );
+    return recordUnlessRecent(tx, input);
+  });
+}
+
+async function recordUnlessRecent(
+  db: DbExecutor,
+  input: Parameters<typeof recordMedicalAlertTrailLine>[1],
 ): Promise<boolean> {
   const [recent] = await db
     .select({ id: activityEvents.id })

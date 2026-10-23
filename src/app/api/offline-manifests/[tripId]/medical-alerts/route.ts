@@ -3,6 +3,7 @@ import { medicalAlertsForOfflineSave } from "@/db/medical-alerts";
 import { getShopById } from "@/db/shops";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { isCrossSiteRequest } from "@/lib/same-origin";
 import { uuidParam } from "@/lib/uuid";
 
 /** Per-session and medical: never held by any cache. */
@@ -23,9 +24,14 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  * copy at sea writes nothing more.
  *
  * POST, not GET: it writes the trail, and nothing should prefetch or replay
- * it. Every refusal says nothing about whether an alert exists.
+ * it. A request from another site is refused before anything is read
+ * (`isCrossSiteRequest`): a route handler gets no server-action origin check.
+ * Every refusal says nothing about whether an alert exists.
  */
-export async function POST(_request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+  if (isCrossSiteRequest(request)) {
+    return Response.json({ error: "forbidden" }, { status: 403, headers: NO_STORE });
+  }
   const session = await auth();
   if (!session?.user || !isStaff(session.user.roles)) {
     return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
