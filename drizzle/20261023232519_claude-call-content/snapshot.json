@@ -1,0 +1,608 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4f0217e0-be1a-48cd-af30-12bdf140e6ba",
+  "prevIds": [
+    "dac2b7a5-137f-4741-b2c4-7cb3e1a0db7a"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "claude_call_content"
+      ],
+      "writes": [
+        "s|tbl|public.claude_call_content",
+        "n|tbl|public.claude_call_content",
+        "e|tbl|public.claude_call_content",
+        "n|rel|public.claude_call_content",
+        "n|type|public.claude_call_content",
+        "n|rel|public.claude_call_content_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "claude_call_content_erasures"
+      ],
+      "writes": [
+        "s|tbl|public.claude_call_content_erasures",
+        "n|tbl|public.claude_call_content_erasures",
+        "e|tbl|public.claude_call_content_erasures",
+        "n|rel|public.claude_call_content_erasures",
+        "n|type|public.claude_call_content_erasures",
+        "n|rel|public.claude_call_content_erasures_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "claude_usage",
+        "latency_ms"
+      ],
+      "writes": [
+        "s|col|public.claude_usage.latency_ms",
+        "n|col|public.claude_usage.latency_ms",
+        "e|col|public.claude_usage.latency_ms"
+      ],
+      "reads": [
+        "n|tbl|public.claude_usage",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "claude_usage",
+        "request_id"
+      ],
+      "writes": [
+        "s|col|public.claude_usage.request_id",
+        "n|col|public.claude_usage.request_id",
+        "e|col|public.claude_usage.request_id"
+      ],
+      "reads": [
+        "n|tbl|public.claude_usage",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "claude_call_content",
+        "claude_call_content_usage_unique"
+      ],
+      "writes": [
+        "s|idx|public.claude_call_content_usage_unique",
+        "n|idx|public.claude_call_content_usage_unique",
+        "e|idx|public.claude_call_content_usage_unique",
+        "n|rel|public.claude_call_content_usage_unique"
+      ],
+      "reads": [
+        "n|tbl|public.claude_call_content",
+        "n|sch|public",
+        "n|col|public.claude_call_content.usage_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "claude_call_content",
+        "claude_call_content_shop_created_at_idx"
+      ],
+      "writes": [
+        "s|idx|public.claude_call_content_shop_created_at_idx",
+        "n|idx|public.claude_call_content_shop_created_at_idx",
+        "e|idx|public.claude_call_content_shop_created_at_idx",
+        "n|rel|public.claude_call_content_shop_created_at_idx"
+      ],
+      "reads": [
+        "n|tbl|public.claude_call_content",
+        "n|sch|public",
+        "n|col|public.claude_call_content.shop_id",
+        "n|col|public.claude_call_content.created_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "claude_call_content",
+        "claude_call_content_created_at_idx"
+      ],
+      "writes": [
+        "s|idx|public.claude_call_content_created_at_idx",
+        "n|idx|public.claude_call_content_created_at_idx",
+        "e|idx|public.claude_call_content_created_at_idx",
+        "n|rel|public.claude_call_content_created_at_idx"
+      ],
+      "reads": [
+        "n|tbl|public.claude_call_content",
+        "n|sch|public",
+        "n|col|public.claude_call_content.created_at"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "claude_call_content"
+      ],
+      "writes": [
+        "s|fk|public.claude_call_content.claude_call_content_usage_id_claude_usage_id_fkey",
+        "n|fk|public.claude_call_content.claude_call_content_usage_id_claude_usage_id_fkey",
+        "e|fk|public.claude_call_content.claude_call_content_usage_id_claude_usage_id_fkey",
+        "n|con|public.claude_call_content.claude_call_content_usage_id_claude_usage_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.claude_call_content",
+        "n|sch|public",
+        "n|tbl|public.claude_usage",
+        "n|sch|public",
+        "n|col|public.claude_call_content.usage_id",
+        "n|col|public.claude_usage.id",
+        "e|uniqueness|public.claude_usage.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "claude_call_content"
+      ],
+      "writes": [
+        "s|fk|public.claude_call_content.claude_call_content_shop_id_shops_id_fkey",
+        "n|fk|public.claude_call_content.claude_call_content_shop_id_shops_id_fkey",
+        "e|fk|public.claude_call_content.claude_call_content_shop_id_shops_id_fkey",
+        "n|con|public.claude_call_content.claude_call_content_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.claude_call_content",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.claude_call_content.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "claude_call_content_erasures"
+      ],
+      "writes": [
+        "s|fk|public.claude_call_content_erasures.claude_call_content_erasures_shop_id_shops_id_fkey",
+        "n|fk|public.claude_call_content_erasures.claude_call_content_erasures_shop_id_shops_id_fkey",
+        "e|fk|public.claude_call_content_erasures.claude_call_content_erasures_shop_id_shops_id_fkey",
+        "n|con|public.claude_call_content_erasures.claude_call_content_erasures_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.claude_call_content_erasures",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.claude_call_content_erasures.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "claude_call_content",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "claude_call_content_erasures",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "usage_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "system_text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "context_text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "content_text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "answer_text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "fetched_urls",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content_erasures",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content_erasures",
+        "name": "erased_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_usage",
+        "name": "latency_ms",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_usage",
+        "name": "request_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "claude_call_content_usage_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "usage_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "claude_call_content_shop_created_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "claude_call_content_created_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "created_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "claude_call_content_usage_id_claude_usage_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "usage_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "claude_usage",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "claude_call_content_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content_erasures",
+        "name": "claude_call_content_erasures_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content",
+        "name": "claude_call_content_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "claude_call_content_erasures",
+        "name": "claude_call_content_erasures_pkey",
+        "columns": [
+          "shop_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}
