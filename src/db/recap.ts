@@ -151,6 +151,8 @@ export type RecapPageData = {
     reviewUrl: string | null;
     /** Whether the shop asks for DiveDay star ratings (`shops.reviews_enabled`). */
     reviewsEnabled: boolean;
+    /** Whether the recap offers a "bring a buddy" link (`shops.buddy_links_enabled`). */
+    buddyLinksEnabled: boolean;
     /**
      * The shop's measurement settings, so the recap's conditions tiles read in
      * the units the shop actually works in (src/lib/depth-units.ts,
@@ -442,6 +444,9 @@ async function readRecapRow(db: AppDb, bookingId: string) {
       contactPhone: shops.contactPhone,
       reviewUrl: shops.reviewUrl,
       reviewsEnabled: shops.reviewsEnabled,
+      buddyLinksEnabled: shops.buddyLinksEnabled,
+      sightingsEnabled: shops.sightingsEnabled,
+      diverPhotosEnabled: shops.diverPhotosEnabled,
       tipsEnabled: shops.tipsEnabled,
       currency: shops.currency,
       depthUnit: shops.depthUnit,
@@ -916,6 +921,7 @@ async function loadRecapPageData(
       contactPhone: row.contactPhone,
       reviewUrl: row.reviewUrl,
       reviewsEnabled: row.reviewsEnabled,
+      buddyLinksEnabled: row.buddyLinksEnabled,
       depthUnit: row.depthUnit,
       temperatureUnit: row.temperatureUnit,
       brandColor: row.brandColor,

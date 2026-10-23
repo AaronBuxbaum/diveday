@@ -301,3 +301,51 @@ describe("the divers who bring friends", () => {
     expect(await friendsBroughtBy(db, shop.id, await personOf(db, outsider.bookingId))).toBe(0);
   });
 });
+
+/**
+ * **"Bring a buddy" switched off** (ADR 20261005-optional-shop-features): an
+ * old link still books a seat but credits nobody, and the counts read as none
+ * while every recorded referral is kept for when it is switched back on.
+ */
+describe("a shop with Bring a buddy switched off", () => {
+  it("credits no new referral, counts none, and keeps the ones it has", async () => {
+    const { db, shop, open } = await context();
+    const ravi = await book(db, shop.id, open.id, "Ravi Nair");
+    const amira = await book(db, shop.id, open.id, "Amira Khan");
+    const noor = await book(db, shop.id, open.id, "Noor Saleh");
+    await recordBuddyReferral(db, {
+      shopId: shop.id,
+      bookingId: amira.bookingId,
+      referredByBookingId: ravi.bookingId,
+    });
+    await db.update(shops).set({ buddyLinksEnabled: false }).where(eq(shops.id, shop.id));
+
+    expect(
+      await resolveBuddyReferral(db, {
+        shopId: shop.id,
+        referralId: buddyReferralId(ravi.bookingId),
+        bookingId: noor.bookingId,
+      }),
+    ).toBeNull();
+    const window = [
+      new Date(open.startsAt.getTime() - 1),
+      new Date(open.startsAt.getTime() + 1),
+    ] as const;
+    const [raviRow] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, ravi.bookingId));
+    expect(await buddyReferredSeatsForWindow(db, shop.id, ...window)).toBe(0);
+    expect(await buddyReferrersForWindow(db, shop.id, ...window)).toEqual([]);
+    expect(await friendsBroughtBy(db, shop.id, raviRow?.personId ?? "")).toBe(0);
+
+    const kept = await db
+      .select()
+      .from(bookingReferrals)
+      .where(eq(bookingReferrals.bookingId, amira.bookingId));
+    expect(kept).toHaveLength(1);
+
+    await db.update(shops).set({ buddyLinksEnabled: true }).where(eq(shops.id, shop.id));
+    expect(await buddyReferredSeatsForWindow(db, shop.id, ...window)).toBe(1);
+  });
+});

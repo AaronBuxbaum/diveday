@@ -32,7 +32,9 @@ import {
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
-import { publicTripPath } from "@/lib/public-routes";
+import { BUDDY_PARAM } from "@/lib/buddy-links";
+import { buddyReferralId } from "@/lib/buddy-tokens";
+import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
@@ -237,6 +239,26 @@ async function nextDiveHandoffHref(
 ): Promise<string | null> {
   const issued = await issueBookingHandoff(db, { shopId: shop.id, bookingId });
   return issued ? handoffHref(publicTripPath(shop.slug, tripId), issued.token) : null;
+}
+
+/**
+ * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): the
+ * recap's own link to the shop's schedule, carrying this booking's signed,
+ * non-secret referral id, for the diver to hand to a friend.
+ *
+ * Null when the shop switched "Bring a buddy" off on Features (ADR
+ * 20261005-optional-shop-features), and when no canonical origin is
+ * configured: the errand is to send it to somebody, and a path nobody can
+ * follow out of a message is no link.
+ */
+export function recapBuddyLinkUrl(
+  shop: { slug: string; buddyLinksEnabled: boolean },
+  bookingId: string,
+  origin: string | null,
+): string | null {
+  if (!shop.buddyLinksEnabled || !origin) return null;
+  const schedule = new URL(publicSchedulePath(shop.slug), `${origin}/`).toString();
+  return `${schedule}?${BUDDY_PARAM}=${buddyReferralId(bookingId)}`;
 }
 
 export async function buildAfterStateProps(input: {

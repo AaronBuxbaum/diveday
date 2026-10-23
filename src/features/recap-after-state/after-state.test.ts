@@ -7,7 +7,7 @@ import { createTrip, upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { buildAfterStateProps } from "./after-state";
+import { buildAfterStateProps, recapBuddyLinkUrl } from "./after-state";
 
 const ctx = fileScopedShopContext();
 
@@ -270,5 +270,23 @@ describe("buildAfterStateProps", () => {
     expect(props.params).toEqual(params);
     expect(props.ownReview).toBeNull();
     expect(props.ownPulse).toBeNull();
+  });
+});
+
+describe("recapBuddyLinkUrl", () => {
+  const shop = { slug: "blue-mantis", buddyLinksEnabled: true };
+
+  it("links to the shop's schedule with this booking's referral id", () => {
+    expect(
+      recapBuddyLinkUrl(shop, "6f1c7b8e-2a43-4c4e-9a7d-0c7d1d9e4b21", "https://diveday.test"),
+    ).toMatch(/^https:\/\/diveday\.test\/s\/blue-mantis\?via=[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+  });
+
+  it("is null when the shop switched Bring a buddy off, or has no origin", () => {
+    const id = "6f1c7b8e-2a43-4c4e-9a7d-0c7d1d9e4b21";
+    expect(
+      recapBuddyLinkUrl({ ...shop, buddyLinksEnabled: false }, id, "https://diveday.test"),
+    ).toBeNull();
+    expect(recapBuddyLinkUrl(shop, id, null)).toBeNull();
   });
 });

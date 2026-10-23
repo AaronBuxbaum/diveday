@@ -2,7 +2,7 @@ import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { bookingIdFromBuddyReferral } from "@/lib/buddy-tokens";
 import type { DbExecutor } from "./client";
-import { bookingReferrals, bookings, people, trips } from "./schema";
+import { bookingReferrals, bookings, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -46,6 +46,9 @@ export async function resolveBuddyReferral(
     .select({ id: bookings.id, personId: bookings.personId })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
+    // A shop that switched "Bring a buddy" off credits nobody: an old link
+    // still books a seat, it just counts for no one.
+    .innerJoin(shops, and(eq(shops.id, bookings.shopId), eq(shops.buddyLinksEnabled, true)))
     .where(and(eq(bookings.id, referredByBookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!row) return null;
@@ -100,6 +103,8 @@ export async function buddyReferredSeatsForWindow(
     .from(bookingReferrals)
     .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // Switched off, the shop's buddy counts read as none; every referral is kept.
+    .innerJoin(shops, and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)))
     .where(
       and(
         liveTrip(),
@@ -129,6 +134,8 @@ export async function friendsBroughtBy(
     .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
     .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // Switched off, the shop's buddy counts read as none; every referral is kept.
+    .innerJoin(shops, and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)))
     .where(
       and(
         liveTrip(),
@@ -165,29 +172,36 @@ export async function buddyReferrersForWindow(
 ): Promise<BuddyReferrer[]> {
   const referrer = alias(bookings, "referrer");
   const friends = sql<number>`count(distinct ${bookings.personId})`.mapWith(Number);
-  return db
-    .select({ personId: people.id, fullName: people.fullName, friends })
-    .from(bookingReferrals)
-    .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
-    .innerJoin(people, eq(people.id, referrer.personId))
-    .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        liveTrip(),
-        eq(bookingReferrals.shopId, shopId),
-        eq(referrer.shopId, shopId),
-        eq(people.shopId, shopId),
-        eq(bookings.shopId, shopId),
-        eq(trips.shopId, shopId),
-        sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
-        ne(bookings.status, "cancelled"),
-        ne(bookings.personId, referrer.personId),
-        isNull(people.deletedAt),
-        isNull(people.anonymizedAt),
-      ),
-    )
-    .groupBy(people.id, people.fullName)
-    .orderBy(desc(friends), asc(people.fullName))
-    .limit(limit);
+  return (
+    db
+      .select({ personId: people.id, fullName: people.fullName, friends })
+      .from(bookingReferrals)
+      .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
+      .innerJoin(people, eq(people.id, referrer.personId))
+      .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      // Switched off, the shop's buddy counts read as none; every referral is kept.
+      .innerJoin(
+        shops,
+        and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)),
+      )
+      .where(
+        and(
+          liveTrip(),
+          eq(bookingReferrals.shopId, shopId),
+          eq(referrer.shopId, shopId),
+          eq(people.shopId, shopId),
+          eq(bookings.shopId, shopId),
+          eq(trips.shopId, shopId),
+          sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
+          ne(bookings.status, "cancelled"),
+          ne(bookings.personId, referrer.personId),
+          isNull(people.deletedAt),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .groupBy(people.id, people.fullName)
+      .orderBy(desc(friends), asc(people.fullName))
+      .limit(limit)
+  );
 }
