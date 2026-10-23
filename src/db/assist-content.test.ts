@@ -101,7 +101,10 @@ describe("the Monday read", () => {
   });
 
   it("says nothing and stores nothing while the shop is dark", async () => {
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+    await ctx.db
+      .update(shops)
+      .set({ claudeSuggestionsEnabled: false })
+      .where(eq(shops.id, ctx.shop.id));
     const provider = answering({ sentences: [{ section: "waivers", text: "Hi." }] });
     expect(await mondayReadFor(ctx.db, input(), { provider, env, now })).toEqual([]);
     expect(provider.requests).toHaveLength(0);
