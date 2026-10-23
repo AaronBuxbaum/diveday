@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, courses, diveSites, people, trips } from "./schema";
+import { bookings, courses, diveSites, people, shops, trips } from "./schema";
 import { listThinBoats } from "./thin-boats";
 
 const ctx = fileScopedShopContext();
@@ -117,5 +117,10 @@ describe("listThinBoats", () => {
       invitesPastDivers: true,
       dealOpen: false,
     });
+
+    // The deal is the last-minute list's door: switched off, no boat offers it.
+    await db.update(shops).set({ lastMinuteListEnabled: false }).where(eq(shops.id, shop.id));
+    const off = await listThinBoats(db, shop.id, now, 1000);
+    expect(off.shown.find((boat) => boat.tripId === session.id)?.dealOpen).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -137,6 +138,15 @@ export default async function ReviewsPage({
   // round trip is the price of not doing that.
   const canReadPulses = await canPersonReadPrivateRecapPulse(db, shop.id, session.user.personId);
   const canManageSettings = await canPersonManageShopSettings(db, shop.id, session.user.personId);
+  // Reviews switched off (the Features page): the tab is gone, and so is the
+  // page, unless a diver's private pulse still waits on a reader who may act
+  // on it. Pulses are not reviews and keep arriving (src/db/recap-pulses.ts).
+  if (
+    !shop.reviewsEnabled &&
+    (!canReadPulses || (await listOpenRecapPulses(db, shop.id)).length === 0)
+  ) {
+    redirect(shopPath(shopSlug, "inbox"));
+  }
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means

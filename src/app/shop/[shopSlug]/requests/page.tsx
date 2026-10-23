@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -6,6 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import {
+  countWaitingDateInterests,
   listClosedDateInterests,
   listDeparturesOnDates,
   listOpenDateInterests,
@@ -90,6 +92,12 @@ export default async function RequestsPage({
   // rather than relaxed, the way the inbox's was, so there is nothing left here
   // to drift out of step with it.
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  // Date requests switched off (the Features page): the tab is gone, and so
+  // is the page once no course inquiry is left waiting on it — those still
+  // arrive, because a course page's inquiry is not part of that switch.
+  if (!shop.dateRequestsEnabled && (await countWaitingDateInterests(db, shop.id)) === 0) {
+    redirect(shopPath(shopSlug, "inbox"));
+  }
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone;
   const t = staffTranslator(locale);

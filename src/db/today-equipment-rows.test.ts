@@ -11,6 +11,7 @@ import { saveRentalFit } from "./rental-fit";
 import {
   boats as boatsTable,
   bookings as bookingsTable,
+  shops as shopsTable,
   trips as tripsTable,
   workOrders as workOrdersTable,
 } from "./schema";
@@ -457,6 +458,12 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       servicedOn: shiftCalendarDate(today, -370),
       nextDueOn: shiftCalendarDate(today, -5),
     });
+
+    // Gear servicing switched off on the Features page: no bench row, no ticket lost.
+    await db.update(shopsTable).set({ workOrdersEnabled: false }).where(eq(shopsTable.id, shop.id));
+    const off = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(off.actions.filter((action) => action.kind.startsWith("work_order_"))).toEqual([]);
+    await db.update(shopsTable).set({ workOrdersEnabled: true }).where(eq(shopsTable.id, shop.id));
 
     const otherWork = await getTodayWork(
       db,
