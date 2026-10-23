@@ -1242,11 +1242,15 @@
     "errorShopQuestionInvalid": "Esa respuesta no es válida para esta pregunta. Revísala e inténtalo de nuevo.",
     "shopQuestionsHealthNote": "Las preguntas de salud están en el cuestionario médico de arriba. Si alguna te corresponde, respóndela allí, no aquí.",
     "medicalAlertHeading": "Para la tripulación, en una emergencia",
-    "medicalAlertIntro": "Lo que la tripulación debe saber si algo sale mal en el barco: una alergia y dónde está tu medicamento, diabetes, un inhalador.",
-    "medicalAlertIntroMinor": "Lo que la tripulación debe saber sobre {name} si algo sale mal en el barco: una alergia y dónde está su medicamento, diabetes, un inhalador.",
+    "medicalAlertIntro": "Lo que la tripulación debe saber si algo sale mal en el barco: una alergia y dónde está tu medicamento, diabetes, un inhalador. Déjalo en blanco si no hay nada.",
+    "medicalAlertIntroMinor": "Lo que la tripulación debe saber sobre {name} si algo sale mal en el barco: una alergia y dónde está su medicamento, diabetes, un inhalador. Déjalo en blanco si no hay nada.",
     "medicalAlertNotQuestionnaire": "Esto no reemplaza las preguntas médicas de arriba. Nadie lo revisa para decidir quién puede bucear.",
+    "medicalAlertReaders": "Pueden leerla el propietario del centro, sus gerentes y la tripulación de tu barco; díselo también a la tripulación en el briefing.",
+    "medicalAlertFromEarlier": "Viene de la última exención firmada aquí. Puedes cambiar el texto o borrarlo.",
+    "medicalAlertCounterOne": "Queda 1 carácter",
+    "medicalAlertCounterOther": "Quedan {count} caracteres",
     "medicalAlertLabel": "Lo que la tripulación debe saber",
-    "errorMedicalAlert": "Escribe como máximo 500 caracteres de texto simple."
+    "errorMedicalAlert": "Escribe como máximo 500 caracteres de texto simple para firmar."
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",

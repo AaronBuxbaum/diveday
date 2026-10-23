@@ -16,7 +16,7 @@
  * alert informs and never gates: nothing here feeds readiness, admission,
  * roll call or a count.
  */
-import { and, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
@@ -199,4 +199,44 @@ export async function medicalAlertForSeat(
     .limit(1);
   if (!record?.text) return null;
   return { personId: record.personId, text: record.text };
+}
+
+/**
+ * **What the diver's box starts with on their own waiver page** (domain
+ * reviews S3/S4, H-153 amendment): the link's own draft when there is one
+ * (`draft_medical_answers` set means the diver saved, and a cleared box stays
+ * cleared); otherwise the alert on the **same person's** most recent signed
+ * release at this shop that carries one, marked `earlier` so the page says
+ * where it came from. The person is the record's `person_id` as it reads now,
+ * so a link moved to someone else never shows the first person's words. The
+ * diver can edit or clear it; clearing signs with nothing, as before.
+ */
+export async function medicalAlertPrefill(
+  db: DbExecutor,
+  record: {
+    id: string;
+    shopId: string;
+    personId: string;
+    draftMedicalAlert: string | null;
+    draftMedicalAnswers: unknown;
+  },
+): Promise<{ text: string | null; earlier: boolean }> {
+  if (record.draftMedicalAlert !== null || record.draftMedicalAnswers !== null) {
+    return { text: record.draftMedicalAlert, earlier: false };
+  }
+  const [earlier] = await db
+    .select({ text: waiverRecords.medicalAlert })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, record.shopId),
+        eq(waiverRecords.personId, record.personId),
+        ne(waiverRecords.id, record.id),
+        isNotNull(waiverRecords.signedAt),
+        isNotNull(waiverRecords.medicalAlert),
+      ),
+    )
+    .orderBy(desc(waiverRecords.signedAt))
+    .limit(1);
+  return earlier?.text ? { text: earlier.text, earlier: true } : { text: null, earlier: false };
 }

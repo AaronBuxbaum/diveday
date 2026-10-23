@@ -1,6 +1,6 @@
-import { Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import { FieldGrid } from "@/components/ui/form";
 import type { DiverTranslator } from "@/i18n/messages";
-import { MEDICAL_ALERT_FIELD, MEDICAL_ALERT_MAX } from "@/lib/medical-alert";
+import { MedicalAlertBox } from "./MedicalAlertBox";
 import { SectionHeading } from "./SectionHeading";
 
 /** The box's id: what a refusal rings and `WAIVER_FIELD_ERROR.medicalAlert` names. */
@@ -15,16 +15,22 @@ export const MEDICAL_ALERT_ANCHOR = "medicalAlert";
  * toward the medical step. The page says plainly that it does not replace the
  * questions above and that nobody reviews it for fitness to dive, because
  * nothing does: the questionnaire alone refers a diver to a doctor. On a
- * minor's release it names the diver, since a guardian is typing.
+ * minor's release it names the diver, since a guardian is typing. It says
+ * who reads it and to tell the crew at the briefing too, and to leave it
+ * blank if there is nothing (a bare "N/A" is stored as none anyway).
+ *
+ * The box starts from the link's draft or, with none, from the same person's
+ * last signed release here (`medicalAlertPrefill`), saying so, so signing
+ * again never drops an alert the diver did not see (H-153 amendment).
  */
 export function MedicalAlertSection({
-  draft,
+  prefill,
   minorName,
   error,
   t,
 }: {
-  /** What "Save and finish later" kept, or null. */
-  draft: string | null;
+  /** What the box starts with (`medicalAlertPrefill`): a draft, or the last signed alert. */
+  prefill: { text: string | null; earlier: boolean };
   /** The diver's name on a minor's release, where a guardian is writing about them. */
   minorName: string | null;
   /** The words for a refused box, shown beside it. */
@@ -40,23 +46,22 @@ export function MedicalAlertSection({
           : t("waiver.medicalAlertIntro")}
       </p>
       <p className="mt-1 text-sm text-muted">{t("waiver.medicalAlertNotQuestionnaire")}</p>
+      <p className="mt-1 text-sm text-muted">{t("waiver.medicalAlertReaders")}</p>
+      {prefill.earlier && prefill.text ? (
+        <p className="mt-3 text-sm font-medium">{t("waiver.medicalAlertFromEarlier")}</p>
+      ) : null}
       <FieldGrid columns={1} className="mt-4">
-        <Field
+        <MedicalAlertBox
+          id={MEDICAL_ALERT_ANCHOR}
           label={t("waiver.medicalAlertLabel")}
           hint={t("common.optional")}
           error={error}
-          htmlFor={MEDICAL_ALERT_ANCHOR}
-        >
-          <textarea
-            id={MEDICAL_ALERT_ANCHOR}
-            name={MEDICAL_ALERT_FIELD}
-            rows={3}
-            maxLength={MEDICAL_ALERT_MAX}
-            autoComplete="off"
-            defaultValue={draft ?? ""}
-            className={textareaClassFor(3)}
-          />
-        </Field>
+          defaultValue={prefill.text ?? ""}
+          counter={{
+            one: t.raw("waiver.medicalAlertCounterOne"),
+            other: t.raw("waiver.medicalAlertCounterOther"),
+          }}
+        />
       </FieldGrid>
     </section>
   );

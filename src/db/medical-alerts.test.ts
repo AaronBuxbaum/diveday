@@ -2,8 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest } from "./manifests";
-import { medicalAlertForSeat, medicalAlertTextsForTrip } from "./medical-alerts";
-import { bookings, waiverRecords } from "./schema";
+import {
+  medicalAlertForSeat,
+  medicalAlertPrefill,
+  medicalAlertTextsForTrip,
+} from "./medical-alerts";
+import { bookings, people, waiverRecords } from "./schema";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { saveWaiverTemplate } from "./waivers-templates";
@@ -117,5 +121,80 @@ describe("the medical alert on the boat (issue #2960)", () => {
       false,
     );
     expect(await medicalAlertForSeat(db, shop.id, trip.id, booking.id)).toBeNull();
+  });
+});
+
+/**
+ * Domain reviews S3/S4: a fresh link starts from the alert the same person
+ * left on their latest signed release here, so re-signing never drops it
+ * without the diver seeing it.
+ */
+describe("medicalAlertPrefill", () => {
+  async function freshLinkAfterSigning(medicalAlert: string) {
+    const context = await signedWith(medicalAlert);
+    const { db, person } = context;
+    // A new release for the same person, not yet signed: what the shop's
+    // next "Send waiver" opens.
+    const [signed] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.personId, person.id));
+    if (!signed) throw new Error("signed record missing");
+    const [record] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: signed.shopId,
+        bookingId: null,
+        personId: person.id,
+        templateId: signed.templateId,
+        templateTitle: signed.templateTitle,
+        templateVersion: signed.templateVersion,
+        templateGeneration: signed.templateGeneration,
+        templateBody: signed.templateBody,
+        status: "pending",
+        tokenHash: `prefill-${signed.id}`,
+        expiresAt: signed.expiresAt,
+      })
+      .returning();
+    if (!record) throw new Error("fresh record missing");
+    return { ...context, record };
+  }
+
+  it("fills a fresh link from the person's latest signed release here that carries one", async () => {
+    const { db, record } = await freshLinkAfterSigning(alert);
+    expect(record.medicalAlert).toBeNull();
+    expect(await medicalAlertPrefill(db, record)).toEqual({ text: alert, earlier: true });
+  });
+
+  it("prefers the link's own draft, even a blank one the diver saved", async () => {
+    const { db, record } = await freshLinkAfterSigning(alert);
+    expect(
+      await medicalAlertPrefill(db, { ...record, draftMedicalAlert: "Inhaler in my BCD pocket." }),
+    ).toEqual({ text: "Inhaler in my BCD pocket.", earlier: false });
+    // A saved draft with the box cleared stays cleared.
+    expect(
+      await medicalAlertPrefill(db, {
+        ...record,
+        draftMedicalAlert: null,
+        draftMedicalAnswers: clearAnswers,
+      }),
+    ).toEqual({ text: null, earlier: false });
+  });
+
+  it("reads the record's person at render, so a link moved to someone else never shows the first person's alert", async () => {
+    const { db, shop, record } = await freshLinkAfterSigning(alert);
+    const [someoneElse] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Someone Else" })
+      .returning({ id: people.id });
+    if (!someoneElse) throw new Error("person insert failed");
+    await db
+      .update(waiverRecords)
+      .set({ personId: someoneElse.id })
+      .where(eq(waiverRecords.id, record.id));
+    const [moved] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
+    if (!moved) throw new Error("moved record missing");
+    expect(await medicalAlertPrefill(db, moved)).toEqual({ text: null, earlier: false });
+    expect(JSON.stringify(await medicalAlertPrefill(db, moved))).not.toContain("EpiPen");
   });
 });

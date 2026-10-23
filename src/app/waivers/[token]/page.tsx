@@ -5,6 +5,7 @@ import { ThreadShell } from "@/components/thread/ThreadShell";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
+import { medicalAlertPrefill } from "@/db/medical-alerts";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId, getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
@@ -338,7 +339,7 @@ export default async function WaiverPage({
           {/* Right after the questionnaire, its own heading, optional, and
               not a step on the rail (issue #2960). */}
           <MedicalAlertSection
-            draft={record.draftMedicalAlert}
+            prefill={await medicalAlertPrefill(db, record)}
             minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
             error={
               namedFieldError?.anchor === MEDICAL_ALERT_ANCHOR
