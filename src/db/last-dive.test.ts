@@ -236,6 +236,10 @@ describe("recordLastDive", () => {
       ok: false,
       reason: "invalid",
     });
+    // Before the box's floor, hand-posted: refused here, not by Postgres with a 500.
+    for (const ancient of ["0000-01-01", "0001-01-01", "1949-12-31"]) {
+      expect(await record(db, shopId, personId, ancient)).toEqual({ ok: false, reason: "invalid" });
+    }
   });
 
   it("writes nothing on another shop's diver or a removed one", async () => {
