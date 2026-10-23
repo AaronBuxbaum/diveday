@@ -43,6 +43,7 @@ export type TripRosterActions = {
   walkInAddBookingAction: FormAction;
   walkInAddExistingDiverAction: FormAction;
   addToWaitlistAction: FormAction;
+  addKnownToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
   invitePastDiverAction: FormAction;
   /** A reducer, not a plain `FormAction`: a refused paper release answers in
@@ -416,6 +417,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                   ? actions.walkInAddBookingAction
                   : actions.addBookingAction,
                 addToWaitlistAction: actions.addToWaitlistAction,
+                addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
                 addExistingDiverAction: walkInOpen
                   ? actions.walkInAddExistingDiverAction
                   : actions.addExistingDiverAction,

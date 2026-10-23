@@ -148,11 +148,8 @@ export async function getTripGuests(
     aboardAtSea,
   ] = await Promise.all([
     filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
-    // The returning-diver picker only books, so it is skipped once the boat is
-    // full — hand-entry then wait-lists instead.
-    isFull(trip) || diverQuery === ""
-      ? []
-      : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
+    // The returning-diver picker books an open boat and wait-lists a full one.
+    diverQuery === "" ? [] : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
     // The roster with what each seat's Paid mark recorded and still owes
     // (batch 6 item 1), so the amount field opens on the usual figure: one
     // statement over the seats, not a second beside it.
