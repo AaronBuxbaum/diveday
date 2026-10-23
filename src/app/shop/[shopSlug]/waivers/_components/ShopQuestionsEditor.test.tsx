@@ -9,7 +9,7 @@ import {
   type ShopQuestion,
 } from "@/lib/waiver-questions";
 import { type ShopQuestionsCopy, ShopQuestionsEditor } from "./ShopQuestionsEditor";
-import { shopQuestionsCopy } from "./ShopQuestionsPanel";
+import { shopQuestionHealthWords, shopQuestionsCopy } from "./ShopQuestionsPanel";
 
 afterEach(cleanup);
 
@@ -110,13 +110,166 @@ describe("ShopQuestionsEditor", () => {
     const [kind] = screen.getAllByLabelText(COPY.kindLabel);
     if (!kind) throw new Error("no kind select");
     fireEvent.change(kind, { target: { value: "choice" } });
-    expect(screen.getByText(COPY.optionsCount)).toBeTruthy();
+    // Two to eight options, said as a problem under the box from the start.
+    expect(screen.getByText(COPY.problems.optionsCount)).toBeTruthy();
     fireEvent.change(screen.getByLabelText(COPY.optionsLabel), {
       target: { value: "A friend\n\n  Online search \n" },
     });
     expect((posted(container) as ShopQuestion[])[0]).toMatchObject({
       kind: "choice",
       options: ["A friend", "Online search"],
+    });
+  });
+
+  // Dive-domain review 2, S2: the editor checks the server's rules as the
+  // staffer types, and the browser's own gate stops Publish, so a refused
+  // list never throws away what was typed.
+  describe("a list the server would refuse", () => {
+    function withChoice(options: string) {
+      const view = render(
+        <form aria-label="release">
+          <ShopQuestionsEditor
+            initialQuestions={[
+              {
+                id: "heardabout1",
+                kind: "choice",
+                prompt: "How did you hear about us?",
+                required: false,
+                options: ["A friend", "Online search"],
+              },
+            ]}
+            healthWords={HEALTH_WORDS}
+            copy={COPY}
+          />
+        </form>,
+      );
+      fireEvent.change(screen.getByLabelText(COPY.optionsLabel), { target: { value: options } });
+      const form = view.container.querySelector("form");
+      if (!form) throw new Error("no form");
+      return form;
+    }
+
+    it("makes the form invalid with one option, or nine, and says so under the options", () => {
+      expect(withChoice("Only one").checkValidity()).toBe(false);
+      expect(screen.getByText(COPY.problems.optionsCount)).toBeTruthy();
+      cleanup();
+      const nine = Array.from({ length: 9 }, (_, i) => `Option ${i + 1}`).join("\n");
+      expect(withChoice(nine).checkValidity()).toBe(false);
+      cleanup();
+      expect(withChoice("A friend\nOnline search").checkValidity()).toBe(true);
+    });
+
+    it("makes the form invalid when two options are the same, or one is too long", () => {
+      expect(withChoice("A friend\nA friend").checkValidity()).toBe(false);
+      expect(screen.getByText(COPY.problems.duplicateOption)).toBeTruthy();
+      cleanup();
+      expect(withChoice(`A friend\n${"x".repeat(81)}`).checkValidity()).toBe(false);
+      expect(screen.getByText(COPY.problems.optionTooLong)).toBeTruthy();
+    });
+
+    it("shows the refused question's problem at once after a server refusal", () => {
+      render(
+        <ShopQuestionsEditor
+          initialQuestions={[
+            ...QUESTIONS,
+            {
+              id: "third000001",
+              kind: "choice",
+              prompt: "Pick",
+              required: false,
+              options: ["One"],
+            },
+          ]}
+          healthWords={HEALTH_WORDS}
+          copy={COPY}
+          refusedNumber={3}
+        />,
+      );
+      const third = screen.getByRole("listitem", { name: "Question 3" });
+      expect(third.textContent).toContain(COPY.problems.optionsCount);
+    });
+  });
+
+  // Dive-domain review 1, S2 and S3: the questions shops copy from the RSTC
+  // form, matched by the bundles' own lists, in a prompt or in an option.
+  describe("the health warning", () => {
+    const words = shopQuestionHealthWords();
+
+    it.each([
+      "Are you on blood thinners or any prescription drugs?",
+      "Have you ever had decompression sickness or the bends?",
+      "Any lung problems or trouble breathing?",
+      "I confirm I am fit to dive",
+      "Any recent illness or hospital stay?",
+      "Do you have a pacemaker or stent?",
+      "Do you suffer from panic attacks or anxiety?",
+      "Any history of seizures or epilepsy?",
+      "Are you diabetic?",
+      "Are you pregnant?",
+      "List any medication you take",
+      "¿Toma anticoagulantes?",
+      "¿Ha tenido enfermedad por descompresión?",
+    ])("warns on %s", (prompt) => {
+      const { container } = render(
+        <ShopQuestionsEditor
+          initialQuestions={[{ id: "healthq0001", kind: "text", prompt, required: false }]}
+          healthWords={words}
+          copy={COPY}
+        />,
+      );
+      expect(container.querySelectorAll("[data-health-warning]")).toHaveLength(1);
+    });
+
+    it("warns on a health word in a choice option, and never refuses it", () => {
+      const { container } = render(
+        <form aria-label="release">
+          <ShopQuestionsEditor
+            initialQuestions={[
+              {
+                id: "anything001",
+                kind: "choice",
+                prompt: "Anything we should know?",
+                required: false,
+                options: ["Asthma", "Heart condition", "None of these"],
+              },
+            ]}
+            healthWords={words}
+            copy={COPY}
+          />
+        </form>,
+      );
+      expect(container.querySelectorAll("[data-health-warning]")).toHaveLength(1);
+      expect(container.querySelector("form")?.checkValidity()).toBe(true);
+    });
+
+    it("says an answer is never checked or shown to the crew as a medical alert", () => {
+      expect(COPY.healthWarning).toContain("never checked");
+      expect(COPY.healthWarning).toContain("never shown to the crew as a medical alert");
+    });
+
+    it("leaves an ordinary question alone", () => {
+      const { container } = render(
+        <ShopQuestionsEditor
+          initialQuestions={[
+            {
+              id: "ordinary001",
+              kind: "choice",
+              prompt: "How did you hear about us?",
+              required: false,
+              options: ["A friend", "Our hotel", "Instagram"],
+            },
+            {
+              id: "insurance01",
+              kind: "yes_no",
+              prompt: "Do you carry DAN insurance?",
+              required: false,
+            },
+          ]}
+          healthWords={words}
+          copy={COPY}
+        />,
+      );
+      expect(container.querySelectorAll("[data-health-warning]")).toHaveLength(0);
     });
   });
 });

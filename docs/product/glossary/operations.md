@@ -1413,9 +1413,14 @@
   a later edit or deletion never changes what a diver was asked. A version that asked nothing leaves
   no snapshot. An answer is what the diver wrote and nothing more: never evidence of fitness, age,
   emergency contact or certification, which DiveDay asks for itself, and not where diving currency
-  lives (that is asked on each booking). A health-worded prompt gets a warning in the editor,
-  because health questions belong to the standard questionnaire, which refers a diver to a doctor.
-  A paper or imported release records no answers, and the signed record says so.
+  lives (that is asked on each booking). A prompt or option with a health word gets a warning in
+  the editor, because health questions belong to the standard questionnaire, which refers a diver
+  to a doctor; an answer here is never shown to the crew as a medical alert, and the diver is told
+  to answer health questions on the questionnaire instead. The signed record shows the sealed
+  answers exactly as sealed, and, under its own heading, the shop's current questions that the
+  record's own version did not ask (decided from the two versions, never from a missing answer). A
+  paper, imported or erased release records no answers, and the signed record says so. The answers
+  travel in the shop's export, not in the diver's own bundle, as medical answers do.
 - **Course form** — a form a course asks each student to sign as well as the release, such as an
   agency's course release or a safe-diving-practices statement. The words are the shop's own, written
   beside the release and versioned on every real edit (DiveDay ships none, H-10). Each course

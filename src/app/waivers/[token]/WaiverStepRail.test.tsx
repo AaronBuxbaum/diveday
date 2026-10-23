@@ -153,7 +153,7 @@ describe("the rail with the shop's questions", () => {
         medicalAnswered: 0,
         medicalTotal: ELEVEN,
         signed: false,
-        shopQuestions: { requiredRemaining: 1 },
+        shopQuestions: { requiredRemaining: 1, reached: true },
       }),
     ).toMatchObject({ questions: false, done: 0, total: 4 });
   });
@@ -166,23 +166,36 @@ describe("the rail with the shop's questions", () => {
       waiverRailProgress({
         ...base,
         medicalAnswered: 3,
-        shopQuestions: { requiredRemaining: 0 },
+        shopQuestions: { requiredRemaining: 0, reached: true },
       }).questions,
     ).toBe(false);
     expect(
       waiverRailProgress({
         ...base,
         medicalAnswered: ELEVEN,
-        shopQuestions: { requiredRemaining: 1 },
+        shopQuestions: { requiredRemaining: 1, reached: true },
       }),
     ).toMatchObject({ medical: true, questions: false, done: 2 });
     expect(
       waiverRailProgress({
         ...base,
         medicalAnswered: ELEVEN,
-        shopQuestions: { requiredRemaining: 0 },
+        shopQuestions: { requiredRemaining: 0, reached: true },
       }),
     ).toMatchObject({ medical: true, questions: true, done: 3, total: 4 });
+  });
+
+  // Dive-domain review 2, S7: with every question optional, nothing required
+  // is blank from the start, and the step used to tick while the section was
+  // still below the fold.
+  it("leaves Questions open until the diver has reached the section, even when all are optional", () => {
+    const done = { medicalAnswered: ELEVEN, medicalTotal: ELEVEN, signed: false } as const;
+    expect(
+      waiverRailProgress({ ...done, shopQuestions: { requiredRemaining: 0, reached: false } }),
+    ).toMatchObject({ medical: true, questions: false, done: 2, total: 4 });
+    expect(
+      waiverRailProgress({ ...done, shopQuestions: { requiredRemaining: 0, reached: true } }),
+    ).toMatchObject({ questions: true, done: 3 });
   });
 
   it("never lets the shop's questions settle Medical", () => {
@@ -191,7 +204,7 @@ describe("the rail with the shop's questions", () => {
         medicalAnswered: ELEVEN - 1,
         medicalTotal: ELEVEN,
         signed: false,
-        shopQuestions: { requiredRemaining: 0 },
+        shopQuestions: { requiredRemaining: 0, reached: true },
       }).medical,
     ).toBe(false);
   });
@@ -202,7 +215,7 @@ describe("the rail with the shop's questions", () => {
         medicalAnswered: 0,
         medicalTotal: 0,
         signed: true,
-        shopQuestions: { requiredRemaining: 0 },
+        shopQuestions: { requiredRemaining: 0, reached: true },
       }),
     ).toMatchObject({ done: 4, total: 4 });
     expect(
@@ -211,7 +224,7 @@ describe("the rail with the shop's questions", () => {
         medicalTotal: 0,
         medicalStillOpen: true,
         signed: true,
-        shopQuestions: { requiredRemaining: 0 },
+        shopQuestions: { requiredRemaining: 0, reached: true },
       }),
     ).toMatchObject({ medical: false, questions: true, done: 3, total: 4 });
   });
@@ -221,7 +234,7 @@ describe("the rail with the shop's questions", () => {
       medicalAnswered: ELEVEN,
       medicalTotal: ELEVEN,
       signed: false,
-      shopQuestions: { requiredRemaining: 0 },
+      shopQuestions: { requiredRemaining: 0, reached: true },
     });
     const { getByTestId } = render(
       <WaiverStepRail

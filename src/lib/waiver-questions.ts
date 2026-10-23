@@ -47,9 +47,29 @@ export const SHOP_QUESTIONS_MAX = 15;
 export const SHOP_QUESTION_PROMPT_MAX = 200;
 export const SHOP_ANSWER_TEXT_MAX = 500;
 export const SHOP_ANSWER_NUMBER_MAX = 100_000;
+/** The most characters a number answer's box takes: "100000". */
+export const SHOP_ANSWER_NUMBER_DIGITS = 6;
 export const SHOP_CHOICE_OPTIONS_MIN = 2;
 export const SHOP_CHOICE_OPTIONS_MAX = 8;
 export const SHOP_CHOICE_OPTION_MAX = 80;
+
+/**
+ * The longest `questions` form field the editor's save reads (security review
+ * M2). Fifteen questions at their widest, every character escaped, fit in
+ * about 30 000; a server action accepts 16 MB, and nothing that long is read,
+ * parsed or looped over.
+ */
+export const SHOP_QUESTIONS_FIELD_MAX = 64_000;
+
+/**
+ * A C0 control character other than tab and newline, or DEL (security review
+ * L1). Postgres `jsonb` cannot hold U+0000 at all, so one reaching a write
+ * would fail it with a 500; none of them belongs in a prompt, an option or an
+ * answer, so each is refused where the value is read. Carriage returns are
+ * folded into newlines before this is asked.
+ */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: finding control characters is this pattern's whole job.
+const CONTROL_CHARACTER = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 
 /** An id the editor mints: lowercase letters and digits, 8 to 32 of them. */
 const SHOP_QUESTION_ID = /^[a-z0-9]{8,32}$/;
@@ -94,7 +114,48 @@ export type ShopQuestionsRefusal =
   | "options_count"
   | "option_empty"
   | "option_too_long"
-  | "duplicate_option";
+  | "duplicate_option"
+  | "control_character";
+
+/** A prompt or an option as stored: normalised, one line, tabs as spaces. */
+function oneLine(value: string): string {
+  return normalizeShopText(value)
+    .replace(/\s*\n\s*/g, " ")
+    .replace(/\t/g, " ");
+}
+
+/**
+ * What is wrong with one question's own fields, or null: the rule the server
+ * refuses by and the editor checks as the staffer types, so a list the server
+ * would refuse never posts and nothing typed is lost (dive-domain review 2,
+ * S2). Counts are checked before any per-option work (security review M2).
+ * Ids and duplicates across the list are {@link parseShopQuestions}'s.
+ */
+export function shopQuestionProblem(question: {
+  kind: ShopQuestionKind;
+  prompt: string;
+  options?: readonly string[];
+}): ShopQuestionsRefusal | null {
+  if (CONTROL_CHARACTER.test(question.prompt)) return "control_character";
+  const prompt = oneLine(question.prompt);
+  if (prompt === "") return "prompt_empty";
+  if (prompt.length > SHOP_QUESTION_PROMPT_MAX) return "prompt_too_long";
+  if (question.kind !== "choice") return null;
+  const options = question.options ?? [];
+  if (options.length < SHOP_CHOICE_OPTIONS_MIN || options.length > SHOP_CHOICE_OPTIONS_MAX) {
+    return "options_count";
+  }
+  const seen = new Set<string>();
+  for (const option of options) {
+    if (CONTROL_CHARACTER.test(option)) return "control_character";
+    const text = oneLine(option);
+    if (text === "") return "option_empty";
+    if (text.length > SHOP_CHOICE_OPTION_MAX) return "option_too_long";
+    if (seen.has(text)) return "duplicate_option";
+    seen.add(text);
+  }
+  return null;
+}
 
 /**
  * The editor's list, as the server accepts it: an array of at most 15
@@ -102,6 +163,10 @@ export type ShopQuestionsRefusal =
  * known kind, a prompt of 1 to 200 characters, and (for `choice` alone) 2 to 8
  * distinct options. Returned normalised, with no key a kind does not use, so
  * the stored list and its comparison are one spelling.
+ *
+ * Every bound is checked before the work it bounds (security review M2): the
+ * list's length before any question is read, an option count before any
+ * option is.
  *
  * Never refuses a prompt for its words: a health word earns a warning in the
  * editor ({@link promptHealthWord}), never a refusal.
@@ -125,39 +190,48 @@ export function parseShopQuestions(
     seen.add(item.id);
     if (!isShopQuestionKind(item.kind)) return { ok: false, reason: "bad_kind", index };
     if (typeof item.prompt !== "string") return { ok: false, reason: "malformed", index };
-    const prompt = normalizeShopText(item.prompt).replace(/\s*\n\s*/g, " ");
-    if (prompt === "") return { ok: false, reason: "prompt_empty", index };
-    if (prompt.length > SHOP_QUESTION_PROMPT_MAX) {
-      return { ok: false, reason: "prompt_too_long", index };
-    }
     if (typeof item.required !== "boolean") return { ok: false, reason: "malformed", index };
-    const question: ShopQuestion = {
-      id: item.id,
-      kind: item.kind,
-      prompt,
-      required: item.required,
-    };
+    let options: string[] | undefined;
     if (item.kind === "choice") {
       if (!Array.isArray(item.options)) return { ok: false, reason: "options_count", index };
-      const options: string[] = [];
-      for (const option of item.options) {
-        if (typeof option !== "string") return { ok: false, reason: "malformed", index };
-        const text = normalizeShopText(option);
-        if (text === "") return { ok: false, reason: "option_empty", index };
-        if (text.length > SHOP_CHOICE_OPTION_MAX) {
-          return { ok: false, reason: "option_too_long", index };
-        }
-        if (options.includes(text)) return { ok: false, reason: "duplicate_option", index };
-        options.push(text);
-      }
-      if (options.length < SHOP_CHOICE_OPTIONS_MIN || options.length > SHOP_CHOICE_OPTIONS_MAX) {
+      if (
+        item.options.length < SHOP_CHOICE_OPTIONS_MIN ||
+        item.options.length > SHOP_CHOICE_OPTIONS_MAX
+      ) {
         return { ok: false, reason: "options_count", index };
       }
-      question.options = options;
+      if (!item.options.every((option) => typeof option === "string")) {
+        return { ok: false, reason: "malformed", index };
+      }
+      options = item.options as string[];
     }
-    questions.push(question);
+    const problem = shopQuestionProblem({ kind: item.kind, prompt: item.prompt, options });
+    if (problem) return { ok: false, reason: problem, index };
+    questions.push({
+      id: item.id,
+      kind: item.kind,
+      prompt: oneLine(item.prompt),
+      required: item.required,
+      ...(options ? { options: options.map(oneLine) } : {}),
+    });
   }
   return { ok: true, questions };
+}
+
+/**
+ * The editor's posted `questions` field, read: refused unread above
+ * {@link SHOP_QUESTIONS_FIELD_MAX} characters (security review M2), refused
+ * when it is not JSON, and otherwise {@link parseShopQuestions}'s answer.
+ */
+export function readPostedShopQuestions(raw: string): ReturnType<typeof parseShopQuestions> {
+  if (raw.length > SHOP_QUESTIONS_FIELD_MAX) return { ok: false, reason: "malformed" };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { ok: false, reason: "malformed" };
+  }
+  return parseShopQuestions(parsed);
 }
 
 /** One canonical spelling of a question, key order fixed, for comparison. */
@@ -188,6 +262,35 @@ export function shopQuestionsEqual(
   });
 }
 
+/** A question as a diver read it: kind, prompt and options, never `required`. */
+function askedAs(question: ShopQuestion): string {
+  return JSON.stringify([
+    question.kind,
+    oneLine(question.prompt),
+    question.kind === "choice" ? (question.options ?? []).map(oneLine) : null,
+  ]);
+}
+
+/**
+ * The questions on the shop's current version that the version a record was
+ * signed on did not ask: an id the signed version lacks, or the same id now
+ * with a different prompt, kind or options after normalisation (a question
+ * repurposed in place was never asked in its new words). Whether it is
+ * required does not change what was asked.
+ *
+ * Takes the signed **version's** questions, from the record's own
+ * `template_id`, never its answers: a question left blank, a snapshot erased
+ * or stripped, never makes a question the version asked read as not asked
+ * (dive-domain reviews 1 S1, 2 S3).
+ */
+export function questionsNotAskedBy(
+  signedVersion: readonly ShopQuestion[],
+  current: readonly ShopQuestion[],
+): ShopQuestion[] {
+  const asked = new Map(signedVersion.map((question) => [question.id, askedAs(question)]));
+  return current.filter((question) => asked.get(question.id) !== askedAs(question));
+}
+
 /**
  * One raw form value read as an answer to one question: the typed value,
  * `null` for blank, or `invalid` for a value the kind cannot hold. A `choice`
@@ -199,13 +302,14 @@ export function readShopAnswer(
 ): ShopAnswerValue | null | "invalid" {
   const value = normalizeShopText(raw ?? "");
   if (value === "") return null;
+  if (CONTROL_CHARACTER.test(value)) return "invalid";
   switch (question.kind) {
     case "yes_no":
       return value === "yes" ? true : value === "no" ? false : "invalid";
     case "text":
       return value.length <= SHOP_ANSWER_TEXT_MAX ? value : "invalid";
     case "number": {
-      if (!/^\d{1,6}$/.test(value)) return "invalid";
+      if (!new RegExp(`^\\d{1,${SHOP_ANSWER_NUMBER_DIGITS}}$`).test(value)) return "invalid";
       const number = Number.parseInt(value, 10);
       return number <= SHOP_ANSWER_NUMBER_MAX ? number : "invalid";
     }
@@ -222,13 +326,19 @@ function holdsShopAnswer(question: ShopQuestion, value: unknown): value is ShopA
     case "yes_no":
       return typeof value === "boolean";
     case "text":
-      return typeof value === "string" && value !== "" && value.length <= SHOP_ANSWER_TEXT_MAX;
+      return (
+        typeof value === "string" &&
+        value !== "" &&
+        value.length <= SHOP_ANSWER_TEXT_MAX &&
+        !CONTROL_CHARACTER.test(value)
+      );
     case "number":
       return (
-        typeof value === "number" &&
-        Number.isInteger(value) &&
-        value >= 0 &&
-        value <= SHOP_ANSWER_NUMBER_MAX
+        (typeof value === "number" &&
+          Number.isInteger(value) &&
+          value >= 0 &&
+          value <= SHOP_ANSWER_NUMBER_MAX) ||
+        isNumberAsTyped(value)
       );
     case "date":
       return typeof value === "string" && isValidCalendarDate(value);
@@ -288,9 +398,26 @@ export function buildShopAnswers(
 }
 
 /**
+ * A number answer the diver typed that is not a whole number ("40ish"), as
+ * short as the box allows and with no control character: kept in a draft as
+ * typed, so the diver sees it again and the refusal under it makes sense
+ * (dive-domain review 2, S6). Never sealed: signing reads it as invalid.
+ */
+function isNumberAsTyped(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value !== "" &&
+    value.length <= SHOP_ANSWER_NUMBER_DIGITS &&
+    !CONTROL_CHARACTER.test(value)
+  );
+}
+
+/**
  * What "Save and finish later" keeps: every value that reads as a valid answer
- * to a question on the pinned template. Blanks and values the kind cannot hold
- * are dropped rather than refused: a draft is not evidence.
+ * to a question on the pinned template, and a number answer that is not one
+ * as typed (see {@link isNumberAsTyped}), so nothing the diver can see in a
+ * number box is silently dropped. Blanks and other values the kind cannot
+ * hold are dropped rather than refused: a draft is not evidence.
  */
 export function draftShopAnswersFrom(
   questions: readonly ShopQuestion[],
@@ -299,8 +426,13 @@ export function draftShopAnswersFrom(
   if (questions.length === 0) return null;
   const draft: DraftShopAnswers = {};
   for (const question of questions) {
-    const answer = readShopAnswer(question, read(question.id));
+    const raw = read(question.id);
+    const answer = readShopAnswer(question, raw);
     if (answer !== null && answer !== "invalid") draft[question.id] = answer;
+    else if (answer === "invalid" && question.kind === "number") {
+      const typed = normalizeShopText(raw ?? "");
+      if (isNumberAsTyped(typed)) draft[question.id] = typed;
+    }
   }
   return draft;
 }

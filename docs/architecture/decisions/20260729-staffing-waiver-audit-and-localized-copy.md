@@ -72,7 +72,9 @@ snapshot is what was asked and answered, so it is signed evidence and the seal c
   stripping the snapshot from such a record changes the digest and reads `invalid`.
 - **Versions 3 and 4 inherit it** by spreading the version 1 set, as they inherit every other
   field. **Version 2 (erased) excludes it**: erasure strips the answers with the rest of the
-  diver's own words and re-seals without them.
+  diver's own words and re-seals without them. Because the answers cannot survive erasure, a version
+  2 record that carries `shop_answers` or `draft_shop_answers` again reads `invalid`, the way
+  version 4 refuses a guardian address put back.
 - `shopAnswers` is in `WAIVER_SEALED_FIELDS`, so the integrity readers (`WAIVER_SEALED_COLUMNS`)
   select it. The unsigned draft, `draft_shop_answers`, is never sealed, never exported and is
   cleared on signing.

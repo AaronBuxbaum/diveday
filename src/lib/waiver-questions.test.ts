@@ -7,8 +7,11 @@ import {
   parseHealthWords,
   parseShopQuestions,
   promptHealthWord,
+  questionsNotAskedBy,
+  readPostedShopQuestions,
   readShopAnswer,
   restoreDraftShopAnswers,
+  SHOP_QUESTIONS_FIELD_MAX,
   SHOP_QUESTIONS_MAX,
   type ShopQuestion,
   shopAnswerField,
@@ -107,6 +110,72 @@ describe("parseShopQuestions", () => {
     });
   });
 
+  // Security review M2: the count is checked before any per-option work, so a
+  // 16 MB body of distinct options is refused in one comparison, not in
+  // minutes of quadratic duplicate checks.
+  it("refuses a huge option list on its count, before reading a single option", () => {
+    const options = Array.from({ length: 200_000 }, (_, i) => String(i));
+    const started = performance.now();
+    expect(parseShopQuestions([{ ...heard, options }])).toEqual({
+      ok: false,
+      reason: "options_count",
+      index: 0,
+    });
+    expect(performance.now() - started).toBeLessThan(50);
+    // And a list of more than fifteen is refused before any question is read.
+    const many = Array.from({ length: 100_000 }, () => ({ ...heard, options }));
+    const startedMany = performance.now();
+    expect(parseShopQuestions(many)).toEqual({ ok: false, reason: "too_many" });
+    expect(performance.now() - startedMany).toBeLessThan(50);
+  });
+
+  it("caps the posted list's length before it is parsed", () => {
+    expect(SHOP_QUESTIONS_FIELD_MAX).toBeGreaterThan(
+      JSON.stringify(
+        Array.from({ length: SHOP_QUESTIONS_MAX }, (_, i) => ({
+          id: `question${String(i).padStart(4, "0")}`,
+          kind: "choice",
+          prompt: "p".repeat(200),
+          required: true,
+          options: Array.from({ length: 8 }, (_, j) => `${j}${"o".repeat(79)}`),
+        })),
+      ).length,
+    );
+    const started = performance.now();
+    expect(readPostedShopQuestions("x".repeat(16 * 1024 * 1024))).toEqual({
+      ok: false,
+      reason: "malformed",
+    });
+    expect(readPostedShopQuestions("{not json")).toEqual({ ok: false, reason: "malformed" });
+    expect(readPostedShopQuestions(JSON.stringify([heard]))).toEqual({
+      ok: true,
+      questions: [heard],
+    });
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+
+  // Security review L1: Postgres jsonb cannot hold U+0000, so a control
+  // character is refused here rather than failing the write with a 500.
+  it("refuses a control character in a prompt or an option", () => {
+    expect(parseShopQuestions([{ ...insured, prompt: "Insured\u0000?" }])).toMatchObject({
+      reason: "control_character",
+      index: 0,
+    });
+    expect(parseShopQuestions([{ ...insured, prompt: "Insured\u0007?" }])).toMatchObject({
+      reason: "control_character",
+    });
+    expect(parseShopQuestions([{ ...heard, options: ["A\u0000", "B"] }])).toMatchObject({
+      reason: "control_character",
+    });
+    // A tab pasted into a one-line prompt or option is a space.
+    expect(parseShopQuestions([{ ...heard, options: ["A\tfriend", "B"] }])).toMatchObject({
+      ok: true,
+      questions: [{ options: ["A friend", "B"] }],
+    });
+    // A pasted line break in a prompt is still folded to a space.
+    expect(parseShopQuestions([{ ...insured, prompt: "Insured\n?" }]).ok).toBe(true);
+  });
+
   /** A shop may write any words it likes: a health word warns in the editor, never refuses. */
   it("never refuses a prompt for its words", () => {
     expect(
@@ -148,6 +217,42 @@ describe("shopQuestionsEqual", () => {
   });
 });
 
+/**
+ * "Asked now, not on this release" (dive-domain reviews 1 S1, 2 S3 and S5):
+ * decided from the version the record was signed on, never from which
+ * answers are missing.
+ */
+describe("questionsNotAskedBy", () => {
+  it("lists a current question the signed version did not have", () => {
+    expect(questionsNotAskedBy([dives], [dives, insured])).toEqual([insured]);
+    expect(questionsNotAskedBy([], [dives])).toEqual([dives]);
+    expect(questionsNotAskedBy([dives, insured], [dives, insured])).toEqual([]);
+  });
+
+  it("lists a question reworded, retyped or given other options under the same id", () => {
+    const reworded = { ...heard, prompt: "Do you carry dive accident insurance?" };
+    const retyped: ShopQuestion = { ...dives, kind: "text" };
+    const reoptioned = { ...heard, options: ["A friend", "Instagram"] };
+    expect(questionsNotAskedBy([heard, dives], [reworded, retyped])).toEqual([reworded, retyped]);
+    expect(questionsNotAskedBy([heard], [reoptioned])).toEqual([reoptioned]);
+  });
+
+  it("does not list a question that only changed spacing, Unicode form or whether it is required", () => {
+    expect(
+      questionsNotAskedBy(
+        [heard],
+        [{ ...heard, prompt: `  ${heard.prompt.normalize("NFD")} `, required: true }],
+      ),
+    ).toEqual([]);
+  });
+
+  it("never reads the answers, so a question left blank or erased is not listed", () => {
+    // The helper takes questions only: a snapshot with every answer null, or
+    // none at all, cannot make a question the version asked read "not asked".
+    expect(questionsNotAskedBy([dives, heard, insured], [dives, heard, insured])).toEqual([]);
+  });
+});
+
 describe("readShopAnswer", () => {
   it("reads each kind and refuses what it cannot hold", () => {
     expect(readShopAnswer(insured, "yes")).toBe(true);
@@ -172,6 +277,31 @@ describe("readShopAnswer", () => {
     expect(readShopAnswer(text, "x".repeat(500))).toBe("x".repeat(500));
     expect(readShopAnswer(text, "x".repeat(501))).toBe("invalid");
     expect(readShopAnswer(text, "   ")).toBeNull();
+  });
+});
+
+describe("control characters in answers (security review L1)", () => {
+  const note: ShopQuestion = {
+    id: "notetext01",
+    kind: "text",
+    prompt: "Anything else?",
+    required: false,
+  };
+
+  it("refuses a NUL or other control character in a text answer, and keeps newlines and tabs", () => {
+    expect(readShopAnswer(note, "a\u0000b")).toBe("invalid");
+    expect(readShopAnswer(note, "a\u001bb")).toBe("invalid");
+    expect(readShopAnswer(note, "line one\nline two\tend")).toBe("line one\nline two\tend");
+    expect(buildShopAnswers([note], () => "a\u0000b")).toEqual({
+      ok: false,
+      questionId: note.id,
+      reason: "invalid",
+    });
+  });
+
+  it("never saves a draft value holding a control character", () => {
+    expect(draftShopAnswersFrom([note], () => "a\u0000b")).toEqual({});
+    expect(restoreDraftShopAnswers([note], { [note.id]: "a\u0000b" })).toEqual({});
   });
 });
 
@@ -228,13 +358,29 @@ describe("buildShopAnswers", () => {
 });
 
 describe("drafts", () => {
-  it("keeps only valid values on save", () => {
+  // Dive-domain review 2, S6: a number box the diver typed into never comes
+  // back empty, and the value is still refused at signing.
+  it("keeps a number answer that is not a whole number as typed, never sealing it", () => {
+    expect(draftShopAnswersFrom([dives], () => "40ish")).toEqual({ [dives.id]: "40ish" });
+    expect(restoreDraftShopAnswers([dives], { [dives.id]: "40ish" })).toEqual({
+      [dives.id]: "40ish",
+    });
+    expect(buildShopAnswers([dives], () => "40ish")).toMatchObject({
+      ok: false,
+      reason: "invalid",
+    });
+    // Longer than the box takes, or carrying a control character: dropped.
+    expect(draftShopAnswersFrom([dives], () => "1234567")).toEqual({});
+    expect(restoreDraftShopAnswers([dives], { [dives.id]: "4\u00000" })).toEqual({});
+  });
+
+  it("keeps valid values on save and drops a choice or yes/no it cannot hold", () => {
     expect(
       draftShopAnswersFrom(
         [dives, heard, insured],
-        reader({ [dives.id]: "lots", [heard.id]: "A friend", [insured.id]: "yes" }),
+        reader({ [dives.id]: "40", [heard.id]: "Not an option", [insured.id]: "maybe" }),
       ),
-    ).toEqual({ [heard.id]: "A friend", [insured.id]: true });
+    ).toEqual({ [dives.id]: 40 });
     expect(draftShopAnswersFrom([], reader({}))).toBeNull();
   });
 

@@ -1622,7 +1622,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       await db
         .update(waiverRecords)
-        .set({ draftSignerName: "Ben Q", draftAcknowledged: true })
+        .set({ draftSignerName: "Ben Q", draftAcknowledged: true, draftShopAnswers: { q1: "Ana" } })
         .where(eq(waiverRecords.bookingId, shared.bookingId));
 
       const result = await splitBookingIdentity(db, {
@@ -1643,7 +1643,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         expect(release.personId).toBe(result.personId);
         expect(release.movedFromPersonId).toBe(nora);
         expect(release.movedByPersonId).toBe(staffer.id);
-        expect(release.draftSignerName).toBeNull();
+        expect([release.draftSignerName, release.draftShopAnswers]).toEqual([null, null]);
         expect(release.draftAcknowledged).toBe(false);
         expect(verifyWaiverIntegrity(release)).toBe("unsealed");
       }

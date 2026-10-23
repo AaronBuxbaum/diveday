@@ -9,17 +9,22 @@
     "unchanged": "No change. The release is exactly as it was, so nothing was published and no signature was affected.",
     "resigningSendLink": "Send them by departure",
     "resigning": "{count, plural, one {New version published. # diver signs again before boarding.} other {New version published. # divers sign again before boarding.}}",
-    "questionsInvalid": "That didn’t publish. Each question needs a prompt, and a choice needs 2 to 8 different options, one per line."
+    "questionsInvalid": "That didn’t publish. Each question needs its wording, and a list needs 2 to 8 different options, one per line.",
+    "questionInvalid": "That didn’t publish. Question {number} needs a fix."
   },
   "publish": {
     "choiceLegend": "This edit is",
-    "correction": "A correction — wording only",
+    "correction": "A correction: wording only",
     "correctionDetail": "Every standing signature stays current.",
     "material": "A material change",
     "materialDetail": "{count, plural, one {Asks the # standing signature to sign again.} other {Asks all # standing signatures to sign again.}}",
     "materialBoarding": "{count, plural, one {# diver boards within {days} days.} other {# divers board within {days} days.}}",
     "action": "Publish",
-    "confirm": "{count, plural, one {Publish: # signs again} other {Publish: # sign again}}"
+    "confirm": "{count, plural, one {Publish: # signs again} other {Publish: # sign again}}",
+    "correctionQuestions": "A correction: questions only",
+    "correctionQuestionsDetail": "Every standing signature stays current. Those divers are not asked the new questions until they sign again, and links already sent ask the questions they went out with.",
+    "materialQuestions": "A material change: everyone answers the new questions",
+    "materialQuestionsDetail": "{count, plural, one {Asks the # standing signature to sign again and answer the new questions.} other {Asks all # standing signatures to sign again and answer the new questions.}}"
   },
   "fieldLabel": "Release text",
   "placeholder": "Write the release the diver will read and sign.",
@@ -91,13 +96,19 @@
     "answerNo": "No",
     "releaseHeading": "What they signed",
     "shopAnswersHeading": "Answers to your questions",
-    "shopAnswersLead": "What the diver wrote. DiveDay does not check these answers.",
+    "shopAnswersLead": "The diver wrote these answers. DiveDay does not check them.",
     "shopAnswerBlank": "Left blank",
-    "shopAnswerNotAsked": "Not asked (signed on version {version})",
     "shopAnswerAsOf": "{answer}, as of {date}",
     "shopAnswersPaper": "Not recorded in DiveDay: this release was signed on paper.",
     "shopAnswersImported": "Not recorded in DiveDay: this release was imported.",
-    "shopAnswersHeld": "Answers stay hidden until someone confirms who is in this seat."
+    "shopAnswersHeld": "Answers stay hidden until someone confirms who is in this seat.",
+    "shopAnswerRequired": "Required",
+    "shopAnswerOptional": "Optional",
+    "shopAnswerOptions": "Options: {options}",
+    "shopAnswersNotOnRelease": "Asked now, not on this release",
+    "shopAnswersNotOnReleaseLead": "Your current questions that version {version} did not ask. They are not part of this signed record.",
+    "shopAnswersErased": "The answers were erased with the diver’s personal data on {date}.",
+    "shopAnswersMissing": "Version {version} asked questions, but no answers are on this record."
   },
   "courseForms": {
     "heading": "Course forms",
@@ -132,12 +143,12 @@
     "heading": "Your questions",
     "intro": "Divers answer these after the medical questionnaire, before they sign. The answers go on the signed waiver and never hold anyone back from diving.",
     "alreadyAsked": "DiveDay already asks for date of birth, an emergency contact, the certification card and agency, and a guardian for a minor. When they last dived is asked on each booking.",
-    "optionalAdvice": "Most questions work best optional: each required one is another step on a phone at the dock.",
+    "optionalAdvice": "Keep most questions optional. Each required one is another step for a diver signing on a phone.",
     "empty": "No questions yet.",
     "add": "Add a question",
     "full": "{max, plural, one {A waiver asks at most # question.} other {A waiver asks at most # questions.}}",
     "promptLabel": "Question",
-    "kindLabel": "Answer",
+    "kindLabel": "Answer type",
     "kind": {
       "yesNo": "Yes or no",
       "text": "Short text",
@@ -148,14 +159,21 @@
     "requiredLabel": "Must be answered to sign",
     "optionsLabel": "Options, one per line",
     "optionsHint": "From 2 to 8.",
-    "optionsCount": "A list needs 2 to 8 different options, one per line.",
     "moveUp": "Move up",
     "moveDown": "Move down",
     "delete": "Delete",
-    "healthWarning": "Health questions are asked by the standard medical questionnaire, which refers a diver to a doctor when needed. An answer here is never checked.",
+    "healthWarning": "Health questions belong on the standard medical questionnaire, which refers a diver to a doctor when needed. An answer here is never checked, never shown to the crew as a medical alert, and every staff member can read it.",
     "questionLabel": "Question {number}",
     "standardSummary": "The standard medical questionnaire",
     "standardStays": "It stays as it is. Every diver answers it before your questions.",
-    "healthWords": "medic*, condition*, health, doctor*, physician*, allerg*, asthma, heart, cardi*, pregnan*, surger*, injur*, diabet*, epilep*, seizure*, blood pressure"
+    "healthWords": "medic*, meds, condition*, health, doctor*, physician*, allerg*, asthma, heart, cardi*, pregnan*, surger*, injur*, diabet*, epilep*, seizure*, blood*, lung*, breath*, sick*, ill, illness*, disease*, decompress*, bends, fit to dive, fitness, prescri*, drug*, pill*, stroke*, hospital*, pacemaker*, stent*, insulin, faint*, unconscious*, panic, anxiety, mental, psych*, pain, sinus*, ear, ears, cancer*, disab*, implant*, migraine*",
+    "problem": {
+      "promptEmpty": "Write the question.",
+      "promptTooLong": "Keep the question to {max, plural, one {# character} other {# characters}}.",
+      "optionsCount": "A list needs 2 to 8 different options, one per line.",
+      "optionTooLong": "Keep each option to {max, plural, one {# character} other {# characters}}.",
+      "duplicateOption": "Two options are the same.",
+      "controlCharacter": "Remove the hidden character pasted into this question."
+    }
   }
 }

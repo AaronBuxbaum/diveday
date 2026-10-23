@@ -267,7 +267,9 @@ export default async function SignedWaiverPage({
         {shopAnswers ? (
           <ShopAnswersCard
             shopAnswers={shopAnswers.shopAnswers}
-            currentQuestions={shopAnswers.currentQuestions}
+            versionAsked={shopAnswers.versionAsked}
+            notOnThisRelease={shopAnswers.notOnThisRelease}
+            erasedAt={shopAnswers.erasedAt}
             signatureMethod={waiver.signatureMethod}
             templateVersion={waiver.templateVersion}
             signedAt={waiver.signedAt}

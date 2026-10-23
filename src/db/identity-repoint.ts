@@ -15,6 +15,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
 /**
  * **The third answer to a held seat: it is another diver already on file**
@@ -369,10 +370,7 @@ async function repointInTransaction(
     .update(waiverRecords)
     .set({
       personId: input.toPersonId,
-      draftSignerName: null,
-      draftMedicalAnswers: null,
-      draftAcknowledged: false,
-      draftGuardian: null,
+      ...CLEARED_DRAFT_COLUMNS,
       deliveryError: null,
       deliveryProviderMessageId: null,
       deliveryProviderStatus: null,

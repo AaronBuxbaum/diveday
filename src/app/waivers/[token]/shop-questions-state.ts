@@ -38,7 +38,7 @@ export async function shopQuestionsForPage(
   /** The named question's own field error, for the page's refusal ring. */
   refusedFieldError: WaiverFieldError | undefined;
   /** What `WaiverPacing` needs, or nothing when this version asks no questions. */
-  pacing: { initialRequiredRemaining: number } | undefined;
+  pacing: { initialRequiredRemaining: number; initialReached: boolean } | undefined;
 }> {
   const questions = await getWaiverTemplateQuestions(db, record.shopId, record.templateId);
   const draft = restoreDraftShopAnswers(questions, record.draftShopAnswers);
@@ -62,6 +62,8 @@ export async function shopQuestionsForPage(
             initialRequiredRemaining: questions.filter(
               (question) => question.required && draft[question.id] === undefined,
             ).length,
+            // A draft holding any answer means the diver has been there.
+            initialReached: Object.keys(draft).length > 0,
           }
         : undefined,
   };

@@ -62,6 +62,10 @@ export function ShopQuestionsSection({
           ? t("waiver.shopQuestionsIntroMinor", { name: minorName, shop: shopName })
           : t("waiver.shopQuestionsIntro", { shop: shopName })}
       </p>
+      {/* Never a gate: one line sending health back to the questionnaire,
+          which refers a diver to a doctor, because an answer here is never
+          read as a disclosure (dive-domain review 1, S4). */}
+      <p className="mt-1 text-sm text-muted">{t("waiver.shopQuestionsHealthNote")}</p>
       <ul className="mt-4 divide-y divide-border border-y border-border">
         {questions.map((question) => (
           <li key={question.id} className="py-4">

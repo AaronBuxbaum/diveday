@@ -19,7 +19,12 @@ import {
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
-import { type ShopAnswer, type ShopQuestion, shopQuestionsEqual } from "@/lib/waiver-questions";
+import {
+  questionsNotAskedBy,
+  type ShopAnswer,
+  type ShopQuestion,
+  shopQuestionsEqual,
+} from "@/lib/waiver-questions";
 import { DEFAULT_WAIVER_TITLE, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import {
@@ -437,16 +442,19 @@ export async function getWaiverTemplateQuestions(
 
 /**
  * **The shop's questions on one signed record**, for its staff page: the
- * snapshot sealed into the record, and the questions the shop's current
- * version asks, so a question added since reads "Not asked" rather than as
- * left blank (dive-domain review C5). Scoped by shop *and* by the diver the
- * URL names, signed records only, like `getSignedWaiverForDiver`. A seat
- * still held over who is in it (H-13) shows no answers at all: they may not
- * be this diver's.
+ * snapshot sealed into the record; whether the version it was signed on (its
+ * own `template_id` row) asked anything; and the shop's current questions that
+ * version did not ask (`questionsNotAskedBy`), decided from the two versions
+ * and never from which answers are missing, so a blank, erased or stripped
+ * answer never reads "not asked" (dive-domain reviews 1 S1, 2 S3).
+ *
+ * Scoped by shop *and* by the diver the URL names, signed records only, like
+ * `getSignedWaiverForDiver`. A seat still held over who is in it (H-13) shows
+ * no answers at all: they may not be this diver's. An erased record says when.
  *
  * The caller decides who reads it (`canPersonReadShopAnswers`); nothing
  * here aggregates answers across records, and the snapshot's own prompt is
- * the only label a reader may show (C6).
+ * the only label a sealed answer may wear (C6).
  */
 export async function getSignedRecordShopAnswers(
   db: DbExecutor,
@@ -454,11 +462,15 @@ export async function getSignedRecordShopAnswers(
 ): Promise<{
   shopAnswers: ShopAnswer[] | null;
   identityHeld: boolean;
-  currentQuestions: ShopQuestion[];
+  erasedAt: Date | null;
+  versionAsked: boolean;
+  notOnThisRelease: ShopQuestion[];
 } | null> {
   const [row] = await db
     .select({
       shopAnswers: waiverRecords.shopAnswers,
+      templateId: waiverRecords.templateId,
+      anonymizedAt: waiverRecords.anonymizedAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
     })
     .from(waiverRecords)
@@ -477,10 +489,13 @@ export async function getSignedRecordShopAnswers(
     .limit(1);
   if (!row) return null;
   const identityHeld = Boolean(row.identityUnconfirmedAt);
+  const signedVersion = await getWaiverTemplateQuestions(db, input.shopId, row.templateId);
   const current = await getCurrentWaiverTemplate(db, input.shopId);
   return {
     shopAnswers: identityHeld ? null : row.shopAnswers,
     identityHeld,
-    currentQuestions: current?.questions ?? [],
+    erasedAt: row.anonymizedAt,
+    versionAsked: signedVersion.length > 0,
+    notOnThisRelease: questionsNotAskedBy(signedVersion, current?.questions ?? []),
   };
 }

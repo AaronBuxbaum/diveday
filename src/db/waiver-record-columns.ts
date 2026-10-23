@@ -66,3 +66,25 @@ const allColumns = getTableColumns(waiverRecords);
 export const WAIVER_SEALED_COLUMNS = Object.fromEntries(
   WAIVER_SEALED_FIELDS.map((field) => [field, allColumns[field]]),
 ) as { [Field in WaiverSealedField]: (typeof allColumns)[Field] };
+
+/**
+ * **Every draft column of a pending link, cleared** (security review M1): what
+ * a bearer typed before signing, which belongs to whoever typed it. Spread by
+ * every writer that moves a pending link to another diver (the split in
+ * `bookings.ts`, the repoint in `identity-repoint.ts`) and by erasure
+ * (`anonymize.ts`), so a draft never ends up filed under someone who did not
+ * type it, where the typist's erasure cannot find it.
+ * `waiver-record-columns.test.ts` compares the keys with every `draft*`
+ * column of the schema, so a new draft column cannot be missed.
+ */
+export const CLEARED_DRAFT_COLUMNS = {
+  draftSignerName: null,
+  draftAcknowledged: false,
+  draftMedicalAnswers: null,
+  draftGuardian: null,
+  draftShopAnswers: null,
+} as const satisfies {
+  [Column in keyof typeof allColumns as Column extends `draft${string}` ? Column : never]:
+    | null
+    | false;
+};

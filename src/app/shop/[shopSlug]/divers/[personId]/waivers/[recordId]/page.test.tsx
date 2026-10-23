@@ -2,12 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { isValidElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { personRoles, shops, waiverRecords } from "@/db/schema";
+import { personRoles, shops, waiverRecords, waiverTemplates } from "@/db/schema";
+import { DEMO_SHOP_QUESTIONS } from "@/db/seed-waiver-questions";
 import { getShopBySlug } from "@/db/shops";
+import { staffTranslator } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import type { ShopAnswer } from "@/lib/waiver-questions";
+import type { ShopAnswer, ShopQuestion } from "@/lib/waiver-questions";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import {
@@ -98,6 +100,12 @@ async function renderAs(
     recordInAnotherShop?: boolean;
     /** Columns to write onto the record first: the shop's answers, a paper signature. */
     recordPatch?: Partial<typeof waiverRecords.$inferInsert>;
+    /**
+     * The questions the version this record was signed on asked: written as
+     * an earlier, retired version of the shop's release, and the record
+     * pinned to it. The shop's current version keeps the seeded questions.
+     */
+    signedVersionQuestions?: ShopQuestion[];
   } = {},
 ) {
   if (!FLAGGED || !UNFLAGGED) throw new Error("questionnaire changed shape");
@@ -125,6 +133,24 @@ async function renderAs(
 
   if (options.recordPatch) {
     await db.update(waiverRecords).set(options.recordPatch).where(eq(waiverRecords.id, record.id));
+  }
+  if (options.signedVersionQuestions) {
+    const [version] = await db
+      .insert(waiverTemplates)
+      .values({
+        shopId: shop.id,
+        title: "Release",
+        version: 900,
+        body: "An earlier release the shop has since replaced.",
+        questions: options.signedVersionQuestions,
+        deletedAt: new Date("2026-01-01T00:00:00.000Z"),
+      })
+      .returning({ id: waiverTemplates.id });
+    if (!version) throw new Error("template insert failed");
+    await db
+      .update(waiverRecords)
+      .set({ templateId: version.id, templateVersion: 900 })
+      .where(eq(waiverRecords.id, record.id));
   }
 
   const email = viewerRoles.includes("owner") ? SEEDED_OWNER_EMAIL : SEEDED_CAPTAIN_EMAIL;
@@ -230,47 +256,110 @@ describe("a signed release's medical answers, against a session that claims too 
  * (dive-domain review C5): answered, left blank, and not asked.
  */
 describe("a signed release's answers to the shop's questions", () => {
-  const ANSWERS: ShopAnswer[] = [
-    {
-      id: "demodives01",
-      kind: "number",
-      prompt: "Dives logged so far",
-      required: false,
-      answer: 40,
-    },
+  const staff = staffTranslator("en-US");
+  const NOT_ON_RELEASE = staff("waiversStaff.record.shopAnswersNotOnRelease");
+  /** The version this record was signed on: two questions, worded its own way. */
+  const SIGNED_VERSION: ShopQuestion[] = [
+    { id: "demodives01", kind: "number", prompt: "Dives logged so far", required: false },
     {
       id: "demoheard01",
       kind: "choice",
       prompt: "How did you hear about us?",
-      required: false,
+      required: true,
       options: ["A friend", "Online search"],
-      answer: null,
     },
+  ];
+  const ANSWERS: ShopAnswer[] = [
+    { ...(SIGNED_VERSION[0] as ShopQuestion), answer: 40 },
+    { ...(SIGNED_VERSION[1] as ShopQuestion), answer: null },
   ];
 
   it.each([["crew"], ["owner"]] as const)(
-    "a %s reads what the diver wrote, the blank, and the question this version did not ask",
+    "a %s reads the sealed answers as sealed, and the questions asked since under their own heading",
     async (role) => {
       const { shopAnswersText: text } = await renderAs([role], {
         recordPatch: { shopAnswers: ANSWERS, signatureMethod: "typed_consent" },
+        signedVersionQuestions: SIGNED_VERSION,
       });
       expect(text).toContain("Answers to your questions");
-      expect(text).toContain("What the diver wrote. DiveDay does not check these answers.");
+      expect(text).toContain(staff("waiversStaff.record.shopAnswersLead"));
       expect(text).toContain("Dives logged so far");
       expect(text).toMatch(/40, as of /);
-      expect(text).toContain("How did you hear about us?");
       expect(text).toContain("Left blank");
-      // The seeded current version also asks about insurance, which the
-      // snapshot above never did.
-      expect(text).toMatch(/Not asked \(signed on version \d+\)/);
+      // Exactly what was asked: whether it was required, and a choice's options.
+      expect(text).toContain("Options: A friend, Online search");
+      expect(text).toContain("Required");
+      expect(text).toContain("Optional");
+      // Apart from the sealed list, after it.
+      expect(text).toContain(NOT_ON_RELEASE);
+      expect(text.indexOf("Left blank")).toBeLessThan(text.indexOf(NOT_ON_RELEASE));
+      const since = text.slice(text.indexOf(NOT_ON_RELEASE));
+      // Never on version 900: the insurance question. Reworded since under
+      // the same id: the dive count. Given other options: how they heard.
+      expect(since).toContain("Do you carry dive accident insurance?");
+      expect(since).toContain("How many dives have you logged?");
+      expect(since).toContain("How did you hear about us?");
+      expect(since).toContain(
+        staff("waiversStaff.record.shopAnswersNotOnReleaseLead", { version: 900 }),
+      );
     },
   );
+
+  // Dive-domain reviews 1 S1 and 2 S3: "not asked" comes from the version,
+  // never from a missing or blank answer.
+  it("never lists a question the version asked and the diver left blank", async () => {
+    const { shopAnswersText: text } = await renderAs(["owner"], {
+      recordPatch: {
+        shopAnswers: DEMO_SHOP_QUESTIONS.map((question) => ({ ...question, answer: null })),
+        signatureMethod: "typed_consent",
+      },
+      signedVersionQuestions: DEMO_SHOP_QUESTIONS,
+    });
+    expect(text).toContain("Left blank");
+    expect(text).toContain("Do you carry dive accident insurance?");
+    expect(text).not.toContain(NOT_ON_RELEASE);
+  });
+
+  // Security review L3: erasure nulls the snapshot; the card says so and
+  // claims nothing about what was asked.
+  it("says an erased release's answers were erased, with no list of questions", async () => {
+    const { shopAnswersText: text } = await renderAs(["owner"], {
+      recordPatch: {
+        shopAnswers: null,
+        signatureMethod: "typed_consent",
+        anonymizedAt: new Date("2026-07-01T12:00:00.000Z"),
+      },
+      signedVersionQuestions: DEMO_SHOP_QUESTIONS,
+    });
+    expect(text).toMatch(/The answers were erased with the diver’s personal data on /);
+    expect(text).not.toContain(NOT_ON_RELEASE);
+    expect(text).not.toContain("Do you carry dive accident insurance?");
+  });
+
+  it("says a version that asked questions left no answers on the record, rather than 'not asked'", async () => {
+    const { shopAnswersText: text } = await renderAs(["owner"], {
+      recordPatch: { shopAnswers: null, signatureMethod: "typed_consent" },
+      signedVersionQuestions: DEMO_SHOP_QUESTIONS,
+    });
+    expect(text).toContain(staff("waiversStaff.record.shopAnswersMissing", { version: 900 }));
+    expect(text).not.toContain(NOT_ON_RELEASE);
+  });
 
   it("says a paper release records no answers, rather than inventing any", async () => {
     const { shopAnswersText: text } = await renderAs(["owner"], {
       recordPatch: { signatureMethod: "in_person_attested" },
+      signedVersionQuestions: [],
     });
     expect(text).toContain("Not recorded in DiveDay: this release was signed on paper.");
-    expect(text).not.toContain("Not asked (signed");
+    expect(text).not.toContain(NOT_ON_RELEASE);
+  });
+
+  it("says an imported release records no answers, and lists nothing beside it", async () => {
+    const { shopAnswersText: text } = await renderAs(["owner"], {
+      recordPatch: { signatureMethod: "imported" },
+      signedVersionQuestions: [],
+    });
+    expect(text).toContain(staff("waiversStaff.record.shopAnswersImported"));
+    expect(text).not.toContain(NOT_ON_RELEASE);
   });
 });

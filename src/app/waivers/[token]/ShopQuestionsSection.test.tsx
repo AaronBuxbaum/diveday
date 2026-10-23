@@ -54,6 +54,22 @@ describe("ShopQuestionsSection", () => {
     }
   });
 
+  // Dive-domain review 1, S4: a health answer typed here is never read as a
+  // disclosure, so the diver is told where health belongs. Never a gate.
+  it("sends health back to the medical questionnaire in one line", () => {
+    renderSection();
+    expect(screen.getByText(t("waiver.shopQuestionsHealthNote"))).toBeTruthy();
+  });
+
+  // Review 2, S6: a number typed in a form the draft could not read as one
+  // comes back as typed, so the refusal under it makes sense.
+  it("shows a number answer the draft kept as typed", () => {
+    renderSection({ draft: { dives000001: "40ish" } });
+    expect(
+      (screen.getByRole("textbox", { name: /Dives logged so far/ }) as HTMLInputElement).value,
+    ).toBe("40ish");
+  });
+
   it("pre-selects no answer for any kind", () => {
     const { container } = renderSection();
     expect(container.querySelectorAll("input:checked")).toHaveLength(0);

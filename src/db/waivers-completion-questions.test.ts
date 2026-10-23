@@ -256,16 +256,19 @@ describe("shop questions on the waiver", () => {
       await saveWaiverDraft(db, token, {
         acknowledged: false,
         medicalAnswers: clearAnswers,
-        shopAnswers: { [dives.id]: "lots", [heard.id]: "A friend", [fitToDive.id]: "no" },
+        shopAnswers: { [dives.id]: "lots", [heard.id]: "Not an option", [fitToDive.id]: "no" },
         now,
       }),
     ).toBe(true);
     const record = await recordFor(db, token);
-    expect(record.draftShopAnswers).toEqual({ [heard.id]: "A friend", [fitToDive.id]: false });
+    // A number box keeps what was typed (review 2, S6); a choice that is not
+    // one of the options is dropped.
+    expect(record.draftShopAnswers).toEqual({ [dives.id]: "lots", [fitToDive.id]: false });
     // A draft whose value no longer fits its question is dropped on load.
     expect(
       restoreDraftShopAnswers([{ ...heard, options: ["Our hotel", "Online search"] }, fitToDive], {
         ...record.draftShopAnswers,
+        [heard.id]: "A friend",
         vanished0001: 3,
       }),
     ).toEqual({ [fitToDive.id]: false });

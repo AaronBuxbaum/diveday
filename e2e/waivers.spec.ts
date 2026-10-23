@@ -788,7 +788,10 @@ test("a Box a diver's own yes opens keeps the rail's Medical step open", async (
   for (let i = 0; i < pageOneCount; i++) {
     await noRadios.nth(i).check();
   }
-  // Questions settles with Medical: the demo shop's own are all optional.
+  // The demo shop's own questions are all optional, but Questions waits until
+  // the diver has reached them (dive-domain review 2, S7).
+  await expect(rail).toContainText("2 of 4 done");
+  await page.locator("#shop-questions").scrollIntoViewIfNeeded();
   await expect(rail).toContainText("3 of 4 done");
 
   // One answer changed, and four required questions arrive with it.
@@ -1421,8 +1424,15 @@ test("a shop question is published, answered by the diver and shown on the signe
     .selectOption({ label: staff("waiversStaff.questions.kind.text") });
   await added.getByLabel(staff("waiversStaff.questions.requiredLabel")).check();
 
+  // Only the questions changed, so the choice says what each option does to
+  // the divers who already signed (dive-domain review 2, S1).
+  await expect(
+    page.getByText(staff("waiversStaff.publish.correctionQuestionsDetail")),
+  ).toBeVisible();
   // A correction keeps every standing signature, and the list is still a new version.
-  await page.getByRole("radio", { name: /A correction/ }).check();
+  await page
+    .getByRole("radio", { name: staff("waiversStaff.publish.correctionQuestions") })
+    .check();
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(staff("waiversStaff.banner.savedNew"));
   await expect(page.getByText(/Version 4 ·/)).toBeVisible();

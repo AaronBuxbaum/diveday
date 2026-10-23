@@ -6,7 +6,6 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { courseFormResignImpact, listCourseForms } from "@/db/course-forms";
 import {
@@ -25,9 +24,14 @@ import { type NoticeTone, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
-import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
+import type { PublishReleaseCopy } from "./_components/PublishRelease";
+import { ReleaseForm } from "./_components/ReleaseForm";
 import { ReleasePdfDraft } from "./_components/ReleasePdfDraft";
-import { ShopQuestionsPanel } from "./_components/ShopQuestionsPanel";
+import {
+  StandardQuestionnaire,
+  shopQuestionHealthWords,
+  shopQuestionsCopy,
+} from "./_components/ShopQuestionsPanel";
 import { SignedRecordsSection } from "./_components/SignedRecordsSection";
 import { saveWaiverAction } from "./actions";
 
@@ -153,62 +157,60 @@ export default async function WaiversPage({
   const sampleRelease = isSampleRelease(current?.body);
 
   const resigning = notice === "waiver-resigning" ? Number(count) : Number.NaN;
-  // Two refusals, two sentences. `invalid` says the release is too short;
-  // `waiver-materiality-required` says the edit was never called a correction
-  // or a material change, which is not about the text at all. They shared one
-  // code — and so one sentence — until 2026-08-28, and the staffer who met it
-  // was an owner publishing a typo fix from a tab that had rendered no radios,
-  // told to lengthen a release they had not shortened. See `./actions.ts`.
+  // What a publish that landed says. A refusal never navigates: it answers in
+  // the form, with what was typed handed back (`./_components/ReleaseForm`),
+  // and its words are composed below.
   const banner =
     notice === "saved"
       ? current
         ? t("waiversStaff.banner.savedNew")
         : t("waiversStaff.banner.savedFirst")
-      : notice === "invalid"
-        ? t("waiversStaff.banner.invalid")
-        : notice === "waiver-materiality-required"
-          ? t("waiversStaff.banner.materialityRequired")
-          : notice === "waiver-questions-invalid"
-            ? t("waiversStaff.banner.questionsInvalid")
-            : notice === "waiver-unchanged"
-              ? t("waiversStaff.banner.unchanged")
-              : Number.isFinite(resigning) && resigning > 0
-                ? t("waiversStaff.banner.resigning", { count: resigning })
-                : undefined;
+      : notice === "waiver-unchanged"
+        ? t("waiversStaff.banner.unchanged")
+        : Number.isFinite(resigning) && resigning > 0
+          ? t("waiversStaff.banner.resigning", { count: resigning })
+          : undefined;
   // Warning, not success, for the same reason `requirements-blocking` is: the
   // save worked and there is nothing to undo, but the shop now owes those
   // divers a link. "Unchanged" is neutral — nothing happened, which is the
   // whole message.
   const bannerTone: NoticeTone =
-    notice === "invalid" ||
-    notice === "waiver-materiality-required" ||
-    notice === "waiver-questions-invalid"
-      ? "danger"
-      : notice === "waiver-resigning"
-        ? "warning"
-        : notice === "waiver-unchanged"
-          ? "neutral"
-          : "success";
+    notice === "waiver-resigning"
+      ? "warning"
+      : notice === "waiver-unchanged"
+        ? "neutral"
+        : "success";
 
   // The material option states its own cost, so the sentences are composed
   // here — where the counts and the locale are — and handed over as words: a
   // staff Client Component never translates for itself.
+  // The operational half. The lifetime number says what publishing costs;
+  // this one says which boat it lands on, and it is the one that changes what
+  // the shop does next (issue #790).
+  const boardingSoon =
+    atRisk.boardingSoon > 0
+      ? t("waiversStaff.publish.materialBoarding", {
+          count: atRisk.boardingSoon,
+          days: OPERATIONAL_HORIZON_DAYS,
+        })
+      : null;
   const publishCopy: PublishReleaseCopy = {
     choiceLegend: t("waiversStaff.publish.choiceLegend"),
     correction: t("waiversStaff.publish.correction"),
     correctionDetail: t("waiversStaff.publish.correctionDetail"),
+    correctionQuestions: t("waiversStaff.publish.correctionQuestions"),
+    correctionQuestionsDetail: t("waiversStaff.publish.correctionQuestionsDetail"),
     material: t("waiversStaff.publish.material"),
     materialDetail: [
       t("waiversStaff.publish.materialDetail", { count: atRisk.divers }),
-      // The operational half. The lifetime number says what publishing costs;
-      // this one says which boat it lands on, and it is the one that changes
-      // what the shop does next (issue #790).
-      atRisk.boardingSoon > 0
-        ? t("waiversStaff.publish.materialBoarding", {
-            count: atRisk.boardingSoon,
-            days: OPERATIONAL_HORIZON_DAYS,
-          })
-        : null,
+      boardingSoon,
+    ]
+      .filter(Boolean)
+      .join(" "),
+    materialQuestions: t("waiversStaff.publish.materialQuestions"),
+    materialQuestionsDetail: [
+      t("waiversStaff.publish.materialQuestionsDetail", { count: atRisk.divers }),
+      boardingSoon,
     ]
       .filter(Boolean)
       .join(" "),
@@ -288,49 +290,60 @@ export default async function WaiversPage({
           <DisclosureCaret className="group-open/release:rotate-90" />
         </summary>
         <SectionCard padding="lg" className="mt-4">
-          <form action={saveWaiverAction} className="flex flex-col gap-5">
-            <FieldGrid columns={1} className="gap-y-5">
-              <Field label={t("waiversStaff.fieldLabel")}>
-                <textarea
-                  id="release-body"
-                  name="body"
-                  required
-                  rows={14}
-                  maxLength={12_000}
-                  defaultValue={current?.body ?? DEFAULT_WAIVER_BODY}
-                  placeholder={t("waiversStaff.placeholder")}
-                  className={textareaClassFor(14)}
-                />
-              </Field>
-            </FieldGrid>
-            <ReleasePdfDraft shopId={shop.id} fieldId="release-body" t={t} />
-            <ShopQuestionsPanel
-              jurisdiction={shop.jurisdiction}
-              questions={current?.questions ?? []}
-              t={t}
-            />
-            <PublishRelease copy={publishCopy} standingSignatures={atRisk.divers > 0} />
-            {/* Beside the form, never a banner at the top of the page: the
-              release is a fourteen-row textarea, so the top of this page is a
-              screen and a half away from the control that was pressed. */}
-            <FormStatus tone={bannerTone}>
-              {banner}
-              {/* The shop now owes those divers a link, and every one of them is
-                a waiver row on their boat's station on the home. A door,
-                rather than leaving them to hunt for it (issue #790). */}
-              {notice === "waiver-resigning" && Number.isFinite(resigning) && resigning > 0 ? (
-                <>
-                  {" "}
-                  <Link
-                    href={`/shop/${shopSlug}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {t("waiversStaff.banner.resigningSendLink")}
-                  </Link>
-                </>
-              ) : null}
-            </FormStatus>
-          </form>
+          <ReleaseForm
+            action={saveWaiverAction}
+            fieldLabel={t("waiversStaff.fieldLabel")}
+            placeholder={t("waiversStaff.placeholder")}
+            initialBody={current?.body ?? DEFAULT_WAIVER_BODY}
+            published={current ? { body: current.body, questions: current.questions } : null}
+            pdfDraft={<ReleasePdfDraft shopId={shop.id} fieldId="release-body" t={t} />}
+            standardQuestionnaire={<StandardQuestionnaire jurisdiction={shop.jurisdiction} t={t} />}
+            questionsCopy={shopQuestionsCopy(t)}
+            healthWords={shopQuestionHealthWords()}
+            publishCopy={publishCopy}
+            standingSignatures={atRisk.divers > 0}
+            // Two refusals about the publish, two sentences. `body` says the
+            // release is too short; `materiality` says the edit was never
+            // called a correction or a material change, which is not about the
+            // text at all. They shared one sentence until 2026-08-28, and the
+            // staffer who met it was told to lengthen a release they had not
+            // shortened. See `./actions.ts`.
+            refusalCopy={{
+              body: t("waiversStaff.banner.invalid"),
+              materiality: t("waiversStaff.banner.materialityRequired"),
+              questions: t("waiversStaff.banner.questionsInvalid"),
+              questionNumbered: t.raw("waiversStaff.banner.questionInvalid") as string,
+            }}
+            status={
+              banner
+                ? {
+                    tone: bannerTone,
+                    content: (
+                      <>
+                        {banner}
+                        {/* The shop now owes those divers a link, and every one of
+                            them is a waiver row on their boat's station on the
+                            home. A door, rather than leaving them to hunt for it
+                            (issue #790). */}
+                        {notice === "waiver-resigning" &&
+                        Number.isFinite(resigning) &&
+                        resigning > 0 ? (
+                          <>
+                            {" "}
+                            <Link
+                              href={`/shop/${shopSlug}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {t("waiversStaff.banner.resigningSendLink")}
+                            </Link>
+                          </>
+                        ) : null}
+                      </>
+                    ),
+                  }
+                : null
+            }
+          />
         </SectionCard>
       </AutoOpenDetails>
 

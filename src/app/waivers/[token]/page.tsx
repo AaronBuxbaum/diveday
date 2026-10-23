@@ -174,7 +174,7 @@ export default async function WaiverPage({
       medicalStillOpen: needsReview,
       signed: true,
       // The Questions step stood on this page only when the version asked any.
-      shopQuestions: state.record.shopAnswers ? { requiredRemaining: 0 } : undefined,
+      shopQuestions: state.record.shopAnswers ? { requiredRemaining: 0, reached: true } : undefined,
     });
     return (
       <WaiverCompleted

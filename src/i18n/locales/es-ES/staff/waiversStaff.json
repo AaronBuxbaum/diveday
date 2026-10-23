@@ -9,7 +9,8 @@
     "unchanged": "Sin cambios: la exención está tal cual estaba, así que no se publicó nada ni se vio afectada ninguna firma.",
     "resigningSendLink": "Enviarlas por salida",
     "resigning": "{count, plural, one {Nueva versión publicada. # buceador vuelve a firmar antes de embarcar.} other {Nueva versión publicada. # buceadores vuelven a firmar antes de embarcar.}}",
-    "questionsInvalid": "No se publicó. Cada pregunta necesita un enunciado, y una lista necesita de 2 a 8 opciones distintas, una por línea."
+    "questionsInvalid": "No se publicó. Cada pregunta necesita su texto, y una lista necesita de 2 a 8 opciones distintas, una por línea.",
+    "questionInvalid": "No se publicó. Hay que corregir la pregunta {number}."
   },
   "publish": {
     "choiceLegend": "Esta edición es",
@@ -19,7 +20,11 @@
     "materialDetail": "{count, plural, one {Obliga a repetir # firma vigente.} other {Obliga a repetir las # firmas vigentes.}}",
     "materialBoarding": "{count, plural, one {# buceador embarca en los próximos {days} días.} other {# buceadores embarcan en los próximos {days} días.}}",
     "action": "Publicar",
-    "confirm": "{count, plural, one {Publicar: # vuelve a firmar} other {Publicar: # vuelven a firmar}}"
+    "confirm": "{count, plural, one {Publicar: # vuelve a firmar} other {Publicar: # vuelven a firmar}}",
+    "correctionQuestions": "Una corrección: solo las preguntas",
+    "correctionQuestionsDetail": "Todas las firmas vigentes siguen valiendo. A esos buceadores no se les hacen las preguntas nuevas hasta que vuelvan a firmar, y los enlaces ya enviados hacen las preguntas con las que salieron.",
+    "materialQuestions": "Un cambio sustancial: todos responden las preguntas nuevas",
+    "materialQuestionsDetail": "{count, plural, one {Obliga a repetir # firma vigente y a responder las preguntas nuevas.} other {Obliga a repetir las # firmas vigentes y a responder las preguntas nuevas.}}"
   },
   "fieldLabel": "Texto de la exención",
   "placeholder": "Escribe la exención que leerá y firmará el buceador.",
@@ -91,13 +96,19 @@
     "answerNo": "No",
     "releaseHeading": "Lo que firmó",
     "shopAnswersHeading": "Respuestas a tus preguntas",
-    "shopAnswersLead": "Lo que escribió el buceador. DiveDay no revisa estas respuestas.",
+    "shopAnswersLead": "El buceador escribió estas respuestas. DiveDay no las revisa.",
     "shopAnswerBlank": "En blanco",
-    "shopAnswerNotAsked": "No se preguntó (firmada en la versión {version})",
     "shopAnswerAsOf": "{answer}, al {date}",
     "shopAnswersPaper": "No registrado en DiveDay: esta exención se firmó en papel.",
     "shopAnswersImported": "No registrado en DiveDay: esta exención se importó.",
-    "shopAnswersHeld": "Las respuestas quedan ocultas hasta que alguien confirme quién ocupa esta plaza."
+    "shopAnswersHeld": "Las respuestas quedan ocultas hasta que alguien confirme quién ocupa esta plaza.",
+    "shopAnswerRequired": "Obligatoria",
+    "shopAnswerOptional": "Opcional",
+    "shopAnswerOptions": "Opciones: {options}",
+    "shopAnswersNotOnRelease": "Se pregunta ahora, no en esta exención",
+    "shopAnswersNotOnReleaseLead": "Tus preguntas actuales que la versión {version} no hacía. No forman parte de esta exención firmada.",
+    "shopAnswersErased": "Las respuestas se borraron con los datos personales del buceador el {date}.",
+    "shopAnswersMissing": "La versión {version} hacía preguntas, pero esta exención no tiene respuestas."
   },
   "courseForms": {
     "heading": "Formularios del curso",
@@ -132,30 +143,37 @@
     "heading": "Tus preguntas",
     "intro": "Los buceadores las responden después del cuestionario médico, antes de firmar. Las respuestas quedan en la exención firmada y nunca impiden que nadie bucee.",
     "alreadyAsked": "DiveDay ya pide la fecha de nacimiento, un contacto de emergencia, la tarjeta de certificación y su agencia, y un tutor para un menor. La última inmersión se pregunta en cada reserva.",
-    "optionalAdvice": "La mayoría de las preguntas funcionan mejor opcionales: cada una obligatoria es un paso más en el teléfono, en el muelle.",
+    "optionalAdvice": "Deja opcionales la mayoría de las preguntas. Cada pregunta obligatoria es un paso más para quien firma desde el teléfono.",
     "empty": "Todavía no hay preguntas.",
     "add": "Agregar una pregunta",
     "full": "{max, plural, one {Una exención pide como máximo # pregunta.} other {Una exención pide como máximo # preguntas.}}",
     "promptLabel": "Pregunta",
-    "kindLabel": "Respuesta",
+    "kindLabel": "Tipo de respuesta",
     "kind": {
       "yesNo": "Sí o no",
       "text": "Texto corto",
       "number": "Número entero",
       "date": "Fecha",
-      "choice": "Una de una lista"
+      "choice": "Elegir de una lista"
     },
     "requiredLabel": "Hay que responderla para firmar",
     "optionsLabel": "Opciones, una por línea",
     "optionsHint": "De 2 a 8.",
-    "optionsCount": "Una lista necesita de 2 a 8 opciones distintas, una por línea.",
     "moveUp": "Subir",
     "moveDown": "Bajar",
     "delete": "Eliminar",
-    "healthWarning": "Las preguntas de salud las hace el cuestionario médico estándar, que deriva al buceador a un médico cuando hace falta. Una respuesta aquí nunca se revisa.",
+    "healthWarning": "Las preguntas de salud van en el cuestionario médico estándar, que deriva al buceador a un médico cuando hace falta. Una respuesta aquí nunca se revisa, nunca se muestra a la tripulación como alerta médica y todo el personal puede leerla.",
     "questionLabel": "Pregunta {number}",
     "standardSummary": "El cuestionario médico estándar",
-    "standardStays": "Se queda como está. Cada buceador lo responde antes de tus preguntas.",
-    "healthWords": "médic*, medicament*, medicina*, condición, condiciones, enfermedad*, salud, doctor*, alergi*, alérgic*, asma, corazón, cardi*, embaraz*, cirugía*, operación, lesión, lesiones, diabet*, epileps*, convulsi*, presión arterial"
+    "standardStays": "No cambia. Cada buceador lo responde antes de tus preguntas.",
+    "healthWords": "médic*, medicament*, medicina*, condición, condiciones, enfermedad*, enferm*, salud, doctor*, alergi*, alérgic*, asma, corazón, cardi*, embaraz*, cirugía*, operación, lesión, lesiones, diabet*, epileps*, convulsi*, presión arterial, sangr*, anticoagul*, pulm*, respir*, descompres*, apto para bucear, receta*, fármaco*, pastilla*, hospital*, marcapasos, stent*, infarto*, insulina, desmay*, ansiedad, pánico, mental, psic*, dolor, oído*, sinus*, cáncer, discapac*, implante*, migraña*",
+    "problem": {
+      "promptEmpty": "Escribe la pregunta.",
+      "promptTooLong": "La pregunta puede tener hasta {max, plural, one {# carácter} other {# caracteres}}.",
+      "optionsCount": "Una lista necesita de 2 a 8 opciones distintas, una por línea.",
+      "optionTooLong": "Cada opción puede tener hasta {max, plural, one {# carácter} other {# caracteres}}.",
+      "duplicateOption": "Hay dos opciones iguales.",
+      "controlCharacter": "Quita el carácter oculto que se pegó en esta pregunta."
+    }
   }
 }

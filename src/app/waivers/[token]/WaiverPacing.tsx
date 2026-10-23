@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { fill, pluralForm } from "@/i18n/fill";
 import { MEDICAL_FIELD_PREFIX } from "@/lib/medical";
 import { SHOP_ANSWER_FIELD_PREFIX } from "@/lib/waiver-questions";
+import { SHOP_QUESTIONS_ANCHOR } from "./ShopQuestionsSection";
 import {
   type WaiverRailLabels,
   type WaiverRailSegmentId,
@@ -111,10 +112,11 @@ export function WaiverPacing({
   initialFollowUpsRemaining: number;
   /**
    * The shop's own questions, when the release asks any: how many required
-   * ones the saved draft leaves blank, for the first paint. Absent, the rail
-   * has three steps.
+   * ones the saved draft leaves blank, and whether the draft shows the diver
+   * has already been there, for the first paint. Absent, the rail has three
+   * steps.
    */
-  shopQuestions?: { initialRequiredRemaining: number };
+  shopQuestions?: { initialRequiredRemaining: number; initialReached: boolean };
   locale: string;
   children: React.ReactNode;
 }) {
@@ -125,6 +127,7 @@ export function WaiverPacing({
   const [shopRequiredRemaining, setShopRequiredRemaining] = useState(
     shopQuestions?.initialRequiredRemaining ?? 0,
   );
+  const [shopReached, setShopReached] = useState(shopQuestions?.initialReached ?? false);
 
   const refreshFromDom = useCallback(() => {
     const container = containerRef.current;
@@ -186,11 +189,40 @@ export function WaiverPacing({
     return () => observer.disconnect();
   }, [refreshFromDom]);
 
+  // The Questions step waits until the diver has reached the section (review
+  // 2, S7): once any of it has been on screen, or once focus lands on one of
+  // its controls, which is all a browser without the observer has. An answer
+  // counts too (`handleChange`).
+  useEffect(() => {
+    const container = containerRef.current;
+    if (shopReached || !container) return;
+    const onFocus = (event: FocusEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && target.name.startsWith(SHOP_ANSWER_FIELD_PREFIX)) {
+        setShopReached(true);
+      }
+    };
+    container.addEventListener("focusin", onFocus);
+    const section = container.querySelector(`#${SHOP_QUESTIONS_ANCHOR}`);
+    const observer =
+      section && typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) setShopReached(true);
+          })
+        : null;
+    if (section) observer?.observe(section);
+    return () => {
+      container.removeEventListener("focusin", onFocus);
+      observer?.disconnect();
+    };
+  }, [shopReached]);
+
   function handleChange(event: React.ChangeEvent<HTMLDivElement>) {
     const target = event.target;
     // A shop question's answer moves only the Questions step: a rescan
     // re-reads every required one, whatever kind of control it is.
     if (target instanceof HTMLInputElement && target.name.startsWith(SHOP_ANSWER_FIELD_PREFIX)) {
+      setShopReached(true);
       queueMicrotask(refreshFromDom);
       return;
     }
@@ -220,7 +252,9 @@ export function WaiverPacing({
     medicalTotal: questionTotal,
     medicalFollowUpsRemaining: followUpsRemaining,
     signed: false,
-    shopQuestions: shopQuestions ? { requiredRemaining: shopRequiredRemaining } : undefined,
+    shopQuestions: shopQuestions
+      ? { requiredRemaining: shopRequiredRemaining, reached: shopReached }
+      : undefined,
   });
 
   const doneLabel = fill(

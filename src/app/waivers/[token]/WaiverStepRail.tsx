@@ -122,11 +122,15 @@ export function waiverRailProgress(input: {
   signed: boolean;
   /**
    * The shop's own questions, when the release asks any: how many required
-   * ones are still blank. Absent, the rail has its three steps. The step
-   * settles once Medical has and nothing required is blank, never on which
-   * answer was given: shop questions inform and never gate.
+   * ones are still blank, and whether the diver has reached the section
+   * (scrolled to it, focused one of its controls, or answered one). Absent,
+   * the rail has its three steps. The step settles once Medical has, the
+   * section has been reached and nothing required is blank, never on which
+   * answer was given: shop questions inform and never gate. Without
+   * `reached`, a release whose questions are all optional ticked the step
+   * while it was still below the fold (dive-domain review 2, S7).
    */
-  shopQuestions?: { requiredRemaining: number };
+  shopQuestions?: { requiredRemaining: number; reached: boolean };
 }): WaiverRailProgress {
   const release = input.signed || input.medicalAnswered > 0;
   const medical =
@@ -136,7 +140,8 @@ export function waiverRailProgress(input: {
         input.medicalAnswered >= input.medicalTotal &&
         (input.medicalFollowUpsRemaining ?? 0) === 0));
   const questions = input.shopQuestions
-    ? input.signed || (medical && input.shopQuestions.requiredRemaining === 0)
+    ? input.signed ||
+      (medical && input.shopQuestions.reached && input.shopQuestions.requiredRemaining === 0)
     : null;
   const sign = input.signed;
   const steps = questions === null ? [release, medical, sign] : [release, medical, questions, sign];

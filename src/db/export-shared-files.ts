@@ -818,12 +818,14 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     },
     // The shop's own questions as asked, with the diver's answers
     // (glossary *Shop question*). Inside the v1 seal when present, so a
-    // destination re-verifying the hash needs them; the diver's own words,
-    // so their bundle carries them too. Not medical answers: shop questions
-    // never stand in for the questionnaire.
+    // destination re-verifying the hash needs them. Shop-only, as
+    // `medical_answers` is (H-50, security review L4): on a seat still held
+    // over who is in it the staff card withholds them because they may not be
+    // this diver's, and the diver's bundle has no way to tell a held seat, so
+    // free text somebody else typed must not travel in it.
     {
       header: "shop_answers",
-      in: "both",
+      in: "shop",
       value: (row) => (row.shopAnswers ? JSON.stringify(row.shopAnswers) : null),
     },
     // The physician clearance that ends a medical hold (issue #1252).
