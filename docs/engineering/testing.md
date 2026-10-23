@@ -115,6 +115,11 @@ structured Playwright report. Proof is the visual screenshot probe's explicit we
 timed-out test's own `browser-activity` attachment with the renderer probe verdict. Mixed ordinary
 failures, missing evidence, global errors and unexecuted tests keep the shard red. Both attempts'
 JSON reports and attachments are retained; duration and budget consumers keep the initial report.
+A second exception, decided 2026-10-23 (H-156), on main only: a visual shard reruns its failed
+captures once whatever the cause, because a failed shard on main publishes no screenshot baseline
+and blinds visual review for every branch. A capture that passes only on that rerun is filed as a
+`needs-triage` issue naming its spec (`scripts/visual-flake-issue.mjs`, CI's `visual-flakes` job),
+or comments on the one already open. Pull requests keep the wedge-only rule above.
 A failing or flaky test is part of the work that meets it, even when unrelated: fixed, after
 searching open PRs for a fix in flight, or quarantined; never skipped, never given a wider timeout
 (AGENTS.md, testing review decision 4).
