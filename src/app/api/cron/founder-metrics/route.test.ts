@@ -14,6 +14,9 @@ vi.mock("@/db/founder-metrics", () => ({
   releaseFounderDigest: vi.fn(),
   syncShopMilestones: vi.fn(),
 }));
+vi.mock("@/db/email-bounces", () => ({
+  listEmailBounces: vi.fn().mockResolvedValue({ total: 0, lines: [] }),
+}));
 vi.mock("@/db/funnel", () => ({
   countDemoEntriesBySource: vi.fn(),
   countSetupRequestsBySource: vi.fn(),
@@ -186,6 +189,7 @@ describe("Monday's digest", () => {
           waitingFor: "first_departure",
         },
       ],
+      bounces: { total: 0, lines: [] },
     });
     expect(metrics.markStallsAlerted).toHaveBeenCalledWith(
       expect.anything(),

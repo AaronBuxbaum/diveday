@@ -9,7 +9,7 @@ import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
 import { reservedTestRecipientDelivery } from "./provider";
 import { messageFor } from "./render";
-import { SES_KIND_TAG, SES_PURPOSE_TAG, SES_SHOP_TAG } from "./ses-tags";
+import { SES_KIND_TAG, SES_PURPOSE_TAG, SES_SENDER_TAG, SES_SHOP_TAG } from "./ses-tags";
 import { fromAddressFor } from "./shop-voice";
 
 /**
@@ -203,6 +203,9 @@ function emailTagsOf(notification: Notification): { Name: string; Value: string 
     { Name: SES_KIND_TAG, Value: notification.kind },
     ...("shopId" in notification ? [{ Name: SES_SHOP_TAG, Value: notification.shopId }] : []),
     ...purposeTagOf(notification),
+    ...(notification.sender?.sentByPersonId
+      ? [{ Name: SES_SENDER_TAG, Value: notification.sender.sentByPersonId }]
+      : []),
   ];
 }
 

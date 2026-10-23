@@ -6,6 +6,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/courtesy-email", () => ({ optOutAddressAfterComplaint: vi.fn() }));
+vi.mock("@/db/email-bounces", () => ({ recordEmailBounces: vi.fn() }));
 vi.mock("@/lib/notifications/sns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
@@ -14,6 +15,7 @@ vi.mock("@/lib/notifications/sns", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { optOutAddressAfterComplaint } = await import("@/db/courtesy-email");
+const { recordEmailBounces } = await import("@/db/email-bounces");
 const { verifySnsMessage, confirmSnsSubscription } = await import("@/lib/notifications/sns");
 const { POST } = await import("./route");
 const { forgetWebhookRefusalReports } = await import("@/lib/webhook-refusal");
@@ -31,6 +33,7 @@ beforeEach(() => {
   vi.mocked(optOutAddressAfterComplaint)
     .mockReset()
     .mockResolvedValue({ people: 1, listEntries: 0 });
+  vi.mocked(recordEmailBounces).mockReset().mockResolvedValue(1);
   vi.mocked(verifySnsMessage).mockReset();
   vi.mocked(confirmSnsSubscription).mockReset();
 });
@@ -213,6 +216,75 @@ describe("ses webhook route — delivery events", () => {
     await POST(webhookRequest("{}"));
     expect(applyProviderEmailEvent).toHaveBeenCalledTimes(1);
     expect(optOutAddressAfterComplaint).not.toHaveBeenCalled();
+  });
+
+  it("keeps the bounce per address with its shop, kind and sender, and logs no address", async () => {
+    const info = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        JSON.stringify({
+          eventType: "Bounce",
+          mail: {
+            messageId: "ses_5",
+            tags: {
+              diveday_shop: ["3f2504e0-4f89-41d3-9a0c-0305e82c3302"],
+              diveday_kind: ["waiver_request"],
+              diveday_sender: ["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
+            },
+          },
+          bounce: {
+            timestamp: "2026-08-02T18:00:00.000Z",
+            bounceType: "Transient",
+            bounceSubType: "MailboxFull",
+            bouncedRecipients: [
+              { emailAddress: "Nora@Example.dive", diagnosticCode: "smtp; 452 4.2.2 full" },
+            ],
+          },
+        }),
+      ),
+    );
+
+    // An untracked message is still kept: the courtesy kinds record no id.
+    vi.mocked(applyProviderEmailEvent).mockResolvedValue("unknown_message");
+    const response = await POST(webhookRequest("{}"));
+    const lines = info.mock.calls.map((call) => String(call[0]));
+    info.mockRestore();
+    expect(response.status).toBe(200);
+    expect(recordEmailBounces).toHaveBeenCalledWith(FAKE_DB, [
+      {
+        providerMessageId: "ses_5",
+        event: "bounce",
+        recipient: "nora@example.dive",
+        bounceType: "Transient",
+        bounceSubType: "MailboxFull",
+        smtpStatus: "452 4.2.2",
+        complaintType: null,
+        kind: "waiver_request",
+        purpose: null,
+        shopId: "3f2504e0-4f89-41d3-9a0c-0305e82c3302",
+        sentByPersonId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        occurredAt: new Date("2026-08-02T18:00:00.000Z"),
+      },
+    ]);
+    const recorded = lines
+      .map((line) => JSON.parse(line))
+      .find((line) => line.event === "ses_webhook.bounce_recorded");
+    expect(recorded).toMatchObject({ kind: "waiver_request", recipientDomain: "example.dive" });
+    expect(lines.join("\n")).not.toContain("nora@");
+  });
+
+  it("keeps nothing for a delivery", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        JSON.stringify({
+          eventType: "Delivery",
+          mail: { messageId: "ses_6", destination: ["nora@example.dive"] },
+          delivery: { timestamp: "2026-08-02T18:00:00.000Z" },
+        }),
+      ),
+    );
+    await POST(webhookRequest("{}"));
+    expect(recordEmailBounces).not.toHaveBeenCalled();
   });
 
   it("leaves a complaint on untagged mail to the suppression list alone", async () => {

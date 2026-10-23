@@ -182,7 +182,8 @@ for (const scheme of ["light", "dark"] as const) {
           await openThreadStep(page, "dayof");
           await capture(page, "thread-completed-helper", "light", {
             beforeScreenshot: async () => {
-              await readableHelper();
+              // A handled request names nobody: the helper may have left the boat.
+              await expect(promise).toHaveCount(0);
               const status = page.getByText(diverCopy("ready.helpHandled"), { exact: true });
               await expect(status).toBeVisible();
               expect(

@@ -257,6 +257,7 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
+  "email_bounces", // DiveDay's own record of mail SES bounced, for debugging delivery; not a shop record
   // Batch 4's two desk records. A note sent to a whole departure is
   // correspondence, out for the reason staff_replies is: the bundle has no file
   // for a message yet, and the 400-day window bounds it like the delivery trail

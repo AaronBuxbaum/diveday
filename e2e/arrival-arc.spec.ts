@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
@@ -13,6 +14,7 @@ import {
 } from "./helpers";
 
 const staff = staffTranslator("en-US");
+const diver = diverTranslator("en-US");
 
 test.describe("the dive arrival arc", () => {
   signedInAsOwner();
@@ -138,7 +140,9 @@ test.describe("the dive arrival arc", () => {
     const diverPage = await page.context().newPage();
     await diverPage.goto(readyPath);
     await openThreadStep(diverPage, "dayof");
-    await expect(diverPage.getByText(new RegExp(`${helperName} will help you at`))).toBeVisible();
+    // A handled request names nobody: the helper may have left the boat since.
+    await expect(diverPage.getByText(diver("ready.helpHandled"), { exact: true })).toBeVisible();
+    await expect(diverPage.getByText(new RegExp(`${helperName} will help you at`))).toHaveCount(0);
     await diverPage.close();
 
     await page.getByRole("button", { name: "Undo" }).click();

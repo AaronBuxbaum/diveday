@@ -404,6 +404,14 @@
         "files": {
           "src/db/retention.test.ts": "1263 -> 1271"
         }
+      },
+      {
+        "why": "email_bounces joins the census tests that classify every table (erasure, export, retention fixtures); each needs its one entry",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1170 -> 1174",
+          "src/db/export.test.ts": "1565 -> 1566",
+          "src/db/retention.test.ts": "1277 -> 1291"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -436,9 +444,9 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1277,
     "src/db/divers.test.ts": 3056,
-    "src/db/erasure-coverage.test.ts": 1169,
+    "src/db/erasure-coverage.test.ts": 1174,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1565,
+    "src/db/export.test.ts": 1566,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3692,
@@ -452,7 +460,7 @@
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1379,
-    "src/db/retention.test.ts": 1277,
+    "src/db/retention.test.ts": 1291,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,
@@ -470,7 +478,7 @@
     "src/lib/import.test.ts": 1423,
     "src/lib/incident-export.test.ts": 1067,
     "src/lib/manifests.test.ts": 1053,
-    "src/lib/notifications/email.test.ts": 1157,
+    "src/lib/notifications/email.test.ts": 1096,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1575,
@@ -594,7 +602,7 @@
     "src/app/ready/[token]/page.tsx": 654,
     "src/app/s/[shopSlug]/page.tsx": 878,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 510,
-    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 468,
+    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 459,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,

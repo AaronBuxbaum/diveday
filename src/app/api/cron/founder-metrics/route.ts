@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
+import { listEmailBounces } from "@/db/email-bounces";
 import {
   claimFounderDigest,
   departureRollCallEvents,
@@ -131,13 +132,14 @@ async function sendDigest(now: Date): Promise<DigestOutcome> {
 
   try {
     const range = { startsAt: week.startsAt, endsAt: week.endsAt };
-    const [events, demoEntries, setupRequests, unnotifiedSetupRequests, activation] =
+    const [events, demoEntries, setupRequests, unnotifiedSetupRequests, activation, bounces] =
       await Promise.all([
         departureRollCallEvents(db, { from: week.startDate, to: week.endDate }),
         countDemoEntriesBySource(db, range),
         countSetupRequestsBySource(db, range),
         countUnnotifiedSetupRequests(db, range),
         listShopActivation(db),
+        listEmailBounces(db, range),
       ]);
     const northStar = countDiveDays(events);
     const stalls = activation.flatMap((shop) => {
@@ -164,6 +166,7 @@ async function sendDigest(now: Date): Promise<DigestOutcome> {
         since: calendarDateInTimezone(stall.since, "UTC"),
         waitingFor: stall.waitingFor,
       })),
+      bounces,
     });
     if (delivery.status !== "sent") {
       await releaseFounderDigest(db, week.startDate);

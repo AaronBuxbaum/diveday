@@ -509,8 +509,35 @@ half of email analytics and answer no question a dive shop has.
 
 Outcomes land on the notification's existing row, matched by SES's own message id, and a bounce,
 complaint, or failure raises it on the shop's dashboard as an email issue — visible even though the
-original send succeeded. A re-send clears the old outcome. Events about mail we never tracked are
-answered 200 and ignored.
+original send succeeded. A re-send clears the old outcome. Delivery outcomes about mail we never
+tracked are answered 200 and change no row.
+
+**Every bounce and complaint is kept, tracked or not.** One `email_bounces` row per recipient the
+event names (`parseSesBounceReports`, `recordEmailBounces` in `src/db/email-bounces.ts`): the
+address, SES's `bounceType` and `bounceSubType`, the SMTP codes from the diagnostic (never its free
+text), the complaint's feedback type, and the `diveday_kind`, `diveday_purpose`, `diveday_shop` and
+`diveday_sender` tags, so each one says which email it was, which shop it was for and which staff
+member's action sent it. `diveday_sender` is the signed-in staff member at the moment of the send
+(`currentSendActor`, `src/lib/notifications/send-actor.ts`) when the mail is for that staff member's
+own shop, carried into a queued retry, and absent on mail nobody pressed a button for. Each also logs `ses_webhook.bounce_recorded` with the
+same facts and the recipient's domain, never the address. The founder's Monday digest lists last
+week's rows, newest first, with each address masked (`no***@example.com`): a mailbox outlives the
+retention window and any erasure, so the full address is read from the table. Rows are kept 90 days (`RETENTION_DAYS.email_bounces`) and an erasure
+deletes a diver's rows for that shop by their address and their login address. A report that arrives after the erasure is kept
+until the 90 days run out.
+
+This is the place to look when the console shows a bounce rate but the suppression list is empty:
+only a `Permanent` bounce goes on the suppression list, and a `Transient` one (a full mailbox, a
+message too large, a receiving server that refused for now) still counts as a bounce. To read the
+table directly:
+
+```sql
+select occurred_at, recipient, bounce_type, bounce_sub_type, smtp_status, kind, shop_id, sent_by_person_id
+from email_bounces order by occurred_at desc limit 50;
+```
+
+Or, without the database, CloudWatch Logs Insights over `/diveday/app`:
+`filter event = "ses_webhook.bounce_recorded" | fields @timestamp, verdict, bounceType, bounceSubType, smtpStatus, kind, shopId, sentByPersonId, recipientDomain`.
 
 **A complaint is an unsubscribe.** Every send is tagged with its shop and kind (`diveday_shop`,
 `diveday_kind`; `src/lib/notifications/ses-tags.ts`), and SES echoes the tags on every event. On a

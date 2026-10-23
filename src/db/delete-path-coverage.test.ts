@@ -199,6 +199,8 @@ const RESET_KEEPS: Record<string, string> = {
   // and no visitor path that writes one.
   notification_rate_limit_state: "provider coordination state, not shop records",
   stripe_webhook_events: "provider delivery ledger, pruned by retention, not by a reset",
+  email_bounces:
+    "DiveDay's record of mail SES bounced, pruned by retention, not by a reset; a demo mails only the simulator's success address",
   shop_setup_links:
     "the platform's record of which set-up request opened the shop; a demo is never opened by one, and a reset keeps the shop",
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
@@ -292,6 +294,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
   weekly_digest_sends: "ON DELETE CASCADE from shops and people clears it",
   claude_usage: "ON DELETE CASCADE from shops clears it",
+  email_bounces: "ON DELETE CASCADE from shops clears it",
   assist_results: "ON DELETE CASCADE from shops clears it",
   website_setup_drafts: "ON DELETE CASCADE from shops clears it",
   crew_notices: "ON DELETE CASCADE from shops, people and trips clears it",

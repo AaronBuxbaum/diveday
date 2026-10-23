@@ -308,6 +308,15 @@ export const shops = pgTable(
      */
     rentalTerms: text("rental_terms"),
     /**
+     * **What Claude should know when it drafts a reply** (Aaron, 2026-10-22):
+     * plain text in the shop's words, like where to park or which wetsuits it
+     * rents. The `inbox-draft` assist reads it beside the schedule, prices and
+     * desk hours (`replyFacts`, `src/db/inbox-assists.ts`), so a number in it
+     * is one a draft may quote. Never a diver's details; null is no notes.
+     * Replaced saved answers and their `{name}`/`{trip}` markers.
+     */
+    replyNotes: text("reply_notes"),
+    /**
      * **How often the shop services a customer's regulator**, in months: 12 or
      * 24 (issue #2272). Read only by the work-order bench's suggested next-due
      * date for a customer's own regulator, which drives that customer's service

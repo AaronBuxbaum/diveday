@@ -8,22 +8,19 @@ import { LedgerGroup } from "@/components/ui/ledger";
 import { assistsAvailable } from "@/db/assists";
 import { pagedInboxMessages } from "@/db/inbound-messages";
 import { awaitsTriage, triageInboundMessagesSafely } from "@/db/inbox-assists";
-import { listDeletedSavedAnswers, listSavedAnswers } from "@/db/inbox-saved-answers";
 import { inboxSeats } from "@/db/inbox-seats";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { SAVED_ANSWERS_MAX } from "@/lib/saved-answers";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { InboxRow } from "./_components/InboxRow";
-import { SavedAnswersSection } from "./_components/SavedAnswersSection";
+import { ReplyNotesSection } from "./_components/ReplyNotesSection";
 import {
   deleteInboxMessageAction,
-  deleteSavedAnswerAction,
   markInboxSenderLateAction,
-  restoreSavedAnswerAction,
+  saveReplyNotesAction,
   setInboxMessageDoneAction,
 } from "./actions";
 import { requestFromMessageAction } from "./assist-actions";
@@ -45,11 +42,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   gone: { tone: "warning", key: "inbox.notices.gone" },
   "late-marked": { tone: "success", key: "inbox.notices.lateMarked" },
   "late-closed": { tone: "warning", key: "inbox.notices.lateClosed" },
-  // The saved answers at the foot of the page (fifth loop, item 15).
-  "answer-deleted": { tone: "success", key: "inbox.notices.answerDeleted" },
-  "answer-restored": { tone: "success", key: "inbox.notices.answerRestored" },
-  "answer-gone": { tone: "warning", key: "inbox.notices.answerGone" },
-  "answers-full": { tone: "warning", key: "inbox.notices.answersFull" },
+  // The notes for Claude's reply drafts, at the foot of the page.
+  "notes-saved": { tone: "success", key: "inbox.notices.notesSaved" },
   // "Make a request" read nothing a request could hold (the `request` assist).
   "request-nothing": { tone: "warning", key: "assistsFront.inbox.requestNothing" },
 };
@@ -98,10 +92,8 @@ export default async function InboxPage({
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range, so a bookmarked page past the end lands on the last real one.
-  const [messages, savedAnswers, deletedAnswers, assists] = await Promise.all([
+  const [messages, assists] = await Promise.all([
     pagedInboxMessages(db, shop.id, { page: Number.parseInt(page ?? "", 10) }),
-    listSavedAnswers(db, shop.id),
-    listDeletedSavedAnswers(db, shop.id),
     assistsAvailable(db, shop.id),
   ]);
   // One clock for the read and the stamps: "Today, 7:00 AM" and the seat it
@@ -150,11 +142,7 @@ export default async function InboxPage({
         t={t}
       />
 
-      {banner ? (
-        <StaffNoticeBanner tone={banner.tone}>
-          {t(banner.key, { count: SAVED_ANSWERS_MAX })}
-        </StaffNoticeBanner>
-      ) : null}
+      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       {messages.total === 0 ? (
         <EmptyState title={t("inbox.emptyHeading")} body={t("inbox.emptyDetail")} />
@@ -220,13 +208,12 @@ export default async function InboxPage({
         words={staffPagerWords(t)}
       />
 
-      <SavedAnswersSection
+      <ReplyNotesSection
+        notes={shop.replyNotes}
+        assists={assists}
         shopSlug={shopSlug}
-        answers={savedAnswers}
-        deleted={deletedAnswers}
         t={t}
-        deleteAction={deleteSavedAnswerAction}
-        restoreAction={restoreSavedAnswerAction}
+        action={saveReplyNotesAction}
       />
     </main>
   );

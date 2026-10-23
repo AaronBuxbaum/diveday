@@ -17,7 +17,7 @@ import {
   triageInboundMessage,
 } from "./inbox-assists";
 import { inboundMessages, people, personRoles, shops, trips } from "./schema";
-import { setShopFeature } from "./shops";
+import { setShopFeature, setShopReplyNotes } from "./shops";
 
 const ctx = fileScopedShopContext();
 
@@ -267,6 +267,24 @@ describe("replyFacts", () => {
     expect(window).toContain("The list stops at that limit");
   });
 
+  it("ends with the shop's notes for replies, one line each, and leaves them out when there are none", async () => {
+    // The seed writes demo notes, so this starts from none.
+    await setShopReplyNotes(ctx.db, ctx.shop.id, null);
+    const before = (await replyFacts(ctx.db, ctx.shop.id)).lines;
+    expect(before).not.toContain("Notes from the shop:");
+    await setShopReplyNotes(
+      ctx.db,
+      ctx.shop.id,
+      "Park behind the shop by the tank racks. The gate opens at 7:15.\n\nWe rent 5mm wetsuits in every size.",
+    );
+    const { lines } = await replyFacts(ctx.db, ctx.shop.id);
+    expect(lines.slice(-3)).toEqual([
+      "Notes from the shop:",
+      "Park behind the shop by the tank racks. The gate opens at 7:15.",
+      "We rent 5mm wetsuits in every size.",
+    ]);
+  });
+
   it("never quotes a private charter or a rehearsal departure", async () => {
     const soon = new Date(nowMs() + 2 * 24 * 60 * 60 * 1000);
     const departure = (title: string, isPrivate: boolean, isRehearsal: boolean) => ({
@@ -331,6 +349,23 @@ describe("draftReplyFor", () => {
       env: keyed,
     });
     expect(draft).toContain(quoted.replace(/^- /, ""));
+  });
+
+  it("drafts from the shop's notes, so a time only the notes give may be quoted", async () => {
+    await setShopReplyNotes(ctx.db, ctx.shop.id, "Park behind the shop. The gate opens at 7:15.");
+    const { personId } = await diverWithMessage("Where do I park?");
+    const draft = await draftReplyFor(ctx.db, {
+      shopId: ctx.shop.id,
+      personId,
+      provider: answering({
+        reply: "Park behind the shop. The gate opens at 7:15.",
+        medical: false,
+        eligibility: false,
+        confidence: 0.9,
+      }),
+      env: keyed,
+    });
+    expect(draft).toBe("Park behind the shop. The gate opens at 7:15.");
   });
 
   it("throws a draft away when it names a price nobody gave it", async () => {

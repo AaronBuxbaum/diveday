@@ -1,9 +1,10 @@
 import { getDb } from "@/db/client";
 import { optOutAddressAfterComplaint } from "@/db/courtesy-email";
+import { recordEmailBounces } from "@/db/email-bounces";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { parseSesEmailEvent } from "@/lib/notifications/ses-events";
+import { parseSesBounceReports, parseSesEmailEvent } from "@/lib/notifications/ses-events";
 import {
   confirmSnsSubscription,
   readWebhookPayload,
@@ -66,6 +67,31 @@ export async function POST(request: Request) {
     status: event.status,
     result,
   });
+
+  // Every bounce and complaint is kept per address, tracked message or not,
+  // so DiveDay can see which mail bounces, why, for which shop and who sent it
+  // (`email_bounces`, read by the founder's digest). The log line carries the
+  // classification and the recipient's domain, never the address.
+  const reports = parseSesBounceReports(message.Message, nowDate());
+  if (reports.length > 0) {
+    const recorded = await recordEmailBounces(db, reports);
+    for (const report of reports) {
+      log("ses_webhook.bounce_recorded", "info", {
+        providerMessageId: report.providerMessageId,
+        verdict: report.event,
+        bounceType: report.bounceType,
+        bounceSubType: report.bounceSubType,
+        smtpStatus: report.smtpStatus,
+        complaintType: report.complaintType,
+        kind: report.kind,
+        purpose: report.purpose,
+        shopId: report.shopId,
+        sentByPersonId: report.sentByPersonId,
+        recipientDomain: report.recipient.split("@").pop() ?? null,
+        newRows: recorded,
+      });
+    }
+  }
 
   // A complaint is an unsubscribe, whichever message it came in on — filed by
   // address within the shop the message tag names, so it lands even when the
