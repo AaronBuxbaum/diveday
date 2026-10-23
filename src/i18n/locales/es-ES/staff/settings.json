@@ -530,7 +530,7 @@
       "helpRequests": {
         "heading": "Pedidos de ayuda",
         "label": "Dejar que los buceadores pidan ayuda el día de la salida",
-        "description": "Una pregunta en su página de preparación que pone el pedido en Hoy. Desactivado, los buceadores ven ahí tu teléfono y tu correo; un pedido ya abierto sigue en Hoy hasta que lo atiendas, y el buceador todavía puede retirarlo."
+        "description": "Una pregunta en su página de preparación que pone el pedido en Hoy. Desactivado, los buceadores ven ahí tu teléfono y tu correo; un pedido ya abierto sigue en Hoy hasta que lo atiendas, y el buceador todavía puede cancelarlo."
       },
       "publicConditions": {
         "heading": "Condiciones públicas",

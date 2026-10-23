@@ -1038,10 +1038,16 @@ export async function drainNotificationRetries(
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
-      log(switchedOff ? "notification.retry_dropped_switched_off" : "notification.retry_dropped_opted_out", "info", {
-        shopId: claimed.shopId,
-        kind: notification.kind,
-      });
+      log(
+        switchedOff
+          ? "notification.retry_dropped_switched_off"
+          : "notification.retry_dropped_opted_out",
+        "info",
+        {
+          shopId: claimed.shopId,
+          kind: notification.kind,
+        },
+      );
       summary.failed += 1;
       continue;
     }

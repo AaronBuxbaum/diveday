@@ -361,7 +361,9 @@ describe("wait list switched off", () => {
     const guests = await getTripGuests(db, row, trip.id);
     expect(guests?.waitlistOn).toBe(false);
     // Review 2026-10-23, item 8: a diver already waiting never vanishes.
-    expect(guests?.interests.map(({ interest }) => interest.id)).toEqual([before.ok ? before.interestId : ""]);
+    expect(guests?.interests.map(({ interest }) => interest.id)).toEqual([
+      before.ok ? before.interestId : "",
+    ]);
   });
 
   it("still answers that a seat is open before saying the list is off", async () => {
