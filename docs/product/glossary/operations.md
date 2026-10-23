@@ -442,7 +442,9 @@
   lists the `unsealed` ones. A release that asked **shop questions** seals the diver's answers too:
   the snapshot joins the sealed set only when it is there, so a release signed before shops could
   ask anything keeps the digest it was sealed with, and an erasure's re-seal leaves the answers out
-  (ADR 20260729-staffing-waiver-audit-and-localized-copy, amendment of 2026-10-23).
+  (ADR 20260729-staffing-waiver-audit-and-localized-copy, amendment of 2026-10-23). A **medical
+  alert for the crew** joins the sealed set the same way, only when there is one; the version 2
+  (guardian-redacted) seal leaves it out, so a version 2 record carrying an alert reads `invalid`.
 
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
@@ -1415,8 +1417,9 @@
   emergency contact or certification, which DiveDay asks for itself, and not where diving currency
   lives (that is asked on each booking). A prompt or option with a health word gets a warning in
   the editor, because health questions belong to the standard questionnaire, which refers a diver
-  to a doctor; an answer here is never shown to the crew as a medical alert, and the diver is told
-  to answer health questions on the questionnaire instead. The signed record shows the sealed
+  to a doctor, and what the crew should know in an emergency belongs in the **medical alert for the
+  crew** every release already asks for; an answer here is never shown to the crew as a medical
+  alert, and the diver is told to answer health questions on the questionnaire instead. The signed record shows the sealed
   answers exactly as sealed, and, under its own heading, the shop's current questions that the
   record's own version did not ask (decided from the two versions, never from a missing answer). A
   paper, imported or erased release records no answers, and the signed record says so. The answers
@@ -1609,6 +1612,20 @@
   owner/manager-only, behind "Show answers", and each read writes `medical_answers_read` to the
   diver's activity trail before the answers are returned (issue #2157). A read that cannot be
   logged shows nothing, and a page render logs nothing.
+- **Medical alert for the crew** — one optional box on the release, after the **medical
+  questionnaire**, where a diver writes what the crew should know in an emergency ("Bee-sting
+  allergy. EpiPen in the blue dry bag."): plain text, at most 500 characters, sealed with the
+  signature. It **informs and never gates**: it changes no status, referral, readiness, admission,
+  roll call or count, nobody reviews it, and it is never evidence of fitness to dive or a
+  replacement for the questionnaire, which the diver page says. The alert that counts is the one on
+  the diver's current standing release; signing again replaces it, including with nothing. A paper
+  or imported release carries none, and erasure clears it. Every staffer who opens the manifest or
+  roll call sees a "Medical alert" chip on the row (the fact); the words are read by an owner or
+  manager, and by the crew of the departure the diver is booked on, behind "Show the alert", whose
+  action writes `medical_alert_read` to the diver's trail before it returns the text. Anyone else
+  is told who can read it. The offline copy carries the fact for everyone who saves it and the
+  words only for a reader allowed them on that departure, and nothing offline writes a read. On the
+  signed record the words are owner and manager only; a held seat shows neither (issue #2960).
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.
