@@ -458,7 +458,7 @@
     "src/db/divers.test.ts": 3056,
     "src/db/erasure-coverage.test.ts": 1181,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1535,
+    "src/db/export.test.ts": 1534,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3692,

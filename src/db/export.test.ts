@@ -514,11 +514,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "delivery_provider_status",
     "delivery_provider_status_at",
     "delivery_error",
-    // The physician's evaluation itself (issue #1252). The *fact* of the
-    // clearance, its evaluation date, the physician's name and the accountable
-    // staff member are all exported; the document is not, for the same reason
-    // `token_sealed` is not — a bundle leaves DiveDay's custody entirely, and
-    // this is the most sensitive file the product holds.
+    // The physician's evaluation itself (issue #1252), and the diver's own copy
+    // before an answer (`diver_medical_form_url`, issue #2797). The *facts* are
+    // exported; the documents are not, for the reason `token_sealed` is not.
     //
     // **Revisited when the read path landed** (issue #1283), and unchanged. The
     // app can now fetch these bytes back — through one permission-gated route,
@@ -530,6 +528,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // and the file being retrievable *inside* the product is precisely why it
     // does not need to travel outside it.
     "medical_clearance_document_url",
+    "diver_medical_form_url",
     "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
