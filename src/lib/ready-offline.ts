@@ -21,6 +21,13 @@ export const READY_CACHE_NAME = "diveday-ready-page-v1";
  */
 export const READY_KEEP_UNTIL_META = "diveday-ready-keep-until";
 
+/**
+ * Marks the page's "No signal" line, which the server draws hidden. The
+ * worker shows it in the kept copy (issue #3003): that copy runs no script,
+ * and it is only ever on screen when the network did not answer.
+ */
+export const READY_OFFLINE_NOTE_ATTR = "data-ready-offline-note";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**

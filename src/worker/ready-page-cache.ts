@@ -22,6 +22,16 @@
  * - **No other capability rides along** (issue #2693): a party claim link, a
  *   pending tip's Stripe checkout link, a bound server action's `$ACTION_*`
  *   fields and a recap token are dropped from the stored body for good.
+ * - **No Flight payload and no client runtime** (issue #3003): React flushes
+ *   the payload in 4096-byte views cut at any byte, and Next writes each as
+ *   its own `self.__next_f.push` script, so a token straddling a cut reaches
+ *   the page in two halves that no pattern above matches. The copy keeps none
+ *   of those scripts, and none of the page's external scripts either: with no
+ *   payload the runtime could only fail to hydrate. What is kept is the
+ *   server's markup and React's own streaming instructions, which put each
+ *   Suspense boundary's content in place, so the copy reads as the page did
+ *   and taps nothing that needs signal. Its "No signal" line is drawn by the
+ *   server, hidden, and shown here ({@link READY_OFFLINE_NOTE_ATTR}).
  * - **The diver can remove it**: "Remove saved copy" on the page, and every
  *   staff sign-out, run `forgetReadyPageCopy` (`src/lib/ready-offline.ts`).
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
@@ -44,7 +54,11 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_KEEP_UNTIL_META,
+  READY_OFFLINE_NOTE_ATTR,
+} from "@/lib/ready-offline";
 
 /**
  * A readiness link and nothing else: `/ready/` and one bearer token
@@ -99,6 +113,31 @@ const BOUND_ACTION_FIELD_PATTERN = /<input\b[^>]*\bname="\$ACTION_[^"]*"[^>]*>/g
  */
 const RECAP_TOKEN_PATTERN = /cmVjYXA6[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{43}/g;
 const RECAP_TOKEN_REMOVED = "__diveday_recap_not_kept__";
+
+/** Every `<script>` element, its opening tag's attributes and its inline text. */
+const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+
+/**
+ * **The page's scripts, minus React's streaming instructions** (issue #3003).
+ * Drops every script that loads from a `src` (the client runtime, which with
+ * no payload could only fail to hydrate) and every inline script that touches
+ * `__next_f` (the Flight payload, where a token can sit split across two).
+ * React's inline `$RC`-style instructions carry only boundary ids, and the
+ * copy needs them to show anything past the loading skeleton.
+ */
+function withoutClientRuntime(html: string): string {
+  return html.replace(SCRIPT_ELEMENT_PATTERN, (element, attributes: string, text: string) =>
+    /\bsrc\s*=/i.test(attributes) || text.includes("__next_f") ? "" : element,
+  );
+}
+
+/**
+ * The page's "No signal" line, drawn by the server and hidden there
+ * (`ReadyOfflineCopy`). The copy is only ever on screen when the network did
+ * not answer, and it runs no script to unhide the line, so it is shown here.
+ */
+const OFFLINE_NOTE_HIDDEN = `${READY_OFFLINE_NOTE_ATTR}="" hidden=""`;
+const OFFLINE_NOTE_SHOWN = `${READY_OFFLINE_NOTE_ATTR}=""`;
 
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
 
@@ -168,10 +207,12 @@ export async function saveReadyPage(
   headers.set(PATH_HASH_HEADER, await pathHash(path));
   // The page's links carry the token; a same-origin script reading the stored
   // body must not recover it (residual D1), so it is put back on the way out.
-  // Every other capability on the page is dropped for good: a claim link, a
-  // checkout link, a bound action's fields and a recap token (#2693).
+  // Every other capability on the page is dropped for good: the Flight
+  // payload whole (#3003), then a claim link, a checkout link, a bound
+  // action's fields and a recap token in the markup (#2693).
   const copy = new Response(
-    html
+    withoutClientRuntime(html)
+      .replaceAll(OFFLINE_NOTE_HIDDEN, OFFLINE_NOTE_SHOWN)
       .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
       .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED)
       .replace(CHECKOUT_LINK_PATTERN, CHECKOUT_REMOVED)
@@ -224,9 +265,8 @@ export async function forgetReadyPage(storage: CacheStorage, path: string): Prom
 
 /**
  * The page's own stylesheets (`/_next/static/**.css`), so an offline copy
- * reads as the page rather than as bare HTML. Scripts are left to the worker's
- * ordinary static-asset cache: the copy is read-only, and the inline streamed
- * markup renders without them.
+ * reads as the page rather than as bare HTML. No scripts: the copy keeps none
+ * (issue #3003), and its inline streamed markup renders without them.
  */
 export function readyPageStylesheets(html: string, origin: string): string[] {
   const paths = new Set<string>();

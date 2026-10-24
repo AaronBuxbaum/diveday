@@ -204,6 +204,46 @@ describe("saveReadyPage and readyPageFallback", () => {
   });
 
   /**
+   * **No Flight payload in the kept copy** (issue #3003). Next writes the
+   * payload as `self.__next_f.push` scripts cut at an arbitrary byte, so a
+   * token straddling a cut reaches the page in two halves that no pattern
+   * matches. Joining the push strings back together must find no token.
+   */
+  it("keeps no Flight push script, so a token split between two survives nowhere", async () => {
+    const claim = "C".repeat(20) + "D".repeat(23);
+    const body = [
+      `<a href="/ready/${TOKEN}/forms">Forms</a>`,
+      `<script>(self.__next_f=self.__next_f||[]).push([0])</script>`,
+      // The payload's quotes arrive escaped (`\"`), as in the test above.
+      `<script>self.__next_f.push([1,"8:[\\"$\\",\\"a\\",null,{\\"href\\":\\"/claim/${claim.slice(0, 20)}"])</script>`,
+      `<script>self.__next_f.push([1,"${claim.slice(20)}\\"}]\\n"])</script>`,
+      `<script src="/_next/static/chunks/main-app.js" async=""></script>`,
+      // React's own streaming instruction moves a Suspense boundary's content
+      // into place: the copy needs it to show anything past the skeleton.
+      `<div hidden id="S:0"><p>Where to go</p></div><script>$RC("B:0","S:0")</script>`,
+    ].join("");
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+
+    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
+    const stored = (await kept?.clone().text()) ?? "";
+    const joined = [...stored.matchAll(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g)]
+      .map((match) => match[1])
+      .join("");
+    expect(`${stored}${joined}`).not.toContain(claim);
+    expect(stored).not.toContain("__next_f");
+    // With no payload to hydrate from, the client runtime is left out too, so
+    // the copy is the server's markup as rendered rather than a failed hydration.
+    expect(stored).not.toContain("main-app.js");
+    expect(stored).toContain(`$RC("B:0","S:0")`);
+    expect(stored).toContain("Where to go");
+
+    const served =
+      (await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text()) ?? "";
+    expect(served).toContain(`href="/ready/${TOKEN}/forms"`);
+    expect(served).not.toContain(claim);
+  });
+
+  /**
    * D2: a copy does not outlive the trip it is for (the page names the day
    * after the boat is due back), and a page that names no day (a cancelled
    * booking, a dead link) clears it rather than replacing it.
