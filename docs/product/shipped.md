@@ -13,7 +13,7 @@ A diver writes, after the medical questionnaire, what the crew should know in an
 
 ## Medical alert: print the words, and an emergency read (built 2026-10-24)
 
-An owner or manager prints a departure's packet with each diver's medical alert under their row ("Print with medical alerts"), so a crew whose phone is dead can still act; each printed diver's trail records it. On the day of the departure, a staffer not on the crew opens an alert behind "Emergency: show the alert" and a confirm step; every such read is on the diver's trail and in the owner's Monday email. Issue #2990, H-153 amendment of 2026-10-24, glossary *Medical alert for the crew*.
+An owner or manager prints a departure's packet with each diver's medical alert under their row ("Print with medical alerts"), so a crew whose phone is dead can still act; each printed diver's trail records it. On the days of the trip, a night boat past midnight included, a staffer not on the crew opens an alert behind "Emergency: show the alert" and a confirm step; every such read is on the diver's trail and in the owner's Monday email. Issue #2990, H-153 amendment of 2026-10-24, glossary *Medical alert for the crew*.
 
 ## Shop questions on the release (built 2026-10-23)
 
