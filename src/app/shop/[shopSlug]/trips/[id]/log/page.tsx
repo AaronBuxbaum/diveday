@@ -36,7 +36,7 @@ import {
   rollCallCheckpointPrintClass,
   rollCallTableMinWidth,
 } from "./_components/roll-call-columns";
-import { NoRollCallNote, TimelineEntryText } from "./_components/TimelineEntryText";
+import { NoRollCallNote, RosterIntro, TimelineEntryText } from "./_components/TimelineEntryText";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — the claim
 // every trips/[id] sibling makes (ADR 20260804-instant-navigation): arriving from the home, the
@@ -184,9 +184,7 @@ export default async function IncidentExportPage({
         <h2 id="incident-roster-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.rosterHeading")}
         </h2>
-        <p className="mt-1 max-w-prose text-sm text-muted">
-          {t("incidentExport.rosterDescription")}
-        </p>
+        <RosterIntro turnedAway={doc.turnedAway} t={t} />
         <Table minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)} shellClassName="mt-3">
           <THead>
             <Th>{t("incidentExport.colDiver")}</Th>
@@ -265,19 +263,6 @@ export default async function IncidentExportPage({
             ))}
           </TBody>
         </Table>
-        {/* A seat the desk turned away is off the boat and out of every count
-            above (#2907), and still stated: the category only, never the
-            answers behind it (H-135). */}
-        {doc.turnedAway.length > 0 ? (
-          <ul className="mt-3 space-y-1 text-sm">
-            {doc.turnedAway.map((seat) => (
-              <li key={seat.bookingId}>
-                {seat.fullName} —{" "}
-                {t("incidentExport.timelineSeatTurnedAway", { reason: seat.reason ?? "other" })}
-              </li>
-            ))}
-          </ul>
-        ) : null}
       </section>
 
       <CrewAtDeparture

@@ -30,10 +30,11 @@ export function noShowSalvageCopy(input: {
   offer: SalvageOffer;
   shopSlug: string;
   tripId: string;
-  /** The released seat: a turned-away diver's money line links to its row. */
-  bookingId: string;
-  /** The diver the seat was taken from — the subject of the rebooking offer. */
-  diver: { id: string; name: string };
+  /**
+   * The diver the seat was taken from — the subject of the rebooking offer —
+   * and the released seat, whose row a turned-away diver's money line links to.
+   */
+  diver: { id: string; name: string; bookingId: string };
   /** The page holds the locale and the shop's zone; this holds neither. */
   formatWhen: (startsAt: Date) => string;
   /**
@@ -59,12 +60,12 @@ export function noShowSalvageCopy(input: {
     const money = input.moveClosed
       ? {
           line: t("checkIn.turnAway.money"),
-          href: `${row}#booking-${input.bookingId}`,
+          href: `${row}#booking-${diver.bookingId}`,
           label: t("checkIn.turnAway.moneyRemoveDoor"),
         }
       : {
           line: t("checkIn.turnAway.money"),
-          href: `${row}#move-booking-${input.bookingId}`,
+          href: `${row}#move-booking-${diver.bookingId}`,
           label: t("checkIn.turnAway.moneyMoveDoor"),
         };
     if (offer.kind === "waitlist") {
