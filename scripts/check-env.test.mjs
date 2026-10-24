@@ -27,7 +27,9 @@ const UPSTASH = {
 };
 
 // Every key production must carry: the Upstash pair and the sealing key.
-const PRODUCTION = { ...UPSTASH, SECRET_ENCRYPTION_KEY: "sealing-key" };
+// A well-formed sealing key: 32 bytes, base64, as `openssl rand -base64 32` prints one.
+const SEALING_KEY = Buffer.alloc(32, 7).toString("base64");
+const PRODUCTION = { ...UPSTASH, SECRET_ENCRYPTION_KEY: SEALING_KEY };
 
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
@@ -89,6 +91,38 @@ describe("check-env", () => {
 
     expect(run.status).toBe(1);
     expect(run.stderr).toContain("missing SECRET_ENCRYPTION_KEY");
+  });
+
+  it("fails production when the sealing key is mistyped, naming it", () => {
+    // The app reads a key that does not decode to 32 bytes as none (src/lib/secret-box.ts), so a
+    // truncated paste locks two-factor staff out just as a missing key does.
+    const truncated = SEALING_KEY.slice(0, 20);
+    const run = checkEnv({
+      VERCEL_ENV: "production",
+      ...UPSTASH,
+      SECRET_ENCRYPTION_KEY: truncated,
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("production has a malformed SECRET_ENCRYPTION_KEY.");
+    expect(run.stderr).toContain("locked out");
+  });
+
+  it("fails production when a rotation key is set but mistyped", () => {
+    const run = checkEnv({
+      VERCEL_ENV: "production",
+      ...PRODUCTION,
+      SECRET_ENCRYPTION_KEY_PREVIOUS: "not-a-key",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("malformed SECRET_ENCRYPTION_KEY_PREVIOUS");
+  });
+
+  it("leaves a mistyped sealing key alone outside production", () => {
+    const run = checkEnv({ VERCEL_ENV: "preview", ...UPSTASH, SECRET_ENCRYPTION_KEY: "short" });
+
+    expect(run.status).toBe(0);
   });
 
   it("leaves a preview deployment without the sealing key alone", () => {
