@@ -103,6 +103,19 @@ export function OfflineRollCallSection({
                 })}
           </span>
         </h2>
+        {/* **This copy may be missing someone** (issue #2980, option (a),
+            decided 2026-10-24). The worker chose it because DiveDay was
+            silent, so a walk-up seated after the save has no row below and
+            nothing here can count them. The line names the save time and asks
+            for a head count against the live list, ahead of the first row.
+            No count field and no live rows merged in. */}
+        {controls.servedWithoutAnswer ? (
+          <p className="mt-1 text-sm font-semibold text-pretty text-warning-strong">
+            {t("shared.offlineManifest.single.unansweredCountHeads", {
+              when: view.dateTime.format(new Date(view.envelope.snapshot.savedAt)),
+            })}
+          </p>
+        ) : null}
         {showsDecompressionReminder ? (
           <DecompressionReminder text={t("manifest.decompressionReminder")} />
         ) : null}
