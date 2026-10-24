@@ -23,8 +23,9 @@ The normal matrix, from the `capture()` helper: light at phone and desktop (390x
 - **Specs**: `pnpm e2e:affected` names the strong specs (edited, quoting removed text, on an edited
   route), the five smoke tests, and the reach specs ranked by how much of the diff they name;
   `verify:push` runs them. `--commit <sha>` replays one commit. It excludes every visual spec.
-- **Captures**: a pull request photographs what `scripts/visual-affected.mjs` selects. The same
-  selection, light only, locally:
+- **Captures**: a pull request photographs what `scripts/visual-affected.mjs` selects, in light
+  mode only unless the diff touches a colour token or theme module (`THEME` there); main photographs
+  both schemes. The same selection, light only, locally:
   ```bash
   mkdir -p test-results
   pnpm exec playwright test e2e/visual --list --reporter=json > test-results/list.json
@@ -32,7 +33,7 @@ The normal matrix, from the `capture()` helper: light at phone and desktop (390x
   pnpm e2e:run e2e/visual --grep "$(cat test-results/grep.txt)" --reporter=line
   ```
   A surface you expected to move that reads as passed means the selection missed it: the
-  `visual-all` label captures everything, and the miss is filed.
+  `visual-all` label captures everything, dark included, and the miss is filed.
 
 ## Fast iteration
 

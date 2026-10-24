@@ -46,6 +46,23 @@ export function rankFailedSpecs(annotationsPerJob, { max = 8, exists = () => tru
     .map(([spec]) => spec);
 }
 
+/**
+ * Spec paths in the order the failed jobs first named them, newest first, capped at `max`:
+ * the fast lane's fill (`scripts/fast-lane.mjs`). `annotationsPerJob` is in
+ * {@link readFailureHistory}'s order, which is the API's: the newest failed run first.
+ */
+export function newestFailedSpecs(annotationsPerJob, { max = 8, exists = () => true } = {}) {
+  const seen = [];
+  for (const annotations of annotationsPerJob) {
+    for (const a of annotations) {
+      if (a.annotation_level !== "failure") continue;
+      const spec = annotationSpec(a);
+      if (spec && !seen.includes(spec) && exists(spec)) seen.push(spec);
+    }
+  }
+  return seen.slice(0, max);
+}
+
 // Playwright's GitHub reporter title contains the test's declaration identity;
 // annotation.path can instead be the helper frame where the assertion threw.
 export function annotationSpec(annotation) {
@@ -72,14 +89,18 @@ export function pages(endpoint, key, request) {
   throw new Error(`History pagination exceeded safety limit: ${endpoint}`);
 }
 
-export function readFailureHistory(repo, since, request) {
+/**
+ * Every failed shard job's annotations since `since`, newest run first. `maxRuns` reads only the
+ * newest few runs' jobs, for a caller on a budget (the fast lane reads 10).
+ */
+export function readFailureHistory(repo, since, request, { maxRuns = Infinity } = {}) {
   const runs = pages(
     `repos/${repo}/actions/workflows/ci.yml/runs?status=failure&created=>=${since}`,
     "workflow_runs",
     request,
   );
   const perJob = [];
-  for (const run of runs) {
+  for (const run of runs.slice(0, maxRuns)) {
     const jobs = pages(`repos/${repo}/actions/runs/${run.id}/jobs`, "jobs", request);
     for (const job of jobs.filter(
       (job) =>
