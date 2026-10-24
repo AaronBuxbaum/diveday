@@ -59,7 +59,7 @@ test.describe("as owner", () => {
 
     // The link is one-time: revisiting it now reads as invalid.
     await page.goto(`/invite/${token}`);
-    await expect(page.getByRole("heading", { name: "This invite isn’t available" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
   });
 
   test("removing a staff member lands immediately with an Undo banner, no confirm dialog", async ({
@@ -223,7 +223,7 @@ test.describe("as owner", () => {
 
 test("a tampered invite token reveals nothing", async ({ page }) => {
   await page.goto("/invite/not-a-real-token");
-  await expect(page.getByRole("heading", { name: "This invite isn’t available" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
 });
 
 test.describe("as captain", () => {

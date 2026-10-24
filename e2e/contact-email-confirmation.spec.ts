@@ -54,6 +54,6 @@ test("a shop confirms its contact email through the real page and action", async
 test("a stale link is unavailable, never a false confirmation", async ({ page }) => {
   await page.goto("/confirm-contact/not-a-real-token");
   await expect(
-    page.getByRole("heading", { name: "This confirmation link isn’t available" }),
+    page.getByRole("heading", { name: "This link no longer works" }),
   ).toBeVisible();
 });

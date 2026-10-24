@@ -580,7 +580,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   // A garbage token in the same position must not open the booking.
   await page.goto("/ready/not-a-real-token?booked=1");
   await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).not.toBeVisible();
-  await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /This link no longer works/ })).toBeVisible();
 
   // And the branch this replaced is gone: a real, live capability presented in
   // the old `?booking=` slot on the trip page opens nothing at all. It is the

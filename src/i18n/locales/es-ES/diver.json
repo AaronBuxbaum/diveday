@@ -14,6 +14,8 @@
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
     "diveDayDoor": "Ir a DiveDay",
+    "deadLinkHeading": "Este enlace ya no funciona",
+    "deadLinkNext": "Pide al centro un enlace nuevo.",
     "perDiver": "por buceador",
     "optional": "(opcional)",
     "name": "Nombre",
@@ -513,8 +515,7 @@
       "submitting": "Cancelando…",
       "confirmedTitle": "Te has dado de baja",
       "confirmedText": "Ya no recibirás correos de ofertas de última hora de {shopName}. Puedes volver a inscribirte cuando quieras desde su página de horarios.",
-      "unavailableTitle": "Este enlace no está disponible",
-      "unavailableText": "Puede ser de un centro que ya no está activo. Si sigues recibiendo correos que no quieres, responde a uno y pregúntale directamente al centro."
+      "unavailableText": "Si sigues recibiendo correos que no quieres, responde a uno y pregúntale directamente al centro."
     }
   },
   "findMyBooking": {
@@ -563,8 +564,7 @@
     "submit": "Confirmar esta dirección",
     "confirmedTitle": "Dirección confirmada",
     "confirmedText": "Las respuestas de los buceadores de {shopName} ahora llegan aquí.",
-    "unavailableTitle": "Este enlace de confirmación no está disponible",
-    "unavailableText": "Puede haber caducado, haber sido sustituido por uno más reciente, o la dirección en ajustes cambió desde entonces. Guarda la dirección de nuevo en ajustes para recibir un enlace nuevo."
+    "unavailableText": "Guarda la dirección de nuevo en ajustes para recibir un enlace nuevo."
   },
   "shoreConfirm": {
     "title": "¿Ser el contacto en tierra de {shopName}?",
@@ -573,8 +573,7 @@
     "submit": "Sí, enviadme estos avisos",
     "confirmedTitle": "Eres el contacto en tierra de {shopName}",
     "confirmedText": "Si un pase de lista sigue abierto pasada la hora de regreso de un barco, {shopName} te escribirá. Cada aviso lleva un enlace para dejar de recibirlos.",
-    "unavailableTitle": "Este enlace no está disponible",
-    "unavailableText": "Puede haber caducado o haber sido sustituido por uno más reciente, o el centro cambió la dirección desde entonces. Pide al centro que te envíe uno nuevo."
+    "unavailableText": "Pide al centro que te envíe uno nuevo."
   },
   "course": {
     "hidden": "Oculto: los buceadores no ven esta página.",
@@ -688,8 +687,6 @@
     "yourPhotos": "Tus fotos",
     "captionLabel": "Agrega un pie de foto (opcional)",
     "tipCrew": "Deja propina a la tripulación",
-    "unavailableHeading": "Este enlace de resumen no está disponible",
-    "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "didNotDiveBody": "Esta reserva no tiene resumen que puntuar ni al que agregar una foto.",
     "noRecapBody": "Esta reserva no tiene resumen.",
     "noShowHeading": "Esta reserva figura como no presentado",
@@ -873,9 +870,7 @@
     "cancelledHeading": "Esta reserva se canceló",
     "seatReleasedHeading": "El centro liberó tu plaza en esta salida",
     "seatReleasedBody": "Habla con el mostrador.",
-    "unavailableHeading": "Este enlace de preparación no está disponible",
-    "unavailableBody": "Pide a tu centro un enlace nuevo.",
-    "expiredBody": "Los enlaces de preparación no duran mucho, y este ha caducado. Podemos enviarte uno nuevo por correo.",
+    "expiredBody": "Podemos enviarte uno nuevo por correo.",
     "emailFreshLink": "Envíame un enlace nuevo",
     "sendingFreshLink": "Enviando…",
     "freshLinkSent": "En camino: revisa el correo que tienes registrado en el centro. Debería llegar en un par de minutos.",
@@ -1118,12 +1113,9 @@
   },
   "waiver": {
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
-    "unavailableHeading": "Este enlace de exención no está disponible",
-    "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "heldHeading": "Esta exención espera al centro",
     "heldBody": "El centro está verificando quién va en esta reserva. Podrás firmar cuando lo confirme.",
-    "expiredHeading": "Este enlace de exención ha caducado",
-    "expiredBody": "Los enlaces de exención no duran mucho y este ya no sirve. Podemos enviarte uno nuevo por correo.",
+    "expiredBody": "Podemos enviarte uno nuevo por correo.",
     "emailFreshLink": "Envíame un enlace nuevo",
     "sendingFreshLink": "Enviando…",
     "freshLinkSent": "Ya va en camino. Revisa la dirección de correo que tienes registrada en el centro. Debería llegar en un par de minutos.",
@@ -1282,8 +1274,7 @@
     "submit": "Reclamar esta plaza",
     "claiming": "Reclamando…",
     "privacyNote": "Lo que escribas aquí solo lo ven el centro y tú. Quien organiza el grupo solo ve que la plaza está reclamada.",
-    "unavailableHeading": "Este enlace no está disponible",
-    "unavailableBody": "Puede que ya se haya usado, que lo hayan reemplazado por uno más nuevo o que haya caducado. Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
+    "unavailableBody": "Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
     "sentHeading": "Revisa tu correo",
     "sentBody": "Enviamos un mensaje a la dirección que indicaste. Ahí dice qué sigue.",
     "expiredBody": "Quien te envió este enlace puede decirte qué ha pasado con la plaza.",
@@ -3297,8 +3288,7 @@
       "submit": "Enviar enlace de restablecimiento"
     },
     "invite": {
-      "unavailableTitle": "Esta invitación no está disponible",
-      "unavailableText": "Puede haber caducado, haberse usado ya o haber sido revocada. Pide a quien te invitó que envíe una nueva.",
+      "unavailableText": "Pide a quien te invitó que envíe una nueva.",
       "title": "Crea tu contraseña",
       "description": "Elige una contraseña para terminar de configurar tu cuenta de DiveDay.",
       "confirmPassword": "Confirmar contraseña",
@@ -3310,12 +3300,10 @@
       "submit": "Confirmar mi correo",
       "confirmedTitle": "Correo confirmado",
       "confirmedText": "Todo listo.",
-      "unavailableTitle": "Este enlace de confirmación no está disponible",
-      "unavailableText": "Si ya confirmaste tu correo, todo listo. Inicia sesión y continúa."
+      "unavailableText": "Si ya confirmaste tu correo, inicia sesión y continúa."
     },
     "resetPassword": {
-      "unavailableTitle": "Este enlace de restablecimiento no está disponible",
-      "unavailableText": "Puede haber caducado o haberse usado ya. Pide uno nuevo desde la página de inicio de sesión.",
+      "unavailableText": "Pide uno nuevo desde la página de inicio de sesión.",
       "title": "Crea una nueva contraseña",
       "description": "Elige una nueva contraseña para tu cuenta de DiveDay.",
       "newPassword": "Nueva contraseña",
@@ -5989,8 +5977,7 @@
     "submit": "Sí, quiero recibirlos",
     "confirmedTitle": "Dirección confirmada",
     "confirmedText": "Los archivos de fin de mes de {shopName} llegarán aquí el día 2 de cada mes.",
-    "unavailableTitle": "Este enlace no está disponible",
-    "unavailableText": "Puede haber caducado o haber sido sustituido por uno más reciente, o el centro cambió la dirección desde entonces. Pide al centro que te envíe uno nuevo."
+    "unavailableText": "Pide al centro que te envíe uno nuevo."
   },
   "bookkeeperStop": {
     "title": "¿Dejar de recibir los archivos de fin de mes de {shopName}?",

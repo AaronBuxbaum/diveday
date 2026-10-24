@@ -195,9 +195,6 @@ async function DiverReadinessPage({
 }) {
   const alone = terminalCardIn(underBookedHeader, token);
   const data = await getReadyPageData(db, bookingId);
-  // `ready.unavailableBody`, not the waiver subtree's identical sentence
-  // (issue #1334): `/waivers` and `/ready` have different rescues, and a
-  // reword of one should not reach the other by accident.
   if (!data) return alone(<UnavailableReadyLink t={anonT} />);
 
   const { detail, shop, person } = data;

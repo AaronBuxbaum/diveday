@@ -244,7 +244,7 @@ test.describe("staff-prepared trip", () => {
     readyUrl.search = "";
     await page.goto(readyUrl.toString());
     await expect(
-      page.getByRole("heading", { name: /readiness link isn.t available/ }),
+      page.getByRole("heading", { name: /This link no longer works/ }),
     ).toBeVisible();
     await expect(page.getByText(/Blue Mantis Divers/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
@@ -284,7 +284,7 @@ test.describe("staff-prepared trip", () => {
 
 test("a tampered readiness token reveals nothing, and still leaves a door", async ({ page }) => {
   await page.goto("/ready/not-a-real-token");
-  await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /This link no longer works/ })).toBeVisible();
   // No shop to name, so DiveDay's own door rather than a dead end (UX review
   // 2026-10-10, item 11).
   await expect(page.getByRole("link", { name: "Go to DiveDay" })).toHaveAttribute("href", "/");
@@ -298,7 +298,7 @@ test("a tampered course-forms link opens no form and falls back to the prep link
 }) => {
   await page.goto("/ready/not-a-real-token/forms");
   await expect(page).toHaveURL(/\/ready\/not-a-real-token$/);
-  await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /This link no longer works/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Sign/ })).toHaveCount(0);
 });
 
