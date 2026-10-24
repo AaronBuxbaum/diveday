@@ -5,6 +5,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -142,6 +143,23 @@ export const incidentReports = pgTable(
      * sent. Null until then; the report page says "Not reached yet" while it is.
      */
     missingAlertSentAt: timestamp("missing_alert_sent_at", { withTimezone: true }),
+    /**
+     * **Who the missing-diver alarm actually reached** (issue #2828): the
+     * `people.id` of every owner whose alarm email was sent, appended at send
+     * time by `sendMissingDiverAlerts`, once per person however many passes
+     * it took. A partial send records the owners it reached; one whose email
+     * failed is not here until a later pass reaches them.
+     *
+     * Found reads exactly this set for the all-clear
+     * (`sendMissingDiverAllClear`), never the owner list as it stands then:
+     * an owner who never saw the alarm is not cleared of it, and one who did
+     * is never skipped. Staff ids only, never an address or a name; the
+     * address is re-read from the person's login at send time.
+     */
+    missingAlertReachedPersonIds: jsonb("missing_alert_reached_person_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     /**
      * **"Missing diver, alert owners now"** from the roll-call row (issue
      * #2694, decided by Aaron 2026-10-17): the one tap that tells the owners

@@ -1829,6 +1829,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "missing_alert_raised_by_person_id",
       "missing_alert_raised_by_name",
       "missing_alert_sent_at",
+      "missing_alert_reached_person_ids",
+      "missing_alert_reached_names",
       "missing_found_at",
       "missing_found_by_person_id",
       "missing_found_by_name",
@@ -1870,6 +1872,12 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.missingAlertRaisedByPersonId,
         row.missingAlertRaisedByPersonId ? personName.get(row.missingAlertRaisedByPersonId) : null,
         row.missingAlertSentAt,
+        row.missingAlertReachedPersonIds.length > 0
+          ? row.missingAlertReachedPersonIds.join("; ")
+          : null,
+        row.missingAlertReachedPersonIds.length > 0
+          ? row.missingAlertReachedPersonIds.map((id) => personName.get(id) ?? "").join("; ")
+          : null,
         row.missingFoundAt,
         row.missingFoundByPersonId,
         row.missingFoundByPersonId ? personName.get(row.missingFoundByPersonId) : null,

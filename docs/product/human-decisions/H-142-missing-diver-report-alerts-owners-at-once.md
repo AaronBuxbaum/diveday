@@ -38,6 +38,11 @@ What the build took from the answer, each a one-line change if Aaron wants anoth
 - **Never "owners alerted" unless the send reached someone**: otherwise the row says "Not reached yet. Call the owners now.", and a re-tap sends again. The hourly pass skips a raised report once the roll call has the person back, and stops between owners once Found. Marked not aboard again after Found, a raise opens a new report and alerts again. Offline, the button says to phone the owners or use VHF.
 - The shore contact as a recipient (option 3 on the issue) waits until a pilot shop asks.
 
+## Amendment 2026-10-24 (issue #2828, a build fix awaiting Aaron's confirmation)
+
+- **Who the alarm reached is written down.** Each owner whose alarm email was sent goes into `incident_reports.missing_alert_reached_person_ids` at once, once per person. A retry pages only the owners not reached yet, so nobody gets a second copy; "told" (`missing_alert_sent_at`) still means every current owner has been reached.
+- **The all-clear goes to exactly that set**, never the owner list at Found: an owner promoted since never saw the alarm and gets no all-clear; one demoted, or whose login was turned off since, saw it and still gets one. A partial alarm now clears whoever it reached rather than sending nothing, and an alarm that reached nobody has no all-clear. The claim reads the set in the same statement, and an alarm sent as the all-clear is claimed sends that owner's all-clear itself, so at most one per owner and none skipped. A partial all-clear is logged as an error and the report still says partial. This replaces "each active owner" and "no all-clear unless `missing_alert_sent_at`" above.
+
 ## Minimum outcome to record
 
 Whether a stated missing diver skips the stale roll-call window, who is told, and by which channels.
