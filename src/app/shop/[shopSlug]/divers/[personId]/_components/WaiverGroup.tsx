@@ -5,6 +5,7 @@ import { medicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { FILE_ROW_INSET, WaiverStateRow } from "@/components/person/rows";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
@@ -16,7 +17,11 @@ import type { DiverStatusRow } from "@/lib/diver-status";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { shopPath } from "@/lib/staff-notices";
-import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../waiver-actions";
+import {
+  markWaiverInPersonAction,
+  recordMedicalClearanceAction,
+  rejectDiverMedicalFormAction,
+} from "../waiver-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -488,6 +493,11 @@ export function WaiverGroup({
               >
                 {t("divers.waiver.openClearanceDocument")}
               </a>
+              {/* The file is the diver's, accepted by staff: never read as
+                  staff-sourced evidence (issue #2797). */}
+              {clearanceDocument.fromDiver ? (
+                <span className="text-muted"> · {t("divers.waiver.evaluationFromDiver")}</span>
+              ) : null}
             </p>
           ) : null}
           {/* **The signed form the diver sent from the doctor's page** (issue
@@ -495,7 +505,7 @@ export function WaiverGroup({
             the answer may open it (`canReadDiverMedicalForm`), so the link is
             drawn for whoever sees this control; each open goes on the trail. */}
           {heldForMedical && diver.diverMedicalForm ? (
-            <p className="px-5 pb-3 text-sm sm:px-6">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 pb-3 text-sm sm:px-6">
               <a
                 href={`/api/medical-clearances/${diver.diverMedicalForm.recordId}/diver-form`}
                 target="_blank"
@@ -509,7 +519,17 @@ export function WaiverGroup({
                   ),
                 })}
               </a>
-            </p>
+              {/* Turned away: deleted, and the diver may send another. */}
+              <form action={rejectDiverMedicalFormAction.bind(null, shopSlug, personId)}>
+                <input type="hidden" name="recordId" value={diver.diverMedicalForm.recordId} />
+                <SubmitButton
+                  pendingLabel={t("divers.waiver.rejectingDiverForm")}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                >
+                  {t("divers.waiver.rejectDiverForm")}
+                </SubmitButton>
+              </form>
+            </div>
           ) : null}
           {heldForMedical ? (
             <div className={FILE_ROW_INSET}>

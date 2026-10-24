@@ -506,6 +506,10 @@
     "medicalClearanceRecordedEarlierHeld": "Recorded from the earlier letter. The diver’s other seat is still held by that earlier referral. Record the letter against it too.",
     "medicalClearanceDocumentFailed": "That evaluation file couldn’t be stored.",
     "medicalClearanceEvidenceRequired": "Name the physician, or attach their evaluation.",
+    "medicalClearanceDiverFormPhysician": "Type the physician’s name from the form the diver sent.",
+    "medicalClearanceDiverFormNotOpened": "Open the form the diver sent and check it before you use it.",
+    "diverFormNotUsed": "Form deleted. The diver can send another from their doctor’s page.",
+    "diverFormGone": "That form is no longer on file.",
     "medicalClearanceOutcomeRequired": "Say what the physician decided.",
     "medicalClearanceAnswerRecorded": "A physician’s answer is already on this record. Seat them on a departure and send a new release from there.",
     "medicalClearanceNoHold": "Nothing of this diver’s is waiting on medical review here.",
@@ -637,6 +641,9 @@
     "viewReferralRecord": "View the referral",
     "openClearanceDocument": "Open the physician’s evaluation",
     "openDiverForm": "Open the signed form the diver sent on {date}",
+    "rejectDiverForm": "Can’t use this form",
+    "rejectingDiverForm": "Deleting…",
+    "evaluationFromDiver": "Sent by the diver",
     "openSignedRecord": "Open the signed waiver"
   },
   "details": {

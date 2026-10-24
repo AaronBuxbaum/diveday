@@ -249,6 +249,12 @@ export default async function SignedWaiverPage({
                   {t("divers.waiver.openClearanceDocument")}
                 </a>
               ) : null}
+              {/* Never read as staff-sourced evidence (issue #2797). */}
+              {waiver.medicalClearanceDocumentOnFile && waiver.medicalClearanceDocumentFromDiver ? (
+                <p className="mt-1 font-normal text-muted">
+                  {t("divers.waiver.evaluationFromDiver")}
+                </p>
+              ) : null}
             </div>
           ) : null}
           <MedicalAnswers

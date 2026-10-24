@@ -361,6 +361,8 @@ export async function getSignedWaiverForDiver(
       ? record.medicalClearancePhysicianName
       : null,
     medicalClearanceDocumentOnFile: Boolean(record.medicalClearanceDocumentUrl),
+    /** The file on file is the form the diver sent, accepted by staff (issue #2797). */
+    medicalClearanceDocumentFromDiver: record.medicalClearanceDocumentFromDiver,
     supersededAt: record.supersededAt,
     /**
      * The medical alert for the crew (issue #2960): whether one is on file,

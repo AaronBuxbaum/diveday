@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { recordDiverActivity } from "@/db/operations";
 import { waiverRecords } from "@/db/schema";
 import { completeWaiver } from "@/db/waivers-completion";
 import { attachDiverMedicalForm } from "@/db/waivers-medical";
@@ -42,7 +43,9 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { recordMedicalClearanceAction } = await import("./waiver-actions");
+const { recordMedicalClearanceAction, rejectDiverMedicalFormAction } = await import(
+  "./waiver-actions"
+);
 
 const referral = { ...clearAnswers, responses: { ...clearAnswers.responses, q3: true } };
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -153,23 +156,59 @@ describe("recording with the form the diver sent", () => {
     return { ...context, record, url };
   }
 
-  function usingForm(recordId: string) {
+  function usingForm(recordId: string, physicianName?: string) {
     const formData = new FormData();
+    if (physicianName) formData.set("physicianName", physicianName);
     formData.set("outcome", "cleared");
     formData.set("evaluatedOn", day(nowMs() - DAY_MS));
     formData.set("diverFormRecordId", recordId);
     return formData;
   }
 
-  it("records the answer on it, with no physician's name typed", async () => {
+  it("records the answer on it only once this staffer opened it and typed the physician", async () => {
     const { db, shop, person, record, url } = await diverSentForm();
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    // The tick alone is refused, and so is a name typed without opening it.
+    expect(
+      await redirectedTo(() =>
+        recordMedicalClearanceAction(shop.slug, person.id, usingForm(record.id)),
+      ),
+    ).toContain("notice=medical-clearance-diver-form-physician");
+    expect(
+      await redirectedTo(() =>
+        recordMedicalClearanceAction(shop.slug, person.id, usingForm(record.id, "Dr. Imani Reyes")),
+      ),
+    ).toContain("notice=medical-clearance-diver-form-not-opened");
+    await recordDiverActivity(db, {
+      shopId: shop.id,
+      personId: person.id,
+      actorPersonId: owner,
+      code: "diver_medical_form_opened",
+      waiverRecordId: record.id,
+    });
     const to = await redirectedTo(() =>
-      recordMedicalClearanceAction(shop.slug, person.id, usingForm(record.id)),
+      recordMedicalClearanceAction(shop.slug, person.id, usingForm(record.id, "Dr. Imani Reyes")),
     );
     expect(to).toContain("notice=medical-clearance-recorded");
     const [after] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
     expect(after?.medicalClearanceDocumentUrl).toBe(url);
+    expect(after?.medicalClearanceDocumentFromDiver).toBe(true);
     expect(after?.diverMedicalFormUrl).toBeNull();
+  });
+
+  it("turns a form away, and lets the diver send another", async () => {
+    const { db, shop, person, record } = await diverSentForm();
+    const formData = new FormData();
+    formData.set("recordId", record.id);
+    expect(
+      await redirectedTo(() => rejectDiverMedicalFormAction(shop.slug, person.id, formData)),
+    ).toContain("notice=diver-form-not-used");
+    const [after] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
+    expect(after?.diverMedicalFormUrl).toBeNull();
+    expect(after?.diverMedicalFormSentAt).toBeNull();
+    expect(
+      await redirectedTo(() => rejectDiverMedicalFormAction(shop.slug, person.id, formData)),
+    ).toContain("notice=diver-form-gone");
   });
 
   it("asks for evidence when the posted release is not an id", async () => {

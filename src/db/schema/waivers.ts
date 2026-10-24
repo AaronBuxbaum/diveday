@@ -301,6 +301,17 @@ export const waiverRecords = pgTable(
      */
     medicalClearancePhysicianName: text("medical_clearance_physician_name"),
     /**
+     * **The evaluation on file is the form the diver sent**, which a staffer
+     * accepted as the evidence (issue #2797, ADR 20261024-diver-sent-doctors-form),
+     * rather than a file staff attached themselves. Every surface that links the
+     * evaluation says so, so a diver-sourced photo never reads as staff-sourced
+     * evidence; who accepted it is `medical_diver_form_accepted` on the trail.
+     * Survives erasure with the rest of the fact.
+     */
+    medicalClearanceDocumentFromDiver: boolean("medical_clearance_document_from_diver")
+      .notNull()
+      .default(false),
+    /**
      * **The physician answered, and the answer was no** (issue #1283).
      *
      * The RSTC Physician's Evaluation Form has two outcomes and DiveDay only
@@ -565,6 +576,14 @@ export const waiverRecords = pgTable(
     // day it arrived, and is gone once a physician's answer is recorded: used
     // as the evaluation or deleted (issue #2797). The answered record's
     // evidence is `medical_clearance_document_url`, never this column.
+    // "From the diver" describes a document, so there is one, or there was
+    // one before an erasure destroyed it.
+    check(
+      "waiver_records_clearance_document_from_diver",
+      sql`not ${table.medicalClearanceDocumentFromDiver}
+        or ${table.medicalClearanceDocumentUrl} is not null
+        or ${table.anonymizedAt} is not null`,
+    ),
     check(
       "waiver_records_diver_medical_form_held",
       sql`${table.diverMedicalFormUrl} is null or (

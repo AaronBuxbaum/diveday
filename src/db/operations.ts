@@ -136,6 +136,8 @@ export type DiverActivityCode =
   | "identity_repointed_onto"
   | "medical_clearance_opened"
   | "diver_medical_form_opened"
+  | "medical_diver_form_accepted"
+  | "medical_diver_form_not_used"
   | "medical_answers_read"
   | "medical_alert_read"
   | "medical_alert_saved_offline"
@@ -167,6 +169,12 @@ export async function recordDiverActivity(
      * trail and off the trip's feed, its incident export and dispute sheet.
      */
     departureId?: string;
+    /**
+     * The release a diver-sent doctor's form sits on (issue #2797), so
+     * `recordMedicalEvaluation` can ask whether *this* staffer opened *that*
+     * form before accepting it.
+     */
+    waiverRecordId?: string;
   },
 ): Promise<boolean> {
   const [diver] = await db
@@ -192,6 +200,7 @@ export async function recordDiverActivity(
       actor: actor.name,
       diver: diver.name,
       ...(input.departureId ? { departure: input.departureId } : {}),
+      ...(input.waiverRecordId ? { record: input.waiverRecordId } : {}),
     },
     occurredAt: nowDate(),
   });

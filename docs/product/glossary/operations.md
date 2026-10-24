@@ -1530,9 +1530,10 @@
 - **Diver-sent doctor's form** — the signed physician's form a referred diver sends from the
   **doctor's page** (`waiver_records.diver_medical_form_url`, issue #2797, ADR
   20261024-diver-sent-doctors-form): one photo or PDF per release, stored privately like the
-  evaluation, never replaced from the link. Not a clearance and not evidence until a staffer records
-  the physician's answer and ticks to use it, when it becomes the evaluation; otherwise recording the
-  answer deletes it. Every live staff role may open it until then, each open on the diver's trail
+  evaluation, never replaced from the link. Not a clearance and not evidence until a staffer who
+  opened it records the physician's answer, types the physician's name from it and ticks to use it:
+  it becomes the evaluation, marked "Sent by the diver". Otherwise recording the answer deletes it,
+  and so does "Can't use this form", which lets the diver send another. Every live staff role may open it until then, each open on the diver's trail
   (`diver_medical_form_opened`). Erased with the diver; the day it arrived survives.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that

@@ -898,6 +898,13 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
       in: "both",
       value: (row) => row.medicalClearancePhysicianName,
     },
+    // Whether the evaluation on file is the form the diver sent, accepted by
+    // staff (issue #2797), so a destination never reads it as staff-sourced.
+    {
+      header: "medical_clearance_document_from_diver",
+      in: "both",
+      value: (row) => row.medicalClearanceDocumentFromDiver,
+    },
     // When the diver sent their signed doctor's form from the doctor's page
     // (issue #2797). The fact travels; the file does not, for the reason
     // `medical_clearance_document_url` does not (`export.test.ts`).

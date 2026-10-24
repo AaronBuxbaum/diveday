@@ -114,7 +114,9 @@ describe("the doctor's page", () => {
     expect(html).not.toContain("Question 3");
     expect(html).not.toContain("moderate exercise");
     // The upload leads; the shop's email is the fallback (issue #2797).
-    expect(html).toContain("Send a photo or PDF of the signed form here.");
+    expect(html).toContain(
+      "Send a photo or PDF of the signed form here, with the physician’s signature and date in it.",
+    );
     expect(html).toContain('name="doctorForm"');
     if (shop.contactEmail) {
       expect(html).toContain(
@@ -134,7 +136,7 @@ describe("the doctor's page", () => {
         and(eq(waiverRecords.personId, person.id), eq(waiverRecords.status, "medical_review")),
       );
     const html = await render(token);
-    expect(html).toContain("The shop has your signed form.");
+    expect(html).toContain("You’re not cleared to dive until staff have read it and told you.");
     expect(html).not.toContain('name="doctorForm"');
     expect(html).not.toContain("media.example.com");
     expect(html).not.toContain("Can’t send it here?");

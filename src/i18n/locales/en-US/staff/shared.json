@@ -63,7 +63,7 @@
     "documentChooseAnother": "Choose a different file",
     "recording": "Recording…",
     "confirm": "Record the answer",
-    "useDiverForm": "Use the form the diver sent as the evaluation",
+    "useDiverForm": "Use the form the diver sent as the evaluation. Open it first and type the physician’s name from it.",
     "earlierLetterConfirm": "Tick if this letter is dated before the latest referral: the physician evaluated their current condition, not only the referral signed {date}."
   },
   "waiverSend": {

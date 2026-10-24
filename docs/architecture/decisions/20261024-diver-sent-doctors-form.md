@@ -30,9 +30,11 @@ decides nothing: staff record the physician's answer.
   `canReadDiverMedicalForm` (every live staff role, the same as recording), shop-scoped, never an
   erased record, a 404 for every refusal, `attachment` and `no-store`, and a
   `diver_medical_form_opened` row on the diver's trail before the bytes go out.
-- **Recording empties it.** The staffer may tick "Use the form the diver sent": it moves into
-  `medical_clearance_document_url` and counts as evidence, behind that column's owner-or-manager
-  read. Otherwise the copy on the answered release is queued for deletion.
+- **Recording empties it.** "Use the form the diver sent" needs the physician's name and this
+  staffer's own open since it arrived; the file moves into `medical_clearance_document_url`
+  (owner-or-manager), flagged `medical_clearance_document_from_diver` and labelled "Sent by the
+  diver", with `medical_diver_form_accepted` on the trail. Otherwise it is deleted, with
+  `medical_diver_form_not_used`. Staff "Can't use this form" does the same and reopens the slot.
 - **Erasure, export, retention.** `anonymizeDiver` queues the file and nulls the URL; the sent
   time survives as a fact. The export carries `diver_medical_form_sent_at`, never the URL. Retention
   is the release's own (kept, pending H-02), and the column is empty once an answer is recorded.
@@ -42,12 +44,11 @@ decides nothing: staff record the physician's answer.
 
 - **Relax the attributed check:** a document with no answer would read as staff evidence.
 - **Owner-or-manager reads only:** the staffer recording the answer could not see the form.
-- **A presigned URL:** a bearer link that outlives the role check.
 
 ## Consequences
 
 The pre-decision read is wider than the evaluation's, briefly; the trail makes it checkable. A
 form sent from a second seat's link is shown on the diver record and can be used for the answer, or
-stays until that hold is answered or the diver erased. A wrong photo cannot be replaced from the
-link; the diver uses the fallback. Revisit if uploads are abused (a
+stays until that hold is answered or the diver erased. The link never replaces a form; staff
+reopen the slot. Revisit if uploads are abused (a
 malware scan would be a new dependency and its own ADR), or if H-02 sets a retention clock.

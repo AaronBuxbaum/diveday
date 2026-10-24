@@ -8,6 +8,7 @@ import {
   type MedicalEvaluationOutcome,
   recordInPersonWaiver,
   recordMedicalEvaluation,
+  rejectDiverMedicalForm,
 } from "@/db/waivers";
 import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -224,5 +225,49 @@ const MEDICAL_CLEARANCE_NOTICES: Record<
   evaluation_predates_disclosure: "medical-clearance-date-too-early",
   evaluation_in_future: "medical-clearance-date-in-future",
   evidence_required: "medical-clearance-evidence-required",
+  diver_form_physician_required: "medical-clearance-diver-form-physician",
+  diver_form_not_opened: "medical-clearance-diver-form-not-opened",
   staff_not_found: "waiver-error",
 };
+
+/**
+ * **"Can't use this form"** (issue #2797, domain review 3): the staffer turns
+ * away the signed form a diver sent (blurry, the wrong page, unsigned). The
+ * file is deleted, the trail says who decided, and the diver may send another
+ * from the doctor's page. Same subject rule as recording: the diver is this
+ * route's path segment; the posted release is checked to be theirs.
+ */
+export async function rejectDiverMedicalFormAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-waiver",
+    "waiver",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const posted = formData.get("recordId");
+  const result = await rejectDiverMedicalForm(db, {
+    shopId: staff.user.shopId,
+    personId,
+    recordId: uuidParam(typeof posted === "string" ? posted : null) ?? "",
+    actorPersonId: staff.user.personId,
+  });
+  revalidateAndRedirect(
+    base,
+    await successUrl(
+      context,
+      result.ok
+        ? "diver-form-not-used"
+        : result.reason === "not_authorized"
+          ? "not-authorized-waiver"
+          : "diver-form-gone",
+      "waiver",
+      result.ok,
+    ),
+  );
+}

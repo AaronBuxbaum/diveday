@@ -638,7 +638,8 @@ export type ShopWaiverStatus =
        * storing it with no way back to it is the shape issue #1283 exists to
        * close.
        */
-      evaluation: { recordId: string; documentOnFile: boolean };
+      /** `fromDiver`: the file is the form the diver sent, accepted by staff (issue #2797). */
+      evaluation: { recordId: string; documentOnFile: boolean; fromDiver: boolean };
     };
 
 /**
@@ -696,6 +697,7 @@ export function shopWaiverStatus(input: {
           evaluation: {
             recordId: hold.id,
             documentOnFile: Boolean(hold.medicalClearanceDocumentUrl),
+            fromDiver: hold.medicalClearanceDocumentFromDiver,
           },
         }
       : { state: "medical_review", at };
@@ -841,7 +843,7 @@ export type MedicalWaiverMark = {
    * of a row and a boolean; opening the file is a permission-gated route
    * (`/api/medical-clearances/[recordId]`).
    */
-  clearance: { recordId: string; documentOnFile: boolean } | null;
+  clearance: { recordId: string; documentOnFile: boolean; fromDiver: boolean } | null;
   /**
    * **Who co-signed a minor's release**, or null (ADR
    * 20260907-guardian-co-signature). Rides on the mark because the mark is
@@ -1178,6 +1180,7 @@ export function medicalWaiverMark(
       clearance: {
         recordId: record.id,
         documentOnFile: Boolean(record.medicalClearanceDocumentUrl),
+        fromDiver: record.medicalClearanceDocumentFromDiver,
       },
       guardian,
     };
