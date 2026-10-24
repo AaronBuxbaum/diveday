@@ -22,6 +22,16 @@
  * - **No other capability rides along** (issue #2693): a party claim link, a
  *   pending tip's Stripe checkout link, a bound server action's `$ACTION_*`
  *   fields and a recap token are dropped from the stored body for good.
+ * - **No Flight payload and no client runtime** (issue #3003): React flushes
+ *   the payload in 4096-byte views cut at any byte, and Next writes each as
+ *   its own `self.__next_f.push` script, so a token straddling a cut reaches
+ *   the page in two halves that no pattern above matches. The copy keeps none
+ *   of those scripts, and none of the page's external scripts either: with no
+ *   payload the runtime could only fail to hydrate. What is kept is the
+ *   server's markup and React's own streaming instructions, which put each
+ *   Suspense boundary's content in place, so the copy reads as the page did
+ *   and taps nothing that needs signal. Its "No signal" line is drawn by the
+ *   server, hidden, and shown here ({@link READY_OFFLINE_NOTE_ATTR}).
  * - **The diver can remove it**: "Remove saved copy" on the page, and every
  *   staff sign-out, run `forgetReadyPageCopy` (`src/lib/ready-offline.ts`).
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
@@ -31,8 +41,10 @@
  *   the instant its copy expires ({@link READY_KEEP_UNTIL_META}: a day after
  *   the boat is due back), capped at {@link READY_COPY_MAX_AGE_MS}. A page
  *   that names none (a cancelled booking, a departure called off, a dead link)
- *   clears the copy instead of replacing it, and a `?cancelled=` landing
- *   forgets it outright.
+ *   clears the copy instead of replacing it, and a cancelled landing
+ *   forgets it outright: by navigation, or by the cancelled card asking the
+ *   worker when the cancel's redirect was not one (#2979). A save whose fetch
+ *   began before that forget stores nothing.
  *
  * **A residual we accept** (issue #2478, decided 2026-10-16): a staff cancel
  * or a blow-out (`src/db/blowouts.ts`) reaches the copy only when the diver
@@ -44,7 +56,12 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
-import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import {
+  READY_CACHE_NAME,
+  READY_FORGOTTEN_CACHE_NAME,
+  READY_KEEP_UNTIL_META,
+  READY_OFFLINE_NOTE_ATTR,
+} from "@/lib/ready-offline";
 
 /**
  * A readiness link and nothing else: `/ready/` and one bearer token
@@ -59,6 +76,9 @@ export const READY_COPY_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 export const READY_COPY_KEY = "/ready/kept-copy";
 
 const PATH_HASH_HEADER = "x-diveday-path-sha256";
+const FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
+/** A forget marker's key: a fixed prefix and the path's hash, never the token. */
+const FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
@@ -99,6 +119,31 @@ const BOUND_ACTION_FIELD_PATTERN = /<input\b[^>]*\bname="\$ACTION_[^"]*"[^>]*>/g
  */
 const RECAP_TOKEN_PATTERN = /cmVjYXA6[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{43}/g;
 const RECAP_TOKEN_REMOVED = "__diveday_recap_not_kept__";
+
+/** Every `<script>` element, its opening tag's attributes and its inline text. */
+const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+
+/**
+ * **The page's scripts, minus React's streaming instructions** (issue #3003).
+ * Drops every script that loads from a `src` (the client runtime, which with
+ * no payload could only fail to hydrate) and every inline script that touches
+ * `__next_f` (the Flight payload, where a token can sit split across two).
+ * React's inline `$RC`-style instructions carry only boundary ids, and the
+ * copy needs them to show anything past the loading skeleton.
+ */
+function withoutClientRuntime(html: string): string {
+  return html.replace(SCRIPT_ELEMENT_PATTERN, (element, attributes: string, text: string) =>
+    /\bsrc\s*=/i.test(attributes) || text.includes("__next_f") ? "" : element,
+  );
+}
+
+/**
+ * The page's "No signal" line, drawn by the server and hidden there
+ * (`ReadyOfflineCopy`). The copy is only ever on screen when the network did
+ * not answer, and it runs no script to unhide the line, so it is shown here.
+ */
+const OFFLINE_NOTE_HIDDEN = `${READY_OFFLINE_NOTE_ATTR}="" hidden=""`;
+const OFFLINE_NOTE_SHOWN = `${READY_OFFLINE_NOTE_ATTR}=""`;
 
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
 
@@ -144,15 +189,34 @@ function storable(response: Response): boolean {
 }
 
 /**
+ * Whether `path` was forgotten at or after `requestedAt`: a page fetched
+ * before a cancel is the pre-cancel page, however late it answers (#2979).
+ */
+async function forgottenSince(
+  storage: CacheStorage,
+  hash: string,
+  requestedAt: number,
+): Promise<boolean> {
+  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+  const marker = await markers.match(`${FORGOTTEN_KEY_PREFIX}${hash}`);
+  const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
+  return Number.isFinite(at) && marker !== undefined && at >= requestedAt;
+}
+
+/**
  * Keep `response` as the one copy for `path`, replacing whatever was kept.
  * Reads the body (pass a clone). Returns whether it was kept; a page that
  * names no keep-until, or one already past, clears the copy.
+ *
+ * `requestedAt` is when the fetch that produced `response` began; a forget
+ * of this path at or after it (a cancel landing first) means nothing is kept.
  */
 export async function saveReadyPage(
   storage: CacheStorage,
   path: string,
   response: Response,
   now: number,
+  requestedAt: number = now,
 ): Promise<boolean> {
   if (!storable(response)) return false;
   // A body of its own, so the copy is complete before anything is replaced.
@@ -165,13 +229,17 @@ export async function saveReadyPage(
   }
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
-  headers.set(PATH_HASH_HEADER, await pathHash(path));
+  const hash = await pathHash(path);
+  if (await forgottenSince(storage, hash, requestedAt)) return false;
+  headers.set(PATH_HASH_HEADER, hash);
   // The page's links carry the token; a same-origin script reading the stored
   // body must not recover it (residual D1), so it is put back on the way out.
-  // Every other capability on the page is dropped for good: a claim link, a
-  // checkout link, a bound action's fields and a recap token (#2693).
+  // Every other capability on the page is dropped for good: the Flight
+  // payload whole (#3003), then a claim link, a checkout link, a bound
+  // action's fields and a recap token in the markup (#2693).
   const copy = new Response(
-    html
+    withoutClientRuntime(html)
+      .replaceAll(OFFLINE_NOTE_HIDDEN, OFFLINE_NOTE_SHOWN)
       .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
       .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED)
       .replace(CHECKOUT_LINK_PATTERN, CHECKOUT_REMOVED)
@@ -186,6 +254,13 @@ export async function saveReadyPage(
   // Replace, then sweep: an offline reload landing mid-save (two saves overlap,
   // the navigation's and the page's keep request) still finds a copy.
   await cache.put(READY_COPY_KEY, copy);
+  // A forget that landed while this was storing: the copy just put down is
+  // the pre-cancel page, so it goes again (it is this path's, by the hash).
+  if (await forgottenSince(storage, hash, requestedAt)) {
+    const kept = await cache.match(READY_COPY_KEY);
+    if (kept?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
+    return false;
+  }
   await clearCopies(cache, READY_COPY_KEY);
   return true;
 }
@@ -213,20 +288,44 @@ export async function readyPageFallback(
   });
 }
 
-/** Drop the kept copy if it is `path`'s: the seat it was for has just been cancelled. */
-export async function forgetReadyPage(storage: CacheStorage, path: string): Promise<void> {
-  const cache = await storage.open(READY_CACHE_NAME);
-  const cached = await cache.match(READY_COPY_KEY);
-  if (cached && cached.headers.get(PATH_HASH_HEADER) === (await pathHash(path))) {
-    await cache.delete(READY_COPY_KEY);
+/**
+ * Drop the kept copy if it is `path`'s: the seat it was for has just been
+ * cancelled. Notes the moment first, so a save whose fetch began before it
+ * stores nothing (#2979), and a forget that cannot finish deletes every copy
+ * on the phone rather than leave this one: never throws.
+ */
+export async function forgetReadyPage(
+  storage: CacheStorage,
+  path: string,
+  now: number,
+): Promise<void> {
+  try {
+    const hash = await pathHash(path);
+    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    await markers.put(
+      `${FORGOTTEN_KEY_PREFIX}${hash}`,
+      new Response(null, { headers: { [FORGOTTEN_AT_HEADER]: String(now) } }),
+    );
+    // Old markers go: no fetch outlives the longest copy.
+    for (const request of await markers.keys()) {
+      const marker = await markers.match(request);
+      const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
+      if (!Number.isFinite(at) || at < now - READY_COPY_MAX_AGE_MS) await markers.delete(request);
+    }
+    const cache = await storage.open(READY_CACHE_NAME);
+    const cached = await cache.match(READY_COPY_KEY);
+    if (cached && cached.headers.get(PATH_HASH_HEADER) === hash) {
+      await cache.delete(READY_COPY_KEY);
+    }
+  } catch {
+    await storage.delete(READY_CACHE_NAME).catch(() => false);
   }
 }
 
 /**
  * The page's own stylesheets (`/_next/static/**.css`), so an offline copy
- * reads as the page rather than as bare HTML. Scripts are left to the worker's
- * ordinary static-asset cache: the copy is read-only, and the inline streamed
- * markup renders without them.
+ * reads as the page rather than as bare HTML. No scripts: the copy keeps none
+ * (issue #3003), and its inline streamed markup renders without them.
  */
 export function readyPageStylesheets(html: string, origin: string): string[] {
   const paths = new Set<string>();

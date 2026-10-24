@@ -6,6 +6,7 @@ import {
   forgetReadyPageCopy,
   keepReadyPageOnDevice,
   READY_KEEP_UNTIL_META,
+  READY_OFFLINE_NOTE_ATTR,
 } from "@/lib/ready-offline";
 
 /**
@@ -61,11 +62,17 @@ export function ReadyOfflineCopy({
   return (
     <>
       <meta name={READY_KEEP_UNTIL_META} content={String(keepUntil)} />
-      {offline ? (
-        <p role="status" className="mt-3 text-sm font-medium text-warning-strong">
-          {copy.offlineNote}
-        </p>
-      ) : null}
+      {/* Drawn by the server too, hidden: the kept copy runs no script, and
+        the worker shows this line in it (issue #3003). The marker comes first
+        and `hidden` straight after it, the order the worker reads. */}
+      <p
+        {...{ [READY_OFFLINE_NOTE_ATTR]: "" }}
+        hidden={!offline}
+        role="status"
+        className="mt-3 text-sm font-medium text-warning-strong"
+      >
+        {copy.offlineNote}
+      </p>
       {/* Offline, the note above already says this is the saved copy. */}
       {saved === "kept" && !offline ? (
         <p className="mt-2 text-sm text-muted">

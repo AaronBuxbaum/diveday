@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { forgetReadyPageCopy, keepReadyPageOnDevice } from "@/lib/ready-offline";
+import { readyPageFallback, saveReadyPage } from "@/worker/ready-page-cache";
 import { ReadyOfflineCopy } from "./ReadyOfflineCopy";
 
 vi.mock("@/lib/ready-offline", async (importOriginal) => ({
@@ -30,7 +32,9 @@ describe("ReadyOfflineCopy", () => {
   it("online, says nothing and keeps the page on the phone", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     render(<ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} />);
-    expect(screen.queryByText(NOTE)).toBeNull();
+    // Drawn, for the kept copy to show (issue #3003), but hidden online.
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByText(NOTE)).not.toBeVisible();
     expect(keepReadyPageOnDevice).toHaveBeenCalledTimes(1);
   });
 
@@ -115,5 +119,35 @@ describe("ReadyOfflineCopy", () => {
       window.dispatchEvent(new Event("online"));
     });
     expect(screen.getByRole("button", { name: COPY.remove })).toBeTruthy();
+  });
+
+  /**
+   * The phone's kept copy runs no script (issue #3003), so this component
+   * cannot show its own "No signal" line there. The server draws the line
+   * hidden, and the worker shows it in the copy it keeps. Rendered by the real
+   * component into the real worker, so the two cannot drift apart.
+   */
+  it("draws the no-signal line hidden for the server, and the kept copy shows it", async () => {
+    const token = "A".repeat(43);
+    const now = KEEP_UNTIL - 1_000_000;
+    const markup = renderToStaticMarkup(<ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} />);
+    expect(markup).toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
+
+    const entries = new Map<string, Response>();
+    const cache = {
+      keys: async () => [...entries.keys()].map((key) => new Request(`https://dive.day${key}`)),
+      delete: async (key: string) => entries.delete(key),
+      put: async (key: string, response: Response) => {
+        entries.set(key, response);
+      },
+      match: async (key: string) => entries.get(key)?.clone(),
+    };
+    const storage = { open: async () => cache } as unknown as CacheStorage;
+    const page = new Response(markup, { headers: { "content-type": "text/html" } });
+    expect(await saveReadyPage(storage, `/ready/${token}`, page, now)).toBe(true);
+
+    const served = (await (await readyPageFallback(storage, `/ready/${token}`, now))?.text()) ?? "";
+    expect(served).toContain(NOTE);
+    expect(served).not.toMatch(/<p [^>]*hidden=""[^>]*>No signal/);
   });
 });
