@@ -1837,6 +1837,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "missing_found_by_person_id",
       "missing_found_by_name",
       "missing_all_clear_sent_at",
+      "missing_all_clear_sent_person_ids",
+      "missing_all_clear_sent_names",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, incidentReportRows }) =>
       incidentReportRows.map((row) => [
@@ -1884,6 +1886,12 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.missingFoundByPersonId,
         row.missingFoundByPersonId ? personName.get(row.missingFoundByPersonId) : null,
         row.missingAllClearSentAt,
+        row.missingAllClearSentPersonIds.length > 0
+          ? row.missingAllClearSentPersonIds.join("; ")
+          : null,
+        row.missingAllClearSentPersonIds.length > 0
+          ? row.missingAllClearSentPersonIds.map((id) => personName.get(id) ?? "").join("; ")
+          : null,
       ]),
     note: EXPORT_FILE_NOTES["incident_reports.csv"],
   },

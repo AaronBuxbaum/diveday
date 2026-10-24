@@ -70,6 +70,12 @@ export const MISSING_DIVER_PUSH_STALE_MS = 6 * 60 * 60 * 1000;
 /** The push goes with the first sends only; a retry later than this emails alone. */
 export const MISSING_DIVER_PUSH_WINDOW_MS = 15 * 60 * 1000;
 
+/** The hourly pass retries an all-clear still owed to an owner for this long after Found. */
+export const ALL_CLEAR_RETRY_MS = 24 * 60 * 60 * 1000;
+
+/** How long an all-clear run holds the report before another may take it. */
+export const ALL_CLEAR_LEASE_MS = 10 * 60 * 1000;
+
 /** A filed report still not sent this long after filing is told to the cron monitor. */
 export const MISSING_DIVER_OVERDUE_MS = 30 * 60 * 1000;
 
@@ -83,6 +89,8 @@ export type MissingDiverAlertSummary = {
   released: number;
   /** Reports still not told, filed longer ago than `MISSING_DIVER_OVERDUE_MS`. */
   overdue: number;
+  /** Found reports whose all-clear this pass tried again for owners still owed one. */
+  allClearsRetried: number;
 };
 
 export async function sendMissingDiverAlerts(
@@ -103,6 +111,7 @@ export async function sendMissingDiverAlerts(
     pushes: 0,
     released: 0,
     overdue: 0,
+    allClearsRetried: 0,
   };
   const origin = input.origin === undefined ? publicAppUrl() : input.origin;
   const leaseEnds = new Date(now.getTime() - MISSING_DIVER_LEASE_MS);
@@ -199,6 +208,9 @@ export async function sendMissingDiverAlerts(
         if (reached.has(owner.personId)) continue;
         // Found meanwhile: no owner gets the alarm after the all-clear.
         if (await foundSince(db, report)) break;
+        // Written down before the send (#2828): if this process dies before
+        // the outcome is recorded, the all-clear still goes to this owner.
+        await markAttempting(db, report, owner.personId);
         const delivery = await sendNotification(
           db,
           {
@@ -219,14 +231,15 @@ export async function sendMissingDiverAlerts(
           },
           input.provider,
         );
-        if (delivery.status === "sent") {
+        const sent = delivery.status === "sent";
+        if (sent) {
           summary.emails += 1;
           reached.add(owner.personId);
-          await recordReached(db, report, owner.personId, {
-            origin,
-            provider: input.provider,
-          });
         }
+        await recordOutcome(db, report, owner.personId, sent, {
+          origin,
+          provider: input.provider,
+        });
       }
       ownersTold = owners.length > 0 && owners.every((owner) => reached.has(owner.personId));
       // Found meanwhile: the boat's followers are not woken for a diver already found.
@@ -258,6 +271,35 @@ export async function sendMissingDiverAlerts(
           .where(and(eq(incidentReports.id, report.id), eq(incidentReports.missingAlertedAt, now)));
         summary.released += 1;
         if (isOverdue(alertStartedAt(report))) summary.overdue += 1;
+      }
+    }
+  }
+  // The all-clear's retry (#2828): a found report still owing an owner theirs.
+  if (!input.reportId) {
+    const owing = await db
+      .select({ id: incidentReports.id, shopId: incidentReports.shopId })
+      .from(incidentReports)
+      .where(
+        and(
+          eq(incidentReports.kind, "missing_diver"),
+          isNotNull(incidentReports.missingAllClearClaimedAt),
+          isNull(incidentReports.missingAllClearSentAt),
+          isNull(incidentReports.deletedAt),
+          gte(incidentReports.missingFoundAt, new Date(now.getTime() - ALL_CLEAR_RETRY_MS)),
+        ),
+      );
+    for (const report of owing) {
+      try {
+        await sendMissingDiverAllClear(db, {
+          shopId: report.shopId,
+          reportId: report.id,
+          now,
+          origin,
+          provider: input.provider,
+        });
+        summary.allClearsRetried += 1;
+      } catch (error) {
+        failure ??= error;
       }
     }
   }
@@ -301,56 +343,87 @@ async function reachedPersonIds(
   return row?.reached ?? [];
 }
 
-/**
- * **Write down that this owner's alarm was sent** (issue #2828), once per
- * person, the moment it went.
- *
- * One statement, so it is ordered against the all-clear's claim on the same
- * row: the claim returns the reached set as it stands, and this append returns
- * whether a claim came first. If one did, the all-clear has already read a set
- * without this owner, so they get theirs here and now; if the diver is found
- * and nobody has claimed yet, the all-clear runs now and finds them in the
- * set. Either way an owner who saw the alarm is never left without the
- * all-clear because the two crossed.
- */
-async function recordReached(
+/** Append one id to a jsonb id set, once (`case when col @> [id] ...`). */
+function withId(column: typeof incidentReports.missingAlertReachedPersonIds, personId: string) {
+  const one = JSON.stringify([personId]);
+  return sql`case when ${column} @> ${one}::jsonb then ${column} else ${column} || ${one}::jsonb end`;
+}
+
+/** Take one id out of a jsonb id set. */
+function withoutId(column: typeof incidentReports.missingAlertReachedPersonIds, personId: string) {
+  return sql`${column} - ${personId}::text`;
+}
+
+/** Before an owner's alarm email: they are being told, outcome unknown until recorded. */
+async function markAttempting(
   db: AppDb,
   report: { id: string; shopId: string },
   personId: string,
-  send: { origin: string; provider?: NotificationProvider },
 ): Promise<void> {
-  const column = incidentReports.missingAlertReachedPersonIds;
-  const one = JSON.stringify([personId]);
-  const [row] = await db
+  await db
     .update(incidentReports)
     .set({
-      missingAlertReachedPersonIds: sql`case when ${column} @> ${one}::jsonb then ${column} else ${column} || ${one}::jsonb end`,
+      missingAlertAttemptingPersonIds: withId(
+        incidentReports.missingAlertAttemptingPersonIds,
+        personId,
+      ),
     })
-    .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)))
-    .returning({
-      foundAt: incidentReports.missingFoundAt,
-      allClearClaimedAt: incidentReports.missingAllClearClaimedAt,
-    });
-  if (!row?.foundAt) return;
-  if (row.allClearClaimedAt === null) {
-    await sendMissingDiverAllClear(db, {
-      shopId: report.shopId,
-      reportId: report.id,
-      origin: send.origin,
-      provider: send.provider,
-    });
-    return;
+    .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)));
+}
+
+/**
+ * **Write down how this owner's alarm went** (issue #2828), the moment it
+ * did: sent moves them from attempting to reached; a failure the provider
+ * reported takes them out, so the all-clear never goes to an owner known not
+ * to have been told. A write that fails here leaves them attempting, which
+ * the all-clear treats as told.
+ *
+ * Then, if the diver is already found, the all-clear runs: it sends to every
+ * owner still owed one, this one included, or, if another run holds it, that
+ * run looks again before it lets go (`sendMissingDiverAllClear`). Either way
+ * an owner who saw the alarm is never left without the all-clear because the
+ * two crossed.
+ */
+async function recordOutcome(
+  db: AppDb,
+  report: { id: string; shopId: string },
+  personId: string,
+  sent: boolean,
+  send: { origin: string; provider?: NotificationProvider },
+): Promise<void> {
+  let foundAt: Date | null = null;
+  try {
+    const [row] = await db
+      .update(incidentReports)
+      .set({
+        missingAlertAttemptingPersonIds: withoutId(
+          incidentReports.missingAlertAttemptingPersonIds,
+          personId,
+        ),
+        ...(sent
+          ? {
+              missingAlertReachedPersonIds: withId(
+                incidentReports.missingAlertReachedPersonIds,
+                personId,
+              ),
+            }
+          : {}),
+      })
+      .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)))
+      .returning({ foundAt: incidentReports.missingFoundAt });
+    foundAt = row?.foundAt ?? null;
+  } catch (error) {
+    // Left attempting, so the all-clear still counts them told. Loud: the
+    // record of who heard the alarm is short of the truth.
+    log("incident.missing_diver_alert_unrecorded", "error", { reportId: report.id, personId });
+    throw error;
   }
-  // Claimed before this owner was in the set: theirs alone, now.
-  const sent = await sendAllClearTo(db, {
-    report: { id: report.id, shopId: report.shopId },
-    personIds: [personId],
+  if (!foundAt) return;
+  await sendMissingDiverAllClear(db, {
+    shopId: report.shopId,
+    reportId: report.id,
     origin: send.origin,
     provider: send.provider,
-  });
-  log("incident.missing_diver_all_clear_late", sent?.everyone ? "info" : "error", {
-    reportId: report.id,
-    sent: sent?.sent ?? 0,
   });
 }
 
@@ -373,32 +446,35 @@ function withinPushWindow(
 export type MissingDiverAllClearOutcome = "sent" | "partial" | "skipped";
 
 /**
- * **One quiet all-clear** (issue #2694, decided by Aaron 2026-10-17): when a
- * missing diver is marked found, each owner the alarm reached gets one email
- * saying the diver reported missing on this departure was found, and when,
- * and how many are still reported missing on it (a count, never a name).
- * Email only: no push wakes the boat's followers, who are the ones who found
- * them.
+ * **One quiet all-clear per owner** (issue #2694, decided by Aaron
+ * 2026-10-17): when a missing diver is marked found, each owner the alarm
+ * reached gets one email saying the diver reported missing on this departure
+ * was found, and when, and how many are still reported missing on it (a
+ * count, never a name). Email only: no push wakes the boat's followers, who
+ * are the ones who found them.
  *
- * **Exactly the owners the alarm reached** (issue #2828): the set its sends
- * wrote down (`missing_alert_reached_person_ids`), never the owner list as it
- * stands at Found. An owner promoted since never saw the alarm and is not
- * cleared of it; one demoted, or whose login was turned off since, saw it and
- * is. A partial alarm still clears whoever it reached: it no longer waits for
- * `missing_alert_sent_at`, which a partial send never writes. An alarm that
- * reached nobody has no all-clear to follow it.
+ * **Who is owed one** (issue #2828, H-142 amendment 2026-10-24): the owners
+ * the alarm reached (`missing_alert_reached_person_ids`) and any whose send
+ * never reported back (`missing_alert_attempting_person_ids`, the process
+ * died mid-send), never one whose send is known to have failed, and never
+ * the owner list as it stands at Found. An alarm told by an older build that
+ * wrote nobody down (`missing_alert_sent_at` set, both sets empty) falls back
+ * to the shop's active owners, logged. Of those, only people the shop still
+ * lets it reach are sent to (`reachedLogins`). An alarm that reached nobody
+ * has no all-clear.
  *
- * **At most once**: the report is claimed (`missing_all_clear_claimed_at`)
- * before any send, and the claim reads the reached set in the same statement,
- * so two taps or a retry never send a second all-clear, and an alarm sent as
- * the claim lands is cleared by its own send (`recordReached`).
- * `missing_all_clear_sent_at` is written only once every reached owner's email
- * went, so the report page says when it did not, and the pass logs it as an
- * error: a partial all-clear is never silent. A failed send is not retried:
- * the found stands on the report either way, and the owner's first
- * instruction was to call the boat. Never for a rehearsal or a demo shop,
- * which are never alerted; a departure cancelled or removed since the alarm
- * still gets it.
+ * **At most one per owner, and retried until each has theirs.** One run at a
+ * time under a lease (`missing_all_clear_leased_at`); each sent email appends
+ * its owner to `missing_all_clear_sent_person_ids`, which every later run
+ * skips. A second Found tap and the hourly pass call this again, so an owner
+ * whose all-clear failed gets it later. Letting go of the lease, a run looks
+ * once more for an owner who joined the set meanwhile (an alarm that went out
+ * as the diver was found) and takes the lease back if there is one.
+ * `missing_all_clear_sent_at` is set only while nobody is owed one, and
+ * cleared when somebody is again, so the report never reads "sent" over an
+ * owner who heard nothing. A failed send is logged as an error. Never for a
+ * rehearsal or a demo shop, which are never alerted; a departure cancelled or
+ * removed since the alarm still gets it.
  */
 export async function sendMissingDiverAllClear(
   db: AppDb,
@@ -410,77 +486,124 @@ export async function sendMissingDiverAllClear(
     provider?: NotificationProvider;
   },
 ): Promise<MissingDiverAllClearOutcome> {
-  const now = input.now ?? nowDate();
   const origin = input.origin === undefined ? publicAppUrl() : input.origin;
-  const [report] = await db
-    .update(incidentReports)
-    .set({ missingAllClearClaimedAt: now })
-    .where(
-      and(
-        eq(incidentReports.id, input.reportId),
-        eq(incidentReports.shopId, input.shopId),
-        eq(incidentReports.kind, "missing_diver"),
-        or(eq(incidentReports.status, "filed"), isNotNull(incidentReports.missingAlertRaisedAt)),
-        isNotNull(incidentReports.missingFoundAt),
-        // An alarm that reached nobody has no all-clear to follow it.
-        sql`jsonb_array_length(${incidentReports.missingAlertReachedPersonIds}) > 0`,
-        isNull(incidentReports.missingAllClearClaimedAt),
-        isNull(incidentReports.deletedAt),
-      ),
-    )
-    .returning({
-      id: incidentReports.id,
-      shopId: incidentReports.shopId,
-      tripId: incidentReports.tripId,
-      foundAt: incidentReports.missingFoundAt,
-      reached: incidentReports.missingAlertReachedPersonIds,
-    });
-  if (!report?.foundAt) return "skipped";
-  const outcome = await sendAllClearTo(db, {
-    report,
-    personIds: report.reached,
-    origin,
-    provider: input.provider,
-  });
-  if (outcome === null) return "skipped";
-  // Every reached owner the shop has since revoked (login turned off, removed
-  // or erased): nobody left to send to, which is the shop's act, not a failure.
-  if (outcome.addressable === 0) {
-    log("incident.missing_diver_all_clear_revoked", "warn", {
-      reportId: report.id,
-      reached: report.reached.length,
-    });
-    return "skipped";
+  let outcome: MissingDiverAllClearOutcome = "skipped";
+  // Each owner one try per call: a failure waits for the next call.
+  const tried = new Set<string>();
+  for (;;) {
+    const now = input.now ?? nowDate();
+    const leaseEnds = new Date(now.getTime() - ALL_CLEAR_LEASE_MS);
+    const [report] = await db
+      .update(incidentReports)
+      .set({
+        missingAllClearLeasedAt: now,
+        missingAllClearClaimedAt: sql`coalesce(${incidentReports.missingAllClearClaimedAt}, ${now.toISOString()}::timestamptz)`,
+      })
+      .where(
+        and(
+          eq(incidentReports.id, input.reportId),
+          eq(incidentReports.shopId, input.shopId),
+          eq(incidentReports.kind, "missing_diver"),
+          or(eq(incidentReports.status, "filed"), isNotNull(incidentReports.missingAlertRaisedAt)),
+          isNotNull(incidentReports.missingFoundAt),
+          isNull(incidentReports.deletedAt),
+          or(
+            isNull(incidentReports.missingAllClearLeasedAt),
+            lte(incidentReports.missingAllClearLeasedAt, leaseEnds),
+          ),
+        ),
+      )
+      .returning({ id: incidentReports.id, shopId: incidentReports.shopId });
+    if (!report) return outcome;
+    let owed: string[] = [];
+    try {
+      owed = await owedAllClear(db, report);
+      const pending = owed.filter((personId) => !tried.has(personId));
+      if (pending.length > 0) {
+        for (const personId of pending) tried.add(personId);
+        const sent = await sendAllClearTo(db, {
+          report,
+          personIds: pending,
+          origin,
+          provider: input.provider,
+        });
+        if (sent === null) return "skipped";
+        owed = await owedAllClear(db, report);
+      }
+      // A call that tried nobody leaves the report as it reads.
+      if (tried.size > 0) {
+        outcome = owed.length === 0 ? "sent" : "partial";
+        await db
+          .update(incidentReports)
+          .set({ missingAllClearSentAt: owed.length === 0 ? nowDate() : null })
+          .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)));
+      }
+    } finally {
+      await db
+        .update(incidentReports)
+        .set({ missingAllClearLeasedAt: null })
+        .where(
+          and(eq(incidentReports.id, report.id), eq(incidentReports.missingAllClearLeasedAt, now)),
+        );
+    }
+    // Let go, then look once more: an owner who joined the set while this run
+    // held the lease found it taken and left them to this run.
+    const after = await owedAllClear(db, report);
+    if (!after.some((personId) => !tried.has(personId))) return outcome;
   }
-  if (outcome.everyone) {
+}
+
+/**
+ * The owners still owed this report's all-clear, among those the shop still
+ * lets it reach: reached or attempting, minus those already sent theirs. The
+ * legacy fallback (told, nobody written down) is written back as the reached
+ * set, so it is decided once.
+ */
+async function owedAllClear(db: AppDb, report: { id: string; shopId: string }): Promise<string[]> {
+  const [row] = await db
+    .select({
+      sentAt: incidentReports.missingAlertSentAt,
+      reached: incidentReports.missingAlertReachedPersonIds,
+      attempting: incidentReports.missingAlertAttemptingPersonIds,
+      cleared: incidentReports.missingAllClearSentPersonIds,
+    })
+    .from(incidentReports)
+    .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)))
+    .limit(1);
+  if (!row) return [];
+  let told = [...new Set([...row.reached, ...row.attempting])];
+  if (told.length === 0 && row.sentAt !== null) {
+    told = (await ownerLogins(db, report.shopId)).map((owner) => owner.personId);
+    log("incident.missing_diver_all_clear_legacy_set", "warn", {
+      reportId: report.id,
+      owners: told.length,
+    });
     await db
       .update(incidentReports)
-      .set({ missingAllClearSentAt: nowDate() })
+      .set({ missingAlertReachedPersonIds: told })
       .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)));
   }
-  // Ids and counts only. A partial all-clear is an error, never a quiet line;
-  // a reached owner whose login was revoked since is a warning (`addressable`
-  // short of `reached`), not a failed send.
-  const level = !outcome.everyone
-    ? "error"
-    : outcome.addressable < report.reached.length
-      ? "warn"
-      : "info";
-  log("incident.missing_diver_all_clear", level, {
-    reportId: report.id,
-    reached: report.reached.length,
-    addressable: outcome.addressable,
-    sent: outcome.sent,
-  });
-  return outcome.everyone ? "sent" : "partial";
+  const cleared = new Set(row.cleared);
+  const owed = told.filter((personId) => !cleared.has(personId));
+  if (owed.length === 0) return [];
+  const reachable = new Set(
+    (await reachedLogins(db, report.shopId, owed)).map((login) => login.personId),
+  );
+  if (reachable.size < owed.length) {
+    // A login the shop turned off, or a person it removed: left out on purpose.
+    log("incident.missing_diver_all_clear_revoked", "warn", {
+      reportId: report.id,
+      revoked: owed.length - reachable.size,
+    });
+  }
+  return owed.filter((personId) => reachable.has(personId));
 }
 
 /**
  * The all-clear's emails to these people, each re-read from their login at
- * send time and only within this shop. `everyone` means every person the
- * shop still lets it reach (`reachedLogins`) was sent it: a revoked login is
- * left out on purpose and is not a failure, while a send that failed is.
- * Null when the departure is one that never alerts, or nothing can be linked.
+ * send time and only within this shop; each one sent is written into
+ * `missing_all_clear_sent_person_ids` at once. Null when the departure is one
+ * that never alerts, or nothing can be linked.
  */
 async function sendAllClearTo(
   db: AppDb,
@@ -490,7 +613,7 @@ async function sendAllClearTo(
     origin: string | null;
     provider?: NotificationProvider;
   },
-): Promise<{ everyone: boolean; sent: number; addressable: number } | null> {
+): Promise<{ sent: number; failed: number } | null> {
   const [report] = await db
     .select({
       id: incidentReports.id,
@@ -528,11 +651,11 @@ async function sendAllClearTo(
     if (context && !input.origin) log("incident.missing_diver_all_clear_no_origin", "error", {});
     return null;
   }
-  const personIds = [...new Set(input.personIds)];
-  const recipients = await reachedLogins(db, report.shopId, personIds);
+  const recipients = await reachedLogins(db, report.shopId, [...new Set(input.personIds)]);
   const stillMissing = await stillReportedMissing(db, report);
   const reportPath = shopPath(context.slug, "trips", report.tripId, "incidents", report.id);
   let sent = 0;
+  let failed = 0;
   for (const recipient of recipients) {
     const delivery = await sendNotification(
       db,
@@ -554,13 +677,28 @@ async function sendAllClearTo(
       },
       input.provider,
     ).catch(() => ({ status: "failed" as const }));
-    if (delivery.status === "sent") sent += 1;
+    if (delivery.status === "sent") {
+      sent += 1;
+      await db
+        .update(incidentReports)
+        .set({
+          missingAllClearSentPersonIds: withId(
+            incidentReports.missingAllClearSentPersonIds,
+            recipient.personId,
+          ),
+        })
+        .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)));
+    } else {
+      failed += 1;
+    }
   }
-  return {
-    everyone: recipients.length > 0 && sent === recipients.length,
+  // Ids and counts only. A failed all-clear is an error, never a quiet line.
+  log("incident.missing_diver_all_clear", failed > 0 ? "error" : "info", {
+    reportId: report.id,
     sent,
-    addressable: recipients.length,
-  };
+    failed,
+  });
+  return { sent, failed };
 }
 
 /**
