@@ -286,6 +286,12 @@ export async function seedBookings(
     (b) => b.tripId === reef.id && b.personId === customers[0]?.id,
   )?.id;
   if (!recapBookingId) throw new Error("seed: recap booking missing from reef roster");
+  // Two photos uploaded in one statement would share one `createdAt`, and
+  // every reader orders by it alone, so the recap page (newest first) and the
+  // seed-shared-recap-photo test route (oldest first) each picked an arbitrary
+  // one: the visual baseline of /recap swapped the two tiles between runs.
+  // Real uploads are separate requests a moment apart; the seed says so.
+  const photoUploadedAt = nowDate().getTime();
   await db.insert(recapPhotos).values([
     {
       shopId,
@@ -293,6 +299,7 @@ export async function seedBookings(
       tripId: reef.id,
       imageUrl: commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
       caption: "French angelfish cruising the coral",
+      createdAt: new Date(photoUploadedAt - 2 * 60_000),
     },
     {
       shopId,
@@ -300,6 +307,7 @@ export async function seedBookings(
       tripId: reef.id,
       imageUrl: commonsImage("Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg"),
       caption: "A whole squad of blue tangs",
+      createdAt: new Date(photoUploadedAt - 60_000),
     },
   ]);
 

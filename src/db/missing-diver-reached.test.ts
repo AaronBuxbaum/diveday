@@ -1,0 +1,452 @@
+import { readFileSync } from "node:fs";
+import { eq, sql } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Notification, NotificationProvider } from "@/lib/notifications";
+import { fileScopedShopContext } from "@/test/db";
+import { demoteOwnerToManager } from "@/test/staff-session";
+import type { AppDb } from "./client";
+import { markMissingDiverFound, raiseMissingDiverAlert } from "./incident-reports";
+import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
+import { MARKED_AT, mark, missingSeat, recorder, stateOf } from "./missing-diver-test-fixtures";
+import { incidentReports, personRoles, userAccounts } from "./schema";
+
+// The boat's followers are pushed by the alarm; never sent here.
+const push = vi.hoisted(() => ({ calls: 0 }));
+vi.mock("./push-subscriptions", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./push-subscriptions")>();
+  return {
+    ...actual,
+    pushTripAlert: async () => {
+      push.calls += 1;
+      return 0;
+    },
+  };
+});
+afterEach(() => {
+  push.calls = 0;
+});
+
+/**
+ * **The all-clear goes to exactly the owners the alarm reached** (issue
+ * #2828). An owner who never saw the alarm is not cleared of it, and one who
+ * did is never left believing a diver is still missing: not after a partial
+ * send, not after the owner list changed, and not when the alarm's last send
+ * crosses the all-clear. At most one all-clear per owner, whatever retries.
+ */
+const ctx = fileScopedShopContext();
+const backAt = new Date(MARKED_AT.getTime() + 60_000);
+
+async function emailOf(db: AppDb, personId: string): Promise<string> {
+  const [account] = await db
+    .select({ email: userAccounts.email })
+    .from(userAccounts)
+    .where(eq(userAccounts.personId, personId));
+  if (!account) throw new Error("expected a login");
+  return account.email;
+}
+
+/** A provider that fails the named addresses, recording what it did send. */
+function failingFor(addresses: readonly string[]) {
+  const sent: Notification[] = [];
+  const provider: NotificationProvider = {
+    async send(notification) {
+      if ("to" in notification && addresses.includes(notification.to)) {
+        return { status: "failed", retryable: false, errorCode: "test" };
+      }
+      sent.push(notification);
+      return { status: "sent", providerMessageId: `msg-${sent.length}` };
+    },
+  };
+  return { sent, provider };
+}
+
+const to = (sent: readonly Notification[], kind: string) =>
+  sent.filter((n) => n.kind === kind).map((n) => ("to" in n ? n.to : ""));
+
+/** The fixture's seat missing, with the divemaster made a second owner. */
+async function twoOwners() {
+  const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+  await db.insert(personRoles).values({ personId: f.crew.id, role: "owner" });
+  return {
+    db,
+    f,
+    input,
+    ownerEmail: await emailOf(db, f.owner.id),
+    secondEmail: await emailOf(db, f.crew.id),
+  };
+}
+
+async function raise(
+  db: AppDb,
+  input: Awaited<ReturnType<typeof missingSeat>>["input"],
+  actor: string,
+  provider: NotificationProvider,
+): Promise<string> {
+  const result = await raiseMissingDiverAlert(db, { ...input, actorPersonId: actor, provider });
+  if (!result.ok || !result.reportId) throw new Error("raise refused");
+  return result.reportId;
+}
+
+async function reachedOf(db: AppDb, reportId: string): Promise<string[]> {
+  const [row] = await db
+    .select({ reached: incidentReports.missingAlertReachedPersonIds })
+    .from(incidentReports)
+    .where(eq(incidentReports.id, reportId));
+  return [...(row?.reached ?? [])].sort();
+}
+
+describe("who the alarm reached (#2828)", () => {
+  it("records the owners a partial alarm reached, and only them", async () => {
+    const { db, f, input, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    expect(await reachedOf(db, reportId)).toEqual([f.owner.id]);
+    expect((await stateOf(db, reportId)).sentAt).toBeNull();
+  });
+
+  it("adds the owner a retry reached, without paging the first one twice", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    const retry = recorder();
+    expect(await sendMissingDiverAlerts(db, { provider: retry.provider })).toMatchObject({
+      alerted: 1,
+    });
+    expect(to(retry.sent, "incident_missing_diver")).toEqual([secondEmail]);
+    expect(to(retry.sent, "incident_missing_diver")).not.toContain(ownerEmail);
+    expect(await reachedOf(db, reportId)).toEqual([f.owner.id, f.crew.id].sort());
+    expect((await stateOf(db, reportId)).sentAt).toBeInstanceOf(Date);
+  });
+
+  it("records nobody when every send failed", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const reportId = await raise(db, input, f.crew.id, recorder("failed").provider);
+    expect(await reachedOf(db, reportId)).toEqual([]);
+  });
+});
+
+describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
+  it("clears the owner a partial alarm reached, and nobody it did not", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    const found = await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(found).toEqual({ ok: true, changed: true, allClear: "sent" });
+    expect(to(clear.sent, "incident_missing_diver_found")).toEqual([ownerEmail]);
+    expect((await stateOf(db, reportId)).allClearAt).toBeInstanceOf(Date);
+  });
+
+  it("never clears an owner promoted after the alarm, who never saw it", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const ownerEmail = await emailOf(db, f.owner.id);
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await db.insert(personRoles).values({ personId: f.crew.id, role: "owner" });
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(to(clear.sent, "incident_missing_diver_found")).toEqual([ownerEmail]);
+  });
+
+  it("still clears an owner demoted after the alarm reached them", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await demoteOwnerToManager(db, f.owner.id);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    const found = await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(found).toMatchObject({ allClear: "sent" });
+    expect(to(clear.sent, "incident_missing_diver_found").sort()).toEqual(
+      [ownerEmail, secondEmail].sort(),
+    );
+  });
+
+  it("sends at most one all-clear per owner: a second tap and a retry send nothing", async () => {
+    const { db, f, input, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    const target = { ...input, reportId, provider: clear.provider };
+    await markMissingDiverFound(db, { ...target, actorPersonId: f.crew.id });
+    await markMissingDiverFound(db, { ...target, actorPersonId: f.owner.id });
+    expect(
+      await sendMissingDiverAllClear(db, {
+        shopId: input.shopId,
+        reportId,
+        provider: clear.provider,
+      }),
+    ).toBe("skipped");
+    expect(clear.kinds("incident_missing_diver_found")).toBe(1);
+  });
+
+  it("says partial, never sent, when a reached owner's all-clear fails", async () => {
+    const { db, f, input, ownerEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const half = failingFor([ownerEmail]);
+    const found = await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: half.provider,
+    });
+    expect(found).toMatchObject({ allClear: "partial" });
+    expect((await stateOf(db, reportId)).allClearAt).toBeNull();
+  });
+
+  it("skips the all-clear when the alarm reached nobody: there is nothing to clear", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const reportId = await raise(db, input, f.crew.id, recorder("failed").provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    const found = await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(found).toMatchObject({ changed: true, allClear: "skipped" });
+    expect(clear.sent).toEqual([]);
+  });
+
+  it("clears an owner whose alarm went out as the all-clear was claimed", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    // The first send reached only the owner; the retry pass reaches the
+    // second owner just as the boat taps Found and the all-clear is claimed.
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    const clears: Notification[] = [];
+    const provider: NotificationProvider = {
+      async send(notification) {
+        if (notification.kind === "incident_missing_diver_found") {
+          clears.push(notification);
+        } else if (notification.kind === "incident_missing_diver") {
+          // Found, and its all-clear claimed, while this alarm is in flight.
+          await db
+            .update(incidentReports)
+            .set({ missingFoundAt: backAt, missingFoundByPersonId: f.crew.id })
+            .where(eq(incidentReports.id, reportId));
+          await sendMissingDiverAllClear(db, { shopId: input.shopId, reportId, provider });
+        }
+        return { status: "sent", providerMessageId: `msg-${clears.length}` };
+      },
+    };
+    await sendMissingDiverAlerts(db, { provider });
+    expect(to(clears, "incident_missing_diver_found").sort()).toEqual(
+      [ownerEmail, secondEmail].sort(),
+    );
+  });
+});
+
+describe("who the all-clear may reach (#2828, security review)", () => {
+  it("sends nothing to a reached owner whose login was turned off since", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, f.owner.id));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    const found = await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(to(clear.sent, "incident_missing_diver_found")).toEqual([secondEmail]);
+    expect(to(clear.sent, "incident_missing_diver_found")).not.toContain(ownerEmail);
+    // A revoked login is the shop's own act, not a failed send: the
+    // all-clear reached everyone it may reach.
+    expect(found).toMatchObject({ allClear: "sent" });
+  });
+});
+
+describe("the backfill for alarms sent before the column (#2828)", () => {
+  const backfill = readFileSync(
+    new URL(
+      "../../drizzle/20261024123528_backfill-missing-alert-reached/migration.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  it("fills an open report's set from the active owners, and Found clears them", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const ownerEmail = await emailOf(db, f.owner.id);
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    // As the row stood before the column: told, and nobody written down.
+    await db
+      .update(incidentReports)
+      .set({ missingAlertReachedPersonIds: [] })
+      .where(eq(incidentReports.id, reportId));
+    expect((await stateOf(db, reportId)).sentAt).toBeInstanceOf(Date);
+    await db.execute(sql.raw(backfill));
+    expect(await reachedOf(db, reportId)).toEqual([f.owner.id]);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(to(clear.sent, "incident_missing_diver_found")).toEqual([ownerEmail]);
+  });
+
+  it("leaves a report never told, or already found, as it is", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const untold = await raise(db, input, f.crew.id, recorder("failed").provider);
+    await db.execute(sql.raw(backfill));
+    expect(await reachedOf(db, untold)).toEqual([]);
+    await db
+      .update(incidentReports)
+      .set({
+        missingAlertSentAt: backAt,
+        missingFoundAt: backAt,
+        missingFoundByPersonId: f.crew.id,
+      })
+      .where(eq(incidentReports.id, untold));
+    await db.execute(sql.raw(backfill));
+    expect(await reachedOf(db, untold)).toEqual([]);
+  });
+});
+
+async function columnsOf(db: AppDb, reportId: string) {
+  const [row] = await db
+    .select({
+      attempting: incidentReports.missingAlertAttemptingPersonIds,
+      cleared: incidentReports.missingAllClearSentPersonIds,
+      allClearAt: incidentReports.missingAllClearSentAt,
+    })
+    .from(incidentReports)
+    .where(eq(incidentReports.id, reportId));
+  if (!row) throw new Error("report missing");
+  return row;
+}
+
+describe("the edges the adversarial review found (#2828)", () => {
+  it("falls back to the active owners for an alarm told by an older build", async () => {
+    // A rolling deploy: an old instance sent the alarm after the migration,
+    // so the report is told and nobody is written down.
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const ownerEmail = await emailOf(db, f.owner.id);
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await db
+      .update(incidentReports)
+      .set({ missingAlertReachedPersonIds: [] })
+      .where(eq(incidentReports.id, reportId));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    const found = await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(found).toMatchObject({ allClear: "sent" });
+    expect(to(clear.sent, "incident_missing_diver_found")).toEqual([ownerEmail]);
+  });
+
+  it("leaves nobody written down as attempting after an ordinary send", async () => {
+    const { db, f, input, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    expect((await columnsOf(db, reportId)).attempting).toEqual([]);
+  });
+
+  it("clears an owner whose send was cut off mid-way, state unknown", async () => {
+    // The process died between the email and writing the owner down: the
+    // owner is still marked attempting, and may have seen the alarm.
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    await db
+      .update(incidentReports)
+      .set({ missingAlertAttemptingPersonIds: [f.crew.id] })
+      .where(eq(incidentReports.id, reportId));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(to(clear.sent, "incident_missing_diver_found").sort()).toEqual(
+      [ownerEmail, secondEmail].sort(),
+    );
+  });
+
+  it("retries a failed all-clear on a second Found tap, once per owner", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const target = { ...input, reportId, actorPersonId: f.crew.id };
+    const first = failingFor([secondEmail]);
+    expect(await markMissingDiverFound(db, { ...target, provider: first.provider })).toMatchObject({
+      allClear: "partial",
+    });
+    expect(to(first.sent, "incident_missing_diver_found")).toEqual([ownerEmail]);
+    const again = recorder();
+    expect(await markMissingDiverFound(db, { ...target, provider: again.provider })).toMatchObject({
+      allClear: "sent",
+    });
+    expect(to(again.sent, "incident_missing_diver_found")).toEqual([secondEmail]);
+    expect((await columnsOf(db, reportId)).allClearAt).toBeInstanceOf(Date);
+    const third = recorder();
+    await markMissingDiverFound(db, { ...target, provider: third.provider });
+    expect(third.sent).toEqual([]);
+  });
+
+  it("retries a failed all-clear from the hourly pass", async () => {
+    const { db, f, input, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: failingFor([secondEmail]).provider,
+    });
+    const hourly = recorder();
+    await sendMissingDiverAlerts(db, { provider: hourly.provider });
+    expect(to(hourly.sent, "incident_missing_diver_found")).toEqual([secondEmail]);
+    expect(to(hourly.sent, "incident_missing_diver")).toEqual([]);
+  });
+
+  it("never reads sent while a late owner's all-clear failed", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
+    const provider: NotificationProvider = {
+      async send(notification) {
+        if (notification.kind === "incident_missing_diver") {
+          await db
+            .update(incidentReports)
+            .set({ missingFoundAt: backAt, missingFoundByPersonId: f.crew.id })
+            .where(eq(incidentReports.id, reportId));
+          await sendMissingDiverAllClear(db, { shopId: input.shopId, reportId, provider });
+          return { status: "sent", providerMessageId: "alarm" };
+        }
+        // The all-clear reaches the first owner and fails for the late one.
+        return "to" in notification && notification.to === ownerEmail
+          ? { status: "sent", providerMessageId: "clear" }
+          : { status: "failed", retryable: false, errorCode: "test" };
+      },
+    };
+    await sendMissingDiverAlerts(db, { provider });
+    const state = await columnsOf(db, reportId);
+    expect(state.cleared).toEqual([f.owner.id]);
+    expect(state.allClearAt).toBeNull();
+  });
+});

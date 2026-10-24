@@ -28,6 +28,13 @@
   rather than blaming the weather. Staff see that record as **Canceled with its run**, never as a
   weather call. A date blown out, reinstated and then cancelled with its run takes the newer cause,
   and is still refused while it is underway.
+- **Logbook suggestion** — the "Logbook" line on a diver's Bring list (`/ready`, the booking email
+  and the printed pass), set by the shop's `packing_logbook` flag beside its packing list in
+  Settings, never typed as a line of `packing_list`. It reads in the diver's language and is left
+  off only for a try-dive (intro course) student with no certification card, who has no dives to
+  log; a student on a course that logs training dives keeps it (`packsLogbook`, issue #2795). A
+  suggestion, never a gate. A shop's typed "Logbook" line moved into the flag by a one-time
+  migration.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.

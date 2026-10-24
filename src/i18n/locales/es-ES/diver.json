@@ -205,6 +205,7 @@
     "calendarDockCall": "Presentación en el muelle a las {dockCall}. Salimos a las {departure}.",
     "calendarMeetingPoint": "Punto de encuentro: {place}.",
     "packBring": "Trae",
+    "packLogbook": "Bitácora de buceo",
     "packRenting": "Alquilas",
     "packProvided": "Lo ponemos nosotros",
     "packNothingRequested": "Aún no has pedido nada",
@@ -1246,6 +1247,8 @@
     "full": "{tripTitle}",
     "gear": "Equipo de alquiler",
     "gearForDiver": "Equipo de alquiler — {name}",
+    "nitrox": "Cargas de nitrox",
+    "nitroxForDiver": "Cargas de nitrox — {name}",
     "tip": "Propina para la tripulación",
     "seatFull": "{tripTitle} ({type})",
     "seatDeposit": "Depósito — {tripTitle} ({type})"

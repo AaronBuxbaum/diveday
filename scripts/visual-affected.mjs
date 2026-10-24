@@ -15,9 +15,13 @@
 //
 // A pull request whose diff this cannot bound captures everything, so the narrowing only ever
 // removes captures nothing could have moved: the e2e harness and helpers, the visual plumbing in
-// `scripts/` and the CI workflow, the seed and the schema, a stylesheet, a root config that
-// shapes the build, a renderer dependency, and a module that runs for every page (the proxy,
-// the service worker, what `next.config.ts` imports).
+// `scripts/` and the CI workflow, the seed's orchestrator (`src/db/seed.ts`), the catalog seed
+// and the dev credentials, a stylesheet, a root config that shapes the build, a renderer
+// dependency, and a module that runs for every page (the proxy, the service worker, what
+// `next.config.ts` imports).
+//
+// Light mode only, on a pull request (`--light-only`, 2026-10-24): the dark captures are the
+// baseline's own unless the diff touches a colour token or theme module ({@link THEME}).
 //
 // Everything else is bounded (test review 2026-10-14: 26 of 28 product PRs captured all):
 //
@@ -31,6 +35,11 @@
 //     a slug);
 //   - a visual spec (`e2e/visual-*.spec.ts`, one per feature): the captures whose lines changed,
 //     and the captures that call a helper whose lines changed;
+//   - a schema module: its changed tables, followed name by name to the modules that read them
+//     and on to the pages (`dataReach`); a seed scenario (`src/db/seed-<scenario>.ts`): the
+//     tables its changed code writes, followed the same way. Neither walk passes through a seed
+//     module, since the demo action that runs the seed is imported by every public page
+//     (8 of the 9 merges before 2026-10-24 captured everything over a schema or seed edit);
 //   - a module: its changed lines, followed name by name to the pages that read them
 //     (`symbol-reach.mjs`; a layout's reach is every page beneath it); a module no page reads
 //     (a test fixture, a script's helper, a deleted file whose importers are in the same diff)
@@ -50,7 +59,12 @@
 // commits), so the copies never stand in for pixels anyone compares against.
 //
 //   node scripts/visual-affected.mjs --list <playwright --list json> --out <filtered json>
-//        [--base <ref>] [--all] [--github-output] [--grep <file>]
+//        [--base <ref>] [--all] [--light-only] [--github-output] [--grep <file>]
+//
+// `--light-only` (a pull request) drops every dark-mode capture unless the diff touches a colour
+// token or theme module ({@link THEME}); `mode` is then `light` when the diff was unbounded (every
+// light capture), and `visual-report` fills the dark ones from the baseline as it fills an
+// `affected` run's uncaptured surfaces.
 //
 // `--grep` writes a Playwright `--grep` for the chosen captures in light mode only: the local
 // pass a push can afford (#2517).
@@ -95,8 +109,36 @@ const INERT =
 const VISUAL_PLUMBING =
   /^scripts\/(?:visual-|symbol-reach|e2e-affected|e2e-shard|reg-suit-keys|wait-for-baseline|build-service-worker|check-e2e-build)|^\.github\/(?:workflows\/ci\.yml|actions\/)/;
 
-/** `src/` paths whose blast radius is every page: the data every capture shows. */
-const EVERYWHERE = /^src\/db\/(?:seed|schema\/|dev-credentials)/;
+/**
+ * `src/` paths whose blast radius is every page: the data every capture shows. The orchestrator
+ * `seed.ts` writes the demo shop's own row and its cast, which every page reads; the catalog
+ * every agency and course card; the dev credentials every signed-in capture.
+ */
+const EVERYWHERE = /^src\/db\/(?:seed\.ts|seed-catalog\.ts|dev-credentials)/;
+
+/**
+ * A seed scenario (`src/db/seed-<scenario>.ts`) or the orchestrator: what they change is data,
+ * not a page. A scenario's edit reaches the pages that read the tables it writes; nothing reaches
+ * a page *through* one (the demo actions and test routes that import the seed would otherwise
+ * carry every scenario to every public page).
+ */
+const SEED = /^src\/db\/seed(?:-[\w-]+)?\.ts$/;
+
+/** The schema: a table's edit reaches the modules that read that table, name by name. */
+const SCHEMA = /^src\/db\/schema(?:\/|\.ts$)/;
+
+/**
+ * Colour tokens and theme modules: a pull request that touches one captures dark mode too
+ * (every other pull request captures light only; main captures both). `globals.css` holds the
+ * tokens and the `prefers-color-scheme: dark` block, `brand.ts` derives a shop's dark brand
+ * theme, `BrandStyle.tsx` writes it, `_brand/colors.ts` mirrors the tokens for the places CSS
+ * cannot reach, and the PostCSS config decides how the tokens compile.
+ */
+export const THEME =
+  /^(?:src\/app\/globals\.css|src\/lib\/brand\.ts|src\/components\/BrandStyle\.tsx|src\/app\/_brand\/colors\.ts|postcss\.config\.mjs)$/;
+
+/** A dark-mode capture, by the describe its title carries (`dark mode`, `dark mode — …`). */
+const DARK = / › dark mode(?: [^›]*)? › /;
 
 /**
  * Modules Next runs for every page without a page importing them. `instrumentation.ts` is not
@@ -277,6 +319,162 @@ function namedBy(needles, sources, { code = true } = {}) {
   return found;
 }
 
+const ALL_LINES = "all";
+
+/** Where `name`, exported by `file`, is declared: through re-exports and `export *` barrels. */
+function declarationOf(index, file, name, seen = new Set()) {
+  if (seen.has(file)) return null;
+  seen.add(file);
+  const parsed = index.get(file);
+  if (!parsed) return null;
+  const item = parsed.items.find((it) => it.exports.includes(name));
+  if (item) return { file, line: item.start };
+  for (const reexport of parsed.reexports) {
+    if (reexport.exported === name) return declarationOf(index, reexport.target, reexport.imported);
+  }
+  for (const target of parsed.stars) {
+    const found = declarationOf(index, target, name, seen);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** `items` and every item of the same module declaring a name they use, to a fixpoint. */
+function withLocalCallees(parsed, items) {
+  const out = new Set(items);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const item of parsed.items) {
+      if (out.has(item) || item.kind !== "declaration") continue;
+      if (![...out].some((used) => item.locals.some(({ local }) => used.names.has(local))))
+        continue;
+      out.add(item);
+      grew = true;
+    }
+  }
+  return out;
+}
+
+/** A drizzle write, `db.insert(bookings)` / `tx.update(people)` / `.delete(x)`: the table's name. */
+const WRITE = /\.(?:insert|update|delete)\(\s*([\w$]+)\s*[,)]/g;
+
+/**
+ * The schema tables `items` of `parsed` write, as `{ target, imported }` import bindings: the
+ * writes in the items and the local helpers they call, and one hop into a `src/db/` writer they
+ * import (`createBookingRecord`), whose own writes count the same way. A table only read is not
+ * data the edit changes.
+ */
+function tablesWritten(index, parsed, items, hop = true) {
+  const used = withLocalCallees(parsed, items);
+  const written = new Set();
+  for (const item of used) for (const [, name] of item.text.matchAll(WRITE)) written.add(name);
+  const out = [];
+  for (const { local, target, imported } of parsed.imports) {
+    if (!target) continue;
+    if (SCHEMA.test(target)) {
+      if (written.has(local)) out.push({ target, imported });
+      continue;
+    }
+    if (!hop || !/^src\/db\//.test(target) || SEED.test(target)) continue;
+    if (![...used].some((item) => item.names.has(local))) continue;
+    const writer = index.get(target);
+    const declared = writer?.items.filter((it) => it.exports.includes(imported)) ?? [];
+    if (declared.length > 0) out.push(...tablesWritten(index, writer, declared, false));
+  }
+  return out;
+}
+
+/** The module index with no edge out of a seed module: the walk stops at the data. */
+function sealed(modules, keep = () => false) {
+  const importers = new Map();
+  for (const [file, from] of modules.importers) {
+    importers.set(file, SEED.test(file) ? new Set([...from].filter(keep)) : from);
+  }
+  return { ...modules, importers };
+}
+
+/**
+ * The modules a diff reaches when some of it is data. Three walks over the module index, none
+ * of which passes *through* a seed module:
+ *
+ *   1. code: `edited`, name by name. A seed scenario it reaches is data, handed to walk 2; the
+ *      orchestrator or the dev credentials is every capture (`{ all }`).
+ *   2. data: the scenarios `data` names and walk 1 reached, followed into the scenarios that
+ *      import them. The tables each one's touched items write (`tablesWritten`) are what the
+ *      edit writes differently.
+ *   3. schema: `schema`'s changed lines and the tables of walk 2, name by name to their readers.
+ *
+ * Returns `{ reached }` (every module touched outside the seed) or `{ all }`.
+ */
+export function dataReach(
+  modules,
+  { edited = new Map(), data = new Map(), schema = new Map(), before },
+) {
+  const { index } = modules;
+  const outside = sealed(modules);
+  const reached = new Set();
+  const scenarios = new Map(data);
+  for (const [file, exports] of symbolReach(outside, edited, { before })) {
+    if (!SEED.test(file)) {
+      if (EVERYWHERE.test(file)) {
+        return { all: `the diff reaches ${file}, which builds the data every capture shows` };
+      }
+      reached.add(file);
+      continue;
+    }
+    if (EVERYWHERE.test(file) && file === "src/db/seed.ts") {
+      return { all: `the diff reaches ${file}, which builds the data every capture shows` };
+    }
+    if (scenarios.has(file)) continue;
+    const parsed = index.get(file);
+    const at =
+      exports === ALL_LINES
+        ? ALL_LINES
+        : parsed.items.filter((it) => it.exports.some((name) => exports.has(name)));
+    if (at === ALL_LINES || at.length > 0) {
+      scenarios.set(file, at === ALL_LINES ? at : at.map((it) => it.start));
+    }
+  }
+  // Scenario to scenario only: the orchestrator imports every one and writes nothing of theirs.
+  const amongSeeds = sealed(modules, (from) => SEED.test(from) && from !== "src/db/seed.ts");
+  const tables = new Map(schema);
+  const touched = symbolReach(amongSeeds, scenarios, { before });
+  for (const [file, exports] of touched) {
+    const parsed = index.get(file);
+    const lines = scenarios.get(file);
+    let items;
+    if (lines === ALL_LINES || exports === ALL_LINES) items = parsed.items;
+    else {
+      items = parsed.items.filter(
+        (it) =>
+          it.kind === "declaration" &&
+          (it.exports.some((name) => exports.has(name)) ||
+            [...(lines ?? [])].some((line) => line >= it.start && line <= it.end) ||
+            parsed.imports.some(
+              ({ local, target, imported }) =>
+                it.names.has(local) &&
+                touched.get(target) !== undefined &&
+                (touched.get(target) === ALL_LINES || touched.get(target).has(imported)),
+            )),
+      );
+    }
+    for (const { target, imported } of tablesWritten(index, parsed, items)) {
+      const declared = declarationOf(index, target, imported);
+      if (!declared) return { all: `${file} writes ${imported}, which no schema module declares` };
+      const prior = tables.get(declared.file);
+      if (prior === ALL_LINES) continue;
+      tables.set(declared.file, new Set([...(prior ?? []), declared.line]));
+    }
+  }
+  // Not the proxy either: it reads a table to decide whether a public route exists, and that
+  // route's own page reads the same table, so the walk has reached it already.
+  for (const file of symbolReach(outside, tables, { before }).keys()) {
+    if (!SEED.test(file) && !RUNTIME_ROOT.test(file)) reached.add(file);
+  }
+  return { reached };
+}
+
 /**
  * Why `changed` cannot be bounded (a reason to capture everything), or the routes it reaches:
  * `{ all: string }` or `{ routes: [{ route, broad }], boundaries, visualSpec, helpersEdited }`:
@@ -311,6 +509,9 @@ export function changedRoutes(changed, graph, context = {}) {
   const seedAll = (found) => {
     for (const [file, at] of found) seed(file, at);
   };
+  // Seed scenarios and schema modules the diff changes: data, followed to its readers below.
+  const data = new Map();
+  const schema = new Map();
   let visualSpec = false;
   let helpersEdited = false;
   const boundaries = [];
@@ -376,6 +577,15 @@ export function changedRoutes(changed, graph, context = {}) {
     }
     if (!file.startsWith("src/")) return { all: `${file} can reach every page` };
     if (EVERYWHERE.test(file)) return { all: `${file} is data every capture shows` };
+    if (SEED.test(file) || SCHEMA.test(file)) {
+      if (!modules?.index.has(file)) {
+        // Deleted: what read or ran it is in the same diff.
+        if (modules && after && after(file) === null) continue;
+        return { all: `${file} is data the import graph does not hold` };
+      }
+      (SEED.test(file) ? data : schema).set(file, lines?.get(file) ?? "all");
+      continue;
+    }
     if (file.endsWith(".json") && sources) {
       // Data a module imports (`src/content/*.json`): its importers carry the reach.
       seedAll(namedBy([`/${file.split("/").pop()}`], sources));
@@ -398,15 +608,19 @@ export function changedRoutes(changed, graph, context = {}) {
   // The modules the edits reach: name by name when the module index is given, else file by file.
   const reached = new Set();
   if (modules) {
-    for (const file of symbolReach(modules, edited, { before }).keys()) reached.add(file);
+    const reach = dataReach(modules, { edited, data, schema, before });
+    if (reach.all) return { all: reach.all };
+    for (const file of reach.reached) reached.add(file);
   } else {
     for (const file of edited.keys()) {
       if (graph.has(file)) for (const importer of importersOf(graph, [file])) reached.add(importer);
     }
+    // An edit the seed runs (a write helper it calls) changes the data every capture shows.
+    const seeded = [...reached].find((f) => EVERYWHERE.test(f) || SEED.test(f));
+    if (seeded) {
+      return { all: `the diff reaches ${seeded}, which builds the data every capture shows` };
+    }
   }
-  // An edit the seed runs (a write helper it calls) changes the data every capture shows.
-  const data = [...reached].find((f) => EVERYWHERE.test(f));
-  if (data) return { all: `the diff reaches ${data}, which builds the data every capture shows` };
   const root = [...reached].find((f) => RUNTIME_ROOT.test(f) || configImports.includes(f));
   if (root) return { all: `the diff reaches ${root}, which runs for every page` };
   // A module no page reaches (a test fixture, a script's helper) moves no capture.
@@ -836,6 +1050,20 @@ export function lightGrep(lines) {
   return titles.length === 0 ? null : `(?:${titles.join("|")})$`;
 }
 
+/**
+ * A pull request's captures in light mode only (A1, 2026-10-24): dark mode is 339 of 836
+ * captures and ~40% of capture time, and a change that moves a dark pixel without moving the
+ * light one is a colour token or a theme module, which {@link THEME} names. Returns
+ * `{ lines }` without the dark captures, or `{ dark }` saying why they stay: a theme path in
+ * the diff, or no diff to read (`changed` null).
+ */
+export function lightOnly(lines, changed) {
+  if (changed === null) return { dark: "the diff could not be read" };
+  const theme = changed.find((file) => THEME.test(file));
+  if (theme) return { dark: `${theme} changes a colour token or theme` };
+  return { lines: lines.filter((line) => !DARK.test(line)) };
+}
+
 /** Each spec owns its line numbers; never apply one file's spans to another. */
 export function selectCaptureFiles({
   files,
@@ -886,13 +1114,15 @@ async function main() {
   const outFile = option(args, "out");
   if (!listFile || !outFile) {
     console.error(
-      "usage: node scripts/visual-affected.mjs --list <json> --out <json> [--base <ref>] [--all] [--github-output] [--grep <file>]",
+      "usage: node scripts/visual-affected.mjs --list <json> --out <json> [--base <ref>] [--all] [--light-only] [--github-output] [--grep <file>]",
     );
     process.exit(2);
   }
   const report = JSON.parse(readFileSync(listFile, "utf8"));
   const every = listedTests(report);
   let result;
+  // The diff's paths, or null when there is no diff to read (dark mode is then kept).
+  let changedFiles = null;
   if (args.includes("--all")) {
     result = { mode: "all", why: "not a pull request: every capture, published as the baseline" };
   } else {
@@ -903,6 +1133,7 @@ async function main() {
     if (diff === null) {
       result = { mode: "all", why: `git could not diff against ${base}` };
     } else {
+      changedFiles = diff.changed;
       result = selectCaptureFiles({
         files: visualSpecs(ROOT),
         report,
@@ -920,26 +1151,39 @@ async function main() {
     durations =
       JSON.parse(readFileSync(path.join(ROOT, "scripts/e2e-durations.json"), "utf8")).visual ?? {};
   } catch {}
-  const chosen = result.mode === "all" ? every : every.filter((line) => result.lines.has(line));
-  const filtered = result.mode === "all" ? report : filterReport(report, result.lines);
+  let chosen = result.mode === "all" ? every : every.filter((line) => result.lines.has(line));
+  let mode = result.mode;
+  let schemes = "";
+  if (args.includes("--light-only")) {
+    const light = lightOnly(chosen, changedFiles);
+    if (light.dark) schemes = ` Dark mode too: ${light.dark}.`;
+    else {
+      chosen = light.lines;
+      if (mode === "all") mode = "light";
+      schemes = " Light mode only; the dark captures are the baseline's own (main captures both).";
+    }
+  }
+  const filtered = mode === "all" ? report : filterReport(report, new Set(chosen));
   writeFileSync(outFile, JSON.stringify(filtered));
   const grepFile = option(args, "grep");
   if (grepFile) writeFileSync(grepFile, lightGrep(chosen) ?? "");
-  const shards = result.mode === "all" ? FULL_SHARDS : shardCount(chosen, durations);
+  const shards = mode === "all" ? FULL_SHARDS : shardCount(chosen, durations);
 
   const headline =
-    result.mode === "all"
-      ? `visual-affected: all ${every.length} captures on ${shards} shards — ${result.why}.`
-      : `visual-affected: ${chosen.length} of ${every.length} captures on ${shards} shard(s); the rest are copied from the baseline before the compare.`;
+    mode === "all"
+      ? `visual-affected: all ${every.length} captures on ${shards} shards — ${result.why}.${schemes}`
+      : mode === "light"
+        ? `visual-affected: ${chosen.length} of ${every.length} captures (every light-mode one) on ${shards} shard(s) — ${result.why}.${schemes}`
+        : `visual-affected: ${chosen.length} of ${every.length} captures on ${shards} shard(s); the rest are copied from the baseline before the compare.${schemes}`;
   console.log(headline);
-  if (result.mode === "affected") {
+  if (mode === "affected") {
     for (const line of chosen) console.log(`  ${line}  — ${result.why.get(line)}`);
   }
   if (args.includes("--github-output") && process.env.GITHUB_OUTPUT) {
     appendFileSync(
       process.env.GITHUB_OUTPUT,
       [
-        `mode=${result.mode}`,
+        `mode=${mode}`,
         `count=${shards}`,
         `shards=${JSON.stringify(Array.from({ length: shards }, (_, i) => i + 1))}`,
         `captured=${chosen.length}`,

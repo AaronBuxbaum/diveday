@@ -541,9 +541,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // An ephemeral Stripe Checkout link that stopped resolving when the session
     // expired — same reasoning as tips.checkout_url.
     "checkout_url",
-    // Provider linkage for matching a later refund or dispute event, useless
-    // outside this Stripe account — same reasoning as stripe_account_id.
-    "stripe_payment_intent_id",
+    "stripe_payment_intent_id", // provider linkage for a later refund, same as stripe_account_id
   ],
   // The join row's surrogate id says nothing beyond (checkout_id, booking_id),
   // which are both exported — same reasoning as buddy_pair_members.id.
@@ -553,7 +551,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // H-142, #2694: send leases and the alert's subject row id, like `roll_call_alerted_at`.
     "missing_alerted_at",
     "missing_all_clear_claimed_at",
+    "missing_all_clear_leased_at",
     "missing_subject_row_id",
+    "missing_alert_attempting_person_ids", // #2828: a send in flight; the reached set is exported
   ],
   rental_fit_profiles: [
     "shop_id",

@@ -48,6 +48,8 @@ type BookingConfirmationEmailInput = {
   waiverExpiresAt?: Date;
   /** The shop's configured packing suggestions (`shops.packingList`). */
   packingList?: string[];
+  /** The shop also suggests a logbook (`shops.packing_logbook`), said in the diver's language. */
+  packingLogbook?: boolean;
   /** A course session's learning materials, already read through `readLearningMaterials`. */
   learningMaterials?: CourseLearningMaterial[];
   /** Where to go (`meetingPointOf`), drawn as its own panel. */
@@ -814,7 +816,10 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
 
   const dock = dockCallPhrase(t, input.dockCallMinutes);
-  const packingItems = (input.packingList ?? []).map((item) => item.trim()).filter(Boolean);
+  const packingItems = [
+    ...(input.packingList ?? []).map((item) => item.trim()).filter(Boolean),
+    ...(input.packingLogbook ? [t("trip.packLogbook")] : []),
+  ];
   const packingHeading = t("notifications.bookingConfirmation.packingHeading");
   const reminderText = packingItems.length
     ? `\n\n${packingHeading}\n${packingItems.map((item) => `- ${item}`).join("\n")}\n`
