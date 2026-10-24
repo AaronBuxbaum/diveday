@@ -1264,6 +1264,8 @@
     "full": "{tripTitle}",
     "gear": "Equipo de alquiler",
     "gearForDiver": "Equipo de alquiler — {name}",
+    "nitrox": "Cargas de nitrox",
+    "nitroxForDiver": "Cargas de nitrox — {name}",
     "tip": "Propina para la tripulación",
     "seatFull": "{tripTitle} ({type})",
     "seatDeposit": "Depósito — {tripTitle} ({type})"

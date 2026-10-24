@@ -291,9 +291,9 @@ export function PackingSection({
    */
   temperatureStatedAbove: boolean;
   /**
-   * This diver has a certification card on file. Read only on a course
-   * session, where a student with none has no dives to log yet and is not
-   * told to bring a logbook (`packsLogbook`, issue #2795).
+   * This diver has a certification card on file. Read only on a try-dive
+   * session, where a student with none has no dives to log and is not told to
+   * bring a logbook (`packsLogbook`, issue #2795).
    */
   holdsCertification: boolean;
   locale: string;
@@ -307,7 +307,7 @@ export function PackingSection({
   );
   const logbook = packsLogbook({
     shopSuggests: shop.packingLogbook,
-    courseSession: Boolean(trip.course),
+    introCourseSession: trip.course?.isIntroCourse === true,
     holdsCertification,
   });
   const t = diverTranslator(locale);

@@ -5,6 +5,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
+import { packsLogbook } from "@/lib/diver-planning";
 import { formatDateWithYear, formatTime } from "@/lib/format";
 import { meetingPointOfRows } from "@/lib/meeting-point";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -71,8 +72,13 @@ export default async function PaperPassPage({
   // 2026-10-11, item 27): the departure's meeting point, or the shop itself,
   // with the landmark and the parking note a diver without a phone needs most.
   const where = meetingPointOfRows(shop, booking);
-  // The shop's list, then the logbook when it suggests one (`packing_logbook`).
-  const bring = shop.packingLogbook
+  // The shop's list, then the logbook when it suggests one (`packsLogbook`;
+  // the pass reads no cards, so a try-dive's pass leaves it off).
+  const bring = packsLogbook({
+    shopSuggests: shop.packingLogbook,
+    introCourseSession: booking.introCourse,
+    holdsCertification: false,
+  })
     ? [...shop.packingList, t("print.sheet.pass.logbook")]
     : shop.packingList;
 

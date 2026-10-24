@@ -152,15 +152,17 @@ describe("PackingSection — the dock-day rhythm's meeting point", () => {
 });
 
 /**
- * **No logbook for a student with nothing to log yet** (issue #2795). The
- * shop's own flag decides whether a logbook is suggested at all; on a course
- * session it is left off for a student holding no certification. Never decided
- * by finding "Logbook" in the shop's free-text list.
+ * **No logbook for a student with nothing to log** (issue #2795). The shop's
+ * own flag decides whether a logbook is suggested at all; on a try-dive session
+ * it is left off for a student holding no certification. An Open Water student
+ * keeps it: training dives are logged. Never decided by finding "Logbook" in
+ * the shop's free-text list.
  */
 describe("PackingSection — the logbook line", () => {
   function renderBring(options: {
     packingLogbook: boolean;
     course: boolean;
+    intro?: boolean;
     holdsCertification: boolean;
   }) {
     const trip = {
@@ -168,7 +170,7 @@ describe("PackingSection — the logbook line", () => {
       endsAt: new Date("2026-08-12T16:00:00Z"),
       plannedDives: 2,
       waterTemperatureC: null,
-      course: options.course ? { gearIncluded: true } : null,
+      course: options.course ? { gearIncluded: true, isIntroCourse: options.intro ?? true } : null,
     } as unknown as Trip;
     return render(
       <PackingSection
@@ -188,14 +190,19 @@ describe("PackingSection — the logbook line", () => {
     expect(screen.getByText("Swimsuit and towel")).toBeInTheDocument();
   });
 
-  it("leaves it off for an uncertified student on a course session", () => {
+  it("leaves it off for an uncertified student on a try-dive session", () => {
     renderBring({ packingLogbook: true, course: true, holdsCertification: false });
     expect(screen.queryByText("Logbook")).not.toBeInTheDocument();
     expect(screen.getByText("Swimsuit and towel")).toBeInTheDocument();
   });
 
-  it("keeps it for a certified diver taking a course", () => {
+  it("keeps it for a certified diver on a try-dive", () => {
     renderBring({ packingLogbook: true, course: true, holdsCertification: true });
+    expect(screen.getByText("Logbook")).toBeInTheDocument();
+  });
+
+  it("keeps it for an uncertified student on a course that logs training dives", () => {
+    renderBring({ packingLogbook: true, course: true, intro: false, holdsCertification: false });
     expect(screen.getByText("Logbook")).toBeInTheDocument();
   });
 

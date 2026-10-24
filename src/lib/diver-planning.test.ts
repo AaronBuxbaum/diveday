@@ -469,26 +469,26 @@ describe("booking delight planning", () => {
     expect(packingConfidence(["Towel"], null).bringPersonal).toEqual([]);
   });
 
-  // Issue #2795: a student with no card yet has no dives to log. Decided by
-  // the shop's flag and the facts, never by finding "Logbook" in a list.
+  // Issue #2795: a try-dive student with no card has no dives to log. Decided
+  // by the shop's flag and the facts, never by finding "Logbook" in a list.
   it("suggests a logbook to every diver when the shop does", () => {
     expect(
-      packsLogbook({ shopSuggests: true, courseSession: false, holdsCertification: false }),
+      packsLogbook({ shopSuggests: true, introCourseSession: false, holdsCertification: false }),
     ).toBe(true);
     expect(
-      packsLogbook({ shopSuggests: true, courseSession: true, holdsCertification: true }),
+      packsLogbook({ shopSuggests: true, introCourseSession: true, holdsCertification: true }),
     ).toBe(true);
   });
 
-  it("leaves the logbook off for a student on a course session with no certification", () => {
+  it("leaves the logbook off for a try-dive student with no certification", () => {
     expect(
-      packsLogbook({ shopSuggests: true, courseSession: true, holdsCertification: false }),
+      packsLogbook({ shopSuggests: true, introCourseSession: true, holdsCertification: false }),
     ).toBe(false);
   });
 
   it("never suggests a logbook the shop has switched off", () => {
     expect(
-      packsLogbook({ shopSuggests: false, courseSession: false, holdsCertification: true }),
+      packsLogbook({ shopSuggests: false, introCourseSession: false, holdsCertification: true }),
     ).toBe(false);
   });
 

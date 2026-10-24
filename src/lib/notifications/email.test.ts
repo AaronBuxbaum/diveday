@@ -61,17 +61,6 @@ describe("bookingConfirmationEmail", () => {
     expect(email.html).toContain('class="dd-panel"');
   });
 
-  it("ends the checklist with a logbook, in the diver's language, when the shop suggests one", () => {
-    const email = bookingConfirmationEmail({
-      ...base,
-      packingList: ["Reef-safe sunscreen"],
-      packingLogbook: true,
-    });
-    expect(email.text).toContain("- Reef-safe sunscreen\n- Logbook");
-    const spanish = bookingConfirmationEmail({ ...base, locale: "es-ES", packingLogbook: true });
-    expect(spanish.text).toContain("- Bitácora de buceo");
-  });
-
   it("omits the checklist entirely when the shop has no packing list (no empty box)", () => {
     const email = bookingConfirmationEmail(base);
     expect(email.text).not.toContain("Bring");

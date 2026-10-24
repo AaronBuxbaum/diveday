@@ -113,20 +113,21 @@ async function gearShop(db: AppDb, shopId: string) {
 
 /**
  * Book one seat as `fullName` on `email` (Dana's by default), ticking a rented
- * wetsuit, and a rented BCD when asked.
+ * wetsuit unless told not to, and a rented BCD or nitrox when asked.
  */
 async function book(
   shopSlug: string,
   tripId: string,
   fullName: string,
-  options: { email?: string; bcd?: boolean } = {},
+  options: { email?: string; bcd?: boolean; wetsuit?: boolean; nitrox?: boolean } = {},
 ) {
   const form = new FormData();
   form.set("partySize", "1");
   form.set("fullName-0", fullName);
   form.set("email-0", options.email ?? EMAIL);
-  form.set("gear-0-wetsuit", "on");
+  if (options.wetsuit ?? true) form.set("gear-0-wetsuit", "on");
   if (options.bcd) form.set("gear-0-bcd", "on");
+  if (options.nitrox) form.set("nitrox-0", "on");
   // The action ends in a redirect, which the mock throws.
   await bookSpot({ shopSlug, tripId, embed: false }, {}, form)
     .then(() => undefined)
@@ -270,6 +271,34 @@ describe("gear on a course whose fee includes it", () => {
     expect(stripe.sessions).toHaveLength(1);
     expect(stripe.lineNames()).toContain("Rental gear");
     expect(await gearCentsOn(db, tripId)).toEqual([{ gearCents: 1_500 + 1_200 }]);
+  });
+
+  it("names a nitrox-only charge as nitrox, not as rental gear", async () => {
+    // Domain review of #2795: a student on a gear-included course who only
+    // ticks nitrox must not read "Rental gear" on a card statement.
+    const { db, shop } = ctx;
+    const { tripId } = await gearShop(db, shop.id);
+    await db
+      .update(shops)
+      .set({
+        rentalItems: ["bcd", "wetsuit", "drysuit", "nitrox"],
+        rentalPricing: {
+          setCents: null,
+          perItemCents: { bcd: 1500, wetsuit: 1200 },
+          nitroxCents: 900,
+        },
+      })
+      .where(eq(shops.id, shop.id));
+    const stripe = fakeStripe();
+
+    await book(shop.slug, tripId, "Nia Nitrox", {
+      email: "nia@example.com",
+      wetsuit: false,
+      nitrox: true,
+    });
+
+    expect(stripe.lineNames()).toContain("Nitrox fills");
+    expect(stripe.lineNames()).not.toContain("Rental gear");
   });
 
   it("charges no rental on a gear-included course session, whatever the post ticks", async () => {
