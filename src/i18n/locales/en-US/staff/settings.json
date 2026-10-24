@@ -1,7 +1,6 @@
 {
   "main": {
     "eyebrow": "Settings",
-    "boatMode": "Boat mode",
     "notice": {
       "packingSaved": "Packing checklist saved for every trip",
       "packingInvalid": "Add between one and twelve packing items.",
@@ -1102,6 +1101,7 @@
     "sessions": {
       "group": "{count, plural, one {# session} other {# sessions}} · last seen {when}",
       "thisDevice": "This device",
+      "includesThisDevice": "Includes this device",
       "showSessions": "Show sessions",
       "showAll": "Show all"
     },

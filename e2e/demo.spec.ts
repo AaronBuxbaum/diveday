@@ -40,6 +40,10 @@ test("demo role switcher moves from owner to instructor and back", async ({ page
   await page.getByRole("button", { name: /^Switch role/ }).click();
   await page.getByRole("button", { name: "Switch to Instructor" }).click();
   await expect(page.locator("p", { hasText: /Viewing as/ })).toContainText("Instructor");
+  // The banner updates with the layout, before the instructor's Today has
+  // streamed in; switching back mid-stream raced that navigation. A visitor
+  // switches back from a page, so the test does too.
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
 
   await page.getByRole("button", { name: /^Switch role/ }).click();
   await page.getByRole("button", { name: "Switch to Owner" }).click();

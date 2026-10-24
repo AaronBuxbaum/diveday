@@ -10,8 +10,11 @@ const staffCopy = staffTranslator("en-US");
  * the site, the dive and certification stand open; every other section is a
  * closed row whose controls still post with Save.
  */
-const openSection = (page: Page, id: string) =>
-  openIfClosed(page.locator(`details#briefing-${id}`));
+const section = (page: Page, id: string) =>
+  // Visible only: the page a save navigated away from can stay mounted,
+  // hidden, in an Activity tree, with the same ids.
+  page.locator(`details#briefing-${id}`).filter({ visible: true });
+const openSection = (page: Page, id: string) => openIfClosed(section(page, id));
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -295,7 +298,7 @@ test.describe("staff", () => {
 
     // A closed row opens from its fragment, so a link to one still lands.
     await page.goto(`${page.url().split("#")[0]}#briefing-photos`);
-    await expect(page.locator("details#briefing-photos")).toHaveAttribute("open", "");
+    await expect(section(page, "photos")).toHaveAttribute("open", "");
     await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
 
     // One edit names its section by name; a second stops naming and counts.
@@ -356,9 +359,10 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { level: 1, name: siteName })).toBeVisible();
 
     // Saved, and read back on the form: the route survives the round trip
-    // rather than being a drawing that only existed in the browser.
-    await expect(page.getByLabel("What the route is called")).toHaveValue("Ledge and back");
+    // rather than being a drawing that only existed in the browser. The saved
+    // page opens on its everyday sections, so the route's row opens first.
     await openSection(page, "route");
+    await expect(page.getByLabel("What the route is called")).toHaveValue("Ledge and back");
     await expect(page.getByText(/^3 waypoints/)).toBeVisible();
 
     // And it reaches the diver, which is the only reason to draw it.
@@ -612,7 +616,8 @@ test.describe("staff", () => {
   test("the briefing takes photos as files, never as a pasted link", async ({ page }) => {
     await page.goto("/shop/blue-mantis/dive-sites/new");
     // Three file inputs — map still, route still, and the gallery — and not one
-    // box asking for a URL.
+    // box asking for a URL. They sit in the closed Photos row.
+    await openSection(page, "photos");
     await expect(page.getByLabel("Map still")).toHaveAttribute("type", "file");
     await expect(page.getByLabel("Route still")).toHaveAttribute("type", "file");
     await expect(page.getByLabel(/Site photos/)).toHaveAttribute("type", "file");
@@ -658,7 +663,12 @@ test.describe("staff", () => {
     // true only once the write has happened.
     await page.waitForURL(/[?&]notice=saved/);
     // The form settles in place — the note it was given is what it reads back.
-    await expect(note).toHaveValue("The mooring ball moved south. Brief the swim-through first.");
+    // Read off the box inside its row, which a save leaves closed: opening it
+    // again only to read would spend this test's budget on an animation.
+    const storedNote = () => section(page, "planning").locator('textarea[name="planningNote"]');
+    await expect(storedNote()).toHaveValue(
+      "The mooring ball moved south. Brief the swim-through first.",
+    );
 
     // And the library row now carries it.
     await page.goto("/shop/blue-mantis/dive-sites");
@@ -690,7 +700,7 @@ test.describe("staff", () => {
     // Same reason, and worse here: the field is empty before the save too, so
     // this is the assertion that raced.
     await page.waitForURL(/[?&]notice=saved/);
-    await expect(cleared).toHaveValue("");
+    await expect(storedNote()).toHaveValue("");
     // The library row no longer carries it, read the same way as the public
     // page above: the row was proven on screen once already.
     const library = await page.request.get("/shop/blue-mantis/dive-sites");
@@ -830,7 +840,7 @@ test.describe("an owner's own library", () => {
     // language and resolved for whoever reads the briefing (ADR
     // 20260813-marine-life-is-diveday-copy). What the shop chooses is which
     // faces this site shows, and in what order.
-    const guide = page.locator("details#briefing-field-guide");
+    const guide = section(page, "field-guide");
     await openSection(page, "field-guide");
     await page.getByLabel("Find a species").fill("Hogfish");
     await page.getByRole("button", { name: "Add", exact: true }).click();
@@ -857,7 +867,7 @@ test.describe("an owner's own library", () => {
     await page.getByRole("button", { name: "Add a landmark" }).click();
     // The section is a closed row named for what it holds (visual review
     // 2026-10-24, A11).
-    const landmarks = page.locator("details#briefing-landmarks");
+    const landmarks = section(page, "landmarks");
     await landmarks.getByRole("textbox", { name: "Landmark" }).last().fill("The barrel casks");
     await landmarks
       .getByRole("textbox", { name: "What to say about it" })
@@ -873,6 +883,7 @@ test.describe("an owner's own library", () => {
     await openSection(page, "field-guide");
     await expect(guide.getByText("Hogfish")).toBeVisible();
     await expect(guide.getByText(/Pygmy seahorse/)).toHaveCount(0);
+    await openSection(page, "landmarks");
     await expect(landmarks.getByRole("textbox", { name: "Landmark" }).last()).toHaveValue(
       "The barrel casks",
     );
@@ -908,6 +919,7 @@ test.describe("an owner's own library", () => {
     await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
     // The field guide came with it — a template that arrived without one left a
     // shop to retype the half of the briefing it could not see.
+    await openSection(page, "field-guide");
     await expect(
       page.locator('fieldset:has-text("Field guide")').getByText("Goliath grouper"),
     ).toBeVisible();

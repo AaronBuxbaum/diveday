@@ -302,6 +302,7 @@ export default async function SecurityPage({
             revokeAction={revokeSessionAction}
             labels={{
               thisDevice: t("settings.security.sessions.thisDevice"),
+              includesThisDevice: t("settings.security.sessions.includesThisDevice"),
               browserLine: (browser) => t("settings.security.browserLine", { browser }),
               networkLine: (network) => t("settings.security.networkLine", { network }),
               unknownDevice: t("settings.security.unknownDevice"),

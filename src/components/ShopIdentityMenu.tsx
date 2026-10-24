@@ -7,14 +7,16 @@ import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoic
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/group-label";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { MENU_PANEL, MENU_TICK_GUTTER, menuRowClass } from "@/components/ui/menu";
+import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER, menuRowClass } from "@/components/ui/menu";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
+import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
 import { tellUsMailto, tellUsPath } from "@/lib/tell-us";
 import { forgetThisDevice } from "./forget-device";
 
 export type ShopIdentityMenuCopy = {
+  boatMode: string;
   language: string;
   /** "Account settings": the reader's own sign-in page. */
   accountSettings: string;
@@ -57,9 +59,10 @@ export type TellUsTarget = {
  * **Settings left again, for the nav** (ADR 20261001-logbook): it has its own
  * row at the sidebar's foot, and a second door here would be the duplicate
  * control principle 8 forbids. **One account row** (visual review 2026-10-24,
- * A42): the menu reads Language, Account settings, Send feedback, Sign out.
- * The calendar feed and email settings are reached from the account page, and
- * boat mode is a row on Settings.
+ * A42): the menu reads Language, Account settings, Boat mode, Send feedback,
+ * Sign out. The calendar feed and email settings are reached from the account
+ * page. Boat mode stays here, where every signed-in role reaches it: crew on
+ * deck are who it is for, and Settings is gated to owners and managers.
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -212,20 +215,19 @@ export function ShopIdentityMenu({
               />
             </div>
           </div>
-          {accountHref || tellUs ? (
-            <div className="mt-1 border-t border-border pt-1">
-              {accountHref ? (
-                <Link
-                  href={accountHref}
-                  onClick={() => setOpen(false)}
-                  className={menuRowClass("quiet")}
-                >
-                  {copy.accountSettings}
-                </Link>
-              ) : null}
-              {tellUs ? <TellUsRow to={tellUs.to} copy={copy} /> : null}
-            </div>
-          ) : null}
+          <div className="mt-1 border-t border-border pt-1">
+            {accountHref ? (
+              <Link
+                href={accountHref}
+                onClick={() => setOpen(false)}
+                className={menuRowClass("quiet")}
+              >
+                {copy.accountSettings}
+              </Link>
+            ) : null}
+            <BoatModeRow label={copy.boatMode} />
+            {tellUs ? <TellUsRow to={tellUs.to} copy={copy} /> : null}
+          </div>
           {/* Signing out is the destructive end of the menu, so it sits below
               the rule rather than in the same stack as the language rows. */}
           <form
@@ -272,5 +274,36 @@ function TellUsRow({ to, copy }: { to: string; copy: ShopIdentityMenuCopy }) {
     <a href={href} data-tell-us="" className={menuRowClass("quiet")}>
       {copy.tellUs}
     </a>
+  );
+}
+
+/**
+ * Boat mode, by hand (ADR 20261001-logbook, decision 6): the high-contrast
+ * palette on every page of this device, light in sun and navy at night
+ * (H-97). Ticked like the language in force, because it is the same kind of
+ * choice: about this reader on this device.
+ */
+function BoatModeRow({ label }: { label: string }) {
+  // Read after mount: the stored choice lives in this browser, and the
+  // pre-paint script has already put the class on the page.
+  const [on, setOn] = useState(false);
+  useEffect(() => setOn(isBoatModeOn()), []);
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={() => {
+        setBoatMode(!on);
+        setOn(!on);
+      }}
+      className={menuRowClass(on ? "current" : "quiet")}
+    >
+      {on ? (
+        <span aria-hidden="true" className={`${MENU_TICK} text-primary`}>
+          <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} />
+        </span>
+      ) : null}
+      {label}
+    </button>
   );
 }

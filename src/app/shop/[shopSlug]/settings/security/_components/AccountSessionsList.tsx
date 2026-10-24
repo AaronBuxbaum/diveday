@@ -2,7 +2,12 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupSessions, SESSION_GROUPS_SHOWN, type SessionGroup } from "./group-sessions";
+import {
+  groupDeviceTag,
+  groupSessions,
+  SESSION_GROUPS_SHOWN,
+  type SessionGroup,
+} from "./group-sessions";
 
 export type AccountSessionDisplayRow = {
   id: string;
@@ -18,6 +23,8 @@ export type AccountSessionDisplayRow = {
 
 export type AccountSessionsLabels = {
   thisDevice: string;
+  /** A device row standing for several sessions, one of them this one. */
+  includesThisDevice: string;
   /** "Browser: {browser}", whole from the bundle so the translator owns the punctuation. */
   browserLine: (browser: string) => string;
   /** "Network: {network}", likewise. */
@@ -98,11 +105,12 @@ function SessionGroupRow({
   shopSlug: string;
   revokeAction: RevokeAction;
 }) {
+  const tag = groupDeviceTag(group);
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="font-medium">{group.deviceLabel}</span>
-        {group.isCurrent ? <Badge tone="success">{labels.thisDevice}</Badge> : null}
+        {tag ? <Badge tone="success">{labels[tag]}</Badge> : null}
       </div>
       <p className="text-sm text-muted">{labels.group(group.sessions.length, group.lastSeenAt)}</p>
       <details className="group/sessions">

@@ -103,11 +103,15 @@ runs. Pass args directly. The shell guard refuses the bare form.
   20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
-- **A thread that steers never builds.** A thread that plans, routes or watches a stack hands each
-  ticket or stack layer to a fresh worker (a subagent, or a new thread) with a spec written from
-  [spec-template.md](spec-template.md): goal, files owned, constraints, done-when, verification
-  command, hand-back format. The worker builds, writes its result to a file and hands back the
-  path; the steering thread reads that file, not the tree. A thread whose context passes about
+- **A thread builds one layer itself; parallel layers go to fresh workers.** A single layer or a
+  small change is built in the thread that understands it, because a handoff loses detail and
+  adds latency (Aaron, 2026-10-24, after Anthropic's article in [Delegating](#delegating)). When
+  the work has independent layers that can run in parallel, or would push the thread past about
+  150k tokens, the thread steers instead: it hands each ticket or layer to a fresh worker (a
+  subagent, or a new thread) with a spec written from [spec-template.md](spec-template.md): goal,
+  files owned, constraints, done-when, verification command, hand-back format. The worker builds,
+  writes its result to a file and hands back the path; the steering thread reads that file, not
+  the tree, and leaves CI logs and visual triage to a worker too. A thread whose context passes about
   150k tokens writes a state note (what is done, what is in flight and where, the next step) and
   retires, and a fresh thread picks up from the note. The measurement: on 2026-10-14 five
   steering threads at 200k to 380k context were also building, one with fourteen branches and

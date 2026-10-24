@@ -179,9 +179,15 @@ export function registerRemainingExpandedAuditCaptures(
     test("a gear unit opens its identity and purchase fields", async ({ page }) => {
       await page.goto("/shop/blue-mantis/gear");
       await page.getByRole("link", { name: "Reg #1", exact: true }).click();
-      const details = page.locator("#unit-details details");
-      await openIfClosed(details);
-      await details.locator('input[name="serialNumber"]').waitFor();
+      // The identity fields open from the header's "Edit details" (visual
+      // review 2026-10-24, A19), into the unit's one summary panel.
+      await page.getByRole("link", { name: staff("gear.unit.details.edit") }).click();
+      await page.waitForURL(/[?&]edit=details/);
+      await page
+        .locator("#unit-details")
+        .filter({ visible: true })
+        .locator('input[name="serialNumber"]')
+        .waitFor();
       await capture(page, "gear-unit-details-editor", "light");
     });
 
