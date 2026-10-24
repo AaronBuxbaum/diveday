@@ -123,9 +123,11 @@ describe("DiverDetailsGroup", () => {
       <DiverDetailsGroup {...props} diver={{ ...declared, minorDeclared: true }} />,
     );
     expect(
-      getByText("Booked as under 18, with no date of birth on file. Add one."),
+      getByText(
+        "A booking says this diver is under 18, so their waiver needs a parent or guardian’s signature. Add the date of birth to settle it.",
+      ),
     ).toBeInTheDocument();
-    expect(getByText("Booked as under 18")).toBeInTheDocument();
+    expect(getByText("Booked as under 18, no date on file")).toBeInTheDocument();
     expect(getByText("Emergency contact: Ana Castellanos")).toHaveClass("text-warning-strong");
     expect(container.querySelector("details")).toHaveAttribute("open");
 
@@ -140,11 +142,11 @@ describe("DiverDetailsGroup", () => {
         }}
       />,
     );
-    expect(document.body).not.toHaveTextContent("Booked as under 18");
+    expect(document.body).not.toHaveTextContent("under 18");
 
     // No declared seat ahead: nothing to ask.
     rerender(<DiverDetailsGroup {...props} diver={{ ...declared, minorDeclared: false }} />);
-    expect(document.body).not.toHaveTextContent("Booked as under 18");
+    expect(document.body).not.toHaveTextContent("under 18");
   });
 
   it("is a closed door that names a missing contact in warning ink", () => {

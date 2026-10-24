@@ -269,4 +269,4 @@ standing and its paper release, a counter rental) read the stamp off any of the 
 still stands: not cancelled, on a live, scheduled departure not yet over
 (`minorDeclaredOnLiveUpcomingSeat`, `src/db/minor-declared.ts`). The record then asks the staffer
 for a date of birth. Nothing writes a date of birth from the stamp. A canceled day's carried
-preparation still answers `false`.
+preparation reads the stamp on that day's own seat too, called off or not.
