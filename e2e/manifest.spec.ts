@@ -1378,8 +1378,15 @@ test("a departure's crew opens a diver's medical alert, and the read is on their
     const sheet = await openAlertSheet(instructor);
     await expect(sheet.getByText(staff("manifest.medicalAlertReaders"))).toBeVisible();
     await expect(
-      sheet.getByRole("button", { name: staff("manifest.medicalAlertShow") }),
+      sheet.getByRole("button", { name: staff("manifest.medicalAlertShow"), exact: true }),
     ).toHaveCount(0);
+    // The day before, the emergency offer is already there and the server
+    // says it opens on the day of the trip (domain review 2, S1).
+    await sheet.getByRole("button", { name: staff("manifest.medicalAlertEmergencyOffer") }).click();
+    await sheet
+      .getByRole("button", { name: staff("manifest.medicalAlertEmergencyConfirm") })
+      .click();
+    await expect(sheet.getByText(staff("manifest.medicalAlertEmergencyNotYet"))).toBeVisible();
     await expect(sheet.getByText(DEMO_MEDICAL_ALERT)).toHaveCount(0);
   } finally {
     await instructorContext.close();
@@ -1454,6 +1461,9 @@ test("an owner prints the packet with the medical alerts, and the print is on th
   await expect(popup).toHaveURL(new RegExp(`${tripPath}/print/medical-alerts$`));
   await popup.emulateMedia({ media: "print" });
   await expect(popup.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
+  await expect(
+    popup.getByRole("heading", { level: 1, name: staff("manifest.medicalAlertsPrintedTitle") }),
+  ).toBeVisible();
   await expect(popup.getByText(staff("manifest.medicalAlertsPrintedKeep"))).toBeVisible();
   await expect(popup.getByText(staff("manifest.medicalAlertNotReviewed"))).toBeVisible();
   await popup.close();
