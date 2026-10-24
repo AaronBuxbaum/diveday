@@ -274,3 +274,68 @@ export function parseSesBounceReports(rawMessage: string, now: Date): SesBounceR
 
   return [];
 }
+
+/** The kind tag a month-end send carries (`kinds.ts`). */
+const BOOKKEEPER_MONTH_END_KIND = "bookkeeper_month_end";
+
+/** What a month-end send's event says about the bookkeeper's address. */
+export type SesBookkeeperOutcome = {
+  shopId: string;
+  recipient: string;
+  outcome: "bounced" | "delivered";
+  occurredAt: Date;
+};
+
+/**
+ * **A month-end send's outcome** (issue #2798): for a message tagged
+ * `bookkeeper_month_end` with a shop, a permanent bounce (which is also how SES
+ * answers an address on its suppression list, `OnAccountSuppressionList` or
+ * `Suppressed`) reads `bounced` and a delivery reads `delivered`, one per
+ * address named. A transient bounce, a complaint, any other kind and an
+ * untagged message read nothing: a mailbox that is full today must not mark the
+ * address wrong. Matched to the shop by its tag, never by a stored message id,
+ * since this kind keeps no delivery row.
+ */
+export function parseSesBookkeeperOutcomes(rawMessage: string, now: Date): SesBookkeeperOutcome[] {
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(rawMessage);
+  } catch {
+    return [];
+  }
+  const parsed = sesEventDataSchema.safeParse(parsedJson);
+  if (!parsed.success) return [];
+  const data = parsed.data;
+  if (trimmedOrNull(data.mail.tags?.[SES_KIND_TAG]?.[0]) !== BOOKKEEPER_MONTH_END_KIND) return [];
+  const shopId = shopIdOf(data);
+  if (!shopId) return [];
+  const destinations = (data.mail.destination ?? []).map((address) => ({ emailAddress: address }));
+  const outcomes = (
+    named: readonly { emailAddress?: string }[],
+    outcome: SesBookkeeperOutcome["outcome"],
+    occurredAt: Date,
+  ) =>
+    named.flatMap((recipient) => {
+      const address = recipient.emailAddress?.trim().toLowerCase();
+      return address ? [{ shopId, recipient: address, outcome, occurredAt }] : [];
+    });
+
+  if (data.eventType === "Bounce" && data.bounce?.bounceType === "Permanent") {
+    const named = data.bounce.bouncedRecipients?.length
+      ? data.bounce.bouncedRecipients
+      : destinations;
+    return outcomes(
+      named,
+      "bounced",
+      timestampFrom([data.bounce.timestamp, data.mail.timestamp], now),
+    );
+  }
+  if (data.eventType === "Delivery") {
+    return outcomes(
+      destinations,
+      "delivered",
+      timestampFrom([data.delivery?.timestamp, data.mail.timestamp], now),
+    );
+  }
+  return [];
+}

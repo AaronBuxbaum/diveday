@@ -531,6 +531,16 @@ export const shops = pgTable(
      */
     bookkeeperStopTokenHash: text("bookkeeper_stop_token_hash"),
     /**
+     * **The last month-end files to this address bounced** (issue #2798,
+     * security review N2): SES answered a `bookkeeper_month_end` send with a
+     * permanent bounce, which is also how it answers an address on its
+     * suppression list. Set by the delivery webhook, matched by the send's shop
+     * tag and the address on file; cleared by any change of address and by a
+     * later delivered send. Reports warns while it is set. Informs only: the
+     * pass keeps sending, since nothing here tells a dead inbox from a fixed one.
+     */
+    bookkeeperBouncedAt: timestamp("bookkeeper_bounced_at", { withTimezone: true }),
+    /**
      * **A shop name that could pass for a brand or an institution** (issue
      * #2450, decided 2026-10-16): set when the name matched the denylist in
      * `src/lib/shop-name-review.ts` at sign-up (or a rename). While it is set
@@ -729,6 +739,11 @@ export const shops = pgTable(
       "shops_bookkeeper_confirmation_has_address",
       sql`${table.bookkeeperEmail} is not null
         or (${table.bookkeeperConfirmedAt} is null and ${table.bookkeeperConfirmTokenHash} is null)`,
+    ),
+    // A bounce is about the address on file; none is held without one.
+    check(
+      "shops_bookkeeper_bounce_has_address",
+      sql`${table.bookkeeperEmail} is not null or ${table.bookkeeperBouncedAt} is null`,
     ),
     check(
       "shops_bookkeeper_confirm_token_expiry",

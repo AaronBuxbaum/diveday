@@ -1,0 +1,2 @@
+ALTER TABLE "shops" ADD COLUMN "bookkeeper_bounced_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "shops" ADD CONSTRAINT "shops_bookkeeper_bounce_has_address" CHECK ("bookkeeper_email" is not null or "bookkeeper_bounced_at" is null);
