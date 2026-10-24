@@ -164,8 +164,6 @@ export function TripFullSection({
   trip,
   tripRef,
   errorMessage,
-  contactEmail,
-  contactPhone,
   alternatives = [],
   terms,
   offerLastMinuteList = true,
@@ -176,8 +174,6 @@ export function TripFullSection({
   trip: BookingFormTrip;
   tripRef: TripRef;
   errorMessage?: string;
-  contactEmail?: string | null;
-  contactPhone?: string | null;
   /**
    * The same money fine print (`TripTerms`) the open form renders beside its
    * button. A wait-list join commits the diver to these terms the moment a
@@ -294,8 +290,6 @@ export function TripFullSection({
             maxPartySize={trip.capacity}
             leadOnly
             leadPhone
-            contactEmail={contactEmail}
-            contactPhone={contactPhone}
           />
           {/* Two joiners from one couple would each count the couple, so the
             shop reads demand that is not there (dive-domain review r4-4, N8). */}
@@ -381,8 +375,6 @@ export type BookSpotSectionContext = {
   /** The shop's currency — this is a list price, so it follows the shop, not a payment row. */
   currency: ShopCurrency;
   locale: string;
-  contactEmail?: string | null;
-  contactPhone?: string | null;
   /** The shop's rental catalog and price list — a gear step only renders when both offer something priced. */
   rentalItems: string[];
   rentalPricing: RentalPricing;
@@ -481,8 +473,6 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     perDiverPriceCents,
     currency,
     locale,
-    contactEmail,
-    contactPhone,
     rentalItems,
     rentalPricing,
     passThroughFee,
@@ -619,8 +609,6 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           fieldErrors={state.fieldErrors}
           remember={!tripRef.embed}
           onSizeChange={setPartySize}
-          contactEmail={contactEmail}
-          contactPhone={contactPhone}
           lead={knownDiver?.lead ?? null}
           onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}
           participantChoices={participantChoices}

@@ -182,13 +182,11 @@
     "openPublicTrip": "Open the public trip page",
     "arrivalShopDefault": "Shop meeting point",
     "changeLedgerHeading": "What changed",
-    "changeLedgerBody": "Material updates to the meeting point and conditions appear here with who supplied them and when.",
     "changeMeetingPoint": "Meeting point: {label}",
     "changeMeetingPointUpdated": "Meeting point updated",
     "changeMeetingPointWithAddress": "Meeting point: {label} · {address}",
     "changeArrivalGuidance": "Arrival guidance updated",
     "changeArrivalPhoto": "Arrival photo updated",
-    "changeConditions": "The crew updated the conditions outlook.",
     "changeConditionsWithSummary": "Conditions: {summary}",
     "cancellationAskShop": "Cancellation questions? Ask the shop:",
     "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}",
@@ -346,7 +344,8 @@
     "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
     "logEntryWaiting": "After you dive, your log entry is waiting for you.",
     "runLine": "Runs {cadence} · next {date}",
-    "crewToBeConfirmed": "{role} · to be confirmed"
+    "crewToBeConfirmed": "{role} · to be confirmed",
+    "changedAt": "Changed {when}"
   },
   "factSource": {
     "forecast": "Forecast",
@@ -1416,8 +1415,6 @@
     "useMainContactEmail": "Use the main contact’s email for this diver",
     "under18": "Under 18",
     "under18Hint": "A parent or guardian signs the waiver too.",
-    "bigGroupContactEmail": "Bringing more than {count}? <a>Contact the shop: {contact}</a>",
-    "bigGroupContactPhone": "Bringing more than {count}? <a>Contact the shop: {contact}</a>",
     "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
   },
   "site": {

@@ -443,8 +443,6 @@ export default async function TripDetailPage({
                   trip={bookingFormTrip(trip)}
                   tripRef={tripRef}
                   errorMessage={errorMessage}
-                  contactEmail={shop.contactEmail}
-                  contactPhone={shop.contactPhone}
                   alternatives={alternatives}
                   offerLastMinuteList={shop.lastMinuteListEnabled}
                   offerWaitlist={shop.waitlistEnabled}
@@ -464,8 +462,6 @@ export default async function TripDetailPage({
                     currency: shopCurrency,
                     locale,
                     timeZone: shop.timezone,
-                    contactEmail: shop.contactEmail,
-                    contactPhone: shop.contactPhone,
                     rentalItems: shop.rentalItems,
                     rentalPricing: shop.rentalPricing,
                     passThroughFee: parsePassThroughFee(shop.passThroughFee),

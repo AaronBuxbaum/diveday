@@ -182,13 +182,11 @@
     "openPublicTrip": "Abrir la página pública de la salida",
     "arrivalShopDefault": "Punto de encuentro del centro",
     "changeLedgerHeading": "Qué ha cambiado",
-    "changeLedgerBody": "Aquí aparecen las actualizaciones importantes del punto de encuentro y las condiciones, con quién las comunicó y cuándo.",
     "changeMeetingPoint": "Punto de encuentro: {label}",
     "changeMeetingPointUpdated": "Punto de encuentro actualizado",
     "changeMeetingPointWithAddress": "Punto de encuentro: {label} · {address}",
     "changeArrivalGuidance": "Indicaciones de llegada actualizadas",
     "changeArrivalPhoto": "Foto de llegada actualizada",
-    "changeConditions": "La tripulación ha actualizado la previsión de condiciones.",
     "changeConditionsWithSummary": "Condiciones: {summary}",
     "cancellationAskShop": "¿Dudas sobre la cancelación? Pregunta al centro:",
     "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}",
@@ -346,7 +344,8 @@
     "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera.",
     "runLine": "Sale {cadence} · la próxima, {date}",
-    "crewToBeConfirmed": "{role} · por confirmar"
+    "crewToBeConfirmed": "{role} · por confirmar",
+    "changedAt": "Cambiado el {when}"
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -1416,8 +1415,6 @@
     "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
     "under18": "Menor de 18 años",
     "under18Hint": "Un padre, madre o tutor legal también firma la exención.",
-    "bigGroupContactEmail": "¿Vienen más de {count}? <a>Contacta con el centro: {contact}</a>",
-    "bigGroupContactPhone": "¿Vienen más de {count}? <a>Contacta con el centro: {contact}</a>",
     "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
   },
   "site": {

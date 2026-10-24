@@ -41,3 +41,24 @@ describe("RegisterForm card photo", () => {
     expect(read).toHaveBeenCalledWith({ data: "AAAA", mediaType: "image/jpeg" });
   });
 });
+
+/** Visual review 2026-10-24, B22: the SMS consent appears once a number is typed. */
+describe("RegisterForm SMS consent", () => {
+  it("reveals the consent's unchanged words on phone entry", () => {
+    render(
+      <DiverIntlProvider
+        locale="en-US"
+        timeZone="America/New_York"
+        namespaces={["register", "common", "course"]}
+      >
+        <RegisterForm action={vi.fn()} shopName="Blue Mantis" />
+      </DiverIntlProvider>,
+    );
+    const consent = /you agree to texts from DiveDay/i;
+    expect(screen.queryByText(consent)).toBeNull();
+    const phone = document.querySelector<HTMLInputElement>("input#phone");
+    if (!phone) throw new Error("phone input missing");
+    fireEvent.input(phone, { target: { value: "+1 305 555 0142" } });
+    expect(screen.getByText(consent)).toBeInTheDocument();
+  });
+});
