@@ -393,15 +393,67 @@ describe("the manifest printed with the medical alerts", () => {
     expect(rows[0]).not.toHaveTextContent(t("manifest.medicalAlertPrinted"));
     expect(screen.getAllByText(t("manifest.medicalAlertNotReviewed"))).toHaveLength(1);
     expect(screen.getByText(t("manifest.medicalAlertsPrintedKeep"))).toBeInTheDocument();
-    // Who printed it, and when, in the shop's zone.
+    // Who printed it, and when, in the shop's zone, and that it is a snapshot from then.
     expect(container).toHaveTextContent(/Printed by Dana Owner, .*7:15.*EDT/);
+    expect(container).toHaveTextContent(t("manifest.medicalAlertsPrintedSnapshot"));
+    expect(t("manifest.medicalAlertsPrintedSnapshot")).toMatch(/written or changed .*aren’t on/);
   });
 
-  it("carries no words and no note on the default print", () => {
+  it("lists, at the top, the row number and name of every diver with an alert on the sheet", () => {
+    const { container } = render(
+      <DiverRollCall
+        context={diverContext({
+          checkpoint: "departure",
+          isDeparture: true,
+          timezone: "America/New_York",
+          divers: [
+            diver({ bookingId: "b-1", fullName: "Ana Ruiz" }),
+            diver({ bookingId: "b-2", fullName: "Siobhan Doyle", medicalAlert: true }),
+            diver({
+              bookingId: "b-3",
+              fullName: "Held Seat",
+              medicalAlert: true,
+              identityWithheld: true,
+            }),
+            diver({ bookingId: "b-4", fullName: "Kai Mendes", medicalAlert: true }),
+          ],
+          printedMedicalAlerts: {
+            texts: new Map([
+              ["b-2", ALERT],
+              ["b-3", ALERT],
+              ["b-4", "Type 1 diabetic. Glucose gel in the red pouch."],
+            ]),
+            printedBy: "Dana Owner",
+            printedAt: PRINTED_AT,
+          },
+        })}
+      />,
+    );
+    expect(
+      screen.getByText(
+        t("manifest.medicalAlertsPrintedOnSheet", { divers: "02 Siobhan Doyle, 04 Kai Mendes" }),
+      ),
+    ).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("03 Held Seat");
+  });
+
+  it("repeats keep-with-the-crew under every alert, so every page with words carries it", () => {
+    renderSheet({ texts: new Map([["b-1", ALERT]]) });
+    const keep = t("manifest.medicalAlertsPrintedKeepShort");
+    expect(screen.getAllByText(keep)).toHaveLength(1);
+    expect(keep).toMatch(/keep .*crew.*destroy/i);
+  });
+
+  it("carries no words and no note on the default print, and points to the alerts sheet", () => {
     const { container } = renderSheet();
     expect(container).not.toHaveTextContent(ALERT);
     expect(container).not.toHaveTextContent(t("manifest.medicalAlertsPrintedHeading"));
+    expect(container).not.toHaveTextContent(t("manifest.medicalAlertsPrintedKeepShort"));
     expect(container).toHaveTextContent(t("manifest.medicalAlertPrinted"));
+    expect(t("manifest.medicalAlertPrinted")).toMatch(/any staffer .*emergency during the trip/);
+    expect(t("manifest.medicalAlertPrinted")).toMatch(
+      /medical alerts sheet .*if the shop printed one/,
+    );
   });
 
   it("prints no words on a held seat, even if handed some", () => {

@@ -79,7 +79,7 @@ export default async function TripPrintWithMedicalAlertsPage({
       <AutoPrint readySelector={PACKET_READY_SELECTOR} />
       <header className="mb-10 border-b border-border pb-6 print:mb-6">
         <p className={EYEBROW_CLASS}>DiveDay</p>
-        <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.title")}</h1>
+        <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("manifest.medicalAlertsPrintedTitle")}</h1>
         <p className="mt-2 text-muted">
           {t("print.sheet.printed", {
             date: formatDateTimeTz(printed.printed.printedAt, locale, shop.timezone),

@@ -106,6 +106,9 @@ export function DiverRowPrint({
           <p className="text-sm font-semibold">{t("manifest.medicalAlertHeading")}</p>
           {/* The diver's own words, line breaks kept. */}
           <p className="text-base whitespace-pre-wrap [overflow-wrap:anywhere]">{printedAlert}</p>
+          {/* Under every alert, so each printed page with words says what to
+              do with the paper (domain review 1, S3). */}
+          <p className="mt-1 text-xs font-medium">{t("manifest.medicalAlertsPrintedKeepShort")}</p>
         </div>
       ) : null}
       {ready ? null : (

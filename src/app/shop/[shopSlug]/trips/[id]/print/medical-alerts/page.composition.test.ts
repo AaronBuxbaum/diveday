@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { routeSource } from "@/test/route-source";
 
 /**
@@ -28,6 +29,14 @@ describe("the print with medical alerts", () => {
     expect(guard).toBeGreaterThan(-1);
     expect(guard).toBeLessThan(SOURCE.indexOf("await requireShopSurface("));
     expect(guard).toBeLessThan(SOURCE.indexOf("await medicalAlertsForPrint(db, {"));
+  });
+
+  it("prints its own title, never the plain packet's (domain review 1, S3)", () => {
+    expect(SOURCE).toContain('t("manifest.medicalAlertsPrintedTitle")');
+    expect(SOURCE).not.toContain('t("shared.printPacket.title")');
+    expect(staffTranslator("en-US")("manifest.medicalAlertsPrintedTitle")).not.toBe(
+      staffTranslator("en-US")("shared.printPacket.title"),
+    );
   });
 
   it("asks the server for the words, refuses with a 404, and only then composes the packet", () => {

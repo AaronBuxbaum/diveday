@@ -78,6 +78,7 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
       {context.printedMedicalAlerts && context.printedMedicalAlerts.texts.size > 0 ? (
         <PrintedMedicalAlertsNote
           printed={context.printedMedicalAlerts}
+          divers={divers}
           locale={locale}
           timezone={context.timezone}
           t={t}
