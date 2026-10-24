@@ -1,11 +1,17 @@
-import { eq, getTableName } from "drizzle-orm";
+import { eq, getTableName, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
+import { capturedDemoResetPlan, resetDemoFromSnapshot } from "./demo-reset-snapshot";
 import * as schema from "./schema";
 import { accountSessions, mediaDeletionAttempts, people, shops, userAccounts } from "./schema";
-import { createDemoShop, deleteDemoShopCascade, resetDemoSchedule } from "./seed";
+import {
+  clearDemoSchedule,
+  createDemoShop,
+  deleteDemoShopCascade,
+  resetDemoSchedule,
+} from "./seed";
 
 /**
  * The structural guard on the two hand-maintained delete orderings —
@@ -396,6 +402,81 @@ describe("shop-scoped delete-path coverage", () => {
     expect(Object.keys(CASCADE_KEEPS).filter((name) => deleted.has(name))).toEqual([]);
   });
 });
+
+/** Tables `RESET_KEEPS` names because a cascade from a reset-owned parent clears them. */
+const RESET_CASCADES = Object.entries(RESET_KEEPS)
+  .filter(([, why]) => why.startsWith("ON DELETE CASCADE"))
+  .map(([name]) => name);
+
+/** Rolls the probe's transaction back. */
+const PROBE = Symbol("delete-path-coverage:probe");
+
+/**
+ * **The e2e reset replays a copy, and the copy is held to the same list.**
+ *
+ * The fleet's `/api/test/reset` runs `clearDemoSchedule` and then writes the
+ * rows the re-seed would from a shadow taken on the server's first reset
+ * (`src/db/demo-reset-snapshot.ts`). The shadow is found by difference rather
+ * than listed, so these hold it to the delete path above from both sides: it
+ * writes only tables the reset deletes from (or that a cascade from one
+ * clears), and every table the clear half empties of seeded rows is in it. A
+ * table the shadow missed would be a table every replay leaves empty; one it
+ * wrote outside the list would be a table no reset owns.
+ */
+describe("the e2e reset's snapshot covers what the reset deletes", () => {
+  it("replays every table the clear half empties, and nothing it keeps", async () => {
+    const db = await seededTestDb({ history: true });
+    const [shop] = await db.select().from(shops).where(eq(shops.slug, "blue-mantis")).limit(1);
+    if (!shop) throw new Error("test setup: the canonical demo shop is missing");
+    expect((await resetDemoFromSnapshot(db, shop.id)).mode).toBe("captured");
+    const plan = capturedDemoResetPlan(db);
+    if (!plan) throw new Error("expected the capture to have produced a plan");
+    const replayed = plan.inserts.map((step) => step.table).sort();
+
+    // Which tables the clear half takes seeded rows out of, read off a clear
+    // that is rolled back, and which tables it deletes from at all.
+    const names = shopScopedTableNames();
+    const emptied: string[] = [];
+    let deleted = new Set<string>();
+    await db
+      .transaction(async (tx) => {
+        const before = await rowCounts(tx, names);
+        deleted = await recordDeletedTables(tx as unknown as AppDb, (recorder) =>
+          clearDemoSchedule(recorder, shop.id).then(() => undefined),
+        );
+        const after = await rowCounts(tx, names);
+        for (const name of names) {
+          if ((after.get(name) ?? 0) < (before.get(name) ?? 0)) emptied.push(name);
+        }
+        throw PROBE;
+      })
+      .catch((error: unknown) => {
+        if (error !== PROBE) throw error;
+      });
+
+    expect(replayed.length).toBeGreaterThan(30);
+    expect(replayed).toEqual(emptied.sort());
+    expect(replayed.filter((name) => !deleted.has(name) && !RESET_CASCADES.includes(name))).toEqual(
+      [],
+    );
+    // A kept row the re-seed changes is written back column by column; it must
+    // be a table the reset keeps or deletes from, never one outside the shop.
+    expect(plan.updates.map((step) => step.table).filter((name) => !names.includes(name))).toEqual(
+      [],
+    );
+  }, 60_000);
+});
+
+async function rowCounts(db: DbExecutor, tables: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  for (const table of tables) {
+    const result = (await db.execute(
+      sql`select count(*)::int as n from ${sql.identifier(table)}`,
+    )) as unknown as { rows: { n: number }[] };
+    counts.set(table, Number(result.rows[0]?.n ?? 0));
+  }
+  return counts;
+}
 
 /**
  * **The reset has to restore what Today reads, not only the schedule.**

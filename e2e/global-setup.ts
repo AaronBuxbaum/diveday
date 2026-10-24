@@ -99,8 +99,11 @@ async function warmServers() {
         // (issue #2624) it costs about 30s of server CPU on its own and 28 to
         // 47s of wall time once other processes share the cores, so the old
         // 30s failed the whole run here ("Timeout 30000ms exceeded" at this
-        // line) before a single test started. The per-test reset after it is
-        // about 5.5s of CPU and is not governed by this number.
+        // line) before a single test started. It also takes the copy every
+        // later reset replays (src/db/demo-reset-snapshot.ts), a few seconds
+        // more, so that cost lands here too rather than on the first test. The
+        // per-test replay after it is a few hundred milliseconds and is not
+        // governed by this number.
         await context.post("/api/test/reset", { timeout: 120_000 });
         // Warm the routes every test hits first so the first test's clock
         // doesn't absorb their one-time render cost. Best-effort.
