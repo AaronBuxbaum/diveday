@@ -6,10 +6,10 @@ import { e2eNow, rosterRow } from "./helpers";
  * One booking, seated end to end with nothing but Tab, Shift+Tab, Enter and
  * typing — no `click()` anywhere in this file.
  *
- * ## Why this exists next to the axe scans
+ * ## Why this exists
  *
- * `e2e/a11y.spec.ts` proves every control on ~40 surfaces has a name, a role
- * and a reachable label. None of that is the same as the page being
+ * An axe scan proves every control has a name, a role and a reachable label
+ * (the suite ran one until 2026-10-24). None of that is the same as the page being
  * *traversable*. A page can pass every rule axe has and still be unusable
  * without a mouse, because the three things that decide that are all invisible
  * to a static tree walk:

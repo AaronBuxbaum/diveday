@@ -46,6 +46,12 @@ class name, a marker order or a JSX count pinned in a unit test is a change dete
 refactor and passes on a broken render. **A geometry fix is proven by a capture**, not a class
 assertion: the screenshot shows the overlap gone.
 
+**No automated accessibility scans in the suite.** The axe scans (`e2e/a11y.spec.ts`,
+`e2e/a11y-map.spec.ts`, `e2e/a11y-scan.ts`) were removed 2026-10-24: the scans were the week's top
+failure site and the product does not prioritize automated a11y (Aaron, 2026-10-24). Markup fixes
+that are free still land: a name on a control, a label on an input, a real heading. The weekly
+persona walk keeps its own axe probe, which files issues and never blocks a PR.
+
 ## How a change decides its tests
 
 1. A new rule or branch: a rules test, the refusal included. Always.
@@ -241,8 +247,8 @@ and in Spanish for Ingrid, whose findings are invisible in English — runs a fi
 each, photographs the surfaces the findings name, and files what it found as `needs-triage` issues.
 
 **Every probe is deterministic.** Each one answers yes or no from the rendered DOM, the response
-status, or axe's own rule set: the WCAG 2.0 A/AA + 2.2 AA scan `e2e/a11y.spec.ts` already runs, a
-missing skip link, a message key that reached the screen instead of a sentence, a page that did not
+status, or axe's own WCAG 2.0 A/AA + 2.2 AA rule set (the walk's own probe; the suite runs no
+scan since 2026-10-24), a missing skip link, a message key that reached the screen instead of a sentence, a page that did not
 render, a browser console error, a `/s/**` page that does not name its shop, an image with neither
 dimensions nor lazy loading. The persona doc's softer lines stay a human's reading — a bot guessing
 at those would file opinions into a tracker one person reads.
@@ -332,11 +338,12 @@ Until that is fixed, read a survivor list as noise.
 
 `playwright-core` is declared explicitly at the exact version `@playwright/test` resolves to. It is
 not a dependency anything imports directly — it is there to decide which copy `@axe-core/playwright`
-binds its `playwright-core` **peer** to.
+binds its `playwright-core` **peer** to, for the persona walk's probe
+(`scripts/persona-bots/walk.spec.ts`).
 
 Without the pin, two copies sit in the tree: `@playwright/test`'s, and the exact alpha that
 `@playwright/mcp` pins for its own use. pnpm picked the higher one for the peer, so `AxeBuilder`
-wanted a `Page` from one copy while `e2e/a11y.spec.ts` had one from the other — structurally the
+wanted a `Page` from one copy while the spec calling it had one from the other — structurally the
 same object, a hard `tsc` error, and nothing about the message says "you have two Playwrights". That
 is how `main` went red on typecheck after a routine package bump.
 
@@ -351,12 +358,9 @@ tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.
 uses the last such literal within its test. These associations are candidates for coverage, not
 proof that a route was visited or a capture ran. A capture never counts as a route's flow spec.
 
-An inferred `a11y` candidate requires `expectNoA11yViolations(page)` after the last literal
-`page.goto` in the same enabled test. Setup routes, unrelated tests and comments cannot lend scan
-credit; a dynamic navigation clears the candidate. Conditional execution, helpers, loops and
-fixture-driven skips require runtime evidence, so these figures cannot establish scanning
-completeness. `scripts/route-coverage.json` retains explicit click-reached associations and written
-exemptions for what source inference cannot resolve.
+The ledger's `a11y` column has been empty since the suite's scans were removed (2026-10-24,
+[above](#what-each-layer-is-for)). `scripts/route-coverage.json` retains explicit click-reached
+associations and written exemptions for what source inference cannot resolve.
 
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with

@@ -19,7 +19,7 @@ test.describe("owner", () => {
    * How far down the board the scroll test below reads before clicking a row.
    *
    * **157, because that is the number the bug was reported at** (issue #1941)
-   * — the offset `e2e/a11y.spec.ts`'s cert-gated roster kept inheriting, where
+   * — the offset the since-removed `e2e/a11y.spec.ts`'s cert-gated roster kept inheriting, where
    * axe measured the back-link at "63.7px by 9.5px" and failed WCAG 2.5.8.
    *
    * It is not an arbitrary point inside a range. Next's router leaves the
@@ -101,7 +101,7 @@ test.describe("owner", () => {
    * at `window.scrollY === 157` — the board's own position, carried over — with
    * the masthead that names the departure already under the staff bar and the
    * `‹ BOARD` back-link half covered by it. Axe read that as a WCAG 2.5.8
-   * failure at "63.7px by 9.5px", which is why `e2e/a11y.spec.ts`'s cert-gated
+   * failure at "63.7px by 9.5px", which is why the since-removed `e2e/a11y.spec.ts`'s cert-gated
    * roster was red on some CI runs and green on others (issue #1941).
    *
    * Nothing in this app scrolled: `getScrollTargetState` in Next's
@@ -132,7 +132,7 @@ test.describe("owner", () => {
     // height immediately and the inherited offset stays exactly where the
     // router left it.
     //
-    // Which is also why `e2e/a11y.spec.ts`'s cert-gated roster was red on some
+    // Which is also why the since-removed `e2e/a11y.spec.ts`'s cert-gated roster was red on some
     // CI runs and green on others: whether the route was already in the client
     // cache decided whether the defect could show at all.
     //
