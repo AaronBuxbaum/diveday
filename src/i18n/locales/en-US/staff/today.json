@@ -62,7 +62,14 @@
     "undoRefused": "Undo didn’t go through: the request, its booking or its departure changed. It stays complete.",
     "undo": "Undo",
     "undoPending": "Restoring…",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "handled": {
+      "summary": "{count, plural, one {# handled help request} other {# handled help requests}}",
+      "row": "{name}: {help} ({trip})",
+      "rowWithHelper": "{name}: {help} ({trip}), with {helper}",
+      "reopen": "Reopen",
+      "reopenFor": "Reopen help for {name}"
+    }
   },
   "yourSessions": {
     "heading": "Your sessions",

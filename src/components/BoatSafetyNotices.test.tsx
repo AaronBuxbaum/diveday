@@ -26,9 +26,7 @@ describe("BoatSafetyNotices", () => {
     );
     const section = screen.getByRole("region", { name: HEADING });
     expect(section.className).toContain("bg-danger/10");
-    expect(screen.getByText("No emergency oxygen aboard").className).toContain(
-      "text-danger",
-    );
+    expect(screen.getByText("No emergency oxygen aboard").className).toContain("text-danger");
     expect(screen.getByText("Flares: expired 3 days ago").className).toContain(
       "text-warning-strong",
     );
