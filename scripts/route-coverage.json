@@ -1,8 +1,10 @@
 {
-  "//": "Only what scripts/check-route-coverage.mjs cannot derive from the tree. A route's specs, captures and a11y scans are read from the path literals in e2e/ (see that script); an entry here adds `e2e` specs and `visual` captures that reach the route by clicks a literal cannot show, `a11y` scans likewise, or an `exempt` reason saying why the route warrants less than both. `node scripts/check-route-coverage.mjs --write` prunes it; it never adds an exemption.",
+  "//": "Only what scripts/check-route-coverage.mjs cannot derive from the tree. A route's specs and captures are read from the path literals in e2e/ (see that script); an entry here adds `e2e` specs and `visual` captures that reach the route by clicks a literal cannot show, or an `exempt` reason saying why the route warrants less than both. `node scripts/check-route-coverage.mjs --write` prunes it; it never adds an exemption.",
   "/claim/[token]": {
-    "visual": ["seat-claim"],
-    "a11y": ["a11y.spec.ts"]
+    "visual": ["seat-claim"]
+  },
+  "/get-set-up/sent": {
+    "e2e": ["setup-request.spec.ts"]
   },
   "/product/[feature]": {
     "visual": [
@@ -31,8 +33,7 @@
       "stranded-diver-card",
       "thread-anything-changed",
       "thread-prep-current-step"
-    ],
-    "a11y": ["a11y.spec.ts"]
+    ]
   },
   "/ready/[token]/forms": {
     "e2e": ["course-forms.spec.ts"],
@@ -110,28 +111,18 @@
   "/shop/[shopSlug]/safety": {
     "e2e": ["incident-reports.spec.ts"]
   },
-  "/shop/[shopSlug]/schedule/blowout/[tripId]": {
-    "a11y": ["a11y.spec.ts"]
-  },
   "/shop/[shopSlug]/schedule/blowout/day/[date]": {
     "visual": ["blowout-day"]
   },
   "/shop/[shopSlug]/settings/security": {
     "exempt": "Browser coverage is real (e2e/security-settings.spec.ts enrols in two-factor against the frozen clock, reads the recovery codes and revokes a session). No capture, because the Active sessions card cannot hold a baseline still: account_sessions.updated_at is stamped by better-auth's own clock, which DIVEDAY_CLOCK does not reach, so \"last seen\" is the wall clock; the row beside it prints the Chromium user-agent string, version and all; and the row count depends on how often the run signed in. Masking those is the one fix AGENTS.md refuses. Closing this means stamping those timestamps through src/lib/clock.ts at the better-auth boundary, which is an auth change wanting its own review (issue #1020)."
   },
-  "/shop/[shopSlug]/trips/[id]": {
-    "a11y": ["a11y.spec.ts"]
-  },
   "/shop/[shopSlug]/trips/[id]/incidents/[reportId]": {
     "e2e": ["incident-reports.spec.ts"],
     "visual": ["incident-report-draft"]
   },
   "/shop/[shopSlug]/trips/[id]/log": {
-    "visual": ["departure-log", "departure-log-every-checkpoint"],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/trips/[id]/manifest": {
-    "a11y": ["a11y.spec.ts"]
+    "visual": ["departure-log", "departure-log-every-checkpoint"]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
     "e2e": ["gear.spec.ts", "rental-terms.spec.ts"],

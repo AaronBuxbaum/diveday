@@ -691,7 +691,7 @@ export const test = base.extend<
     // hang, though nothing has proven it. Playwright only fires the main
     // frame's `networkidle` once *every* child frame reports idle, and on CI
     // runs 32439332010, 32440808953 and 32441820119 the aborted frame's error
-    // page cost `e2e/a11y.spec.ts` its entire test budget three times over on
+    // page cost the since-removed `e2e/a11y.spec.ts` its entire test budget three times over on
     // `/ready`, whose shop-location map is the page's only child frame — 112
     // seconds during which the page requested nothing whatsoever. It never
     // reproduced on macOS. The rule it taught stands whatever answers the

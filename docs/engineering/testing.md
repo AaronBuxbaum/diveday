@@ -46,6 +46,12 @@ class name, a marker order or a JSX count pinned in a unit test is a change dete
 refactor and passes on a broken render. **A geometry fix is proven by a capture**, not a class
 assertion: the screenshot shows the overlap gone.
 
+**No automated accessibility scans in the suite.** The axe scans (`e2e/a11y.spec.ts`,
+`e2e/a11y-map.spec.ts`, `e2e/a11y-scan.ts`) were removed 2026-10-24: the scans were the week's top
+failure site and the product does not prioritize automated a11y (Aaron, 2026-10-24). Markup fixes
+that are free still land: a name on a control, a label on an input, a real heading. The weekly
+persona walk's axe probe went the same day, and `@axe-core/playwright` with it.
+
 ## How a change decides its tests
 
 1. A new rule or branch: a rules test, the refusal included. Always.
@@ -97,8 +103,8 @@ Renaming a journey's test renames its row in the same change.
 | --- | --- |
 | Before a commit | the guard you touched, `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`; a changed flow's specs; a changed surface's captures in light (the **verify** skill) |
 | Before a push | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
-| Every pull request | repo checks, lint, typecheck, all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the captures `visual-affected` selects (up to 8 shards); real Postgres when `src/db/**` or `drizzle/**` changed |
-| Push to `main` | all of the above with every capture: the next baseline |
+| Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**` or `drizzle/**` changed |
+| Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL, the follow-up scan |
 | Weekly | the persona walk, the shard-duration refresh; mutation testing once its runner works (manual until then) |
 
@@ -150,11 +156,19 @@ What a diff runs is decided by reading it, at two places:
   and re-exports, not whole files) to the routes that render it, a changed message key to the
   modules that name it, a `public/` asset to the code that names its path, and picks the captures
   that visit those routes plus a fixed smoke set; an edit inside an `e2e/visual-*.spec.ts` or a capture
-  helper picks the captures it touched. It captures everything for the capture harness, the seed
-  and schema, a stylesheet, a root config or renderer dependency, a module every page runs (the
-  proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts). The `visual-all` label forces
-  everything; every surface not captured is copied from the baseline before the compare.
-  Locally, `--grep <file>` writes the light-mode Playwright grep for the same selection.
+  helper picks the captures it touched. A schema edit is followed from the tables it changes to the
+  modules that read them, and a seed scenario's (`src/db/seed-<scenario>.ts`) from the tables it
+  writes, never through a seed module (the demo action that runs the seed is on every public page).
+  It captures everything for the capture harness, the seed's orchestrator (`src/db/seed.ts`), the
+  catalog seed, a stylesheet, a root config or renderer dependency, a module every page runs (the
+  proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts).
+  **A pull request captures light mode only** (`--light-only`, 2026-10-24: dark was 339 of 836
+  captures and a third of the capture time) unless the diff touches a colour token or theme module
+  (`THEME`: `globals.css`, `brand.ts`, `BrandStyle.tsx`, `_brand/colors.ts`, `postcss.config.mjs`);
+  a push to `main` captures both. The accepted risk is a dark-only regression first seen on main's
+  run. The `visual-all` label forces everything, dark included; every surface not captured is
+  copied from the baseline before the compare. Locally, `--grep <file>` writes the light-mode
+  Playwright grep for the same selection.
 - **Specs before a push**: `scripts/e2e-affected.mjs`, run by `verify:push`. *Strong*: a spec or
   helper the diff edits, a spec quoting text the diff removed (a seeded name included), a spec
   reading an en-US key whose value changed by its full dotted key, a spec naming a seeded record
@@ -187,6 +201,47 @@ baselines continue through the normal config unchanged.
 CI's normal Playwright shards exclude `e2e/mobile*.spec.ts`; `e2e/pixel-probe.spec.ts` runs on `main` and when
 the probe, its spec, `e2e/fixtures.ts`, `globals.css`, a dependency or `ci.yml` changed
 (`changes.pixel_probe`).
+
+### Where a visual shard's time goes
+
+Measured 2026-10-24 on shard 1/8 of the full list (104 tests, one worker, a shared 4-core box)
+with `e2e/visual-timing-reporter.ts`:
+
+| Item | Seconds | Share of wall |
+| --- | --- | --- |
+| Wall | 1,336 | 100% |
+| Sum of test durations | 1,285 | 96% |
+| Outside any test (server boot, global setup's migrate and seed, browser warm-up) | 52 | 4% |
+| `demoReset` before every test | 479 | 36% |
+| `privateShop` (9 tests: mint, sign-in, drop) | 42 | 3% |
+| `context` and `page` | 33 | 2% |
+| Worker starts | 1 for 104 tests | |
+
+Two suspects are cleared. Every `test.use` in the visual specs sets test-scoped options
+(`colorScheme`, `viewport`, `locale`, the step bounds, `privateShopSlug`), and Playwright keys a
+worker only on worker-scoped fixtures, so the whole shard runs in one worker and one browser.
+`privateShop` costs 3%. The largest cost outside the captures is the per-test reset.
+
+On CI, the "7.1 minutes recorded" per shard counted only the 622 of 836 captures that
+`scripts/e2e-durations.json` had durations for. The deal weighs each unrecorded capture at the
+recorded mean, which puts the shard at about 9.5 minutes. The rest of the 12.3-minute job is
+about 50 s of job steps and the run's own setup.
+
+To measure again, run `pnpm e2e:build`, deal a shard with `node scripts/e2e-shard.mjs`, then
+run `E2E_WORKERS=1 VISUAL_TIMING_OUT=.agent-out/timing.json pnpm exec playwright test e2e/visual --test-list <list> --reporter=line,./e2e/visual-timing-reporter.ts`.
+
+**Two workers per visual shard is a trial, not a setting.** `.github/workflows/visual-workers-trial.yml`
+runs on manual dispatch only. Each of its eight shards captures its list three times from one
+build: twice at `E2E_WORKERS=2` and once at 1. `scripts/compare-capture-sets.mjs` then fails the
+shard if any PNG differs by one byte or is missing from a set, and lists each one in the step
+summary. CI's `visual` job stays at one worker until a trial is green.
+
+Byte equality is stricter than reg-suit, which ignores anti-aliasing (`enableAntialias` in
+`regconfig.json`). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
+were a timed toast caught at one width and gone at the next, now waited out before the capture
+(`blowout-cascade`, `staffing-shift-remove-disclosure`). The third was anti-aliasing on one map
+pin (`dive-sites-library-pin-selected`, a channel difference of at most 3). So a difference in a
+trial is a worker-count effect only when one-worker runs agree on that capture.
 
 ## Commands
 
@@ -241,11 +296,10 @@ and in Spanish for Ingrid, whose findings are invisible in English — runs a fi
 each, photographs the surfaces the findings name, and files what it found as `needs-triage` issues.
 
 **Every probe is deterministic.** Each one answers yes or no from the rendered DOM, the response
-status, or axe's own rule set: the WCAG 2.0 A/AA + 2.2 AA scan `e2e/a11y.spec.ts` already runs, a
-missing skip link, a message key that reached the screen instead of a sentence, a page that did not
-render, a browser console error, a `/s/**` page that does not name its shop, an image with neither
-dimensions nor lazy loading. The persona doc's softer lines stay a human's reading — a bot guessing
-at those would file opinions into a tracker one person reads.
+status: a missing skip link, a message key that reached the screen instead of a sentence, a page
+that did not render, a browser console error, a `/s/**` page that does not name its shop, an image
+with neither dimensions nor lazy loading. The persona doc's softer lines stay a human's reading — a
+bot guessing at those would file opinions into a tracker one person reads.
 
 **It may file three issues a week, and stops filing at forty.** The volume policy is
 `scripts/persona-bots/findings.mjs`, unit-tested in `findings.test.mjs`: one issue per finding
@@ -331,14 +385,11 @@ Until that is fixed, read a survivor list as noise.
 ### Why `playwright-core` is pinned in devDependencies
 
 `playwright-core` is declared explicitly at the exact version `@playwright/test` resolves to. It is
-not a dependency anything imports directly — it is there to decide which copy `@axe-core/playwright`
-binds its `playwright-core` **peer** to.
-
-Without the pin, two copies sit in the tree: `@playwright/test`'s, and the exact alpha that
-`@playwright/mcp` pins for its own use. pnpm picked the higher one for the peer, so `AxeBuilder`
-wanted a `Page` from one copy while `e2e/a11y.spec.ts` had one from the other — structurally the
-same object, a hard `tsc` error, and nothing about the message says "you have two Playwrights". That
-is how `main` went red on typecheck after a routine package bump.
+not a dependency anything imports directly. It was added to decide which copy `@axe-core/playwright`
+bound its `playwright-core` **peer** to: without it, two copies sat in the tree (`@playwright/test`'s
+and the exact alpha `@playwright/mcp` pins), and `AxeBuilder` wanted a `Page` from the other copy, a
+hard `tsc` error that turned `main` red after a routine bump. The axe package went on 2026-10-24;
+the pin stays so the tree keeps one browser driver.
 
 Keep the pin equal to `@playwright/test`'s version when either moves. One browser driver in the
 tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.
@@ -351,12 +402,9 @@ tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.
 uses the last such literal within its test. These associations are candidates for coverage, not
 proof that a route was visited or a capture ran. A capture never counts as a route's flow spec.
 
-An inferred `a11y` candidate requires `expectNoA11yViolations(page)` after the last literal
-`page.goto` in the same enabled test. Setup routes, unrelated tests and comments cannot lend scan
-credit; a dynamic navigation clears the candidate. Conditional execution, helpers, loops and
-fixture-driven skips require runtime evidence, so these figures cannot establish scanning
-completeness. `scripts/route-coverage.json` retains explicit click-reached associations and written
-exemptions for what source inference cannot resolve.
+The ledger's `a11y` column has been empty since the suite's scans were removed (2026-10-24,
+[above](#what-each-layer-is-for)). `scripts/route-coverage.json` retains explicit click-reached
+associations and written exemptions for what source inference cannot resolve.
 
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with

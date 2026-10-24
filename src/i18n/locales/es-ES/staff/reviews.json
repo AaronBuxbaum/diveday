@@ -14,7 +14,7 @@
     "pulseAddressed": "Marcado como atendido",
     "pulseNotAuthorized": "Leer lo que un buceador pidió arreglar está limitado a propietarios y gerentes."
   },
-  "ratingWithheld": "Tu valoración sigue apareciendo en tu propia página de calendario, pero DiveDay ha dejado de publicarla en los buscadores: ahora está oculta más de una de cada cinco reseñas que has revisado. Volver a publicar {count, plural, one {# reseña oculta} other {# reseñas ocultas}} la recupera.",
+  "ratingWithheld": "Tu valoración sigue apareciendo en tu propia página de calendario, pero DiveDay ha dejado de publicarla en los buscadores: ahora está oculta más de una de cada cinco reseñas que has respondido. Volver a publicar {count, plural, one {# reseña oculta} other {# reseñas ocultas}} la recupera.",
   "standout": "Destacada",
   "markStandout": "Marcar como destacada",
   "removeStandout": "Quitar de destacadas",
@@ -29,7 +29,7 @@
   "publish": "Publicar",
   "saving": "Guardando…",
   "pagination": {
-    "total": "{count, plural, one {# reseña ya resuelta} other {# reseñas ya resueltas}}"
+    "total": "{count, plural, one {# reseña que has respondido} other {# reseñas que has respondido}}"
   },
   "hideConfirm": "Ocultar esta reseña",
   "hideReasonLabel": "¿Por qué la retiras?",

@@ -112,6 +112,12 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: expectInvalidBody,
   },
   {
+    // It writes a joiner onto a shop's last-minute list, self-declared card
+    // and all: on a live deployment that is anyone mailing anyone deals.
+    slug: "seed-last-minute-interest",
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
     slug: "seed-courtesy-email-unsubscribe-token",
     expectPastTheGuard: expectInvalidBody,
   },

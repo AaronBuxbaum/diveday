@@ -4,10 +4,11 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 /**
- * **Two form-control mistakes the axe scan cannot see.**
+ * **Two form-control mistakes an axe scan cannot see**, and since the suite's scan was
+ * removed on 2026-10-24, the only automated check on form controls.
  *
  * 1. **A control whose only name is its placeholder.** axe-core's `label` rule accepts a
- *    non-empty `placeholder` as a name, so `e2e/a11y.spec.ts` passed two routes with one
+ *    non-empty `placeholder` as a name, so the suite's axe scan passed two routes with one
  *    (2026-10-13 review): an order's line-item description beside two labelled siblings, and
  *    the brand-colour hex field, the value the profile form submits, sitting second inside a
  *    `<Field>` whose wrapping `<label>` names only its first control. A placeholder vanishes

@@ -17,8 +17,9 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * Ids are the `#anchor` the rail links to and the DOM subtree the unsaved note
  * maps a control back to. They are prefixed rather than bare because this page
  * already spends the obvious names on its controls (`site-photos` is the
- * multi-file input), and a duplicate id is an accessibility failure
- * `e2e/a11y.spec.ts` fails the build on.
+ * multi-file input), and a duplicate id is an accessibility failure; since the
+ * suite's axe scan was removed on 2026-10-24, the test beside this file is the
+ * only net.
  */
 export const SITE_FORM_SECTION_IDS = {
   about: "briefing-about",

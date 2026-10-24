@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { rankFailedSpecs } from "./e2e-recent-failures.mjs";
+import { newestFailedSpecs, rankFailedSpecs } from "./e2e-recent-failures.mjs";
 
 const failure = (path) => ({ path, annotation_level: "failure" });
 
@@ -45,13 +45,13 @@ it("uses structured github reporter title identity when an error originates in a
       [
         {
           annotation_level: "failure",
-          path: "e2e/a11y-scan.ts",
-          title: "[chromium] › e2e/a11y.spec.ts:12:3 › accessibility › dashboard",
+          path: "e2e/helpers.ts",
+          title: "[chromium] › e2e/booking.spec.ts:12:3 › booking › dashboard",
           message: "helper failed",
         },
       ],
     ]),
-  ).toEqual(["e2e/a11y.spec.ts"]);
+  ).toEqual(["e2e/booking.spec.ts"]);
 });
 
 it("distinguishes successful empty history from failed or partial pagination", async () => {
@@ -80,4 +80,38 @@ it("distinguishes successful empty history from failed or partial pagination", a
       return { rows: Array(100).fill({}) };
     }),
   ).toThrow("rate limited");
+});
+
+describe("newestFailedSpecs", () => {
+  it("lists specs in the order the newest failed jobs named them, capped and existing", () => {
+    const jobs = [
+      [failure("e2e/newest.spec.ts"), failure("e2e/both.spec.ts")],
+      [failure("e2e/both.spec.ts"), failure("e2e/older.spec.ts"), failure("e2e/gone.spec.ts")],
+      [{ path: "e2e/warned.spec.ts", annotation_level: "warning" }, failure("e2e/oldest.spec.ts")],
+    ];
+    const exists = (spec) => spec !== "e2e/gone.spec.ts";
+    expect(newestFailedSpecs(jobs, { exists })).toEqual([
+      "e2e/newest.spec.ts",
+      "e2e/both.spec.ts",
+      "e2e/older.spec.ts",
+      "e2e/oldest.spec.ts",
+    ]);
+    expect(newestFailedSpecs(jobs, { max: 2, exists })).toEqual([
+      "e2e/newest.spec.ts",
+      "e2e/both.spec.ts",
+    ]);
+  });
+
+  it("reads only the newest runs when asked to", async () => {
+    const { readFailureHistory } = await import("./e2e-recent-failures.mjs");
+    const asked = [];
+    const request = (url) => {
+      asked.push(url);
+      if (url.includes("/workflows/")) return { workflow_runs: [{ id: 1 }, { id: 2 }, { id: 3 }] };
+      if (url.includes("/jobs")) return { jobs: [] };
+      return [];
+    };
+    expect(readFailureHistory("o/r", "2026-10-01", request, { maxRuns: 2 }).runCount).toBe(3);
+    expect(asked.filter((url) => url.includes("/jobs"))).toHaveLength(2);
+  });
 });
