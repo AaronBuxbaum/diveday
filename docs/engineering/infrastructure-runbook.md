@@ -763,6 +763,8 @@ keys (`src/lib/secret-box.ts`): `SECRET_ENCRYPTION_KEY` seals and opens, and
 A malformed `SECRET_ENCRYPTION_KEY_PREVIOUS` is reported as an invalid key, as a malformed current key
 is: it would otherwise quietly fail everything it was set to open.
 
+A well-formed wrong key is caught by the deploy instead (issue #2999). After `db:migrate`, a production build runs `scripts/check-sealing-keys.ts`, which trial-opens every enabled two-factor secret and compares each recovery-code fingerprint with the pair. If any account would be locked out, the build fails before it serves, naming the variables and a count of accounts, never a value: a rotation that did not move the old key to `SECRET_ENCRYPTION_KEY_PREVIOUS`, a wrong `SECRET_ENCRYPTION_KEY_PREVIOUS`, or step 5 taken while the step 4 query still returns rows. The previous deployment keeps serving. Put the old key back in `SECRET_ENCRYPTION_KEY_PREVIOUS` and redeploy; to retire it with accounts still on it, those accounts turn two-factor off and on again first. Only two-factor accounts are checked: WhatsApp tokens, connector credentials and the other sealed values degrade rather than lock anyone out.
+
 ### Why two secrets, not ten
 
 Secrets Manager bills $0.40 per secret per month and has no free tier. Eight credential secrets plus
