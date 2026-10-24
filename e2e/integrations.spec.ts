@@ -12,23 +12,25 @@ const INTEGRATIONS_SETTINGS = "/shop/blue-mantis/settings/integrations";
 test.describe("shop integrations settings", () => {
   signedInAs("owner");
 
-  test("shows the three provider surfaces and fails closed without credentials", {
+  test("shows a card only for what this build can connect, and fails closed without credentials", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto(INTEGRATIONS_SETTINGS);
     await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Shopify" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "QuickBooks Online" })).toBeVisible();
+    // The fleet has the secret key Zapier needs and no Shopify or Intuit
+    // credentials: a card for the one it can connect, and no card at all for
+    // the two it cannot (visual review 2026-10-24, A20). No control appears
+    // that could not act (principle 8).
     await expect(page.getByRole("heading", { name: "Zapier" })).toBeVisible();
-    // One muted line per provider this deployment has no credentials for, and
-    // no control at all: a pale "Not configured" button read as a disabled
-    // primary a shop could fix by clicking, and nothing here can fix it
-    // (principle 8). With more than one unavailable, the ask to email support
-    // is said once under the title, and each card says only that much.
-    await expect(page.getByText("Not available yet", { exact: true })).toHaveCount(2);
+    await expect(page.getByRole("heading", { name: "Shopify" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "QuickBooks Online" })).toHaveCount(0);
+    // Its state is a line of text, not a pill, and the rest is one foot line.
+    // The Settings rail's Payments badge says "Not connected" too (Stripe), so
+    // the count is of the page's own words, outside any navigation.
     await expect(
-      page.getByText(/Want one of these\? Email .+ and we’ll switch it on\./),
+      page.getByText("Not connected", { exact: true }).and(page.locator(":not(nav *)")),
     ).toHaveCount(1);
+    await expect(page.getByText(/More integrations come later\. Ask us at .+\./)).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Connect Zapier" })).toBeVisible();
   });
 

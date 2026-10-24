@@ -108,9 +108,14 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
       await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
       await page
+        .locator("details#briefing-planning")
+        .filter({ visible: true })
+        .locator("> summary")
+        .click();
+      await page
         .getByLabel("What to remember about running this site")
         .fill("The entry silted up after the storm. Brief the swim-through before you go in.");
-      await page.getByRole("button", { name: "Save dive site" }).click();
+      await page.getByRole("button", { name: "Save", exact: true }).click();
       // **Wait for the save's own redirect, not for the text we just typed.**
       // The frame worth keeping is one navigation on from the form — the note
       // in the list a shop plans against — and the assertion that used to

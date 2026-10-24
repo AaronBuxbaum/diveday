@@ -4,11 +4,8 @@
     "notice": {
       "packingSaved": "Lista de equipo guardada para todas las salidas",
       "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
-      "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios",
-      "deskPaymentSaved": "Guardado. Cada plaza a pagar en el centro dice cómo pagar.",
       "deskPaymentInvalid": "No cambió nada: elige tarjeta, efectivo, tarjeta y efectivo o no decirlo.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
-      "turnaroundSaved": "Margen entre salidas guardado",
       "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
       "unitsSaved": "Unidades guardadas",
       "unitsSavedSitesLeft": "Unidades guardadas. {count, plural, one {# sitio de buceo se dejó} other {# sitios de buceo se dejaron}} tal cual, y {count, plural, one {sigue} other {siguen}} en {from, select, feet {pies} other {metros}}: {sites}{more, plural, =0 {} other { y # más}}. Revisa{count, plural, one {lo} other {los}} a mano en Sitios de buceo.",
@@ -58,7 +55,6 @@
       "packageSaved": "Paquete agregado",
       "packageDeleted": "Paquete eliminado",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar.",
-      "crewLeadSaved": "Minutos de la tripulación guardados",
       "crewLeadInvalid": "Introduce entre 5 y 180 minutos para la tripulación, o déjalo vacío."
     },
     "timezone": {
@@ -136,12 +132,12 @@
       "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
       "removeLogo": "Eliminar logotipo actual",
       "submitting": "Guardando…",
+      "viewStorefront": "Ver la página pública",
       "submit": "Guardar perfil",
-      "viewSavedStorefront": "Ver el escaparate guardado en otra pestaña",
       "brandColor": "Color de marca",
       "brandColorPicker": "Elegir un color de marca",
       "brandColorHint": "Botones y enlaces de tus páginas públicas. Déjalo vacío para mantener el turquesa de DiveDay.",
-      "brandColorDarkened": "Tu color era demasiado claro para leerse como texto, así que tu página pública usa {hex}.",
+      "brandColorDarkened": "Tu color era demasiado claro para leerse como texto, así que tu página pública usa este tono más oscuro.",
       "displayFont": "Tipografía de títulos",
       "displayFontDefault": "La de DiveDay",
       "heroPhoto": "Foto de portada",
@@ -162,7 +158,7 @@
         "dan_partner": "Socio empresarial de DAN",
         "readers_choice": "Premio Readers’ Choice"
       },
-      "brandColorLightenedAtNight": "De noche tu página pública lo aclara a {hex} para que siga leyéndose sobre el fondo oscuro.",
+      "brandColorLightenedAtNight": "De noche tu página pública lo aclara a este tono para que siga leyéndose sobre el fondo oscuro.",
       "brandPreview": "Cómo se ve",
       "brandPreviewNight": "De noche"
     },
@@ -237,14 +233,11 @@
       "none": "No decirlo",
       "card": "Tarjeta",
       "cash": "Efectivo",
-      "card_and_cash": "Tarjeta y efectivo",
-      "submit": "Guardar cómo pagan",
-      "submitting": "Guardando…"
+      "card_and_cash": "Tarjeta y efectivo"
     },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
       "description": "Todos estos números están en minutos.",
-      "submit": "Guardar el ritmo del día",
       "submitting": "Guardando…",
       "dockCallLabel": "Llegar antes de la salida",
       "dockCallDescription": "Con cuánta antelación se pide a los buceadores estar en el muelle.",
@@ -274,13 +267,11 @@
     },
     "turnaround": {
       "label": "Margen entre salidas",
-      "description": "Al mover una salida, avisa si un barco, o un tripulante que sale desde otro punto de encuentro, tiene menos que esto. Con 0 no avisa.",
-      "submit": "Guardar margen"
+      "description": "Al mover una salida, avisa si un barco, o un tripulante que sale desde otro punto de encuentro, tiene menos que esto. Con 0 no avisa."
     },
     "crewLead": {
       "label": "La tripulación llega antes que los buceadores",
-      "description": "Minutos antes de que los buceadores lleguen al muelle; el turno propio de un tripulante gana si empieza antes. Vacío, la tripulación llega con los buceadores.",
-      "submit": "Guardar minutos de la tripulación"
+      "description": "Minutos antes de que los buceadores lleguen al muelle; el turno propio de un tripulante gana si empieza antes. Vacío, la tripulación llega con los buceadores."
     },
     "units": {
       "heading": "Unidades",
@@ -299,7 +290,6 @@
     "tax": {
       "heading": "Impuestos (IVA y ventas)",
       "description": "Agrega IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
-      "detail": "El impuesto se agrega al precio publicado y se muestra al buceador en el checkout de Stripe. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
       "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas"
     },
     "passThrough": {
@@ -410,12 +400,12 @@
       "reviews": {
         "heading": "Reseñas de buceadores",
         "label": "Pedir a los buceadores que valoren su día",
-        "description": "Valoraciones con estrellas en el resumen de la salida, visibles en tus páginas públicas una vez publicadas. Tu enlace de reseñas funciona en cualquier caso."
+        "description": "Valoraciones con estrellas en el resumen de la salida, visibles en tus páginas públicas."
       },
       "dateRequests": {
         "heading": "Solicitudes de fecha",
         "label": "Permitir que los buceadores pidan un día",
-        "description": "Un formulario en tus páginas públicas para un día que no está en el calendario. Las solicitudes llegan a Mensajes."
+        "description": "Un formulario en tus páginas públicas para un día que no está en el calendario."
       },
       "lastMinuteList": {
         "heading": "Lista de última hora",
@@ -430,17 +420,17 @@
       "publicYear": {
         "heading": "Nuestro año",
         "label": "Mostrar “Nuestro año” en tu calendario",
-        "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero."
+        "description": "El año hasta hoy en cifras al pie de tu calendario público."
       },
       "padiChecks": {
         "heading": "Verificación con PADI (beta)",
         "label": "Verificar certificaciones y eLearning de PADI",
-        "description": "Beta: verifica la tarjeta PADI de un buceador en DiveChek desde su ficha, y su eLearning desde el listado de un curso, con un clic. La extensión de DiveDay hace la verificación en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene."
+        "description": "Verifica la tarjeta PADI y el eLearning de un buceador con un clic, con la extensión de DiveDay."
       },
       "claudeSuggestions": {
         "heading": "Sugerencias de IA",
         "label": "Mostrar sugerencias de IA",
-        "description": "Borradores y orden que tu equipo puede editar o ignorar. No se envía ni se guarda nada hasta que alguien de tu equipo lo haga. Lo que lee la IA se envía a Anthropic, el proveedor de IA de DiveDay.",
+        "description": "Borradores y orden que tu equipo puede editar o ignorar.",
         "dark": {
           "noProvider": "La IA aún no está conectada en este servidor, así que las sugerencias siguen ocultas aunque esto esté activado.",
           "demoOverCap": "Los centros de demostración comparten una pequeña cuota mensual de IA, y ya se agotó. Las sugerencias vuelven el día 1 (UTC).",
@@ -455,92 +445,92 @@
       "recapAutoApprove": {
         "heading": "Resumen del día",
         "label": "Escribir el resumen del día cuando la tripulación lo deja vacío",
-        "description": "La IA escribe dos frases con los avistamientos que anotó tu tripulación, y salen en el resumen. Desactivado, la tripulación escribe o aprueba cada uno."
+        "description": "La IA escribe lo destacado del resumen con los avistamientos de tu tripulación."
       },
       "lostFound": {
         "heading": "Objetos perdidos",
         "label": "Llevar una lista de objetos perdidos",
-        "description": "Lo que la tripulación encuentra a bordo, anotado en la salida y en la lista hasta que vuelve a su dueño. El buceador recibe un correo cuando encuentras algo suyo."
+        "description": "Lo que la tripulación encuentra a bordo, anotado en la salida hasta que vuelve a su dueño."
       },
       "workOrders": {
         "heading": "Mantenimiento de equipo",
         "label": "Hacer el mantenimiento del equipo de los buceadores",
-        "description": "Órdenes de trabajo para el equipo que traen los buceadores, sus etiquetas y un correo cuando está listo. Quien lo pide recibe un aviso cuando le toca la revisión. Las fechas de revisión de tu equipo de alquiler se mantienen en cualquier caso."
+        "description": "Órdenes de trabajo, etiquetas y aviso de listo para el equipo que traen los buceadores."
       },
       "promoCodes": {
         "heading": "Códigos promocionales",
         "label": "Aceptar códigos promocionales",
-        "description": "Códigos que creas en Descuentos y que los buceadores escriben al reservar. El código de una oferta de última hora sigue funcionando mientras la lista de última hora esté activada."
+        "description": "Códigos que creas en Descuentos y que los buceadores escriben al reservar."
       },
       "divePackages": {
         "heading": "Paquetes de inmersiones",
         "label": "Vender paquetes de inmersiones",
-        "description": "Inmersiones prepagadas que el buceador compra por adelantado y usa en reservas posteriores. Desactivado, dejas de venderlos; quien ya compró uno lo sigue usando."
+        "description": "Inmersiones prepagadas que el buceador compra por adelantado y usa en reservas posteriores."
       },
       "hotelPickup": {
         "heading": "Recogida en el hotel",
         "label": "Ofrecemos recogida en el hotel",
-        "description": "La página de cada buceador pregunta si quiere que lo recojan y dónde se aloja, y el manifiesto muestra a quién recoger."
+        "description": "Los buceadores dicen dónde se alojan, y el manifiesto muestra a quién recoger."
       },
       "checkoutRecovery": {
         "heading": "Recordatorios de pago",
         "label": "Escribir al buceador que no terminó de pagar",
-        "description": "Un correo, dos horas después de que el buceador deja el pago, con un enlace a su reserva. Desactivado, no se envía nada y su reserva queda como estaba."
+        "description": "Un correo, dos horas después de que el buceador deja el pago, con un enlace de vuelta."
       },
       "buddyLinks": {
         "heading": "Trae a alguien",
         "label": "Dar a cada buceador un enlace para traer a alguien",
-        "description": "Aparece en la página del buceador y en el resumen de la salida después de la inmersión. Quien reserva con ese enlace se cuenta en Informes y en la ficha del buceador."
+        "description": "Un enlace para compartir en la página del buceador y en el resumen de la salida."
       },
       "selfRegistration": {
         "heading": "Registro en el mostrador",
         "label": "Dejar que quien llega sin reserva se registre solo",
-        "description": "El código QR de la tarjeta del mostrador abre un formulario en su teléfono para sus datos de contacto, certificación y tallas de alquiler. Desactivado, el formulario desaparece y el QR envía a quien llega con tu personal; quien ya se registró se queda. Retira las tarjetas impresas del mostrador al desactivarlo."
+        "description": "El código QR de la tarjeta del mostrador abre un formulario de registro en su teléfono."
       },
       "sightings": {
         "heading": "Avistamientos",
         "label": "Anotar lo que vieron los buceadores",
-        "description": "La tripulación anota las especies después de cada inmersión. Aparecen en tus páginas públicas, los sitios de buceo y el resumen de la salida. Desactivado, se ocultan y se guarda cada avistamiento."
+        "description": "La tripulación anota las especies después de cada inmersión, visibles en tus páginas públicas."
       },
       "diverPhotos": {
         "heading": "Fotos del resumen",
         "label": "Dejar que buceadores y tripulación agreguen fotos al resumen",
-        "description": "Fotos del día, compartidas con el barco. Desactivado, nadie puede agregar una; las fotos ya agregadas se quedan contigo para que puedas quitar cualquiera."
+        "description": "Fotos del día, compartidas con el barco."
       },
       "waitlist": {
         "heading": "Lista de espera",
         "label": "Llevar una lista de espera para salidas llenas",
-        "description": "Los buceadores piden saber cuándo se libera una plaza en un barco lleno, y tú se la ofreces por correo. Desactivado, nadie nuevo se anota y la lista no envía nada por su cuenta; quienes ya esperan siguen en Hoy hasta que los atiendas, y todavía puedes enviarle una fecha a cualquier buceador tú mismo."
+        "description": "Los buceadores piden saber cuándo se libera una plaza en un barco lleno."
       },
       "pastDiverInvites": {
         "heading": "Invitar a buceadores anteriores",
         "label": "Sugerir buceadores anteriores para un barco con plazas libres",
-        "description": "Buceadores que ya salieron contigo, sugeridos en una salida con pocas reservas junto con una oferta por correo que tú envías. Desactivado, no se sugiere a nadie; un buceador que eliges e invitas tú mismo sigue recibiendo el correo."
+        "description": "Buceadores que ya salieron contigo, sugeridos en una salida con pocas reservas."
       },
       "partnerLinks": {
         "heading": "Enlaces de socios",
         "label": "Dar a hoteles y socios un enlace de reserva",
-        "description": "Cada plaza reservada con el enlace de un socio se le acredita en Informes. Desactivado, Inserción en tu web no ofrece enlaces de socio y no se acredita ninguna plaza nueva; los créditos anteriores se quedan."
+        "description": "Cada plaza reservada con el enlace de un socio se le acredita en Informes."
       },
       "weekOutReminder": {
         "heading": "Recordatorio de una semana",
         "label": "Enviar un correo a los buceadores una semana antes",
-        "description": "Un correo siete días antes de la salida. Desactivado, quien no tiene nada pendiente no recibe nada una semana antes; quien todavía debe una exención, una certificación o los materiales del curso lo recibe igual, y el recordatorio del día anterior se envía de todos modos."
+        "description": "Un correo siete días antes de la salida."
       },
       "helpRequests": {
         "heading": "Pedidos de ayuda",
         "label": "Dejar que los buceadores pidan ayuda el día de la salida",
-        "description": "Una pregunta en su página de preparación que pone el pedido en Hoy. Desactivado, los buceadores ven ahí tu teléfono y tu correo; un pedido ya abierto sigue en Hoy hasta que lo atiendas, y el buceador todavía puede cancelarlo."
+        "description": "Una pregunta en la página de preparación del buceador que pone su pedido en Hoy."
       },
       "publicConditions": {
         "heading": "Condiciones públicas",
         "label": "Mostrar el pronóstico automático a los buceadores",
-        "description": "El pronóstico de agua, mar y viento en cada página de salida cuando tu tripulación no escribió el suyo. Desactivado, desaparece; las condiciones y actualizaciones de tu tripulación se siguen mostrando, y la alerta de viento fuerte se queda de todos modos."
+        "description": "El pronóstico de agua, mar y viento en cada página de salida."
       },
       "fieldGuide": {
         "heading": "Guía de campo",
         "label": "Llevar una guía de campo para cada sitio",
-        "description": "Las especies que eliges para cada sitio de buceo, en su página pública, en los briefings de las salidas y en el resumen. Desactivado, se ocultan y se guardan; tus sitios se quedan."
+        "description": "Las especies que eliges para cada sitio de buceo, en su página pública."
       },
       "door": "Activar o desactivar funciones"
     },
@@ -549,7 +539,7 @@
       "on": "Activado",
       "off": "Desactivado",
       "label": "Organizar la tripulación en DiveDay",
-      "description": "Turnos, días fuera y quién trabaja en cada salida. Las sesiones de curso nombran a su instructor en cualquier caso.",
+      "description": "Turnos, días fuera y quién trabaja en cada salida.",
       "save": "Guardar turnos",
       "saving": "Guardando…",
       "saved": "Turnos de la tripulación guardados",
@@ -662,15 +652,26 @@
       "delete": "Eliminar",
       "deleting": "Eliminando…",
       "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})",
-      "createTitle": "Agregar paquete",
+      "createTitle": "Agregar un paquete",
       "empty": "Todavía no hay paquetes a la venta"
     },
     "yourData": {
       "heading": "Exportar, importar, respaldos e integraciones"
     }
   },
+  "dockDay": {
+    "save": "Guardar",
+    "saved": "Día de muelle guardado",
+    "groups": {
+      "divers": "Buceadores",
+      "crew": "Tripulación",
+      "turnaround": "Entre salidas",
+      "desk": "En el mostrador"
+    }
+  },
   "team": {
     "title": "Equipo",
+    "credentialsNeedReview": "{count, plural, one {# credencial necesita revisión} other {# credenciales necesitan revisión}}",
     "unnamedInviter": "Un compañero",
     "notice": {
       "invited": "Invitación enviada",
@@ -1096,10 +1097,15 @@
     "recoveryWarning": "Estos códigos desaparecen al terminar la configuración o en diez minutos. DiveDay no puede volver a mostrarlos.",
     "sessionsHeading": "Sesiones activas",
     "sessionsDescription": "Revoca un dispositivo que ya no reconozcas o cierra sesión en todas partes.",
+    "sessions": {
+      "group": "{count, plural, one {# sesión} other {# sesiones}} · última vez {when}",
+      "thisDevice": "Este dispositivo",
+      "includesThisDevice": "Incluye este dispositivo",
+      "showSessions": "Ver sesiones",
+      "showAll": "Ver todas"
+    },
     "unknownDevice": "Dispositivo desconocido",
     "unknownIp": "Red desconocida",
-    "thisDevice": "Este dispositivo",
-    "details": "Detalles",
     "browserLine": "Navegador: {browser}",
     "networkLine": "Red: {network}",
     "browser": {

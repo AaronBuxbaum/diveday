@@ -44,7 +44,7 @@ export function DiverNotesSection({
   const noteSummary =
     notes.length > 0
       ? t("divers.file.noteCount", { count: notes.length })
-      : t("divers.file.noNotes");
+      : t("divers.file.noneOnFile");
 
   return (
     <DiverFileGroupDisclosure

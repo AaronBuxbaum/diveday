@@ -58,6 +58,7 @@ vi.mock("@/db/course-forms", () => ({
 }));
 vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
+  courseIdsEverOnBoard: vi.fn(async () => new Set<string>()),
   getCourseTemplateUpdate: vi.fn(),
 }));
 vi.mock("@/db/authz", () => ({

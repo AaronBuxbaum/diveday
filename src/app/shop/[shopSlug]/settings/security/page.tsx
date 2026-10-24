@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -17,10 +18,12 @@ import {
   sessionDeviceLabel,
   sessionUserAgentDetails,
 } from "@/lib/account-session-device";
-import { formatDateTimeTz } from "@/lib/format";
+import { nowDate } from "@/lib/clock";
+import { formatDateTimeTz, formatRelativeDay } from "@/lib/format";
 import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS, staffDestination } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { AccountSessionsList } from "./_components/AccountSessionsList";
@@ -111,6 +114,7 @@ export default async function SecurityPage({
     },
   });
   const isEnabled = Boolean(security?.totpEnabledAt);
+  const now = nowDate();
   const sessionRows = sessions.map((item) => {
     const device = sessionDeviceLabel(item.userAgent);
     const deviceLabel =
@@ -126,6 +130,7 @@ export default async function SecurityPage({
       id: item.id,
       deviceLabel,
       isCurrent: isCurrentAccountSession(session.user.sessionId, item.id),
+      lastSeenAt: item.updatedAt,
       lastSeen: t("settings.security.lastSeen", {
         date: formatDateTimeTz(item.updatedAt, locale, shop.timezone),
       }),
@@ -141,6 +146,22 @@ export default async function SecurityPage({
         // The one settings sub-page whose eyebrow was not also its way up.
         eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("settings.security.title")}
+        // **The account's other two pages** (visual review 2026-10-24, A42):
+        // the identity menu's one "Account settings" row lands here, so the
+        // reader's calendar feed and email are a tap away from it.
+        meta={
+          <nav aria-label={t("settings.security.title")} className="flex flex-wrap gap-x-4">
+            {(["calendarFeed", "emailSettings"] as const).map((id) => (
+              <Link
+                key={id}
+                href={`${shopPath(shopSlug)}${staffDestination(id).suffix}`}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {t(STAFF_DESTINATION_LABEL_KEYS[id])}
+              </Link>
+            ))}
+          </nav>
+        }
       />
       {notice ? <StaffNoticeBanner tone={notice.tone}>{notice.text}</StaffNoticeBanner> : null}
       {/* Section rhythm belongs to the page, not to each section: one
@@ -280,16 +301,25 @@ export default async function SecurityPage({
             shopSlug={shopSlug}
             revokeAction={revokeSessionAction}
             labels={{
-              thisDevice: t("settings.security.thisDevice"),
-              details: t("settings.security.details"),
+              thisDevice: t("settings.security.sessions.thisDevice"),
+              includesThisDevice: t("settings.security.sessions.includesThisDevice"),
               browserLine: (browser) => t("settings.security.browserLine", { browser }),
               networkLine: (network) => t("settings.security.networkLine", { network }),
               unknownDevice: t("settings.security.unknownDevice"),
               unknownIp: t("settings.security.unknownIp"),
               revoke: t("settings.security.revoke"),
               revoking: t("settings.security.revoking"),
+              group: (count, lastSeenAt) =>
+                t("settings.security.sessions.group", {
+                  count,
+                  when: formatRelativeDay(lastSeenAt, now, locale, shop.timezone),
+                }),
+              showSessions: t("settings.security.sessions.showSessions"),
+              showAll: t("settings.security.sessions.showAll"),
             }}
           />
+          {/* Once, under the list, secondary. It signs out every session,
+              this one included, and its words say so. */}
           <form action={revokeAllSessionsAction.bind(null, shopSlug)} className="mt-4">
             <SubmitButton
               pendingLabel={t("settings.security.revokingAll")}

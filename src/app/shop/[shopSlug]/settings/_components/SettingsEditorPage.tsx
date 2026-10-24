@@ -21,6 +21,7 @@ export function SettingsEditorPage({
   title,
   description,
   banner,
+  actions,
   unframed = false,
   children,
 }: {
@@ -30,6 +31,8 @@ export function SettingsEditorPage({
   /** What the setting is for, which the hub row showed once it was opened. */
   description?: string;
   banner: { tone: NoticeTone; text: string } | undefined;
+  /** The header's own actions, such as a text link out to what the page edits. */
+  actions?: ReactNode;
   /** A collection owns its list shells; singleton editors use the default card. */
   unframed?: boolean;
   children: ReactNode;
@@ -43,6 +46,7 @@ export function SettingsEditorPage({
         title={title}
         description={description}
         descriptionIsCaption
+        actions={actions}
       />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
       {unframed ? children : <SectionCard padding="lg">{children}</SectionCard>}

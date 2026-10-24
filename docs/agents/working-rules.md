@@ -103,11 +103,15 @@ runs. Pass args directly. The shell guard refuses the bare form.
   20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
-- **A thread that steers never builds.** A thread that plans, routes or watches a stack hands each
-  ticket or stack layer to a fresh worker (a subagent, or a new thread) with a spec written from
-  [spec-template.md](spec-template.md): goal, files owned, constraints, done-when, verification
-  command, hand-back format. The worker builds, writes its result to a file and hands back the
-  path; the steering thread reads that file, not the tree. A thread whose context passes about
+- **A thread builds one layer itself; parallel layers go to fresh workers.** A single layer or a
+  small change is built in the thread that understands it, because a handoff loses detail and
+  adds latency (Aaron, 2026-10-24, after Anthropic's article in [Delegating](#delegating)). When
+  the work has independent layers that can run in parallel, or would push the thread past about
+  150k tokens, the thread steers instead: it hands each ticket or layer to a fresh worker (a
+  subagent, or a new thread) with a spec written from [spec-template.md](spec-template.md): goal,
+  files owned, constraints, done-when, verification command, hand-back format. The worker builds,
+  writes its result to a file and hands back the path; the steering thread reads that file, not
+  the tree, and leaves CI logs and visual triage to a worker too. A thread whose context passes about
   150k tokens writes a state note (what is done, what is in flight and where, the next step) and
   retires, and a fresh thread picks up from the note. The measurement: on 2026-10-14 five
   steering threads at 200k to 380k context were also building, one with fourteen branches and
@@ -120,6 +124,22 @@ runs. Pass args directly. The shell guard refuses the bare form.
   change gets a plan first. A cross-area change gets at most three parallel subagents, each given
   an objective, an output format and a boundary (the paths it may read or change). One turn here
   once spawned nine; most coding work has fewer independent parts than that.
+- **The main loop is the default; a subagent needs a reason.** One context that loads skills as it
+  needs them connects results across steps that a handoff loses, and runs faster
+  ([Anthropic, "When to fold subagents into your main agent loop"](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop)).
+  Delegate only for one of three reasons: the input would bloat the context (long logs, CI output,
+  screenshots, a sweep across many files), the parts are independent and run in parallel with a
+  context you can throw away, or an independent read is the point (the reviewer agents, which must
+  not inherit the author's reasoning). "It is a different area" is not a reason.
+- **Split by context, never by problem type.** A worker gets work that needs little from the rest
+  of the task and returns a compact result. Steps that chain on each other's output or share data
+  stay in one context: a scout whose notes an implementer must re-read, or a merger that reads what
+  an implementer wrote, is a lossy relay of the same facts. A finding the agent must *experience*
+  (friction, a confusing flow) is reported by the agent that experienced it.
+- **A procedure is a skill, not an agent.** New know-how goes into `.agents/skills/` with a
+  description that says when it applies, so the main loop loads it on demand. A new
+  `.claude/agents/` definition is only for a read that needs a fresh, unanchored context; it needs
+  an owner, a narrow tool list and a compact output.
 - **Route cheap work to a cheap model.** Scouting and search go to the read-only `Explore` agent
   (`.claude/agents/Explore.md`). Screenshot capture and test execution need an execution-capable
   worker; never assign shell commands or file output to a read-only scout. Design,

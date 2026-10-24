@@ -1,10 +1,10 @@
-import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { Field, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { CoursePhotoCell } from "./CoursePhotoCell";
+import { CourseSection, type CourseSectionRef } from "./CourseSection";
 import type { EditableCourse } from "./course-types";
 
 /** The editor's photos section: the cover, the gallery, each with its description box. */
@@ -14,7 +14,7 @@ export function CoursePhotosSection({
   t,
 }: {
   course: EditableCourse;
-  photos: EditorSectionRef;
+  photos: CourseSectionRef;
   t: StaffTranslator;
 }) {
   return (
@@ -27,7 +27,7 @@ export function CoursePhotosSection({
                     current photo" under one stood beside "Remove" under the
                     rest. What a description is for is said once, in the
                     section's line, not after every box (Aaron, 2026-10-05). */}
-      <EditorSection as="fieldset" {...photos} description={t("courses.edit.photosDescription")}>
+      <CourseSection as="fieldset" {...photos} description={t("courses.edit.photosDescription")}>
         <FieldGrid columns={1} className="gap-y-6">
           <Field
             label={t("courses.edit.heroPhotoLabel")}
@@ -109,7 +109,7 @@ export function CoursePhotosSection({
             </div>
           </Field>
         </FieldGrid>
-      </EditorSection>
+      </CourseSection>
     </>
   );
 }

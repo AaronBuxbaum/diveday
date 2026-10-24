@@ -23,9 +23,10 @@ const COPY = {
   language: "Language",
   signOut: "Sign out",
   signOutConfirm: "Sign out now?",
+  accountSettings: "Account settings",
   boatMode: "Boat mode",
   signOutPending: "Signing out…",
-  tellUs: "Tell us",
+  tellUs: "Send feedback",
   tellUsSubject: "DiveDay note from blue-mantis",
   tellUsBody: "Page: {path}\n\n",
 };
@@ -175,7 +176,6 @@ describe("ShopIdentityMenu — the open panel", () => {
       screen.getByText("Language"),
       screen.getByRole("button", { name: "English (US)" }),
       screen.getByRole("button", { name: "Español" }),
-      screen.getByRole("button", { name: "Boat mode" }),
       screen.getByRole("button", { name: "Sign out" }),
     ];
     for (const element of starts) {
@@ -198,19 +198,6 @@ describe("ShopIdentityMenu — the open panel", () => {
     // No inert placeholder is left in the other rows to hold their edge: the
     // gutter holds it.
     expect(screen.getByRole("button", { name: "Español" }).children).toHaveLength(0);
-  });
-
-  it("switches this device into Boat mode and back, ticking the row while it is on", async () => {
-    await openMenu();
-    const row = screen.getByRole("button", { name: "Boat mode" });
-    expect(row).toHaveAttribute("aria-pressed", "false");
-    await userEvent.click(row);
-    expect(row).toHaveAttribute("aria-pressed", "true");
-    expect(document.documentElement).toHaveClass("boat-mode");
-    expect(row.querySelector("svg")).not.toBeNull();
-    await userEvent.click(row);
-    expect(row).toHaveAttribute("aria-pressed", "false");
-    expect(document.documentElement).not.toHaveClass("boat-mode");
   });
 
   it("nests the panel's rows in its corner: a p-1 panel, and every row on the derived corner", async () => {
@@ -321,7 +308,7 @@ describe("the identity trigger", () => {
   });
 });
 
-describe("ShopIdentityMenu — Tell us", () => {
+describe("ShopIdentityMenu — Send feedback and Account settings", () => {
   it("opens a note to support carrying the shop and the page's path, and nothing else", async () => {
     render(
       <ShopIdentityMenu
@@ -335,7 +322,7 @@ describe("ShopIdentityMenu — Tell us", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
-    const link = screen.getByRole("link", { name: "Tell us" });
+    const link = screen.getByRole("link", { name: "Send feedback" });
     const href = link.getAttribute("href") ?? "";
     expect(href.startsWith("mailto:support@dive.day?")).toBe(true);
     const params = new URLSearchParams(href.slice(href.indexOf("?") + 1));
@@ -355,10 +342,10 @@ describe("ShopIdentityMenu — Tell us", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
-    expect(screen.queryByRole("link", { name: "Tell us" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Send feedback" })).toBeNull();
   });
 
-  it("lists My account's links, each a plain link that closes the menu", async () => {
+  it("reads Language, Account settings, Send feedback, Sign out, in that order", async () => {
     render(
       <ShopIdentityMenu
         shopName="Blue Mantis Divers"
@@ -366,23 +353,25 @@ describe("ShopIdentityMenu — Tell us", () => {
         locale="en-US"
         languages={[{ locale: "en-US", label: "English (US)" }]}
         setLocaleAction={vi.fn()}
-        account={{
-          label: "My account",
-          links: [
-            { href: "/shop/blue-mantis/settings/security", label: "Security" },
-            { href: "/shop/blue-mantis/settings/calendar", label: "Calendar subscription" },
-          ],
-        }}
+        tellUs={{ to: "support@dive.day" }}
+        accountHref="/shop/blue-mantis/settings/security"
         copy={COPY}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
-    const nav = screen.getByRole("navigation", { name: "My account" });
-    expect(nav).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Security" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/settings/security",
+    const account = screen.getByRole("link", { name: "Account settings" });
+    expect(account).toHaveAttribute("href", "/shop/blue-mantis/settings/security");
+    const order = ["Language", "Account settings", "Boat mode", "Send feedback", "Sign out"].map(
+      (words) => screen.getByText(words),
     );
-    expect(screen.getByRole("link", { name: "Calendar subscription" })).toBeInTheDocument();
+    for (const [index, element] of order.entries()) {
+      const next = order[index + 1];
+      if (!next) continue;
+      expect(element.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    // Boat mode stays in this menu: every signed-in role reaches it here, and
+    // Settings is gated to owners and managers.
+    expect(screen.getByRole("button", { name: "Boat mode" })).toHaveAttribute("aria-pressed");
+    expect(screen.queryByRole("link", { name: "Calendar subscription" })).toBeNull();
   });
 });

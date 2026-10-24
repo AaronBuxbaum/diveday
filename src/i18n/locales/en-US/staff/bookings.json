@@ -1,6 +1,6 @@
 {
   "new": {
-    "title": "Add a booking",
+    "title": "New booking",
     "tripHeading": "Which departure?",
     "fullExcluded": "Full departures aren’t listed. Add seats, or another departure that day, from the board.",
     "tripEmpty": "Nothing upcoming has a seat left",

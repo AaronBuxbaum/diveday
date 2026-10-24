@@ -1,7 +1,6 @@
 import type { ComponentProps } from "react";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { noticeForForm } from "@/lib/staff-notices";
-import { DownloadDiverExportButton } from "./DownloadDiverExportButton";
 import { ErasePersonalData } from "./ErasePersonalData";
 import { GuardianEmailErasure } from "./GuardianEmailErasure";
 import { MergeDiver } from "./MergeDiver";
@@ -10,7 +9,7 @@ import { RemoveDiver } from "./RemoveDiver";
 import type { DiverProfile } from "./shared";
 
 /**
- * The foot of a diver's record: merge, the guardian's address, export, delete
+ * The foot of a diver's record: merge, the guardian's address, delete
  * and erase, each present only for a staffer the page has already cleared for
  * it. Moved out of the route file whole, so the page reads as the record and
  * this reads as what you do *to* it.
@@ -26,7 +25,6 @@ export function DiverRecordFoot({
   mergeCandidates,
   guardianEmails,
   canErase,
-  canExport,
   canDelete,
 }: {
   diver: DiverProfile;
@@ -41,7 +39,6 @@ export function DiverRecordFoot({
   /** Null unless this staffer may erase. */
   guardianEmails: string[] | null;
   canErase: boolean;
-  canExport: boolean;
   canDelete: boolean;
 }) {
   // **The quiet foot** — the things you do *to* a record rather than with
@@ -69,17 +66,11 @@ export function DiverRecordFoot({
           status={noticeForForm(notice, "guardian-email")}
         />
       ) : null}
-      {canExport ? (
-        <DownloadDiverExportButton
-          href={`/shop/${shopSlug}/divers/${personId}/export`}
-          idleLabel={t("divers.export.downloadButton.idle")}
-          acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
-        />
-      ) : null}
-      {/* Delete on a line of its own, never beside "Download record": two
-          quiet buttons in one row, one of them red, were one slip apart (UX
-          review 2026-10-10, item 37). Nothing to delete twice: a removed diver
-          gets the Restore panel at the top of the record instead. */}
+      {/* Delete on a line of its own. "Download record" moved to the
+          header's action row (visual review 2026-10-24, A12), so it is no
+          longer one slip from this red one (UX review 2026-10-10, item 37).
+          Nothing to delete twice: a removed diver gets the Restore panel at
+          the top of the record instead. */}
       {canDelete && !removed ? (
         <RemoveDiver
           diver={diver}

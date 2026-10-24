@@ -19,33 +19,10 @@ export const DEMO_ROLE_META: { id: DemoRoleId; name: string }[] = [
   { id: "diver", name: "Public Guest" }, // i18n-exempt: seed placeholder, not rendered as copy
 ];
 
-export const DEMO_ROLE_KEYS: Record<
-  DemoRoleId,
-  { title: DiverMessageKey; desc: DiverMessageKey; tryThis: DiverMessageKey }
-> = {
-  owner: {
-    title: "demo.roles.owner.title",
-    desc: "demo.roles.owner.desc",
-    tryThis: "demo.roles.owner.tryThis",
-  },
-  instructor: {
-    title: "demo.roles.instructor.title",
-    desc: "demo.roles.instructor.desc",
-    tryThis: "demo.roles.instructor.tryThis",
-  },
-  divemaster: {
-    title: "demo.roles.divemaster.title",
-    desc: "demo.roles.divemaster.desc",
-    tryThis: "demo.roles.divemaster.tryThis",
-  },
-  captain: {
-    title: "demo.roles.captain.title",
-    desc: "demo.roles.captain.desc",
-    tryThis: "demo.roles.captain.tryThis",
-  },
-  diver: {
-    title: "demo.roles.diver.title",
-    desc: "demo.roles.diver.desc",
-    tryThis: "demo.roles.diver.tryThis",
-  },
+export const DEMO_ROLE_KEYS: Record<DemoRoleId, { title: DiverMessageKey }> = {
+  owner: { title: "demo.roles.owner.title" },
+  instructor: { title: "demo.roles.instructor.title" },
+  divemaster: { title: "demo.roles.divemaster.title" },
+  captain: { title: "demo.roles.captain.title" },
+  diver: { title: "demo.roles.diver.title" },
 };

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { buttonClass } from "@/components/ui/button";
 import type { WorkOrder } from "@/db/schema";
 import { staffTranslator } from "@/i18n/staff-messages";
 
@@ -31,5 +32,14 @@ describe("WorkOrderStatusCard", () => {
     expect(screen.queryByRole("radio")).toBeNull();
     // The current status is not one of the moves.
     expect(within(group).queryByRole("button", { name: "Received" })).toBeNull();
+  });
+
+  it("says where the ticket is as a pill in the row, and fills no move (A29)", () => {
+    render(<WorkOrderStatusCard workOrder={received} subject="customer" readOnly={false} t={t} />);
+    const group = screen.getByRole("group", { name: "Move to" });
+    expect(within(group).getByText("Received").closest("button")).toBeNull();
+    for (const button of within(group).getAllByRole("button")) {
+      expect(button.className).toBe(buttonClass({ variant: "secondary" }));
+    }
   });
 });

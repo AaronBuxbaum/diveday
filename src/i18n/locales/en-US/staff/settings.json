@@ -4,11 +4,8 @@
     "notice": {
       "packingSaved": "Packing checklist saved for every trip",
       "packingInvalid": "Add between one and twelve packing items.",
-      "dockSaved": "Dock call time saved for every confirmation and reminder",
-      "deskPaymentSaved": "Saved. Every seat due at the shop says how to pay.",
       "deskPaymentInvalid": "Nothing changed: choose card, cash, card and cash, or don’t say.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
-      "turnaroundSaved": "Turnaround saved",
       "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
       "unitsSaved": "Units saved",
       "unitsSavedSitesLeft": "Units saved. {count, plural, one {# dive site was} other {# dive sites were}} left alone, whole, and still {count, plural, one {reads} other {read}} in {from, select, feet {feet} other {meters}}: {sites}{more, plural, =0 {} other { and # more}}. Check {count, plural, one {it} other {them}} by hand in Dive sites.",
@@ -58,7 +55,6 @@
       "packageSaved": "Package added",
       "packageDeleted": "Package deleted",
       "packageInvalid": "That didn’t save. Check the number of dives, the price, and how long it stays usable.",
-      "crewLeadSaved": "Crew minutes saved",
       "crewLeadInvalid": "Enter between 5 and 180 minutes for crew, or leave it empty."
     },
     "timezone": {
@@ -136,12 +132,12 @@
       "logoHint": "PNG, JPG, or WebP. Square image recommended.",
       "removeLogo": "Remove current logo",
       "submitting": "Saving…",
+      "viewStorefront": "View storefront",
       "submit": "Save profile",
-      "viewSavedStorefront": "View saved storefront in a new tab",
       "brandColor": "Brand color",
       "brandColorPicker": "Pick a brand color",
       "brandColorHint": "Buttons and links on your public pages. Leave it blank to keep DiveDay’s teal.",
-      "brandColorDarkened": "Your color was too light to read as text, so your storefront uses {hex}.",
+      "brandColorDarkened": "Your color was too light to read as text, so your storefront uses this darker shade.",
       "displayFont": "Headline face",
       "displayFontDefault": "DiveDay’s own",
       "heroPhoto": "Cover photo",
@@ -162,7 +158,7 @@
         "dan_partner": "DAN Business Partner",
         "readers_choice": "Readers’ Choice Award"
       },
-      "brandColorLightenedAtNight": "At night your storefront lightens it to {hex} so it still reads on the dark ground.",
+      "brandColorLightenedAtNight": "At night your storefront lightens it to this shade so it still reads on the dark ground.",
       "brandPreview": "How it reads",
       "brandPreviewNight": "At night"
     },
@@ -237,14 +233,11 @@
       "none": "Don’t say",
       "card": "Card",
       "cash": "Cash",
-      "card_and_cash": "Card and cash",
-      "submit": "Save how divers pay",
-      "submitting": "Saving…"
+      "card_and_cash": "Card and cash"
     },
     "dockCall": {
       "heading": "Dock-day rhythm",
       "description": "Every number here is in minutes.",
-      "submit": "Save dock-day rhythm",
       "submitting": "Saving…",
       "dockCallLabel": "Arrive before departure",
       "dockCallDescription": "How early divers are asked to be at the dock.",
@@ -274,13 +267,11 @@
     },
     "turnaround": {
       "label": "Turnaround between departures",
-      "description": "Moving a departure warns when a boat, or crew leaving from another meeting point, gets less than this. 0 turns it off.",
-      "submit": "Save turnaround"
+      "description": "Moving a departure warns when a boat, or crew leaving from another meeting point, gets less than this. 0 turns it off."
     },
     "crewLead": {
       "label": "Crew arrive before divers",
-      "description": "Minutes before the divers’ dock time; a crew member’s own shift wins if it starts earlier. Empty gives crew the divers’ time.",
-      "submit": "Save crew minutes"
+      "description": "Minutes before the divers’ dock time; a crew member’s own shift wins if it starts earlier. Empty gives crew the divers’ time."
     },
     "units": {
       "heading": "Units",
@@ -299,7 +290,6 @@
     "tax": {
       "heading": "Sales tax & VAT",
       "description": "Add sales tax, VAT, and similar taxes to new booking payments and staff invoices through Stripe.",
-      "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Tips after the trip are separate and unaffected. Turn this off if you handle tax yourself.",
       "checkboxLabel": "Use Stripe Tax for new booking and invoice payments"
     },
     "passThrough": {
@@ -410,12 +400,12 @@
       "reviews": {
         "heading": "Diver reviews",
         "label": "Ask divers to rate their day",
-        "description": "Star ratings on the trip recap, shown on your public pages once published. Your review link works either way."
+        "description": "Star ratings on the trip recap, shown on your public pages once published."
       },
       "dateRequests": {
         "heading": "Date requests",
         "label": "Let divers ask for a day",
-        "description": "A form on your public pages for a day that isn’t on the schedule. Requests land in Inbox."
+        "description": "A form on your public pages for a day that isn’t on the schedule."
       },
       "lastMinuteList": {
         "heading": "Last-minute list",
@@ -430,17 +420,17 @@
       "publicYear": {
         "heading": "Our year",
         "label": "Show “Our year” on your schedule",
-        "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money."
+        "description": "The year so far in counts at the foot of your public schedule."
       },
       "padiChecks": {
         "heading": "PADI checks (beta)",
         "label": "Check PADI certifications and eLearning with the extension",
-        "description": "Beta: check a diver’s PADI card on DiveChek from their record, and their eLearning from a course roster, in one click. The DiveDay extension runs the check in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays."
+        "description": "Check a diver’s PADI card and eLearning in one click, with the DiveDay extension."
       },
       "claudeSuggestions": {
         "heading": "AI suggestions",
         "label": "Show AI suggestions",
-        "description": "Drafts and sorting your staff can edit or ignore. Nothing is sent or saved until someone on your team does it. What AI reads goes to Anthropic, DiveDay’s AI provider.",
+        "description": "Drafts and sorting your staff can edit or ignore.",
         "dark": {
           "noProvider": "AI isn’t connected on this server yet, so suggestions stay hidden even with this on.",
           "demoOverCap": "Demo shops share a small monthly AI allowance, and it’s used up. Suggestions come back on the 1st (UTC).",
@@ -455,92 +445,92 @@
       "recapAutoApprove": {
         "heading": "Recap highlights",
         "label": "Write the recap highlight when the crew leaves it blank",
-        "description": "AI writes two sentences from the sightings your crew logged, and they go out on the recap. Off, the crew writes or approves each one."
+        "description": "AI writes the recap highlight from the sightings your crew logged."
       },
       "lostFound": {
         "heading": "Lost and found",
         "label": "Keep a lost-and-found list",
-        "description": "What crews find aboard, logged on the departure and listed until it goes home. The diver gets an email when you find something of theirs."
+        "description": "What crews find aboard, logged on the departure until it goes home."
       },
       "workOrders": {
         "heading": "Gear servicing",
         "label": "Service divers’ own gear",
-        "description": "Work orders for gear divers bring in, their tags, and an email when it’s ready. Divers who ask get a reminder when service is due. Your rental fleet’s service dates stay either way."
+        "description": "Work orders, tags and a ready email for gear divers bring in."
       },
       "promoCodes": {
         "heading": "Promo codes",
         "label": "Take promo codes",
-        "description": "Codes you make under Discounts, typed by divers when they book. A last-minute deal’s code still works while the last-minute list is on."
+        "description": "Codes you make under Discounts, typed by divers when they book."
       },
       "divePackages": {
         "heading": "Dive packages",
         "label": "Sell dive packages",
-        "description": "Prepaid dives a diver buys up front and spends on later bookings. Off, you stop selling them; divers who already bought one keep using it."
+        "description": "Prepaid dives a diver buys up front and spends on later bookings."
       },
       "hotelPickup": {
         "heading": "Hotel pickups",
         "label": "We offer hotel pickup",
-        "description": "Each diver’s page asks whether they want a pickup and where they’re staying, and the manifest lists who to collect."
+        "description": "Divers say where they’re staying, and the manifest lists who to collect."
       },
       "checkoutRecovery": {
         "heading": "Checkout reminders",
         "label": "Email a diver who didn’t finish paying",
-        "description": "One email, two hours after a diver leaves checkout, with a link back to their booking. Off, nothing is sent and their booking stays as it was."
+        "description": "One email, two hours after a diver leaves checkout, with a link back."
       },
       "buddyLinks": {
         "heading": "Bring a buddy",
         "label": "Give each diver a link to bring a buddy",
-        "description": "Shown on the diver’s page and trip recap after the dive. A friend who books through it is counted on Reports and the diver’s record."
+        "description": "A link to share on the diver’s page and trip recap after the dive."
       },
       "selfRegistration": {
         "heading": "Counter sign-up",
         "label": "Let walk-ins sign themselves up",
-        "description": "The QR code on your counter card opens a form on their phone for contact details, certification and rental sizes. Off, the form is gone and the QR sends walk-ins to your crew; divers who already signed up stay. Take printed counter cards down when you turn it off."
+        "description": "The QR code on your counter card opens a sign-up form on the diver’s phone."
       },
       "sightings": {
         "heading": "Sightings",
         "label": "Log what divers saw",
-        "description": "The crew notes species after each dive. They show on your public pages, dive sites and the trip recap. Off, they’re hidden and every sighting is kept."
+        "description": "The crew notes species after each dive, shown on your public pages."
       },
       "diverPhotos": {
         "heading": "Recap photos",
         "label": "Let divers and crew add photos to the recap",
-        "description": "Photos from the day, shared with the boat. Off, nobody can add one; photos already added stay with you so you can remove any."
+        "description": "Photos from the day, shared with the boat."
       },
       "waitlist": {
         "heading": "Wait list",
         "label": "Keep a wait list for full departures",
-        "description": "Divers ask to hear when a seat opens on a full boat, and you offer it by email. Off, nobody new joins and the list sends nothing on its own; divers already waiting stay on Today until you handle them, and you can still email any diver a date yourself."
+        "description": "Divers ask to hear when a seat opens on a full boat."
       },
       "pastDiverInvites": {
         "heading": "Invite past divers",
         "label": "Suggest past divers for a boat with empty seats",
-        "description": "Divers who sailed with you before, suggested on a thin departure with an email offer you send. Off, nobody is suggested; a diver you pick and invite yourself still gets the email."
+        "description": "Divers who sailed with you before, suggested on a thin departure."
       },
       "partnerLinks": {
         "heading": "Partner links",
         "label": "Give hotels and partners a booking link",
-        "description": "Each seat booked through a partner’s link is credited to them on Reports. Off, Website embed offers no partner link and no new seat is credited; earlier credits stay."
+        "description": "Each seat booked through a partner’s link is credited to them on Reports."
       },
       "weekOutReminder": {
         "heading": "Week-out reminder",
         "label": "Email divers a week before they dive",
-        "description": "One email seven days before the departure. Off, a diver with nothing left to do hears nothing a week out; anyone with a waiver, a card or course materials still to finish gets it anyway, and the day-before reminder goes out either way."
+        "description": "One email seven days before the departure."
       },
       "helpRequests": {
         "heading": "Help requests",
         "label": "Let divers ask for help on the day",
-        "description": "A question on their ready page that puts the request on Today. Off, divers see your phone and email there instead; a request already open stays on Today until you handle it, and the diver can still withdraw it."
+        "description": "A question on the diver’s ready page that puts their request on Today."
       },
       "publicConditions": {
         "heading": "Public conditions",
         "label": "Show divers the automated forecast",
-        "description": "The water, sea and wind outlook on each trip page when your crew hasn’t written their own. Off, it’s gone; your crew’s conditions and updates still show, and the high-wind alert stays either way."
+        "description": "The water, sea and wind outlook on each trip page."
       },
       "fieldGuide": {
         "heading": "Field guide",
         "label": "Keep a field guide for each site",
-        "description": "The species you pick for each dive site, shown on its public page, in trip briefings and on the recap. Off, they’re hidden and kept; your sites stay."
+        "description": "The species you pick for each dive site, shown on its public page."
       },
       "door": "Turn features on or off"
     },
@@ -549,7 +539,7 @@
       "on": "On",
       "off": "Off",
       "label": "Plan crew in DiveDay",
-      "description": "Shifts, days away, and who works each departure. Course sessions name their instructor either way.",
+      "description": "Shifts, days away, and who works each departure.",
       "save": "Save crew schedule",
       "saving": "Saving…",
       "saved": "Crew schedule saved",
@@ -662,15 +652,26 @@
       "delete": "Delete",
       "deleting": "Deleting…",
       "owed": "Dives owed on packages: {dives, number} ({value})",
-      "createTitle": "Add package",
+      "createTitle": "Add a package",
       "empty": "No packages for sale yet"
     },
     "yourData": {
       "heading": "Export, import, backups and integrations"
     }
   },
+  "dockDay": {
+    "save": "Save",
+    "saved": "Dock day saved",
+    "groups": {
+      "divers": "Divers",
+      "crew": "Crew",
+      "turnaround": "Between departures",
+      "desk": "At the desk"
+    }
+  },
   "team": {
     "title": "Team",
+    "credentialsNeedReview": "{count, plural, one {# credential needs review} other {# credentials need review}}",
     "unnamedInviter": "A teammate",
     "notice": {
       "invited": "Invite sent",
@@ -1096,10 +1097,15 @@
     "recoveryWarning": "These codes disappear after setup or in ten minutes. DiveDay cannot show them again.",
     "sessionsHeading": "Active sessions",
     "sessionsDescription": "Revoke a device you no longer recognize, or sign out everywhere.",
+    "sessions": {
+      "group": "{count, plural, one {# session} other {# sessions}} · last seen {when}",
+      "thisDevice": "This device",
+      "includesThisDevice": "Includes this device",
+      "showSessions": "Show sessions",
+      "showAll": "Show all"
+    },
     "unknownDevice": "Unknown device",
     "unknownIp": "Unknown network",
-    "thisDevice": "This device",
-    "details": "Details",
     "browserLine": "Browser: {browser}",
     "networkLine": "Network: {network}",
     "browser": {

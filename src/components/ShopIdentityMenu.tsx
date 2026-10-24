@@ -18,25 +18,17 @@ import { forgetThisDevice } from "./forget-device";
 export type ShopIdentityMenuCopy = {
   boatMode: string;
   language: string;
+  /** "Account settings": the reader's own sign-in page. */
+  accountSettings: string;
   signOut: string;
   signOutConfirm: string;
   signOutPending: string;
-  /** "Tell us": the row that opens a note to DiveDay support. */
+  /** "Send feedback": the row that opens a note to DiveDay support. */
   tellUs: string;
   /** The note's subject, the shop's slug already in it. */
   tellUsSubject: string;
   /** The body's opening line, with `{path}` where the page's path goes. */
   tellUsBody: string;
-};
-
-/**
- * **My account** (issue #2813): the places about this reader rather than the
- * shop (their sign-in, calendar feed and email), ungated, so every role keeps a
- * door whether or not it may open Settings.
- */
-export type ShopIdentityAccount = {
-  label: string;
-  links: readonly { href: string; label: string }[];
 };
 
 /**
@@ -66,11 +58,11 @@ export type TellUsTarget = {
  *
  * **Settings left again, for the nav** (ADR 20261001-logbook): it has its own
  * row at the sidebar's foot, and a second door here would be the duplicate
- * control principle 8 forbids. The reader's calendar subscription left for the
- * same reason (Aaron, 2026-10-03). They came back as **My account** (issue
- * #2813, Aaron, 2026-10-17): sign-in security, calendar feed and email are about
- * this reader, so they are one labelled group here rather than rows in a
- * shop's Settings.
+ * control principle 8 forbids. **One account row** (visual review 2026-10-24,
+ * A42): the menu reads Language, Account settings, Boat mode, Send feedback,
+ * Sign out. The calendar feed and email settings are reached from the account
+ * page. Boat mode stays here, where every signed-in role reaches it: crew on
+ * deck are who it is for, and Settings is gated to owners and managers.
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -91,7 +83,7 @@ export function ShopIdentityMenu({
   languages,
   setLocaleAction,
   tellUs,
-  account,
+  accountHref,
   copy,
 }: {
   shopName: string;
@@ -103,7 +95,8 @@ export function ShopIdentityMenu({
   languages: readonly LanguageChoice[];
   setLocaleAction: (locale: string) => Promise<void>;
   tellUs?: TellUsTarget;
-  account?: ShopIdentityAccount;
+  /** The reader's own account page (`/settings/security`). */
+  accountHref?: string;
   copy: ShopIdentityMenuCopy;
 }) {
   const [open, setOpen] = useState(false);
@@ -222,24 +215,16 @@ export function ShopIdentityMenu({
               />
             </div>
           </div>
-          {account && account.links.length > 0 ? (
-            <nav aria-label={account.label} className="mt-1 border-t border-border pt-1">
-              <GroupLabel className={MENU_TICK_GUTTER}>{account.label}</GroupLabel>
-              <div className="mt-1">
-                {account.links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className={menuRowClass("quiet")}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </nav>
-          ) : null}
           <div className="mt-1 border-t border-border pt-1">
+            {accountHref ? (
+              <Link
+                href={accountHref}
+                onClick={() => setOpen(false)}
+                className={menuRowClass("quiet")}
+              >
+                {copy.accountSettings}
+              </Link>
+            ) : null}
             <BoatModeRow label={copy.boatMode} />
             {tellUs ? <TellUsRow to={tellUs.to} copy={copy} /> : null}
           </div>
@@ -273,7 +258,7 @@ export function ShopIdentityMenu({
 }
 
 /**
- * **Tell us** (batch 4, M2): a note to DiveDay support, addressed and opened
+ * **Send feedback** (batch 4, M2): a note to DiveDay support, addressed and opened
  * on the page the staffer was reading. Read at click time rather than render
  * time, so the path is the one on screen even after a client navigation.
  * Only the path goes in (`tellUsPath` drops the query string).

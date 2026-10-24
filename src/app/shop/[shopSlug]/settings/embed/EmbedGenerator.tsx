@@ -105,6 +105,10 @@ export function EmbedGenerator({
   const [platform, setPlatform] = useState<Platform>("html");
   const [partner, setPartner] = useState("");
   const [qr, setQr] = useState<string | null>(null);
+  // Which frame has finished loading. The box is drawn only around a widget
+  // that is there to see (visual review 2026-10-24, A45): an empty rounded
+  // rectangle while the iframe loads read as a broken preview.
+  const [loadedFrame, setLoadedFrame] = useState<string | null>(null);
   const ids = { kind: useId(), look: useId(), platform: useId() };
 
   const options = { look, lang, show: show || null };
@@ -141,6 +145,10 @@ export function EmbedGenerator({
         look === "site" ? previewHost : {},
       )
     : null;
+  const frameKey = `${kind}-${show}-${lang}-${look}`;
+  const frameLoaded = loadedFrame === frameKey;
+  // Every other preview is drawn at once; a framed widget waits for its load.
+  const previewDrawn = !FRAMED.has(kind) || showMissing || frameLoaded;
 
   useEffect(() => {
     if (kind !== "qr") return;
@@ -306,8 +314,14 @@ export function EmbedGenerator({
             </div>
 
             <div className="@container">
-              <p className="mb-2 text-sm font-medium">{copy.preview}</p>
-              <div className="rounded-panel border border-border bg-surface-sunken p-3">
+              <p className={`mb-2 text-sm font-medium ${previewDrawn ? "" : "sr-only"}`}>
+                {copy.preview}
+              </p>
+              <div
+                className={
+                  previewDrawn ? "rounded-panel border border-border bg-surface-sunken p-3" : ""
+                }
+              >
                 {FRAMED.has(kind) && showMissing ? (
                   <p className="py-8 text-center text-sm text-muted">{copy.showRequired}</p>
                 ) : FRAMED.has(kind) ? (
@@ -315,10 +329,13 @@ export function EmbedGenerator({
                   // opens at full size in a tab of its own instead.
                   <>
                     <iframe
-                      key={`${kind}-${show}-${lang}-${look}`}
+                      key={frameKey}
                       title={copy.preview}
                       src={frameUrl ?? undefined}
-                      className="hidden h-[480px] w-full rounded-lg border-0 bg-surface @md:block"
+                      onLoad={() => setLoadedFrame(frameKey)}
+                      className={`hidden w-full rounded-lg border-0 bg-surface @md:block ${
+                        frameLoaded ? "h-[480px]" : "pointer-events-none h-0 opacity-0"
+                      }`}
                     />
                     <div className="flex items-center justify-center py-8 @md:hidden">
                       <a

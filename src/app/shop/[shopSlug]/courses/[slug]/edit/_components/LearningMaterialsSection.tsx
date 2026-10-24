@@ -1,7 +1,7 @@
-import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_LEARNING_MATERIALS } from "@/lib/course-limits";
 import { readLearningMaterials } from "@/lib/courses";
+import { CourseSection, type CourseSectionRef } from "./CourseSection";
 import { LearningMaterialsEditor } from "./LearningMaterialsEditor";
 
 /**
@@ -14,17 +14,16 @@ export function LearningMaterialsSection({
   storageKey,
   t,
 }: {
-  section: EditorSectionRef;
+  section: CourseSectionRef;
   /** `courses.learning_materials` as stored; read through `readLearningMaterials`. */
   stored: unknown;
   storageKey: string;
   t: StaffTranslator;
 }) {
   return (
-    <EditorSection
+    <CourseSection
       unsavedTag={t("shared.formDraft.unsavedSection")}
-      id={section.id}
-      label={section.label}
+      {...section}
       as="fieldset"
       description={t("courses.edit.materialsDescription")}
     >
@@ -44,6 +43,6 @@ export function LearningMaterialsSection({
           empty: t("courses.materials.empty"),
         }}
       />
-    </EditorSection>
+    </CourseSection>
   );
 }

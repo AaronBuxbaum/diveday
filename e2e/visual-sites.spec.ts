@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openIfClosed } from "./helpers";
 import {
   capture,
   installVisualBuildGuard,
@@ -28,8 +29,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites");
         await page.getByRole("link", { name: "Molasses Reef" }).first().click();
         await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
-        // The route's own caption box, which only renders once the editor has
-        // mounted and read the coordinate fields beside it.
+        // The route is what this frame is for, and it and the station line sit
+        // in closed rows since the fold (visual review 2026-10-24, A11): both
+        // open. The route's caption box renders once the editor has mounted
+        // and read the coordinate fields beside it.
+        await openIfClosed(page.locator("details#briefing-route").filter({ visible: true }));
+        await openIfClosed(page.locator("details#briefing-forecast").filter({ visible: true }));
         await page.getByLabel("What the route is called").waitFor();
         // What the seven-digit station id actually names (issue #1468), read
         // off the fixture station the fleet serves in place of NOAA. Waited on
@@ -37,7 +42,7 @@ for (const scheme of ["light", "dark"] as const) {
         // at all, and this is the capture that would otherwise photograph the
         // absence without failing. Carysfort is genuinely the nearest station
         // to this reef, so no distance warning belongs in this frame.
-        await page.getByText("8723583 · Carysfort Reef, FL").waitFor();
+        await page.getByText("8723583 · Carysfort Reef, FL").waitFor({ state: "attached" });
         await capture(page, "dive-site-edit", scheme);
       });
 
@@ -72,11 +77,14 @@ for (const scheme of ["light", "dark"] as const) {
 
         await page.goto(`/shop/blue-mantis/dive-sites/${farStation.siteId}`);
         await page.getByRole("heading", { level: 1, name: farStation.name }).waitFor();
-        // The editor's own mounted marker, as the calm capture uses.
-        await page.getByLabel("What the route is called").waitFor();
+        // The editor's own mounted marker.
+        await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
         // The sentence itself, not the echo line: the echo renders whether or
         // not the station is far, so waiting on it would photograph the calm
         // state without failing.
+        // Forecast is a closed row (visual review 2026-10-24, A11); the advisory
+        // is what this frame is for, so it is opened.
+        await openIfClosed(page.locator("details#briefing-forecast").filter({ visible: true }));
         await page.getByText(/so the turn it predicts can reach this water/).waitFor();
         await capture(page, "dive-site-far-station", scheme);
       });
@@ -90,7 +98,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the new-dive-site form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites/new");
-        await page.getByLabel("What the route is called").waitFor();
+        await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
         await capture(page, "dive-site-new", scheme);
       });
 
@@ -106,7 +114,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/dive-sites/new");
-        await page.getByLabel("What the route is called").waitFor();
+        await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
         await page.getByLabel("Name").fill("Turtle Ledge");
         await page.getByLabel("Depth note").fill("20-45 ft");
         await page.getByText("Unsaved changes in 2 sections").waitFor();

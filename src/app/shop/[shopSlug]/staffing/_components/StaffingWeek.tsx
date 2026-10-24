@@ -40,8 +40,8 @@ import { windowOnThisDay } from "./window-on-this-day";
  *   reader. The warning glyph and the tint go with the loud ones only — the
  *   shop's own target binds nothing, so drawing it as an alarm would spend the
  *   one warning channel this surface has on advice (`GAP_TONE`).
- * - **Credentials are not here.** They are the quiet ledger beneath this
- *   (`StaffCredentials`), and nothing in this grid is gated by one — H-59's
+ * - **Credentials are not here.** They are a quiet ledger on each person’s
+ *   Team card (`StaffCardCredentials`), and nothing in this grid is gated by one — H-59's
  *   clocks inform, never gate. Since issue #1853 a lapsed rating can open a
  *   gap here (the count reads recorded ratings), and the chip then says so
  *   (`PlacedGap.ratingLapsed`); it still disables nothing.

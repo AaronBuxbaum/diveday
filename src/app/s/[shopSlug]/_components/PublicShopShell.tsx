@@ -49,7 +49,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { whatsAppChatHref } from "@/lib/contact-links";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { deskTimeOn } from "@/lib/desk-hours";
 import {
@@ -194,8 +193,6 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
             return {
               ...role,
               title,
-              desc: t(DEMO_ROLE_KEYS[role.id].desc),
-              tryThis: t(DEMO_ROLE_KEYS[role.id].tryThis),
               switchAriaLabel: t("demo.switchToAria", { role: title }),
             };
           })}
@@ -204,17 +201,11 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
             viewingAs: t("demo.viewingAs"),
             switchRole: t("demo.switchRole"),
             sharedWarning: t("demo.sharedWarning"),
-            sessionExpired: t("demo.sessionExpired"),
-            withCredentials: t("demo.withCredentials"),
-            active: t("demo.active"),
-            tryLabel: t("demo.tryLabel"),
             current: t("demo.current"),
             switchAction: t("demo.switchAction"),
             switchFailed: t("demo.switchFailed"),
           }}
           isMintedDemo={shop.slug !== DEMO_SHOP_SLUG}
-          currentEmail={session?.user?.email}
-          demoPassword={DEMO_BYPASS_PASSWORD}
         />
       ) : null}
       {showStaffBar && shop ? (

@@ -215,11 +215,13 @@
       "title": "Rental history",
       "importedAssignment": "Historical assignment to {name}"
     },
+    "noServiceOrHistory": "No service or history yet",
     "details": {
       "title": "Details",
       "edit": "Edit details",
       "save": "Save changes",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "cancel": "Cancel"
     },
     "status": {
       "title": "Status",

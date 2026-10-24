@@ -145,6 +145,7 @@
     "noticeNotAuthorized": "Deleting or restoring a diver is limited to owners and managers.",
     "noticeInvalid": "Check the diver’s name, email, and phone number.",
     "newDiverTitle": "Add a diver",
+    "newDiverLead": "A name is enough to start. Add contact details when you have them.",
     "backToRoster": "All divers",
     "backToTripGuests": "Back to the trip’s divers",
     "addDiverWithName": "Add diver",
@@ -153,7 +154,6 @@
     "addToBoatButton": "Add to boat",
     "fullNameLabel": "Full name",
     "emailLabel": "Email",
-    "optionalHint": "(optional)",
     "phoneLabel": "Phone",
     "adding": "Adding…",
     "cancel": "Cancel",
@@ -615,10 +615,10 @@
     "newInvoice": "New invoice"
   },
   "file": {
-    "certificationsNone": "None on file",
     "conversationUnanswered": "{count, plural, one {# unanswered} other {# unanswered}}",
     "noteCount": "{count, plural, one {# note} other {# notes}}",
-    "noNotes": "None",
+    "noneOnFile": "None on file",
+    "certificationsNone": "None on file",
     "gearHeading": "Gear and sizes",
     "rentalFitOnFile": "Rental fit on file",
     "rentsFromUs": "Rents from us",
@@ -646,7 +646,6 @@
   },
   "lastDive": {
     "heading": "Last dive",
-    "notKnown": "Not known",
     "monthsAgo": "{count, plural, =0 {less than a month ago} one {# month ago} other {# months ago}}",
     "yearsAgo": "{count, plural, one {# year ago} other {# years ago}}",
     "fromShop": "Their last dive with you.",

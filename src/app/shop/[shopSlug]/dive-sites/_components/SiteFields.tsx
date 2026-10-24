@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { EditorSection } from "@/components/editor/EditorSection";
 import { RequirementFields } from "@/components/RequirementFields";
+import { DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -14,6 +14,7 @@ import { formatDateWithYear } from "@/lib/format";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { TideStationEcho } from "@/lib/tide-stations";
 import type { TidePreference } from "@/lib/tides";
+import { ClosedEditorSection, OpenEditorSection } from "./EditorSections";
 import {
   type FieldGuideCatalogEntry,
   FieldGuideEditor,
@@ -25,7 +26,9 @@ import { SiteDiveFields } from "./SiteDiveFields";
 import { SiteForecastFields } from "./SiteForecastFields";
 import { SitePhotoFields } from "./SitePhotoFields";
 import {
+  SITE_FORM_OPEN_SECTIONS,
   SITE_FORM_SECTION_IDS,
+  SITE_FORM_SPANISH_ID,
   type SiteFormSection,
   siteFormSectionLabels,
   siteFormSectionOrder,
@@ -95,14 +98,14 @@ type SectionParts = {
  * so a refused submit re-renders nothing here and every value the staffer typed
  * survives.
  *
- * **Ten sections on hairlines, not fourteen blocks in four boxes** — ADR
- * 20260827-the-shops-shelves, the long-form editor pattern. The bordered
- * fieldsets are gone (the `<fieldset>` elements are not: a run of controls that
- * is genuinely one group still announces itself as one, it just has no border);
- * the sticky rail beside this form links to the section ids, and the sentence
- * beside Save names a section out of the same list. `site-form-sections.ts` is
- * that list, and the `Record<SiteFormSection, …>` below is what makes a section
- * in the rail with no fields under it a compile error.
+ * **Three sections open, the rest closed behind their names** (visual review
+ * 2026-10-24, A11, after ADR 20260827-the-shops-shelves' long-form editor
+ * pattern). The sections a briefing is edited for stand open on hairlines; the
+ * others are one list of disclosures under them, each closed and named, so the
+ * page is the length of what a staffer came to change. A closed section's
+ * controls stay in the form and post with Save. The sentence beside Save names
+ * a section out of `site-form-sections.ts`, and the `Record<SiteFormSection, …>`
+ * below is what makes a section with no fields under it a compile error.
  *
  * Nothing here is DiveDay's words about the site itself: every sentence a diver
  * reads off a briefing comes off the row a shop wrote (ADR
@@ -124,6 +127,7 @@ export function SiteFields({
   locale,
   timezone,
   briefAssist,
+  spanish,
   fieldGuideOn = true,
 }: {
   t: StaffTranslator;
@@ -157,6 +161,8 @@ export function SiteFields({
   timezone: string;
   /** Claude's "Draft from these fields" (site-brief), inside this form; absent while dark. */
   briefAssist?: ReactNode;
+  /** The briefing's Spanish boxes (edit only), closed behind a disclosure of their own. */
+  spanish?: ReactNode;
   /** The shop's field-guide switch (the Features page); off, its section is not drawn. */
   fieldGuideOn?: boolean;
 }) {
@@ -391,24 +397,51 @@ export function SiteFields({
     },
   };
 
+  const order = siteFormSectionOrder(fieldGuideOn);
+  const open = order.filter((section) => SITE_FORM_OPEN_SECTIONS.has(section));
+  const closed = order.filter((section) => !SITE_FORM_OPEN_SECTIONS.has(section));
   return (
     <>
-      {siteFormSectionOrder(fieldGuideOn).map((section, index) => {
+      {open.map((section, index) => {
         const parts = sections[section];
         return (
-          <EditorSection
+          <OpenEditorSection
             key={section}
             id={SITE_FORM_SECTION_IDS[section]}
             label={labels[section]}
             description={parts.description}
-            as={parts.grouped ? "fieldset" : "section"}
-            lead={index === 0}
+            grouped={parts.grouped}
+            first={index === 0}
             unsavedTag={t("shared.formDraft.unsavedSection")}
           >
             {parts.body}
-          </EditorSection>
+          </OpenEditorSection>
         );
       })}
+      <DisclosureRowList>
+        {closed.map((section) => {
+          const parts = sections[section];
+          return (
+            <ClosedEditorSection
+              key={section}
+              id={SITE_FORM_SECTION_IDS[section]}
+              label={labels[section]}
+              description={parts.description}
+              grouped={parts.grouped}
+            >
+              {parts.body}
+            </ClosedEditorSection>
+          );
+        })}
+        {spanish ? (
+          <ClosedEditorSection
+            id={SITE_FORM_SPANISH_ID}
+            label={t("diveSites.form.sections.spanish")}
+          >
+            {spanish}
+          </ClosedEditorSection>
+        ) : null}
+      </DisclosureRowList>
     </>
   );
 }
