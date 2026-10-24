@@ -16,6 +16,7 @@ import {
   pendingOfflineEventCount,
   rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
+import type { CopyCaveat } from "./controls";
 import { savedCopyReducer } from "./saved-copy";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useOfflineTenant } from "./use-offline-tenant";
@@ -95,6 +96,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   const deviceOnline = useDeviceOnline();
   const fallback = useMemo(() => offlineFallbackReason(searchParams), [searchParams]);
   const servedWithoutAnswer = fallback !== null && deviceOnline;
+  // **What the roll call says this copy may be missing** (issue #2980, domain
+  // reviews 2026-10-24). Kept apart from the header's wording above: offline,
+  // the header says "No signal", but the copy is just as stale, so the caveat
+  // stays, and only its instruction changes to the count on the boat.
+  const copyCaveat: CopyCaveat = !deviceOnline
+    ? "offline"
+    : servedWithoutAnswer
+      ? "unanswered"
+      : null;
   // Freshness (current/aging/stale) is computed inline at render time from
   // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
   // this component as the wall clock crosses the 15-minute or 4-hour
@@ -360,6 +370,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     reconcile,
     fallback,
     servedWithoutAnswer,
+    copyCaveat,
   };
 }
 

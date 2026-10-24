@@ -642,7 +642,7 @@ test("a copy opened because DiveDay was slow says so from the list on, and offer
   await expect(page.getByText(staff("shared.connectivity.unansweredWithCopy"))).toBeVisible();
   await expect(page.getByText(/DiveDay didn’t answer, so this is the list/)).toBeVisible();
   // Under the roll call: who may be missing from this copy (issue #2980).
-  await expect(page.getByText(/has no row here, so count heads/)).toBeVisible();
+  await expect(page.getByText(/one removed still has one/)).toBeVisible();
   await expect(page.getByText("Fresh copy")).toHaveCount(0);
   await expect(page.getByText(staff("shared.connectivity.online"), { exact: true })).toHaveCount(0);
   // DiveDay answers this time: the copy says so and offers the live list,

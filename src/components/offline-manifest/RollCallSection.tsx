@@ -94,7 +94,10 @@ export function OfflineRollCallSection({
 
       <section className="mt-8">
         <h2 className={`flex items-center gap-2 ${SUB_TITLE_CLASS}`}>
-          {rollCallComplete ? <StatusMark variant="success" size="md" /> : null}
+          {/* No all-clear mark beside a caveat: the list itself may be short. */}
+          {rollCallComplete && !controls.copyCaveat ? (
+            <StatusMark variant="success" size="md" />
+          ) : null}
           <span>
             {rollCallComplete
               ? t("shared.offlineManifest.single.rollCallCompleteHeading")
@@ -103,17 +106,21 @@ export function OfflineRollCallSection({
                 })}
           </span>
         </h2>
-        {/* **This copy may be missing someone** (issue #2980, option (a),
-            decided 2026-10-24). The worker chose it because DiveDay was
-            silent, so a walk-up seated after the save has no row below and
-            nothing here can count them. The line names the save time and asks
-            for a head count against the live list, ahead of the first row.
-            No count field and no live rows merged in. */}
-        {controls.servedWithoutAnswer ? (
+        {/* **This copy may be missing someone, or carry someone gone**
+            (issue #2980, option (a), decided 2026-10-24; domain reviews the
+            same day). A walk-up seated after the save has no row below, and a
+            seat cancelled since still has one. The line names the save time,
+            in its zone, and asks for a head count ahead of the first row:
+            against the live list once DiveDay answers, or on the boat with no
+            signal. No count field and no live rows merged in. */}
+        {controls.copyCaveat ? (
           <p className="mt-1 text-sm font-semibold text-pretty text-warning-strong">
-            {t("shared.offlineManifest.single.unansweredCountHeads", {
-              when: view.dateTime.format(new Date(view.envelope.snapshot.savedAt)),
-            })}
+            {t(
+              controls.copyCaveat === "offline"
+                ? "shared.offlineManifest.single.copyCaveatOffline"
+                : "shared.offlineManifest.single.copyCaveatUnanswered",
+              { when: view.savedAtZoned },
+            )}
           </p>
         ) : null}
         {showsDecompressionReminder ? (
