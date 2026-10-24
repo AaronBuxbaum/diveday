@@ -121,7 +121,6 @@
     "tripListLabel": "Upcoming trips",
     "monthNav": "Browse by month",
     "jumpToDay": "Jump to a day",
-    "spotsLeftUrgent": "{count, plural, one {Only # seat left} other {Only # seats left}}",
     "nextWithSpace": {
       "eyebrow": "Next boat with space",
       "earlierFull": "{count, plural, one {the {time} boat is full} other {the # boats before it are full}}",
@@ -3642,7 +3641,7 @@
     "nightDive": "Night Dive",
     "tomorrowTime": "Tomorrow · 7:30 AM",
     "fridayTime": "Friday · 7:30 PM",
-    "spotsLeft": "{count, plural, one {# seat left} other {# seats left}}",
+    "spotsLeft": "{count, plural, one {# seat} other {# seats}}",
     "full": "Full",
     "recap": {
       "label": "Dive recap",
@@ -3751,8 +3750,7 @@
       "reefSites": "Molasses Reef and French Reef",
       "reefPrice": "$95",
       "nightTime": "7:30 PM – 9:30 PM",
-      "nightPrice": "$120",
-      "onlyLeft": "{count, plural, one {Only # seat left} other {Only # seats left}}"
+      "nightPrice": "$120"
     },
     "waiverSigning": {
       "label": "Waiver",

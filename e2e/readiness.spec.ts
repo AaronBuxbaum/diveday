@@ -278,7 +278,7 @@ test.describe("staff-prepared trip", () => {
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("list", { name: "Upcoming trips" }).locator("li").filter({ hasText: title }),
-    ).toContainText("6 seats left");
+    ).toContainText("6 seats");
   });
 });
 

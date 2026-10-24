@@ -56,7 +56,7 @@ describe("BookSpotSection price currency (task 35)", () => {
       />,
     );
 
-    expect(screen.getByText(/MX\$1,300\.00 × 1 diver/)).toBeInTheDocument();
+    expect(screen.getByText("MX$1,300")).toBeInTheDocument();
   });
 
   it("does not divide a zero-decimal currency by a hundred", () => {
@@ -79,7 +79,7 @@ describe("BookSpotSection price currency (task 35)", () => {
       />,
     );
 
-    expect(screen.getByText(/¥13,000 × 1 diver/)).toBeInTheDocument();
+    expect(screen.getByText("¥13,000")).toBeInTheDocument();
   });
 
   it("still reads as dollars for a usd shop", () => {
@@ -100,7 +100,7 @@ describe("BookSpotSection price currency (task 35)", () => {
       />,
     );
 
-    expect(screen.getByText(/\$130\.00 × 1 diver/)).toBeInTheDocument();
+    expect(screen.getByText("$130")).toBeInTheDocument();
   });
 });
 
@@ -129,7 +129,7 @@ describe("BookSpotSection — the money says itself once", () => {
       />,
     );
 
-    expect(loudFigures()).toEqual(["$95.00"]);
+    expect(loudFigures()).toEqual(["$95"]);
     expect(screen.getByText("Due now")).toBeInTheDocument();
   });
 
@@ -151,7 +151,7 @@ describe("BookSpotSection — the money says itself once", () => {
       />,
     );
 
-    expect(loudFigures()).toEqual(["$95.00"]);
+    expect(loudFigures()).toEqual(["$95"]);
     expect(screen.getByText("Due at the shop")).toBeInTheDocument();
   });
 
@@ -420,7 +420,7 @@ describe("BookSpotSection rental gear at checkout", () => {
     // scale — the running "total due at checkout" line is gone with the other
     // four places this form used to say the money.
     expect(screen.getByText("Rental gear", { selector: "dt" })).toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$135.00"]);
+    expect(loudFigures()).toEqual(["$135"]);
   });
 
   it("shows no gear step when the shop hasn't priced any rental gear online", () => {

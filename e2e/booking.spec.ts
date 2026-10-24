@@ -69,18 +69,13 @@ test.describe("staff", () => {
     // the list locator above is scoped against, one step later in the flow.
     await page.waitForURL(/\/s\/blue-mantis\/trips\//);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await expect(page.getByText("6 seats left")).toBeVisible();
-    // Two spellings on purpose, one per job: the hero's "$120" is a price
-    // being *scanned*, which drops minor units it does not have
-    // (`formatMoneyScanned`, issue #769); the money block's "$120.00" is the
-    // arithmetic being *shown*, where the total carries its cents like the
-    // addends above it or the sum reads as rounding (principle 6; 2026-08-28
-    // diver-views review, finding 3).
-    await expect(page.getByText("$120", { exact: true })).toHaveCount(1);
-    // Twice inside the card: the fare line's value and the total it sums to.
-    await expect(page.getByLabel("Grab a seat").getByText("$120.00", { exact: true })).toHaveCount(
-      2,
-    );
+    await expect(page.getByText("6 seats", { exact: true })).toBeVisible();
+    // One spelling, twice (visual review 2026-10-24, B20): the hero's price
+    // and the card's pay line, both `formatMoneyScanned`. A lone diver with
+    // nothing added has no fare line, which would only repeat the pay line.
+    await expect(page.getByText("$120", { exact: true })).toHaveCount(2);
+    await expect(page.getByLabel("Grab a seat").getByText("$120", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("$120.00", { exact: true })).toHaveCount(0);
     await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
@@ -127,7 +122,7 @@ test.describe("staff", () => {
     // Both named spots are held atomically.
     await page.goto("/s/blue-mantis");
     const card = page.locator("li").filter({ hasText: title });
-    await expect(card.getByText("4 seats left").filter({ visible: true })).toBeVisible();
+    await expect(card.getByText("4 seats", { exact: true }).filter({ visible: true })).toBeVisible();
 
     // Staff sees the diver on the roster. Today is a work queue, so open the trip
     // from the schedule (staff cards link straight to the management view). This

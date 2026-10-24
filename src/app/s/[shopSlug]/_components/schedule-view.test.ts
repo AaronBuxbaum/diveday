@@ -160,9 +160,21 @@ describe("scheduleDayWords", () => {
 
 describe("scheduleSeatState", () => {
   it("words a full boat, a nearly full one and an open one", () => {
-    expect(scheduleSeatState(t, { capacity: 10, booked: 10 }).tone).toBe("full");
-    expect(scheduleSeatState(t, { capacity: 10, booked: 8 }).tone).toBe("low");
+    expect(scheduleSeatState(t, { capacity: 10, booked: 10 })).toEqual({
+      text: "Full",
+      tone: "full",
+    });
     expect(scheduleSeatState(t, { capacity: 10, booked: 2 }).tone).toBe("quiet");
+  });
+
+  /** Visual review 2026-10-24, B19: one neutral count, two seats as plainly as eight. */
+  it("words two seats as plainly as eight, with no urgent tone", () => {
+    expect(scheduleSeatState(t, { capacity: 10, booked: 8 })).toEqual({
+      text: "2 seats",
+      tone: "quiet",
+    });
+    expect(scheduleSeatState(t, { capacity: 10, booked: 9 }).text).toBe("1 seat");
+    expect(scheduleSeatState(t, { capacity: 10, booked: 2 }).text).toBe("8 seats");
   });
 });
 

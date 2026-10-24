@@ -16,7 +16,7 @@ import {
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
 } from "@/i18n/participant-labels";
 import type { DeskPayment } from "@/lib/desk-payment";
-import { formatMoneyCents } from "@/lib/format";
+import { formatMoneyScanned } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { type ParticipantType, rentsGear } from "@/lib/participant-types";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
@@ -501,7 +501,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
   } = context;
   const t = useTranslations("booking");
   const tRoot = useTranslations();
-  const money = (cents: number) => formatMoneyCents(cents, currency, locale);
+  const money = (cents: number) => formatMoneyScanned(cents, currency, locale);
   const [state, formAction] = useActionState(bookSpot.bind(null, tripRef), INITIAL_BOOKING_STATE);
   // `BookingPartyFields` owns the party-count control, so it reports changes
   // back up rather than this section duplicating that state — `MoneyBlock`

@@ -120,9 +120,7 @@ export default async function EmbedWidgetPage({
   const seats = (trip: { capacity: number; sellableCapacity: number; booked: number }) => {
     const label = capacityLabel(seatsOnSale(trip));
     if (label.kind === "full") return t("fallback.full");
-    return label.remaining <= 2
-      ? t("schedule.spotsLeftUrgent", { count: label.remaining })
-      : t("fallback.spotsLeft", { count: label.remaining });
+    return t("fallback.spotsLeft", { count: label.remaining });
   };
 
   let body: React.ReactNode;

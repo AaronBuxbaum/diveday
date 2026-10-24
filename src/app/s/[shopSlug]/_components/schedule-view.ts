@@ -196,19 +196,14 @@ export function scheduleDayWords(now: Date, locale: string, tz: string) {
 }
 
 /**
- * Seat state as a word plus the tone that decides whether it earns a badge.
- * Low inventory keeps the urgent wording the booking form itself switches to
- * ("Book the last seat") — never colour alone (WCAG 1.4.1).
+ * Seat state as one neutral count, or "Full" (visual review 2026-10-24, B19).
+ * Two seats read as plainly as twelve: the amber "Only 2 seats left" chip sold
+ * scarcity on a page whose job is to say what is on. The tone only says whether
+ * the row is full, which quiets the row's ink.
  */
 export function scheduleSeatState(t: DiverTranslator, trip: { capacity: number; booked: number }) {
   const label = capacityLabel(trip);
   if (label.kind === "full") return { text: t("fallback.full"), tone: "full" as const };
-  if (label.remaining <= 2) {
-    return {
-      text: t("schedule.spotsLeftUrgent", { count: label.remaining }),
-      tone: "low" as const,
-    };
-  }
   return { text: t("fallback.spotsLeft", { count: label.remaining }), tone: "quiet" as const };
 }
 
