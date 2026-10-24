@@ -456,10 +456,8 @@
     },
     "confirmationOnTheWay": "Your confirmation is on its way by email.",
     "confirmationWithWaiverOnTheWay": "Your confirmation is on its way by email. Signing your waiver is its first step.",
-    "alreadyDoor": {
-      "sendLink": "Send me my link",
-      "addSeat": "Bringing someone? Open your link and add a seat for them there."
-    },
+    "sentHeading": "We’ve emailed you",
+    "sentBody": "We sent a note to the address you gave. It says what happens next.",
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
     "continueToPayment": "Continue to payment",
     "alsoOnTheSchedule": "Also on the schedule",
@@ -5428,7 +5426,12 @@
     },
     "seatAlreadyHeld": {
       "subject": "You already have a seat on {tripTitle}",
-      "body": "Someone used a seat-claim link for {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
+      "body": "Someone used a seat-claim link for {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed.",
+      "bookingBody": "Someone tried to book {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
+    },
+    "partyNotBooked": {
+      "subject": "Your party for {tripTitle} wasn’t booked",
+      "body": "Your party for {tripTitle} on {date} with {shopName} wasn’t booked, because someone in it already holds a seat on that trip. To book everyone else, send the form again without them."
     },
     "tripBlowout": {
       "subject": "Trip canceled: {tripTitle}",

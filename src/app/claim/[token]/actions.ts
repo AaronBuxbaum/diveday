@@ -69,7 +69,7 @@ export async function claimSeatAction(token: string, formData: FormData) {
     if (outcome.reason === "invalid") redirect(base);
     if (outcome.reason === "already_booked") {
       const { held } = outcome;
-      if (held) after(() => tellSeatAlreadyHeld(db, held));
+      if (held) after(() => tellSeatAlreadyHeld(db, { ...held, attempt: "claim" }));
       redirect(sentPath(base));
     }
     redirect(

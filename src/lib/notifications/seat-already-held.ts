@@ -17,30 +17,72 @@ export type SeatAlreadyHeldInput = {
   tripTitle: string;
   startsAt: Date;
   timezone: string;
+  /** The claim link (#2381) or the public booking form (#2691). */
+  attempt: "claim" | "booking";
 };
 
 /**
- * "Someone used a seat-claim link with your address. You already have a seat on
- * Two-Tank Reef, so nothing changed." Names the seat the reader already holds
- * and nothing about anyone else's: not the claim's organizer, not the seat it
- * was for.
+ * "Someone used a seat-claim link with your address" (or "tried to book",
+ * from the public form). "You already have a seat on Two-Tank Reef, so nothing
+ * changed." Names the seat the reader already holds and nothing about anyone
+ * else's: not the organizer, not the seat or party the attempt was for.
  */
 export function seatAlreadyHeldEmail(input: SeatAlreadyHeldInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
-  const body = t("notifications.seatAlreadyHeld.body", {
+  const key =
+    input.attempt === "booking"
+      ? "notifications.seatAlreadyHeld.bookingBody"
+      : "notifications.seatAlreadyHeld.body";
+  const body = t(key, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,
     date,
   });
-  const bodyHtml = t("notifications.seatAlreadyHeld.body", {
+  const bodyHtml = t(key, {
     shopName: escapeHtml(input.shopName),
     tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
     date: escapeHtml(date),
   });
   return {
     subject: t("notifications.seatAlreadyHeld.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>`,
+  };
+}
+
+export type PartyNotBookedInput = {
+  locale: DiverLocale;
+  leadName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  timezone: string;
+};
+
+/**
+ * "Your party for Two-Tank Reef on Sat, Oct 24 wasn’t booked: someone in it
+ * already has a seat on that trip with Blue Mantis. Book again without them."
+ * To the lead of a party the data layer rolled back (#2691). Says that a member
+ * holds a seat, which is the whole reason nothing booked, and never which one.
+ */
+export function partyNotBookedEmail(input: PartyNotBookedInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.leadName, t("notifications.common.genericName"));
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const body = t("notifications.partyNotBooked.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+    date,
+  });
+  const bodyHtml = t("notifications.partyNotBooked.body", {
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
+    date: escapeHtml(date),
+  });
+  return {
+    subject: t("notifications.partyNotBooked.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>`,
   };

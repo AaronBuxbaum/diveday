@@ -435,7 +435,7 @@
     "src/app/api/webhooks/stripe/route.test.ts": 1873,
     "src/app/api/webhooks/stripe/route.ts": 923,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1052,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1044,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1266,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1065,
@@ -607,6 +607,12 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 513"
         }
+      },
+      {
+        "why": "issue #2691: the trip page reads ?sent=1 and returns the neutral already-held landing before the departure is read; the landing itself lives in _components/BookingSentLanding.tsx",
+        "files": {
+          "src/app/s/[shopSlug]/trips/[id]/page.tsx": "509 -> 513"
+        }
       }
     ],
     "src/app/onboard/page.tsx": 479,
@@ -614,7 +620,7 @@
     "src/app/pricing/page.tsx": 426,
     "src/app/ready/[token]/page.tsx": 652,
     "src/app/s/[shopSlug]/page.tsx": 869,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 509,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 513,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,

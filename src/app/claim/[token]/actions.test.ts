@@ -56,8 +56,10 @@ vi.mock("@/db/seat-already-held", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/seat-already-held")>();
   return {
     ...actual,
-    tellSeatAlreadyHeld: (db: never, input: { shopId: string; bookingId: string }) =>
-      actual.tellSeatAlreadyHeld(db, input, { provider: mail.current?.provider }),
+    tellSeatAlreadyHeld: (
+      db: never,
+      input: { shopId: string; bookingId: string; attempt: "claim" | "booking" },
+    ) => actual.tellSeatAlreadyHeld(db, input, { provider: mail.current?.provider }),
   };
 });
 

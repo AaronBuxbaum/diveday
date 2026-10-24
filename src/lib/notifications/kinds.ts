@@ -1581,6 +1581,34 @@ const seatAlreadyHeldSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   /** When the claim was tried; keys the send. */
   requestedAt: z.date(),
+  /**
+   * Which door the address was tried at: a seat-claim link (#2381) or the
+   * public booking form (#2691). Only the sentence differs.
+   */
+  attempt: z.enum(["claim", "booking"]),
+});
+
+/**
+ * **A public booking party did not book, because one member already holds a
+ * seat on the departure** (#2691, Aaron's 2026-10-24 decision). The data layer
+ * rolls back the whole party, and the form lands on a neutral page that names
+ * nobody, so the lead hears the outcome here, by email, in words that do not
+ * name which member holds the seat. Not queued; the sender throttles it per
+ * lead and departure.
+ */
+const partyNotBookedSchema = z.object({
+  kind: z.literal("party_not_booked"),
+  shopId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  leadName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** When the booking was tried; keys the send. */
+  requestedAt: z.date(),
 });
 
 const workOrderReadySchema = z.object({
@@ -2024,6 +2052,7 @@ export const notificationSchema = z
     bookingCancelledSchema,
     partyPaymentReceiptSchema,
     seatAlreadyHeldSchema,
+    partyNotBookedSchema,
     welcomeSchema,
     addressConfirmationSchema,
     passwordResetRequestSchema,
@@ -2186,6 +2215,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "bookkeeper_confirmation":
     case "bookkeeper_notice":
     case "seat_already_held":
+    case "party_not_booked":
     case "setup_request_receipt":
       return false;
     default:
@@ -2345,6 +2375,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // turn a loop of claims into a loop of mail (issue #2381).
     case "seat_already_held":
       return `seat-already-held/${notification.heldBookingId}/${Math.floor(notification.requestedAt.getTime() / 3_600_000)}`;
+    // Never queued, so this key is never written; exact for the attempt anyway.
+    case "party_not_booked":
+      return `party-not-booked/${notification.tripId}/${notification.requestedAt.toISOString()}`;
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;

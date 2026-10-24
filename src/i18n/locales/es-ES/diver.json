@@ -456,10 +456,8 @@
     },
     "confirmationOnTheWay": "Tu confirmación va en camino por correo.",
     "confirmationWithWaiverOnTheWay": "Tu confirmación va en camino por correo. Firmar tu exención es el primer paso.",
-    "alreadyDoor": {
-      "sendLink": "Envíame mi enlace",
-      "addSeat": "¿Vienes con alguien? Abre tu enlace y agrega una plaza para esa persona."
-    },
+    "sentHeading": "Te enviamos un correo",
+    "sentBody": "Enviamos un mensaje a la dirección que indicaste. Ahí dice qué sigue.",
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
     "continueToPayment": "Continuar al pago",
     "alsoOnTheSchedule": "También en el calendario",
@@ -5428,7 +5426,12 @@
     },
     "seatAlreadyHeld": {
       "subject": "Ya tienes una plaza en {tripTitle}",
-      "body": "Alguien usó un enlace para reclamar una plaza de {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
+      "body": "Alguien usó un enlace para reclamar una plaza de {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada.",
+      "bookingBody": "Alguien intentó reservar {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
+    },
+    "partyNotBooked": {
+      "subject": "No se reservó tu grupo para {tripTitle}",
+      "body": "No se reservó tu grupo para {tripTitle} el {date} con {shopName}, porque alguien del grupo ya tiene una plaza en ese viaje. Para reservar a los demás, envía el formulario otra vez sin esa persona."
     },
     "tripBlowout": {
       "subject": "Salida cancelada: {tripTitle}",
