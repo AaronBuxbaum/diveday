@@ -7,6 +7,7 @@ import { fileScopedShopContext } from "@/test/db";
 import {
   formBuddyTeam,
   formPartyTeams,
+  listTripBuddyTeamEvents,
   listTripBuddyTeams,
   partyConfirmKey,
   planPartyTeams,
@@ -521,6 +522,28 @@ describe("which parties one tap leaves for the divemaster", () => {
       expect(await tap(db, shop.id, trip.id, [partyConfirmKey(ids)])).toBe(1);
       expect(await teamedIds(db, shop.id, trip.id)).toEqual([[...ids].sort()]);
       expect((await planPartyTeams(db, shop.id, trip.id)).ageUnconfirmed).toEqual([]);
+    });
+
+    it("records the staffer's 18-or-over attestation on that team's trail line, and only there", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const couple = await party(db, shop.id, trip, [adult, adult]);
+      const unknown = await party(db, shop.id, trip, [undeclared, undeclared]);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey(unknown)])).toBe(2);
+      const teams = await listTripBuddyTeams(db, shop.id, trip.id);
+      const teamOf = (ids: string[]) =>
+        teams.find((team) =>
+          team.members.some((member) => member.kind === "diver" && ids.includes(member.bookingId)),
+        )?.teamId;
+      const events = await listTripBuddyTeamEvents(db, shop.id, trip.id);
+      expect(events.find((event) => event.teamId === teamOf(unknown))).toMatchObject({
+        action: "formed",
+        adultsConfirmed: true,
+      });
+      expect(events.find((event) => event.teamId === teamOf(couple))).toMatchObject({
+        action: "formed",
+        adultsConfirmed: false,
+      });
     });
 
     it("reads the confirmation whatever order its ids arrive in", async () => {

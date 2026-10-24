@@ -92,6 +92,7 @@
   "timelineBuddyMemberAdded": "Integrante agregado a la pareja de buceo",
   "timelineBuddyMemberRemoved": "Integrante quitado de la pareja de buceo",
   "timelineBuddyMembers": "Integrantes en ese momento: {names}",
+  "timelineBuddyAdultsConfirmed": "Confirmó que todos tienen 18 años o más",
   "timelineDescription": "Cada entrada de recuento de esta salida, y cada cambio de plazas o tripulación desde que el barco debía salir (su hora prevista, o el primer recuento de salida si fue antes), de la más antigua a la más reciente. Las entradas solo se agregan: una corrección agrega una línea y nunca reescribe otra.",
   "timelineEmpty": "No se ha registrado ningún pase de lista para esta salida.",
   "timelineHeading": "Cronología del pase de lista",
@@ -122,6 +123,6 @@
   "reportDeleted": "Borrador empezado por {creator}, eliminado sin presentar por {name} el {date}.",
   "reportAddenda": "{count, plural, =0 {Sin notas posteriores} one {# nota posterior} other {# notas posteriores}}",
   "footerHashVersion": "versión {version}",
-  "sailedWithSnag": "{item}: {note}. Anotado por {name}\u00a0· {date}",
+  "sailedWithSnag": "{item}: {note}. Anotado por {name} · {date}",
   "sailedWithSnagsHeading": "Pendiente en el barco al zarpar"
 }

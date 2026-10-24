@@ -4,6 +4,7 @@ import {
   type PartyMember,
   partyAgesUnconfirmed,
   partyLeftReason,
+  teamUpRefusal,
 } from "./party-teams";
 
 /**
@@ -189,5 +190,21 @@ describe("partyAgesUnconfirmed", () => {
     const party = [adult({ age: null }), adult({ age: null })];
     expect(partyLeftReason(FUN_DIVE, party)).toBeNull();
     expect(partyAgesUnconfirmed(party)).toBe(true);
+  });
+});
+
+/**
+ * Issue 2808: a tap that teamed nobody while a party waited on its tick says
+ * so, so the staffer is never left guessing why nothing happened.
+ */
+describe("teamUpRefusal", () => {
+  it("asks for a tick when nothing was teamed and a party waits on one", () => {
+    expect(teamUpRefusal(0, 1)).toBe("confirm-adults");
+  });
+
+  it("says nothing when the tap teamed someone, or nobody was waiting", () => {
+    expect(teamUpRefusal(1, 1)).toBeNull();
+    expect(teamUpRefusal(0, 0)).toBeNull();
+    expect(teamUpRefusal(2, 0)).toBeNull();
   });
 });

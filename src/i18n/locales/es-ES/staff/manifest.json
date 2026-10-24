@@ -187,8 +187,8 @@
   "buddyCameTogether": "Llegaron juntos: {parties}",
   "buddyCameAlone": "Llegaron solos: {names}",
   "buddyTeamUpParties": "Formar una pareja por grupo",
-  "buddyPartyConfirmHint": "En cada grupo de abajo alguien no tiene fecha de nacimiento ni la casilla “Menor de 18 años”. Marca un grupo para formar su pareja.",
-  "buddyPartyConfirmAdults": "{names} tienen todos 18 años o más",
+  "buddyPartyConfirmHint": "No hay fecha de nacimiento ni casilla “Menor de 18 años” para los buceadores nombrados entre paréntesis. Marca un grupo que sepas que es todo de adultos para formar su pareja.",
+  "buddyPartyConfirmAdults": "{names} tienen todos 18 años o más (sin edad registrada para {unknown})",
   "buddyPartyLeft": "Para que los emparejes tú: {names} ({reason})",
   "buddyPartyLeftReason": {
     "intro_course": "bautismo",
@@ -314,6 +314,7 @@
     "noteHint": "Los buceadores no ven esto."
   },
   "buddyErrorNotDiver": "Una pareja de buceo es solo de buceadores. Quien hace snorkel o va de acompañante no forma parte de una.",
+  "buddyErrorConfirmAdults": "No se formó ninguna pareja. Marca cada grupo que sepas que tiene 18 años o más y vuelve a tocar.",
   "participantType": {
     "diver": "Buceador",
     "snorkeler": "Snorkel",

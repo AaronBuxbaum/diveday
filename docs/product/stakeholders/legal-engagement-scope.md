@@ -44,8 +44,8 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
      card money the shop takes through DiveDay's Stripe Connect flow (bookings, invoices, packages)
      in its local calendar month, in place of the flat price; existing shops stay flat. The clause
      excludes tips, tax, pass-through fees, counter cash, money marked paid at the counter and
-     imported history; nets a refund against the month the money was taken when recorded before
-     that month's statement; promises a monthly statement, that the shop pays and never the diver,
+     imported history; nets a refund in the month the refund is recorded, on the first statement
+     written after it, carrying what that month cannot cover; promises a monthly statement, that the shop pays and never the diver,
      and 30 days' notice before any change. Questions: is the fee base disclosed adequately, do
      existing shops need notice of a plan they are not on, and does billing from payment records
      the shop already holds with us need a privacy-policy change? The ADR is

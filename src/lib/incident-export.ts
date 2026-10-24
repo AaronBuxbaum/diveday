@@ -382,6 +382,12 @@ export type IncidentTimelineEntry =
       teamNumber: number;
       memberNames: string[];
       recordedByName: string;
+      /**
+       * The recorder said everyone on the team is 18 or over, where nothing on
+       * file did (issue 2808). Present only when true, so a line without it
+       * hashes as it did before the field existed.
+       */
+      adultsConfirmed?: true;
     }
   /**
    * A seat or crew place added, removed or moved **once the boat was due out**
@@ -728,6 +734,7 @@ export type IncidentBuddyTeamEventInput = {
   action: "formed" | "dissolved" | "member_added" | "member_removed";
   memberNames: readonly string[];
   recordedByName: string;
+  adultsConfirmed?: boolean;
   occurredAt: Date;
   createdAt: Date;
 };
@@ -1081,6 +1088,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         teamNumber: teamNumberById.get(event.teamId) ?? 0,
         memberNames: [...event.memberNames],
         recordedByName: event.recordedByName,
+        ...(event.adultsConfirmed ? { adultsConfirmed: true as const } : {}),
       } satisfies IncidentTimelineEntry,
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,

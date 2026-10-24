@@ -4791,7 +4791,7 @@
         "ours": "{hasBase, select, yes {DiveDay cobra {base} al mes más el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.} other {DiveDay no tiene cuota mensual. Su tarifa es el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.}} No se suma nada al precio de tu cliente.",
         "closingBody": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay}}, mes a mes, y la exportación funciona cualquier día.",
         "whatCountsQuestion": "¿Qué cuenta para el {percent}?",
-        "whatCountsAnswer": "El dinero que tu centro cobra con tarjeta a través de DiveDay: las reservas hechas por internet, y las facturas y los paquetes que los buceadores pagan con tarjeta. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el dinero cobrado en el mostrador y el historial importado del sistema que usabas antes nunca cuentan. Un reembolso registrado antes de que cierre el mes se descuenta de ese mes."
+        "whatCountsAnswer": "El dinero que tu centro cobra con tarjeta a través de DiveDay: las reservas hechas por internet, y las facturas y los paquetes que los buceadores pagan con tarjeta. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el dinero cobrado en el mostrador y el historial importado del sistema que usabas antes nunca cuentan. Un reembolso se descuenta del mes en que se registra."
       }
     },
     "privacy": {
@@ -4947,7 +4947,7 @@
         "countsTerm": "Qué cuenta",
         "countsBody": "los pagos con tarjeta que tu centro recibe a través de DiveDay con Stripe Connect: reservas por internet, facturas y paquetes. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el efectivo del mostrador, el dinero marcado como pagado en el mostrador y el historial importado de otro sistema nunca cuentan.",
         "refundsTerm": "Reembolsos",
-        "refundsBody": "un reembolso se descuenta del dinero del mes en que se cobró el pago, si se registra antes de que se emita el estado de cuenta de ese mes. Un reembolso registrado después no se acredita.",
+        "refundsBody": "un reembolso se descuenta en el mes en que se registra el reembolso: sale del dinero con tarjeta del primer estado de cuenta mensual que se emita después de registrarlo, sea cual sea el mes en que se cobró el pago. Lo que el dinero con tarjeta de ese mes no cubra pasa al estado de cuenta siguiente, de modo que una comisión nunca queda por debajo de cero.",
         "statementTerm": "Un estado de cuenta mensual",
         "statementBody": "a principios del mes siguiente, Ajustes le muestra a tu centro el dinero del mes, la tasa y la tarifa, y la tarifa se cobra con tu suscripción a DiveDay.",
         "whoPaysTerm": "Quién paga la tarifa",

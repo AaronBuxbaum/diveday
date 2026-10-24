@@ -59,6 +59,9 @@ describe("/terms percent-plan clause", () => {
       expect(text).toContain(excluded);
     }
     expect(text).toContain("Refunds");
+    // Issue 3024: a refund recorded after a statement closed is credited, not lost.
+    expect(text).toContain("in the month the refund is recorded");
+    expect(text).not.toContain("not credited");
     expect(text).toContain("statement");
     expect(text).toContain("never the diver");
     expect(text).toContain("30 days");

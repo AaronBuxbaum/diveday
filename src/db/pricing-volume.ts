@@ -1,7 +1,7 @@
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt } from "drizzle-orm";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { percentFeeCents } from "@/lib/billing/pricing-plans";
-import { type MonthRef, monthKey } from "@/lib/calendar";
+import { type MonthRef, monthKey, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { shopMonthBounds } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
@@ -73,6 +73,16 @@ export function statementMonth(month: MonthRef): string {
  * for the same month returns the row the first wrote, figures unchanged, so a
  * re-run never re-reads a month whose late refund would move its fee after
  * Stripe was told.
+ *
+ * **A refund recorded after its month closed nets in the month it is
+ * recorded** (issue 3024). Each earlier statement keeps the card money it
+ * read (`monthCardCents`) and how much of it later statements have already
+ * credited (`refundedSinceCloseCents`); what its month reads now falls short
+ * of that by the refunds nobody has credited yet. This statement takes them,
+ * with what the one before carried, off its own card money, never below
+ * zero: the rest carries to the next statement. Reading cumulative figures
+ * rather than individual refunds is what keeps a refund from being credited
+ * twice or lost, however the closes and refunds interleave.
  */
 export async function closePricingMonth(
   db: AppDb,
@@ -89,32 +99,93 @@ export async function closePricingMonth(
   const month = statementMonth(input.month);
   const existing = await getPricingStatement(db, input.shopId, month);
   if (existing) return existing;
-  const volumeCents = await processedVolumeCents(
-    db,
-    input.shopId,
-    input.month,
-    input.timeZone,
-    input.freeUntil,
-    input.endedAt ?? null,
-  );
-  const now = nowDate();
-  await db
-    .insert(pricingVolumeStatements)
-    .values({
-      shopId: input.shopId,
-      month,
-      volumeCents,
-      basisPoints: input.terms.basisPoints,
-      feeCents: percentFeeCents(volumeCents, input.terms.basisPoints),
-      stripeMeterIdentifier: meterIdentifier(input.shopId, input.month),
-      createdAt: now,
-    })
-    .onConflictDoNothing({
-      target: [pricingVolumeStatements.shopId, pricingVolumeStatements.month],
-    });
-  const row = await getPricingStatement(db, input.shopId, month);
-  if (!row) throw new Error("closePricingMonth: statement missing after insert");
-  return row;
+  return db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .insert(pricingVolumeStatements)
+      .values({
+        shopId: input.shopId,
+        month,
+        volumeCents: 0,
+        basisPoints: input.terms.basisPoints,
+        feeCents: 0,
+        stripeMeterIdentifier: meterIdentifier(input.shopId, input.month),
+        createdAt: nowDate(),
+      })
+      .onConflictDoNothing({
+        target: [pricingVolumeStatements.shopId, pricingVolumeStatements.month],
+      })
+      .returning({ id: pricingVolumeStatements.id });
+    if (!claimed) {
+      const row = await getPricingStatement(tx, input.shopId, month);
+      if (!row) throw new Error("closePricingMonth: statement missing after insert");
+      return row;
+    }
+    const monthCardCents = await processedVolumeCents(
+      tx,
+      input.shopId,
+      input.month,
+      input.timeZone,
+      input.freeUntil,
+      input.endedAt ?? null,
+    );
+    const late = await creditLateRefunds(tx, input, month);
+    const lateRefundCents = late.newlyRefundedCents + late.carriedInCents;
+    const volumeCents = Math.max(0, monthCardCents - lateRefundCents);
+    const [row] = await tx
+      .update(pricingVolumeStatements)
+      .set({
+        monthCardCents,
+        lateRefundCents,
+        refundCarryCents: Math.max(0, lateRefundCents - monthCardCents),
+        volumeCents,
+        feeCents: percentFeeCents(volumeCents, input.terms.basisPoints),
+      })
+      .where(eq(pricingVolumeStatements.id, claimed.id))
+      .returning();
+    if (!row) throw new Error("closePricingMonth: statement missing after insert");
+    return row;
+  });
+}
+
+/**
+ * Re-read every earlier statement's month, mark what has been refunded since
+ * it closed as credited, and return that with the carry of the latest one.
+ */
+async function creditLateRefunds(
+  tx: DbExecutor,
+  input: { shopId: string; timeZone: string; freeUntil: Date | null },
+  month: string,
+): Promise<{ newlyRefundedCents: number; carriedInCents: number }> {
+  const earlier = await tx
+    .select()
+    .from(pricingVolumeStatements)
+    .where(
+      and(
+        eq(pricingVolumeStatements.shopId, input.shopId),
+        lt(pricingVolumeStatements.month, month),
+      ),
+    )
+    .orderBy(desc(pricingVolumeStatements.month));
+  let newlyRefundedCents = 0;
+  for (const statement of earlier) {
+    const ref = parseMonthKey(statement.month.slice(0, 7));
+    if (!ref) throw new Error(`closePricingMonth: unreadable month ${statement.month}`);
+    const readsNow = await processedVolumeCents(
+      tx,
+      input.shopId,
+      ref,
+      input.timeZone,
+      input.freeUntil,
+    );
+    const newly = statement.monthCardCents - statement.refundedSinceCloseCents - readsNow;
+    if (newly <= 0) continue;
+    newlyRefundedCents += newly;
+    await tx
+      .update(pricingVolumeStatements)
+      .set({ refundedSinceCloseCents: statement.refundedSinceCloseCents + newly })
+      .where(eq(pricingVolumeStatements.id, statement.id));
+  }
+  return { newlyRefundedCents, carriedInCents: earlier[0]?.refundCarryCents ?? 0 };
 }
 
 export async function getPricingStatement(

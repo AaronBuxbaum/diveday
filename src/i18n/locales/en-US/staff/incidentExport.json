@@ -92,6 +92,7 @@
   "timelineBuddyMemberAdded": "Buddy team member added",
   "timelineBuddyMemberRemoved": "Buddy team member removed",
   "timelineBuddyMembers": "Members at that moment: {names}",
+  "timelineBuddyAdultsConfirmed": "Confirmed everyone is 18 or over",
   "timelineDescription": "Every roll-call entry for this departure, and every change to its seats or crew from when the boat was due out (its scheduled start, or the first departure roll call if earlier), oldest first. Entries are append-only, so a correction adds a line and never rewrites one.",
   "timelineEmpty": "No roll-call entries have been recorded for this departure.",
   "timelineHeading": "Roll-call timeline",
@@ -122,6 +123,6 @@
   "reportDeleted": "Draft started by {creator}, deleted unfiled by {name} on {date}.",
   "reportAddenda": "{count, plural, =0 {No later notes} one {# later note} other {# later notes}}",
   "footerHashVersion": "version {version}",
-  "sailedWithSnag": "{item}: {note}. Noted by {name}\u00a0· {date}",
+  "sailedWithSnag": "{item}: {note}. Noted by {name} · {date}",
   "sailedWithSnagsHeading": "Open on the boat when it sailed"
 }
