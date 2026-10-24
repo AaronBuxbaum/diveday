@@ -65,7 +65,8 @@ export function ReadyOfflineCopy({
       ) : null}
       {saved === "kept" ? (
         <p className="mt-2 text-sm text-muted">
-          {copy.savedNote}{" "}
+          {/* Offline, the note above already says this is the saved copy. */}
+          {offline ? null : `${copy.savedNote} `}
           <button
             type="button"
             onClick={remove}

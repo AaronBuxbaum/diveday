@@ -92,5 +92,7 @@ describe("ReadyOfflineCopy", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     render(<ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} />);
     expect(screen.getByRole("button", { name: COPY.remove })).toBeTruthy();
+    // Said once: the offline note already says this is the saved copy.
+    expect(screen.queryByText(COPY.savedNote, { exact: false })).toBeNull();
   });
 });
