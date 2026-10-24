@@ -617,7 +617,7 @@
     "lunchNoteAdd": "Add a lunch note",
     "lunchNoteEdit": "Edit lunch note",
     "lunchNoteLabel": "Lunch preference",
-    "lunchNoteHint": "For the galley only. A food allergy is medical: it belongs in the diver’s medical alert for the crew, not here.",
+    "lunchNoteHint": "For the galley only. A food allergy is medical: it belongs in the diver’s medical alert for the crew, not here. If there is no alert yet, tell the crew at the briefing yourself.",
     "lunchNotePlaceholder": "Vegetarian, halal, no pork…",
     "lunchNoteSave": "Save note",
     "saving": "Saving…",
