@@ -471,6 +471,23 @@ export const waiverRecords = pgTable(
      * Outside the seal; a count of attempts, not evidence.
      */
     doctorUnlockFailures: integer("doctor_unlock_failures").notNull().default(0),
+    /**
+     * **The signed doctor's form the diver sent from the doctor's page**
+     * (issue #2797, ADR 20261024-diver-sent-doctors-form), re-stored under the
+     * private `medical-clearances` prefix exactly like the evaluation staff
+     * attach. Not `medical_clearance_document_url`: that column is evidence
+     * of a recorded answer (`waiver_records_medical_clearance_attributed`),
+     * and this is a file nobody has answered yet.
+     *
+     * One per release, while it waits on a physician. Recording the answer
+     * empties it: the staffer either uses it as the evaluation (moved into
+     * `medical_clearance_document_url`) or attaches their own evidence, and
+     * then this copy is queued for deletion. Destroyed by `anonymizeDiver`.
+     * Outside the seal and out of the export bundle, like the evaluation.
+     */
+    diverMedicalFormUrl: text("diver_medical_form_url"),
+    /** When the diver sent it. Kept after the file is used or deleted: the fact, not the document. */
+    diverMedicalFormSentAt: timestamp("diver_medical_form_sent_at", { withTimezone: true }),
     /** The shop owner who ordered the erasure — see `people.anonymized_by_person_id`. */
     anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
     /**
@@ -543,6 +560,18 @@ export const waiverRecords = pgTable(
         ${table.medicalClearanceEvaluatedOn} is not null
         and (${table.medicalClearanceDocumentUrl} is not null
           or ${table.medicalClearancePhysicianName} is not null))`,
+    ),
+    // A doctor's form the diver sent is only ever for a referral, carries the
+    // day it arrived, and is gone once a physician's answer is recorded: used
+    // as the evaluation or deleted (issue #2797). The answered record's
+    // evidence is `medical_clearance_document_url`, never this column.
+    check(
+      "waiver_records_diver_medical_form_held",
+      sql`${table.diverMedicalFormUrl} is null or (
+        ${table.diverMedicalFormSentAt} is not null
+        and ${table.medicalReviewRequired}
+        and ${table.medicalClearedAt} is null
+        and ${table.medicalClearanceDeclinedAt} is null)`,
     ),
     // An erased address stays erased: no writer may put one back on a release
     // the guardian asked to be taken off (H-103, issue #1673).

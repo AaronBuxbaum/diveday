@@ -13,6 +13,7 @@ import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { storeMedicalClearanceDocument } from "@/lib/storage";
+import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
 
 /**
@@ -26,6 +27,8 @@ const evaluationForm = z.object({
   medicalClearanceDocument: formValue(),
   // A checkbox: present ("on") only when ticked.
   earlierLetterConfirmed: text(),
+  // A checkbox carrying the release whose diver-sent form to use (issue #2797).
+  diverFormRecordId: trimmedText(),
 });
 
 /**
@@ -177,6 +180,9 @@ export async function recordMedicalClearanceAction(
     documentUrl,
     // Read by the domain only when the letter predates the open referral.
     earlierLetterConfirmed: evaluation.earlierLetterConfirmed === "on",
+    // Narrowed to an id here; the domain checks it is this diver's unanswered
+    // hold at this shop, and ignores it beside an uploaded file.
+    diverFormRecordId: uuidParam(evaluation.diverFormRecordId) ?? null,
   });
   if (!result.ok && documentUrl) {
     await queueAndAttemptMediaDeletion(db, {

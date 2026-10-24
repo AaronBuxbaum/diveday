@@ -490,6 +490,27 @@ export function WaiverGroup({
               </a>
             </p>
           ) : null}
+          {/* **The signed form the diver sent from the doctor's page** (issue
+            #2797), where the answer is recorded. Every staffer who may record
+            the answer may open it (`canReadDiverMedicalForm`), so the link is
+            drawn for whoever sees this control; each open goes on the trail. */}
+          {heldForMedical && diver.diverMedicalForm ? (
+            <p className="px-5 pb-3 text-sm sm:px-6">
+              <a
+                href={`/api/medical-clearances/${diver.diverMedicalForm.recordId}/diver-form`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                {t("divers.waiver.openDiverForm", {
+                  date: formatCalendarDate(
+                    calendarDateInTimezone(diver.diverMedicalForm.sentAt, timezone),
+                    locale,
+                  ),
+                })}
+              </a>
+            </p>
+          ) : null}
           {heldForMedical ? (
             <div className={FILE_ROW_INSET}>
               <MedicalClearanceControl
@@ -499,7 +520,9 @@ export function WaiverGroup({
                   diver.medicalEarlierReferral
                     ? formatCalendarDate(diver.medicalEarlierReferral.on, locale)
                     : null,
+                  Boolean(diver.diverMedicalForm),
                 )}
+                diverFormRecordId={diver.diverMedicalForm?.recordId ?? null}
                 // The shop's own today, so the date box cannot offer tomorrow: a
                 // Key Largo evening is already tomorrow in UTC, and the reader's
                 // browser zone is nobody's business here.

@@ -752,6 +752,9 @@ async function scrubWaiverRecords(
     // certification sighting below, and for the same reason: it is the shop's
     // record of an act it performed, not a document about this person.
     await retire("waiver_document", record.medicalClearanceDocumentUrl);
+    // The signed doctor's form the diver sent and nobody has answered yet
+    // (issue #2797): the same document, a step earlier.
+    await retire("waiver_document", record.diverMedicalFormUrl);
 
     const [stripped] = await tx
       .update(waiverRecords)
@@ -785,6 +788,7 @@ async function scrubWaiverRecords(
         importSourceDocumentUrl: null,
         importSourceMedicalDocumentUrl: null,
         medicalClearanceDocumentUrl: null,
+        diverMedicalFormUrl: null,
         // The URL *is* the capability. A live pending link would let its bearer
         // complete a fresh, un-erased record against this same person after the
         // erasure, so the hash is rotated to a value no issued token maps to,

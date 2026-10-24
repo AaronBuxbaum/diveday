@@ -415,5 +415,6 @@ script again.
 | 20261022-pricing-ab-test | Test a percent-of-volume plan against… |
 | 20261023-claude-call-content | DiveDay keeps what each Claude… |
 | 20261023-last-known-dive | A diver's last known dive… |
+| 20261024-diver-sent-doctors-form | A referred diver sends the… |
 
 <!-- adr-index:end -->

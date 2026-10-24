@@ -55,7 +55,7 @@ describe("getDoctorReferral", () => {
   it("carries the name and a locked answers section, never the date of birth or an answer", async () => {
     const { db, person, record } = await signed(medicalReferralAnswers);
     const referral = await getDoctorReferral(db, record);
-    expect(referral).toEqual({ fullName: person.fullName, answers: "locked" });
+    expect(referral).toEqual({ fullName: person.fullName, answers: "locked", formSent: false });
     expect(JSON.stringify(referral)).not.toContain("1984");
   });
 
