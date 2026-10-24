@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
@@ -78,6 +78,8 @@ export function ScheduleFilters({
   canDiveFilter,
   hideAboveFilter,
   copy,
+  chips = null,
+  monthRail = null,
 }: {
   embed: boolean;
   month: string | null;
@@ -99,7 +101,12 @@ export function ScheduleFilters({
   canDiveFilter: string | null;
   hideAboveFilter: boolean;
   copy: ScheduleFiltersCopy;
+  /** The shop's lens chips, which lead the row. */
+  chips?: ReactNode;
+  /** The month link, at the row's end. */
+  monthRail?: ReactNode;
 }) {
+  const panelId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
@@ -119,87 +126,103 @@ export function ScheduleFilters({
       {embed ? <input type="hidden" name="embed" value="1" /> : null}
       {month ? <input type="hidden" name="month" value={month} /> : null}
       {lens ? <input type="hidden" name="lens" value={lens} /> : null}
-      <details
-        open={open}
-        onToggle={(event) => setOpen(event.currentTarget.open)}
-        className="group/filters"
-      >
-        <summary className="-mx-2 inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted select-none transition-brand [&::-webkit-details-marker]:hidden hover:text-primary">
-          <DisclosureCaret className="group-open/filters:rotate-90" />
+      {/* **One filter row** (visual review 2026-10-24, B18): the shop's
+          chips, then one "More filters" disclosure holding the rest of the
+          controls, then the month link at the row's end. The form is the row,
+          so the list still follows it directly (`form + ul`). The disclosure
+          is a button rather than a `<details>` so its panel can take the
+          row's full width beneath the chips; it wears the diver pages' one
+          disclosure face, the chevron that turns open (B35). */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {chips ? <div className="min-w-0 max-w-full">{chips}</div> : null}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((was) => !was)}
+          className="group/filters inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-brand hover:text-primary focus-visible:focus-ring"
+        >
           {copy.disclosure}
-        </summary>
+          <DisclosureCaret
+            direction="down"
+            className="size-4 group-aria-expanded/filters:rotate-180"
+          />
+        </button>
+        {monthRail ? <div className="ms-auto">{monthRail}</div> : null}
+      </div>
+      <div id={panelId} hidden={!open} className="mt-3">
         {/* A column below `sm`: wrapped by the selects' own widths, a phone
-            got two selects ending 49px apart and a checkbox riding up beside
-            the second, three ragged rows. */}
-        <div className="mt-3 flex flex-wrap items-end gap-3 max-sm:flex-col max-sm:items-stretch">
-          <FieldGrid columns={1} className="min-w-40">
-            <Field label={copy.tripType}>
-              <select
-                name="tripType"
-                defaultValue={tripTypeFilter ?? ""}
-                onChange={submit}
-                // The e2e suite waits on this before relying on change-to-submit —
-                // the deterministic signal that the auto-apply handlers are live.
-                data-hydrated={hydrated ? "true" : undefined}
-                className={controlClass}
-              >
-                <option value="">{copy.allTrips}</option>
-                <option value="fun_dive">{copy.funDive}</option>
-                <option value="course">{copy.course}</option>
-              </select>
-            </Field>
-          </FieldGrid>
-          {/* The one thing a diver arriving here knows about themselves, and until
-              now the one thing the filters never asked. Unsaid by default: this is
-              an anonymous page, the answer is a fact about a person, and it is
-              carried in the URL and nowhere else. */}
-          <FieldGrid columns={1} className="min-w-44">
-            <Field label={copy.canDive}>
-              <select
-                name="canDive"
-                defaultValue={canDiveFilter ?? ""}
-                onChange={submit}
-                className={controlClass}
-              >
-                <option value="">{copy.canDiveUnsaid}</option>
-                {copy.canDiveLevels.map((level) => (
-                  <option key={level.value} value={level.value}>
-                    {level.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </FieldGrid>
-          <ChoiceRow
-            type="checkbox"
-            name="hasSpace"
-            value="1"
-            defaultChecked={hasSpaceFilter}
-            onChange={submit}
-            className="text-sm"
-          >
-            {copy.hasSpace}
-          </ChoiceRow>
-          {/* Opt-in, and only once a level is stated. Marking rather than hiding is
-              the default because a shop will happily take an Open Water diver on an
-              Advanced charter as a guided dive, or sell them the specialty — a
-              filter that silently removes those trips costs the shop the sale and
-              the diver the option. This is for the reader who wants the shorter
-              list anyway. */}
-          {canDiveFilter ? (
+              got two selects ending 49px apart and a checkbox riding up beside
+              the second, three ragged rows. */}
+          <div className="mt-3 flex flex-wrap items-end gap-3 max-sm:flex-col max-sm:items-stretch">
+            <FieldGrid columns={1} className="min-w-40">
+              <Field label={copy.tripType}>
+                <select
+                  name="tripType"
+                  defaultValue={tripTypeFilter ?? ""}
+                  onChange={submit}
+                  // The e2e suite waits on this before relying on change-to-submit —
+                  // the deterministic signal that the auto-apply handlers are live.
+                  data-hydrated={hydrated ? "true" : undefined}
+                  className={controlClass}
+                >
+                  <option value="">{copy.allTrips}</option>
+                  <option value="fun_dive">{copy.funDive}</option>
+                  <option value="course">{copy.course}</option>
+                </select>
+              </Field>
+            </FieldGrid>
+            {/* The one thing a diver arriving here knows about themselves, and until
+                now the one thing the filters never asked. Unsaid by default: this is
+                an anonymous page, the answer is a fact about a person, and it is
+                carried in the URL and nowhere else. */}
+            <FieldGrid columns={1} className="min-w-44">
+              <Field label={copy.canDive}>
+                <select
+                  name="canDive"
+                  defaultValue={canDiveFilter ?? ""}
+                  onChange={submit}
+                  className={controlClass}
+                >
+                  <option value="">{copy.canDiveUnsaid}</option>
+                  {copy.canDiveLevels.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      {level.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </FieldGrid>
             <ChoiceRow
               type="checkbox"
-              name="hideAbove"
+              name="hasSpace"
               value="1"
-              defaultChecked={hideAboveFilter}
+              defaultChecked={hasSpaceFilter}
               onChange={submit}
               className="text-sm"
             >
-              {copy.hideAboveLevel}
+              {copy.hasSpace}
             </ChoiceRow>
-          ) : null}
-        </div>
-      </details>
+            {/* Opt-in, and only once a level is stated. Marking rather than hiding is
+                the default because a shop will happily take an Open Water diver on an
+                Advanced charter as a guided dive, or sell them the specialty — a
+                filter that silently removes those trips costs the shop the sale and
+                the diver the option. This is for the reader who wants the shorter
+                list anyway. */}
+            {canDiveFilter ? (
+              <ChoiceRow
+                type="checkbox"
+                name="hideAbove"
+                value="1"
+                defaultChecked={hideAboveFilter}
+                onChange={submit}
+                className="text-sm"
+              >
+                {copy.hideAboveLevel}
+              </ChoiceRow>
+            ) : null}
+          </div>
+      </div>
     </QueryForm>
   );
 }

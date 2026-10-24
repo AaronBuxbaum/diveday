@@ -50,7 +50,7 @@ export function PublicShopHeader({
   setLocale,
   languagePickerCopy,
 }: {
-  shop: { slug: string; name: string };
+  shop: { slug: string; name: string; logoUrl?: string | null };
   navAriaLabel: string;
   navItems: readonly PublicShopNavItem[];
   /** The language this page was written in — the one marked as in force. */
@@ -79,8 +79,18 @@ export function PublicShopHeader({
         <Link
           href={publicSchedulePath(shop.slug)}
           // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
-          className="font-brand-display flex min-h-11 min-w-0 items-center text-lg font-semibold tracking-tight"
+          className="font-brand-display flex min-h-11 min-w-0 items-center gap-2.5 text-lg font-semibold tracking-tight"
         >
+          {/* The shop's logo is the nav's mark beside its name (visual review
+              2026-10-24, B16); it stood as an orphan tile beside the hero. */}
+          {shop.logoUrl ? (
+            // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
+            <img
+              src={shop.logoUrl}
+              alt=""
+              className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
+            />
+          ) : null}
           <span className="truncate">{shop.name}</span>
         </Link>
       }

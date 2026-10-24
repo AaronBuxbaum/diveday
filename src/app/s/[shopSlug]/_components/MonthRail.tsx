@@ -21,15 +21,18 @@ export function MonthRail({
   month,
   previous,
   next,
+  className = "mb-4",
 }: {
   "aria-label": string;
   /** The month being read, already in the diver's words. */
   month: string;
   previous: { href: string; label: string } | null;
   next: { href: string; label: string } | null;
+  /** Placement only. */
+  className?: string;
 }) {
   return (
-    <section aria-label={label} className="mb-4 flex flex-wrap items-center gap-2">
+    <section aria-label={label} className={`flex flex-wrap items-center gap-2 ${className}`}>
       <p className="text-base font-semibold">{month}</p>
       {previous ? (
         <Link

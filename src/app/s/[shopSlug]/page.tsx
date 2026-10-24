@@ -377,14 +377,7 @@ export default async function SchedulePage({
           schedule that issue #805 made it. */}
       {isEmbed ? null : (
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
-          {shop.logoUrl ? (
-            // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
-            <img
-              src={shop.logoUrl}
-              alt=""
-              className="size-16 shrink-0 rounded-inset border border-border bg-surface object-cover"
-            />
-          ) : null}
+          {/* The logo is the nav's mark (B16), never a tile beside the hero. */}
           {/* **The next boat beside the shop, from `lg` up.** Stacked, the
               photograph, its name band and the next-boat card filled the whole
               first screen of a 1280×900 window, and the schedule a diver came
@@ -509,71 +502,23 @@ export default async function SchedulePage({
             </div>
           )}
 
-          {/* The month and its days share one line from `sm` up: stacked,
-              each took a full row of blank before the first boat. */}
-          <div className="sm:flex sm:flex-wrap sm:items-center sm:gap-x-6">
-            {hasUpcoming && !isEmbed && (prevMonthKey || nextMonthKey || explicitMonth) ? (
-              <MonthRail
-                aria-label={t("schedule.monthNav")}
-                month={monthLabel(currentMonth, locale)}
-                {...monthRailSides(shopSlug, prevMonthKey, nextMonthKey, filterSuffix, t)}
-              />
-            ) : null}
-
-            {/* The week's days, one tap from each (UX audit #18): under the
-                month rail, the other date control, and above the lens rail and
-                the filter form, which must stay directly before the list. */}
-            {showsWeekLedger && !isEmbed ? (
-              <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
-            ) : null}
-          </div>
-
-          {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2
-              (issue #1162): the shop's trip tags, as a row
-              of views onto the list below.
-
-              **Above the filter form, never between it and the list.** Seven
-              assertions across `e2e/schedule-filters.spec.ts` and
-              `e2e/trip-admission.spec.ts` address the departures as the `ul`
-              directly after the form, and an element sibling in between breaks
-              every one of them silently; `page.composition.test.ts` pins the
-              order. And never inside the frame: `FilterChips` renders a `<nav>`
-              landmark, and `?embed=1` promises the host page zero navigation
-              landmarks. */}
-          {hasUpcoming && !isEmbed && lenses.length > 0 ? (
-            <FilterChips
-              label={t("schedule.lenses.railLabel")}
-              className="mb-4"
-              chips={[
-                {
-                  key: "all",
-                  href: lensHref(null),
-                  active: !activeLens,
-                  label: t("schedule.lenses.all"),
-                },
-                // The shop's own word, verbatim and untranslated — the same
-                // contract as a boat's line or a site's fit tone. Only the reset
-                // chip and the rail's accessible name are DiveDay's to say.
-                ...lenses.map((entry) => ({
-                  key: entry.slug,
-                  href: lensHref(entry.slug),
-                  active: activeLens?.id === entry.id,
-                  label: entry.name,
-                })),
-              ]}
-            />
+          {/* The week's days, one tap from each (UX audit #18), over the same
+              days the list below runs (B18). */}
+          {showsWeekLedger && !isEmbed ? (
+            <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
           ) : null}
 
-          {/* No filters in the frame. A month pager and a "has space" checkbox are
-              page furniture inside a 900px window whose whole job is "here is
-              what's next" — and every control in there is one more thing competing
-              with the shop's own page around it (issue #805). */}
+          {/* **One filter row** (visual review 2026-10-24, B18): the lens
+              chips (ADR 20260904-reef-all-the-way-down, decision 2), the "More
+              filters" disclosure, and the month link at the row's end, all
+              inside the filter form, which must stay directly before the list:
+              `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts`
+              address the departures as `form + ul`. None of it renders in the
+              frame (issue #805): `FilterChips` is a `<nav>` landmark and
+              `?embed=1` promises the host page none. The URL carries the
+              filters and the list re-renders server-side (ADR
+              20260812-javascript-is-required). */}
           {hasUpcoming && !isEmbed ? (
-            // Server-fed, same house pattern as the roster search in
-            // AddDiverSection.tsx: the URL carries the filters and the list below
-            // re-renders filtered. Changing a filter submits the form itself —
-            // there is no Apply button for anyone (ADR
-            // 20260812-javascript-is-required).
             <ScheduleFilters
               embed={isEmbed}
               month={month ?? null}
@@ -583,6 +528,38 @@ export default async function SchedulePage({
               canDiveFilter={canDiveFilter ?? null}
               hideAboveFilter={hideAboveFilter}
               copy={scheduleFilterCopy(t)}
+              chips={
+                lenses.length > 0 ? (
+                  <FilterChips
+                    label={t("schedule.lenses.railLabel")}
+                    chips={[
+                      {
+                        key: "all",
+                        href: lensHref(null),
+                        active: !activeLens,
+                        label: t("schedule.lenses.all"),
+                      },
+                      // The shop's own word, verbatim and untranslated.
+                      ...lenses.map((entry) => ({
+                        key: entry.slug,
+                        href: lensHref(entry.slug),
+                        active: activeLens?.id === entry.id,
+                        label: entry.name,
+                      })),
+                    ]}
+                  />
+                ) : null
+              }
+              monthRail={
+                prevMonthKey || nextMonthKey || explicitMonth ? (
+                  <MonthRail
+                    aria-label={t("schedule.monthNav")}
+                    month={monthLabel(currentMonth, locale)}
+                    className=""
+                    {...monthRailSides(shopSlug, prevMonthKey, nextMonthKey, filterSuffix, t)}
+                  />
+                ) : null
+              }
             />
           ) : null}
 

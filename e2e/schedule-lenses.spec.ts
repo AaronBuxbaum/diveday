@@ -29,16 +29,16 @@ const nextBoat = (page: Page) => page.getByRole("region", { name: "Next boat wit
 const list = (page: Page) => page.locator("form + ul");
 
 /**
- * **The filters live behind one quiet "Filter" disclosure** (2026-09-17). The
- * rail at rest is the shop's own lens chips; the trip-type select, the
- * "what can you dive?" select and the two checkboxes are the advanced ask and
- * sit inside the form's own `<details>`. A URL that already carries one of
+ * **The filters live behind one quiet "More filters" disclosure** (2026-09-17;
+ * one row with the chips and the month link since 2026-10-24). The rail at
+ * rest is the shop's own lens chips; the trip-type select, the "what can you
+ * dive?" select and the two checkboxes are the advanced ask and sit in the
+ * form's own panel. A URL that already carries one of
  * those four parameters paints it open, so this opens it only when it is shut.
  *
  * Addressed by `page.locator`, not `getByLabel`/`getByRole`: `e2e/fixtures.ts`
  * filters those three to visible elements, and the point here is the control
- * that is not visible yet. `<summary>` has no implicit role for `getByRole` to
- * find either.
+ * that is not visible yet.
  */
 async function openFilters(page: Page) {
   const tripType = page.locator('select[name="tripType"]');
@@ -47,7 +47,7 @@ async function openFilters(page: Page) {
   // need the control on screen.
   await expect(tripType).toHaveAttribute("data-hydrated", "true");
   if (!(await tripType.isVisible())) {
-    await page.locator('form:has(select[name="tripType"]) summary').click();
+    await page.locator('form:has(select[name="tripType"]) button[aria-expanded]').click();
   }
   await expect(page.getByLabel("Trip type")).toBeVisible();
 }

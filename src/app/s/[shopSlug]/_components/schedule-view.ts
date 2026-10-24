@@ -394,5 +394,28 @@ export function scheduleNextBoat({
    */
   const skippedBoats = nextBoat ? visibleUpcoming.indexOf(nextBoat) : 0;
   const firstSkippedBoat = skippedBoats > 0 ? visibleUpcoming[0] : null;
-  return { nextBoat, filteredView, skippedBoats, firstSkippedBoat };
+  return {
+    nextBoat: nextBoatCardShows(nextBoat, visibleUpcoming) ? nextBoat : null,
+    filteredView,
+    skippedBoats,
+    firstSkippedBoat,
+  };
+}
+
+/**
+ * **Whether the "Next boat with space" card earns its place** (visual review
+ * 2026-10-24, B17): only when the boat it pins is not the list's first row.
+ * When it is, the card repeated the row directly beneath it, same trip, time,
+ * price, seats and Book button. It shows when the first row is full (the card
+ * steps over it) or the next boat with space sails on a later day than the
+ * list's first; both mean the boat is not `visibleUpcoming[0]`, the row the
+ * day strip and the list start on.
+ */
+export function nextBoatCardShows(
+  nextBoat: { id: string } | null,
+  visibleUpcoming: readonly { id: string }[],
+): boolean {
+  if (!nextBoat) return false;
+  const first = visibleUpcoming[0];
+  return first !== undefined && first.id !== nextBoat.id;
 }
