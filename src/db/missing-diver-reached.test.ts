@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { readFileSync } from "node:fs";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
@@ -246,5 +247,79 @@ describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
     expect(to(clears, "incident_missing_diver_found").sort()).toEqual(
       [ownerEmail, secondEmail].sort(),
     );
+  });
+});
+
+describe("who the all-clear may reach (#2828, security review)", () => {
+  it("sends nothing to a reached owner whose login was turned off since", async () => {
+    const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, f.owner.id));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    const found = await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(to(clear.sent, "incident_missing_diver_found")).toEqual([secondEmail]);
+    expect(to(clear.sent, "incident_missing_diver_found")).not.toContain(ownerEmail);
+    // A revoked login is the shop's own act, not a failed send: the
+    // all-clear reached everyone it may reach.
+    expect(found).toMatchObject({ allClear: "sent" });
+  });
+});
+
+describe("the backfill for alarms sent before the column (#2828)", () => {
+  const backfill = readFileSync(
+    new URL(
+      "../../drizzle/20261024123528_backfill-missing-alert-reached/migration.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  it("fills an open report's set from the active owners, and Found clears them", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const ownerEmail = await emailOf(db, f.owner.id);
+    const reportId = await raise(db, input, f.crew.id, recorder().provider);
+    // As the row stood before the column: told, and nobody written down.
+    await db
+      .update(incidentReports)
+      .set({ missingAlertReachedPersonIds: [] })
+      .where(eq(incidentReports.id, reportId));
+    expect((await stateOf(db, reportId)).sentAt).toBeInstanceOf(Date);
+    await db.execute(sql.raw(backfill));
+    expect(await reachedOf(db, reportId)).toEqual([f.owner.id]);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const clear = recorder();
+    await markMissingDiverFound(db, {
+      ...input,
+      reportId,
+      actorPersonId: f.crew.id,
+      provider: clear.provider,
+    });
+    expect(to(clear.sent, "incident_missing_diver_found")).toEqual([ownerEmail]);
+  });
+
+  it("leaves a report never told, or already found, as it is", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const untold = await raise(db, input, f.crew.id, recorder("failed").provider);
+    await db.execute(sql.raw(backfill));
+    expect(await reachedOf(db, untold)).toEqual([]);
+    await db
+      .update(incidentReports)
+      .set({
+        missingAlertSentAt: backAt,
+        missingFoundAt: backAt,
+        missingFoundByPersonId: f.crew.id,
+      })
+      .where(eq(incidentReports.id, untold));
+    await db.execute(sql.raw(backfill));
+    expect(await reachedOf(db, untold)).toEqual([]);
   });
 });

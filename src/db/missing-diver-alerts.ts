@@ -10,7 +10,7 @@ import { sendNotification } from "./notifications";
 import { ownerLogins } from "./owner-logins";
 import { pushTripAlert } from "./push-subscriptions";
 import { incidentReports, people, shops, trips, userAccounts } from "./schema";
-import { liveTrip, notRehearsal } from "./trips-live";
+import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **A filed report of a missing diver tells the owners at once** (H-142,
@@ -443,14 +443,30 @@ export async function sendMissingDiverAllClear(
     provider: input.provider,
   });
   if (outcome === null) return "skipped";
+  // Every reached owner the shop has since revoked (login turned off, removed
+  // or erased): nobody left to send to, which is the shop's act, not a failure.
+  if (outcome.addressable === 0) {
+    log("incident.missing_diver_all_clear_revoked", "warn", {
+      reportId: report.id,
+      reached: report.reached.length,
+    });
+    return "skipped";
+  }
   if (outcome.everyone) {
     await db
       .update(incidentReports)
       .set({ missingAllClearSentAt: nowDate() })
       .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)));
   }
-  // Ids and counts only. A partial all-clear is an error, never a quiet line.
-  log("incident.missing_diver_all_clear", outcome.everyone ? "info" : "error", {
+  // Ids and counts only. A partial all-clear is an error, never a quiet line;
+  // a reached owner whose login was revoked since is a warning (`addressable`
+  // short of `reached`), not a failed send.
+  const level = !outcome.everyone
+    ? "error"
+    : outcome.addressable < report.reached.length
+      ? "warn"
+      : "info";
+  log("incident.missing_diver_all_clear", level, {
     reportId: report.id,
     reached: report.reached.length,
     addressable: outcome.addressable,
@@ -461,10 +477,10 @@ export async function sendMissingDiverAllClear(
 
 /**
  * The all-clear's emails to these people, each re-read from their login at
- * send time and only within this shop. A person the shop can no longer
- * address (erased, or with no login) counts as not sent, so the caller never
- * reports "sent" for an owner who heard nothing. Null when the departure is
- * one that never alerts, or nothing can be linked.
+ * send time and only within this shop. `everyone` means every person the
+ * shop still lets it reach (`reachedLogins`) was sent it: a revoked login is
+ * left out on purpose and is not a failure, while a send that failed is.
+ * Null when the departure is one that never alerts, or nothing can be linked.
  */
 async function sendAllClearTo(
   db: AppDb,
@@ -541,17 +557,18 @@ async function sendAllClearTo(
     if (delivery.status === "sent") sent += 1;
   }
   return {
-    everyone: personIds.length > 0 && sent === personIds.length,
+    everyone: recipients.length > 0 && sent === recipients.length,
     sent,
     addressable: recipients.length,
   };
 }
 
 /**
- * The login of each person the alarm reached, this shop's only. Not filtered
- * by role or login status: an owner demoted, or turned off, since the alarm
- * still saw it and is owed the all-clear (#2828). An erased person has no
- * address left to use, and is left out.
+ * The login of each person the alarm reached that the shop still lets it
+ * reach, this shop's only (#2828, security review): an active login on a
+ * person neither removed nor erased. Not filtered by role: an owner demoted
+ * since, still active, saw the alarm and is owed the all-clear. A login the
+ * shop turned off, or a person it removed, gets nothing.
  */
 async function reachedLogins(db: AppDb, shopId: string, personIds: readonly string[]) {
   if (personIds.length === 0) return [];
@@ -566,10 +583,11 @@ async function reachedLogins(db: AppDb, shopId: string, personIds: readonly stri
     .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
     .where(
       and(
-        // diveday:allow-deleted-people: a by-id read of owners the alarm already reached; one removed since still saw it and is owed the all-clear.
         eq(people.shopId, shopId),
         inArray(people.id, [...personIds]),
+        livePerson(),
         isNull(people.anonymizedAt),
+        eq(userAccounts.status, "active"),
       ),
     );
 }
