@@ -152,7 +152,8 @@ export function UnitSummary({
           </FieldGrid>
         </div>
       ) : null}
-      <div className="mt-6 border-t border-border pt-4">
+      {/* The controls carry their own rule above Delete; one rule, not two. */}
+      <div className="mt-6">
         {deletedAt ? (
           <form action={restoreGearItemAction}>
             <input type="hidden" name="gearItemId" value={item.id} />
