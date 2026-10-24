@@ -793,15 +793,24 @@ export async function formBuddyTeamAction(ctx: ManifestActionContext, formData: 
 
 /**
  * **"Team up each party"** (fifth-loop ideas, item 50): one team per party of
- * two or three divers not yet on a team, each through `formBuddyTeam`. The
- * panel comes back open with the teams on it to check.
+ * two or three divers not yet on a team, each through `formBuddyTeam`, and a
+ * party nobody has said is adult only when its box was ticked. The panel comes
+ * back open with the teams on it to check.
  */
-export async function teamUpPartiesAction(ctx: ManifestActionContext) {
+export async function teamUpPartiesAction(ctx: ManifestActionContext, formData: FormData) {
   const staff = await manifestStaff(ctx);
+  // Each ticked "18 or over" box names one party's exact seats (issue 2808);
+  // `formPartyTeams` matches them against its own plan, so a key naming
+  // anything else teams nothing.
+  const confirmedAdultParties = formData
+    .getAll("adultParty")
+    .flatMap((value) => (typeof value === "string" && value.length <= 4_000 ? [value] : []))
+    .slice(0, 200);
   await formPartyTeams(await getDb(), {
     shopId: staff.user.shopId,
     tripId: ctx.tripId,
     recordedByPersonId: staff.user.personId,
+    confirmedAdultParties,
   });
   revalidateAndRedirect(manifestPath(ctx), manifestBack(ctx));
 }

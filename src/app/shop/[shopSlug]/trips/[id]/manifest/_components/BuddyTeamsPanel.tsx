@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { controlClass, Field, FormStatus } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
@@ -99,6 +99,11 @@ export function BuddyTeamsPanel({
     /** One line per party the tap leaves for the divemaster, with why. */
     left: string[];
     teamable: number;
+    /**
+     * One tick box per party the tap teams only once a staffer confirms
+     * everyone in it is 18 or over (issue 2808): its seats' key and its words.
+     */
+    confirmAdults: { key: string; label: string }[];
   } | null;
   /** Informational course, age and readiness cautions, already localized. */
   teamWarnings?: Readonly<Record<string, readonly string[]>>;
@@ -183,8 +188,30 @@ export function BuddyTeamsPanel({
             {partyLines.left.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            {partyLines.teamable > 0 && teamUpPartiesAction ? (
+            {(partyLines.teamable > 0 || partyLines.confirmAdults.length > 0) &&
+            teamUpPartiesAction ? (
               <form action={teamUpPartiesAction} className="mt-2">
+                {/* Issue 2808: nobody has said these divers are adults (no date
+                    of birth, no "Under 18" box), and two thirteen-year-olds
+                    look the same. Unticked, the tap leaves the party alone. */}
+                {partyLines.confirmAdults.length > 0 ? (
+                  <fieldset className="mb-2">
+                    <legend className="text-sm text-muted">
+                      {t("manifest.buddyPartyConfirmHint")}
+                    </legend>
+                    {partyLines.confirmAdults.map((party) => (
+                      <ChoiceRow
+                        key={party.key}
+                        type="checkbox"
+                        name="adultParty"
+                        value={party.key}
+                        className="text-sm text-foreground"
+                      >
+                        {party.label}
+                      </ChoiceRow>
+                    ))}
+                  </fieldset>
+                ) : null}
                 <SubmitButton
                   pendingLabel={t("manifest.buddyTeamUpParties")}
                   className={buttonClass({ variant: "secondary", size: "sm" })}

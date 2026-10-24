@@ -1203,7 +1203,10 @@
   diver under 15 and no diver of 18 or more by a date of birth on file holding a verified card the
   shop has not deleted in the same party, and a party of more than three. Every age reason is said
   before the size one, so whoever splits a family of four by hand is told there is a child in it.
-  Ages are taken on the departure's own local date; the bands are PADI's and SSI's, kept once in
+  A party it would team where someone has neither a date of birth nor the "Under 18" box gets a
+  tick box, "… are all 18 or over", and is teamed only when the staffer ticks it; the tick names
+  that party's exact seats (`partyConfirmKey`), and the sale still asks no age (issue 2808, H-113,
+  H-22). Ages are taken on the departure's own local date; the bands are PADI's and SSI's, kept once in
   `src/lib/age.ts` (`partyLeftReason` in `src/lib/party-teams.ts`, read against **Junior
   certification**). Only booked and checked-in diver seats that are not held count, and every line
   on the panel and the button's number are drawn from that one plan. A team built by hand carries

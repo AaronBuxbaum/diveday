@@ -187,6 +187,8 @@
   "buddyCameTogether": "Came together: {parties}",
   "buddyCameAlone": "Came alone: {names}",
   "buddyTeamUpParties": "Team up each party",
+  "buddyPartyConfirmHint": "Someone in each party below has no date of birth and no Under 18 box. Tick a party to team it.",
+  "buddyPartyConfirmAdults": "{names} are all 18 or over",
   "buddyPartyLeft": "Left for you: {names} ({reason})",
   "buddyPartyLeftReason": {
     "intro_course": "intro dive",

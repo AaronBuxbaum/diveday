@@ -26,6 +26,7 @@ function plan(overrides: Partial<PartyTeamPlan>): PartyTeamPlan {
     members: new Map(),
     parties: new Map(),
     teamable: [],
+    ageUnconfirmed: [],
     left: [],
     alone: [],
     names: NAMES,
@@ -207,6 +208,7 @@ describe("buddyBuilderView", () => {
       alone: null,
       left: [],
       teamable: 1,
+      confirmAdults: [],
     });
   });
 
@@ -259,6 +261,35 @@ describe("buddyBuilderView", () => {
         }),
       ],
       teamable: 0,
+      confirmAdults: [],
+    });
+  });
+
+  /**
+   * Issue 2808: a party with someone who has neither a date of birth nor the
+   * "Under 18" box is named on its own tick box, carrying that party's exact
+   * seats, and is counted among the parties who came together.
+   */
+  it("asks the staffer to confirm each party whose ages nobody has said", () => {
+    const { panel } = view(
+      undefined,
+      [],
+      plan({
+        ageUnconfirmed: [["b-2", "b-1"]],
+        names: new Map([...NAMES, ["b-9", "Dara Ruiz"]]),
+      }),
+    );
+    expect(panel.partyLines).toEqual({
+      together: t("manifest.buddyCameTogether", { parties: "Ben Okafor and Ana Ruiz" }),
+      alone: null,
+      left: [],
+      teamable: 0,
+      confirmAdults: [
+        {
+          key: "b-1,b-2",
+          label: t("manifest.buddyPartyConfirmAdults", { names: "Ben Okafor and Ana Ruiz" }),
+        },
+      ],
     });
   });
 });
