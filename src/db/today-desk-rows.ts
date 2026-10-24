@@ -36,8 +36,13 @@ export function pushDeskRows(actions: TodayAction[], ctx: TodayRowsContext, fact
     // **A boat at sea comes first** (issue #2802, Aaron's option b): she is
     // carrying the blank card now, and the desk can still radio her a number.
     // `boatsOut.out` is every departure past the sailing hour and not back by
-    // the stage pill's own rule, so the row lets go when she is home.
-    const out = [...ctx.wave.boatsOut.out].sort(departureClockOrder((trip) => trip.id))[0];
+    // the stage pill's own rule, so the row lets go when she is home. It leaves
+    // out a departure still in the horizon, which at the sailing hour itself
+    // has sailed and is not the next to sail either: that one is out too.
+    const out = [
+      ...ctx.wave.boatsOut.out,
+      ...inWindow.filter((trip) => hasSailed(trip.startsAt, now)),
+    ].sort(departureClockOrder((trip) => trip.id))[0];
     const next = inWindow
       .filter(
         (trip) =>

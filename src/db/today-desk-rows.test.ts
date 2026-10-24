@@ -2,6 +2,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { groupByDeparture } from "@/lib/today";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
 import { countOpenLostItems, openLostItemsByPerson, recordLostItem } from "./lost-items";
 import { lostItems, shops, trips as tripRows } from "./schema";
@@ -99,6 +100,51 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
     });
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
     expect(after.actions.some((row) => row.kind === "emergency_card_blank")).toBe(true);
+  });
+
+  /**
+   * **No gap at the sailing hour** (domain review of #2802). Before the
+   * late-arrival hour a boat is the next to sail; from it, she is out. A
+   * departure exactly at the boundary, or a millisecond either side, keeps
+   * the row.
+   */
+  it("keeps the row on both sides of the sailing hour (#2802)", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ emergencyReference: BLANK }).where(eq(shops.id, shop.id));
+    const now = nowDate();
+    await db
+      .update(tripRows)
+      .set({
+        startsAt: new Date(now.getTime() + 30 * 24 * HOUR),
+        endsAt: new Date(now.getTime() + 30 * 24 * HOUR + 4 * HOUR),
+      })
+      .where(
+        and(
+          eq(tripRows.shopId, shop.id),
+          gt(tripRows.startsAt, new Date(now.getTime() - 2 * HOUR)),
+        ),
+      );
+    for (const offset of [-1, 0, 1]) {
+      const startsAt = new Date(now.getTime() - DEPARTURE_BUFFER_MS + offset);
+      const [trip] = await db
+        .insert(tripRows)
+        .values({
+          shopId: shop.id,
+          title: `Boundary ${offset} — Molasses`,
+          startsAt,
+          endsAt: new Date(startsAt.getTime() + 4 * HOUR),
+          capacity: 12,
+          plannedDives: 2,
+          priceCents: 13000,
+        })
+        .returning();
+      if (!trip) throw new Error("trip insert returned no row");
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+      const rows = work.actions.filter((row) => row.kind === "emergency_card_blank");
+      expect(rows, `offset ${offset}`).toHaveLength(1);
+      expect(rows[0]?.dueAt?.getTime(), `offset ${offset}`).toBe(startsAt.getTime());
+      await db.delete(tripRows).where(eq(tripRows.id, trip.id));
+    }
   });
 
   it("lets the row go once the boat is back, or for a departure called off that nobody boarded (#2802)", async () => {
