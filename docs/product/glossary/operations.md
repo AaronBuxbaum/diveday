@@ -1638,8 +1638,19 @@
   writes `medical_alert_saved_offline` per diver on the server. The copy records who saved them,
   signing out or another person signing in on the device wipes them, and a crew member taken off
   the boat later keeps that copy until it expires. Opening the copy at sea writes nothing. On the
-  signed record the words are owner and manager only; a held seat shows neither. Paper prints the
-  fact only (issue #2960, H-153).
+  signed record the words are owner and manager only; a held seat shows neither. The default print
+  carries the fact only. **"Print with medical alerts"**, beside "Print packet" for an owner or a
+  manager on a departure with an alert, prints the packet with each diver's words under their row,
+  the not-reviewed line once above them, who printed it and when in the shop's zone, and a line to
+  keep the sheet with the crew and destroy it after the trip; the server reads the words and writes
+  `medical_alert_printed` per printed diver when it produces the sheet, every print its own line.
+  Never the day's paper, the dispute sheet or any other print. A staffer the crew rule refuses
+  (not on the crew, or added late) sees **"Emergency: show the alert"** in the sheet on the day the
+  departure leaves in the shop's zone, and nowhere else: never a bearer page, never offline. A
+  confirm step says it is for emergencies and the owner will see it; the server checks again and
+  writes `medical_alert_emergency_read`, naming the reader, on every confirm (no ten-minute
+  window), and the owner's **Monday email** lists last week's: diver, departure, who and when
+  (issues #2960 and #2990, H-153).
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.
