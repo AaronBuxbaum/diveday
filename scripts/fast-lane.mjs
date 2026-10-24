@@ -16,6 +16,15 @@
 //            and the smoke tests. Up to {@link FAST_LANE_BUDGET_MS}: edited specs first, then
 //            the other strong picks, then smoke, each tier cheapest first.
 //
+//   fill   — what the strong tier left of {@link FAST_LANE_BUDGET_MS} (2026-10-24): first the
+//            repository's recent-failure specs, newest first, at most {@link HOT_MAX}
+//            (`scripts/e2e-recent-failures.mjs`, the nightly flake hunt's reading), then the
+//            tests the last main run measured over {@link NEAR_BUDGET_SHARE} of their own budget
+//            (its `e2e test at N% of its budget` annotations). The red runs of the week were
+//            mostly red on the same few specs, on whichever branch ran them; this runs them
+//            before the shards do. Either reading fails open: GitHub unreachable leaves that
+//            list empty, and the summary says so.
+//
 // Everything else is left to the shards, which run it all anyway: the fast lane never decides
 // green. It is a report that arrives early, under its own check name.
 //
@@ -37,7 +46,10 @@ import {
   durations,
   UNRECORDED_MS,
 } from "./e2e-affected.mjs";
+import { newestFailedSpecs, pages, readFailureHistory } from "./e2e-recent-failures.mjs";
 import { readOwnVerdict } from "./own-ci.mjs";
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { isVisualSpec } from "./visual-specs.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -57,6 +69,12 @@ export const OWN_BUDGET_MS = 8 * 60_000;
 
 /** A `file:line` pick (a smoke test) costs one test, not its whole spec. */
 export const ONE_TEST_MS = 60_000;
+
+/** How many recent-failure specs the fill reads, newest first. */
+export const HOT_MAX = 8;
+
+/** A main-run test this close to its own budget is the next timeout: the fill runs it. */
+export const NEAR_BUDGET_SHARE = 0.9;
 
 const LINE_PICK = /:\d+$/;
 
@@ -83,8 +101,13 @@ function tier(why) {
  * the `functional` durations; `captureCost(title)` the recorded ms for one light-mode capture;
  * `exists(file)` whether a spec is still in the tree.
  *
- * Returns `{ specs, captures, left, strongMs, ownMs }`: `specs` to run (own first), `captures`
- * titles to run, `left` the picks the budgets left to the shards.
+ * `hot` (recent-failure spec files, newest first) and `slow` (`file:line` tests near their
+ * budget on main) fill what the strong tier left of `budgetMs`, in that order; a pick that does
+ * not fit is skipped, never listed in `left`, since nothing in the diff asked for it.
+ *
+ * Returns `{ specs, captures, left, strongMs, ownMs, fillMs, filled }`: `specs` to run (own
+ * first), `captures` titles to run, `left` the picks the budgets left to the shards, `filled` the
+ * fill's picks (also in `specs`).
  */
 export function planFastLane({
   strong = new Map(),
@@ -92,6 +115,8 @@ export function planFastLane({
   record = {},
   captureCost = () => 0,
   exists = () => true,
+  hot = [],
+  slow = [],
   budgetMs = FAST_LANE_BUDGET_MS,
   ownBudgetMs = OWN_BUDGET_MS,
 }) {
@@ -148,15 +173,91 @@ export function planFastLane({
     chosen.add(pick);
     strongMs += cost;
   }
+  // The fill: what the diff's picks left of the budget, hot specs first, in the order given.
+  let fillMs = 0;
+  const filled = [];
+  for (const pick of [...hot, ...slow]) {
+    const file = pick.replace(LINE_PICK, "");
+    if (chosen.has(pick) || chosen.has(file) || isVisualSpec(file) || !exists(file)) continue;
+    const cost = pickCost(pick, record);
+    if (strongMs + fillMs + cost > budgetMs) continue;
+    specs.push(pick);
+    filled.push(pick);
+    chosen.add(pick);
+    fillMs += cost;
+  }
   // A `file:line` whose whole file was chosen after it is already covered.
   const runs = specs.filter(
     (pick) => !LINE_PICK.test(pick) || !chosen.has(pick.replace(LINE_PICK, "")),
   );
-  return { specs: runs, captures, left, strongMs, ownMs };
+  return {
+    specs: runs,
+    captures,
+    left,
+    strongMs,
+    ownMs,
+    fillMs,
+    filled: filled.filter((pick) => runs.includes(pick)),
+  };
+}
+
+/** `gh api <endpoint>`, parsed, bounded. */
+const ghApi = (endpoint) =>
+  JSON.parse(
+    readBounded("gh", ["api", endpoint], {
+      encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+    }),
+  );
+
+/**
+ * The repository's recent-failure specs, newest first: failed Playwright and visual shard jobs
+ * of the last three days' newest ten failed runs. `{ specs }` or `{ unknown }`, never a throw.
+ */
+export function readHotSpecs(
+  repo,
+  { request = ghApi, exists = () => true, now = Date.now() } = {},
+) {
+  const since = new Date(now - 3 * 86_400_000).toISOString().slice(0, 10);
+  try {
+    const { perJob } = readFailureHistory(repo, since, request, { maxRuns: 10 });
+    return { specs: newestFailedSpecs(perJob, { max: HOT_MAX, exists }) };
+  } catch (error) {
+    return { unknown: `CI history unreadable: ${error.message}` };
+  }
+}
+
+/**
+ * The tests the newest finished push run of main measured over {@link NEAR_BUDGET_SHARE} of their
+ * own budget, as `file:line`, from the `e2e test at N% of its budget` annotations its Playwright
+ * shards wrote (`scripts/e2e-budget-report.mjs --annotate`). `{ picks }` or `{ unknown }`.
+ */
+export function readNearBudget(repo, { request = ghApi, share = NEAR_BUDGET_SHARE } = {}) {
+  try {
+    const { workflow_runs: runs } = request(
+      `repos/${repo}/actions/workflows/ci.yml/runs?branch=main&event=push&status=completed&per_page=1`,
+    );
+    const run = runs?.[0];
+    if (!run) return { unknown: "no finished main run" };
+    const jobs = pages(`repos/${repo}/actions/runs/${run.id}/jobs`, "jobs", request);
+    const picks = [];
+    for (const job of jobs.filter((item) => /^Playwright shard/.test(item.name))) {
+      for (const a of pages(`repos/${repo}/check-runs/${job.id}/annotations`, null, request)) {
+        const used = Number(a.title?.match(/^e2e test at (\d+)% of its budget$/)?.[1]);
+        if (used >= share * 100 && /^e2e\/.+\.spec\.ts$/.test(a.path ?? "")) {
+          picks.push({ pick: `${a.path}:${a.start_line}`, used });
+        }
+      }
+    }
+    picks.sort((a, b) => b.used - a.used || a.pick.localeCompare(b.pick));
+    return { picks: [...new Set(picks.map(({ pick }) => pick))], sha: run.head_sha };
+  } catch (error) {
+    return { unknown: `main's last run unreadable: ${error.message}` };
+  }
 }
 
 /** The job summary: what runs, why, and what the shards answer instead. */
-export function renderSummary({ plan, ownLine, strongLine }) {
+export function renderSummary({ plan, ownLine, strongLine, hotLine, slowLine }) {
   const minutes = (ms) => (ms / 60_000).toFixed(1);
   const lines = [
     "### Fast lane",
@@ -165,8 +266,11 @@ export function renderSummary({ plan, ownLine, strongLine }) {
     "",
     `- Previous red run: ${ownLine}`,
     `- Diff: ${strongLine}`,
+    ...(hotLine ? [`- Recent failures: ${hotLine}`] : []),
+    ...(slowLine ? [`- Near budget on main: ${slowLine}`] : []),
     `- Runs ${plan.specs.length} spec pick(s) and ${plan.captures.length} capture(s), about ` +
-      `${minutes(plan.ownMs + plan.strongMs)} recorded CI-minutes.`,
+      `${minutes(plan.ownMs + plan.strongMs + (plan.fillMs ?? 0))} recorded CI-minutes` +
+      `${plan.filled?.length ? `, ${plan.filled.length} of them the fill` : ""}.`,
   ];
   if (plan.specs.length > 0) lines.push("", ...plan.specs.map((pick) => `  - \`${pick}\``));
   if (plan.captures.length > 0)
@@ -210,12 +314,24 @@ function main() {
       `red (${verdict.sha.slice(0, 9)}): ${verdict.specs.length} spec(s), ` +
       `${verdict.captures.length} capture(s) named. ${verdict.url ?? ""}`.trimEnd();
 
+  const exists = (file) => existsSync(path.join(ROOT, file));
+  const hot = args.repo ? readHotSpecs(args.repo, { exists }) : { unknown: "no repository given" };
+  const slow = args.repo ? readNearBudget(args.repo) : { unknown: "no repository given" };
+  const hotLine = hot.unknown
+    ? `skipped (${hot.unknown}).`
+    : `${hot.specs.length} spec(s) named by the newest failed runs.`;
+  const slowLine = slow.unknown
+    ? `skipped (${slow.unknown}).`
+    : `${slow.picks.length} test(s) over ${NEAR_BUDGET_SHARE * 100}% of their budget on ${slow.sha?.slice(0, 9)}.`;
+
   const plan = planFastLane({
     strong: affected?.strong ?? new Map(),
     own: verdict.unknown || verdict.green ? {} : verdict,
     record: durations(),
     captureCost: (title) => captureMs([title]),
-    exists: (file) => existsSync(path.join(ROOT, file)),
+    exists,
+    hot: hot.specs ?? [],
+    slow: slow.picks ?? [],
   });
 
   mkdirSync(args.out, { recursive: true });
@@ -223,7 +339,7 @@ function main() {
   const grep = captureGrep(plan.captures) ?? "";
   writeFileSync(path.join(args.out, "grep.txt"), grep);
 
-  const summary = renderSummary({ plan, ownLine, strongLine });
+  const summary = renderSummary({ plan, ownLine, strongLine, hotLine, slowLine });
   process.stdout.write(summary);
   if (args.summary) appendFileSync(args.summary, summary);
   if (args.githubOutput && process.env.GITHUB_OUTPUT) {

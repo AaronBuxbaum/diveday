@@ -15,12 +15,14 @@ import {
   filterReport,
   helperBodies,
   lightGrep,
+  lightOnly,
   literalPaths,
   messageConsumers,
   packageJsonReach,
   SMOKE,
   selectCaptures,
   shardCount,
+  THEME,
 } from "./visual-affected.mjs";
 import { visualSpecs } from "./visual-specs.mjs";
 
@@ -235,7 +237,60 @@ const tree = new Map([
   ["src/lib/orphan.ts", "export const unused = 1;"],
   ["src/i18n/index.ts", "export function t(key) {\n  return key;\n}"],
   ["src/proxy.ts", 'import { courseTitle } from "@/lib/courses";\nexport const x = courseTitle;'],
-  ["src/db/seed.ts", 'import { slugify } from "@/lib/text";\nexport const seed = slugify;'],
+  [
+    "src/db/seed.ts",
+    [
+      'import { slugify } from "@/lib/text";',
+      'import { seedRentals } from "./seed-rentals";',
+      "export const seed = slugify;",
+      "export async function seedDemo(db) {",
+      "  await seedRentals(db);",
+      "}",
+    ].join("\n"),
+  ],
+  // The data: a schema module behind its barrel, a reader two pages call, a scenario that
+  // writes one table and reads another, and the demo action every public page would import.
+  [
+    "src/db/schema/rentals.ts",
+    [
+      'import { pgTable } from "drizzle-orm/pg-core";', // 1
+      "", // 2
+      'export const rentals = pgTable("rentals", {});', // 3
+      "", // 4
+      'export const sizes = pgTable("sizes", {});', // 5
+    ].join("\n"),
+  ],
+  ["src/db/schema/index.ts", 'export * from "./rentals";'],
+  [
+    "src/db/rentals.ts",
+    'import { rentals } from "./schema";\nexport function listRentals(db) {\n  return db.select().from(rentals);\n}',
+  ],
+  [
+    "src/db/seed-rentals.ts",
+    [
+      'import { rentals, sizes } from "./schema";', // 1
+      "export async function seedRentals(db) {", // 2
+      "  await db.insert(rentals).values({});", // 3
+      "  return db.select().from(sizes);", // 4
+      "}", // 5
+    ].join("\n"),
+  ],
+  [
+    "src/app/shop/[shopSlug]/rentals/page.tsx",
+    'import { listRentals } from "@/db/rentals";\nexport default function Page() {\n  return listRentals();\n}',
+  ],
+  [
+    "src/app/s/[shopSlug]/rentals/page.tsx",
+    'import { listRentals } from "@/db/rentals";\nexport default function Page() {\n  return listRentals();\n}',
+  ],
+  [
+    "src/app/actions/demo.ts",
+    'import { seedDemo } from "@/db/seed";\nexport async function mintDemo() {\n  return seedDemo();\n}',
+  ],
+  [
+    "src/app/page.tsx",
+    'import { mintDemo } from "./actions/demo";\nexport default function Page() {\n  return mintDemo;\n}',
+  ],
 ]);
 
 const bySymbol = (changed, context = {}) => {
@@ -266,6 +321,38 @@ describe("following an edit name by name", () => {
     expect(bySymbol(["src/lib/courses.ts"]).all).toMatch(/src\/proxy\.ts/);
     const lines = new Map([["src/lib/text.ts", new Set([2])]]);
     expect(bySymbol(["src/lib/text.ts"], { lines }).all).toMatch(/src\/db\/seed\.ts/);
+  });
+
+  it("follows a schema edit to the pages that read the table, never through the seed", () => {
+    const rentalPages = [
+      { route: "/shop/[shopSlug]/rentals", broad: false },
+      { route: "/s/[shopSlug]/rentals", broad: false },
+    ];
+    const table = new Map([["src/db/schema/rentals.ts", new Set([3])]]);
+    expect(bySymbol(["src/db/schema/rentals.ts"], { lines: table }).routes).toEqual(rentalPages);
+    // `sizes` is read by the scenario only, and nothing reaches a page through a seed module.
+    const unread = new Map([["src/db/schema/rentals.ts", new Set([5])]]);
+    expect(bySymbol(["src/db/schema/rentals.ts"], { lines: unread }).routes).toEqual([]);
+  });
+
+  it("follows a seed scenario's edit to the readers of the tables it writes", () => {
+    const write = new Map([["src/db/seed-rentals.ts", new Set([3])]]);
+    expect(bySymbol(["src/db/seed-rentals.ts"], { lines: write }).routes).toEqual([
+      { route: "/shop/[shopSlug]/rentals", broad: false },
+      { route: "/s/[shopSlug]/rentals", broad: false },
+    ]);
+    // The landing page imports the demo action that runs the seed: not a reader of rentals.
+    expect(
+      bySymbol(["src/db/seed-rentals.ts"], { lines: write }).routes.map((r) => r.route),
+    ).not.toContain("/");
+  });
+
+  it("captures everything for the orchestrator, the catalog, or a module the graph lacks", () => {
+    const lines = new Map([["src/db/seed.ts", new Set([5])]]);
+    expect(bySymbol(["src/db/seed.ts"], { lines }).all).toMatch(/data every capture shows/);
+    expect(bySymbol(["src/db/seed-catalog.ts"]).all).toMatch(/data every capture shows/);
+    expect(bySymbol(["src/db/seed-unknown.ts"]).all).toMatch(/import graph does not hold/);
+    expect(bySymbol(["src/db/schema/unknown.ts"]).all).toMatch(/import graph does not hold/);
   });
 
   it("maps a reworded message to the module that names it, and drops a removed one", () => {
@@ -419,6 +506,27 @@ describe("edits to the visual spec and its helpers", () => {
     expect([...changedLines("@@ -3,0 +4,2 @@\n@@ -9 +11,0 @@")]).toEqual([4, 5, 11, 12]);
   });
 
+  it("captures light mode only on a pull request, unless it touches a colour token or theme", () => {
+    const lines = [
+      "visual.spec.ts › light mode › the day spine renders true to the design (light)",
+      "visual.spec.ts › dark mode › the day spine renders true to the design (dark)",
+      "visual-shop-states.spec.ts › dark mode — the unanswered emergency reference › a note (dark)",
+      "visual-audit-x.ts › light mode — sign-in outcomes › email verification renders",
+    ];
+    expect(lightOnly(lines, ["src/lib/gear.ts"]).lines).toEqual([lines[0], lines[3]]);
+    for (const theme of [
+      "src/app/globals.css",
+      "src/lib/brand.ts",
+      "src/components/BrandStyle.tsx",
+      "src/app/_brand/colors.ts",
+      "postcss.config.mjs",
+    ]) {
+      expect(THEME.test(theme), theme).toBe(true);
+      expect(lightOnly(lines, ["src/lib/gear.ts", theme]).dark).toMatch(theme);
+    }
+    expect(lightOnly(lines, null).dark).toMatch(/could not be read/);
+  });
+
   it("gives a local run the light-mode captures only, as a --grep", () => {
     expect(
       lightGrep([
@@ -540,7 +648,7 @@ describe("the 28 pull requests the test review replayed", () => {
     for (const [pr, why] of reasons) {
       if (why === null) continue;
       expect(why, `#${pr}`).toMatch(
-        /capture's own plumbing|capture harness|data every capture shows|pnpm-workspace\.yaml/,
+        /capture's own plumbing|capture harness|data every capture shows|import graph does not hold|pnpm-workspace\.yaml/,
       );
     }
     expect([...reasons.values()].filter((why) => why === null).length).toBe(18);

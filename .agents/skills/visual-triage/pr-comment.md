@@ -28,13 +28,18 @@ read the `visual-report` job log rather than assuming the pixels held still.
 **A pull request captures what its diff can reach, not everything.** `visual-plan` in `ci.yml`
 (`scripts/visual-affected.mjs`) picks the captures whose test visits a route the diff reaches,
 following each changed name through its importers, layouts and pages (a changed message key or
-`public/` asset through the modules that name it), plus a smoke set; every other surface is copied
-from the baseline before the compare (`scripts/visual-fill.mjs`), so it reads as passed, and the
-sticky comment says how many were captured. A diff it cannot bound (the e2e harness, the seed or
-schema, a stylesheet, a root config, `ci.yml`) captures everything, and the push to `main` always
-captures everything and is the only baseline. If a surface you expected to move
-reads as passed, the selection missed it: add the `visual-all` label to the pull request and push
-again, and file what it missed.
+`public/` asset through the modules that name it, a schema or seed-scenario edit through the
+modules that read the tables it changes), plus a smoke set, **in light mode only**; every other
+surface, every dark one included, is copied from the baseline before the compare
+(`scripts/visual-fill.mjs`), so it reads as passed, and the sticky comment says how many were
+captured. A diff touching a colour token or theme module (`THEME` in `scripts/visual-affected.mjs`:
+`globals.css`, `brand.ts`, `BrandStyle.tsx`, `_brand/colors.ts`, the PostCSS config) captures dark
+too. A diff it cannot bound (the e2e harness, the seed's orchestrator or catalog, a stylesheet, a
+root config, `ci.yml`) captures every light surface, and the push to `main` always captures
+everything, both schemes, and is the only baseline. A dark-only change on a pull request is
+therefore first seen on main's run. If a surface you expected to move reads as passed, the
+selection missed it: add the `visual-all` label (every capture, dark included) to the pull request
+and push again, and file what it missed.
 
 **On a stacked pull request, read that comment on every layer.** A layer's baseline is its fork
 point from `main`, like any branch's (`scripts/reg-suit-keys.mjs`, ADR

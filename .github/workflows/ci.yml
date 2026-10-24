@@ -63,6 +63,13 @@ jobs:
   # superseding 20260919-stack-ci-cancels-superseded-layers), so a green check
   # on any layer means that layer was actually tested.
 
+  # Lint, Typecheck and the repository safeguards, one job (2026-10-24). They
+  # were three jobs of about a minute each, and each paid its own checkout,
+  # `pnpm install` and runner slot against the concurrent-job cap for that
+  # minute; one runner does the three in sequence for one setup. The job keeps
+  # the name `Repository safeguards`, which scripts/own-ci.mjs, base-ci.mjs and
+  # red-below.mjs read as answered by the local gate, and each check is still
+  # its own step under its old name, so a red one names itself.
   repo-safeguards:
     name: Repository safeguards
     # Per-commit signal, so it has nothing to say on a nightly re-run of a commit
@@ -75,7 +82,9 @@ jobs:
     # unconditionally before it read the runner choice; it falls back to GitHub.
     if: ${{ !cancelled() && github.event_name != 'schedule' }}
     runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
-    timeout-minutes: 15
+    # Fifteen for the safeguards, plus the two-odd minutes Lint and Typecheck
+    # took as jobs of their own.
+    timeout-minutes: 20
     permissions:
       contents: read
       # No `issues: read`: nothing in check:repo reads the tracker. The one guard
@@ -92,10 +101,19 @@ jobs:
           # release, which is the destructive-DDL gate silently not running.
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      # The three checks run whatever the one before answered (`!cancelled()`),
+      # so a lint error does not hide a type error or a guard behind it.
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: pnpm typecheck
       # The failing guards go to the job summary by name, and every guard's
       # result to the `check-repo-results` artifact, so a catch rate per guard
       # can be read across runs (scripts/repo-check-report.mjs).
-      - run: pnpm check:repo
+      - name: Repository safeguards
+        if: ${{ !cancelled() }}
+        run: pnpm check:repo
         env:
           CHECK_REPO_RESULTS: check-repo-results.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -111,7 +129,9 @@ jobs:
       # `unit-tests-docs` too. It needs no database and no PGlite template, and
       # this job runs on every pull request, docs-only included, so a guard over
       # a document still answers to a docs-only change.
-      - run: pnpm exec vitest run --project guards --reporter=dot --reporter=./src/test/failed-files-reporter.ts
+      - name: Source-text guards
+        if: ${{ !cancelled() }}
+        run: pnpm exec vitest run --project guards --reporter=dot --reporter=./src/test/failed-files-reporter.ts
       # Supply chain: no dependency carries a known high or critical advisory.
       # The whole tree, not only production: dev tooling is what runs on the
       # runners that hold the reg-suit keys and the deploy role. An advisory with
@@ -128,7 +148,7 @@ jobs:
       # so an edit counts on a re-run; without `pull-requests: read` that read fails and the
       # event's copy is used. Passed through env and a file, never interpolated into the script.
       - name: Pull request body names its reviews
-        if: github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -137,38 +157,6 @@ jobs:
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
           node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "origin/$BASE_REF"
-
-  lint:
-    name: Lint
-    # Nightly runs `real-postgres` only. The Mac when it is online (`changes`).
-    needs: changes
-    # `!cancelled()`: a failed `changes` must not skip this job, which ran
-    # unconditionally before it read the runner choice; it falls back to GitHub.
-    if: ${{ !cancelled() && github.event_name != 'schedule' }}
-    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm lint
-
-  typecheck:
-    name: Typecheck
-    # Nightly runs `real-postgres` only. The Mac when it is online (`changes`).
-    needs: changes
-    # `!cancelled()`: a failed `changes` must not skip this job, which ran
-    # unconditionally before it read the runner choice; it falls back to GitHub.
-    if: ${{ !cancelled() && github.event_name != 'schedule' }}
-    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm typecheck
 
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/4
@@ -607,7 +595,12 @@ jobs:
   # latest finished red CI run named (`scripts/own-ci.mjs`, the reading
   # `verify:push` replays), and the strong specs against the pull request's
   # base, capped at about four recorded CI-minutes (`scripts/e2e-durations.json`).
-  # The job summary names both lists and what the cap left to the shards.
+  # What the strong list leaves of those four minutes is filled (2026-10-24)
+  # with the repository's recent-failure specs, newest first and at most
+  # eight (`scripts/e2e-recent-failures.mjs`), then the tests main's last run
+  # measured over 90% of their budget (its budget annotations); either reading
+  # is skipped, and says so, when GitHub cannot be read. The job summary names
+  # every list and what the cap left to the shards.
   #
   # It decides nothing. `continue-on-error` keeps a red fast lane from failing
   # the run, so `needs.fast-lane.result` reads success for `ci-result` below
@@ -699,12 +692,20 @@ jobs:
   # - A pull request captures what its diff can reach plus a smoke set
   #   (`scripts/visual-affected.mjs`: the changed lines followed name by name
   #   to the pages that read them, `scripts/symbol-reach.mjs`, read against each
-  #   capture's own source), on as few shards as that weighs, and
-  #   `visual-report` copies every other surface from the expected snapshot
+  #   capture's own source; a schema or seed-scenario edit followed to the
+  #   pages that read the tables it changes), on as few shards as that weighs,
+  #   and `visual-report` copies every other surface from the expected snapshot
   #   before the compare (`scripts/visual-fill.mjs`), so it reads as unchanged
   #   and the published report is whole. A diff it cannot bound (the harness,
-  #   the seed or what the seed runs, the schema, a stylesheet, a build config,
-  #   this file) captures everything.
+  #   the seed's orchestrator or catalog, a stylesheet, a build config, this
+  #   file) captures every light-mode surface.
+  # - A pull request captures light mode only (`--light-only`, 2026-10-24): the
+  #   dark captures were 339 of 836 and a third of the capture time, and what
+  #   moves a dark pixel without moving the light one is a colour token or a
+  #   theme module (`THEME` in scripts/visual-affected.mjs). A diff touching
+  #   one captures dark too; every other run's dark surfaces are filled from
+  #   the baseline exactly like the uncaptured ones (`mode` is `light` when the
+  #   diff was unbounded, `affected` when it was not). Main captures both.
   #
   # The diff is taken against the fork point from the default branch, which is
   # the commit reg-suit's expected key names, so a stacked layer captures what
@@ -735,7 +736,8 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           # The `visual-all` label is the reviewer's way to ask for every
-          # capture on a pull request the selection may have under-read.
+          # capture on a pull request the selection may have under-read,
+          # dark mode included.
           WANTS_ALL: ${{ contains(github.event.pull_request.labels.*.name, 'visual-all') }}
         run: |
           set -euo pipefail
@@ -744,7 +746,7 @@ jobs:
             # `|| true` and the script's own fallback: a base it cannot diff
             # against captures everything, never nothing.
             git fetch --no-tags origin "${DEFAULT_BRANCH}" > /dev/null 2>&1 || true
-            node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --base "origin/${DEFAULT_BRANCH}" --github-output
+            node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --base "origin/${DEFAULT_BRANCH}" --light-only --github-output
           else
             node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --all --github-output
           fi
@@ -787,7 +789,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Eight on main; on a pull request as many as its captures weigh.
+        # Eight on main; on a pull request as many as its captures weigh (seven
+        # for every light-mode capture).
         shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1154,15 +1157,16 @@ jobs:
           path: .reg-baseline
           key: reg-baseline-${{ env.REG_EXPECTED_KEY }}
       # `VISUAL_FILL_FROM_EXPECTED` on a pull request that captured only what its
-      # diff can reach (`visual-plan`): every surface it did not capture is
-      # copied from the expected snapshot before the compare, so it reads as
-      # unchanged instead of deleted (`scripts/visual-fill.mjs`).
+      # diff can reach, or light mode only (`visual-plan`'s `affected` and
+      # `light` modes): every surface it did not capture is copied from the
+      # expected snapshot before the compare, so it reads as unchanged instead
+      # of deleted (`scripts/visual-fill.mjs`).
       - name: Run reg-suit visual regression
         id: compare
         if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
         run: pnpm visual:compare
         env:
-          VISUAL_FILL_FROM_EXPECTED: ${{ needs.visual-plan.outputs.mode == 'affected' }}
+          VISUAL_FILL_FROM_EXPECTED: ${{ needs.visual-plan.outputs.mode == 'affected' || needs.visual-plan.outputs.mode == 'light' }}
           VISUAL_EXPECTED_DIR: ${{ steps.baseline-cache.outputs.cache-hit == 'true' && '.reg-baseline' || '' }}
           REG_SUIT_AWS_REGION: ${{ env.REG_SUIT_AWS_REGION }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
@@ -1596,8 +1600,6 @@ jobs:
     if: always() && github.event_name != 'schedule'
     needs:
       - repo-safeguards
-      - lint
-      - typecheck
       - unit-tests
       - unit-tests-docs
       - build

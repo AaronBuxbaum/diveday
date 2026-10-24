@@ -340,8 +340,10 @@ On a pull request, CI's `Fast lane` job starts when the build's artifact exists 
 runner, what is most likely to be red: the spec files and capture titles the branch's latest
 finished red CI run named (`scripts/own-ci.mjs`, the reading `verify:push` replays), then the
 `strong` tier of `scripts/e2e-affected.mjs` against the pull request's base, capped at about four
-recorded CI-minutes (`scripts/fast-lane.mjs`; its job summary names both lists and what the cap
-left out). It reports under its own check in a few minutes rather than the ~22 a full run took
+recorded CI-minutes, and what those leave of the four minutes filled with the repository's
+recent-failure specs (newest first, at most eight) and then the tests main's last run measured over
+90% of their budget (`scripts/fast-lane.mjs`; its job summary names every list, what the cap left
+out, and a reading skipped because GitHub could not be read). It reports under its own check in a few minutes rather than the ~22 a full run took
 (2026-10-22). It decides nothing: `continue-on-error` keeps it from failing the run, and the
 Playwright and visual capture shards run every one of its tests again and still decide green. A
 red `Fast lane` is the same failure the shards will report; start on it without waiting for them.
