@@ -636,6 +636,7 @@
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
     "viewReferralRecord": "View the referral",
     "openClearanceDocument": "Open the physician’s evaluation",
+    "openDiverForm": "Open the signed form the diver sent on {date}",
     "openSignedRecord": "Open the signed waiver"
   },
   "details": {

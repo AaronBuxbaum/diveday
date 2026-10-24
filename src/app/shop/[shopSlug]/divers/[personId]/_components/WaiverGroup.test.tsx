@@ -221,6 +221,41 @@ describe("the waiver group", () => {
   });
 
   /**
+   * **The signed form the diver sent, where the answer is recorded** (issue
+   * #2797): a link to its own staff route, never the stored address, for any
+   * reader who sees the recording control.
+   */
+  it("offers the doctor's form a held diver sent, by its route", () => {
+    const profile = diver({
+      waiver: {
+        state: "medical_review",
+        at: new Date("2026-09-02T15:00:00.000Z"),
+      } as DiverProfile["waiver"],
+    });
+    renderCard({
+      ...profile,
+      diverMedicalForm: { recordId: "rec-9", sentAt: new Date("2026-09-03T15:00:00.000Z") },
+    } as DiverProfile);
+    const link = screen.getByRole("link", {
+      // The date is one unit, joined by U+00A0 (`keepUnitsWhole`).
+      name: /^Open the signed form the diver sent on Sep\s3,\s2026$/,
+    });
+    expect(link).toHaveAttribute("href", "/api/medical-clearances/rec-9/diver-form");
+  });
+
+  it("offers no doctor's form when the diver sent none", () => {
+    renderCard(
+      diver({
+        waiver: {
+          state: "medical_review",
+          at: new Date("2026-09-02T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+    );
+    expect(screen.queryByRole("link", { name: /signed form the diver sent/ })).toBeNull();
+  });
+
+  /**
    * **Every row in the group keeps the state row's inset** (pixel-craft
    * class 5). The physician's form, the send options and the outcome line
    * padded themselves `py-3` where the state row above them pads `py-4`, so

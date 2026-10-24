@@ -335,6 +335,25 @@ export function canReadMedicalClearanceDocument(roles: readonly Role[] | undefin
 }
 
 /**
+ * **Open the signed doctor's form a diver sent from the doctor's page**,
+ * before anybody has recorded the physician's answer (issue #2797, ADR
+ * 20261024-diver-sent-doctors-form).
+ *
+ * Exactly the roles that may **record** that answer: every live staff role,
+ * the gate `recordMedicalClearanceAction` applies (`isLiveStaff`). The
+ * staffer at the rail who records the clearance has to read the form to do
+ * it, so a narrower gate would send the diver back to the shop's mailbox.
+ * Wider than {@link canReadMedicalClearanceDocument} on purpose, and only
+ * until the answer is recorded: then the form is the evaluation, behind that
+ * gate, or deleted. Every open is written to the diver's trail
+ * (`diver_medical_form_opened`). If recording ever narrows, this narrows
+ * with it.
+ */
+export function canReadDiverMedicalForm(roles: readonly Role[] | undefined): boolean {
+  return isStaff(roles);
+}
+
+/**
  * Who reads a diver's **whole** medical questionnaire on their signed record
  * (`divers/[personId]/waivers/[recordId]`), every answer and the physician's
  * name. Owner or manager: the same wall as {@link canExportShopData}, which

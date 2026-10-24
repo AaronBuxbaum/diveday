@@ -32,14 +32,22 @@ export type MedicalClearanceCopy = {
    * so the form asks nothing extra.
    */
   earlierLetterConfirm: string | null;
+  /**
+   * Offer to use the signed form the diver sent from the doctor's page as the
+   * evaluation (issue #2797); null when there is none.
+   */
+  useDiverForm: string | null;
 };
 
 export function medicalClearanceCopy(
   t: StaffTranslator,
   /** The earlier referral's signing day, already formatted for the reader, or null. */
   earlierReferralOn: string | null = null,
+  /** The diver sent their signed form from the doctor's page. */
+  hasDiverForm = false,
 ): MedicalClearanceCopy {
   return {
+    useDiverForm: hasDiverForm ? t("shared.medicalClearance.useDiverForm") : null,
     earlierLetterConfirm: earlierReferralOn
       ? t("shared.medicalClearance.earlierLetterConfirm", { date: earlierReferralOn })
       : null,

@@ -52,6 +52,7 @@ import { livePerson } from "./trips-live";
 import {
   earlierReferralForOpenHold,
   getCurrentWaiverGeneration,
+  getDiverMedicalFormForHold,
   getDiverWaiverChannelStates,
   getDiverWaiverRequestStatus,
   listSignedWaiversByPerson,
@@ -1072,6 +1073,10 @@ export async function getDiverProfile(
     waiver.state === "medical_review"
       ? await earlierReferralForOpenHold(db, shopId, personId)
       : null;
+  const diverMedicalForm =
+    waiver.state === "medical_review"
+      ? await getDiverMedicalFormForHold(db, shopId, personId)
+      : null;
 
   return {
     person: personRow.person,
@@ -1122,6 +1127,12 @@ export async function getDiverProfile(
      * there is none.
      */
     medicalEarlierReferral,
+    /**
+     * The newest signed doctor's form the diver sent from the doctor's page
+     * for a hold nobody has answered (issue #2797): which release holds it and
+     * when it arrived, never the file. Null when nothing is held or none was sent.
+     */
+    diverMedicalForm,
     waiverRequest,
     /**
      * What we know about each way of handing this diver's outstanding link

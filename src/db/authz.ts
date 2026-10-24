@@ -24,6 +24,7 @@ import {
   canOverrideCertBlock,
   canOverrideGearRequest,
   canPrintMedicalAlerts,
+  canReadDiverMedicalForm,
   canReadEveryIncidentReport,
   canReadMedicalAlert,
   canReadMedicalAnswers,
@@ -263,6 +264,10 @@ export const canPersonReadMedicalClearanceDocument = (
   shopId: string,
   personId: string,
 ) => canPerson(db, shopId, personId, canReadMedicalClearanceDocument);
+
+/** The live check behind the doctor's form a diver sent (`canReadDiverMedicalForm`, issue #2797). */
+export const canPersonReadDiverMedicalForm = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canReadDiverMedicalForm);
 
 /** The live check behind a signed record's whole questionnaire (`canReadMedicalAnswers`). */
 export const canPersonReadMedicalAnswers = (db: DbExecutor, shopId: string, personId: string) =>

@@ -238,6 +238,8 @@ type ActivityParamShapes = {
   party_seat_self_refunded: { actor: string; diver: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
+  /** A staffer opened the signed doctor's form a diver sent from the doctor's page (issue #2797). */
+  diver_medical_form_opened: { actor: string; diver: string };
   /**
    * A physician's answer was recorded from a letter dated before the referral it
    * answers (issue #2616): the letter's date, the earlier referral it was written
@@ -544,6 +546,7 @@ export const ACTIVITY_CODES = [
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",
+  "diver_medical_form_opened",
   "medical_answered_by_earlier_letter",
   "medical_answers_read",
   "medical_alert_read",

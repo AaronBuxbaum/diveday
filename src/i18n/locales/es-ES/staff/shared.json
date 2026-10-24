@@ -63,6 +63,7 @@
     "documentChooseAnother": "Elige otro archivo",
     "recording": "Registrando…",
     "confirm": "Registrar la respuesta",
+    "useDiverForm": "Usar como evaluación el formulario que envió el buceador",
     "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}."
   },
   "waiverSend": {

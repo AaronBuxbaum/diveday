@@ -636,6 +636,7 @@
     "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada. Regístrala o pregunta.",
     "viewReferralRecord": "Ver la derivación",
     "openClearanceDocument": "Abrir la evaluación médica",
+    "openDiverForm": "Abrir el formulario firmado que el buceador envió el {date}",
     "openSignedRecord": "Abrir la exención firmada"
   },
   "details": {
