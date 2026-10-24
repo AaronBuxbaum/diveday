@@ -177,7 +177,10 @@ describe("the emergency read in the reveal sheet", () => {
     const body = t("manifest.medicalAlertEmergencyConfirmBody");
     expect(screen.getByText(body)).toBeInTheDocument();
     expect(body).toContain("emergency");
-    expect(body).toContain("owner");
+    expect(body).toContain("diver’s record");
+    expect(body).toContain("owner will see it");
+    // No promise of an email the owner may have turned off (domain review 2, S5).
+    expect(body).not.toMatch(/email/i);
     expect(emergency).not.toHaveBeenCalled();
     expect(screen.queryByText(ALERT)).toBeNull();
     // Cancel goes back without a call.
@@ -232,16 +235,38 @@ describe("the emergency read in the reveal sheet", () => {
     }
   });
 
-  it("says a refused or failed read failed, shows nothing, and never throws to the page", async () => {
-    const refused = vi.fn(async () => ({ ok: false }) as const);
-    const first = renderPanel(undefined, {}, () => refused);
+  it("says a refused read can't be opened now and to ask the owner or a manager, never to try again", async () => {
+    for (const refusal of [{ ok: false, reason: "closed" }, { ok: false }] as const) {
+      const refused = vi.fn(async () => refusal);
+      const panel = renderPanel(undefined, {}, () => refused);
+      fireEvent.click(screen.getByRole("button", { name: OFFER }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+      });
+      const closed = t("manifest.medicalAlertEmergencyClosed");
+      expect(await screen.findByText(closed)).toBeInTheDocument();
+      expect(closed).toMatch(/owner or a manager/);
+      expect(closed).not.toMatch(/try again/i);
+      expect(screen.queryByText(ALERT)).toBeNull();
+      panel.unmount();
+    }
+  });
+
+  it("says a read refused as not yet open opens on the day of the trip, never to try again", async () => {
+    const early = vi.fn(async () => ({ ok: false, reason: "not_yet" }) as const);
+    renderPanel(undefined, {}, () => early);
     fireEvent.click(screen.getByRole("button", { name: OFFER }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
     });
-    expect(await screen.findByText(t("manifest.medicalAlertShowFailed"))).toBeInTheDocument();
+    const notYet = t("manifest.medicalAlertEmergencyNotYet");
+    expect(await screen.findByText(notYet)).toBeInTheDocument();
+    expect(notYet).toMatch(/day of the trip/);
+    expect(notYet).not.toMatch(/try again/i);
     expect(screen.queryByText(ALERT)).toBeNull();
-    first.unmount();
+  });
+
+  it("says there is no signal right now when the call fails, points to the sheet, and never throws", async () => {
     const thrown = vi.fn(async (): Promise<MedicalAlertResult> => {
       throw new TypeError("Failed to fetch");
     });
@@ -250,9 +275,68 @@ describe("the emergency read in the reveal sheet", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
     });
-    expect(
-      await screen.findByText(t("manifest.medicalAlertEmergencyNoSignal")),
-    ).toBeInTheDocument();
+    const noSignal = t("manifest.medicalAlertEmergencyNoSignal");
+    expect(await screen.findByText(noSignal)).toBeInTheDocument();
+    expect(noSignal).toMatch(/^No signal right now\. Try again/);
+    expect(noSignal).toMatch(/medical alerts sheet if the shop printed one/);
+    // A retry is one tap.
+    expect(screen.getByRole("button", { name: CONFIRM })).toBeEnabled();
+  });
+
+  it("gives up after 15 seconds on weak signal, and Cancel works while it waits", async () => {
+    vi.useFakeTimers();
+    try {
+      const hangs = vi.fn((): Promise<MedicalAlertResult> => new Promise(() => {}));
+      renderPanel(undefined, {}, () => hangs);
+      fireEvent.click(screen.getByRole("button", { name: OFFER }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+      });
+      expect(hangs).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByRole("button", { name: t("manifest.medicalAlertShowing") }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: t("manifest.medicalAlertEmergencyCancel") }),
+      ).toBeEnabled();
+      await act(async () => {
+        vi.advanceTimersByTime(14_999);
+      });
+      expect(screen.queryByText(t("manifest.medicalAlertEmergencyNoSignal"))).toBeNull();
+      await act(async () => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByText(t("manifest.medicalAlertEmergencyNoSignal"))).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: CONFIRM })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: t("manifest.medicalAlertEmergencyCancel") }),
+      ).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops a late answer once the staffer has cancelled", async () => {
+    let answer: (result: MedicalAlertResult) => void = () => {};
+    const slow = vi.fn(
+      () =>
+        new Promise<MedicalAlertResult>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    renderPanel(undefined, {}, () => slow);
+    fireEvent.click(screen.getByRole("button", { name: OFFER }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: t("manifest.medicalAlertEmergencyCancel") }),
+    );
+    await act(async () => {
+      answer({ ok: true, text: ALERT });
+    });
+    expect(screen.queryByText(ALERT)).toBeNull();
+    expect(screen.getByRole("button", { name: OFFER })).toBeEnabled();
   });
 
   it("is not offered to a reader the crew rule admits, nor where nothing is bound", () => {

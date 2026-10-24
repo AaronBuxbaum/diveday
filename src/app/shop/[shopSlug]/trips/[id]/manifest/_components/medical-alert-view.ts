@@ -16,7 +16,7 @@ export type MedicalAlertView = {
   keepAs: string;
   /** This seat on the device's saved copy, for the no-signal fallback. */
   savedCopy: { tripId: string; bookingId: string };
-  /** "Emergency: show the alert", for a reader the crew rule refuses today (issue #2990). */
+  /** "Emergency: show the alert", for a reader the crew rule refuses, until the trip's days end (issue #2990). */
   emergency?: { show: () => Promise<MedicalAlertResult>; copy: MedicalAlertEmergencyCopy };
 };
 
@@ -37,7 +37,7 @@ export function medicalAlertView({
   t,
 }: {
   show?: () => Promise<MedicalAlertResult>;
-  /** Bound only when `show` is not: a staffer the crew rule refuses, on the day. */
+  /** Bound only when `show` is not: a staffer the crew rule refuses, until the trip's days end. */
   emergencyShow?: () => Promise<MedicalAlertResult>;
   tripId: string;
   bookingId: string;
@@ -67,6 +67,8 @@ export function medicalAlertView({
               confirm: t("manifest.medicalAlertEmergencyConfirm"),
               cancel: t("manifest.medicalAlertEmergencyCancel"),
               noSignal: t("manifest.medicalAlertEmergencyNoSignal"),
+              notYet: t("manifest.medicalAlertEmergencyNotYet"),
+              closed: t("manifest.medicalAlertEmergencyClosed"),
             },
           }
         : undefined,

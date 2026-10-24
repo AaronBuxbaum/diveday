@@ -66,7 +66,7 @@ export type DiverRollCallContext = {
   showMedicalAlert?: (bookingId: string) => () => Promise<MedicalAlertResult>;
   /**
    * One seat's "Emergency: show the alert" (issue #2990), bound only for a
-   * staffer the crew rule refuses, on the day the departure leaves. The
+   * staffer the crew rule refuses, until the days of the trip end. The
    * action re-checks and records every confirm.
    */
   emergencyShowMedicalAlert?: (bookingId: string) => () => Promise<MedicalAlertResult>;

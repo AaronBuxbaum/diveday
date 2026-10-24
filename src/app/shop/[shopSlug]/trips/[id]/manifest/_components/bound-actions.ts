@@ -47,7 +47,7 @@ export function bindManifestActions(
     alerted?: ReadonlySet<string>;
     /** Whether the reader may read the medical alerts on this departure (issue #2960). */
     mayReadMedicalAlerts?: boolean;
-    /** Whether the reader may open them in an emergency instead, today (issue #2990). */
+    /** Whether to offer them in an emergency instead, until the trip's days end (issue #2990). */
     mayEmergencyReadMedicalAlerts?: boolean;
   } = { mayStartIncidentReport: false },
   /** The page's own search params: the printed words ride on them, never on the URL. */
@@ -97,7 +97,7 @@ export function bindManifestActions(
         ? (bookingId: string) => showSeatMedicalAlertAction.bind(null, shopSlug, tripId, bookingId)
         : undefined,
       // One seat's "Emergency: show the alert", only for a reader the crew rule
-      // refuses on the day; the action re-checks and records every confirm.
+      // refuses until the trip's days end; the action decides and records every confirm.
       emergencyShowMedicalAlert:
         !reader.mayReadMedicalAlerts && reader.mayEmergencyReadMedicalAlerts
           ? (bookingId: string) =>
