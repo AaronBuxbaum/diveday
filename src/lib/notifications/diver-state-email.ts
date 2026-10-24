@@ -86,8 +86,8 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
     const sentence = t("notifications.flySafeCorrection.body", { tripTitle: input.tripTitle });
     return {
       subject: t("notifications.flySafeCorrection.subject", { tripTitle: input.tripTitle }),
-      text: `${sentence}\n\n${input.shopName}\n`,
-      html: `<p>${escapeHtml(sentence)}</p><p>${shop}</p>`,
+      text: `${sentence}\n`,
+      html: `<p>${escapeHtml(sentence)}</p>`,
     };
   }
 

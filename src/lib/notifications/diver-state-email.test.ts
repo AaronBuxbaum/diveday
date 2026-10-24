@@ -376,8 +376,6 @@ describe("diverStateEmail: fly_safe_correction (#2927)", () => {
       [
         "Two-Tank Reef now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly.",
         "",
-        "Blue Mantis",
-        "",
       ].join("\n"),
     );
     // No new number to hold instead: DAN gives none for a dive with stops (H-84).
