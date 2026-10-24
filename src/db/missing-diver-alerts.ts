@@ -566,6 +566,7 @@ async function reachedLogins(db: AppDb, shopId: string, personIds: readonly stri
     .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
     .where(
       and(
+        // diveday:allow-deleted-people: a by-id read of owners the alarm already reached; one removed since still saw it and is owed the all-clear.
         eq(people.shopId, shopId),
         inArray(people.id, [...personIds]),
         isNull(people.anonymizedAt),
