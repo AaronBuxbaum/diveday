@@ -12,7 +12,7 @@ import { SkeletonLineBars } from "@/components/ShopPageHeader";
 export default function FindYourBookingLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNavFallback hideCta compactMobile />
+      <MarketingNavFallback compactMobile />
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12 sm:py-16">
         <SkeletonLineBars lines={1} height="h-9" width="w-56" />
         <div className="mt-2">

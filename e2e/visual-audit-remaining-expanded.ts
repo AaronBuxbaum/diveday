@@ -44,6 +44,16 @@ function nestedEditor(container: Locator, selector: string) {
 }
 
 async function openEditorSection(page: Page, id: string) {
+  // A closed section is a row of the page's disclosure list (visual review
+  // 2026-10-24, A11); the open ones are still `EditorSection`s.
+  const row = page.locator(`details#${id}`);
+  if ((await row.count()) > 0) {
+    await openIfClosed(row);
+    await expect(
+      row.locator("input, select, textarea, button").filter({ visible: true }).first(),
+    ).toBeVisible();
+    return;
+  }
   const section = page.locator(`[data-editor-section="${id}"]`);
   await expect(section.locator("[data-section-preview][data-preview-ready]")).toHaveCount(1);
   const trigger = section.locator(`button[aria-controls="${id}-body"]`);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -25,36 +26,24 @@ import {
   gearReturnOutcomeLabel,
   gearServiceKindLabel,
   gearServiceStateText,
-  gearStatusLabel,
 } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate } from "@/lib/format";
-import {
-  GEAR_KIND_ORDER,
-  GEAR_SERVICE_KINDS_FOR,
-  gearServiceState,
-  reservationPhase,
-} from "@/lib/gear";
-import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
+import { GEAR_SERVICE_KINDS_FOR, gearServiceState, reservationPhase } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-// The register's restore, not a second one: one act, one code path, and a tag
-// collision on the way back answers on the page that holds the fleet it hit.
-import { restoreGearItemAction } from "../actions";
 import { GearItemNotes } from "./_components/GearItemNotes";
-import { aboardText, gearUnitHull, KindFacts } from "./_components/KindFacts";
-import { StatusCard } from "./_components/StatusCard";
+import { aboardText, gearUnitHull } from "./_components/KindFacts";
+import { UnitSummary } from "./_components/UnitSummary";
 import {
   checkOutGearReservationFromUnitAction,
   recordGearServiceAction,
   releaseGearReservationAction,
   returnGearReservationFromUnitAction,
-  updateGearItemAction,
 } from "./actions";
 
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
@@ -99,7 +88,8 @@ const SERVICE_NOTICES = new Set([
   "invalid-dives",
   "dives-need-a-date",
 ]);
-const DETAILS_NOTICES = new Set(["updated", "empty-label", "duplicate-label"]);
+/** A refused details save brings the form back standing, with the words. */
+const DETAILS_REFUSALS = new Set(["empty-label", "duplicate-label"]);
 
 // See the register page's copy of this comment (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -111,10 +101,10 @@ export default async function GearUnitPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; edit?: string }>;
 }) {
   const { shopSlug, id } = await params;
-  const { notice } = await searchParams;
+  const { notice, edit } = await searchParams;
   const { db, shop } = await requireShopSurface(shopSlug);
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -172,15 +162,17 @@ export default async function GearUnitPage({
     : null;
 
   // Safety kit names its hull ("the AED on Mantis I"): part of what it *is*.
-  const identity = [
-    gearItemKindLabel(t, item.kind),
-    aboardText(hull, t),
-    item.size,
-    item.brandModel,
-    item.serialNumber,
-  ]
+  // The rest of the record is the summary panel's list, so the masthead does
+  // not say it twice (visual review 2026-10-24, A19).
+  const identity = [gearItemKindLabel(t, item.kind), aboardText(hull, t)]
     .filter(Boolean)
     .join(" · ");
+  const unitPath = `/shop/${shopSlug}/gear/${item.id}`;
+  // "Edit details" is the header's door; the form opens in the summary panel,
+  // server-rendered, and a refused save comes back to it standing.
+  const editing = !deletedAt && (edit === "details" || DETAILS_REFUSALS.has(notice ?? ""));
+  const hasService = clocks.length > 0 || serviceHistory.length > 0;
+  const hasRentals = settled.length > 0 || priorAssignments.length > 0;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -194,14 +186,20 @@ export default async function GearUnitPage({
           meta={
             deletedAt ? (
               // The one fact that explains the whole page: no forms, and a
-              // Restore where the Delete was. "Needs service" is a state of a
-              // unit on the wall, so it does not also render here.
+              // Restore where the Delete was. A live unit's status is the
+              // summary panel's first line, so it does not also render here.
               <Badge tone="warning">{t("gear.unit.deleted.badge")}</Badge>
-            ) : item.status !== "in_service" ? (
-              <Badge tone={item.status === "needs_service" ? "warning" : "neutral"}>
-                {gearStatusLabel(t, item.status)}
-              </Badge>
             ) : undefined
+          }
+          actions={
+            deletedAt || editing ? undefined : (
+              <Link
+                href={`${unitPath}?edit=details#unit-details`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("gear.unit.details.edit")}
+              </Link>
+            )
           }
         />
       </div>
@@ -302,23 +300,21 @@ export default async function GearUnitPage({
           </SectionCard>
         )}
 
-        {/* A deleted unit with no notes ever written has an empty card and no
-            form to fill it, so it gets no card at all. */}
-        {deletedAt && notes.length === 0 ? null : (
-          <GearItemNotes
-            gearItemId={item.id}
-            notes={notes}
-            todayLocal={todayLocal}
-            locale={locale}
-            t={t}
-            readOnly={deletedAt !== null}
-            formOpen={notice === "service-logged"}
-          />
-        )}
+        <UnitSummary
+          detail={detail}
+          hull={hull}
+          held={held}
+          editing={editing}
+          unitPath={unitPath}
+          t={t}
+          locale={locale}
+          zone={shop.timezone}
+        />
 
-        {/* A deleted unit that was never serviced has an empty card and no
-            form to fill it, so it gets no card at all. */}
-        {deletedAt && clocks.length === 0 && serviceHistory.length === 0 ? null : (
+        {/* Service and history render only when they hold rows. A unit with
+            neither says so in one line, and the log door stands under it,
+            since logging the first service is how the card comes to exist. */}
+        {hasService ? (
           <ServiceCard
             item={item}
             clocks={clocks}
@@ -330,9 +326,21 @@ export default async function GearUnitPage({
             readOnly={deletedAt !== null}
             formOpen={SERVICE_NOTICES.has(notice ?? "")}
           />
+        ) : deletedAt ? null : (
+          <section aria-label={t("gear.unit.service.title")} className="space-y-2">
+            {hasRentals ? null : (
+              <p className="text-sm text-muted">{t("gear.unit.noServiceOrHistory")}</p>
+            )}
+            <ServiceLogDoor
+              item={item}
+              t={t}
+              todayLocal={todayLocal}
+              formOpen={SERVICE_NOTICES.has(notice ?? "")}
+            />
+          </section>
         )}
 
-        {settled.length > 0 || priorAssignments.length > 0 ? (
+        {hasRentals ? (
           <SectionCard padding="none" title={t("gear.unit.rentals.title")}>
             <ul className="divide-y divide-border">
               {settled.map((reservation) => (
@@ -402,107 +410,18 @@ export default async function GearUnitPage({
           </SectionCard>
         ) : null}
 
-        {deletedAt ? null : (
-          <SectionCard id="unit-details" padding="lg" title={t("gear.unit.details.title")}>
-            {/* The identity is already the masthead's line, so the only record
-                fact this section has left to state is the one that is not up
-                there — and the form that rewrites all of them opens on request.
-                The caption that sat here ("The tag, size, and serial the
-                register lists this unit by") described the form's own fields. */}
-            {item.purchasedOn ? (
-              <p className="text-sm text-muted">
-                {t("gear.form.purchasedOn")} · {formatCalendarDate(item.purchasedOn, locale)}
-              </p>
-            ) : null}
-            <details
-              className={`group ${item.purchasedOn ? "mt-3" : ""}`.trim()}
-              open={DETAILS_NOTICES.has(notice ?? "") || undefined}
-            >
-              <summary
-                className={buttonClass({
-                  variant: "link",
-                  size: "sm",
-                  flush: true,
-                  className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-                })}
-              >
-                {t("gear.unit.details.edit")}
-                <DisclosureCaret direction="down" className="group-open:rotate-180" />
-              </summary>
-              <FieldGrid as="form" action={updateGearItemAction} columns={2} className="mt-4">
-                <input type="hidden" name="gearItemId" value={item.id} />
-                <Field label={t("gear.form.kind")}>
-                  <select name="kind" className={controlClass} defaultValue={item.kind}>
-                    {GEAR_KIND_ORDER.map((option) => (
-                      <option key={option} value={option}>
-                        {gearItemKindLabel(t, option)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={t("gear.form.label")} hint={t("gear.form.labelHint")}>
-                  <input
-                    name="label"
-                    required
-                    maxLength={80}
-                    defaultValue={item.label}
-                    className={controlClass}
-                  />
-                </Field>
-                {/* The action's own cap, which is the fit forms' cap
-                  (`RENTAL_FIT_TEXT_LIMITS.size`) because `keepRentalFitAction`
-                  copies this value into `rental_fit_profiles` — issue #1754. */}
-                <Field label={t("gear.form.size")} hint={t("gear.form.optionalHint")}>
-                  <input
-                    name="size"
-                    maxLength={RENTAL_FIT_TEXT_LIMITS.size}
-                    defaultValue={item.size ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("gear.form.serialNumber")} hint={t("gear.form.optionalHint")}>
-                  <input
-                    name="serialNumber"
-                    maxLength={80}
-                    defaultValue={item.serialNumber ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("gear.form.brandModel")} hint={t("gear.form.optionalHint")}>
-                  <input
-                    name="brandModel"
-                    maxLength={120}
-                    defaultValue={item.brandModel ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("gear.form.purchasedOn")} hint={t("gear.form.optionalHint")}>
-                  <DateField name="purchasedOn" defaultValue={item.purchasedOn ?? ""} />
-                </Field>
-                <KindFacts hull={hull} item={item} t={t} />
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("gear.unit.details.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("gear.unit.details.save")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </details>
-          </SectionCard>
-        )}
-
-        {deletedAt ? (
-          <RestoreCard
-            item={item}
-            deletedAt={deletedAt}
-            t={t}
+        {/* A deleted unit with no notes ever written has an empty card and no
+            form to fill it, so it gets no card at all. */}
+        {deletedAt && notes.length === 0 ? null : (
+          <GearItemNotes
+            gearItemId={item.id}
+            notes={notes}
+            todayLocal={todayLocal}
             locale={locale}
-            timeZone={shop.timezone}
+            t={t}
+            readOnly={deletedAt !== null}
+            formOpen={notice === "service-logged"}
           />
-        ) : (
-          <StatusCard detail={detail} held={held} t={t} locale={locale} zone={shop.timezone} />
         )}
       </div>
     </main>
@@ -600,81 +519,7 @@ function ServiceCard({
           primary: it is still this page's most frequent act, and behind a door
           it shouts at nobody at rest. */}
       {readOnly ? null : (
-        <details className="group" open={formOpen || undefined}>
-          <summary
-            className={buttonClass({
-              variant: "link",
-              size: "sm",
-              flush: true,
-              className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-            })}
-          >
-            {t("gear.unit.service.logDoor")}
-            <DisclosureCaret direction="down" className="group-open:rotate-180" />
-          </summary>
-          <FieldGrid as="form" action={recordGearServiceAction} columns={2} className="mt-4">
-            <input type="hidden" name="gearItemId" value={item.id} />
-            <Field label={t("gear.unit.service.kind")}>
-              <select name="kind" className={controlClass}>
-                {GEAR_SERVICE_KINDS_FOR[item.kind].map((option) => (
-                  <option key={option} value={option}>
-                    {gearServiceKindLabel(t, option)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("gear.unit.service.servicedOn")}>
-              <DateField name="servicedOn" required defaultValue={todayLocal} />
-            </Field>
-            <Field
-              label={t("gear.unit.service.nextDueOn")}
-              hint={t("gear.form.optionalHint")}
-              description={t("gear.unit.service.nextDueHint")}
-            >
-              <DateField name="nextDueOn" />
-            </Field>
-            <Field
-              label={t("gear.unit.service.nextDueDives")}
-              hint={t("gear.form.optionalHint")}
-              description={t("gear.unit.service.nextDueDivesHint")}
-            >
-              <input
-                type="number"
-                name="nextDueDives"
-                min={1}
-                max={9999}
-                inputMode="numeric"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("gear.unit.service.note")} hint={t("gear.form.optionalHint")}>
-              <textarea
-                name="note"
-                maxLength={500}
-                rows={3}
-                placeholder={t("gear.unit.service.notePlaceholder")}
-                className={textareaClassFor(3)}
-              />
-            </Field>
-            {item.status === "needs_service" ? (
-              <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
-                <input
-                  type="checkbox"
-                  name="returnToService"
-                  defaultChecked
-                  className={choiceClass}
-                />
-                {t("gear.unit.service.returnToService")}
-              </label>
-            ) : null}
-            <FieldActions>
-              <SubmitButton pendingLabel={t("gear.unit.service.logging")} className={buttonClass()}>
-                {t("gear.unit.service.log")}
-              </SubmitButton>
-              <FormStatus />
-            </FieldActions>
-          </FieldGrid>
-        </details>
+        <ServiceLogDoor item={item} t={t} todayLocal={todayLocal} formOpen={formOpen} />
       )}
 
       {/* The paper trail rides the card whose clocks it explains, folded —
@@ -736,44 +581,91 @@ function ServiceCard({
 }
 
 /**
- * The way back, where the Delete was.
- *
- * A deleted unit's record is read-only (`getGearItemDetail` reports the stamp
- * rather than hiding the row), so this card is the page's only control: the
- * day the unit came off the register, and the one act that reverses it. The
- * restore is the register's own action, so a refused one — another unit is
- * wearing this one's tag now — lands on the register beside the fleet that
- * refused it, which is where the collision is.
+ * **The service log's door**: on the Service card when the unit has clocks
+ * or a paper trail, and on its own under the summary when it has neither.
  */
-function RestoreCard({
+function ServiceLogDoor({
   item,
-  deletedAt,
   t,
-  locale,
-  timeZone,
+  todayLocal,
+  formOpen,
 }: {
   item: GearItemDetail["item"];
-  deletedAt: Date;
   t: StaffTranslator;
-  locale: string;
-  timeZone: string;
+  todayLocal: string;
+  /** A save or a refusal from this form landed back here — bring it back standing. */
+  formOpen: boolean;
 }) {
   return (
-    <SectionCard padding="lg" title={t("gear.unit.status.title")}>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <p className="w-full text-sm text-muted sm:w-auto sm:flex-1">
-          {t("gear.deleted.on", { date: formatShortDate(deletedAt, locale, timeZone) })}
-        </p>
-        <form action={restoreGearItemAction}>
-          <input type="hidden" name="gearItemId" value={item.id} />
-          <SubmitButton
-            pendingLabel={t("gear.deleted.restoring")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("gear.unit.deleted.restore")}
+    <details className="group" open={formOpen || undefined}>
+      <summary
+        className={buttonClass({
+          variant: "link",
+          size: "sm",
+          flush: true,
+          className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+        })}
+      >
+        {t("gear.unit.service.logDoor")}
+        <DisclosureCaret direction="down" className="group-open:rotate-180" />
+      </summary>
+      <FieldGrid as="form" action={recordGearServiceAction} columns={2} className="mt-4">
+        <input type="hidden" name="gearItemId" value={item.id} />
+        <Field label={t("gear.unit.service.kind")}>
+          <select name="kind" className={controlClass}>
+            {GEAR_SERVICE_KINDS_FOR[item.kind].map((option) => (
+              <option key={option} value={option}>
+                {gearServiceKindLabel(t, option)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("gear.unit.service.servicedOn")}>
+          <DateField name="servicedOn" required defaultValue={todayLocal} />
+        </Field>
+        <Field
+          label={t("gear.unit.service.nextDueOn")}
+          hint={t("gear.form.optionalHint")}
+          description={t("gear.unit.service.nextDueHint")}
+        >
+          <DateField name="nextDueOn" />
+        </Field>
+        <Field
+          label={t("gear.unit.service.nextDueDives")}
+          hint={t("gear.form.optionalHint")}
+          description={t("gear.unit.service.nextDueDivesHint")}
+        >
+          <input
+            type="number"
+            name="nextDueDives"
+            min={1}
+            max={9999}
+            inputMode="numeric"
+            className={controlClass}
+          />
+        </Field>
+        <Field label={t("gear.unit.service.note")} hint={t("gear.form.optionalHint")}>
+          <textarea
+            name="note"
+            maxLength={500}
+            rows={3}
+            placeholder={t("gear.unit.service.notePlaceholder")}
+            className={textareaClassFor(3)}
+          />
+        </Field>
+        {item.status === "needs_service" ? (
+          <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="returnToService" defaultChecked className={choiceClass} />
+            {t("gear.unit.service.returnToService")}
+          </label>
+        ) : null}
+        <FieldActions>
+          <SubmitButton pendingLabel={t("gear.unit.service.logging")} className={buttonClass()}>
+            {t("gear.unit.service.log")}
           </SubmitButton>
-        </form>
-      </div>
-    </SectionCard>
+          <FormStatus />
+        </FieldActions>
+      </FieldGrid>
+    </details>
   );
 }

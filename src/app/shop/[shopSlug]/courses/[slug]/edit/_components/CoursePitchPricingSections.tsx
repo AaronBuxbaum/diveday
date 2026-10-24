@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { controlClass, Field, FieldGrid, PriceField, textareaClassFor } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ShopCurrency } from "@/lib/money";
+import { CourseSection, type CourseSectionRef } from "./CourseSection";
 import type { EditableCourse } from "./course-types";
 
 /** The editor's pitch and pricing sections. */
@@ -17,8 +17,8 @@ export function CoursePitchPricingSections({
   summaryAssist,
 }: {
   course: EditableCourse;
-  pitch: EditorSectionRef;
-  pricing: EditorSectionRef;
+  pitch: CourseSectionRef;
+  pricing: CourseSectionRef;
   currency: ShopCurrency;
   locale: string;
   t: StaffTranslator;
@@ -27,7 +27,7 @@ export function CoursePitchPricingSections({
 }) {
   return (
     <>
-      <EditorSection {...pitch} as="fieldset" lead>
+      <CourseSection {...pitch} as="fieldset" lead>
         <FieldGrid columns={1} className="gap-y-5">
           <Field
             label={t("courses.edit.subheadLabel")}
@@ -69,9 +69,9 @@ export function CoursePitchPricingSections({
             })}
           </p>
         </FieldGrid>
-      </EditorSection>
+      </CourseSection>
 
-      <EditorSection as="fieldset" {...pricing} description={t("courses.edit.pricingDescription")}>
+      <CourseSection as="fieldset" {...pricing} description={t("courses.edit.pricingDescription")}>
         <FieldGrid columns={2} className="gap-y-5">
           <PriceField
             id="price"
@@ -103,7 +103,7 @@ export function CoursePitchPricingSections({
             copy={forgivingCopy(t)}
           />
         </FieldGrid>
-      </EditorSection>
+      </CourseSection>
     </>
   );
 }

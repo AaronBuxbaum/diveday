@@ -94,6 +94,12 @@ export default async function CourseFormsPage({
   // A forms-only link cannot open the prep page, so it is never offered one.
   const offerPrep = !capability.formsOnly;
 
+  // Visual review 2026-10-24, B28: a course that asks for no forms has no forms
+  // page; the link goes back to the thread. A course whose forms are all signed
+  // keeps its done page. `outstanding` is never non-empty here, so no unsigned
+  // form is hidden. A forms-only link cannot open the thread, so it stays.
+  if (required.length === 0 && offerPrep) redirect(prep);
+
   if (outstanding.length === 0) {
     return (
       <ThreadShell shopName={shop.name} title={t("courseForms.doneTitle")}>

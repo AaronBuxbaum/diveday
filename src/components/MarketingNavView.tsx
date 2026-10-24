@@ -25,7 +25,6 @@ const navLinkClassName =
 export function MarketingNavView({
   shopSlug,
   locale,
-  hideCta,
   compactMobile = false,
   demoAction,
 }: {
@@ -36,7 +35,6 @@ export function MarketingNavView({
    */
   shopSlug: string | null;
   locale: DiverLocale;
-  hideCta: boolean;
   /**
    * The onboard artboard keeps only the wordmark in the phone header, and it
    * keeps it for as long as the full header would take two rows (below lg), so
@@ -55,12 +53,6 @@ export function MarketingNavView({
     { href: "/switching", label: t("nav.switch") },
     { href: "/about", label: t("nav.about") },
   ];
-  // The CTA slot renders nothing for a signed-out visitor on a page that hides
-  // the pitch (/dive, /onboard). With no CTA after it, the row's last link ends
-  // its word `lg:px-3` short of the gutter the footer and the CTA end on, so
-  // the row hangs that padding into the gutter, as `-mx-2` does on a phone
-  // (K-512). With a CTA the padding is the gap before it and stays.
-  const ctaSlotEmpty = !shopSlug && hideCta;
 
   return (
     <header
@@ -83,7 +75,7 @@ export function MarketingNavView({
       >
         <Wordmark href="/" className="text-foreground" />
         <div
-          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 lg:order-none lg:mx-0 lg:ml-auto lg:basis-auto lg:justify-end lg:gap-x-2 ${ctaSlotEmpty ? "lg:-me-3" : ""} ${compactMobile ? "max-lg:hidden" : ""}`}
+          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 lg:order-none lg:mx-0 lg:ml-auto lg:basis-auto lg:justify-end lg:gap-x-2 ${compactMobile ? "max-lg:hidden" : ""}`}
         >
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={navLinkClassName}>
@@ -103,10 +95,8 @@ export function MarketingNavView({
         </div>
         {/* One CTA slot, two audiences. Somebody already signed in cannot try
             the demo or start a trial — they have a shop — so the slot becomes
-            the door back to it. `hideCta` suppresses only the pitch (it is
-            set on /onboard, whose footer already offers the demo and whose
-            form is the trial itself); the way back to your own shop is
-            wayfinding, never a pitch, so it still shows. */}
+            the door back to it. Every marketing page carries it, the funnel's
+            own pages included (visual review 2026-10-24, B43). */}
         {shopSlug ? (
           <Link
             href={staffShopRoot(shopSlug)}
@@ -117,7 +107,7 @@ export function MarketingNavView({
           >
             {t("nav.goToShop")}
           </Link>
-        ) : ctaSlotEmpty ? null : (
+        ) : (
           // The demo leads everywhere in the funnel (docs/product/marketing.md,
           // "The two doors, and which one leads"); the nav is a single door,
           // not the pair `FunnelCtas` renders, so it carries that same door

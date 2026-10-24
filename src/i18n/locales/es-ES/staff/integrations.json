@@ -38,9 +38,7 @@
     "orderPaid": "Se paga un pedido",
     "orderRefunded": "Se reembolsa un pedido",
     "orderVoided": "Se anula un pedido",
-    "notAvailable": "Todavía no está disponible. Escribe a {email} y la activamos.",
-    "notAvailableShort": "Todavía no está disponible.",
-    "notAvailableAsk": "¿Quieres alguna? Escribe a {email} y la activamos."
+    "notAvailableAsk": "Más integraciones llegarán más adelante. Escríbenos a {email}."
   },
   "shopify": {
     "name": "Shopify",

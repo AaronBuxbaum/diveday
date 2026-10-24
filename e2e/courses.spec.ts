@@ -202,7 +202,7 @@ test.describe("staff", () => {
     // Pricing now lives on the course page, beside the copy it prices.
     await page.getByLabel("Instruction fee").fill("149.00");
     await page.getByLabel("e-Learning fee").fill("100.00");
-    await page.getByRole("button", { name: "Save course page" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
 
     // The two items are billed separately, so the public page states the single
@@ -341,17 +341,17 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { level: 2, name: "PADI" })).toBeVisible();
   });
 
-  test("a course row schedules a session of itself, opening the board's add panel", async ({
+  test("a course page schedules a session of itself, opening the board's add panel", async ({
     page,
   }) => {
     // A course the shop runs: the seed seats Discover Scuba Diving on the
-    // board, so its row offers Schedule (third UX review, item 35).
+    // board, so its page offers "Schedule a session" in its header (third UX
+    // review, item 35; the row's own action moved there in visual review
+    // 2026-10-24, A39, so a row is one link).
     await page.goto("/shop/blue-mantis/courses");
-    const row = page
-      .getByRole("listitem")
-      .filter({ has: page.getByText("Discover Scuba Diving", { exact: true }) });
-
-    await row.getByRole("link", { name: "Schedule a session of Discover Scuba Diving" }).click();
+    await page.getByRole("link", { name: "Edit Discover Scuba Diving", exact: true }).click();
+    await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\/edit$/);
+    await page.getByRole("link", { name: "Schedule a session", exact: true }).click();
     // The one trip-creation path, not a second one (ADR
     // 20260806-one-trip-create-form) — the panel opens with the course
     // preselected and the title placeholder already shaped for it.
@@ -449,7 +449,7 @@ test.describe("staff", () => {
     // tighter 2:1 in-water ratio — a checkbox on the marketing form was a way
     // to switch that cap off on a boat full of first-timers.
     await expect(page.getByRole("checkbox", { name: /taster session/ })).toHaveCount(0);
-    await page.getByRole("button", { name: "Save course page" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
 
     // The editor's one primary is Save; visibility is a quiet `secondary`
@@ -685,7 +685,7 @@ test.describe("staff", () => {
     // not type, and the assertion that fails is the *next* one.
     await expect(editorHydrated(page)).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth18}");
-    await page.getByRole("button", { name: "Save course page" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
 
     // Resolved on the way out, in whichever unit this shop is set to — never
@@ -706,7 +706,7 @@ test.describe("staff", () => {
     // wait burned its eight seconds and reported the alert as simply absent.
     await expect(editorHydrated(page)).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth 18}");
-    await page.getByRole("button", { name: "Save course page" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     // Filtered, not bare: Next's own route announcer is a `role="alert"` too.
     await expect(page.getByRole("alert").filter({ hasText: "depth markers" })).toContainText(
       "is broken, so nothing saved",
@@ -719,60 +719,40 @@ test.describe("staff", () => {
   });
 
   /**
-   * **On a phone the editor folds** (UX review 2026-10-10, item 15). There is
-   * no rail at 390: each section is a header naming it, the first one open,
-   * one open at a time. What a writer typed in a section survives folding it,
-   * because the fields are hidden rather than unmounted, and Save still posts
-   * them.
+   * **On a phone the everyday sections stand open** (visual review
+   * 2026-10-24, A11). The pitch, pricing, at a glance and day by day are what
+   * the page is edited for, so they are open at 390 as on a desktop; the rest
+   * are closed rows, and an edit in one still saves.
    */
-  test("on a phone, one section opens at a time and a folded edit still saves", async ({
+  test("on a phone, the everyday sections stand open and a closed row's edit still saves", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
     await expect(editorHydrated(page)).toBeAttached();
-    await expect(page.getByRole("navigation", { name: "Sections", exact: true })).toBeHidden();
+    await expect(page.getByRole("navigation", { name: "Sections", exact: true })).toHaveCount(0);
 
-    const pitch = page.getByRole("button", { name: /^The pitch/ });
-    const pricing = page.getByRole("button", { name: /^Pricing/ });
-    await expect(pitch).toHaveAttribute("aria-expanded", "true");
-    await expect(pricing).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByLabel("Instruction fee")).toBeHidden();
-
-    await pricing.click();
-    await expect(pitch).toHaveAttribute("aria-expanded", "false");
     await page.getByLabel("Instruction fee").fill("151.00");
-
-    // Fold it again by opening another: the edit is still in the form.
-    await pitch.click();
-    await expect(page.getByLabel("Instruction fee")).toBeHidden();
-    await expect(pricing).toContainText("151.00");
-    await page.getByRole("button", { name: "Save course page" }).click();
+    await page.locator("#fee-covers > summary").click();
+    await expect(page.locator("#fee-covers")).toHaveAttribute("open", "");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
 
-    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit#pricing");
-    await expect(page.getByRole("button", { name: /^Pricing/ })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
     await expect(page.getByLabel("Instruction fee")).toHaveValue(/151/);
   });
 
   /**
-   * **The editor rail** — ADR 20260827-the-shops-shelves, decision 2.
-   *
-   * Two things a unit test cannot see: that the rail actually moves the page to
-   * the section it names, and that the sentence beside Save names the section
-   * the writer changed rather than saying "Unsaved changes" about four thousand
-   * pixels of form.
+   * **The save bar names the section holding the edit** (ADR
+   * 20260827-the-shops-shelves, decision 2): the sentence beside Save says
+   * which section the writer changed rather than "Unsaved changes" about four
+   * thousand pixels of form. The rail that once sat beside it is gone (visual
+   * review 2026-10-24, A11).
    */
-  test("the rail jumps to a section, and the save bar names the one holding the edit", async ({
-    page,
-  }) => {
+  test("the save bar names the section holding the edit", async ({ page }) => {
     test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
-    const rail = page.getByRole("navigation", { name: "Sections", exact: true });
-    await expect(rail.getByRole("link", { name: "Day by day" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Sections", exact: true })).toHaveCount(0);
 
     // A clean form says nothing at all — the note is a consequence, not a label.
     await expect(page.getByText(/^Unsaved changes/)).toHaveCount(0);
@@ -793,12 +773,6 @@ test.describe("staff", () => {
     // one line beside a button is a sentence nobody reads.
     await page.getByLabel("Duration").fill("Three days");
     await expect(page.getByText("Unsaved changes in 2 sections")).toBeVisible();
-
-    // And the rail is the way back to it. The anchor is a real fragment, so it
-    // works before hydration and survives a copied URL.
-    await rail.getByRole("link", { name: "The pitch" }).click();
-    await expect(page).toHaveURL(/#pitch$/);
-    await expect(page.getByLabel("Subhead")).toBeInViewport();
   });
 });
 
@@ -1129,12 +1103,12 @@ test.describe("the course editor with two tabs open", () => {
     await expect(second.locator('[name="summary"]')).toBeVisible();
 
     await summary.fill("Saved by the first tab");
-    await first.getByRole("button", { name: "Save course page" }).click();
+    await first.getByRole("button", { name: "Save", exact: true }).click();
     await expect(first.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
 
     // The second tab is holding the page as it was before that save.
     await second.locator('[name="summary"]').fill("Saved by the second tab");
-    await second.getByRole("button", { name: "Save course page" }).click();
+    await second.getByRole("button", { name: "Save", exact: true }).click();
 
     // Refused, and it says so.
     await expect(
@@ -1261,12 +1235,12 @@ test("writes a FAQ pair through two boxes and shows it to a diver", async ({
   // Half a pair is refused, and says which half — the old textarea dropped an
   // unanswered question silently, so the writer saved, saw it gone, and had no
   // way to tell whether it had ever been there.
-  await page.getByRole("button", { name: "Save course page" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Every question needs an answer")).toBeVisible();
   await expect(page.getByLabel(/^Question \d+$/).last()).toHaveValue("Do I need my own gear?");
 
   await page.getByLabel("Answer").last().fill("No — every rental is part of the fee.");
-  await page.getByRole("button", { name: "Save course page" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Course page saved");
 
   await page.goto(`/s/${privateShop.slug}/courses/rescue-diver`);
@@ -1299,11 +1273,11 @@ test("a course's learning materials reach the student's thread, and staff tick t
     .last()
     .fill("Pool skills video");
   await page.getByLabel("Link").last().fill("http://example.com/pool");
-  await page.getByRole("button", { name: "Save course page" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Each link has to start with https://.")).toBeVisible();
 
   await page.getByLabel("Link").last().fill("https://example.com/pool");
-  await page.getByRole("button", { name: "Save course page" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Course page saved");
 
   // A diver, on their own browser profile, books the seeded three-day session.
@@ -1363,7 +1337,7 @@ test("a course that includes its gear asks the student for sizes, not money", as
   await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
   await expect(editorHydrated(page)).toBeVisible();
   await page.getByRole("checkbox", { name: "The scuba unit is part of the course fee" }).check();
-  await page.getByRole("button", { name: "Save course page" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Course page saved");
   await page.reload();
   await expect(

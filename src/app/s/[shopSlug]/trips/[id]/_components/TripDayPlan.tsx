@@ -813,7 +813,10 @@ export function TripSiteNotes({
                       photo is the content, so the photo is `alt=""`. */}
                   <ul
                     className={
-                      landmarks.some((landmark) => landmark.photoUrl)
+                      // Fewer than four is a list whatever the photos (visual
+                      // review 2026-10-24, B50): three in a two-up grid left
+                      // one large empty cell beside the last.
+                      landmarks.length >= 4 && landmarks.some((landmark) => landmark.photoUrl)
                         ? "mt-2 grid gap-x-4 gap-y-5 sm:grid-cols-2"
                         : "mt-2 space-y-3"
                     }

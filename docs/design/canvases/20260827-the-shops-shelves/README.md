@@ -52,10 +52,10 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | 9b — the editor rail on the course editor | shipped | `src/components/editor/EditorRail.tsx` | `EditorRail.test.tsx`, `page.test.tsx`, `UnsavedChangesGuard.test.tsx`, `e2e/courses.spec.ts` |
 | 9c — the editor rail on the site form | shipped | `src/components/editor/EditorRail.tsx` | `EditorRail.test.tsx`, `site-form-sections.test.ts`, `SiteFormShell.test.tsx`, `e2e/dive-sites.spec.ts` |
 | 9d — the gear register's one story | shipped | `src/app/shop/[shopSlug]/gear/_components/GearRegisterLedger.tsx` | `GearRegisterLedger.test.tsx`, `src/lib/gear.test.ts`, `src/db/gear.test.ts`, `e2e/gear.spec.ts` |
-| 9e — staffing as a week | shipped | `src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx` | `staffing-week.test.ts`, `StaffingWeek.test.tsx`, `StaffCredentials.test.tsx`, `staffing.test.ts`, `e2e/staffing.spec.ts` |
+| 9e — staffing as a week | shipped | `src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx` | `staffing-week.test.ts`, `StaffingWeek.test.tsx`, `StaffCardCredentials.test.tsx`, `staffing.test.ts`, `e2e/staffing.spec.ts` |
 
 (The assembly half is `src/lib/staffing-week.ts` and the credentials ledger
-`src/app/shop/[shopSlug]/staffing/_components/StaffCredentials.tsx`; both name the ADR in their doc
+`src/app/shop/[shopSlug]/settings/team/_components/StaffCardCredentials.tsx`; both name the ADR in their doc
 comments, as does the component in the row above, so `pnpm check:design-canvases` is satisfied when
 the row flips to `shipped`.)
 | 9f — reports sheds its chrome | shipped | `src/app/shop/[shopSlug]/reports/_components/MonthFigures.tsx` | `MonthFigures.test.tsx`, `DepartureLedger.test.tsx`, `reporting.test.ts`, `e2e/reports.spec.ts` |

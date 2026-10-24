@@ -73,7 +73,10 @@ import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
  */
 
 export function messageFor(notification: Notification): NotificationEmail {
-  const message = withPostalFooter(rawMessageFor(notification), notification);
+  const message = withPostalFooter(
+    withShopSignOff(rawMessageFor(notification), notification),
+    notification,
+  );
   // Not every kind carries both fields (the internal new-account alert has no
   // locale; password-changed has no shop to brand as) — the wrapper's own
   // document chrome (doctype, viewport, container) applies uniformly either way.
@@ -117,6 +120,40 @@ function withPostalFooter(
     ...message,
     text: `${message.text.replace(/\n*$/, "")}\n\n${line}\n`,
     html: `${message.html}<p style="margin-top: 24px; font-size: 12px; line-height: 1.5; opacity: 0.7;">${escapeHtml(line)}</p>`,
+  };
+}
+
+/**
+ * **Every shop email signs off the same way** (visual review 2026-10-24, B31):
+ * the shop's name, then its phone, then its address, each on its own line,
+ * the shop's own words passed through. The reminder and the recap used to end
+ * on the bare name and every other message on nothing.
+ *
+ * Only a kind the shop speaks in (`shopVoiceOf`); DiveDay's own mail is
+ * signed by its chrome. The address is the confirmed one only, the same rule
+ * `Reply-To` keeps (`deliverableShopContactEmail`).
+ */
+export function withShopSignOff(
+  message: NotificationEmail,
+  notification: Notification,
+): NotificationEmail {
+  const shopName = shopVoiceOf(notification);
+  if (!shopName) return message;
+  const phone = notification.sender?.contactPhone;
+  const email = notification.sender?.contactEmail;
+  const lines = [shopName, phone, email].filter((line): line is string => Boolean(line));
+  const htmlLines = [
+    escapeHtml(shopName),
+    ...(phone ? [escapeHtml(phone)] : []),
+    // Plain text, never an anchor: some shop-voice mail promises "no link at
+    // all" (the guardian's copy of a release), and a reader's mail app links
+    // an address on its own.
+    ...(email ? [escapeHtml(email)] : []),
+  ];
+  return {
+    ...message,
+    text: `${message.text.replace(/\n*$/, "")}\n\n${lines.join("\n")}\n`,
+    html: `${message.html}<p class="dd-signoff" style="margin-top: 24px;">${htmlLines.join("<br>")}</p>`,
   };
 }
 

@@ -18,10 +18,11 @@ import { dayAnchorId, type WeekLedgerRow } from "./WeekLedger";
  * one: the frame promises zero navigation landmarks, and this is a list of
  * dates rather than a way around the site. It never renders in the frame.
  *
- * On a phone the week runs past the right edge, and a row that ends flush on a
- * day number says nothing more is there. It wears the scrolling tables' edge
- * fade (`table-scroll-shell` in globals.css), which closes as the hand reaches
- * the last day and draws nothing when the week fits.
+ * On a phone the days share the row's width equally (visual review
+ * 2026-10-24, B18): the strip clipped the list's last day at 390, so the strip
+ * and the list below it named different weeks. Eight days fit at 44px each;
+ * a longer run, after "Show later departures", still scrolls, under the
+ * scrolling tables' edge fade (`table-scroll-shell` in globals.css).
  */
 export function DayJumpStrip({
   rows,
@@ -40,15 +41,15 @@ export function DayJumpStrip({
       aria-label={label}
       className="table-scroll-shell -mx-4 mb-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
     >
-      <ol className="flex gap-1">
+      <ol className="grid auto-cols-fr grid-flow-col sm:flex sm:gap-1">
         {days.map(({ dayKey, dayParts }) => (
-          <li key={dayKey}>
+          <li key={dayKey} className="min-w-11">
             <a
               href={`#${dayAnchorId(dayKey)}`}
               // Spoken whole: the month is drawn once on the rail above, but a
               // screen reader reading one link hears the whole date.
               aria-label={`${dayParts.weekday} ${dayParts.day} ${dayParts.month}`}
-              className="flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg px-2 py-1 transition-colors hover:bg-surface focus-visible:focus-ring"
+              className="flex min-h-12 flex-col items-center justify-center rounded-lg py-1 sm:min-w-12 sm:px-2 transition-colors hover:bg-surface focus-visible:focus-ring"
             >
               <span className={groupLabelClass()}>{dayParts.weekday}</span>{" "}
               <span className={`${FIGURE_INLINE_CLASS} leading-tight`}>{dayParts.day}</span>

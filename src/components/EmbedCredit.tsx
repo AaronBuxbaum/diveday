@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { tapTargetLinkClass } from "@/components/ui/button";
 
 /**
- * **"Powered by DiveDay" at the foot of a frame** — under the storefront's
+ * **"Bookings by DiveDay" at the foot of a frame**, the shopfront footer's own credit (visual review 2026-10-24, B33) — under the storefront's
  * `?embed=1` board and under each of the three catalogue widgets
  * (`/s/[shopSlug]/embed/[widget]`), wherever the loader has not drawn the
  * crawlable credit on the host page instead.
@@ -32,7 +32,7 @@ export function EmbedCredit({
   /** `_top` to leave the frame for DiveDay's own page, `_blank` for a new tab. */
   target?: "_top" | "_blank";
   rel?: string;
-  /** The words, from the caller's bundle (`schedule.poweredByDiveDay`). */
+  /** The words, from the caller's bundle (`shopChrome.credit`). */
   children: ReactNode;
 }) {
   return (

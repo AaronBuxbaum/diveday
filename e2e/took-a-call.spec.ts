@@ -4,8 +4,8 @@ import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 /**
  * **"Took a call"** (N-22): the desk phone's answer for a caller with no seat
- * to book, kept at the foot of Add a booking as a disclosure (`#call`) titled
- * "Full boat or another day?".
+ * to book, kept at the foot of New booking as a disclosure (`#call`) titled
+ * "Log a call".
  *
  * What this pins is the *routing*, because that is the whole feature. Each of
  * the two answers is written by a door that already exists and already has its
@@ -23,7 +23,7 @@ const ADD_BOOKING = "/shop/blue-mantis/bookings/new";
 async function openCallForm(page: Page): Promise<Locator> {
   await page.goto(`${ADD_BOOKING}#call`);
   const call = page.locator("details#call");
-  await expect(call.getByRole("heading", { name: "Full boat or another day?" })).toBeVisible();
+  await expect(call.getByRole("heading", { name: "Log a call" })).toBeVisible();
   await expect(call).toHaveJSProperty("open", true);
   return call;
 }

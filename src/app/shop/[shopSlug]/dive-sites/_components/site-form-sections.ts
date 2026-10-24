@@ -7,14 +7,14 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  *
  * The form was fourteen unlabelled blocks with four bordered fieldsets among
  * them, at two radii, and no way to know where you were in ~4,000px of it.
- * This list is the one place that changes: the rail reads it, `SiteFields`
- * renders one `EditorSection` per entry, and the unsaved-changes sentence names
- * a section out of it. Nothing may be in the form that is not in here — the
- * `Record<SiteFormSection, ReactNode>` `SiteFields` builds is what makes a
- * missing section a compile error rather than a section unreachable from the
- * rail.
+ * This list is the one place that changes: `SiteFields` renders one section
+ * per entry (open, or closed behind a disclosure), and the unsaved-changes
+ * sentence names a section out of it. Nothing may be in the form that is not
+ * in here — the `Record<SiteFormSection, ReactNode>` `SiteFields` builds is
+ * what makes a missing section a compile error. The jump rail that once read
+ * this list too is gone (visual review 2026-10-24, A11).
  *
- * Ids are the `#anchor` the rail links to and the DOM subtree the unsaved note
+ * Ids are the `#anchor` a link can open and the DOM subtree the unsaved note
  * maps a control back to. They are prefixed rather than bare because this page
  * already spends the obvious names on its controls (`site-photos` is the
  * multi-file input), and a duplicate id is an accessibility failure; since the
@@ -38,22 +38,52 @@ export const SITE_FORM_SECTION_IDS = {
 export type SiteFormSection = keyof typeof SITE_FORM_SECTION_IDS;
 
 /**
- * Page order — the rail's order, the form's order, and the order the unsaved
- * sentence counts in are one list.
+ * Page order — the form's order and the order the unsaved sentence counts in
+ * are one list. The open sections lead it; the rest follow, each closed
+ * behind its own disclosure (`SITE_FORM_OPEN_SECTIONS`).
  */
 export const SITE_FORM_SECTION_ORDER = [
   "about",
+  "dive",
+  "certification",
   "forecast",
   "route",
   "photos",
   "underwater",
-  "dive",
   "planning",
   "fit",
   "landmarks",
   "fieldGuide",
-  "certification",
 ] as const satisfies readonly SiteFormSection[];
+
+/**
+ * **The sections a briefing opens on** (visual review 2026-10-24, A11): the
+ * name, place and words of the site, its depth, and who may dive it. Every
+ * other section is closed behind a disclosure that names it, because a
+ * briefing edited weekly was a 7,400px page of sections edited once.
+ */
+export const SITE_FORM_OPEN_SECTIONS: ReadonlySet<SiteFormSection> = new Set([
+  "about",
+  "dive",
+  "certification",
+]);
+
+/** The disclosure the briefing's Spanish sits in, on the edit form only. */
+export const SITE_FORM_SPANISH_ID = "briefing-spanish";
+
+/**
+ * The closed section a refusal is about, so the form opens it beside the
+ * refusal rather than leaving the field to fix behind a shut disclosure.
+ */
+export const SITE_FORM_REFUSAL_SECTION: Partial<Record<string, string>> = {
+  coordinatesIncomplete: SITE_FORM_SECTION_IDS.forecast,
+  tideStationInvalid: SITE_FORM_SECTION_IDS.forecast,
+  images: SITE_FORM_SECTION_IDS.photos,
+  imagesUnconfigured: SITE_FORM_SECTION_IDS.photos,
+  planningNoteTooLong: SITE_FORM_SECTION_IDS.planning,
+  spanishStale: SITE_FORM_SPANISH_ID,
+  spanishRefused: SITE_FORM_SPANISH_ID,
+};
 
 /**
  * Each section's name, in the staffer's language.
@@ -88,7 +118,7 @@ export function siteFormSectionOrder(fieldGuideOn = true): readonly SiteFormSect
     : SITE_FORM_SECTION_ORDER.filter((section) => section !== "fieldGuide");
 }
 
-/** The rail's entries, in page order. */
+/** The sections' entries, in page order, for the unsaved-changes sentence. */
 export function siteFormSections(t: StaffTranslator, fieldGuideOn = true): EditorSectionRef[] {
   const labels = siteFormSectionLabels(t);
   return siteFormSectionOrder(fieldGuideOn).map((section) => ({

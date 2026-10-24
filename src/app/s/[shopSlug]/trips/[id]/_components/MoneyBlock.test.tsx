@@ -44,7 +44,7 @@ describe("MoneyBlock — one figure", () => {
     renderDiver(<MoneyBlock context={props({ partySize: 2, gearCents: 4_500 })} />);
 
     expect(screen.getByText("Due now")).toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$235.00"]);
+    expect(loudFigures()).toEqual(["$235"]);
   });
 
   it("states exactly one figure at total scale when the shop is paid at the counter", () => {
@@ -52,11 +52,11 @@ describe("MoneyBlock — one figure", () => {
 
     expect(screen.getByText("Due at the shop")).toBeInTheDocument();
     expect(screen.queryByText("Due now")).not.toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$285.00"]);
+    expect(loudFigures()).toEqual(["$285"]);
   });
 
   it("renders nothing at all for an unpriced departure", () => {
-    // Never a "$0.00" under a Book button: a trip with no price has no money
+    // Never a "$0" under a Book button: a trip with no price has no money
     // story, and a zero reads as either a bug or a promise.
     const { container } = renderDiver(
       <MoneyBlock context={props({ dueNow: "none", fareCents: 0 })} />,
@@ -75,16 +75,38 @@ describe("MoneyBlock — the lines that do not render", () => {
   it("shows the gear line once something is", () => {
     renderDiver(<MoneyBlock context={props({ gearCents: 4_500 })} />);
     expect(screen.getByText("Rental gear")).toBeInTheDocument();
-    expect(screen.getByText("$45.00")).toBeInTheDocument();
+    expect(screen.getByText("$45")).toBeInTheDocument();
   });
 
   it("hides the course-fee and e-learning lines on an ordinary charter", () => {
-    renderDiver(<MoneyBlock context={props()} />);
+    renderDiver(<MoneyBlock context={props({ partySize: 2 })} />);
     expect(screen.queryByText("Course fee")).not.toBeInTheDocument();
     expect(screen.queryByText("E-learning")).not.toBeInTheDocument();
     // …and states the fare instead, which the two of them would otherwise
     // double.
-    expect(screen.getByText("$95.00 × 1 diver")).toBeInTheDocument();
+    expect(screen.getByText("$95 × 2 divers")).toBeInTheDocument();
+  });
+
+  /**
+   * Visual review 2026-10-24, B20: one diver and nothing else to add, the
+   * fare line said the pay line's figure twice ("$95 × 1 diver $95", then
+   * "Due now $95"). The pay line says it once, in the hero's format.
+   */
+  it("states a lone diver's fare once, on the pay line", () => {
+    renderDiver(<MoneyBlock context={props()} />);
+    expect(screen.queryByText(/× 1 diver/)).not.toBeInTheDocument();
+    expect(screen.getAllByText("$95")).toHaveLength(1);
+  });
+
+  it("keeps the fare line once anything else is added to it", () => {
+    renderDiver(<MoneyBlock context={props({ gearCents: 4_500 })} />);
+    expect(screen.getByText("$95 × 1 diver")).toBeInTheDocument();
+    expect(screen.getByText("$140")).toBeInTheDocument();
+  });
+
+  it("keeps the minor units of an amount that has them", () => {
+    renderDiver(<MoneyBlock context={props({ fareCents: 6_250 })} />);
+    expect(screen.getByText("$62.50")).toBeInTheDocument();
   });
 
   it("replaces the fare line with the course's own two halves", () => {
@@ -155,9 +177,9 @@ describe("MoneyBlock — the deposit split", () => {
     );
 
     // $30 × 2 now…
-    expect(loudFigures()).toEqual(["$60.00"]);
+    expect(loudFigures()).toEqual(["$60"]);
     // …and $65 × 2 at the dock, on the departure's own day.
-    expect(screen.getByText(/\$130\.00 at the dock on Sat, Aug 29/)).toBeInTheDocument();
+    expect(screen.getByText(/\$130 at the dock on Sat, Aug 29/)).toBeInTheDocument();
   });
 
   it("never renders a deposit line on a booking nobody is paying for yet", () => {
@@ -176,7 +198,7 @@ describe("MoneyBlock — the deposit split", () => {
     );
 
     expect(screen.queryByText(/at the dock on/)).not.toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$95.00"]);
+    expect(loudFigures()).toEqual(["$95"]);
   });
 });
 

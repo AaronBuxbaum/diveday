@@ -111,7 +111,7 @@ test.describe("seat claim links", () => {
     // (ADR 20260827-first-light, decision 3): the shop's name and its way in.
     await claimantPage.goto(claimPath ?? "/");
     await expect(
-      claimantPage.getByRole("heading", { name: "This link isn’t available" }),
+      claimantPage.getByRole("heading", { name: "This link no longer works" }),
     ).toBeVisible();
     await expect(claimantPage.getByText(/Whoever sent you this link/)).toBeVisible();
     await expect(
@@ -125,7 +125,7 @@ test.describe("seat claim links", () => {
     // A token that was never ours resolves to no record, so it names nobody.
     await claimantPage.goto("/claim/not-a-real-token");
     await expect(
-      claimantPage.getByRole("heading", { name: "This link isn’t available" }),
+      claimantPage.getByRole("heading", { name: "This link no longer works" }),
     ).toBeVisible();
     await expect(claimantPage.getByText(/Blue Mantis/)).toHaveCount(0);
     await claimantContext.close();

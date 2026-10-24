@@ -27,7 +27,6 @@ import type { DemoRoleId } from "./demo-roles";
  */
 export const FEATURE_PAGE_SLUGS = [
   "online-booking",
-  "website",
   "waivers",
   "certifications",
   "messages",
@@ -35,6 +34,7 @@ export const FEATURE_PAGE_SLUGS = [
   "boat-manifest",
   "dive-sites",
   "rental-gear",
+  "website",
   "schedule",
   "courses",
   "payments",
@@ -117,14 +117,6 @@ export const FEATURE_PAGES: readonly FeaturePage[] = [
     related: ["website", "payments", "waivers"],
   },
   {
-    slug: "website",
-    key: "website",
-    phase: "before",
-    screen: "storefront",
-    demo: { role: "diver", landing: null },
-    related: ["online-booking", "courses", "dive-sites"],
-  },
-  {
     slug: "waivers",
     key: "waivers",
     phase: "before",
@@ -179,6 +171,17 @@ export const FEATURE_PAGES: readonly FeaturePage[] = [
     screen: "gearRegister",
     demo: { role: "owner", landing: "gear" },
     related: ["online-booking", "check-in", "payments"],
+  },
+  {
+    slug: "website",
+    key: "website",
+    // Across the season, not before the dive day: a shop's site runs all
+    // year, and it evens the directory's three columns at four rows each
+    // (visual review 2026-10-24, B43).
+    phase: "season",
+    screen: "storefront",
+    demo: { role: "diver", landing: null },
+    related: ["online-booking", "courses", "dive-sites"],
   },
   {
     slug: "schedule",

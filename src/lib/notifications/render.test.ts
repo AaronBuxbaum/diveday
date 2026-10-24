@@ -51,6 +51,32 @@ describe("messageFor", () => {
     expect(email.html).not.toContain("background-color: #0b6e8a; border-radius: 12px");
   });
 
+  // Visual review 2026-10-24, B31: one sign-off on every shop email.
+  it("signs every shop email off the same way: name, then phone, then address", () => {
+    const sender = { contactPhone: "+1 305 555 0142", contactEmail: "desk@bluemantis.dive" };
+    const confirmation = messageFor({ kind: "booking_confirmation", ...trip, sender });
+    const { diverName: _diverName, endsAt: _endsAt, userAccountId: _account, ...base } = trip;
+    const reminder = messageFor({
+      kind: "trip_reminder_24h",
+      ...base,
+      open: 1,
+      sender,
+      readinessUrl: "https://diveday.test/ready/abc.def",
+    });
+    for (const email of [confirmation, reminder]) {
+      expect(email.text).toContain("\n\nBlue Mantis\n+1 305 555 0142\ndesk@bluemantis.dive\n");
+      expect(email.html).toContain(
+        '<p class="dd-signoff" style="margin-top: 24px;">Blue Mantis<br>+1 305 555 0142<br>desk@bluemantis.dive</p>',
+      );
+      expect(email.html.split('class="dd-signoff"')).toHaveLength(2);
+    }
+  });
+
+  it("signs with the shop's name alone when it has no phone or confirmed address", () => {
+    const email = messageFor({ kind: "booking_confirmation", ...trip });
+    expect(email.text.endsWith("\n\nBlue Mantis\n")).toBe(true);
+  });
+
   it("keeps DiveDay's own mark and no credit on DiveDay's own mail", () => {
     const email = messageFor({
       kind: "password_changed",

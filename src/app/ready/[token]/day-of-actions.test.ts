@@ -151,6 +151,23 @@ describe("the first-timer's word to the crew", () => {
     expect(await read(bookingId)).toMatchObject({ welcomeShared: false, welcomeHello: null });
   });
 
+  /**
+   * Visual review 2026-10-24, B27: the thread no longer asks for the word, so
+   * a save that does not carry the field leaves a word on file where it was.
+   * Withdrawing the yes still clears it.
+   */
+  it("leaves a stored word alone when the save does not carry the field", async () => {
+    const { bookingId, token } = await firstTimerSeat();
+    await save(token, { welcomeAsked: "1", welcomeShare: "on", welcomeHello: "celebrating" });
+    await save(token, { welcomeAsked: "1", welcomeShare: "on", note: "Left ear is slow." });
+    expect(await read(bookingId)).toMatchObject({
+      welcomeShared: true,
+      welcomeHello: "celebrating",
+    });
+    await save(token, { welcomeAsked: "1" });
+    expect(await read(bookingId)).toMatchObject({ welcomeShared: false, welcomeHello: null });
+  });
+
   it("refuses a choice outside the three, and stores nothing without the yes", async () => {
     const { bookingId, token } = await firstTimerSeat();
     expect(

@@ -1,8 +1,8 @@
 import type { DiverTranslator } from "@/i18n/messages";
 import { planCopyParams, planMoney, planPercent } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
-import { continuityPromise, earlyAccessPrice, fullShopExport } from "@/lib/marketing";
-import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { continuityPromise, earlyAccessPrice } from "@/lib/marketing";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
  * The pricing card's figure and cadence for an offer (ADR
@@ -79,18 +79,8 @@ export function pricingFaq(
       question: t("marketing.pricing.faq.crewSize.question"),
       answer: t("marketing.pricing.faq.crewSize.answer"),
     },
-    {
-      question: t("marketing.pricing.faq.trialMeaning.question"),
-      // The upgrade address, not the support one: marketing.md routes "how do
-      // I move a trial shop to paid" through its own inbox, and the soft
-      // expiry ("nothing switches off") restates src/lib/trial.ts, where
-      // expiry blocks no route and no mutation.
-      answer: t("marketing.pricing.faq.trialMeaning.answer", { email: ONBOARDING_EMAIL }),
-    },
-    {
-      question: t("marketing.pricing.faq.seeBefore.question"),
-      answer: t("marketing.pricing.faq.seeBefore.answer"),
-    },
+    // The trial and the demo left this list on 2026-10-24 (visual review
+    // B11): the notes beside the invoice and the hero's footnote say both.
     {
       // Counted against what setup is now: one request through the Get set
       // up form (the page's own doors; an onboarding@ address until
@@ -112,13 +102,8 @@ export function pricingFaq(
     // answers it at depth beside the screen it is about
     // (`marketing.featurePages.boatManifest`).
     // Nothing on this page decides on it (docs/product/marketing-review-20260827.md).
-    {
-      question: t("marketing.pricing.faq.dataIfNotWorking.question"),
-      answer: t("marketing.pricing.faq.dataIfNotWorking.answer", {
-        claim: t(fullShopExport.claimKey),
-        terms: t(fullShopExport.termsKey),
-      }),
-    },
+    // The export left this list on 2026-10-24: the invoice's leaving row
+    // (`#export`) is where the promise is written (B10).
     {
       // The vendor-death objection, answered beside the export it rests on:
       // the shared continuity promise (`continuityPromise`), an authorized

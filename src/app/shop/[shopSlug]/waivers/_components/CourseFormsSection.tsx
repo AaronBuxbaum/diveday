@@ -87,15 +87,20 @@ export function CourseFormsSection({
               open={notice?.form === form.id}
               className="group/form scroll-mt-24"
             >
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+              {/* A grid, not a flex row (visual review 2026-10-24, A21): the
+                  title takes what is left and wraps inside its own column, so
+                  a long one never pushes its row's version and date along. */}
+              <summary className="grid min-h-11 cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 py-2 sm:grid-cols-[auto_minmax(0,1fr)_auto] [&::-webkit-details-marker]:hidden">
                 <DisclosureCaret className="group-open/form:rotate-90" />
-                <span className="font-medium">{form.title}</span>
-                {courseFormAwaitingText(form.body) ? (
-                  <Badge tone="warning" size="sm">
-                    {t("waiversStaff.courseForms.needsText")}
-                  </Badge>
-                ) : null}
-                <span className="text-sm text-muted">
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="font-medium">{form.title}</span>
+                  {courseFormAwaitingText(form.body) ? (
+                    <Badge tone="warning" size="sm">
+                      {t("waiversStaff.courseForms.needsText")}
+                    </Badge>
+                  ) : null}
+                </span>
+                <span className="col-start-2 whitespace-nowrap text-sm text-muted tabular-nums sm:col-start-3 sm:text-end">
                   {t("waiversStaff.courseForms.versionLine", {
                     version: form.version,
                     date: formatShortDate(form.updatedAt, locale, timezone),

@@ -33,10 +33,10 @@ import { canonicalAgency } from "@/lib/courses";
  *
  * Hidden is the roster's one exceptional state, so it is the roster's one
  * Badge (decision 3 — a badge marks the exception, never the expected). The
- * row is the door to the course's editor, and Schedule is the one act that
- * rides above the stretched link in the trailing slot. Hide/Show used to ride
- * there too; it moved to the course's own editor, because a rare act standing
- * on every row of a list that exists to be read is a toolbar, not an
+ * row is the door to the course's editor, whole, with its trailing chevron and
+ * nothing else in it. Schedule and Hide/Show used to ride there; both moved to
+ * the course's own page (visual review 2026-10-24, A39), because a rare act
+ * standing on every row of a list that exists to be read is a toolbar, not an
  * affordance (principles §8, §10).
  */
 
@@ -58,8 +58,6 @@ export type CourseRosterRow = {
   meta: ReactNode;
   /** Set for a course the shop has taken off its public catalog. */
   hiddenLabel?: string;
-  /** Schedule — the caller's one quiet act, rendered per its permissions. */
-  actions?: ReactNode;
 };
 
 /** One agency's run of the roster, in the order the rows arrived. */
@@ -109,16 +107,7 @@ export function CourseRoster({
           >
             <ul aria-labelledby={labelId}>
               {group.courses.map((course) => (
-                <LedgerRow
-                  key={course.id}
-                  href={course.href}
-                  linkLabel={course.linkLabel}
-                  trailing={course.actions}
-                  // Not `stacked`: a phone's meta line is two facts now (the
-                  // page's `meta`), so Schedule fits beside the words and the
-                  // row loses the line it used to stand on alone.
-                  pad="lg"
-                >
+                <LedgerRow key={course.id} href={course.href} linkLabel={course.linkLabel} pad="lg">
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2">
                       <span className={`font-medium ${course.hiddenLabel ? "text-muted" : ""}`}>

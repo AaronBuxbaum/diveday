@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { type CSSProperties, Fragment, type ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
 import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
@@ -66,10 +65,10 @@ export type WeekLedgerRow = {
   requirements: readonly string[];
   /** The two words that give the dimming a name, or null. */
   aboveLevel: string | null;
-  /** Worded seat state ("Full", "Only 2 spots left", "5 spots left"). */
+  /** Worded seat state ("Full", "2 seats"). */
   capacityText: string;
-  /** `full` and `low` earn the badge; everything else is a quiet fact (principle 9). */
-  capacityTone: "full" | "low" | "quiet";
+  /** `full` quiets the row's ink; the count itself is always plain muted text (B19). */
+  capacityTone: "full" | "quiet";
   /** Already-formatted money, or null for a departure with no price set. */
   price: string | null;
 };
@@ -351,8 +350,8 @@ function Row({
             </p>
           ) : null}
         </div>
-        {/* The badge is spent on the states that need a decision now — full, or
-            nearly — and routine availability reads as the quiet fact it is. The
+        {/* The seat count is one neutral fact in muted text, full or not
+            (visual review 2026-10-24, B19): no chip, no scarcity colour. The
             chevron is the row's one at-rest tap cue: with no border, a phone row
             (where hover does not exist) read as a text listing rather than as a
             pressable thing. Below `sm` the row is a column and this group is
@@ -365,20 +364,7 @@ function Row({
           {/* Seat state and price are the two facts a diver decides on, so they
               are critical text (principle 2's own definition: a status word, a
               money amount) and hold the 16px floor the rest of the row keeps. */}
-          {row.capacityTone === "quiet" ? (
-            <p className="text-base text-muted tabular-nums">{row.capacityText}</p>
-          ) : (
-            // `toneMark={false}`: scarcity is a sales fact, and the warning
-            // triangle is rationed for safety (UX audit #26). The words and
-            // the tint carry it; "Only 2 spots left" never reads as colour alone.
-            <Badge
-              tone={row.capacityTone === "full" ? "neutral" : "warning"}
-              tabularNums
-              toneMark={false}
-            >
-              {row.capacityText}
-            </Badge>
-          )}
+          <p className="text-base text-muted tabular-nums">{row.capacityText}</p>
           {/* The price's column stands on every row of a list that charges
               anything, so a departure with no price keeps its seat state and
               chevron where the others' are rather than sliding 43px into the

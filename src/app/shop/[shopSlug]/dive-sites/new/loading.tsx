@@ -1,6 +1,9 @@
-import { EditorFoldedSectionsSkeleton, EditorRailSkeleton } from "@/components/editor/EditorRail";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { SITE_FORM_SECTION_ORDER } from "../_components/site-form-sections";
+import { EditorFormSkeleton } from "../_components/EditorFormSkeleton";
+import {
+  SITE_FORM_OPEN_SECTIONS,
+  SITE_FORM_SECTION_ORDER,
+} from "../_components/site-form-sections";
 
 /**
  * Form-shaped skeleton for the new-dive-site editor (ADR
@@ -10,14 +13,13 @@ import { SITE_FORM_SECTION_ORDER } from "../_components/site-form-sections";
  * `src/app/shop/[shopSlug]/dive-sites/loading.tsx`, the site *library*, at
  * `max-w-6xl` — so a staffer tapping "Add a dive site" watched a table
  * skeleton and landed on a narrow form. It tracks the page's own shape: the
- * header with its back link as its eyebrow, then the two columns the long-form editor pattern put
- * there — the section rail from `lg` up, the jump row below it, and unboxed
- * sections on hairlines rather than the bordered fieldsets that used to stand
- * here (ADR 20260827-the-shops-shelves).
+ * header with its back link as its eyebrow, the open sections on hairlines,
+ * the closed ones as rows of one card, and the sticky Save (visual review
+ * 2026-10-24, A11).
  */
 export default function NewDiveSiteLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         {/* The header's eyebrow bar is the back link: the page draws one,
             as the header's own eyebrow. A second, standalone bar above it
@@ -29,35 +31,11 @@ export default function NewDiveSiteLoading() {
           descriptionWidth="w-80 max-w-full"
         />
 
-        <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
-          {/* The rail on a desktop, one stub per section; a phone has none,
-              its sections fold to their own headers. */}
-          <EditorRailSkeleton count={SITE_FORM_SECTION_ORDER.length} />
-
-          <div className="flex min-w-0 flex-col gap-6">
-            {[0, 1, 2].map((section) => (
-              // Below `lg` the loaded editor opens one section and folds the rest.
-              <div
-                key={section}
-                className={section === 0 ? "" : "border-t border-border pt-6 max-lg:hidden"}
-              >
-                <div className="h-3 w-32 rounded bg-surface-sunken" />
-                <div className="mt-4 flex flex-col gap-5">
-                  {[0, 1].map((field) => (
-                    <div key={field}>
-                      <div className="h-4 w-28 rounded bg-surface-sunken" />
-                      <div className="mt-2 h-12 rounded-lg bg-surface-sunken" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <EditorFoldedSectionsSkeleton count={SITE_FORM_SECTION_ORDER.length} />
-            {/* The one Save, in its sticky row. */}
-            <div className="border-t border-border pt-3">
-              <div className="h-11 w-40 rounded-lg bg-surface-sunken" />
-            </div>
-          </div>
+        <div className="mt-8">
+          <EditorFormSkeleton
+            open={SITE_FORM_OPEN_SECTIONS.size}
+            closed={SITE_FORM_SECTION_ORDER.length - SITE_FORM_OPEN_SECTIONS.size}
+          />
         </div>
       </div>
     </main>

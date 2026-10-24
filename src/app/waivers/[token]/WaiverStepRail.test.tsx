@@ -283,8 +283,8 @@ describe("the rail as an object on the page", () => {
 
   it("names all three segments and states the count in words", () => {
     // Every colour-carried state also carries a word (ADR
-    // 20260827-clearwater-surface-language). The marks differ by shape as well
-    // as ink, and the aggregate is a sentence beside them.
+    // 20260827-clearwater-surface-language): the current step is bold, and the
+    // aggregate is a sentence beside the names.
     renderRail({ answered: ELEVEN });
     for (const word of ["Release", "Medical", "Sign", "2 of 3 done"]) {
       expect(screen.getByText(word)).toBeInTheDocument();
@@ -309,7 +309,7 @@ describe("the rail as an object on the page", () => {
     expect(links[0]).toHaveTextContent("Medical");
   });
 
-  it("draws a held step as an open mark with the shortfall stated in words", () => {
+  it("draws a held step as open, not current, with the shortfall stated in words", () => {
     // Two settled ends and an open middle, and "2 of 3 done" beside them: the
     // state is legible with no colour perception, which is the whole reason the
     // count is a sentence rather than a row of ticks.
@@ -326,6 +326,53 @@ describe("the rail as an object on the page", () => {
     expect(screen.getByText("2 of 3 done")).toBeInTheDocument();
     expect(rail.querySelector('[data-rail-step="medical"]')?.className).toContain("text-muted");
     expect(rail.querySelector('[data-rail-step="sign"]')?.className).not.toContain("text-muted");
+    expect(rail.querySelector('[aria-current="step"]')).toBeNull();
+  });
+
+  it("is one progress line: the names between middots, the current one bold, no rings (B56)", () => {
+    const { getByTestId } = renderRail({ answered: 1 });
+    const rail = getByTestId(WAIVER_RAIL_TEST_ID);
+    expect(rail.querySelector("ol")?.textContent).toBe("Release·Medical·Sign");
+    const current = rail.querySelector('[aria-current="step"]');
+    expect(current?.getAttribute("data-rail-step")).toBe("medical");
+    expect(current?.className).toContain("font-semibold");
+    expect(rail.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
+    // A check on the settled step only; an open step draws nothing.
+    expect(rail.querySelectorAll("svg")).toHaveLength(1);
+    expect(rail.querySelector('[data-rail-step="release"] svg[data-rail-done]')).not.toBeNull();
+    expect(rail.querySelector('[data-rail-step="release"]')?.className).not.toContain("text-muted");
+    expect(rail.querySelector('[data-rail-step="sign"]')?.className).toContain("text-muted");
+  });
+
+  it("says each step's state in words, never by ink alone", () => {
+    const progress = waiverRailProgress({
+      medicalAnswered: 0,
+      medicalTotal: 0,
+      medicalStillOpen: true,
+      signed: true,
+    });
+    const { getByTestId } = render(
+      <WaiverStepRail
+        progress={progress}
+        labels={{ ...LABELS, states: { done: "done", open: "to do" } }}
+        doneLabel="2 of 3 done"
+        anchors={{ medical: "medical-questionnaire" }}
+      />,
+    );
+    const rail = getByTestId(WAIVER_RAIL_TEST_ID);
+    expect(rail.querySelector('[data-rail-step="release"]')?.textContent).toBe("Release, done");
+    expect(rail.querySelector('[data-rail-step="medical"]')?.textContent).toBe("·Medical, to do");
+    expect(rail.querySelector('[data-rail-step="medical"] svg')).toBeNull();
+    expect(rail.querySelector('[data-rail-step="sign"] svg')).not.toBeNull();
+  });
+
+  it("starts on Release on a waiver nobody has touched", () => {
+    const { getByTestId } = renderRail({});
+    expect(
+      getByTestId(WAIVER_RAIL_TEST_ID)
+        .querySelector('[aria-current="step"]')
+        ?.getAttribute("data-rail-step"),
+    ).toBe("release");
   });
 
   it("keeps its hairlines and takes no elevation", () => {
@@ -367,7 +414,7 @@ describe("the rail as an object on the page", () => {
     const row = rail.className.split(" ");
     expect(row).toEqual(expect.arrayContaining(["justify-between", "gap-x-4"]));
     expect(row).not.toContain("gap-x-5");
-    expect(rail.querySelector("ol")?.className.split(" ")).toContain("gap-x-5");
+    expect(rail.querySelector("ol")?.className.split(" ")).toContain("gap-x-2");
     const count = screen.getByText("0 of 3 done");
     expect(count.className).not.toMatch(/(?:^|\s)(?:[\w-]+:)?ms-auto(?:\s|$)/);
   });

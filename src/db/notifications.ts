@@ -401,6 +401,7 @@ export async function shopSenderFor(
       inboundEmailToken: shops.inboundEmailToken,
       contactEmail: shops.contactEmail,
       contactEmailConfirmedAt: shops.contactEmailConfirmedAt,
+      contactPhone: shops.contactPhone,
       addressStreet: shops.addressStreet,
       addressLocality: shops.addressLocality,
       addressRegion: shops.addressRegion,

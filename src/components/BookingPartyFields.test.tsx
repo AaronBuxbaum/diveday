@@ -81,14 +81,11 @@ describe("BookingPartyFields", () => {
   });
 
   it("shows the big-group escape hatch once the party cap is below the maximum (task 24)", () => {
-    renderDiver(
-      <BookingPartyFields maxPartySize={3} contactEmail="dive@example.com" contactPhone={null} />,
-    );
-    expect(screen.getByText(/bringing more than 3/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /contact the shop/i })).toHaveAttribute(
-      "href",
-      "mailto:dive@example.com",
-    );
+    renderDiver(<BookingPartyFields maxPartySize={3} />);
+    expect(screen.getByText("Bringing more than 3? Contact the shop.")).toBeInTheDocument();
+    // The address and number stand once in the page's "Questions?" line and
+    // once in the footer, not a third time here (visual review 2026-10-24, B23).
+    expect(screen.queryByRole("link", { name: /contact the shop/i })).toBeNull();
   });
 
   it("hides the big-group escape hatch when the full party size is still selectable", () => {
@@ -265,5 +262,37 @@ describe("BookingPartyFields — the party-count control", () => {
       expect(segment).toHaveClass("has-[:focus-visible]:focus-ring");
       expect(segment?.className).not.toMatch(/outline-/);
     }
+  });
+});
+
+/**
+ * **The SMS consent arrives with the number** (visual review 2026-10-24, B22).
+ * The paragraph's words never change (H-09); it stands under the phone field
+ * once the field holds a number, and is server-rendered when the number is
+ * already on file.
+ */
+describe("BookingPartyFields — SMS consent", () => {
+  const consent = /you agree to texts from DiveDay/i;
+
+  it("shows the consent only once a number is typed", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} leadPhone />);
+    expect(screen.queryByText(consent)).toBeNull();
+    fireEvent.change(screen.getByRole("textbox", { name: /phone/i }), {
+      target: { value: "+1 305 555 0142" },
+    });
+    expect(screen.getByText(consent)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: /phone/i }), { target: { value: "" } });
+    expect(screen.queryByText(consent)).toBeNull();
+  });
+
+  it("shows it from the first render when the number is prefilled", () => {
+    renderDiver(
+      <BookingPartyFields
+        maxPartySize={2}
+        leadPhone
+        lead={{ fullName: "Grace H.", email: "grace@example.com", phone: "+1 305 555 0142" }}
+      />,
+    );
+    expect(screen.getByText(consent)).toBeInTheDocument();
   });
 });

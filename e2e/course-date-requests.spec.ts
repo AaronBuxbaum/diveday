@@ -48,7 +48,7 @@ for (const scenario of cases) {
     try {
       const publicPage = makeActivitySafe(await context.newPage());
       await publicPage.goto(publicCoursePath(privateShop.slug, scenario.slug));
-      const inquiry = publicPage.getByRole("region", { name: diver("inquiry.getInTouch") });
+      const inquiry = publicPage.getByRole("region", { name: diver("inquiry.askAboutCourse") });
       await expect(inquiry).toBeVisible();
       await expect(
         publicPage.getByRole("link", { name: diver("course.bookThisDate") }),

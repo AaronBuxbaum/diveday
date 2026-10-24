@@ -105,8 +105,13 @@ describe("the day-of step saves as one", () => {
     expect(screen.getByRole("checkbox", { name: "Yes, tell the crew" })).not.toBeChecked();
   });
 
-  it("offers the three hello choices to a first trip only, as radios and never free text", () => {
-    const { container, rerender } = render(
+  /**
+   * Visual review 2026-10-24, B27: the step asks one question, the crew note.
+   * The "Anything to add for the crew?" radios are gone; nothing on the form
+   * names the stored word, so a save leaves it where it was.
+   */
+  it("asks one question of the crew, the note, and no hello radios", () => {
+    const { container } = render(
       <DayOfDetails
         token="tok"
         data={{ ...data("diver"), welcomeOffer: { kind: "first_trip" } } as ReadyPageData}
@@ -114,25 +119,9 @@ describe("the day-of step saves as one", () => {
         t={t}
       />,
     );
-    const radios = container.querySelectorAll('input[name="welcomeHello"]');
-    expect([...radios].map((input) => (input as HTMLInputElement).value)).toEqual([
-      "",
-      "first_ocean_dive",
-      "celebrating",
-      "nervous",
-    ]);
-    expect(screen.getByRole("radio", { name: "Nothing to add" })).toBeChecked();
-    expect(container.querySelector("textarea[name='welcomeHello']")).toBeNull();
-
-    rerender(
-      <DayOfDetails
-        token="tok"
-        data={{ ...data("diver"), welcomeOffer: { kind: "returning", years: 3 } } as ReadyPageData}
-        saved={false}
-        t={t}
-      />,
-    );
-    expect(container.querySelectorAll('input[name="welcomeHello"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[name="welcomeHello"]')).toHaveLength(0);
+    expect(screen.queryByText(/Anything to add for the crew/)).toBeNull();
+    expect(container.querySelector('textarea[name="note"]')).not.toBeNull();
   });
 
   it("shows the saved confirmation in the step itself after a save", () => {

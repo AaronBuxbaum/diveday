@@ -22,7 +22,7 @@ function ActionButton({
 }: {
   label: string;
   pendingLabel: string;
-  variant: "primary" | "secondary" | "ghost";
+  variant: "primary" | "link" | "ghost";
 }) {
   const { pending } = useFormStatus();
   return (
@@ -30,7 +30,9 @@ function ActionButton({
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className={buttonClass({ variant, size: "sm" })}
+      className={buttonClass(
+        variant === "link" ? { variant, flush: true } : { variant, size: "sm" },
+      )}
     >
       {pending ? pendingLabel : label}
     </button>
@@ -56,11 +58,12 @@ export function CalendarFeedPanel({
   copy: CalendarFeedCopy;
   subscribed: boolean;
   /**
-   * Two panels share this screen, and only one earns primary weight
-   * (principle 8): the personal feed is the common path; the shop-wide feed
-   * renders its create as secondary.
+   * Two panels share this screen, and only one is a button (principle 8;
+   * visual review 2026-10-24, A37): the personal feed is the common path; the
+   * shop-wide feed renders its create as a text link, so the page never shows
+   * the same words as two buttons.
    */
-  createVariant?: "primary" | "secondary";
+  createVariant?: "primary" | "link";
 }) {
   // One state for both buttons. Two `useActionState` hooks could not say which
   // of them ran last, so a revoke followed by a create rendered the revoked

@@ -15,9 +15,11 @@ afterEach(cleanup);
  */
 const t = staffTranslator("en-US");
 
-function card(name: string, kind: string): CardCredential {
-  return { id: `c-${kind}`, name, kind, renewalWord: null };
+function card(name: string, kind: string, extra: Partial<CardCredential> = {}): CardCredential {
+  return { id: `c-${kind}`, name, kind, renewalWord: null, reviewed: true, ...extra };
 }
+
+const noop = () => {};
 
 function renderCard(roles: Role[], credentials: CardCredential[]) {
   return render(
@@ -27,6 +29,8 @@ function renderCard(roles: Role[], credentials: CardCredential[]) {
       credentials={credentials}
       locale="en-US"
       t={t}
+      reviewAction={noop}
+      deleteAction={noop}
     />,
   );
 }
@@ -74,6 +78,30 @@ describe("StaffCardCredentials", () => {
       expect(summary).toHaveTextContent(name);
       expect(screen.getAllByText(name, { exact: true })).toHaveLength(1);
     }
+  });
+
+  it("is the ledger: an unreviewed credential says so and offers Mark reviewed and Remove", () => {
+    renderCard(
+      ["captain"],
+      [
+        card("USCG OUPV", "captains_licence", {
+          reviewed: false,
+          renewal: "overdue",
+          renewalWord: "Expired",
+        }),
+      ],
+    );
+    expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark reviewed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    expect(screen.getByText("Expired")).toHaveClass("text-warning-strong");
+  });
+
+  it("offers no Mark reviewed once somebody has reviewed it, and Remove disables nothing", () => {
+    renderCard(["captain"], [card("USCG OUPV", "captains_licence")]);
+    expect(screen.queryByText("Needs review")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mark reviewed" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeEnabled();
   });
 
   it("draws no row for a role that sails on no card and has nothing recorded", () => {

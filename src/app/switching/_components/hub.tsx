@@ -1,3 +1,4 @@
+import { ClosingCtaSkeleton } from "@/app/_components/ClosingCtaSkeleton";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { SwitchingConciergeSkeleton } from "@/components/SwitchingConcierge";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
@@ -58,7 +59,6 @@ export const HUB_ROW_SUMMARY_LINES: Record<string, SkeletonLines> = {
  */
 export function SwitchHubBodySkeleton() {
   const bar = "rounded bg-surface-sunken";
-  const door = "h-12 w-full rounded-lg bg-surface-sunken";
   return (
     <main className="flex-1 animate-pulse">
       <section className={HUB_HERO_CLASS}>
@@ -79,18 +79,12 @@ export function SwitchHubBodySkeleton() {
             <HubGuideRowSkeleton key={slug} summaryLines={HUB_ROW_SUMMARY_LINES[slug]} />
           ))}
         </ul>
-        {/* The "not listed here" row that closes the list, and its two doors. */}
+        {/* The "not listed here" row that closes the list. */}
         <div className={HUB_CLOSING_ROW_CLASS}>
           <div>
             <div className={`h-7 w-40 ${bar}`} />
             <div className="mt-1.5">
               <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-7" width="w-full max-w-xl" />
-            </div>
-          </div>
-          <div className="lg:shrink-0">
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <div className={`${door} sm:w-40`} />
-              <div className={`${door} sm:w-28`} />
             </div>
           </div>
         </div>
@@ -125,6 +119,7 @@ export function SwitchHubBodySkeleton() {
       </section>
 
       <SwitchingConciergeSkeleton />
+      <ClosingCtaSkeleton />
     </main>
   );
 }

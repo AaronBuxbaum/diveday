@@ -20,7 +20,7 @@ import { OnboardDemoDoor } from "./OnboardDemoDoor";
 export function ClosedDoor({ t, spentLink = false }: { t: DiverTranslator; spentLink?: boolean }) {
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav hideCta compactMobile />
+      <MarketingNav compactMobile />
       <EntryShell
         eyebrow={t("account.onboard.eyebrow")}
         title={t(spentLink ? "account.onboard.spentLink.title" : "account.onboard.closed.title")}

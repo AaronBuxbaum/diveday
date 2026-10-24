@@ -95,9 +95,9 @@ describe("weekLedgerRows", () => {
     expect(container.textContent).toContain("·");
   });
 
-  it("words low seats urgently and wears the shop's lens word", () => {
+  it("words low seats plainly and wears the shop's lens word", () => {
     const [reef] = rows();
-    expect(reef?.capacityTone).toBe("low");
+    expect(reef?.capacityTone).toBe("quiet");
     expect(reef?.lens).toBe("Reef day");
     expect(reef?.price).toContain("120");
   });

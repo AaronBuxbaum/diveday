@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
+import { DeadLink } from "@/components/DeadLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -118,13 +119,7 @@ async function ShoreConfirmation({
   if (!check) {
     const shore = await isShoreAlertToken(db, { token });
     if (!shore) return <BookkeeperConfirmation token={token} t={t} />;
-    return (
-      <EntryDone
-        glyph="expired"
-        title={t(shore ? "shoreConfirm.unavailableTitle" : "contactConfirm.unavailableTitle")}
-        text={t(shore ? "shoreConfirm.unavailableText" : "contactConfirm.unavailableText")}
-      />
-    );
+    return <DeadLink t={t} next={t("shoreConfirm.unavailableText")} diveDayDoor={false} />;
   }
   return (
     <EntryShell
@@ -168,14 +163,12 @@ async function BookkeeperConfirmation({
   if (!check) {
     const bookkeeper = await isBookkeeperToken(db, { token });
     return (
-      <EntryDone
-        glyph="expired"
-        title={t(
-          bookkeeper ? "bookkeeperConfirm.unavailableTitle" : "contactConfirm.unavailableTitle",
-        )}
-        text={t(
+      <DeadLink
+        t={t}
+        next={t(
           bookkeeper ? "bookkeeperConfirm.unavailableText" : "contactConfirm.unavailableText",
         )}
+        diveDayDoor={false}
       />
     );
   }

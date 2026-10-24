@@ -11,11 +11,7 @@ const COPY = {
   viewingAs: "Viendo como",
   switchRole: "Cambiar rol",
   sharedWarning: "",
-  sessionExpired: "",
-  withCredentials: "",
-  active: "",
-  tryLabel: "",
-  current: "",
+  current: "Actual",
   switchAction: "",
   switchFailed: "",
 };
@@ -25,8 +21,6 @@ const ROLES = [
     id: "owner" as const,
     name: "Dana Reyes",
     title: "Propietaria",
-    desc: "",
-    tryThis: "",
     switchAriaLabel: "",
   },
 ];
@@ -79,6 +73,50 @@ describe("DemoBanner", () => {
     const barRow = bar.querySelector("header")?.firstElementChild ?? null;
     expect(maxWidthOf(barRow)).toBeDefined();
     expect(maxWidthOf(bannerRow)).toBe(maxWidthOf(barRow));
+  });
+
+  it("opens the picker as a popover of rows, the current role a word and not a button", () => {
+    // Visual review 2026-10-24, A41: the band of five role cards pushed every
+    // page down; the picker now floats under its button.
+    render(
+      <DemoBanner
+        currentRole="owner"
+        currentName="Dana Reyes"
+        shopSlug="demo"
+        roles={[
+          ...ROLES,
+          {
+            id: "captain",
+            name: "Sal Moretti",
+            title: "Capitán",
+            switchAriaLabel: "Cambiar a Capitán",
+          },
+        ]}
+        copy={{ ...COPY, switchAction: "Cambiar" }}
+        switchRole={async () => {}}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /Cambiar rol/ });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const picker = document.getElementById("demo-role-picker");
+    expect(picker).toHaveClass("absolute");
+    expect(screen.getByText("Actual").tagName).toBe("SPAN");
+    expect(screen.queryByRole("button", { name: /Propietaria/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cambiar a Capitán" })).toHaveTextContent("Cambiar");
+    expect(screen.getByText("Sal Moretti")).toBeInTheDocument();
+  });
+
+  it("closes on Escape and hands focus back to its button", () => {
+    renderBanner();
+    const trigger = screen.getByRole("button", { name: /Cambiar rol/ });
+    trigger.focus();
+    fireEvent.click(trigger);
+    expect(document.getElementById("demo-role-picker")).not.toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(document.getElementById("demo-role-picker")).toBeNull();
+    expect(trigger).toHaveFocus();
   });
 
   describe("switching role", () => {

@@ -32,7 +32,7 @@ async function submit(
 test("a walk-in registers, and the shop sees them on the roster", async ({ page }) => {
   const email = freshEmail();
   await page.goto(REGISTER);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Get set up with");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Register with");
 
   await page.getByLabel("Agency").selectOption("padi");
   await page.getByLabel("Level").selectOption("open_water");
