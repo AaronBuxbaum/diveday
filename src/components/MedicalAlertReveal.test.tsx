@@ -77,8 +77,9 @@ describe("MedicalAlertReveal", () => {
     fireEvent.click(screen.getByRole("button", { name: copy.show }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(copy.noSignal));
     expect(loadOfflineManifest).toHaveBeenCalledWith("trip-1");
-    // The button stays, for when signal comes back.
-    expect(screen.getByRole("button", { name: copy.show })).toBeInTheDocument();
+    // The button stays, for when signal comes back. Found, not got: the alert
+    // can paint while the transition still reads "Showing…" on a busy runner.
+    expect(await screen.findByRole("button", { name: copy.show })).toBeInTheDocument();
   });
 
   it("shows the words from a copy saved with them on this phone when the call fails", async () => {
