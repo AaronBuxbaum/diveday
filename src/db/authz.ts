@@ -370,17 +370,6 @@ export async function emergencyMedicalAlertStanding(
   return emergencyReadWindow(departure, departure.timezone, now);
 }
 
-/** Whether the emergency read is open to this staffer on this departure now. */
-export async function canPersonEmergencyReadMedicalAlertOnTrip(
-  db: DbExecutor,
-  shopId: string,
-  personId: string,
-  tripId: string,
-  now: Date = nowDate(),
-): Promise<boolean> {
-  return (await emergencyMedicalAlertStanding(db, shopId, personId, tripId, now)) === "open";
-}
-
 /** The live check behind "Send a new waiver" on a refused seat (`retireMedicalRefusal`). */
 export const canPersonRetireMedicalRefusal = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canRetireMedicalRefusal);

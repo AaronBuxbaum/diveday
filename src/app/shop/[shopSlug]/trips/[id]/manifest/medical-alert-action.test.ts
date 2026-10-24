@@ -1,10 +1,11 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { activityEvents, tripAssignments, trips, waiverRecords } from "@/db/schema";
+import { activityEvents, tripAssignments, trips, userAccounts, waiverRecords } from "@/db/schema";
 import { completeWaiver } from "@/db/waivers-completion";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import { clearAnswers, now, waiverContextFor } from "@/db/waivers-test-fixtures";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
+import { publicAppUrl } from "@/lib/notifications/app-url";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -247,16 +248,35 @@ describe("emergencyShowSeatMedicalAlertAction", () => {
     expect(await readLines(db, person.id)).toEqual([]);
   });
 
-  it("refuses tomorrow and yesterday", async () => {
+  it("refuses tomorrow as not yet open and yesterday as over, and records neither", async () => {
     request.headers = new Headers();
     const { db, shop, trip, booking, person, captain } = await alerted();
     signIn(shop, captain);
-    for (const offset of [DAY_MS, -DAY_MS]) {
-      await leavingAt(db, trip.id, new Date(nowDate().getTime() + offset));
-      await expect(
-        emergencyShowSeatMedicalAlertAction(shop.slug, trip.id, booking.id),
-      ).resolves.toEqual({ ok: false });
-    }
+    await leavingAt(db, trip.id, new Date(nowDate().getTime() + DAY_MS));
+    await expect(
+      emergencyShowSeatMedicalAlertAction(shop.slug, trip.id, booking.id),
+    ).resolves.toEqual({ ok: false, reason: "not_yet" });
+    await leavingAt(db, trip.id, new Date(nowDate().getTime() - DAY_MS));
+    await expect(
+      emergencyShowSeatMedicalAlertAction(shop.slug, trip.id, booking.id),
+    ).resolves.toEqual({ ok: false, reason: "closed" });
+    expect(await readLines(db, person.id, "medical_alert_emergency_read")).toEqual([]);
+  });
+
+  it("gives a refusal no window reason to someone the rule never admits", async () => {
+    request.headers = new Headers();
+    const { db, shop, trip, booking, person } = await alerted();
+    await leavingAt(db, trip.id, new Date(nowDate().getTime() + DAY_MS));
+    const outsider = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    // Disabled since the page loaded: the session still stands, the live roles do not.
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, outsider));
+    signIn(shop, outsider);
+    await expect(
+      emergencyShowSeatMedicalAlertAction(shop.slug, trip.id, booking.id),
+    ).resolves.toEqual({ ok: false });
     expect(await readLines(db, person.id, "medical_alert_emergency_read")).toEqual([]);
   });
 
@@ -274,12 +294,17 @@ describe("emergencyShowSeatMedicalAlertAction", () => {
         emergencyShowSeatMedicalAlertAction(shop.slug, trip.id, booking.id),
       ).resolves.toEqual({ ok: false });
     }
-    // The same call from the app's own origin goes through.
+    // The same call from the app's own origin goes through, and so does one
+    // from DiveDay's public origin behind a proxy that rewrote Host (L1).
     request.headers = new Headers({ origin: "https://app.diveday.test", host: "app.diveday.test" });
     await expect(
       emergencyShowSeatMedicalAlertAction(shop.slug, trip.id, booking.id),
     ).resolves.toEqual({ ok: true, text: ALERT });
-    expect(await readLines(db, person.id, "medical_alert_emergency_read")).toHaveLength(1);
+    request.headers = new Headers({ origin: publicAppUrl() ?? "", host: "internal:3000" });
+    await expect(
+      emergencyShowSeatMedicalAlertAction(shop.slug, trip.id, booking.id),
+    ).resolves.toEqual({ ok: true, text: ALERT });
+    expect(await readLines(db, person.id, "medical_alert_emergency_read")).toHaveLength(2);
     request.headers = new Headers();
   });
 

@@ -1,7 +1,4 @@
-import {
-  canPersonEmergencyReadMedicalAlertOnTrip,
-  canPersonReadMedicalAlertOnTrip,
-} from "@/db/authz";
+import { canPersonReadMedicalAlertOnTrip, emergencyMedicalAlertStanding } from "@/db/authz";
 import { departureKitRecord } from "@/db/boat-safety";
 import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
@@ -61,7 +58,7 @@ export async function readManifestPage(
     rollCallOpen,
     missingAlerts,
     mayReadMedicalAlerts,
-    mayEmergencyReadMedicalAlerts,
+    emergencyStanding,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -116,9 +113,9 @@ export async function readManifestPage(
     // Whether this reader may open a medical alert's words here (issue
     // #2960): the owner, a manager, or crew a manager put on this departure.
     canPersonReadMedicalAlertOnTrip(db, shopId, personId, tripId),
-    // Whether they may open one in an emergency instead (issue #2990): any
-    // active staffer, on the day the departure leaves in the shop's zone.
-    canPersonEmergencyReadMedicalAlertOnTrip(db, shopId, personId, tripId),
+    // Where they stand for opening one in an emergency instead (issue #2990):
+    // any active staffer, on the days of the trip in the shop's zone.
+    emergencyMedicalAlertStanding(db, shopId, personId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -178,8 +175,12 @@ export async function readManifestPage(
         missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
       ),
       mayReadMedicalAlerts,
-      // Offered only where the crew rule refused (`bindManifestActions`).
-      mayEmergencyReadMedicalAlerts: !mayReadMedicalAlerts && mayEmergencyReadMedicalAlerts,
+      // Offered only where the crew rule refused (`bindManifestActions`), and
+      // while the trip's days have not ended, the day before included: a tab
+      // opened the night before still has it at sea (domain review 2, S1).
+      // The server decides on the confirm.
+      mayEmergencyReadMedicalAlerts:
+        !mayReadMedicalAlerts && (emergencyStanding === "open" || emergencyStanding === "not_yet"),
       // Offer "Save the medical alerts for offline" (H-153 amendment) only to
       // a reader allowed the words, on a departure where a seat has an alert.
       mayCarryMedicalAlertsOffline:

@@ -20,9 +20,9 @@ import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from "drizzle
 import { MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import type { OfflineMedicalAlertsResponse } from "@/lib/offline-manifests";
 import {
-  canPersonEmergencyReadMedicalAlertOnTrip,
   canPersonPrintMedicalAlerts,
   canPersonReadMedicalAlertOnTrip,
+  emergencyMedicalAlertStanding,
 } from "./authz";
 import type { DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
@@ -409,28 +409,31 @@ export async function medicalAlertsForPrint(
 
 /**
  * **"Emergency: show the alert"** for one seat (issue #2990, H-153 amendment
- * of 2026-10-24): a staffer the crew rule refuses, on the day the departure
- * leaves in the shop's zone (`canPersonEmergencyReadMedicalAlertOnTrip`,
- * re-read here on every confirm). The seat must be on this departure and its
- * standing release must carry an alert. The read goes on the diver's trail
- * as `medical_alert_emergency_read` before the words are handed back, and it
- * is **never de-duplicated**: two confirms are two lines. A trail that
- * refuses the line shows nothing. Every refusal is the same `{ ok: false }`.
+ * of 2026-10-24): a staffer the crew rule refuses, on the days of the trip in
+ * the shop's zone (`emergencyMedicalAlertStanding`, re-read here on every
+ * confirm). The seat must be on this departure and its standing release must
+ * carry an alert. The read goes on the diver's trail as
+ * `medical_alert_emergency_read` before the words are handed back, and it is
+ * **never de-duplicated**: two confirms are two lines. A trail that refuses
+ * the line shows nothing.
+ *
+ * A refusal says why only when the reason is the window and the reader is
+ * someone the rule admits on the trip's days: `not_yet` (it opens on the day
+ * of the trip) or `closed` (over: ask the owner or a manager). Every other
+ * refusal is the same bare `{ ok: false }`, which says nothing about the seat.
  */
 export async function emergencyReadMedicalAlert(
   db: DbExecutor,
   input: { shopId: string; tripId: string; bookingId: string; readerId: string },
-): Promise<{ ok: true; text: string } | { ok: false }> {
-  if (
-    !(await canPersonEmergencyReadMedicalAlertOnTrip(
-      db,
-      input.shopId,
-      input.readerId,
-      input.tripId,
-    ))
-  ) {
-    return { ok: false };
-  }
+): Promise<{ ok: true; text: string } | { ok: false; reason?: "not_yet" | "closed" }> {
+  const standing = await emergencyMedicalAlertStanding(
+    db,
+    input.shopId,
+    input.readerId,
+    input.tripId,
+  );
+  if (standing === "refused") return { ok: false };
+  if (standing !== "open") return { ok: false, reason: standing };
   const alert = await medicalAlertForSeat(db, input.shopId, input.tripId, input.bookingId);
   if (!alert) return { ok: false };
   const recorded = await recordDiverActivity(db, {

@@ -9,7 +9,6 @@ import {
   canPersonCallDayBlowout,
   canPersonConfigureTrips,
   canPersonDeleteDiver,
-  canPersonEmergencyReadMedicalAlertOnTrip,
   canPersonErasePersonalData,
   canPersonExportIncidentRecord,
   canPersonManageOrders,
@@ -435,7 +434,18 @@ describe("printing the medical alerts' words (canPersonPrintMedicalAlerts, issue
   });
 });
 
-describe("the emergency read (canPersonEmergencyReadMedicalAlertOnTrip, issue #2990)", () => {
+/** Whether the emergency read is open to this staffer on this departure now. */
+async function canPersonEmergencyReadMedicalAlertOnTrip(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  tripId: string,
+  now?: Date,
+): Promise<boolean> {
+  return (await emergencyMedicalAlertStanding(db, shopId, personId, tripId, now)) === "open";
+}
+
+describe("the emergency read (emergencyMedicalAlertStanding, issue #2990)", () => {
   const DAY_MS = 24 * 60 * 60 * 1000;
 
   async function departureAt(db: AppDb, shopId: string, startsAt: Date) {

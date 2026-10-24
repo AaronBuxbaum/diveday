@@ -414,10 +414,13 @@ describe("emergencyReadMedicalAlert", () => {
     expect(await trailLines(db, person.id, "medical_alert_read")).toEqual([]);
   });
 
-  it("refuses tomorrow and yesterday, and writes nothing", async () => {
+  it("refuses tomorrow as not yet open and yesterday as over, and writes nothing", async () => {
     const { db, shop, trip, booking, person } = await signedWith(alert);
     const instructor = await staffer(db, shop.id, ["instructor"]);
-    for (const offset of [DAY_MS, -DAY_MS]) {
+    for (const [offset, reason] of [
+      [DAY_MS, "not_yet"],
+      [-DAY_MS, "closed"],
+    ] as const) {
       await leavingAt(db, trip.id, new Date(nowDate().getTime() + offset));
       await expect(
         emergencyReadMedicalAlert(db, {
@@ -426,7 +429,7 @@ describe("emergencyReadMedicalAlert", () => {
           bookingId: booking.id,
           readerId: instructor,
         }),
-      ).resolves.toEqual({ ok: false });
+      ).resolves.toEqual({ ok: false, reason });
     }
     expect(await trailLines(db, person.id, "medical_alert_emergency_read")).toEqual([]);
   });
