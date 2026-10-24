@@ -1284,6 +1284,34 @@ export async function deleteRecapPhoto(
   return removed ? { deleted: true, imageUrl: removed.imageUrl } : { deleted: false };
 }
 
+/**
+ * **The sharer takes a photo back from the boat** (issue #2806; ADR
+ * 20261016-shared-boat-photos, Consequences): clearing `shared_with_boat_at`
+ * is the whole act, and the photo stays on the sharer's own recap.
+ *
+ * Only the booking that uploaded the photo may clear it: the caller passes the
+ * booking its own verified token resolved to, never one the form names, and a
+ * photo of another seat on the same boat matches no row. A photo already
+ * unshared (or never shared) reports `ok: false` and changes nothing.
+ */
+export async function unshareRecapPhoto(
+  db: AppDb,
+  input: { bookingId: string; photoId: string },
+): Promise<{ ok: boolean }> {
+  const [cleared] = await db
+    .update(recapPhotos)
+    .set({ sharedWithBoatAt: null })
+    .where(
+      and(
+        eq(recapPhotos.id, input.photoId),
+        eq(recapPhotos.bookingId, input.bookingId),
+        isNotNull(recapPhotos.sharedWithBoatAt),
+      ),
+    )
+    .returning({ id: recapPhotos.id });
+  return { ok: Boolean(cleared) };
+}
+
 /** Staff photos taken on a departure, newest first. They are shared into each diver recap. */
 export type CrewRecapPhoto = { id: string; imageUrl: string };
 

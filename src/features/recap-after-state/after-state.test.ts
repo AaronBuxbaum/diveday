@@ -16,6 +16,7 @@ const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const actions = {
   submitReview: async () => {},
   uploadPhoto: async () => {},
+  unsharePhoto: async () => {},
   startTip: async () => {},
   submitPulse: async () => {},
 };

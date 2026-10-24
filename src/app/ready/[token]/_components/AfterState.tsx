@@ -304,6 +304,7 @@ export function AfterState({
             canShareWithBoat={canShareWithBoat}
             notice={photoNotice}
             action={actions.uploadPhoto}
+            unshareAction={actions.unsharePhoto}
           />
         ) : null}
 
