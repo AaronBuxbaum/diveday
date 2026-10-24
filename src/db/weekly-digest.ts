@@ -300,6 +300,7 @@ async function readEmergencyReads(
           departureStartsAt: trips.startsAt,
         })
         .from(activityEvents)
+        // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
         .innerJoin(trips, departure)
         .where(
           and(
@@ -320,6 +321,7 @@ async function readEmergencyReads(
       db
         .select({ reader: readerName, count: reads })
         .from(activityEvents)
+        // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
         .innerJoin(trips, departure)
         .where(
           and(
