@@ -38,6 +38,18 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
      that used to sit here — "founder-direct support" — was retired 2026-08-05, Aaron Buxbaum; the
      product now offers a plain `support@dive.day` inbox with no personal-response or
      response-time commitment, which needs no contract-clause treatment as a commercial term.)
+   - **Percent-of-card-money plan clause on `/terms` (already live; reviewed after launch).**
+     Aaron chose on 2026-10-24 ([#2947](https://github.com/AaronBuxbaum/diveday/issues/2947)) to
+     run the public pricing test before review. Half of new set-up requests are offered 3% of the
+     card money the shop takes through DiveDay's Stripe Connect flow (bookings, invoices, packages)
+     in its local calendar month, in place of the flat price; existing shops stay flat. The clause
+     excludes tips, tax, pass-through fees, counter cash, money marked paid at the counter and
+     imported history; nets a refund against the month the money was taken when recorded before
+     that month's statement; promises a monthly statement, that the shop pays and never the diver,
+     and 30 days' notice before any change. Questions: is the fee base disclosed adequately, do
+     existing shops need notice of a plan they are not on, and does billing from payment records
+     the shop already holds with us need a privacy-policy change? The ADR is
+     [20261022-pricing-ab-test](../../architecture/decisions/20261022-pricing-ab-test.md).
    - Privacy policy — what's collected (contact info, medical questionnaire answers, cert card
      photos, payment references via Stripe), who processes it (Stripe, Resend for email, AWS SNS for
      SMS, Neon/Vercel for hosting), breach-notification duties, no data resale

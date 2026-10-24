@@ -4931,6 +4931,22 @@
         "heading": "Money",
         "body": "Divers pay the shop, not us. Card payments run through the shop’s own Stripe account, so the shop’s money never sits with DiveDay and leaving does not mean extracting funds from us. Stripe’s own fees and terms apply to those payments. What DiveDay charges for itself is on the pricing page."
       },
+      "percentPlan": {
+        "heading": "Plans priced as a percentage of card payments",
+        "intro": "A shop set up from a new request may be offered a plan priced as a share of the card money it takes through DiveDay, in place of the flat price. Shops already on DiveDay stay on the flat monthly price. On that plan:",
+        "feeTerm": "The fee",
+        "feeBody": "{percent} of the card money your shop takes through DiveDay in a calendar month{hasBase, select, yes {, with a base fee of {base} each month on top} other {}}. The month follows your shop’s own timezone.",
+        "countsTerm": "What counts",
+        "countsBody": "card payments your shop takes through DiveDay with Stripe Connect: online bookings, invoices and packages. Tips, tax, park and other pass-through fees, cash at the counter, money marked paid at the counter and history imported from another system never count.",
+        "refundsTerm": "Refunds",
+        "refundsBody": "a refund comes off the card money of the month the payment was taken in, when it is recorded before that month’s statement is written. A refund recorded after that is not credited.",
+        "statementTerm": "A monthly statement",
+        "statementBody": "early in the next month, Settings shows your shop the month’s card money, the rate and the fee, and the fee is billed with your DiveDay subscription.",
+        "whoPaysTerm": "Who pays the fee",
+        "whoPaysBody": "the shop, never the diver. DiveDay adds nothing to a diver’s price or checkout.",
+        "noticeTerm": "Changes to the plan",
+        "noticeBody": "we tell your shop at least 30 days before we change the rate, the base fee or what counts toward the fee."
+      },
       "data": {
         "heading": "Whose data it is",
         "body": "The shop’s records are the shop’s. We hold them to run the product and for nothing else: they are not sold, not used to train anything, and they stay inside the shop’s own tenant. A shop can download the whole lot as one ZIP from its settings on any day, without asking and without a fee. How it is handled while we hold it is on the privacy page."

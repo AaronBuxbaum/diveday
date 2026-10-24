@@ -131,7 +131,7 @@ export async function startBillingCheckoutAction(): Promise<void> {
   // 20261022-pricing-ab-test). The percent plan without its metered price
   // configured cannot be sold yet, and is refused like billing that is off.
   const config = billingConfigFromEnvironment();
-  const terms = shopPricing(context.shopId, row, pricingConfig());
+  const terms = shopPricing(row, pricingConfig());
   const lines = config ? checkoutLines(terms, config, percentBillingFromEnvironment()) : null;
   if (!lines) refuse(context.slug, "not-configured");
 
