@@ -10,6 +10,7 @@ import {
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { isNotBackAboard, isRollCallCheckpoint } from "./roll-call";
+import type { TurnAwayReason } from "./turn-away";
 import type { MedicalWaiverMark, RiderMedicalHold } from "./waivers";
 import type { WelcomeCue } from "./welcome-cue";
 
@@ -331,10 +332,17 @@ export type ManifestDiverInput = {
   notHere?: boolean;
   /**
    * The desk saw this diver and turned them away (H-135): a released seat like
-   * `notHere`, worded apart from it on the row. Display only, never a gate;
-   * absent reads as false.
+   * `notHere`, worded apart from it on the row. Never a gate; absent reads as
+   * false. With no roll-call result it takes the seat out of every head count
+   * ({@link isTurnedAwayOffBoat}, issue #2907).
    */
   turnedAway?: boolean;
+  /**
+   * Why the desk turned them away: the category only, never the evidence
+   * behind it (H-135). Null after erasure or when unknown. The departure log
+   * prints it on the seat's "turned away" line.
+   */
+  turnedAwayReason?: TurnAwayReason | null;
   /**
    * Whether a standing `boarded` result sits at a checkpoint **before** this
    * one (domain review of #2123). False at an after-dive checkpoint means a
@@ -843,6 +851,46 @@ export type RollCallCompleteness = {
 };
 
 /**
+ * **The desk turned this seat away and nobody at the boat has spoken for it
+ * since** (issue #2907): the one predicate every head count reads, so the
+ * manifest, the checkpoint warning, the departure log, Today and the dock copy
+ * cannot disagree about it again.
+ *
+ * Such a seat is **off the boat**, not awaiting. The desk stood in front of
+ * this diver and refused them (H-135), which is a statement about a body, and
+ * the seat went back on sale. Counting it as awaiting left a roll call that
+ * could never reach zero ("10 of 10 aboard · Awaiting 1"), and a count that
+ * never closes is one a captain learns to ignore.
+ *
+ * A plain "Not here" (`notHere` alone) is not this: nobody saw that diver, so
+ * the boat still has to say where they are, and it stays awaiting
+ * (`summary.notHere`). And any result recorded at the boat wins over the desk,
+ * in either direction: boarded (the rail takes the seat back,
+ * `reclaimReleasedSeat`) or not boarded (after a dive that is a missing
+ * person, and the alarm must stand).
+ *
+ * `rollCall` is this checkpoint's result; absence is the only thing that
+ * lets the desk's statement stand.
+ */
+export function isTurnedAwayOffBoat(seat: {
+  turnedAway?: boolean | null;
+  notHere?: boolean | null;
+  rollCall?: unknown;
+}): boolean {
+  return seat.turnedAway === true && !seat.rollCall;
+}
+
+/**
+ * The booking half of a turn-away: the desk released this seat and recorded
+ * that it turned the diver away (`turnBookingAway`, H-135), rather than that
+ * they never arrived. Read by every loader that sets `turnedAway`, and by the
+ * ones that drop such a seat from a count with no roll call in hand.
+ */
+export function isTurnedAwaySeat(booking: { status: string; turnedAwayAt: Date | null }): boolean {
+  return booking.status === "no_show" && booking.turnedAwayAt !== null;
+}
+
+/**
  * The single definition of "this checkpoint is closed", shared by the live
  * manifest and the offline copy. It used to be written twice, inline, at the UI
  * layer (`manifest/page.tsx` and `OfflineManifestView.tsx`), as
@@ -1030,9 +1078,11 @@ export type TripManifest = {
   })[];
   summary: {
     /**
-     * **Every person on this list** — divers, snorkelers and riders alike. The
-     * name predates the other two types; the number never excluded anyone, and
-     * the head count is measured against it.
+     * **Every person the boat counts** — divers, snorkelers and riders alike.
+     * The name predates the other two types. It is every row on this list but
+     * a seat the desk turned away that nobody at the boat has answered for
+     * (`isTurnedAwayOffBoat`, issue #2907): that row stays on the list and out
+     * of every count below, so the count row still sums to this number.
      */
     totalDivers: number;
     /**
@@ -1223,19 +1273,23 @@ export function buildTripManifest(input: {
       rollCallByCrewId,
     ),
   }));
-  const awaiting = divers.filter((diver) => !diver.rollCall).length;
-  const notBackAboard = divers.filter((diver) =>
+  // Every count below reads the people the boat counts: every row but a seat
+  // the desk turned away that nobody at the boat has answered for
+  // (`isTurnedAwayOffBoat`, issue #2907). The row itself stays on the list.
+  const counted = divers.filter((diver) => !isTurnedAwayOffBoat(diver));
+  const awaiting = counted.filter((diver) => !diver.rollCall).length;
+  const notBackAboard = counted.filter((diver) =>
     isNotBackAboard(checkpoint, diver.rollCall),
   ).length;
-  const boarded = divers.filter((diver) => diver.rollCall?.state === "boarded").length;
+  const boarded = counted.filter((diver) => diver.rollCall?.state === "boarded").length;
   const capacity = input.trip.capacity;
   const summary = {
-    totalDivers: divers.length,
-    byType: countParticipants(divers),
-    ready: divers.filter((diver) => diver.readiness.status === "ready").length,
-    blocked: divers.filter((diver) => diver.readiness.status === "blocked").length,
+    totalDivers: counted.length,
+    byType: countParticipants(counted),
+    ready: counted.filter((diver) => diver.readiness.status === "ready").length,
+    blocked: counted.filter((diver) => diver.readiness.status === "blocked").length,
     boarded,
-    notBoarded: divers.filter((diver) => diver.rollCall?.state === "not_boarded").length,
+    notBoarded: counted.filter((diver) => diver.rollCall?.state === "not_boarded").length,
     notBackAboard,
     awaiting,
     unaccountedFor: awaiting + notBackAboard,
@@ -1247,7 +1301,7 @@ export function buildTripManifest(input: {
     // moment anybody at the boat states a result — boarded, which takes the
     // released seat back, or not boarded — that result is the row's answer and
     // the desk's is history.
-    notHere: divers.filter((diver) => diver.notHere && !diver.rollCall).length,
+    notHere: counted.filter((diver) => diver.notHere && !diver.rollCall).length,
   };
   return {
     trip: input.trip,

@@ -196,6 +196,7 @@ export async function buildArrivalDesk({
             offer: salvage,
             shopSlug,
             tripId,
+            bookingId: row.bookingId,
             diver: { id: row.personId, name: row.personName },
             formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, timeZone),
             turnedAway: turnedAway !== null,

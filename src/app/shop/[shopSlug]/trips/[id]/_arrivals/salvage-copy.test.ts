@@ -12,15 +12,21 @@ const departure: SimilarDeparture = {
   reason: "same_site",
 };
 
-function copyFor(offer: Parameters<typeof noShowSalvageCopy>[0]["offer"], turnedAway = false) {
+function copyFor(
+  offer: Parameters<typeof noShowSalvageCopy>[0]["offer"],
+  turnedAway = false,
+  moveClosed = false,
+) {
   return noShowSalvageCopy({
     t,
     offer,
     shopSlug: "blue-mantis",
     tripId: "trip-1",
+    bookingId: "booking-1",
     diver: { id: "person-1", name: "Nadia Petrov" },
     formatWhen: () => "Sat 8:00 AM",
     turnedAway,
+    moveClosed,
   });
 }
 
@@ -119,8 +125,12 @@ describe("noShowSalvageCopy", () => {
       { kind: "rebook", departures: [departure] },
       { kind: "none" },
     ] as const) {
+      // A link, not a sentence telling the desk where to go (#2907): it opens
+      // the row's own Move panel.
       expect(copyFor(offer, true).money).toEqual({
-        line: "Nothing was charged or refunded. Open their row to move the booking to another day.",
+        line: "Nothing was charged or refunded.",
+        href: "/shop/blue-mantis/trips/trip-1#move-booking-booking-1",
+        label: "Move the booking to another day",
       });
     }
     const rebook = copyFor({ kind: "rebook", departures: [departure] }, true);
@@ -128,6 +138,14 @@ describe("noShowSalvageCopy", () => {
     expect(rebook.links).toEqual([]);
     expect(rebook.offerCopy).toBeUndefined();
     expect(copyFor({ kind: "waitlist", count: 2 }, true).links).toHaveLength(1);
+  });
+
+  it("links a seat that can no longer move to its row, where Remove is", () => {
+    expect(copyFor({ kind: "none" }, true, true).money).toEqual({
+      line: "Nothing was charged or refunded.",
+      href: "/shop/blue-mantis/trips/trip-1#booking-booking-1",
+      label: "Remove the booking and refund it by hand",
+    });
   });
 });
 

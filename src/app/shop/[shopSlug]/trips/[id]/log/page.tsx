@@ -265,6 +265,19 @@ export default async function IncidentExportPage({
             ))}
           </TBody>
         </Table>
+        {/* A seat the desk turned away is off the boat and out of every count
+            above (#2907), and still stated: the category only, never the
+            answers behind it (H-135). */}
+        {doc.turnedAway.length > 0 ? (
+          <ul className="mt-3 space-y-1 text-sm">
+            {doc.turnedAway.map((seat) => (
+              <li key={seat.bookingId}>
+                {seat.fullName} —{" "}
+                {t("incidentExport.timelineSeatTurnedAway", { reason: seat.reason ?? "other" })}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
       <CrewAtDeparture

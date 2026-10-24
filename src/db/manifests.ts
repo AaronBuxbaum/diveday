@@ -13,6 +13,7 @@ import {
   buildTripManifest,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
+  isTurnedAwaySeat,
   type ManifestBuddyTeam,
   type ManifestCrewMember,
   manifestAtCheckpoint,
@@ -1359,7 +1360,10 @@ export async function getTripManifests(
       notHere: booking.status === "no_show",
       // Seen at the desk and refused (H-135), which the row says apart from a
       // diver who never came.
-      turnedAway: booking.status === "no_show" && booking.turnedAwayAt !== null,
+      turnedAway: isTurnedAwaySeat(booking),
+      // The category only (H-135); the departure log prints it on the seat's
+      // "turned away" line (#2907).
+      turnedAwayReason: booking.status === "no_show" ? booking.turnedAwayReason : null,
       buddyTeam: teamByBooking.get(booking.id) ?? null,
     };
   });
@@ -2052,7 +2056,7 @@ async function writeRollCall(
       // under the departure lock taken above, as `undoBookingNoShow` counts.
       // Only here: after a dive the body is on the boat, and the reclaim
       // below stays unrefusable.
-      if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
+      if (isTurnedAwaySeat(booking)) {
         const held = await heldSeatCounts(tx, input.shopId, input.tripId);
         const capacity = await sellableCapacity(tx, booking);
         if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
