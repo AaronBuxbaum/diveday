@@ -189,7 +189,7 @@ describe("the template provenance", () => {
       { currentTemplateVersion: new Map([["tpl-1", 3]]) },
     );
     expect(container.querySelector(".rounded-full")?.textContent).toBe(
-      t("diveSites.list.templateUpdateReady", { version: 3 }),
+      t("diveSites.list.templateUpdateReady"),
     );
   });
 });

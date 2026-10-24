@@ -5,7 +5,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
 import { assistDarkReasonFor } from "@/db/assists";
@@ -102,7 +101,7 @@ function switches(shop: Shop, row: FeatureRow, t: StaffTranslator) {
     row.id === "tax"
       ? {
           label: t("settings.main.tax.checkboxLabel"),
-          description: `${t("settings.main.tax.description")} ${t("settings.main.tax.detail")}`,
+          description: t("settings.main.tax.description"),
         }
       : row.id === "crewSchedule"
         ? {
@@ -184,35 +183,34 @@ export default async function FeaturesPage({
               <GroupLabel as="h2" id={`features-${group}`}>
                 {t(`settings.features.groups.${group}`)}
               </GroupLabel>
-              <SectionCard padding="none">
-                <ul className="divide-y divide-border">
-                  {rows.map((row) => (
-                    <Fragment key={row.id}>
-                      <li id={row.id} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
-                        <input type="hidden" name={ROWS_FIELD} value={row.id} />
-                        <h3 className="text-sm font-semibold">{t(row.headingKey)}</h3>
-                        {switches(shop, row, t)}
-                        {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
-                          <p className="text-xs text-warning">{t(darkKey)}</p>
-                        ) : null}
-                        {row.link && linkShown(shop, row) ? (
-                          <Link
-                            href={`${base}${row.link.path}`}
-                            className="inline-block text-sm font-medium text-primary hover:underline"
-                          >
-                            {t(row.link.labelKey)}
-                          </Link>
-                        ) : null}
-                      </li>
-                      {row.id === "claudeSuggestions" && dark === null ? (
-                        <li id={REPLY_NOTES_ROW} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
-                          <ReplyNotesForm notes={shop.replyNotes} t={t} />
-                        </li>
+              {/* Plain rows on hairlines, no card (visual review 2026-10-24,
+                  A24): a switch, its label and one line of what it turns on. */}
+              <ul className="divide-y divide-border border-y border-border">
+                {rows.map((row) => (
+                  <Fragment key={row.id}>
+                    <li id={row.id} className="scroll-mt-8 space-y-2 py-3">
+                      <input type="hidden" name={ROWS_FIELD} value={row.id} />
+                      {switches(shop, row, t)}
+                      {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
+                        <p className="text-xs text-warning">{t(darkKey)}</p>
                       ) : null}
-                    </Fragment>
-                  ))}
-                </ul>
-              </SectionCard>
+                      {row.link && linkShown(shop, row) ? (
+                        <Link
+                          href={`${base}${row.link.path}`}
+                          className="inline-block text-sm font-medium text-primary hover:underline"
+                        >
+                          {t(row.link.labelKey)}
+                        </Link>
+                      ) : null}
+                    </li>
+                    {row.id === "claudeSuggestions" && dark === null ? (
+                      <li id={REPLY_NOTES_ROW} className="scroll-mt-8 space-y-3 py-3">
+                        <ReplyNotesForm notes={shop.replyNotes} t={t} />
+                      </li>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </ul>
             </section>
           );
         })}

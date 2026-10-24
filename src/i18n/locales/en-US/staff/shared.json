@@ -255,13 +255,12 @@
     }
   },
   "shopNav": {
-    "boatMode": "Boat mode",
     "language": "Language",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
     "signOutPending": "Signing out…",
-    "myAccount": "My account",
-    "tellUs": "Tell us",
+    "accountSettings": "Account settings",
+    "tellUs": "Send feedback",
     "tellUsSubject": "DiveDay note from {shop}",
     "tellUsBody": "Page: {path}\n\n"
   },

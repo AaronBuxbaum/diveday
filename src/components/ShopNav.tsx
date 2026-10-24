@@ -7,8 +7,6 @@ import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import {
-  MY_ACCOUNT_DESTINATION_IDS,
-  STAFF_DESTINATION_LABEL_KEYS,
   type StaffDestinationGates,
   type StaffNavOffers,
   staffDestination,
@@ -149,16 +147,10 @@ export function ShopNav({
               languages={languages}
               setLocaleAction={setLocale}
               tellUs={{ to: SUPPORT_EMAIL }}
-              account={{
-                label: t("shared.shopNav.myAccount"),
-                links: MY_ACCOUNT_DESTINATION_IDS.map((id) => ({
-                  href: `${root}${staffDestination(id).suffix}`,
-                  label: t(STAFF_DESTINATION_LABEL_KEYS[id]),
-                })),
-              }}
+              accountHref={`${root}${staffDestination("security").suffix}`}
               copy={{
-                boatMode: t("shared.shopNav.boatMode"),
                 language: t("shared.shopNav.language"),
+                accountSettings: t("shared.shopNav.accountSettings"),
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
                 signOutPending: t("shared.shopNav.signOutPending"),

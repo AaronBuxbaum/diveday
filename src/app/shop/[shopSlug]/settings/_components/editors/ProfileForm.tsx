@@ -20,7 +20,6 @@ import {
   deriveBrandTheme,
   deriveDarkBrandTheme,
 } from "@/lib/brand";
-import { publicSchedulePath } from "@/lib/public-routes";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { saveProfileAction } from "../../website-actions";
 import { BrandColorField } from "../BrandColorField";
@@ -107,16 +106,20 @@ export function ProfileForm({
       <FieldGrid columns={2}>
         <Field
           label={t("settings.main.profile.brandColor")}
+          // The shade the storefront uses, shown as a swatch rather than
+          // spelled as a hex code (visual review 2026-10-24, A30).
           hint={
-            brandTheme?.adjusted
-              ? t("settings.main.profile.brandColorDarkened", {
-                  hex: brandTheme.primary,
-                })
-              : brandNightTheme?.adjusted
-                ? t("settings.main.profile.brandColorLightenedAtNight", {
-                    hex: brandNightTheme.primary,
-                  })
-                : t("settings.main.profile.brandColorHint")
+            brandTheme?.adjusted ? (
+              <ShadeHint shade={brandTheme.primary}>
+                {t("settings.main.profile.brandColorDarkened")}
+              </ShadeHint>
+            ) : brandNightTheme?.adjusted ? (
+              <ShadeHint shade={brandNightTheme.primary}>
+                {t("settings.main.profile.brandColorLightenedAtNight")}
+              </ShadeHint>
+            ) : (
+              t("settings.main.profile.brandColorHint")
+            )
           }
         >
           <BrandColorField
@@ -216,21 +219,29 @@ export function ProfileForm({
         ))}
       </ChoiceFieldset>
       <FieldActions>
+        {/* Save alone: the storefront is a text link in the page header
+            (visual review 2026-10-24, A30). */}
         <SubmitButton
           pendingLabel={t("settings.main.profile.submitting")}
-          className={buttonClass({ variant: "secondary" })}
+          className={buttonClass()}
         >
           {t("settings.main.profile.submit")}
         </SubmitButton>
-        <a
-          href={publicSchedulePath(shop.slug)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonClass({ variant: "secondary" })}
-        >
-          {t("settings.main.profile.viewSavedStorefront")}
-        </a>
       </FieldActions>
     </FieldGrid>
+  );
+}
+
+/** A 20px swatch of the shade the storefront uses, before the line that names why. */
+function ShadeHint({ shade, children }: { shade: string; children: string }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        aria-hidden="true"
+        className="size-5 shrink-0 rounded border border-border-strong"
+        style={{ backgroundColor: shade }}
+      />
+      <span>{children}</span>
+    </span>
   );
 }

@@ -22,6 +22,23 @@ vi.mock("@/components/map/LazySiteMap", () => ({
   ),
 }));
 
+vi.mock("./QuietSiteMap", () => ({
+  QuietSiteMap: ({
+    onSelectPin,
+    selectedPinId,
+  }: {
+    onSelectPin?: (id: string | null) => void;
+    selectedPinId?: string | null;
+  }) => (
+    <div>
+      <button type="button" onClick={() => onSelectPin?.("reef-1")}>
+        Select map pin
+      </button>
+      <output data-testid="selected-pin">{selectedPinId}</output>
+    </div>
+  ),
+}));
+
 let restoreScrollSpy: (() => void) | null = null;
 
 afterEach(() => {

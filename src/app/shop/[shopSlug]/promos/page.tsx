@@ -40,7 +40,7 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { DivePackagesDoor, TripDealsSection } from "./_components/DealsAndPackages";
+import { DivePackagesSection, TripDealsSection } from "./_components/DealsAndPackages";
 import { PromoConnectNotice } from "./_components/PromoConnectNotice";
 import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
 import { PromoCodeLedger, type PromoCodeRow } from "./_components/PromoLedger";
@@ -559,7 +559,7 @@ export default async function PromosPage({
           href={dealsHref}
         />
       ) : null}
-      {packagesOn ? <DivePackagesDoor t={t} shopSlug={shopSlug} /> : null}
+      {packagesOn ? <DivePackagesSection {...{ db, shop, t, notice, locale }} /> : null}
     </main>
   );
 }

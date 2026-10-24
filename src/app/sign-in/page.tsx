@@ -105,7 +105,9 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
     >
       <form action={authenticate} className="flex flex-col gap-4">
         <FieldGrid columns={1} className="gap-y-4">
-          <Field label={t("account.common.email")}>
+          {/* Every field here is required, so no field carries the marker
+              (visual review 2026-10-24, B46). */}
+          <Field label={t("account.common.email")} markRequired={false}>
             <input
               name="email"
               type="email"
@@ -114,7 +116,7 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
               className={controlClass}
             />
           </Field>
-          <Field label={t("account.common.password")}>
+          <Field label={t("account.common.password")} markRequired={false}>
             <input
               name="password"
               type="password"
@@ -127,6 +129,7 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             <Field
               label={t("account.signIn.twoFactorCode")}
               hint={t("account.signIn.twoFactorHint")}
+              markRequired={false}
             >
               <input
                 name="totpCode"

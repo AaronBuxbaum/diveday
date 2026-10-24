@@ -135,7 +135,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the desk phone's door renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/bookings/new?outcome=date-request#call");
-        await page.getByRole("heading", { name: "Full boat or another day?" }).waitFor();
+        await page.getByRole("heading", { name: "Log a call" }).waitFor();
         await page.getByLabel("What they asked about").waitFor();
         await page.locator("#call").scrollIntoViewIfNeeded();
         await capture(page, "took-a-call", scheme);
@@ -176,7 +176,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/bookings/new");
-        await page.getByRole("heading", { name: "Add a booking", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "New booking", level: 1 }).waitFor();
         // The day headings are the composition; wait for the first one rather
         // than for the h1, which paints with the static shell.
         await page.getByRole("heading", { level: 3 }).first().waitFor();
@@ -187,7 +187,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/bookings/new");
-        await page.getByRole("heading", { name: "Add a booking", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "New booking", level: 1 }).waitFor();
         // The whole row is the door and its accessible name is the departure's
         // title — the seats-left fact rides beside it rather than inside the
         // link, so it is the row that is clicked here.

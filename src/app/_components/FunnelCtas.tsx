@@ -3,11 +3,16 @@ import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { diverTranslator } from "@/i18n/messages";
+import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { planCopyParams } from "@/lib/billing/plan-display";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import type { DemoLanding } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { type FunnelSource, setUpHref } from "@/lib/funnel";
+import { earlyAccessPrice } from "@/lib/marketing";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
  * The funnel's two doors, in the one order they are ever offered: **the demo
@@ -55,20 +60,29 @@ import { type FunnelSource, setUpHref } from "@/lib/funnel";
  * The `<form>` is `display: contents` so its button is a direct child of the
  * flex row and the two doors size and wrap as one pair.
  *
- * **At a page's close the pair says who reads a set-up request** (#2097): one
- * line under the doors, once per page, decided by the tag rather than by each
- * page (docs/product/marketing.md, "What Get set up leads to").
+ * **The terms stand under the first pair on a page and nowhere else**
+ * (visual review 2026-10-24, B09): `footnotes` is set only at a hero, where it
+ * renders what the demo costs and the price line. Every later pair is the two
+ * buttons alone; the same two sentences had stood under seven pairs on four
+ * pages. Who reads a set-up request is said once, in {@link ClosingCta}.
  */
 export function FunnelCtas({
   locale,
   source,
   demo,
+  footnotes = false,
   className,
 }: {
   locale: DiverLocale;
   source: FunnelSource;
   /** Where the demo opens: as which role, on which staff page. Owner on Today when absent. */
   demo?: { role: DemoRoleId; landing: DemoLanding | null };
+  /**
+   * The hero's pair only: the demo's cost and the price line under the doors.
+   * Pass the reader's pricing offer (ADR 20261022-pricing-ab-test); absent or
+   * `false` everywhere else.
+   */
+  footnotes?: false | { offer: PlanTerms };
   /** Placement only — margins, `justify-*`, `shrink-0`. Never colour or weight. */
   className?: string;
 }) {
@@ -97,18 +111,81 @@ export function FunnelCtas({
           {t("marketing.common.getSetUp")}
         </Link>
       </div>
-      {isClosingSource(source) ? (
-        <p className="mt-3 text-sm font-medium text-balance text-muted">
-          {t("marketing.common.setUpNote")}
-        </p>
+      {footnotes ? (
+        <>
+          <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
+          <p className="mt-2 text-sm text-muted">{heroPriceLine(t, footnotes.offer, locale)}</p>
+        </>
       ) : null}
     </>
   );
 }
 
-/** The pair at the end of a page: the tags whose position is the page's close. */
-export function isClosingSource(source: FunnelSource): boolean {
-  return CLOSING_SOURCES.has(source) || /^feature-.+-close$/.test(source);
+/**
+ * The price line under a hero's doors, per pricing arm (ADR
+ * 20261022-pricing-ab-test). "No cut of your bookings" is the flat arm's alone.
+ */
+export function heroPriceLine(t: DiverTranslator, offer: PlanTerms, locale: string): string {
+  const params = planCopyParams(offer, locale);
+  return offer.plan === "percent_of_volume"
+    ? t("marketing.home.percentArm.heroPriceLine", params)
+    : t("marketing.home.heroPriceLine", {
+        price: params.price,
+        cadence: t(earlyAccessPrice.cadenceKey),
+      });
 }
 
-const CLOSING_SOURCES = new Set<FunnelSource>(["home-closing", "pricing-close", "about-closing"]);
+/**
+ * **The one close a marketing page ends on** (visual review 2026-10-24, B15):
+ * a left-aligned heading saying what the shop gets, one line naming who reads
+ * a set-up request and the support address, then the shared pair. `/`,
+ * `/product`, each feature page, `/pricing`, `/about` and `/switching` each
+ * had their own composition (centred with four lines, left with buttons right,
+ * the support address three times, a tinted card); a page now passes only its
+ * heading, its tag and where the demo opens.
+ *
+ * The container is the marketing shell's (`max-w-7xl px-6`, the nav's and the
+ * footer's), so the close starts on the same left edge as every band above it.
+ */
+export function ClosingCta({
+  locale,
+  source,
+  title,
+  demo,
+}: {
+  locale: DiverLocale;
+  source: FunnelSource;
+  title: string;
+  demo?: { role: DemoRoleId; landing: DemoLanding | null };
+}) {
+  const t = diverTranslator(locale);
+  // The address is a link inside the bundle's sentence, so the sentence is
+  // split on it rather than concatenated from fragments a translator cannot
+  // reorder.
+  const line = t("marketing.common.closingSupport", { email: SUPPORT_EMAIL });
+  const at = line.indexOf(SUPPORT_EMAIL);
+  return (
+    <section className="border-t border-border bg-surface">
+      <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+        <h2 className={`max-w-3xl ${BANNER_TITLE_CLASS} text-balance sm:text-4xl`}>{title}</h2>
+        <p className="mt-4 max-w-2xl leading-7 text-muted">
+          {at < 0 ? (
+            line
+          ) : (
+            <>
+              {line.slice(0, at)}
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                {SUPPORT_EMAIL}
+              </a>
+              {line.slice(at + SUPPORT_EMAIL.length)}
+            </>
+          )}
+        </p>
+        <FunnelCtas locale={locale} source={source} demo={demo} className="mt-8" />
+      </div>
+    </section>
+  );
+}

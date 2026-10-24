@@ -1,3 +1,4 @@
+import { Eyebrow } from "@/app/_components/Eyebrow";
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
@@ -74,7 +75,7 @@ export function StatusReport({
   return (
     <main className="flex-1">
       <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-24">
-        <p className="text-sm text-muted">{s("eyebrow")}</p>
+        <Eyebrow>{s("eyebrow")}</Eyebrow>
         <h1 className={`mt-4 flex items-start gap-3 ${BANNER_TITLE_CLASS}`}>
           <StatusMark
             variant={HEADLINE_MARK[status]}

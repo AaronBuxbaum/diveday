@@ -1,6 +1,8 @@
 "use client";
 
-import { Copyable } from "@/components/Copyable";
+import { useEffect, useRef, useState } from "react";
+import { copyToClipboard } from "@/components/Copyable";
+import { buttonClass } from "@/components/ui/button";
 import { Field, type TextareaRows, textareaClassFor } from "@/components/ui/form";
 
 /**
@@ -9,6 +11,10 @@ import { Field, type TextareaRows, textareaClassFor } from "@/components/ui/form
  * to a DOM element (RSC serialization boundary) — this whole interactive
  * unit lives on the client so both the select-on-focus and the copy button
  * actually work.
+ *
+ * **Copy is a button in the box's top-right corner** (visual review
+ * 2026-10-24, A45): a bare word on the line under the box read as text, not
+ * an act. The box keeps room at its end for it, so the code never runs under.
  */
 export function SnippetField({
   label,
@@ -26,27 +32,40 @@ export function SnippetField({
   copiedLabel: string;
   failedLabel: string;
 }) {
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
+
+  async function copy() {
+    const ok = await copyToClipboard(snippet);
+    setStatus(ok ? "copied" : "failed");
+    clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setStatus("idle"), 4000);
+  }
+
   return (
     <Field label={label}>
-      <div className="flex flex-col gap-2">
+      <div className="relative">
         <textarea
           readOnly
           rows={rows}
           value={snippet}
           onFocus={(event) => event.currentTarget.select()}
-          className={`${textareaClassFor(rows)} font-mono text-xs`}
+          className={`${textareaClassFor(rows)} pe-24 font-mono text-xs`}
         />
-        <div>
-          {/* Alone on the line under the box: its word sits on the box's edge. */}
-          <Copyable
-            layout="inline"
-            flush
-            value={snippet}
-            copyLabel={copyLabel}
-            copiedLabel={copiedLabel}
-            failedLabel={failedLabel}
-          />
-        </div>
+        <button
+          type="button"
+          onClick={copy}
+          className={buttonClass({
+            variant: "secondary",
+            size: "sm",
+            className: "absolute end-2 top-2",
+          })}
+        >
+          <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>
+            {status === "copied" ? copiedLabel : status === "failed" ? failedLabel : copyLabel}
+          </span>
+        </button>
       </div>
     </Field>
   );

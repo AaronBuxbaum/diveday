@@ -1,26 +1,28 @@
-import { EditorFoldedSectionsSkeleton, EditorRailSkeleton } from "@/components/editor/EditorRail";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { EditorFormSkeleton } from "../../../dive-sites/_components/EditorFormSkeleton";
 
 /**
  * The editor's sections, counted: the `sections` list in `./page.tsx` names
- * nine. `src/app/editor-skeletons.test.tsx` reads that list and fails when the
- * two disagree.
+ * nine, four open and five closed (visual review 2026-10-24, A11).
+ * `src/app/editor-skeletons.test.tsx` reads that list and fails when the two
+ * disagree.
  */
 const COURSE_EDITOR_SECTIONS = 9;
+const COURSE_EDITOR_OPEN_SECTIONS = 4;
 
 /**
  * Form-shaped skeleton for the course editor (design principle 1). Without
  * one, this route would inherit the public course page's hero-shaped
  * skeleton from the parent segment — a shape mismatch for a staff form.
  *
- * Rail-and-sections since ADR 20260827-the-shops-shelves: bars on the page
- * background rather than a stack of bordered panels, because that is what
- * replaces them. A skeleton still drawing eight cards would paint the old
- * editor for a moment on every navigation in.
+ * The open sections as bars on hairlines, the closed ones as rows of one
+ * card, and the sticky Save, because that is what the page draws. A skeleton
+ * still drawing a rail would paint the old editor for a moment on every
+ * navigation in.
  */
 export default function EditCourseLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         {/* The header's meta is one `text-sm` line — "Live at /s/…", or
             "Hidden from divers · Preview" — 12px under the title. Without its
@@ -29,23 +31,11 @@ export default function EditCourseLoading() {
           description={false}
           meta={<div className="h-5 w-72 max-w-full rounded bg-surface-sunken" />}
         />
-        <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
-          {/* The rail, from `lg` up; a phone has none. */}
-          <EditorRailSkeleton count={COURSE_EDITOR_SECTIONS} />
-          <div className="flex flex-col">
-            {[0, 1, 2].map((i) => (
-              // Below `lg` one section stands open and the rest fold to headers.
-              <div
-                key={i}
-                className={i === 0 ? "pb-8" : "border-t border-border py-8 max-lg:hidden"}
-              >
-                <div className="h-3 w-28 rounded bg-surface-sunken" />
-                <div className="mt-4 h-12 rounded-lg bg-surface-sunken" />
-                <div className="mt-5 h-24 rounded-lg bg-surface-sunken" />
-              </div>
-            ))}
-            <EditorFoldedSectionsSkeleton count={COURSE_EDITOR_SECTIONS} />
-          </div>
+        <div className="mt-6">
+          <EditorFormSkeleton
+            open={COURSE_EDITOR_OPEN_SECTIONS}
+            closed={COURSE_EDITOR_SECTIONS - COURSE_EDITOR_OPEN_SECTIONS}
+          />
         </div>
       </div>
     </main>

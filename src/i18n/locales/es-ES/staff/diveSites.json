@@ -13,7 +13,7 @@
     "searchPlaceholder": "Nombre o ubicación",
     "searchClear": "Borrar la búsqueda",
     "noMatchHeading": "Ningún sitio coincide con esa búsqueda",
-    "templateUpdateReady": "Actualización de plantilla v{version} disponible",
+    "templateUpdateReady": "Hay detalles del sitio más recientes",
     "nitroxBadge": "Nitrox",
     "groups": {
       "unrated": "Sin clasificar"
@@ -60,9 +60,9 @@
       "about": "El sitio",
       "underwater": "Lo que hay abajo",
       "dive": "La inmersión",
-      "planning": "Notas de planificación"
+      "planning": "Notas de planificación",
+      "spanish": "Español"
     },
-    "sectionsLabel": "En esta página",
     "unsavedInSection": "Cambios sin guardar en {section}",
     "unsavedInSections": "{count, plural, one {Cambios sin guardar en # sección} other {Cambios sin guardar en # secciones}}",
     "nameLabel": "Nombre",
@@ -210,6 +210,7 @@
     "noLevelRequired": "El sitio no requiere ningún nivel",
     "nitroxCheckbox": "Nitrox",
     "saving": "Guardando…",
+    "save": "Guardar",
     "optionalHint": "(opcional)",
     "errorCoordinates": "Agrega ambas coordenadas GPS: una ubicación necesita latitud y longitud.",
     "errorTideStation": "El id de una estación de mareas NOAA tiene siete dígitos, como 8723583.",
@@ -238,7 +239,6 @@
     "certificationDescription": "Requisitos que impone el sitio.",
     "requiredSpecialties": "Especialidades requeridas",
     "scheduleDeparture": "Programar salida",
-    "saveBriefing": "Guardar sitio de buceo",
     "templateUpdates": {
       "title": "Hay una plantilla de DiveDay más nueva",
       "description": "Este sitio usa la plantilla v{current}; la última versión publicada es la v{latest}.",
@@ -289,8 +289,7 @@
     "title": "Agregar un sitio de buceo",
     "description": "Todo es opcional excepto el nombre.",
     "errorInvalid": "Eso no se guardó. Revisa el nombre obligatorio y los enlaces e inténtalo de nuevo.",
-    "certificationDescription": "Estos requisitos viajan con el sitio a cada nueva salida que lo use.",
-    "saveSiteBriefing": "Guardar sitio de buceo"
+    "certificationDescription": "Estos requisitos viajan con el sitio a cada nueva salida que lo use."
   },
   "import": {
     "description": "Vuelve a leer un dive_sites.csv de tu exportación de DiveDay en la biblioteca de este centro. Elige también dive_site_creatures.csv para recuperar la guía de campo de cada sitio.",

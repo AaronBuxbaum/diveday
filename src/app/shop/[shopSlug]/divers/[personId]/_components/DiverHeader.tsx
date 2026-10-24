@@ -41,6 +41,7 @@ export function DiverHeader({
   standing,
   locale,
   packages,
+  download,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -67,6 +68,8 @@ export function DiverHeader({
   locale: string;
   /** Dives left on the packages this diver holds (fourth UX review, item 20); null when none. */
   packages?: { left: number; of: number } | null;
+  /** "Download record", a secondary beside Book; absent for a reader who may not export. */
+  download?: ReactNode;
 }) {
   return (
     <>
@@ -161,7 +164,12 @@ export function DiverHeader({
       />
       {moment}
       {status?.tone === "success" ? <DiverFormStatus status={status} className="-mt-4" /> : null}
-      {book ? <div className="mt-1 flex flex-wrap items-start gap-2">{book}</div> : null}
+      {book || download ? (
+        <div className="mt-1 flex flex-wrap items-start gap-2">
+          {book}
+          {download}
+        </div>
+      ) : null}
     </>
   );
 }

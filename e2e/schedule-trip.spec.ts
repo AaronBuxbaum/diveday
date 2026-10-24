@@ -66,7 +66,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
     .filter({ hasText: title })
     .filter({ visible: true });
   await expect(card).toBeVisible();
-  await expect(card.getByText("8 seats left").filter({ visible: true })).toBeVisible();
+  await expect(card.getByText("8 seats", { exact: true }).filter({ visible: true })).toBeVisible();
 
   await card.click();
   // What the staffer typed, read back in the diver's own words: the three tanks

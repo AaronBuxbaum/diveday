@@ -80,8 +80,7 @@
     "statusReturned": "devuelto",
     "statusDiscarded": "descartado",
     "tripLine": "{title}, {date}",
-    "empty": "No hay nada esperando a su dueño",
-    "whereToAdd": "Los objetos se registran en la pestaña Barco de cada salida.",
+    "empty": "Nada esperando volver a casa",
     "waiting": "En objetos perdidos: {items}",
     "refusals": {
       "empty": "Indica qué se encontró.",

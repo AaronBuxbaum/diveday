@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
+import { UnsavedSections } from "@/components/editor/EditorRail";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard, TONE_PANEL_CLASS } from "@/components/ui/card";
-import { DangerDisclosure } from "@/components/ui/disclosure";
+import { SectionCard } from "@/components/ui/card";
+import { DangerDisclosure, DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import {
   getDiveSite,
@@ -30,7 +30,7 @@ import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { fetchTideStation, tideStationEcho } from "@/lib/tide-stations";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
-import { loadSiteAssists, SiteTranslations, siteBriefAssist } from "../_components/SiteAssists";
+import { loadSiteAssists, siteBriefAssist, siteSpanishFields } from "../_components/SiteAssists";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell } from "../_components/SiteFormShell";
 import { ERROR_KEYS, NOTICE_KEYS } from "../_components/site-edit-notices";
@@ -182,11 +182,9 @@ export default async function EditDiveSitePage({
   const sections = siteFormSections(t, shop.fieldGuideEnabled);
 
   return (
-    // Wider from `lg` up than the 3xl it was: the rail takes a column of its
-    // own beside the form rather than out of it, so the fields keep the
-    // measure they had (ADR 20260827-the-shops-shelves, the long-form editor
-    // pattern).
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
+    // The form's own measure: the jump rail that widened this page from `lg`
+    // up is gone (visual review 2026-10-24, A11).
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* Without this, `?notice=saved` stayed put and replayed "Saved" on every
           refresh and back-navigation — the same one-shot rule the rest of
           `/shop/**` follows. */}
@@ -239,51 +237,6 @@ export default async function EditDiveSitePage({
           dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : null}
-      {templateUpdate ? (
-        <section className={`mt-6 ${TONE_PANEL_CLASS} border-primary/30 bg-primary/5`}>
-          <h2 className="text-base font-semibold">{t("diveSites.edit.templateUpdates.title")}</h2>
-          <p className="mt-1 text-sm text-muted">
-            {t("diveSites.edit.templateUpdates.description", {
-              current: templateUpdate.currentVersion,
-              latest: templateUpdate.latestVersion,
-            })}
-          </p>
-          {templateUpdate.diff.length > 0 ? (
-            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-              {templateUpdate.diff.map((change) => (
-                <li
-                  key={change.field}
-                  className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2"
-                >
-                  <span>{t(TEMPLATE_FIELD_KEYS[change.field])}</span>
-                  <span className="shrink-0 text-xs font-medium text-muted">
-                    {change.shopChanged
-                      ? t("diveSites.edit.templateUpdates.shopEdit")
-                      : t("diveSites.edit.templateUpdates.templateChange")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-4 text-sm text-muted">
-              {t("diveSites.edit.templateUpdates.noFieldChanges")}
-            </p>
-          )}
-          <p className="mt-4 text-sm text-muted">
-            {t("diveSites.edit.templateUpdates.replaceCopyHint")}
-          </p>
-          <form action={pullDiveSiteTemplateAction.bind(null, id)} className="mt-5">
-            <input type="hidden" name="mode" value="replace-template-copy" />
-            <SubmitButton
-              pendingLabel={t("diveSites.edit.templateUpdates.replacing")}
-              className={buttonClass()}
-              confirmMessage={t("diveSites.edit.templateUpdates.replaceConfirm")}
-            >
-              {t("diveSites.edit.templateUpdates.replaceCopy")}
-            </SubmitButton>
-          </form>
-        </section>
-      ) : null}
       {upcomingTrips.length > 0 ? (
         <SectionCard title={t("diveSites.edit.upcomingHeading")} className="mt-8 overflow-hidden">
           {/* Full-bleed rows inside the card rather than a second bordered box
@@ -315,60 +268,106 @@ export default async function EditDiveSitePage({
           </ul>
         </SectionCard>
       ) : null}
-      <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
-        <EditorRail sections={sections} navLabel={t("diveSites.form.sectionsLabel")} />
-        <div className="min-w-0">
-          <SiteFormShell
-            action={saveDiveSiteAction.bind(null, id)}
-            errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
-            savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
-            actions={
-              <>
-                <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
-                  {t("diveSites.edit.saveBriefing")}
-                </SubmitButton>
-                <UnsavedSections
-                  sections={sections}
-                  copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
-                />
-              </>
-            }
-          >
-            {/* The row's edit generation as this render saw it, posted back so
+      <div className="mt-8">
+        <SiteFormShell
+          action={saveDiveSiteAction.bind(null, id)}
+          errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
+          savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
+          actions={
+            <>
+              <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
+                {t("diveSites.form.save")}
+              </SubmitButton>
+              <UnsavedSections
+                sections={sections}
+                copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
+              />
+            </>
+          }
+        >
+          {/* The row's edit generation as this render saw it, posted back so
                 the save can refuse rather than quietly overwrite a colleague's
                 briefing (issue #820). A site nobody has saved since the column
                 arrived has a null `updated_at`, and `created_at` stands in for
                 it — those are the rows two people are most likely to open at
                 once. */}
-            <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
-            <SiteFields
-              fieldGuideOn={shop.fieldGuideEnabled}
-              t={t}
-              depthUnit={depthUnit}
-              tideStation={tideStationEcho(station, site)}
-              values={{
-                ...site,
-                // Both lists are normalised for the editors rather than handed
-                // over raw: a row written before landmarks carried notes holds
-                // plain strings, and the guide lives in its own table.
-                landmarks: parseDiveSiteLandmarks(site.landmarks),
-                creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
-              }}
-              routeCopy={routeEditorCopy(t)}
-              landmarkCopy={landmarkEditorCopy(t)}
-              fieldGuideCopy={fieldGuideEditorCopy(t)}
-              marineLifeCatalog={marineLifeCatalogEntries(diverT)}
-              locale={locale}
-              timezone={shop.timezone}
-              siteId={site.id}
-              certificationDescription={t("diveSites.edit.certificationDescription")}
-              requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
-              briefAssist={siteBriefAssist(shopSlug, assists.canAssist, t)}
-            />
-          </SiteFormShell>
-          <SiteTranslations shopSlug={shopSlug} assists={assists} t={t} />
-        </div>
+          <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
+          <SiteFields
+            fieldGuideOn={shop.fieldGuideEnabled}
+            t={t}
+            depthUnit={depthUnit}
+            tideStation={tideStationEcho(station, site)}
+            values={{
+              ...site,
+              // Both lists are normalised for the editors rather than handed
+              // over raw: a row written before landmarks carried notes holds
+              // plain strings, and the guide lives in its own table.
+              landmarks: parseDiveSiteLandmarks(site.landmarks),
+              creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
+            }}
+            routeCopy={routeEditorCopy(t)}
+            landmarkCopy={landmarkEditorCopy(t)}
+            fieldGuideCopy={fieldGuideEditorCopy(t)}
+            marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+            locale={locale}
+            timezone={shop.timezone}
+            siteId={site.id}
+            certificationDescription={t("diveSites.edit.certificationDescription")}
+            requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
+            briefAssist={siteBriefAssist(shopSlug, assists.canAssist, t)}
+            spanish={siteSpanishFields(shopSlug, assists, t)}
+          />
+        </SiteFormShell>
       </div>
+      {/* A newer DiveDay template for this site: closed behind its name under
+          the briefing, because pulling one is rare and its own act (visual
+          review 2026-10-24, A11). Outside the briefing form: forms cannot nest. */}
+      {templateUpdate ? (
+        <DisclosureRowList className="mt-8">
+          <DisclosureRow id="briefing-template" heading={t("diveSites.edit.templateUpdates.title")}>
+            <p className="text-sm text-muted">
+              {t("diveSites.edit.templateUpdates.description", {
+                current: templateUpdate.currentVersion,
+                latest: templateUpdate.latestVersion,
+              })}
+            </p>
+            {templateUpdate.diff.length > 0 ? (
+              <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                {templateUpdate.diff.map((change) => (
+                  <li
+                    key={change.field}
+                    className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+                  >
+                    <span>{t(TEMPLATE_FIELD_KEYS[change.field])}</span>
+                    <span className="shrink-0 text-xs font-medium text-muted">
+                      {change.shopChanged
+                        ? t("diveSites.edit.templateUpdates.shopEdit")
+                        : t("diveSites.edit.templateUpdates.templateChange")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-muted">
+                {t("diveSites.edit.templateUpdates.noFieldChanges")}
+              </p>
+            )}
+            <p className="mt-4 text-sm text-muted">
+              {t("diveSites.edit.templateUpdates.replaceCopyHint")}
+            </p>
+            <form action={pullDiveSiteTemplateAction.bind(null, id)} className="mt-5">
+              <input type="hidden" name="mode" value="replace-template-copy" />
+              <SubmitButton
+                pendingLabel={t("diveSites.edit.templateUpdates.replacing")}
+                className={buttonClass()}
+                confirmMessage={t("diveSites.edit.templateUpdates.replaceConfirm")}
+              >
+                {t("diveSites.edit.templateUpdates.replaceCopy")}
+              </SubmitButton>
+            </form>
+          </DisclosureRow>
+        </DisclosureRowList>
+      ) : null}
       <DangerDisclosure
         open={Boolean(error)}
         className="mt-10"

@@ -16,14 +16,15 @@ import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { readRequiredSpecialties } from "@/db/requirement-form";
 import { getShopById } from "@/db/shops";
 import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
-import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
+import { parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { uuidParam } from "@/lib/uuid";
-import type { SiteFormState } from "../_components/SiteFormShell";
+import type { SiteFormState, SiteSaveRefusal } from "../_components/SiteFormShell";
 import { siteFormExtras, templatePullMode } from "../site-forms";
+import { planSpanishBoxes, writeSpanishBoxes } from "../spanish-boxes";
 
 /**
  * The edit page's four doors: save the briefing, delete the site, and pull or undo an update
@@ -44,7 +45,7 @@ export async function saveDiveSiteAction(
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
   // Every refusal carries the whole submission back to the form, so an edit
   // in progress survives a rejected save (see `SiteFormShell`).
-  const refuse = (errorCode: DiveSiteFormError): SiteFormState => ({
+  const refuse = (errorCode: SiteSaveRefusal): SiteFormState => ({
     errorCode,
     values: submittedValues(formData),
   });
@@ -78,6 +79,20 @@ export async function saveDiveSiteAction(
   if (extras.expectedVersion !== null && stored.rowVersion !== extras.expectedVersion) {
     return refuse("conflict");
   }
+  // **The briefing's Spanish rides the same Save** (visual review 2026-10-24,
+  // A11), asked before anything is written: a box that would be refused has
+  // to refuse the whole save while the briefing is still as it was.
+  const spanish = await planSpanishBoxes(
+    activeDb,
+    activeSession.user.shopId,
+    { kind: "dive_site", id },
+    {
+      description: { text: parsed.fields.description ?? "", maxLength: 1200 },
+      marineLifeDescription: { text: parsed.fields.marineLifeDescription ?? "", maxLength: 1200 },
+    },
+    formData,
+  );
+  if (!spanish.ok) return refuse(spanish.reason === "stale" ? "spanishStale" : "spanishRefused");
   // Uploaded from the staffer's own device straight into first-party
   // storage — there is no pasted URL for a public page to fetch (CR-020).
   const photos = await uploadDiveSitePhotos(formData, stored);
@@ -155,6 +170,12 @@ export async function saveDiveSiteAction(
   // briefing comes back to the form like any other refusal.
   if (updated === SITE_NAME_TAKEN) return refuse("nameTaken");
   if (!updated) notFound();
+  await writeSpanishBoxes(
+    activeDb,
+    activeSession.user.shopId,
+    { kind: "dive_site", id },
+    spanish.boxes,
+  );
   // Only once the row is durably saved: a photo this save replaced or
   // removed is queued for provider deletion, never blocked on storage and
   // owner-visible if it fails (CR-012), and only once no other site shows it.

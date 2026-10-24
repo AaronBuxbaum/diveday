@@ -43,7 +43,7 @@ export default async function FindYourBookingPage() {
   const t = diverTranslator(locale);
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav hideCta compactMobile />
+      <MarketingNav compactMobile />
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12 sm:py-16">
         <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("findYourBooking.title")}</h1>
         <p className="mt-2 max-w-prose text-pretty text-muted">

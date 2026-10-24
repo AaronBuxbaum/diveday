@@ -154,7 +154,14 @@ export function threadSpineSteps(
     state: step.state,
     current: step.id === spine.current,
     title: t(THREAD_STEP_TITLE_KEYS[step.id]),
-    stateWord: step.state === "done" ? null : t(THREAD_STEP_STATE_KEYS[step.state]),
+    // "Your turn" names the one step that is next and no other (visual
+    // review 2026-10-24, B24): on four open steps it said nothing about which
+    // to do. A step waiting on the shop still says so; a done step speaks
+    // through its own settled line.
+    stateWord:
+      step.state === "done" || (step.state === "your_turn" && step.id !== spine.current)
+        ? null
+        : t(THREAD_STEP_STATE_KEYS[step.state]),
     line: stepLine(step),
     body: stepBody(step) ?? undefined,
   }));

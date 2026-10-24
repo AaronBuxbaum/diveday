@@ -4,7 +4,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
@@ -286,19 +285,26 @@ export function RentalFitForm({
     // a diver. Raised, this panel read as their peer, which put a green "sizes
     // recorded" light at the same volume as a medical referral one row up.
     <div className="text-left">
-      {/* Gear-Status Light-up Indicator */}
+      {/* The gear status. Lit once the sizes are in; until then it is the
+          live region alone, read to a screen reader and drawn as nothing
+          (visual review 2026-10-24, B25): the gray banner with two gray icons
+          stood over the form saying what the form itself asks. */}
       <div
         data-testid="gear-status-indicator"
         role="status"
         aria-live="polite"
-        className={`flex items-center gap-4 p-4 rounded-inset border transition-all ${
-          isConfirmed ? "border-success/30 bg-success/5" : "border-border bg-surface-sunken/40"
-        }`}
+        className={
+          isConfirmed
+            ? "flex items-center gap-4 rounded-inset border border-success/30 bg-success/5 p-4 transition-all"
+            : "sr-only"
+        }
       >
-        <div className="flex gap-2">
-          <BcdIcon active={isConfirmed} label={t("rental.bcdIconLabel")} />
-          <FinIcon active={isConfirmed} label={t("rental.finIconLabel")} />
-        </div>
+        {isConfirmed ? (
+          <div className="flex gap-2">
+            <BcdIcon active label={t("rental.bcdIconLabel")} />
+            <FinIcon active label={t("rental.finIconLabel")} />
+          </div>
+        ) : null}
         <div>
           <p
             className={`text-sm font-semibold transition-colors ${
@@ -430,41 +436,23 @@ export function RentalFitForm({
               <p className="mt-2 text-sm text-muted">{t("rental.askWhatsIncluded")}</p>
             )}
             {showPricing && quote.subtotalCents > 0 ? (
-              // Sunken, not `bg-surface`: this note is nested *inside* the
-              // card, which is `bg-surface` itself now that the panel comes
-              // from the shared component — surface on surface would leave the
-              // estimate legible only by its hairline. The sunken fill is the
-              // edge now, so the note is the inset box every note in a card
-              // is, with no hairline of its own (pixel-craft class 12).
-              <p className={`mt-3 ${INSET_NOTE_BOX} bg-surface-sunken`}>
-                <RentalQuoteAmount
-                  totalLabel={
-                    quote.unpricedKinds.length > 0
-                      ? t("rental.estimatedRentalWithExtras", {
-                          price: formatMoneyCents(quote.subtotalCents, currency, locale),
-                        })
-                      : t("rental.estimatedRental", {
-                          price: formatMoneyCents(quote.subtotalCents, currency, locale),
-                        })
-                  }
-                  beforeDiscountLabel={t("rental.beforeDiscountLabel")}
-                  struckPrice={
-                    quote.setSavingsCents > 0
-                      ? formatMoneyCents(quote.listSubtotalCents, currency, locale)
-                      : null
-                  }
-                />{" "}
+              // One line (visual review 2026-10-24, B25): the set price the
+              // diver pays, said as the set price, with no struck-through
+              // list price and no green savings line. The set-price math is
+              // unchanged (H-06).
+              <p className="mt-3 text-sm">
+                {quote.unpricedKinds.length > 0
+                  ? t("rental.estimatedRentalWithExtras", {
+                      price: formatMoneyCents(quote.subtotalCents, currency, locale),
+                    })
+                  : quote.setSavingsCents > 0
+                    ? t("rental.estimatedRentalFullSet", {
+                        price: formatMoneyCents(quote.subtotalCents, currency, locale),
+                      })
+                    : t("rental.estimatedRental", {
+                        price: formatMoneyCents(quote.subtotalCents, currency, locale),
+                      })}{" "}
                 {t("rental.confirmAtDock")}
-                {quote.setSavingsCents > 0 ? (
-                  <span // `-strong`: this line sits inside the sunken price box, where the
-                    // raw hue measures 4.36:1 (issue #793).
-                    className="mt-1 block font-medium text-success-strong"
-                  >
-                    {t("rental.fullSetSavings", {
-                      price: formatMoneyCents(quote.setSavingsCents, currency, locale),
-                    })}
-                  </span>
-                ) : null}
               </p>
             ) : null}
           </ChoiceFieldset>
@@ -529,11 +517,9 @@ export function RentalFitForm({
         <div>
           <SubmitButton
             pendingLabel={t("rental.savingFit")}
-            className={buttonClass({
-              variant: "secondary",
-              size: "sm",
-              className: "px-4",
-            })}
+            // The gear step's one action, as every step's is (visual review
+            // 2026-10-24, B26).
+            className={buttonClass({ variant: "primary" })}
           >
             {t("rental.saveFit")}
           </SubmitButton>

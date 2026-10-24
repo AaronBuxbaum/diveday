@@ -219,21 +219,6 @@ describe("MarketingScreenFallbacks", () => {
       expect(container.querySelectorAll("button")).toHaveLength(0);
       expect(screen.queryByText(/Mark (not )?boarded/)).toBeNull();
     });
-
-    it("draws the after-dive checkpoint with eight of nine back aboard", () => {
-      render(<CaptainRollCallFallback locale="en-US" checkpoint="afterDive" />);
-      expect(screen.getByText("8")).toBeInTheDocument();
-      expect(screen.getByText("After dive 1 roll call")).toBeInTheDocument();
-      expect(screen.queryByText("Before departure roll call")).toBeNull();
-    });
-
-    it("draws the after-dive checkpoint in Spanish", () => {
-      render(<CaptainRollCallFallback locale="es-ES" checkpoint="afterDive" />);
-      // The live roll call's heading form, "Pase de lista · …" (es-ES README).
-      expect(screen.getByText("Pase de lista · Después de la inmersión 1")).toBeInTheDocument();
-      expect(screen.getByText("de 9 buceadores a bordo")).toBeInTheDocument();
-      expect(screen.getByText("Inm. 1")).toBeInTheDocument();
-    });
   });
 
   describe("RecapPageFallback, the diver's after-trip page", () => {

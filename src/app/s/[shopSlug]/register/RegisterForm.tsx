@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { AssistPhotoButton } from "@/components/assists/AssistPhotoButton";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
 
@@ -58,6 +58,7 @@ export function RegisterForm({
 }) {
   const t = useTranslations();
   const [state, formAction] = useActionState<SelfRegistrationFormState, FormData>(action, {});
+  const [hasPhone, setHasPhone] = useState(false);
 
   if (state.status === SELF_REGISTRATION_DONE) {
     return (
@@ -101,7 +102,9 @@ export function RegisterForm({
         <Field
           label={t("register.phoneLabel")}
           htmlFor="phone"
-          description={<SmsConsentNote t={t} />}
+          // Shown once the field holds a number, the moment the words start
+          // to apply (visual review 2026-10-24, B22). The words never change.
+          description={hasPhone ? <SmsConsentNote t={t} /> : undefined}
         >
           <input
             id="phone"
@@ -109,6 +112,7 @@ export function RegisterForm({
             type="tel"
             maxLength={30}
             autoComplete="tel"
+            onInput={(event) => setHasPhone(event.currentTarget.value.trim() !== "")}
             className={controlClass}
           />
         </Field>

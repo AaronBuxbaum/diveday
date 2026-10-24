@@ -259,7 +259,9 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
         <div>
           <SubmitButton
             pendingLabel={t("ready.certSubmitting")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
+            // The step's one action, as every step's is (visual review
+            // 2026-10-24, B26).
+            className={buttonClass({ variant: "primary" })}
           >
             {t("ready.certSubmit")}
           </SubmitButton>

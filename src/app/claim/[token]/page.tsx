@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { EntryDone } from "@/components/account/EntryShell";
-import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
+import { DeadLink } from "@/components/DeadLink";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
@@ -70,14 +70,7 @@ const CLAIM_NOTICES: Record<string, { tone: "danger" | "neutral"; key: DiverMess
  * party panel, and this page has no idea who that is.
  */
 function DeadClaim({ shop, t }: { shop: DeadClaimShop; t: DiverTranslator }) {
-  return (
-    <ExpiredLinkCard
-      title={t("seatClaim.unavailableHeading")}
-      text={t("seatClaim.expiredBody")}
-      shop={shop}
-      t={t}
-    />
-  );
+  return <DeadLink t={t} next={t("seatClaim.expiredBody")} shop={shop} />;
 }
 
 /**
@@ -88,13 +81,7 @@ function DeadClaim({ shop, t }: { shop: DeadClaimShop; t: DiverTranslator }) {
  * opens with; what it cannot do is offer a hand.
  */
 function Unavailable({ t }: { t: DiverTranslator }) {
-  return (
-    <EntryDone
-      glyph="expired"
-      title={t("seatClaim.unavailableHeading")}
-      text={t("seatClaim.unavailableBody")}
-    />
-  );
+  return <DeadLink t={t} next={t("seatClaim.unavailableBody")} diveDayDoor={false} />;
 }
 
 // `instant = true`: this route has a real static shell. Every request-scoped

@@ -125,7 +125,7 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
       }),
     );
 
-    const inquiry = within(screen.getByRole("region", { name: t("inquiry.getInTouch") }));
+    const inquiry = within(screen.getByRole("region", { name: t("inquiry.askAboutCourse") }));
     const jump = within(screen.getByRole("navigation", { name: t("course.onThisPage") }));
     expect(jump.getByRole("link", { name: t("course.jumpContact") })).toHaveAttribute(
       "href",

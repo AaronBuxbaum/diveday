@@ -17,14 +17,7 @@ import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { isDiver } from "@/lib/participant-types";
 import { reEntryOffersFor } from "@/lib/re-entry";
-import { WELCOME_HELLOS } from "@/lib/welcome-cue";
 import { saveDayOfDetailsFromReady } from "../day-of-actions";
-
-const WELCOME_HELLO_LABELS = {
-  first_ocean_dive: "ready.welcomeHelloFirstOceanDive",
-  celebrating: "ready.welcomeHelloCelebrating",
-  nervous: "ready.welcomeHelloNervous",
-} as const satisfies Record<(typeof WELCOME_HELLOS)[number], string>;
 
 /** One radio, worded on its right. */
 function RadioRow({
@@ -365,30 +358,6 @@ export function DayOfDetails({
             >
               {t("ready.welcomeShareLabel")}
             </ChoiceRow>
-            {/* **A fixed word to go with it** (issue #2425), first trips only
-                and read by the crew only while the box above is ticked: the
-                save clears it with the consent. Three choices, never free
-                text, so nothing medical can ride along. */}
-            {data.welcomeOffer.kind === "first_trip" ? (
-              <fieldset className="mt-3">
-                <legend className="text-sm text-muted">{t("ready.welcomeHelloLegend")}</legend>
-                <RadioRow
-                  name="welcomeHello"
-                  value=""
-                  label={t("ready.welcomeHelloNone")}
-                  defaultChecked={data.welcomeHello === null}
-                />
-                {WELCOME_HELLOS.map((hello) => (
-                  <RadioRow
-                    key={hello}
-                    name="welcomeHello"
-                    value={hello}
-                    label={t(WELCOME_HELLO_LABELS[hello])}
-                    defaultChecked={data.welcomeHello === hello}
-                  />
-                ))}
-              </fieldset>
-            ) : null}
             {data.welcomeShared ? (
               <p className="mt-2 text-sm font-medium text-success-strong">
                 {t("ready.welcomeShared")}

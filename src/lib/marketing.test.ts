@@ -61,14 +61,12 @@ describe("the price is interpolated, never spelled out in a bundle", () => {
    */
   const priceSentenceKeys = [
     "marketing.home.heroPriceLine",
-    "marketing.home.priceLine",
     "marketing.about.seeCost",
     // The "One price covers the shop." standard on `/about` states the figure
     // where the question is raised rather than a band away from it
     // (2026-10-07; the pricing door below it still carries it too).
     "marketing.about.rules.onePrice.body",
     "marketing.featureChrome.includedPrice",
-    "marketing.featureChrome.closePrice",
   ] as const;
 
   for (const locale of DIVER_LOCALES) {
@@ -159,11 +157,11 @@ describe("the trial's terms stand at the pricing doors", () => {
   } as const;
 
   /**
-   * Billing vocabulary the page may not grow on its own. The rule is not "never
-   * say these words" — `faq.trialMeaning` is allowed to, and does — it is that
-   * the note at the door may not introduce a billing term the FAQ row has not
-   * already committed to. Publishing billing terms through a new channel needs
-   * the decision H-12 leaves open.
+   * Billing vocabulary the page may not grow on its own. The trial's FAQ row
+   * left `/pricing` on 2026-10-24 (visual review B11: the notes beside the
+   * invoice already say it), so the note is the trial's one statement, and it
+   * may name the card it does not take and no other billing term: publishing
+   * billing terms needs the decision H-12 leaves open.
    */
   const billingVocabulary = {
     "en-US": [
@@ -202,21 +200,13 @@ describe("the trial's terms stand at the pricing doors", () => {
       for (const pattern of trialTerms[locale]) expect(note).toMatch(pattern);
     });
 
-    it(`invents no billing term the trial FAQ row has not already made in ${locale}`, () => {
-      const messages = marketingMessages(locale);
-      const note = messages["marketing.pricing.trialNote"].toLowerCase();
-      const answer = messages["marketing.pricing.faq.trialMeaning.answer"].toLowerCase();
+    it(`names no billing term beyond the card it does not take in ${locale}`, () => {
+      const note = marketingMessages(locale)["marketing.pricing.trialNote"].toLowerCase();
+      const allowed = locale === "en-US" ? ["card"] : ["tarjeta"];
       const invented = billingVocabulary[locale].filter(
-        (term) => note.includes(term) && !answer.includes(term),
+        (term) => note.includes(term) && !allowed.includes(term),
       );
       expect(invented).toEqual([]);
-    });
-
-    it(`states the soft expiry the code actually implements in ${locale}`, () => {
-      // src/lib/trial.ts: expiry blocks no route and no mutation, so "nothing
-      // switches off" is a description of behaviour, not a reassurance.
-      const answer = marketingMessages(locale)["marketing.pricing.faq.trialMeaning.answer"];
-      expect(answer).toMatch(locale === "en-US" ? /keeps working/i : /sigue funcionando/i);
     });
 
     /**
@@ -290,27 +280,21 @@ describe("the pricing FAQ promises the import preview once", () => {
 });
 
 /**
- * The homepage's close says a person reads it once (issue #2299). The note
- * under "Get set up" (`common.setUpNote`) and the "Ask us first" line beneath
- * it (`home.contactBody`) sit a few lines apart, and both used to promise a
- * real person. The set-up note keeps it, because there it says what the button
- * leads to: a person sets the shop up. The contact line gives it up.
+ * Every close says a person reads a set-up request, once (issue #2299): the
+ * shared closing band's one line (`common.closingSupport`, visual review
+ * 2026-10-24, B15) carries it and the support address together.
  */
-describe("the homepage close says a person reads it once", () => {
+describe("the closing band says a person reads a request", () => {
   const person = {
     "en-US": /person reads/i,
     "es-ES": /\bpersona\b/i,
   } as const;
 
   for (const locale of DIVER_LOCALES) {
-    it(`keeps it in the set-up note in ${locale}`, () => {
-      expect(marketingMessages(locale)["marketing.common.setUpNote"]).toMatch(person[locale]);
-    });
-
-    it(`leaves it out of the contact line beneath in ${locale}`, () => {
-      const body = marketingMessages(locale)["marketing.home.contactBody"];
-      expect(body).toBeDefined();
-      expect(body).not.toMatch(person[locale]);
+    it(`keeps it in the closing line, with the address, in ${locale}`, () => {
+      const line = marketingMessages(locale)["marketing.common.closingSupport"];
+      expect(line).toMatch(person[locale]);
+      expect(line).toContain("{email}");
     });
   }
 });
@@ -356,8 +340,8 @@ describe("the builder's notes say we", () => {
  * stated the trial five times (the invoice row, the hero's note, the closing
  * band's copy of it, a margin note and the FAQ) and card fees three times (the
  * invoice row, a margin note and a footnote under the included list). The
- * trial keeps the hero's note and its FAQ answer; card fees keep the invoice's
- * row. The deleted keys are absence checks, because the failure they guard is
+ * trial keeps one line in the notes beside the invoice (its FAQ row went on
+ * 2026-10-24, visual review B11); card fees keep the invoice's row. The deleted keys are absence checks, because the failure they guard is
  * an editor filling one back in.
  */
 describe("the pricing page says the trial and card fees once", () => {
@@ -369,10 +353,10 @@ describe("the pricing page says the trial and card fees once", () => {
       expect(messages["marketing.pricing.notes.note3"]).toBeUndefined();
     });
 
-    it(`keeps the trial beside the price and in the FAQ alone in ${locale}`, () => {
+    it(`keeps the trial in the notes beside the price alone in ${locale}`, () => {
       const messages = marketingMessages(locale);
       expect(messages["marketing.pricing.trialNote"]).toBeDefined();
-      expect(messages["marketing.pricing.faq.trialMeaning.answer"]).toBeDefined();
+      expect(messages["marketing.pricing.faq.trialMeaning.answer"]).toBeUndefined();
       expect(messages["marketing.pricing.invoice.trial.label"]).toBeUndefined();
       expect(messages["marketing.pricing.notes.note4"]).toBeUndefined();
     });

@@ -15,7 +15,6 @@ import { getDb } from "@/db/client";
 import {
   COURSE_LIST_VIEWS,
   type CourseListView,
-  courseIdsEverOnBoard,
   courseListViewParam,
   coursesAwaitingFormText,
   pagedCourses,
@@ -55,8 +54,9 @@ const COURSE_VIEW_KEYS: Record<CourseListView, StaffMessageKey> = {
 /**
  * The staff course roster: every course including the hidden ones, as one
  * ledger grouped by agency (ADR 20260827-the-shops-shelves, decision 1 — the
- * library pattern). Each row opens its course's editor; Schedule, on a course
- * the shop runs, is the row's one quiet act, and the header holds the one door to the diver-facing
+ * library pattern). Each row opens its course's editor, whole; Schedule, on a
+ * course the shop runs, is a header action on that editor (visual review
+ * 2026-10-24, A39), and this header holds the one door to the diver-facing
  * catalog. Hiding a course from that catalog lives on the course's own editor,
  * beside Save: it is a rare act, and 55 standing Hide buttons were 55 controls
  * nobody was reaching for. Staff-only, like everything else under
@@ -114,7 +114,7 @@ export default async function CoursesPage({
   // Together rather than in sequence: only the second needs the page of
   // courses, and the permission read does not, so awaiting them one after the
   // other would buy a serial round trip for nothing.
-  const [canSchedule, nextSessions, formsAwaitingText, everOnBoard] = await Promise.all([
+  const [canSchedule, nextSessions, formsAwaitingText] = await Promise.all([
     // Scheduling is owner/manager/instructor work, so the button is absent —
     // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
     // new-trip page re-checks against live roles either way.
@@ -140,11 +140,6 @@ export default async function CoursesPage({
     // shop-wide, with a door to the first (UX review 2026-10-10, item 16);
     // under every row it was the same amber sentence nearly twenty times.
     coursesAwaitingFormText(db, shop.id),
-    courseIdsEverOnBoard(
-      db,
-      shop.id,
-      courseList.map((course) => course.id),
-    ),
   ]);
   const base = `/shop/${shopSlug}/courses`;
   // The search and the view travel with every page turn and chip.
@@ -179,16 +174,6 @@ export default async function CoursesPage({
       active: view === key,
     })),
   ];
-  /**
-   * **"Schedule" on a course the shop runs, not on every catalog entry**
-   * (third UX review, item 35). A template puts the whole agency ladder on the
-   * roster priced and visible, and a Schedule beside each of 55 rows read as
-   * 55 products. It stands on a course that has been on the board, ahead or
-   * behind, and on one the shop wrote itself; any other course is scheduled
-   * from the board's own Add, which lists every course.
-   */
-  const offersSchedule = (course: (typeof courseList)[number]) =>
-    everOnBoard.has(course.id) || course.sourceTemplateSlug === null;
 
   /**
    * The row's quiet line: when it next runs, who it is open to, how long it
@@ -258,35 +243,6 @@ export default async function CoursesPage({
       </>
     ),
     ...(course.isActive ? {} : { hiddenLabel: st("courses.list.hidden") }),
-    // The catalog's whole point is that a course gets taught. This hands the
-    // board's add panel (`?course=` opens it with the course preselected and
-    // shapes the title) the one fact staff would otherwise re-pick from a
-    // dropdown — never a second trip-creation path of its own. It is `link`
-    // weight rather than a button: the row is already a door, and a second
-    // filled control on every one of 20 rows reads as a toolbar the reader has
-    // to map back to its targets (principles §8, §10).
-    //
-    // Below `sm` the row stacks and "Schedule" is its last line, so its
-    // unseen lower half sinks into the row's 12px inset (`block-end-phone`):
-    // standing whole, it left 28px under its word against 17px over the
-    // course's name (pixel-craft class 5). The box then ends on the row's rule,
-    // so its ring is drawn inside it there.
-    ...(canSchedule && offersSchedule(course)
-      ? {
-          actions: (
-            <Link
-              href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
-              aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
-              className={buttonClass({
-                variant: "link",
-                size: "sm",
-              })}
-            >
-              {st("courses.list.schedule")}
-            </Link>
-          ),
-        }
-      : {}),
   }));
 
   return (

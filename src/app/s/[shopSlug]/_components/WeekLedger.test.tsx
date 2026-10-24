@@ -28,7 +28,7 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
     site: "Molasses Reef and French Reef",
     requirements: ["Open Water or higher"],
     aboveLevel: null,
-    capacityText: "3 seats left",
+    capacityText: "3 seats",
     capacityTone: "quiet",
     price: "$95.00",
     ...overrides,
@@ -353,7 +353,7 @@ describe("the requirement slot's silence", () => {
 });
 
 describe("seat state and price", () => {
-  it("quiets a full row in measured ink and marks it with a neutral badge", () => {
+  it("quiets a full row in measured ink and says Full in muted text, no chip", () => {
     render(
       <WeekLedger
         rows={[row({ capacityText: "Full", capacityTone: "full" })]}
@@ -367,38 +367,45 @@ describe("seat state and price", () => {
     // full boat is the wait-list candidate somebody still wants to read.
     expect(item.querySelector(".opacity-60")).toBeNull();
     expect(screen.getByRole("heading", { level: 3 }).className).toContain("text-muted");
-    const badge = screen.getByText("Full");
-    expect(badge.className).toContain("bg-surface-sunken");
-    expect(badge.className).not.toContain("bg-warning-tint");
+    const full = screen.getByText("Full");
+    expect(full.tagName).toBe("P");
+    expect(full).toHaveClass("text-muted");
+    expect(full.className).not.toMatch(/\bbg-/);
   });
 
-  it("keeps the warning words and warning tone for scarcity", () => {
+  /**
+   * Visual review 2026-10-24, B19: two seats read as plainly as twelve. The
+   * amber "Only 2 seats left" chip is gone; every open count is the same
+   * muted words.
+   */
+  it("gives two seats the same muted words as twelve, never a chip", () => {
     render(
       <WeekLedger
-        rows={[row({ capacityText: "Only 2 seats left", capacityTone: "low" })]}
+        rows={[
+          row({ id: "a", capacityText: "2 seats" }),
+          row({ id: "b", capacityText: "12 seats" }),
+        ]}
         listLabel="Upcoming trips"
         stickyTop="top-(--chrome-h)"
       />,
     );
 
-    expect(screen.getByText("Only 2 seats left").className).toContain("bg-warning-tint");
-    // A sales nudge never wears the safety triangle: the words carry it.
-    expect(screen.getByText("Only 2 seats left").querySelector("svg")).toBeNull();
-    // Routine availability is not an alert, so it is not dimmed.
-    expect(screen.getByRole("listitem").querySelector(".opacity-60")).toBeNull();
+    const two = screen.getByText("2 seats");
+    const twelve = screen.getByText("12 seats");
+    expect(two.className).toBe(twelve.className);
+    expect(two).toHaveClass("text-muted");
+    expect(two.className).not.toContain("bg-warning-tint");
   });
 
   /**
-   * The seat badge is a 28px pill beside a 24px title line, and its group
-   * centres everything in the pill's height: top-aligned with the title, the
-   * price and chevron sat 2–3px below the title's line (pixel-craft class 1).
-   * On one baseline the badge's word — `Badge` hands its row the word's
-   * baseline — the price and the title share a line.
+   * Top-aligned with the title, the price and chevron sat 2–3px below the
+   * title's line (pixel-craft class 1). On one baseline the seat words, the
+   * price and the title share a line.
    */
   it("sets the time, the title and the seat state on one baseline", () => {
     render(
       <WeekLedger
-        rows={[row({ capacityText: "Only 2 seats left", capacityTone: "low" })]}
+        rows={[row({ capacityText: "2 seats" })]}
         listLabel="Upcoming trips"
         stickyTop="top-(--chrome-h)"
       />,
@@ -412,7 +419,7 @@ describe("seat state and price", () => {
   it("leaves routine availability as a quiet fact rather than a badge", () => {
     render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
 
-    const seats = screen.getByText("3 seats left");
+    const seats = screen.getByText("3 seats");
     expect(seats.className).toContain("text-muted");
     expect(seats.className).not.toContain("bg-warning-tint");
   });

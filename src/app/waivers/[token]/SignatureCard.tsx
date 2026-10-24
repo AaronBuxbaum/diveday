@@ -38,6 +38,10 @@ export function SignatureCard({
       <FieldGrid columns={1} className="mt-4">
         <Field
           label={t("waiver.typeFullName")}
+          // No `*` (visual review 2026-10-24, B56): this card asks for a
+          // signature, and the typed name is it. The control stays `required`
+          // and the server refuses a blank name with words on this field.
+          markRequired={false}
           description={
             signerOnFile ? t("waiver.typeFullNameHint", { name: signerOnFile.fullName }) : undefined
           }

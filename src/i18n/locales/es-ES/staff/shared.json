@@ -255,13 +255,12 @@
     }
   },
   "shopNav": {
-    "boatMode": "Modo barco",
     "language": "Idioma",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
     "signOutPending": "Cerrando sesión…",
-    "myAccount": "Mi cuenta",
-    "tellUs": "Escríbenos",
+    "accountSettings": "Ajustes de la cuenta",
+    "tellUs": "Enviar comentarios",
     "tellUsSubject": "Nota a DiveDay desde {shop}",
     "tellUsBody": "Página: {path}\n\n"
   },

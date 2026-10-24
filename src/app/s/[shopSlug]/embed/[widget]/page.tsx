@@ -11,7 +11,6 @@ import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
 import { getShopReviewAggregate, listPublishedShopReviewsPage } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
-import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
@@ -21,7 +20,7 @@ import {
   resolveCourseContentDepths,
 } from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
-import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
@@ -33,6 +32,7 @@ import {
   publicTripPath,
 } from "@/lib/public-routes";
 import { capacityLabel, seatsOnSale } from "@/lib/trips";
+import { DepartureCard } from "./_components/DepartureCard";
 import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 
 // The widget is only ever framed, so it paints inside its own shell like every
@@ -110,19 +110,15 @@ export default async function EmbedWidgetPage({
 
   const money = (cents: number | null) =>
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
-  // The day and the time *range* — a diver reading a card on a blog post
-  // wants to know when they are back, not only when they leave.
-  const when = (startsAt: Date, endsAt: Date) => {
-    const parts = formatDayParts(startsAt, locale, tz);
-    return `${parts.weekday} ${parts.day} ${parts.month} · ${formatTimeRange(startsAt, endsAt, locale, tz)}`;
-  };
+  // The day and the time *range*, in the trip page's own words and zone
+  // (visual review 2026-10-24, B33): "Sat, Oct 24 · 1:30 PM – 5:00 PM EDT".
+  const when = (startsAt: Date, endsAt: Date) =>
+    `${formatShortDate(startsAt, locale, tz)} · ${formatTimeRangeTz(startsAt, endsAt, locale, tz)}`;
   // Seats on sale under the boat's certificate, never the stated capacity (#2321).
   const seats = (trip: { capacity: number; sellableCapacity: number; booked: number }) => {
     const label = capacityLabel(seatsOnSale(trip));
-    if (label.kind === "full") return t("fallback.full");
-    return label.remaining <= 2
-      ? t("schedule.spotsLeftUrgent", { count: label.remaining })
-      : t("fallback.spotsLeft", { count: label.remaining });
+    if (label.kind === "full") return { text: t("fallback.full"), full: true };
+    return { text: t("fallback.spotsLeft", { count: label.remaining }), full: false };
   };
 
   let body: React.ReactNode;
@@ -216,6 +212,7 @@ export default async function EmbedWidgetPage({
         price={money(perDiverBookingPriceCents(trip, trip.course))}
         seats={seats(trip)}
         href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
+        waitlist={shop.waitlistEnabled}
         t={t}
       />
     );
@@ -264,7 +261,7 @@ export default async function EmbedWidgetPage({
                 <Link
                   href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
                   target="_top"
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                  className={buttonClass({ size: "sm" })}
                 >
                   {t("embed.enrol")}
                 </Link>
@@ -305,6 +302,7 @@ export default async function EmbedWidgetPage({
             price={money(perDiverBookingPriceCents(trip, trip.course))}
             seats={seats(trip)}
             href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
+            waitlist={shop.waitlistEnabled}
             t={t}
           />
         ))}
@@ -322,7 +320,7 @@ export default async function EmbedWidgetPage({
               <Link
                 href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
                 target="_top"
-                className={buttonClass({ variant: "secondary", size: "sm" })}
+                className={buttonClass({ size: "sm" })}
               >
                 {t("embed.enrol")}
               </Link>
@@ -338,51 +336,10 @@ export default async function EmbedWidgetPage({
       {body}
       {hostCarriesCredit ? null : (
         <EmbedCredit href={`${origin}${publicSchedulePath(shopSlug)}`} target="_top">
-          {t("schedule.poweredByDiveDay")}
+          {t("shopChrome.credit")}
         </EmbedCredit>
       )}
       <EmbedHeightReporter />
     </main>
-  );
-}
-
-function DepartureCard({
-  title,
-  when,
-  site,
-  price,
-  seats,
-  href,
-  t,
-}: {
-  title: string;
-  when: string;
-  site: string | null;
-  price: string | null;
-  seats: string;
-  href: string;
-  t: DiverTranslator;
-}) {
-  return (
-    <article className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-4 shadow-bed">
-      <h2 className="font-brand-display text-base font-semibold">{title}</h2>
-      <p className="text-sm tabular-nums">{when}</p>
-      {site ? <p className="text-sm text-muted">{site}</p> : null}
-      <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-        {/* The price at the footer's own size, as a course card's price in
-            the same slot of the same grid; only the seats step down. Both
-            were `text-sm`, so "$95" stood 2px shorter than "$175" (K-377). */}
-        <span>
-          {price ? <span className="font-semibold tabular-nums">{price}</span> : null}
-          <span className="text-sm">
-            {price ? " · " : ""}
-            <span className="text-muted">{seats}</span>
-          </span>
-        </span>
-        <Link href={href} target="_top" className={buttonClass({ size: "sm" })}>
-          {t("embed.book")}
-        </Link>
-      </div>
-    </article>
   );
 }

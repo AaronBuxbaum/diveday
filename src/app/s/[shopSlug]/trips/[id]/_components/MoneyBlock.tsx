@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import type { DeskPayment } from "@/lib/desk-payment";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import type { NonDiverParticipantType } from "@/lib/participant-types";
 
@@ -139,7 +139,7 @@ export function MoneyBlock({
     otherSeats = [],
   } = context;
   const t = useTranslations("booking");
-  const money = (cents: number) => formatMoneyCents(cents, currency, locale);
+  const money = (cents: number) => formatMoneyScanned(cents, currency, locale);
   if (dueNow === "none") return null;
 
   // The deposit is a checkout mechanism. In `at_shop` mode nothing is charged
@@ -161,7 +161,17 @@ export function MoneyBlock({
     (deposit === null ? 0 : (fareCents - deposit) * partySize) + (otherTotalCents - otherNowCents);
   const anyDeposit = deposit !== null || otherNowCents < otherTotalCents;
   const courseLines = courseFeeCents !== null || eLearningFeeCents !== null;
-  const showDiverLine = partySize > 0 || seats.length === 0;
+  // One diver and nothing else to add: the line would say the pay line's
+  // figure twice ("$95 × 1 diver $95", then "Due at the shop $95"). The pay
+  // line states it once (visual review 2026-10-24, B20).
+  const onlyAddend =
+    partySize <= 1 &&
+    seats.length === 0 &&
+    gearCents === 0 &&
+    !passThroughFeeLine &&
+    taxLine !== "checkout" &&
+    deposit === null;
+  const showDiverLine = (partySize > 0 || seats.length === 0) && !onlyAddend;
 
   return (
     <dl className={`flex flex-col gap-2 ${className}`.trim()}>
@@ -198,13 +208,11 @@ export function MoneyBlock({
       {taxLine === "checkout" ? (
         <Line label={t("money.tax")} value={t("money.taxAtCheckout")} />
       ) : null}
-      {/* The one figure this block exists to state — in the *same formatter as
-          its addends*. It briefly wore the hero's `formatMoneyScanned` so the
-          number a diver commits to matched the number that brought them here,
-          but that optimized hero↔total consistency at the cost of the column:
-          "Course fee $195.00 / E-learning $150.00 / Due at the shop $345"
-          reads as rounding, and within the column is where the eye checks the
-          sum (principle 6: reconciled money carries its minor units always).
+      {/* The one figure this block exists to state, in the hero's formatter
+          and its addends' (visual review 2026-10-24, B20): the page wore
+          "$95" and "$95.00" for one price. `formatMoneyScanned` drops the
+          minor units only when there are none, so a $62.50 line still reads
+          exactly and the column still sums by eye.
 
           `mt-2 … pt-4`: with the list's `gap-2` that is 16px over this rule
           and 16px under it, the air the caller's own rule leaves above the

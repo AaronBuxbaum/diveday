@@ -360,7 +360,7 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await page.waitForURL(/\/bookings\/new$/);
   // A route change puts focus on the new page's heading, so a screen reader
   // reads the page's name and the next Tab starts below it (#2638).
-  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeFocused();
+  await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeFocused();
 
   // ── Leg 3. Choose the departure. Every stop between the top of the page and
   // the first departure is checked, which is the part of "keyboard accessible"
@@ -375,7 +375,7 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   });
   await page.keyboard.press("Enter");
   await page.waitForURL(/\/bookings\/new\/[^/]+$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeFocused();
+  await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeFocused();
 
   // ── Leg 4. Navigate to Add diver, type the diver in and seat them.
   await beginWalk(page);

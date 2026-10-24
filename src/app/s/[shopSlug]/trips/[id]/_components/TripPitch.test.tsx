@@ -59,7 +59,7 @@ function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
       id: "site-1",
       name: "French Reef",
       depthRange: "to 12 m",
-      difficultyLevel: "beginner",
+      difficultyLevel: "advanced",
       fitTone: null,
       fitNote: "A gentle mooring with a sand channel to follow back.",
       divePlan: null,
@@ -194,7 +194,7 @@ describe("TripPitch", () => {
               id: "site-1",
               name: "French Reef",
               depthRange: null,
-              difficultyLevel: "beginner",
+              difficultyLevel: "advanced",
               fitTone: null,
               fitNote: null,
               divePlan: null,
@@ -213,7 +213,7 @@ describe("TripPitch", () => {
       />,
     );
     expect(container.querySelectorAll("details")).toHaveLength(0);
-    // Only the fact chip is left, which is the whole block.
+    // Only the fit line is left, which is the whole block.
     expect(container.firstElementChild?.children).toHaveLength(1);
   });
 
@@ -320,6 +320,40 @@ describe("TripPitch", () => {
     // the door, which is where the shop's prose about it is.
     const chip = container.firstElementChild?.firstElementChild;
     expect(chip?.textContent).toBe("Best with recent experience");
+  });
+});
+
+/**
+ * Visual review 2026-10-24, B41: the fit word is a plain line, never a chip,
+ * and only for a day that asks something of a diver. "Welcoming dive" stood
+ * alone over the faces; each site keeps its own word behind the door.
+ */
+describe("the pitch's fit line", () => {
+  it("says a demanding day in plain words, not a badge", () => {
+    const { container } = fullDay();
+    const line = container.querySelector("section")?.firstElementChild;
+    expect(line?.tagName).toBe("P");
+    expect(line?.textContent).toBe("Best with recent experience");
+    expect(line?.querySelector("span")).toBeNull();
+  });
+
+  it("drops the orphan Welcoming dive chip", () => {
+    const { container } = render(
+      <TripPitch
+        briefings={[
+          briefing({
+            creatures: CREATURES.map(creature),
+            diveSite: { ...briefing().diveSite, difficultyLevel: "beginner" },
+          } as unknown as Partial<DiveBriefing>),
+        ]}
+        crew={CREW}
+        locale={DEFAULT_DIVER_LOCALE}
+        timeZone="UTC"
+      />,
+    );
+    const section = container.querySelector("section");
+    expect(section?.firstElementChild?.tagName).toBe("UL");
+    expect(section?.firstElementChild?.textContent).not.toContain("Welcoming dive");
   });
 });
 

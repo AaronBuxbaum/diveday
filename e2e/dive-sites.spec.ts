@@ -1,8 +1,17 @@
+import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripAbout, openTripMore } from "./helpers";
+import { daysFromNow, e2eNow, openIfClosed, openTripAbout, openTripMore } from "./helpers";
 
 const staffCopy = staffTranslator("en-US");
+
+/**
+ * Open one of the briefing's closed sections (visual review 2026-10-24, A11):
+ * the site, the dive and certification stand open; every other section is a
+ * closed row whose controls still post with Save.
+ */
+const openSection = (page: Page, id: string) =>
+  openIfClosed(page.locator(`details#briefing-${id}`));
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -29,13 +38,15 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "Add a dive site" }).click();
     await page.getByLabel("Name").fill(siteName);
     await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
+    await openSection(page, "forecast");
     await page.getByLabel("Latitude").fill("25.123");
     await page.getByLabel("Longitude").fill("-80.321");
+    await openSection(page, "underwater");
     await page.getByLabel("What might divers see?").fill("Green turtles · spotted eagle rays");
     await page
       .getByLabel("Underwater briefing")
       .fill("Look along the sandy edge for turtles resting below the coral heads.");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     // Saving lands on the site's own page, whose header is its name.
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
@@ -257,7 +268,7 @@ test.describe("staff", () => {
     const siteName = `Unplaced Ledge ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(siteName);
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
     await page.goto(`/shop/blue-mantis/dive-sites?q=${encodeURIComponent(siteName)}`);
@@ -268,32 +279,24 @@ test.describe("staff", () => {
     await expect(row.getByText("Location to add")).toBeVisible();
   });
 
-  test("the rail says where you are in a briefing, and Save says what is unsaved", async ({
-    page,
-  }) => {
-    // ADR 20260827-the-shops-shelves, the long-form editor pattern. The
-    // briefing was fourteen unlabelled blocks in four bordered fieldsets with
-    // no way to know where you were in four thousand pixels of it, and one
-    // Save at the far end that said nothing about what it still owed.
+  test("Save says what is unsaved in a briefing", async ({ page }) => {
+    // ADR 20260827-the-shops-shelves, the long-form editor pattern: one Save
+    // that says what it still owes. The rail beside it is gone (visual review
+    // 2026-10-24, A11): the sections edited every time stand open and the rest
+    // are closed rows, so there is no four-thousand-pixel page to find a place in.
     await page.goto("/shop/blue-mantis/dive-sites");
     await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
     await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+    await expect(page.getByRole("navigation", { name: "Sections", exact: true })).toHaveCount(0);
 
     // Nothing typed, nothing claimed.
     await expect(page.getByText(/Unsaved changes/)).toHaveCount(0);
+    await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
 
-    // Every rail entry is an anchor onto a section of this form — the desktop
-    // rail and the phone jump row render the same list, and 1279px is the
-    // rail. Jumping marks it, which is the whole of "tracking position".
-    const photos = page
-      .getByRole("link", { name: "Photos", exact: true })
-      .filter({ visible: true });
-    await photos.click();
-    await expect(page).toHaveURL(/#briefing-photos$/);
-    await expect(photos).toHaveAttribute("aria-current", "true");
-    // The section it landed on is a group with a name and no box; its legend
-    // carries the hairline (EditorSection).
-    await expect(page.locator("fieldset#briefing-photos")).toBeVisible();
+    // A closed row opens from its fragment, so a link to one still lands.
+    await page.goto(`${page.url().split("#")[0]}#briefing-photos`);
+    await expect(page.locator("details#briefing-photos")).toHaveAttribute("open", "");
+    await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
 
     // One edit names its section by name; a second stops naming and counts.
     await page
@@ -319,8 +322,10 @@ test.describe("staff", () => {
     await page.getByLabel("Name").fill(siteName);
     // No coordinates yet: there is no frame to draw on, and the editor says so
     // rather than showing a map centred on a guess.
+    await openSection(page, "route");
     await expect(page.getByText(/Fill in the GPS location above/)).toBeVisible();
 
+    await openSection(page, "forecast");
     await page.getByLabel("Latitude").fill("25.101");
     await page.getByLabel("Longitude").fill("-80.404");
     // Typing the pair is enough — the frame follows the boxes, so a brand-new
@@ -347,12 +352,13 @@ test.describe("staff", () => {
     await page
       .getByLabel("One line about the route")
       .fill("Out along the ledge, home over the sand.");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: siteName })).toBeVisible();
 
     // Saved, and read back on the form: the route survives the round trip
     // rather than being a drawing that only existed in the browser.
     await expect(page.getByLabel("What the route is called")).toHaveValue("Ledge and back");
+    await openSection(page, "route");
     await expect(page.getByText(/^3 waypoints/)).toBeVisible();
 
     // And it reaches the diver, which is the only reason to draw it.
@@ -406,9 +412,11 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(siteName);
     await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
+    await openSection(page, "underwater");
     await page.getByLabel("What might divers see?").fill("Green turtles");
+    await openSection(page, "forecast");
     await page.getByLabel("Latitude").fill("25.123"); // …and no longitude.
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     // Not `getByRole("alert")` — Next's own route announcer is one too.
     const refusal = page.getByText(/Add both GPS coordinates/);
@@ -427,13 +435,15 @@ test.describe("staff", () => {
 
     // Completing the pair is all it takes — no retyping.
     await page.getByLabel("Longitude").fill("-80.321");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: siteName })).toBeVisible();
 
     // The edit form shares the shape, and so does the fix.
+    await openSection(page, "forecast");
     await page.getByLabel("Longitude").fill("");
+    await openSection(page, "underwater");
     await page.getByLabel("Underwater briefing").fill("Turtles rest below the coral heads.");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     // Not `getByRole("alert")` — Next's own route announcer is one too.
     await expect(page.getByText(/Add both GPS coordinates/)).toBeVisible();
     await expect(page.getByLabel("Underwater briefing")).toHaveValue(
@@ -454,14 +464,14 @@ test.describe("staff", () => {
 
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(taken);
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: taken })).toBeVisible();
 
     // A second site reaching for the same name gets an answer, not a stack.
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(taken);
     await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     // Not `getByRole("alert")` — Next's own route announcer is one too.
     const refusal = page.getByText(/already goes by that name/);
@@ -471,7 +481,7 @@ test.describe("staff", () => {
     await expect(page).toHaveURL(/\/dive-sites\/new$/);
     await expect(page.getByRole("textbox", { name: "Location" })).toHaveValue("Key Largo");
     await page.getByLabel("Name").fill(`${taken} south`);
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: `${taken} south` })).toBeVisible();
   });
 
@@ -506,7 +516,7 @@ test.describe("staff", () => {
     // page. `.first()` stays because the assertion is "the library is offering
     // an update", not "exactly one row is".
     const updateReady = library
-      .getByText(staffCopy("diveSites.list.templateUpdateReady", { version: 3 }), { exact: true })
+      .getByText(staffCopy("diveSites.list.templateUpdateReady"), { exact: true })
       .first();
 
     await page.goto("/shop/blue-mantis/dive-sites");
@@ -633,9 +643,10 @@ test.describe("staff", () => {
     // Typed only once React owns the form: an edit that lands mid-hydration
     // can lose its selection and save the note minus its first letter.
     await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
+    await openSection(page, "planning");
     await expect(note).toHaveValue("");
     await note.fill("The mooring ball moved south. Brief the swim-through first.");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     // Wait for the save's own redirect, not for the field. Every other save in
     // this file lands on a *new* site, so waiting for its heading proves the
     // round trip; this one edits a site that is already open, whose heading and
@@ -673,8 +684,9 @@ test.describe("staff", () => {
     await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
     const cleared = page.getByLabel("What to remember about running this site");
     await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
+    await openSection(page, "planning");
     await cleared.fill("");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     // Same reason, and worse here: the field is empty before the save too, so
     // this is the assertion that raced.
     await page.waitForURL(/[?&]notice=saved/);
@@ -696,7 +708,7 @@ test.describe("staff", () => {
     const first = page;
     await first.goto("/shop/blue-mantis/dive-sites/new");
     await first.getByLabel("Name").fill(siteName);
-    await first.getByRole("button", { name: "Save dive site" }).click();
+    await first.getByRole("button", { name: "Save", exact: true }).click();
     await expect(first.getByRole("heading", { name: siteName })).toBeVisible();
     const url = first.url();
 
@@ -707,12 +719,12 @@ test.describe("staff", () => {
     await expect(secondNote).toBeVisible();
 
     await first.getByLabel("What makes this site special?").fill("Written by the first tab");
-    await first.getByRole("button", { name: "Save dive site" }).click();
+    await first.getByRole("button", { name: "Save", exact: true }).click();
     await expect(first.getByText("Dive site saved")).toBeVisible();
 
     // The second tab is still holding the generation it opened with.
     await secondNote.fill("Written by the second tab");
-    await second.getByRole("button", { name: "Save dive site" }).click();
+    await second.getByRole("button", { name: "Save", exact: true }).click();
 
     // Refused, and it says so.
     await expect(second.getByText(/Somebody else changed this briefing/)).toBeVisible();
@@ -818,7 +830,8 @@ test.describe("an owner's own library", () => {
     // language and resolved for whoever reads the briefing (ADR
     // 20260813-marine-life-is-diveday-copy). What the shop chooses is which
     // faces this site shows, and in what order.
-    const guide = page.locator('fieldset:has-text("Field guide")');
+    const guide = page.locator("details#briefing-field-guide");
+    await openSection(page, "field-guide");
     await page.getByLabel("Find a species").fill("Hogfish");
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(guide.getByText("Pez perro")).toHaveCount(0);
@@ -840,10 +853,11 @@ test.describe("an owner's own library", () => {
     // A landmark, with the shop's own note on it. Pickles Reef ships with two, so
     // the new row is the last one — `.last()` throughout, and the round-trip
     // assertions below read that same row back after the save.
+    await openSection(page, "landmarks");
     await page.getByRole("button", { name: "Add a landmark" }).click();
-    // The section's legend is its name now, not a sentence — the editor rail
-    // beside the form says the same word (ADR 20260827-the-shops-shelves).
-    const landmarks = page.locator('fieldset:has-text("Landmarks")');
+    // The section is a closed row named for what it holds (visual review
+    // 2026-10-24, A11).
+    const landmarks = page.locator("details#briefing-landmarks");
     await landmarks.getByRole("textbox", { name: "Landmark" }).last().fill("The barrel casks");
     await landmarks
       .getByRole("textbox", { name: "What to say about it" })
@@ -851,11 +865,12 @@ test.describe("an owner's own library", () => {
       .fill("Cement that hardened in its barrels and outlasted the ship.");
     await landmarks.getByLabel("What kind").last().selectOption("reefHistory");
 
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("Dive site saved")).toBeVisible();
 
     // Round-trips: the chosen species and the landmark come back as the shop
     // left them, and the refused one never landed.
+    await openSection(page, "field-guide");
     await expect(guide.getByText("Hogfish")).toBeVisible();
     await expect(guide.getByText(/Pygmy seahorse/)).toHaveCount(0);
     await expect(landmarks.getByRole("textbox", { name: "Landmark" }).last()).toHaveValue(
@@ -957,14 +972,16 @@ test.describe("a site whose station is nowhere near it", () => {
 
     // The advisory, on a real row rather than a handed-in echo object.
     await page.goto(siteUrl);
+    await openSection(page, "forecast");
     await expect(page.getByLabel("NOAA tide station")).toHaveValue("8771450");
     await expect(page.getByText(/so the turn it predicts can reach this water/)).toBeVisible();
 
     // The shop says it meant that station. The id is unchanged, so the answer
     // is about the pairing the row already holds.
     await page.getByRole("checkbox", { name: "This is the right station for this site" }).check();
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await page.getByText("Dive site saved").waitFor();
+    await openSection(page, "forecast");
 
     // Gone — and the box stays on the page, ticked, so the shop can take the
     // answer back. A tick that hides its own control is an answer nobody can
@@ -977,8 +994,9 @@ test.describe("a site whose station is nowhere near it", () => {
     // A different station is a different pairing, so the answer does not carry
     // over and the question is put again.
     await page.getByLabel("NOAA tide station").fill("8723583");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await page.getByText("Dive site saved").waitFor();
+    await openSection(page, "forecast");
     await expect(page.getByText(/so the turn it predicts can reach this water/)).toBeVisible();
     await expect(
       page.getByRole("checkbox", { name: "This is the right station for this site" }),
@@ -1077,9 +1095,10 @@ test("map labels keep saved site text literal and details navigation works", asy
   await page.getByRole("textbox", { name: "Location" }).fill(subtitle);
   // Keep this label/keyboard/navigation case separate from the seeded Keys
   // cluster. Clustered literal text is covered through Leaflet in SiteMap.test.
+  await openSection(page, "forecast");
   await page.getByLabel("Latitude").fill("25.30");
   await page.getByLabel("Longitude").fill("-80.00");
-  await page.getByRole("button", { name: "Save dive site" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
   const detailsUrl = page.url();

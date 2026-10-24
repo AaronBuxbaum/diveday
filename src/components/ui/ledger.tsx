@@ -189,6 +189,7 @@ export function LedgerGroup({
   id,
   folded,
   summaryVariant = "group",
+  caret = "door",
   className = "",
   children,
 }: {
@@ -200,6 +201,12 @@ export function LedgerGroup({
   folded?: boolean;
   /** `row` keeps collapsed horizons in the same grammar as their link rows. */
   summaryVariant?: "group" | "row";
+  /**
+   * The `row` summary's glyph: the door's arrow, turned a quarter open, or
+   * the diver pages' one disclosure chevron (visual review 2026-10-24, B35),
+   * pointing down and turning over open.
+   */
+  caret?: "door" | "down";
   className?: string;
   children: ReactNode;
 }) {
@@ -234,7 +241,14 @@ export function LedgerGroup({
             {label}
           </SummaryLabel>
           {meta != null ? <span className={HORIZON_META_CLASS}>{meta}</span> : null}
-          <DoorChevron className={`transition-transform ${HORIZON_ARROW_OPEN}`} />
+          {caret === "down" ? (
+            <DisclosureCaret
+              direction="down"
+              className="size-4 text-muted transition-transform group-open/fold:rotate-180"
+            />
+          ) : (
+            <DoorChevron className={`transition-transform ${HORIZON_ARROW_OPEN}`} />
+          )}
         </summary>
       ) : (
         <summary

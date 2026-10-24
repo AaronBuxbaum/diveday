@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, ne } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -206,6 +206,51 @@ describe("the course-form page", () => {
       acknowledged: "on",
     });
     expect(await rendered(ctx.token)).toContain("Nothing left to sign for this course");
+  });
+
+  it("sends a course that asks for no forms back to the thread", async () => {
+    const ctx = await enrolled({ forms: 0 });
+    expect(await rendered(ctx.token)).toBe(`REDIRECT:/ready/${ctx.token}`);
+  });
+
+  it("sends a booking with no course back to the thread", async () => {
+    const { db, shop } = fileCtx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [seat] = await db
+      .select({ bookingId: bookings.id })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          isNull(trips.courseId),
+          ne(bookings.status, "cancelled"),
+          ne(trips.status, "cancelled"),
+          gt(trips.startsAt, nowDate()),
+        ),
+      )
+      .limit(1);
+    if (!seat) throw new Error("seed has no upcoming boat seat");
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: seat.bookingId,
+      purpose: "readiness",
+    });
+    if (!issued) throw new Error("no readiness link");
+    expect(await rendered(issued.token)).toBe(`REDIRECT:/ready/${issued.token}`);
+  });
+
+  it("never redirects past a form still owed, even with another signed", async () => {
+    const ctx = await enrolled({ forms: 2 });
+    const [first] = await owed(ctx);
+    await signed(ctx.token, {
+      formVersionId: first?.versionId ?? "",
+      signerName: ctx.seat.fullName,
+      acknowledged: "on",
+    });
+    const html = await rendered(ctx.token);
+    expect(html).not.toMatch(/^REDIRECT:/);
+    expect(html).toContain("Course form 2");
   });
 });
 

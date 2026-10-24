@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
-import { EditorRail } from "@/components/editor/EditorRail";
 import type { EditorSectionRef } from "@/components/editor/EditorSection";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
 import { assistsAvailable } from "@/db/assists";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
+import { courseIdsEverOnBoard, getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -21,17 +21,23 @@ import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { loadTranslationBox, ShopTextTranslation } from "../../../_components/ShopTextTranslation";
+import { loadTranslationBox } from "../../../_components/ShopTextTranslation";
 import { draftCourseSummaryAction } from "../../../content-assist-actions";
+import { SpanishBox } from "../../../dive-sites/_components/SiteAssists";
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
-import { CourseDetailSections } from "./_components/CourseDetailSections";
+import {
+  CourseEnrollSection,
+  CourseFeeCoversSection,
+  CourseGlanceSection,
+} from "./_components/CourseDetailSections";
 import {
   CourseFormsRequirement,
   loadCourseFormsRequirement,
 } from "./_components/CourseFormsRequirement";
 import { CoursePhotosSection } from "./_components/CoursePhotosSection";
 import { CoursePitchPricingSections } from "./_components/CoursePitchPricingSections";
-import { CourseScheduleFaqSections } from "./_components/CourseScheduleFaqSections";
+import { CourseDayByDaySection, CourseFaqSection } from "./_components/CourseScheduleFaqSections";
+import { CourseSection } from "./_components/CourseSection";
 import { CourseTemplateUpdatesPanel } from "./_components/CourseTemplateUpdatesPanel";
 import { courseEditNotices } from "./_components/edit-notices";
 import { LearningMaterialsSection } from "./_components/LearningMaterialsSection";
@@ -40,7 +46,6 @@ import { UnsavedChangesGuard, UnsavedChangesNote } from "./_components/UnsavedCh
 import {
   pullCourseTemplateUpdatesAction,
   saveCourseContentAction,
-  saveCourseFormRequirementsAction,
   setCourseVisibilityAction,
 } from "./actions";
 
@@ -125,39 +130,61 @@ export default async function EditCoursePage({
       : t("courses.edit.openToUncertified")) +
     (course.minimumAge ? t("courses.edit.ageSuffix", { age: course.minimumAge }) : "");
 
-  // **The editor's sections, once.** The rail's entries, the anchors it jumps
-  // to, and the sentence naming which one holds unsaved work all read this one
-  // list, so a section cannot exist without a way back to it (ADR
-  // 20260827-the-shops-shelves, decision 2). `scheduleDaysJson` keeps the id it
+  // **The editor's sections, once, in page order.** The unsaved-changes
+  // sentence reads this one list, so a section cannot hold work the sentence
+  // cannot name (ADR 20260827-the-shops-shelves, decision 2). The four a
+  // course page is edited for stand open; the rest are closed behind their
+  // names (visual review 2026-10-24, A11). `scheduleDaysJson` keeps the id it
   // has always had: `saveCourseContentAction` names it in `?field=` when the
   // day-by-day payload is refused, and `FieldErrorFocus` resolves that by id.
   const sections: EditorSectionRef[] = [
     { id: "pitch", label: t("courses.edit.pitchLegend") },
     { id: "pricing", label: t("courses.edit.pricingLegend") },
-    { id: "photos", label: t("courses.edit.photosLegend") },
     { id: "glance", label: t("courses.edit.glanceLegend") },
+    { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
+    { id: "photos", label: t("courses.edit.photosLegend") },
     { id: "enroll", label: t("courses.edit.enrollLegend") },
     { id: "fee-covers", label: t("courses.edit.feeCoversLegend") },
     // `learningMaterialsJson`, like the day-by-day id: the save names it in
     // `?field=` when the materials are refused, and `FieldErrorFocus` finds it.
     { id: "learningMaterialsJson", label: t("courses.edit.materialsLegend") },
-    { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
     { id: "faq", label: t("courses.edit.faqLegend") },
   ];
   const unsavedTag = t("shared.formDraft.unsavedSection");
-  const [pitch, pricing, photos, glance, enroll, feeCovers, materials, dayByDay, faq] =
-    sections.map((section) => ({ ...section, unsavedTag }));
-  // The forms section is its own `<form>` below the save form, so the rail
-  // names it but the unsaved-changes note (which reads the save form) does not.
-  const formsSection: EditorSectionRef = { id: "forms", label: t("courses.edit.forms.legend") };
-  const railSections = canSetVisibility ? [...sections, formsSection] : sections;
+  // A closed section a refusal names opens, so the box to fix is in view.
+  const closedRef = (section: EditorSectionRef) => ({
+    ...section,
+    unsavedTag,
+    closed: true,
+    open: Boolean(error) && field === section.id,
+  });
+  const [pitch, pricing, glance, dayByDay] = sections
+    .slice(0, 4)
+    .map((section) => ({ ...section, unsavedTag }));
+  const [photos, enroll, feeCovers, materials, faq] = sections.slice(4).map(closedRef);
+  const formsSection = {
+    id: "forms",
+    label: t("courses.edit.forms.legend"),
+    closed: true,
+    open: Boolean(notice?.startsWith("forms-")),
+  };
+
+  // "Schedule a session" on a course the shop runs (third UX review, item 35):
+  // one that has been on the board, ahead or behind, or one the shop wrote
+  // itself. It moved here from the roster's every row (visual review
+  // 2026-10-24, A39); a template's other courses are scheduled from the
+  // board's own Add, which lists every course.
+  const offersSchedule =
+    canSetVisibility &&
+    (course.sourceTemplateSlug === null ||
+      (await courseIdsEverOnBoard(db, shop.id, [course.id])).has(course.id));
 
   const templateFieldLabels = courseTemplateFieldLabels(t);
 
   return (
-    // Wider than the form alone needs, because the rail takes the first 220px
-    // of it and the fields keep roughly the column they had.
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
+    // The form's own measure: the jump rail that widened this page from `lg`
+    // up is gone (visual review 2026-10-24, A11).
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* One-shot, like every other staff notice: without this, `?notice=saved`
           stayed in the URL and replayed "Saved" on every refresh and every
           back-navigation, long after the save. `field` rides along because it
@@ -169,6 +196,19 @@ export default async function EditCoursePage({
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.courses)}
           eyebrowHref={back}
           title={course.title}
+          actions={
+            offersSchedule ? (
+              // The board's add panel, with this course preselected (`?course=`
+              // shapes the title too): the one trip-creation path, never a
+              // second one (ADR 20260806-one-trip-create-form).
+              <Link
+                href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("courses.edit.scheduleSession")}
+              </Link>
+            ) : undefined
+          }
           meta={
             course.isActive ? (
               <p className="text-sm text-muted">
@@ -215,159 +255,132 @@ export default async function EditCoursePage({
           fallback (first aria-invalid control) must not fire on a clean load. */}
       {error ? <FieldErrorFocus field={field} /> : null}
 
-      {/* The rail and the form it names. Below `lg` the rail collapses to a
-          jump-row above the sections and this is ordinary block flow, which is
-          also what lets the rail stick on a phone (a one-column grid gives its
-          nav a row of its own, and a sticky element with no travel never
-          moves). ADR 20260827-the-shops-shelves, decision 2. */}
-      <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
-        <EditorRail navLabel={t("courses.edit.sectionsLabel")} sections={railSections} />
+      <div className="mt-6">
+        <UnsavedChangesGuard storageKey={`course-draft:${course.id}`}>
+          <ConflictGuardedForm
+            action={saveAction}
+            conflictMessage={t("courses.edit.conflictMessage")}
+            reloadLabel={t("courses.edit.conflictReload")}
+            className="min-w-0"
+          >
+            {/* The row's edit generation, as this render saw it. The save
+                compares it and refuses rather than reverting somebody else's
+                page (issue #820). `createdAt` when the row has never been saved
+                since the column arrived, which is what stops the protection
+                switching itself off for a course nobody has edited yet — the
+                comparison coalesces the same way. */}
+            <input type="hidden" name="expectedVersion" value={String(course.rowVersion)} />
+            {/* The open sections on hairlines, then every other section
+                closed behind its name in one list (visual review 2026-10-24,
+                A11). One rhythm on the wrapper rather than a margin per
+                section (docs/design/forms-and-controls.md § "Section rhythm").
+                The summary's Spanish and the forms a student signs are part of
+                this form, saved by its one Save. */}
+            <div className="flex flex-col gap-6">
+              <CoursePitchPricingSections
+                course={course}
+                pitch={pitch}
+                pricing={pricing}
+                currency={currency}
+                locale={locale}
+                t={t}
+                summaryAssist={
+                  canAssist ? (
+                    <AssistFillButton
+                      draft={draftCourseSummaryAction.bind(null, shopSlug, course.id)}
+                      label={t("deskAssists.draft")}
+                      pendingLabel={t("deskAssists.drafting")}
+                      emptyLabel={t("deskAssists.nothing")}
+                    />
+                  ) : undefined
+                }
+              />
+              <CourseGlanceSection course={course} glance={glance} t={t} />
+              <CourseDayByDaySection course={course} dayByDay={dayByDay} t={t} />
 
-        {/* One grid cell holding the form and the page's rare act beneath it,
-            so the rail keeps the first column to itself. */}
-        <div className="min-w-0">
-          <UnsavedChangesGuard storageKey={`course-draft:${course.id}`}>
-            <ConflictGuardedForm
-              action={saveAction}
-              conflictMessage={t("courses.edit.conflictMessage")}
-              reloadLabel={t("courses.edit.conflictReload")}
-              className="min-w-0"
-            >
-              {/* The row's edit generation, as this render saw it. The save
-              compares it and refuses rather than reverting somebody else's
-              page (issue #820). `createdAt` when the row has never been saved
-              since the column arrived, which is what stops the protection
-              switching itself off for a course nobody has edited yet — the
-              comparison coalesces the same way. */}
-              <input type="hidden" name="expectedVersion" value={String(course.rowVersion)} />
-              {/* Sections, not cards: each keeps its `<fieldset>`/`<legend>` pair —
-              the legend is still the accessible name of a control group — and
-              loses its border, which is the whole of the change the ADR asks
-              for here. Each draws the hairline above itself; `lead` is what
-              keeps a rule off the top of the first, where it would be a box
-              lid rather than a separator. */}
-              {/* The sections' one rhythm, on the wrapper rather than a margin
-              per section (docs/design/forms-and-controls.md § "Section
-              rhythm"). Each `EditorSection` draws the hairline above itself
-              and holds `pt-6` beneath it; with nothing above the rule the
-              uppercase label of every section but the first sat flush against
-              the previous section's last field, so eight sections read as one
-              undifferentiated column. */}
-              <div className="flex flex-col gap-10">
-                <CoursePitchPricingSections
-                  course={course}
-                  pitch={pitch}
-                  pricing={pricing}
-                  currency={currency}
-                  locale={locale}
-                  t={t}
-                  summaryAssist={
-                    canAssist ? (
-                      <AssistFillButton
-                        draft={draftCourseSummaryAction.bind(null, shopSlug, course.id)}
-                        label={t("deskAssists.draft")}
-                        pendingLabel={t("deskAssists.drafting")}
-                        emptyLabel={t("deskAssists.nothing")}
-                      />
-                    ) : undefined
-                  }
-                />
+              <DisclosureRowList>
                 <CoursePhotosSection course={course} photos={photos} t={t} />
-                <CourseDetailSections
-                  course={course}
-                  glance={glance}
-                  enroll={enroll}
-                  feeCovers={feeCovers}
-                  levelAge={levelAge}
-                  t={t}
-                />
-
+                <CourseEnrollSection course={course} enroll={enroll} levelAge={levelAge} t={t} />
+                <CourseFeeCoversSection course={course} feeCovers={feeCovers} t={t} />
                 <LearningMaterialsSection
                   section={materials}
                   stored={course.learningMaterials}
                   storageKey={`course-draft:${course.id}`}
                   t={t}
                 />
-                <CourseScheduleFaqSections course={course} dayByDay={dayByDay} faq={faq} t={t} />
-              </div>
+                <CourseFaqSection course={course} faq={faq} t={t} />
+                {summaryTranslation ? (
+                  <CourseSection
+                    id="course-spanish"
+                    label={t("courses.edit.spanishLegend")}
+                    closed
+                    open={Boolean(error?.startsWith("spanish-"))}
+                  >
+                    <SpanishBox
+                      shopSlug={shopSlug}
+                      box={summaryTranslation}
+                      canAssist={canAssist}
+                      t={t}
+                      maxLength={200}
+                    />
+                  </CourseSection>
+                ) : null}
+                {formsPanel ? (
+                  <CourseFormsRequirement
+                    {...formsPanel}
+                    {...formsSection}
+                    waiversPath={shopPath(shopSlug, "waivers")}
+                    t={t}
+                  />
+                ) : null}
+              </DisclosureRowList>
+            </div>
 
-              {/* One control, not two. "Preview" opened the same page the "Live
-              at" link in the header already points at, and a second
-              button-shaped thing beside Save competes with the only action
-              this form has (design principles #8). */}
-              {/* The refusal belongs beside the button that earned it, not in a
-              banner thirty lines above the first field: this editor runs to
-              eight sections, so a staffer who pressed Save at the bottom saw
-              nothing happen at all. `FieldErrorFocus` above still carries them
-              on to the offending box when the server named one. */}
-              {/* Sticky, because this form is eight sections and four thousand
-              pixels tall and Save used to live only at the far end of it. The
-              note beside it names the section holding the unsaved work — the
-              rail is what makes that answer actionable. */}
-              <StickyFormActions className="mt-8">
-                <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
-                  {t("courses.edit.savePage")}
-                </SubmitButton>
-                <UnsavedChangesNote
-                  unsavedLabel={t("courses.edit.unsavedChanges")}
-                  restoredLabel={t("courses.edit.draftRestored")}
-                  sections={sections.map((section) => ({
-                    id: section.id,
-                    unsavedSentence: t("courses.edit.unsavedInSection", { section: section.label }),
-                  }))}
-                  countSentences={sections.map((_, index) =>
-                    t("courses.edit.unsavedInSections", { count: index + 1 }),
-                  )}
-                />
-                <FormStatus tone="danger">{errorText}</FormStatus>
-              </StickyFormActions>
-            </ConflictGuardedForm>
-          </UnsavedChangesGuard>
+            {/* One control, not two: "Preview" opened the same page the "Live
+                at" link in the header already points at. The refusal belongs
+                beside the button that earned it, and the note beside it names
+                the section holding the unsaved work. Sticky, because Save used
+                to live only at the far end of a four-thousand-pixel form. */}
+            <StickyFormActions className="mt-8">
+              <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
+                {t("courses.edit.save")}
+              </SubmitButton>
+              <UnsavedChangesNote
+                unsavedLabel={t("courses.edit.unsavedChanges")}
+                restoredLabel={t("courses.edit.draftRestored")}
+                sections={sections.map((section) => ({
+                  id: section.id,
+                  unsavedSentence: t("courses.edit.unsavedInSection", { section: section.label }),
+                }))}
+                countSentences={sections.map((_, index) =>
+                  t("courses.edit.unsavedInSections", { count: index + 1 }),
+                )}
+              />
+              <FormStatus tone="danger">{errorText}</FormStatus>
+            </StickyFormActions>
+          </ConflictGuardedForm>
+        </UnsavedChangesGuard>
 
-          {/* The summary's Spanish, its own small form for the same reason. */}
-          <div className="mt-8">
-            <ShopTextTranslation
-              shopSlug={shopSlug}
-              box={summaryTranslation}
-              canAssist={canAssist}
-              t={t}
-              maxLength={200}
-            />
-          </div>
-
-          {formsPanel ? (
-            <CourseFormsRequirement
-              {...formsPanel}
-              {...formsSection}
-              action={saveCourseFormRequirementsAction.bind(null, slug)}
-              waiversPath={shopPath(shopSlug, "waivers")}
-              t={t}
-            />
-          ) : null}
-
-          {/* Outside the save form, because a form cannot nest inside another —
+        {/* Outside the save form, because a form cannot nest inside another —
             and below it, because this is the page's rare act and Save is its
             frequent one. `secondary`, not primary: the editor has exactly one
             obvious next action and this is not it (principles §8). The word on
-            screen names what it does to the diver's catalog, since the control
-            no longer sits on a row that carried the course's name.
+            screen names what it does to the diver's catalog.
 
             Drawn only for a reader whose roles allow it: for anybody else the
-            button's only outcome is the refusal, and the editor's other work —
-            the prose a diver reads — is still theirs. */}
-          {canSetVisibility ? (
-            <form action={visibilityAction} className="mt-8 border-t border-border pt-6">
-              <SubmitButton
-                pendingLabel="…"
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {course.isActive
-                  ? t("courses.edit.hideFromCatalog")
-                  : t("courses.edit.showInCatalog")}
-              </SubmitButton>
-            </form>
-          ) : null}
-        </div>
+            button's only outcome is the refusal. */}
+        {canSetVisibility ? (
+          <form action={visibilityAction} className="mt-8 border-t border-border pt-6">
+            <SubmitButton
+              pendingLabel="…"
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {course.isActive
+                ? t("courses.edit.hideFromCatalog")
+                : t("courses.edit.showInCatalog")}
+            </SubmitButton>
+          </form>
+        ) : null}
       </div>
     </main>
   );
