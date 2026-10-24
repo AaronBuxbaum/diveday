@@ -50,6 +50,9 @@ const MANUAL_PATH = join(process.cwd(), ".env.manual");
 
 const parse = parseDotenv;
 
+/** `KEY_BYTES` in src/lib/secret-box.ts: what `openssl rand -base64 32` decodes to. */
+const SEALING_KEY_BYTES = 32;
+
 const failures = [];
 
 if (readEnvExample() !== renderEnvExample()) {
@@ -80,6 +83,18 @@ if (process.env.VERCEL_ENV === "production") {
   if (missing.length > 0) {
     failures.push(
       `production is missing ${missing.join(", ")}. ${missing.map((key) => `${key}: ${envEntry(key)?.absent ?? "no documented effect"}.`).join(" ")} Set them on the Vercel project (see config/env-registry.mjs).`,
+    );
+  }
+  // Set is not enough for the sealing keys: the app reads a value that does not decode to 32 bytes
+  // as no usable key (`parseKey` in src/lib/secret-box.ts), so a mistyped or truncated paste locks
+  // out every two-factor staffer exactly as a missing one does. Decoded the same lenient way.
+  const malformed = ["SECRET_ENCRYPTION_KEY", "SECRET_ENCRYPTION_KEY_PREVIOUS"].filter((key) => {
+    const raw = process.env[key]?.trim();
+    return raw ? Buffer.from(raw, "base64").length !== SEALING_KEY_BYTES : false;
+  });
+  if (malformed.length > 0) {
+    failures.push(
+      `production has a malformed ${malformed.join(", ")}. Each must be 32 bytes in base64 (\`openssl rand -base64 32\`); the app treats any other value as no key, and every staffer who turned on two-factor is locked out. Fix it on the Vercel project.`,
     );
   }
   const present = keysForbiddenInProduction().filter((key) => process.env[key]?.trim());
