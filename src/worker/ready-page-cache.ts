@@ -189,11 +189,6 @@ function storable(response: Response): boolean {
 }
 
 /**
- * Keep `response` as the one copy for `path`, replacing whatever was kept.
- * Reads the body (pass a clone). Returns whether it was kept; a page that
- * names no keep-until, or one already past, clears the copy.
- */
-/**
  * Whether `path` was forgotten at or after `requestedAt`: a page fetched
  * before a cancel is the pre-cancel page, however late it answers (#2979).
  */
@@ -209,6 +204,10 @@ async function forgottenSince(
 }
 
 /**
+ * Keep `response` as the one copy for `path`, replacing whatever was kept.
+ * Reads the body (pass a clone). Returns whether it was kept; a page that
+ * names no keep-until, or one already past, clears the copy.
+ *
  * `requestedAt` is when the fetch that produced `response` began; a forget
  * of this path at or after it (a cancel landing first) means nothing is kept.
  */

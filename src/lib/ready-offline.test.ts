@@ -3,6 +3,7 @@ import {
   forgetReadyPageCopy,
   forgetThisReadyPage,
   READY_CACHE_NAME,
+  READY_FORGOTTEN_CACHE_NAME,
   readyCopyKeepUntil,
 } from "./ready-offline";
 
@@ -56,7 +57,7 @@ describe("forgetReadyPageCopy", () => {
     });
 
     expect(await forgetReadyPageCopy()).toBe(true);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
+    expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
     expect(unregistered).toEqual(["https://dive.day/ready/"]);
   });
 
@@ -83,7 +84,7 @@ describe("forgetReadyPageCopy", () => {
     });
     await forgetReadyPageCopy();
     // Security review 2, N2: another tab's save cannot land after the delete.
-    expect(steps).toEqual(["unregister", "delete"]);
+    expect(steps).toEqual(["unregister", "delete", "delete"]);
   });
 
   it("answers false, and throws nothing, when the cache cannot be deleted", async () => {
@@ -117,7 +118,7 @@ describe("forgetReadyPageCopy", () => {
     });
     expect(await forgetReadyPageCopy()).toBe(true);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
+    expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
   });
 
   it("still deletes the copy when the registrations cannot be read", async () => {
@@ -132,7 +133,7 @@ describe("forgetReadyPageCopy", () => {
       serviceWorker: { getRegistrations: () => Promise.reject(new Error("insecure")) },
     });
     expect(await forgetReadyPageCopy()).toBe(true);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
+    expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
   });
 
   it("answers false, and throws nothing, in a browser with no Cache Storage", async () => {

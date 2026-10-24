@@ -157,6 +157,10 @@ export async function forgetReadyPageCopy(): Promise<boolean> {
   try {
     if (typeof caches === "undefined" || !caches) return false;
     await caches.delete(READY_CACHE_NAME);
+    // The forget markers too (#2979): they guard against a save landing
+    // after a forget, and with this registration gone none can, so a shared
+    // device keeps no hash of the link's path either.
+    await caches.delete(READY_FORGOTTEN_CACHE_NAME);
     return true;
   } catch {
     return false;
