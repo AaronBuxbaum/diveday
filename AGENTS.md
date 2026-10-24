@@ -21,9 +21,9 @@ range and `foo.test.ts` before `foo.ts`; run one focused test; redirect long run
 
 ## Delegating
 
-One file: no plan, no subagent. Multi-file: plan first. Cross-area: at most three
-subagents, each with objective, output format and boundary; scouting goes to `Explore`; tests need an execution-capable worker;
-a worker returns a path plus at most ten lines
+Stay in the main loop unless the input would bloat it, parts run in parallel, or a fresh read is
+the point; split by context, not area. Plan multi-file work; at most three subagents, each with
+objective, output format and boundary, returning a path plus ten lines
 ([working-rules.md](docs/agents/working-rules.md#delegating)).
 
 ## Commands
@@ -60,8 +60,7 @@ Playbooks have one source in `.agents/skills/`, mirrored into Claude by symlinks
 [skill index](.claude/skills/README.md). Start or resume with `pnpm agent:bootstrap --provider codex`
 (or `claude` / `other`); it reports repository capabilities. Use `pnpm task:context --path
 <changed-path>` for bounded contracts and `pnpm task:state` for durable handoffs.
-Reviewer agents remain required: `dive-domain-expert` for safety and `security-reviewer` for
-security-sensitive changes. [Provider contract](docs/agents/provider-contract.md).
+[Provider contract](docs/agents/provider-contract.md).
 
 ## Parallel work
 
