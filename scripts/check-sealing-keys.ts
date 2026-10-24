@@ -13,7 +13,10 @@
  * It trial-opens every enabled two-factor secret and compares each recovery-code key fingerprint
  * with the pair (`keyringOpensStored`, src/lib/secret-box.ts). It reads and never writes, and it
  * prints the variables' names and a count of accounts: never a key, a fingerprint, an account or a
- * secret. Reasoning and the rotation steps: docs/engineering/infrastructure-runbook.md, "Rotating
+ * secret. It covers two-factor secrets and recovery codes only: WhatsApp tokens, connector
+ * credentials, backup destinations and the other sealed values degrade rather than lock anyone out,
+ * and are not checked. There is no bypass flag (`./sealing-keys-message.mjs` says why and gives the
+ * two ways back). Reasoning and the rotation steps: docs/engineering/infrastructure-runbook.md, "Rotating
  * the secret-sealing key".
  */
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -23,10 +26,11 @@ import type { AppDb } from "@/db/client";
 import { withExplicitSslMode } from "@/db/connection-string";
 import {
   keyringOpensStored,
-  PREVIOUS_SECRET_KEY_VARIABLE,
   SECRET_KEY_VARIABLE,
   secretKeyFromEnvironment,
 } from "@/lib/secret-box";
+
+import { sealingKeysFailureText } from "./sealing-keys-message.mjs";
 
 const NAME = "check-sealing-keys";
 
@@ -56,12 +60,7 @@ async function main(): Promise<number> {
       console.log(`${NAME}: the sealing keys open all ${result.checked} two-factor account(s).`);
       return 0;
     }
-    const accounts = `${result.lockedOut} of ${result.checked} two-factor account(s)`;
-    console.error(
-      result.reason === "previous_missing"
-        ? `${NAME}: FAILED. ${SECRET_KEY_VARIABLE} cannot open ${accounts}, and ${PREVIOUS_SECRET_KEY_VARIABLE} is not set. Either the key was rotated without moving the old value to ${PREVIOUS_SECRET_KEY_VARIABLE}, or the old key was retired while accounts still need it. Set ${PREVIOUS_SECRET_KEY_VARIABLE} to the old key on the Vercel project and redeploy; nobody can sign in with two-factor until then.`
-        : `${NAME}: FAILED. Neither ${SECRET_KEY_VARIABLE} nor ${PREVIOUS_SECRET_KEY_VARIABLE} opens ${accounts}, so ${PREVIOUS_SECRET_KEY_VARIABLE} is probably not the key it replaced. Set it to the old ${SECRET_KEY_VARIABLE} on the Vercel project and redeploy.`,
-    );
+    console.error(`${NAME}: ${sealingKeysFailureText(result)}`);
     return 1;
   } finally {
     await pool.end().catch(() => undefined);
