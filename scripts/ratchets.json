@@ -594,19 +594,13 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 513"
         }
-      },
-      {
-        "why": "issue #2691: the trip page reads ?sent=1 and returns the neutral already-held landing before the departure is read; the landing itself lives in _components/BookingSentLanding.tsx",
-        "files": {
-          "src/app/s/[shopSlug]/trips/[id]/page.tsx": "509 -> 513"
-        }
       }
     ],
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 491,
     "src/app/ready/[token]/page.tsx": 649,
     "src/app/s/[shopSlug]/page.tsx": 841,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 513,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 508,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 671,
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,
