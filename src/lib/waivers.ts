@@ -494,7 +494,10 @@ export function releaseLapsedForBooking(input: {
     ? isCleanCompletion
     : (record: WaiverRecord) => record.status === "completed" || record.status === "medical_review";
   const at = input.now ?? nowDate();
-  const records = [...(input.bookingWaiver ? [input.bookingWaiver] : []), ...input.personSignedWaivers];
+  const records = [
+    ...(input.bookingWaiver ? [input.bookingWaiver] : []),
+    ...input.personSignedWaivers,
+  ];
   return recordsAsOf(records, at).some(signed);
 }
 

@@ -79,8 +79,13 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
     // past the window.
     await db
       .update(tripRows)
-      .set({ startsAt: new Date(now.getTime() + 30 * 24 * HOUR), endsAt: new Date(now.getTime() + 30 * 24 * HOUR + 4 * HOUR) })
-      .where(and(eq(tripRows.shopId, shop.id), gt(tripRows.startsAt, new Date(now.getTime() - HOUR))));
+      .set({
+        startsAt: new Date(now.getTime() + 30 * 24 * HOUR),
+        endsAt: new Date(now.getTime() + 30 * 24 * HOUR + 4 * HOUR),
+      })
+      .where(
+        and(eq(tripRows.shopId, shop.id), gt(tripRows.startsAt, new Date(now.getTime() - HOUR))),
+      );
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
     expect(before.actions.some((row) => row.kind === "emergency_card_blank")).toBe(false);
     await db.insert(tripRows).values({
@@ -102,8 +107,13 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
     const now = nowDate();
     await db
       .update(tripRows)
-      .set({ startsAt: new Date(now.getTime() + 30 * 24 * HOUR), endsAt: new Date(now.getTime() + 30 * 24 * HOUR + 4 * HOUR) })
-      .where(and(eq(tripRows.shopId, shop.id), gt(tripRows.startsAt, new Date(now.getTime() - HOUR))));
+      .set({
+        startsAt: new Date(now.getTime() + 30 * 24 * HOUR),
+        endsAt: new Date(now.getTime() + 30 * 24 * HOUR + 4 * HOUR),
+      })
+      .where(
+        and(eq(tripRows.shopId, shop.id), gt(tripRows.startsAt, new Date(now.getTime() - HOUR))),
+      );
     await db.insert(tripRows).values([
       {
         shopId: shop.id,

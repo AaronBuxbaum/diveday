@@ -413,9 +413,7 @@ describe("a release read as of a past instant (#3002)", () => {
     expect(effectiveReleaseForRiderSeat(read)?.id).toBe("sailed-on");
     // Superseded before the cutoff, it did not stand.
     const supersededFirst = { ...sailedOn, supersededAt: new Date(cutoff.getTime() - 1) };
-    expect(
-      effectiveWaiverForBooking(args({ personSignedWaivers: [supersededFirst] })),
-    ).toBeNull();
+    expect(effectiveWaiverForBooking(args({ personSignedWaivers: [supersededFirst] }))).toBeNull();
   });
 
   it("names nothing when the only release was signed after the cutoff, and calls nothing lapsed", () => {

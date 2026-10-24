@@ -320,7 +320,10 @@ describe("a physician's letter that predates a re-signed referral", () => {
     const blocked = async (bookingId: string) => {
       const tripId = bookingId === booking.id ? trip.id : other.id;
       const rows = await listTripReadiness(db, shop.id, tripId, TODAY);
-      return rows.find((row) => row.booking.id === bookingId)?.readiness.blockers.map((b) => b.code) ?? [];
+      return (
+        rows.find((row) => row.booking.id === bookingId)?.readiness.blockers.map((b) => b.code) ??
+        []
+      );
     };
     expect(await blocked(booking.id)).toContain("medical_review");
     expect(await blocked(second.bookingId)).toContain("medical_review");
