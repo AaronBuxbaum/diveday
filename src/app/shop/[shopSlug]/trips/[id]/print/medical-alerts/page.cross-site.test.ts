@@ -68,11 +68,12 @@ describe("the print with medical alerts, opened from another site", () => {
   it("is a 404 for a cross-site navigation, and records nothing", async () => {
     const { printedLines, open, host } = await ownerOnTheAlertDeparture();
     const before = (await printedLines()).length;
-    for (const headers of [
+    const navigations: Record<string, string>[] = [
       { "sec-fetch-site": "cross-site", "sec-fetch-mode": "navigate", host },
       { "sec-fetch-site": "same-site", host, referer: "https://blog.diveday.test/" },
       { host, referer: "https://evil.example/" },
-    ]) {
+    ];
+    for (const headers of navigations) {
       request.headers = new Headers(headers);
       vi.mocked(requireStaffSession).mockClear();
       await expect(open()).rejects.toThrow("NOT_FOUND");
