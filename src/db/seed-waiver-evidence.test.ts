@@ -2,13 +2,13 @@ import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
-import { utcToWallTime } from "@/lib/zoned";
+import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { listTripReadiness } from "./readiness";
 import { trips, waiverRecords } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE, withinDeskHours } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
-import { seedWaiverEvidence } from "./seed-waiver-evidence";
+import { seedWaiverEvidence, signedBeforeDeparture } from "./seed-waiver-evidence";
 import { liveTrip } from "./trips";
 import { listWaiverIntegrityAudit } from "./waivers";
 
@@ -225,5 +225,41 @@ describe("a release on a departure", () => {
     const [replayed] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
     expect(replayed?.signedAt?.getTime()).toBeLessThan(dawn.startsAt.getTime());
     expect(replayed && verifyWaiverIntegrity(replayed)).not.toBe("invalid");
+  });
+});
+
+/**
+ * The clamp on its own, away from the frozen 9:30 AM clock (domain review 3B):
+ * a boat just after midnight, and dawn boats on the two days New York changes
+ * its clocks, when "the evening before" is 23 or 25 hours back.
+ */
+describe("signedBeforeDeparture", () => {
+  const local = (year: number, month: number, day: number, hour: number, minute = 0) =>
+    wallTimeToUtc({ year, month, day, hour, minute }, DEMO_SHOP_TIMEZONE);
+  const expectBeforeAndInDeskHours = (signed: Date, departs: Date) => {
+    expect(signed.getTime()).toBeLessThan(departs.getTime());
+    const wall = utcToWallTime(signed, DEMO_SHOP_TIMEZONE);
+    expect(wall.hour).toBeGreaterThanOrEqual(8);
+    expect(wall.hour).toBeLessThan(18);
+    return wall;
+  };
+
+  it("puts a release for a boat just after midnight on the evening before", () => {
+    const departs = local(2026, 10, 25, 0, 20);
+    const signed = signedBeforeDeparture(local(2026, 10, 25, 9, 0), departs, 7);
+    const wall = expectBeforeAndInDeskHours(signed, departs);
+    expect([wall.month, wall.day]).toEqual([10, 24]);
+  });
+
+  it("puts a dawn boat's release on the evening before across both clock changes", () => {
+    for (const [month, day] of [
+      [3, 8],
+      [11, 1],
+    ] as const) {
+      const departs = local(2026, month, day, 6, 0);
+      const signed = signedBeforeDeparture(local(2026, month, day, 9, 0), departs, 3);
+      const wall = expectBeforeAndInDeskHours(signed, departs);
+      expect([wall.month, wall.day]).toEqual([month === 3 ? 3 : 10, month === 3 ? 7 : 31]);
+    }
   });
 });
