@@ -1,6 +1,7 @@
 // i18n-exempt-file: model instructions, sent to Claude and never shown to a reader
 import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
+import type { CallTranscript } from "@/lib/claude/transcript";
 import { hasNumberWord, numbersCameFrom, sameNumberWords } from "./facts";
 
 /**
@@ -189,6 +190,38 @@ export function replyDraftCall(input: {
     maxTokens: 2_000,
     effort: "low",
     confidence: (value) => value.confidence,
+    keepTranscript: keepUnlessHealth,
+  };
+}
+
+/** What DiveDay's 30-day copy holds in place of a health question. */
+export const HEALTH_MESSAGE_NOT_KEPT = "[message not kept: health question]";
+export const HEALTH_ANSWER_NOT_KEPT = "[answer not kept: health question]";
+
+/**
+ * **A health question is not kept** (ADR 20261023-claude-call-content): when
+ * the draft's answer says the diver asked about their health, the thread is
+ * replaced by a placeholder, and so is the answer unless its reply is empty,
+ * since a reply could quote the question back. An answer that cannot be read
+ * but says `"medical": true` is treated the same way.
+ */
+export function keepUnlessHealth(transcript: CallTranscript): CallTranscript {
+  const answer = transcript.answer;
+  if (!answer) return transcript;
+  let parsed: { medical?: unknown; reply?: unknown } | null = null;
+  try {
+    const json: unknown = JSON.parse(answer);
+    if (json && typeof json === "object") parsed = json as { medical?: unknown; reply?: unknown };
+  } catch {
+    parsed = null;
+  }
+  const medical = parsed ? parsed.medical === true : /"medical"\s*:\s*true/.test(answer);
+  if (!medical) return transcript;
+  const quotesNothing = parsed !== null && typeof parsed.reply === "string" && !parsed.reply.trim();
+  return {
+    ...transcript,
+    content: HEALTH_MESSAGE_NOT_KEPT,
+    answer: quotesNothing ? answer : HEALTH_ANSWER_NOT_KEPT,
   };
 }
 

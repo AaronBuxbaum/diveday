@@ -224,6 +224,26 @@ describe("callStructured's record of the call", () => {
     expect(result.transcript.content).toBe("Can I move my Saturday dive to Sunday?");
   });
 
+  it("keeps what the call's own rule allows, and nothing of the request when the rule throws", async () => {
+    const provider = fakeClaude({
+      reply: () => fakeClaudeMessage({ text: JSON.stringify({ tag: "move", confidence: 0.9 }) }),
+    });
+    const trimmed = await callStructured(provider, {
+      ...call,
+      keepTranscript: (transcript) => ({ ...transcript, content: "[not kept]" }),
+    });
+    expect(trimmed.transcript.content).toBe("[not kept]");
+    expect(trimmed.value).toEqual({ tag: "move", confidence: 0.9 });
+    const broken = await callStructured(provider, {
+      ...call,
+      keepTranscript: () => {
+        throw new Error("Can I move my Saturday dive");
+      },
+    });
+    expect(broken.transcript).toMatchObject({ content: "[content not kept]", answer: null });
+    expect(broken.value).toEqual({ tag: "move", confidence: 0.9 });
+  });
+
   it("refuses a request id shaped like words", async () => {
     const provider = fakeClaude({
       reply: () => fakeClaudeMessage({ text: "{}", requestId: "Ana Diaz wrote this" }),

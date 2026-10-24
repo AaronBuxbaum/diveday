@@ -15,8 +15,14 @@ import process from "node:process";
  * (`@/db/assists`, `./assists`) by alias or relative path (security review
  * L3, B1). None may import a medical reader: a module
  * whose path names `medical` or `questionnaire`, the waiver-records schema,
- * or the waiver module that reads the answers. Neither may name the answer
- * columns (`medicalAnswers`, `medical_answers`) at all.
+ * or the waiver module that reads the answers. Nor may it take the waiver
+ * records table (`waiverRecords`) out of the schema barrel (`./schema`,
+ * `@/db/schema`), which is how every db module imports tables, or name the
+ * answer columns (`medicalAnswers`, `medical_answers`) or the crew's medical
+ * alert (`medicalAlert`, `medical_alert`, `draftMedicalAlert`), which is
+ * medical-class data too (glossary, "Medical alert for the crew"). What a call
+ * sends is kept 30 days (ADR 20261023-claude-call-content), so this is also
+ * what keeps medical data out of `claude_call_content`.
  *
  * Left alone: test files, and every module that does not build a prompt.
  */
@@ -33,7 +39,12 @@ const SENDS = /\b(?:runAssist|runAssistOutcome)\b|["'](?:@\/db|\.\.?(?:\/\.\.)*)
 const ASSIST_DB_MODULE = /^src\/db\/[^/]*assist[^/]*\.[cm]?[jt]sx?$/;
 const MEDICAL_SPECIFIER =
   /medical|questionnaire|waiver-records|(?:@\/lib|@\/db|^\.\.?(?:\/\.\.)*)\/waivers$/i;
-const MEDICAL_NAME = /\bmedical_?answers\b|\bmedicalAnswers\b/i;
+const MEDICAL_NAME = /\bmedical_?answers\b|\b(?:draft_?)?medical_?alerts?\b/i;
+// The schema barrel, or one of its modules: where a db module takes its tables.
+const SCHEMA_SPECIFIER = /(?:^|\/)schema(?:\/[\w-]+)?$/;
+// Tables a prompt module may not take from it: the one that holds the answers
+// and the crew's medical alert.
+const MEDICAL_TABLE = /\bwaiverRecords\b/;
 const PROMPTS = "src/lib/assists/";
 
 async function walk(relative) {
@@ -62,13 +73,17 @@ for (const file of await walk("src")) {
   scanned += 1;
   for (const match of text.matchAll(IMPORT)) {
     const specifier = match[1] ?? match[2] ?? "";
-    if (!MEDICAL_SPECIFIER.test(specifier)) continue;
     const line = text.slice(0, match.index).split("\n").length;
+    if (SCHEMA_SPECIFIER.test(specifier) && MEDICAL_TABLE.test(match[0])) {
+      violations.push(`${file}:${line}: imports waiverRecords from ${specifier}`);
+      continue;
+    }
+    if (!MEDICAL_SPECIFIER.test(specifier)) continue;
     violations.push(`${file}:${line}: imports ${specifier}`);
   }
   const lines = text.split("\n");
   lines.forEach((line, index) => {
-    if (MEDICAL_NAME.test(line)) violations.push(`${file}:${index + 1}: names medical answers`);
+    if (MEDICAL_NAME.test(line)) violations.push(`${file}:${index + 1}: names medical data`);
   });
 }
 

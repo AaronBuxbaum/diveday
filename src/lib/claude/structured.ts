@@ -63,6 +63,14 @@ export type StructuredCall<S extends z.ZodType> = {
    * what the cap reserves before the call is sent. Never sent to the API.
    */
   readonly inputTokens?: number;
+  /**
+   * What of this call DiveDay may keep for 30 days, given what it sent and
+   * what came back (`claude_call_content`): a feature whose answer can say the
+   * request was about something never to be stored (a health question)
+   * replaces those parts with a placeholder. Absent, the whole transcript is
+   * kept. If it throws, nothing of the request or the answer is kept.
+   */
+  readonly keepTranscript?: (transcript: CallTranscript) => CallTranscript;
 };
 
 export const STRUCTURED_OUTCOMES = [
@@ -175,13 +183,20 @@ function transcriptOf<S extends z.ZodType>(
       return fallback;
     }
   };
-  return {
+  const transcript: CallTranscript = {
     system: call.system,
     context: call.context ?? null,
     content: attempt(() => renderContent(call.content), "[content not rendered]"),
     answer: last ? attempt(() => finalText(last), null) : null,
     fetchedUrls: attempt(() => fetchedUrls(responses), null),
   };
+  const keep = call.keepTranscript;
+  if (!keep) return transcript;
+  return attempt(() => keep(transcript), {
+    ...transcript,
+    content: "[content not kept]",
+    answer: null,
+  });
 }
 
 /** Sends one structured call, resuming paused server-tool turns. Never throws. */
