@@ -57,6 +57,7 @@ describe("a release read as of a past instant (#3002)", () => {
     personSignedWaivers: [sailedOn, signedLater],
     currentTemplateVersion: 1 as number | null,
     now: cutoff,
+    asOf: cutoff as Date | undefined,
     ...over,
   });
 
@@ -124,14 +125,53 @@ describe("a release read as of a past instant (#3002)", () => {
     expect(atCutoff && isCleanCompletion(atCutoff)).toBe(false);
     // Read today, the clearance stands and the record is a clean release.
     const today = effectiveWaiverForBooking(
-      args({ personSignedWaivers: [referral], now: SIGN_NOW }),
+      args({ personSignedWaivers: [referral], now: SIGN_NOW, asOf: undefined }),
     );
     expect(today).toBe(referral);
   });
 
   it("changes nothing for a reader at the live clock", () => {
-    const live = args({ now: SIGN_NOW });
+    const live = args({ now: SIGN_NOW, asOf: undefined });
     expect(effectiveWaiverForBooking(live)).toBe(signedLater);
     expect(effectiveReleaseForRiderSeat(live)).toBe(signedLater);
+  });
+
+  it("reads a record with neither stamp by when it was created", () => {
+    const unstamped = completedWaiver({
+      id: "unstamped-hold",
+      status: "medical_review",
+      signedAt: null,
+      completedAt: null,
+      createdAt: after,
+    });
+    expect(
+      effectiveWaiverForBooking(args({ personSignedWaivers: [sailedOn, unstamped] }))?.id,
+    ).toBe("sailed-on");
+  });
+});
+
+/**
+ * **A live reader never hides a fresh hold** (domain review of #3002). Only
+ * the departure log passes `asOf`; a live `now` captured a moment before a
+ * hold was written still sees it.
+ */
+describe("a live reading with no asOf", () => {
+  it("still blocks on a hold signed a second after the reader's clock", () => {
+    const now = new Date("2026-07-18T12:00:00.000Z");
+    const clean = completedWaiver({ id: "clean", signedAt: new Date(now.getTime() - 86_400_000) });
+    const hold = completedWaiver({
+      id: "fresh-hold",
+      bookingId: "booking-1",
+      status: "medical_review",
+      signedAt: new Date(now.getTime() + 1000),
+      completedAt: new Date(now.getTime() + 1000),
+    });
+    const read = {
+      bookingWaiver: hold,
+      personSignedWaivers: [clean],
+      currentTemplateVersion: 1,
+      now,
+    };
+    expect(effectiveWaiverForBooking(read)?.id).toBe("fresh-hold");
   });
 });

@@ -338,8 +338,9 @@ export function waiverClockInstant(input: {
  * season, or a referral cleared after the boat came home, out of that record.
  */
 export function recordAsOf(record: WaiverRecord, at: Date): WaiverRecord | null {
-  const signedAt = record.signedAt ?? record.completedAt;
-  if (signedAt && signedAt.getTime() > at.getTime()) return null;
+  // The signing instant every resolver orders by, down to the row's own
+  // creation for a record with neither stamp.
+  if (signatureTime(record) > at.getTime()) return null;
   const later = (stamp: Date | null | undefined) =>
     stamp ? stamp.getTime() > at.getTime() : false;
   if (
@@ -371,12 +372,26 @@ export function recordAsOf(record: WaiverRecord, at: Date): WaiverRecord | null 
   return asOf;
 }
 
-/** {@link recordAsOf} over a list, dropping what did not exist yet. */
-function recordsAsOf(records: readonly WaiverRecord[], at: Date): WaiverRecord[] {
+/**
+ * {@link recordAsOf} over a list, dropping what did not exist yet. With no
+ * `at`, the list as it is: only the departure log passes an instant, so a
+ * live reader whose clock runs a moment behind a fresh write still sees it.
+ */
+function recordsAsOf(
+  records: readonly WaiverRecord[],
+  at: Date | undefined,
+): readonly WaiverRecord[] {
+  if (!at) return records;
   return records.flatMap((record) => {
     const asOf = recordAsOf(record, at);
     return asOf ? [asOf] : [];
   });
+}
+
+/** A seat's own record as it stood at `at`, or as it is with no `at`. */
+function ownAsOf(record: WaiverRecord | null, at: Date | undefined): WaiverRecord | null {
+  if (!record) return null;
+  return at ? recordAsOf(record, at) : record;
 }
 
 /**
@@ -398,18 +413,21 @@ function recordsAsOf(records: readonly WaiverRecord[], at: Date): WaiverRecord[]
  * ({@link isUnclearedReferral}), or a clean signature a fresh link replaced,
  * which no currency check lets stand.
  *
- * Every record is read as it stood at `now` ({@link recordAsOf}), so a reading
- * as of a past instant names only what existed then (issue #3002).
+ * With `asOf`, every record is read as it stood then ({@link recordAsOf}), so
+ * the departure log names only what existed when the diver boarded (issue
+ * #3002). Live readers pass none and see every record, however fresh.
  */
 export function effectiveWaiverForBooking(input: {
   bookingWaiver: WaiverRecord | null;
   personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
   now?: Date;
+  /** Read every record as it stood then ({@link recordAsOf}); the departure log only. */
+  asOf?: Date;
 }): WaiverRecord | null {
   const now = input.now ?? nowDate();
-  const own = input.bookingWaiver ? recordAsOf(input.bookingWaiver, now) : null;
-  const personSignedWaivers = recordsAsOf(input.personSignedWaivers, now);
+  const own = ownAsOf(input.bookingWaiver, input.asOf);
+  const personSignedWaivers = recordsAsOf(input.personSignedWaivers, input.asOf);
   if (own && isUnresolvedMedicalHold(own)) return own;
 
   const clean = [
@@ -452,10 +470,12 @@ export function effectiveReleaseForRiderSeat(input: {
   personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
   now?: Date;
+  /** As {@link effectiveWaiverForBooking}'s: the departure log only. */
+  asOf?: Date;
 }): WaiverRecord | null {
   const now = input.now ?? nowDate();
-  const own = input.bookingWaiver ? recordAsOf(input.bookingWaiver, now) : null;
-  const signed = [...(own ? [own] : []), ...recordsAsOf(input.personSignedWaivers, now)]
+  const own = ownAsOf(input.bookingWaiver, input.asOf);
+  const signed = [...(own ? [own] : []), ...recordsAsOf(input.personSignedWaivers, input.asOf)]
     .filter((record) => isSignatureCurrent(record, input.currentTemplateVersion, now))
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (signed) return signed;
@@ -486,6 +506,8 @@ export function releaseLapsedForBooking(input: {
   /** False for a rider's seat (H-109); defaults to a seat in the water. */
   heldToMedical?: boolean;
   now?: Date;
+  /** As {@link effectiveWaiverForBooking}'s: the departure log only. */
+  asOf?: Date;
 }): boolean {
   const heldToMedical = input.heldToMedical ?? true;
   const resolve = heldToMedical ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat;
@@ -493,12 +515,11 @@ export function releaseLapsedForBooking(input: {
   const signed = heldToMedical
     ? isCleanCompletion
     : (record: WaiverRecord) => record.status === "completed" || record.status === "medical_review";
-  const at = input.now ?? nowDate();
   const records = [
     ...(input.bookingWaiver ? [input.bookingWaiver] : []),
     ...input.personSignedWaivers,
   ];
-  return recordsAsOf(records, at).some(signed);
+  return recordsAsOf(records, input.asOf).some(signed);
 }
 
 /** Why a seat's release does not stand: aged out already, or aging out before the trip. */
@@ -520,6 +541,8 @@ export function releaseLapseForBooking(input: {
   heldToMedical?: boolean;
   /** Real now, never the trip-scoped instant. */
   now: Date;
+  /** As {@link effectiveWaiverForBooking}'s: the departure log only. */
+  asOf?: Date;
   startsAt: Date | null;
   endsAt: Date | null;
 }): ReleaseLapse | null {

@@ -27,7 +27,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { afterSeedStamps, at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
+import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
 import { paperRelease, signingNames } from "./seed-paper-release";
 
 /** The returned demo departure that gives Close-Out a finished local-day dive. */
@@ -971,11 +971,7 @@ async function seedCompletedRollCall(
   completedTrip: { id: string; startsAt: Date; plannedDives: number },
   rollCallRecorderId: string,
 ): Promise<void> {
-  // Read after this run's own stamps (`afterSeedStamps`): the releases just
-  // inserted are dated a few milliseconds ahead of the clock until
-  // `seedWaiverEvidence` re-dates them, and readiness counts no signature
-  // dated after the instant it is asked about (#3002).
-  const readiness = await listTripReadiness(db, shopId, completedTrip.id, afterSeedStamps());
+  const readiness = await listTripReadiness(db, shopId, completedTrip.id);
   const mark = (
     bookingId: string,
     status: "boarded" | "not_boarded",

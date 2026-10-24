@@ -527,12 +527,6 @@
           "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": "0 -> 310",
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "308 -> 315"
         }
-      },
-      {
-        "why": "merge of the training-dive ratio fix into the batch adds the over-ratio and no-card flags to listTripsReadiness",
-        "files": {
-          "src/db/readiness.ts#listTripsReadiness": "0 -> 305"
-        }
       }
     ],
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 420,
@@ -547,7 +541,6 @@
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 367,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 312,
-    "src/db/readiness.ts#listTripsReadiness": 305,
     "src/db/reminders.ts#sendDueReminders": 303,
     "src/db/reporting.ts#getMonthlyReport": 321,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,

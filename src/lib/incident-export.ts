@@ -881,6 +881,27 @@ export function hasRollCallEntries(timeline: readonly IncidentTimelineEntry[]): 
 }
 
 /**
+ * **When each diver boarded, for reading their release** (domain reviews of
+ * issue #3002): the seat's latest departure roll-call mark. A boat that sailed
+ * late had divers sign at the dock after the scheduled start, and the release
+ * that stood when the boat left is the one she boarded on. A seat with no
+ * departure mark is read at the log's cutoff instead.
+ */
+export function seatBoardingInstants(
+  events: readonly { bookingId: string; checkpoint: string; occurredAt: Date }[],
+): Map<string, Date> {
+  const boarded = new Map<string, Date>();
+  for (const event of events) {
+    if (event.checkpoint !== "departure") continue;
+    const seen = boarded.get(event.bookingId);
+    if (!seen || event.occurredAt.getTime() > seen.getTime()) {
+      boarded.set(event.bookingId, event.occurredAt);
+    }
+  }
+  return boarded;
+}
+
+/**
  * **From when a seat change is this log's business**: the scheduled start, or
  * the first departure roll-call mark if the boat began loading before it
  * (domain reviews 2026-10-16). A seat taken off between a diver's boarding and

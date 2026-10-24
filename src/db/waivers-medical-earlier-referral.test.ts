@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { listTripReadiness, upsertTripRequirements } from "./readiness";
+import { getBookingReadiness, upsertTripRequirements } from "./readiness";
 import { activityEvents, bookings, people, waiverRecords } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers-completion";
@@ -315,16 +315,8 @@ describe("a physician's letter that predates a re-signed referral", () => {
         requiresPayment: false,
       });
     }
-    // Read as of TODAY, when the re-signed referral and the letter both
-    // exist: a reading at the frozen clock (July) sees neither (issue #3002).
-    const blocked = async (bookingId: string) => {
-      const tripId = bookingId === booking.id ? trip.id : other.id;
-      const rows = await listTripReadiness(db, shop.id, tripId, TODAY);
-      return (
-        rows.find((row) => row.booking.id === bookingId)?.readiness.blockers.map((b) => b.code) ??
-        []
-      );
-    };
+    const blocked = async (bookingId: string) =>
+      (await getBookingReadiness(db, shop.id, bookingId))?.blockers.map((b) => b.code) ?? [];
     expect(await blocked(booking.id)).toContain("medical_review");
     expect(await blocked(second.bookingId)).toContain("medical_review");
 
