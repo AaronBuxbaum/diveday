@@ -22,7 +22,7 @@ const COPY = {
   offlineNote: NOTE,
   savedNote: "Saved on this device for when there’s no signal.",
   remove: "Remove saved copy",
-  removed: "Removed from this device.",
+  removed: "Removed from this device until you next open this link.",
 };
 const KEEP_UNTIL = 1_800_000_000_000;
 
@@ -88,11 +88,32 @@ describe("ReadyOfflineCopy", () => {
     expect(screen.queryByRole("button", { name: COPY.remove })).toBeNull();
   });
 
-  it("offline, the copy on screen is the kept one, and can be removed", () => {
+  /**
+   * **Offline, the copy cannot be removed** (domain review 2, blocking): at a
+   * dock with no signal it is the diver's only copy, and nothing can keep it
+   * again, so a wet-hand tap must not delete it.
+   */
+  it("offline, offers no way to remove the copy on screen", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     render(<ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} />);
-    expect(screen.getByRole("button", { name: COPY.remove })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: COPY.remove })).toBeNull();
     // Said once: the offline note already says this is the saved copy.
     expect(screen.queryByText(COPY.savedNote, { exact: false })).toBeNull();
+  });
+
+  it("takes the remove control away when the signal drops, and gives it back with signal", async () => {
+    const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    render(<ReadyOfflineCopy copy={COPY} keepUntil={KEEP_UNTIL} />);
+    await screen.findByRole("button", { name: COPY.remove });
+    online.mockReturnValue(false);
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    expect(screen.queryByRole("button", { name: COPY.remove })).toBeNull();
+    online.mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(screen.getByRole("button", { name: COPY.remove })).toBeTruthy();
   });
 });

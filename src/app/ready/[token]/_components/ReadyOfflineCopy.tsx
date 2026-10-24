@@ -21,6 +21,9 @@ import {
  * **The copy is kept on any browser that opens the link** (issue #2693), a
  * hotel PC or a shop tablet as well as the diver's phone, so once one is kept
  * the page says so and offers "Remove saved copy" (`forgetReadyPageCopy`).
+ * **Never offline** (domain review 2, blocking): there the copy on screen is
+ * the diver's only one, at a dock with no way to keep it again, so one wet tap
+ * must not delete it. Removal is for a device you are on with signal.
  */
 export function ReadyOfflineCopy({
   copy,
@@ -63,10 +66,10 @@ export function ReadyOfflineCopy({
           {copy.offlineNote}
         </p>
       ) : null}
-      {saved === "kept" ? (
+      {/* Offline, the note above already says this is the saved copy. */}
+      {saved === "kept" && !offline ? (
         <p className="mt-2 text-sm text-muted">
-          {/* Offline, the note above already says this is the saved copy. */}
-          {offline ? null : `${copy.savedNote} `}
+          {`${copy.savedNote} `}
           <button
             type="button"
             onClick={remove}

@@ -83,6 +83,8 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   await page.reload();
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: "No signal" })).toBeVisible();
+  // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
+  await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
 
   // Back online, the diver lands on the page their own cancel redirects to.
   await context.setOffline(false);
@@ -112,8 +114,16 @@ test("Remove saved copy takes the page off this device", async ({ page, context 
     ),
   ).not.toContain("/ready/");
 
-  // With no signal there is nothing saved to show.
+  // With no signal there is nothing saved to show, reload after reload.
   await context.setOffline(true);
   await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
+  await expect(page.reload({ waitUntil: "domcontentloaded" })).rejects.toThrow();
+
+  // "Until you next open this link": opening it again with signal keeps it
+  // again, and the page says so rather than still saying "Removed".
   await context.setOffline(false);
+  await page.goto(readyPath, { waitUntil: "domcontentloaded" });
+  await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toBeVisible();
+  await expect(page.getByText(diver("ready.offlineRemoved"))).toHaveCount(0);
 });
