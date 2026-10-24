@@ -12,12 +12,11 @@ export const MEDICAL_ALERT_ANCHOR = "medicalAlert";
  * questionnaire, for what the boat should know if something goes wrong.
  *
  * It is not a step on the rail (optional, one field) and nothing counts it
- * toward the medical step. The page says plainly that it does not replace the
- * questions above and that nobody reviews it for fitness to dive, because
- * nothing does: the questionnaire alone refers a diver to a doctor. On a
- * minor's release it names the diver, since a guardian is typing. It says
- * who reads it and to tell the crew at the briefing too, and to leave it
- * blank if there is nothing (a bare "N/A" is stored as none anyway).
+ * toward the medical step; the questionnaire alone refers a diver to a doctor.
+ * Since the visual review of 2026-10-24 (B56) it carries one helper sentence,
+ * the first: what to write, and to leave it blank if there is nothing (a bare
+ * "N/A" is stored as none anyway). On a minor's release it names the diver,
+ * since a guardian is typing.
  *
  * The box starts from the link's own draft. With none, and when the same
  * person's latest signed release here carried an alert, it says so and asks
@@ -47,8 +46,6 @@ export function MedicalAlertSection({
           ? t("waiver.medicalAlertIntroMinor", { name: minorName })
           : t("waiver.medicalAlertIntro")}
       </p>
-      <p className="mt-1 text-sm text-muted">{t("waiver.medicalAlertNotQuestionnaire")}</p>
-      <p className="mt-1 text-sm text-muted">{t("waiver.medicalAlertReaders")}</p>
       {prefill.earlierAlert ? (
         <p className="mt-3 text-sm font-medium">{t("waiver.medicalAlertEarlier")}</p>
       ) : null}

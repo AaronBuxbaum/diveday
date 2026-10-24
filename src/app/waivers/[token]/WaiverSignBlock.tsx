@@ -43,7 +43,6 @@ export function WaiverSignBlock({
       >
         {t("waiver.signButton")}
       </SubmitButton>
-      <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
       {/* Two facts on one line from `sm`, split by the dot; stacked below it,
           with no dot. The row used to wrap, and the wrap fell after the dot:
           "Save and finish later ·" on one line at 390, the expiry alone on

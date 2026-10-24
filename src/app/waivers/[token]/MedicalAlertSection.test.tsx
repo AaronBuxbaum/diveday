@@ -13,7 +13,7 @@ const NONE = { draft: null, earlierAlert: false };
 
 /** Issue #2960: one optional box for the crew, after the questionnaire. */
 describe("MedicalAlertSection", () => {
-  it("asks for the crew in its own section, optional, and says it is not the questionnaire", () => {
+  it("asks for the crew in its own section, optional, under one helper sentence", () => {
     render(<MedicalAlertSection prefill={NONE} minorName={null} error={undefined} t={t} />);
     expect(
       screen.getByRole("heading", { name: t("waiver.medicalAlertHeading") }),
@@ -25,7 +25,8 @@ describe("MedicalAlertSection", () => {
     expect(box).not.toBeRequired();
     expect(box).toHaveValue("");
     expect(screen.getByText(t("waiver.medicalAlertIntro"))).toBeInTheDocument();
-    expect(screen.getByText(t("waiver.medicalAlertNotQuestionnaire"))).toBeInTheDocument();
+    // One helper sentence, the first (visual review 2026-10-24, B56).
+    expect(document.querySelectorAll("section > p")).toHaveLength(1);
   });
 
   it("fills in what Save and finish later kept", () => {
@@ -57,10 +58,7 @@ describe("MedicalAlertSection", () => {
     expect(t("waiver.medicalAlertEarlier")).toMatch(/write it again/);
   });
 
-  it("says who reads it and to tell the crew at the briefing", () => {
-    render(<MedicalAlertSection prefill={NONE} minorName={null} error={undefined} t={t} />);
-    expect(screen.getByText(t("waiver.medicalAlertReaders"))).toBeInTheDocument();
-    expect(t("waiver.medicalAlertReaders")).toMatch(/briefing/);
+  it("says to leave it blank if there is nothing", () => {
     expect(t("waiver.medicalAlertIntro")).toMatch(/Leave it blank/);
   });
 
