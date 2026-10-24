@@ -369,7 +369,18 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: next-build
-          path: .next/
+          # `.next/cache` is Turbopack's incremental build cache (651 of the
+          # 776 MB a local build leaves behind; `.next/trace` is the build's own
+          # timing trace). `next start` reads neither: the fifteen jobs that
+          # download this artifact run a server, never a build, and a missing
+          # cache directory is simply recreated for the image optimizer. Proven
+          # 2026-10-24 by serving `/` and `/s/<slug>` from a build with both
+          # moved aside: 788 MB became 139 MB. Shipping them cost ~23 s to upload
+          # on the critical path and ~13 s per download (test-speed review, A13).
+          path: |
+            .next/
+            !.next/cache/**
+            !.next/trace
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
