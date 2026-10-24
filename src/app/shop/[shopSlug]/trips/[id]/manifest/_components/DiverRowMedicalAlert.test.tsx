@@ -6,6 +6,7 @@ import {
   type MedicalAlertResult,
 } from "@/components/MedicalAlertReveal";
 import type { TripManifest } from "@/lib/manifests";
+import { DiverRollCall } from "./DiverRollCall";
 import { DiverRowPanel } from "./DiverRowPanel";
 import { DiverRowPrint } from "./DiverRowPrint";
 import { diver, diverContext, renderList, t } from "./diver-roll-call-test-fixtures";
@@ -269,5 +270,71 @@ describe("the emergency read in the reveal sheet", () => {
     first.unmount();
     renderPanel(undefined);
     expect(screen.queryByRole("button", { name: OFFER })).toBeNull();
+  });
+});
+
+/**
+ * Issue #2990: "Print with medical alerts" puts each alert under its row, with
+ * one note at the top; every other print carries the flag only.
+ */
+describe("the manifest printed with the medical alerts", () => {
+  const PRINTED_AT = new Date("2026-07-21T11:15:00.000Z");
+  function renderSheet(printed?: { texts: Map<string, string> }) {
+    return render(
+      <DiverRollCall
+        context={diverContext({
+          checkpoint: "departure",
+          isDeparture: true,
+          timezone: "America/New_York",
+          divers: [
+            diver({ bookingId: "b-1", medicalAlert: true }),
+            diver({ bookingId: "b-2", fullName: "Ana Ruiz" }),
+          ],
+          printedMedicalAlerts: printed && {
+            texts: printed.texts,
+            printedBy: "Dana Owner",
+            printedAt: PRINTED_AT,
+          },
+        })}
+      />,
+    );
+  }
+
+  it("puts the words under the diver's row, the note once at the top, and nothing on another row", () => {
+    const { container } = renderSheet({ texts: new Map([["b-1", ALERT]]) });
+    const rows = within(container).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent(ALERT);
+    expect(rows[1]).not.toHaveTextContent(ALERT);
+    // The flag line about who can read it in DiveDay gives way to the words.
+    expect(rows[0]).not.toHaveTextContent(t("manifest.medicalAlertPrinted"));
+    expect(screen.getAllByText(t("manifest.medicalAlertNotReviewed"))).toHaveLength(1);
+    expect(screen.getByText(t("manifest.medicalAlertsPrintedKeep"))).toBeInTheDocument();
+    // Who printed it, and when, in the shop's zone.
+    expect(container).toHaveTextContent(/Printed by Dana Owner, .*7:15.*EDT/);
+  });
+
+  it("carries no words and no note on the default print", () => {
+    const { container } = renderSheet();
+    expect(container).not.toHaveTextContent(ALERT);
+    expect(container).not.toHaveTextContent(t("manifest.medicalAlertsPrintedHeading"));
+    expect(container).toHaveTextContent(t("manifest.medicalAlertPrinted"));
+  });
+
+  it("prints no words on a held seat, even if handed some", () => {
+    const { container } = render(
+      <DiverRollCall
+        context={diverContext({
+          checkpoint: "departure",
+          isDeparture: true,
+          divers: [diver({ bookingId: "b-1", medicalAlert: true, identityWithheld: true })],
+          printedMedicalAlerts: {
+            texts: new Map([["b-1", ALERT]]),
+            printedBy: "Dana Owner",
+            printedAt: PRINTED_AT,
+          },
+        })}
+      />,
+    );
+    expect(container).not.toHaveTextContent(ALERT);
   });
 });

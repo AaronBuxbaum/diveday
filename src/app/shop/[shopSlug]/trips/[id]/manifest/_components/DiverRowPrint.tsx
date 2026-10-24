@@ -18,6 +18,7 @@ import type { DiverRowState } from "./diver-row-state";
  */
 export function DiverRowPrint({
   diver,
+  printedAlert,
   state,
   checkpoint,
   auditLabel,
@@ -27,6 +28,12 @@ export function DiverRowPrint({
   t,
 }: {
   diver: TripManifest["divers"][number];
+  /**
+   * The diver's own words, only on a packet printed **with** the medical
+   * alerts (issue #2990), which recorded the print on their trail first.
+   * Absent on every other print: the flag only.
+   */
+  printedAlert?: string;
   state: DiverRowState;
   checkpoint: RollCallCheckpoint;
   /** The recorded state's words, as the row's own label says them. */
@@ -56,9 +63,10 @@ export function DiverRowPrint({
           </Badge>
         )}
         {diver.checkedIn ? <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge> : null}
-        {/* The fact only (issue #2960): paper records no read, so the words
-          stay on the screen behind the tap and on the crew's offline copy. */}
-        {diver.medicalAlert && !diver.identityWithheld ? (
+        {/* The fact only (issue #2960) on the default print: the words stay
+          behind the tap and on the crew's offline copy. "Print with medical
+          alerts" puts them under the row instead (below, issue #2990). */}
+        {diver.medicalAlert && !diver.identityWithheld && !printedAlert ? (
           <Badge tone="primary">{t("manifest.medicalAlertPrinted")}</Badge>
         ) : null}
         {diver.hotelPickupLocation ? (
@@ -93,6 +101,13 @@ export function DiverRowPrint({
           </Badge>
         ) : null}
       </p>
+      {printedAlert && !diver.identityWithheld ? (
+        <div className="mt-2 rounded border border-border px-3 py-2">
+          <p className="text-sm font-semibold">{t("manifest.medicalAlertHeading")}</p>
+          {/* The diver's own words, line breaks kept. */}
+          <p className="text-base whitespace-pre-wrap [overflow-wrap:anywhere]">{printedAlert}</p>
+        </div>
+      ) : null}
       {ready ? null : (
         <ul className="mt-2 flex flex-col gap-1 text-base">
           {diver.readiness.blockers.map((blocker) => {

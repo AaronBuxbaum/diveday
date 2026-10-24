@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { getDb } from "@/db/client";
+import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import { getTripOverview, type TripOverviewShop } from "@/db/trips";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { TripPageHeader } from "../../_components/TripPageHeader";
+import { PRINTED_MEDICAL_ALERTS } from "../../manifest/_components/manifest-search-params";
 import TripManifestPage from "../../manifest/page";
 import TripPrepPage from "../../prep/page";
 import { PacketDives } from "./PacketDives";
@@ -47,6 +49,7 @@ export async function TripPacket({
   actorPersonId,
   locale,
   t,
+  printedMedicalAlerts,
 }: {
   shopSlug: string;
   shop: TripOverviewShop;
@@ -55,6 +58,12 @@ export async function TripPacket({
   actorPersonId: string;
   locale: string;
   t: StaffTranslator;
+  /**
+   * The medical alerts' words, only from "Print with medical alerts" (issue
+   * #2990), which checked the printer and recorded the print first. Every
+   * other caller (the packet, the day's paper) leaves it out: the flag only.
+   */
+  printedMedicalAlerts?: PrintedMedicalAlerts;
 }): Promise<ReactNode> {
   const params = Promise.resolve({ shopSlug, id: tripId });
   // **The composed pages scope their own element ids to this departure.** Both
@@ -65,7 +74,10 @@ export async function TripPacket({
   // safe to leave. `src/lib/element-id.ts` carries the full reasoning, and the
   // reason this rides on `searchParams` rather than a prop is that a page
   // component's props are pinned to Next's `PageProps`.
-  const searchParams = Promise.resolve({ idPrefix: tripId });
+  const searchParams = Promise.resolve({
+    idPrefix: tripId,
+    ...(printedMedicalAlerts ? { [PRINTED_MEDICAL_ALERTS]: printedMedicalAlerts } : {}),
+  });
   const db = await getDb();
   // **The overview resolves alone, first.** It is the cheapest of the three
   // reads and the one that answers "is this departure still there", and the

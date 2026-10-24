@@ -112,6 +112,19 @@ export async function medicalAlertsForTrip(
   return alerts;
 }
 
+/**
+ * Whether any seat on the departure has an alert on its standing release: the
+ * fact, never the text, for whether "Print with medical alerts" is offered.
+ */
+export async function tripHasMedicalAlert(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const releaseByBooking = standingReleaseByBooking(await listTripReadiness(db, shopId, tripId));
+  return (await bookingsWithMedicalAlert(db, shopId, releaseByBooking)).size > 0;
+}
+
 /** The texts alone, by booking id (`medicalAlertsForTrip`). */
 export async function medicalAlertTextsForTrip(
   db: DbExecutor,
