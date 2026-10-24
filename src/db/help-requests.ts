@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { isStaff, STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -200,6 +200,86 @@ export async function listTodayHelpRequests(
     tripTitle: trip.title,
     startsAt: trip.startsAt,
   }));
+}
+
+/** A handled request, kept on the departure so a mis-tap can be reopened after the undo toast. */
+export type HandledHelpRequest = {
+  id: string;
+  tripId: string;
+  revision: number;
+  kind: HelpRequestKind;
+  personName: string;
+  helperPersonId: string;
+  helperPersonName: string | null;
+  tripTitle: string;
+  startsAt: Date;
+  handledAt: Date | null;
+};
+
+/**
+ * The handled requests of these departures, while a reopen can still succeed: the same live,
+ * scheduled, unfinished departure and uncancelled booking `undoHelpRequestCompletion` demands. A
+ * request with no recorded helper is left out, since undo is keyed on the helper it recorded.
+ */
+export async function listHandledHelpRequests(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<HandledHelpRequest[]> {
+  if (tripIds.length === 0) return [];
+  const rows = await db
+    .select({
+      request: tripHelpRequests,
+      personName: people.fullName,
+      helperPersonName: helperPerson.fullName,
+      trip: trips,
+    })
+    .from(tripHelpRequests)
+    .innerJoin(bookings, eq(bookings.id, tripHelpRequests.bookingId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(trips, eq(trips.id, tripHelpRequests.tripId))
+    .leftJoin(helperPerson, and(eq(helperPerson.shopId, shopId), helperStillServes(db)))
+    .where(
+      and(
+        eq(tripHelpRequests.shopId, shopId),
+        inArray(tripHelpRequests.tripId, tripIds),
+        eq(tripHelpRequests.status, "handled"),
+        isNotNull(tripHelpRequests.helperPersonId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripHelpRequests.tripId),
+        eq(people.shopId, shopId),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        ne(bookings.status, "cancelled"),
+        eq(trips.status, "scheduled"),
+        gt(trips.endsAt, now),
+      ),
+    )
+    .orderBy(
+      asc(trips.startsAt),
+      asc(tripHelpRequests.handledAt),
+      asc(people.fullName),
+      asc(tripHelpRequests.id),
+    );
+  return rows.flatMap(({ request, personName, helperPersonName, trip }) =>
+    request.helperPersonId
+      ? [
+          {
+            id: request.id,
+            tripId: trip.id,
+            revision: request.revision,
+            kind: request.kind,
+            personName,
+            helperPersonId: request.helperPersonId,
+            helperPersonName,
+            tripTitle: trip.title,
+            startsAt: trip.startsAt,
+            handledAt: request.handledAt,
+          },
+        ]
+      : [],
+  );
 }
 
 export type SaveHelpRequestResult =

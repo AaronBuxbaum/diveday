@@ -65,7 +65,11 @@ import {
   listGearServiceDue,
   listOverdueGearReservations,
 } from "./gear";
-import { listTodayHelpRequests } from "./help-requests";
+import {
+  type HandledHelpRequest,
+  listHandledHelpRequests,
+  listTodayHelpRequests,
+} from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
 import { countWaitingDateInterests } from "./interest-dates";
@@ -305,6 +309,8 @@ export type CrewedSessionSummary = {
 export type TodayWork = {
   departures: DepartureSummary[];
   actions: TodayAction[];
+  /** Today's handled help requests, so Today can offer Reopen after the undo toast (issue #2939). */
+  handledHelp: HandledHelpRequest[];
   /**
    * The high-wind rows, still arriving: the marine forecast is the one read
    * here that is not the database, so the queue answers without it and the
@@ -1751,6 +1757,7 @@ async function readTodayWave(
     boardedAnywhere,
     sharedWelcomeSeats,
     helpRequests,
+    handledHelp,
     rawStaff,
     credentialRows,
     { diveIntents, boatNames, crewByTrip, meetingWindows },
@@ -1840,6 +1847,7 @@ async function readTodayWave(
     // Thursday's boat on Tuesday morning would be a badge with a date on it.
     sharedWelcomeSeatsByTrip(db, shopId, todayTripIds, now),
     listTodayHelpRequests(db, shopId, todayTripIds, now),
+    listHandledHelpRequests(db, shopId, todayTripIds, now),
     listStaff(db, shopId),
     listStaffCredentials(db, shopId),
     // What each card shows beyond readiness and the roll call - intents, hull,
@@ -1955,6 +1963,7 @@ async function readTodayWave(
     boardedAnywhere,
     sharedWelcomeSeats,
     helpRequests,
+    handledHelp,
     rawStaff,
     credentialRows,
     diveIntents,
@@ -2137,6 +2146,7 @@ export async function getTodayWork(
     stagesByTrip,
     crewClashState,
     helpRequests,
+    handledHelp,
     rawStaff,
     diveIntents,
     boatNames,
@@ -2323,6 +2333,7 @@ export async function getTodayWork(
   return {
     departures,
     actions: visibleActions,
+    handledHelp,
     highWind,
     outTripIds: [
       ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),

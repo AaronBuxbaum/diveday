@@ -303,7 +303,8 @@
   (vegetarian, halal, no pork), 160 characters, from the diver's Day-of form or the desk. **A galley
   note, not an allergy record**: a food allergy is medical, belongs on the person and on every
   departure with whether they carry an auto-injector, and is not modeled yet (dive-domain review
-  B1). So the form never invites one and sends an allergy to the shop, and an empty list is never
+  B1). So the form never invites one and sends an allergy to the **medical alert for the crew** (the
+  waiver's "For the crew, in an emergency" box, H-153), and an empty list is never
   read as "nobody has a restriction". It is in the diver's own export, cleared by erasure, and
   nulled 30 days after the boat sailed (`DIETARY_NOTE_RETENTION_DAYS`).
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
