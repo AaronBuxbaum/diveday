@@ -43,8 +43,9 @@ export default async function TripPrintWithMedicalAlertsPage({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const resolvedParams = await params;
-  const tripId = uuidParam(resolvedParams.id);
-  if (!tripId) notFound();
+  const { id } = resolvedParams;
+  if (!uuidParam(id)) notFound();
+  const tripId = id;
 
   const { shop, session, db } = await requireShopSurface(resolvedParams.shopSlug);
   const printed = await medicalAlertsForPrint(db, {

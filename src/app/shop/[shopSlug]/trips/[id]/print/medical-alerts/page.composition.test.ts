@@ -40,7 +40,6 @@ describe("the print with medical alerts", () => {
       return /printedMedicalAlerts:\s*printed/.test(text) || /PRINTED_MEDICAL_ALERTS\]:/.test(text);
     });
     expect(handing.map((file) => path.relative(SRC, file)).sort()).toEqual([
-      "app/shop/[shopSlug]/trips/[id]/manifest/page.tsx",
       "app/shop/[shopSlug]/trips/[id]/print/_components/TripPacket.tsx",
       "app/shop/[shopSlug]/trips/[id]/print/medical-alerts/page.tsx",
     ]);

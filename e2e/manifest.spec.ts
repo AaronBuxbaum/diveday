@@ -1521,7 +1521,7 @@ test("an instructor off the crew opens a medical alert in an emergency today, an
     // Refused by the crew rule: who can read it, and the emergency door.
     await expect(sheet.getByText(staff("manifest.medicalAlertReaders"))).toBeVisible();
     await expect(
-      sheet.getByRole("button", { name: staff("manifest.medicalAlertShow") }),
+      sheet.getByRole("button", { name: staff("manifest.medicalAlertShow"), exact: true }),
     ).toHaveCount(0);
     await sheet.getByRole("button", { name: staff("manifest.medicalAlertEmergencyOffer") }).click();
     await expect(sheet.getByText(staff("manifest.medicalAlertEmergencyConfirmBody"))).toBeVisible();

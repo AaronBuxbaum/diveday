@@ -140,6 +140,10 @@
   "/shop/[shopSlug]/trips/[id]/print": {
     "visual": ["trip-packet"]
   },
+  "/shop/[shopSlug]/trips/[id]/print/medical-alerts": {
+    "e2e": ["manifest.spec.ts"],
+    "visual": ["trip-packet-medical-alerts"]
+  },
   "/waivers/[token]/doctor": {
     "e2e": ["waivers.spec.ts"],
     "visual": ["waiver-doctor"]

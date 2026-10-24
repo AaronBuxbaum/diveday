@@ -289,7 +289,7 @@ async function readEmergencyReads(
         lt(activityEvents.occurredAt, to),
       ),
     )
-    .orderBy(activityEvents.occurredAt, activityEvents.id)
+    .orderBy(activityEvents.occurredAt, sql`${activityEvents.params}->>'diver'`, activityEvents.id)
     .limit(EMERGENCY_READS_LISTED);
   return rows.map((row) => {
     const params = (row.params ?? {}) as { actor?: unknown; diver?: unknown };

@@ -40,10 +40,7 @@ import {
   offlineManifestManagerCopy,
 } from "./_components/manifest-copy";
 import { readManifestPage } from "./_components/manifest-reads";
-import {
-  type ManifestSearchParams,
-  PRINTED_MEDICAL_ALERTS,
-} from "./_components/manifest-search-params";
+import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { openCheckpoint } from "./_components/open-checkpoint";
@@ -97,8 +94,6 @@ export default async function TripManifestPage({
     buddyError,
     buddies,
     idPrefix: requestedIdPrefix,
-    // Only "Print with medical alerts" sets it, under a key no URL can carry.
-    [PRINTED_MEDICAL_ALERTS]: printedMedicalAlerts,
   } = await searchParams;
   const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
   const { db, shop, session } = await requireShopSurface(shopSlug);
@@ -147,7 +142,7 @@ export default async function TripManifestPage({
   const completeness = manifest.completeness;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext, reader);
+  const actions = bindManifestActions(actionContext, reader, await searchParams);
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -329,9 +324,7 @@ export default async function TripManifestPage({
             missingDiver: actions.missingDiver,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
-            showMedicalAlert: actions.showMedicalAlert,
-            emergencyShowMedicalAlert: actions.emergencyShowMedicalAlert,
-            printedMedicalAlerts,
+            ...actions.medicalAlert,
             t,
           }}
         />
