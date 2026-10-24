@@ -119,13 +119,7 @@ async function ShoreConfirmation({
   if (!check) {
     const shore = await isShoreAlertToken(db, { token });
     if (!shore) return <BookkeeperConfirmation token={token} t={t} />;
-    return (
-      <DeadLink
-        t={t}
-        next={t(shore ? "shoreConfirm.unavailableText" : "contactConfirm.unavailableText")}
-        diveDayDoor={false}
-      />
-    );
+    return <DeadLink t={t} next={t("shoreConfirm.unavailableText")} diveDayDoor={false} />;
   }
   return (
     <EntryShell

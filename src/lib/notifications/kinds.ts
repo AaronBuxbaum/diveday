@@ -1983,7 +1983,15 @@ export const notificationSenderSchema = z.object({
    * 2026-10-24, B31). The address only once the shop has confirmed it
    * (`deliverableShopContactEmail`), the same rule `Reply-To` keeps.
    */
-  contactPhone: z.string().trim().min(1).max(40).optional(),
+  // One printable line: a newline or control character could fake extra lines
+  // in the plain-text sign-off (security review, B31).
+  contactPhone: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .regex(/^[^\u0000-\u001f\u007f]+$/)
+    .optional(),
   contactEmail: emailAddressSchema.optional(),
   /** The shop's brand colour, `#rrggbb` (`shops.brand_color`), for the wrapper's accents. */
   brandColor: z

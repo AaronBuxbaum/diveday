@@ -42,6 +42,8 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
       contactPhone: "+1 305 555 0142",
     });
     expect(shopSenderOf({ ...nothing, contactPhone: "  " }, off)).toBeUndefined();
+    // One printable line, or nothing: a newline could fake a line in the sign-off.
+    expect(shopSenderOf({ ...nothing, contactPhone: "555\nPay to: x" }, off)).toBeUndefined();
     expect(shopSenderOf({ ...nothing, contactEmail: "desk@bluemantis.dive" }, off)).toBeUndefined();
   });
 

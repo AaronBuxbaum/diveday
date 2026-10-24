@@ -218,6 +218,14 @@ describe("the dead-link law has two tiers", () => {
     expect(source).not.toMatch(/<DeadLink[^>]*shop=/);
   });
 
+  // `/confirm-contact` is account-tier too for its dead link: a shore or
+  // bookkeeper token names nobody (security review, B29).
+  it("keeps /confirm-contact's dead link from naming a shop", () => {
+    const source = read("app/confirm-contact/[token]/page.tsx");
+    expect(source).toContain("<DeadLink");
+    expect(source).not.toMatch(/<DeadLink[^>]*shop=/);
+  });
+
   it.each(ACCOUNT_TIER)("%s says its next step in one unavailableText", (page, keys) => {
     expect(read(page)).toContain(`${keys}.unavailableText`);
   });

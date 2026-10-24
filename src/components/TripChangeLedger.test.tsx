@@ -114,6 +114,45 @@ describe("TripChangeLedger", () => {
     expect(screen.getByText("Conditions: Light chop, 2 ft")).toBeInTheDocument();
   });
 
+  it("keeps an earlier move of the meeting point when a later event changed only the photo", () => {
+    render(
+      <TripChangeLedger
+        events={[
+          moved(),
+          moved({
+            id: "photo",
+            beforeValue: { meetingPointLabel: "Slip 4, the east dock" },
+            afterValue: {
+              meetingPointLabel: "Slip 4, the east dock",
+              arrivalPhotoUrl: "https://media.dive.day/east-dock.jpg",
+            },
+            occurredAt: new Date("2026-09-04T13:00:00Z"),
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.getByText(/Slip 4, the east dock/)).toBeInTheDocument();
+    expect(screen.getByText("Arrival photo updated")).toBeInTheDocument();
+  });
+
+  it("says a cleared conditions note is gone", () => {
+    render(
+      <TripChangeLedger
+        events={[
+          event({
+            beforeValue: { conditionsSummary: "Strong current" },
+            afterValue: { conditionsSummary: "" },
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.getByText("Conditions: no note from the crew")).toBeInTheDocument();
+  });
+
   it("renders nothing when nothing has changed", () => {
     const { container } = render(
       <TripChangeLedger events={[]} locale="en-US" timeZone={timeZone} />,

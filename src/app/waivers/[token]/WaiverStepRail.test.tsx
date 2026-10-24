@@ -329,7 +329,7 @@ describe("the rail as an object on the page", () => {
     expect(rail.querySelector('[aria-current="step"]')).toBeNull();
   });
 
-  it("is one progress line: the names between middots, the current one bold, no marks (B56)", () => {
+  it("is one progress line: the names between middots, the current one bold, no rings (B56)", () => {
     const { getByTestId } = renderRail({ answered: 1 });
     const rail = getByTestId(WAIVER_RAIL_TEST_ID);
     expect(rail.querySelector("ol")?.textContent).toBe("Release·Medical·Sign");
@@ -337,9 +337,33 @@ describe("the rail as an object on the page", () => {
     expect(current?.getAttribute("data-rail-step")).toBe("medical");
     expect(current?.className).toContain("font-semibold");
     expect(rail.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
-    expect(rail.querySelector("svg")).toBeNull();
+    // A check on the settled step only; an open step draws nothing.
+    expect(rail.querySelectorAll("svg")).toHaveLength(1);
+    expect(rail.querySelector('[data-rail-step="release"] svg[data-rail-done]')).not.toBeNull();
     expect(rail.querySelector('[data-rail-step="release"]')?.className).not.toContain("text-muted");
     expect(rail.querySelector('[data-rail-step="sign"]')?.className).toContain("text-muted");
+  });
+
+  it("says each step's state in words, never by ink alone", () => {
+    const progress = waiverRailProgress({
+      medicalAnswered: 0,
+      medicalTotal: 0,
+      medicalStillOpen: true,
+      signed: true,
+    });
+    const { getByTestId } = render(
+      <WaiverStepRail
+        progress={progress}
+        labels={{ ...LABELS, states: { done: "done", open: "to do" } }}
+        doneLabel="2 of 3 done"
+        anchors={{ medical: "medical-questionnaire" }}
+      />,
+    );
+    const rail = getByTestId(WAIVER_RAIL_TEST_ID);
+    expect(rail.querySelector('[data-rail-step="release"]')?.textContent).toBe("Release, done");
+    expect(rail.querySelector('[data-rail-step="medical"]')?.textContent).toBe("·Medical, to do");
+    expect(rail.querySelector('[data-rail-step="medical"] svg')).toBeNull();
+    expect(rail.querySelector('[data-rail-step="sign"] svg')).not.toBeNull();
   });
 
   it("starts on Release on a waiver nobody has touched", () => {

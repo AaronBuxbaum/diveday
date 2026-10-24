@@ -13,7 +13,7 @@ const NONE = { draft: null, earlierAlert: false };
 
 /** Issue #2960: one optional box for the crew, after the questionnaire. */
 describe("MedicalAlertSection", () => {
-  it("asks for the crew in its own section, optional, under one helper sentence", () => {
+  it("asks for the crew in its own section, optional, and says it is not the questionnaire", () => {
     render(<MedicalAlertSection prefill={NONE} minorName={null} error={undefined} t={t} />);
     expect(
       screen.getByRole("heading", { name: t("waiver.medicalAlertHeading") }),
@@ -25,8 +25,13 @@ describe("MedicalAlertSection", () => {
     expect(box).not.toBeRequired();
     expect(box).toHaveValue("");
     expect(screen.getByText(t("waiver.medicalAlertIntro"))).toBeInTheDocument();
-    // One helper sentence, the first (visual review 2026-10-24, B56).
-    expect(document.querySelectorAll("section > p")).toHaveLength(1);
+    // The first helper sentence, and the one safety line the dive-domain
+    // reviews kept (visual review 2026-10-24, B56): not the questionnaire, and
+    // who reads it.
+    expect(screen.getByText(t("waiver.medicalAlertNotQuestionnaire"))).toBeInTheDocument();
+    expect(t("waiver.medicalAlertNotQuestionnaire")).toMatch(/medical questions/);
+    expect(t("waiver.medicalAlertNotQuestionnaire")).toMatch(/crew can read it/);
+    expect(document.querySelectorAll("section > p")).toHaveLength(2);
   });
 
   it("fills in what Save and finish later kept", () => {

@@ -15,6 +15,9 @@ const ARRIVAL_GUIDANCE_FIELDS = [
   "arrivalFirstInteraction",
 ] as const;
 
+/** The four facts the card can name; each is listed once, at its newest change. */
+type FactKey = "meetingPoint" | "arrivalGuidance" | "arrivalPhoto" | "conditions";
+
 /**
  * The facts one event changed, each "{fact}: {new value}", or none. A part
  * whose value did not move is left out rather than restated (visual review
@@ -25,7 +28,7 @@ function changedFacts(
   event: TripChangeEvent,
   t: DiverTranslator,
   revealArrivalDetails: boolean,
-): string[] {
+): [FactKey, string][] {
   const before = event.beforeValue ?? {};
   if (event.kind === "meeting_point") {
     const meetingPointChanged =
@@ -44,22 +47,26 @@ function changedFacts(
       : address
         ? t("trip.changeMeetingPointWithAddress", { label, address })
         : t("trip.changeMeetingPoint", { label });
-    return [
-      meetingPointChanged ? meetingPoint : null,
-      guidanceChanged ? t("trip.changeArrivalGuidance") : null,
-      photoChanged ? t("trip.changeArrivalPhoto") : null,
-    ].filter((part): part is string => part !== null);
+    const facts: [FactKey, string][] = [];
+    if (meetingPointChanged) facts.push(["meetingPoint", meetingPoint]);
+    if (guidanceChanged) facts.push(["arrivalGuidance", t("trip.changeArrivalGuidance")]);
+    if (photoChanged) facts.push(["arrivalPhoto", t("trip.changeArrivalPhoto")]);
+    return facts;
   }
   const summary = valueText(event.afterValue.conditionsSummary);
-  if (!summary || summary === valueText(before.conditionsSummary)) return [];
-  return [t("trip.changeConditionsWithSummary", { summary })];
+  const was = valueText(before.conditionsSummary);
+  if (summary === was) return [];
+  // A cleared note is a change too: a diver who read "Strong current" is told
+  // it is gone, not left with the old warning (dive-domain review, B21).
+  if (!summary) return was ? [["conditions", t("trip.changeConditionsCleared")]] : [];
+  return [["conditions", t("trip.changeConditionsWithSummary", { summary })]];
 }
 
 /**
  * **What changed**: the trip's facts that moved, each once with its newest
- * value, and when (visual review 2026-10-24, B21). One entry per kind of fact,
- * the latest, because a diver needs where the boat leaves from now, not each
- * step it took to get there. No self-description and no source chip; when
+ * value, and when (visual review 2026-10-24, B21). One entry per fact, at its
+ * newest change across every event, because a diver needs where the boat
+ * leaves from now, not each step it took to get there. No self-description and no source chip; when
  * nothing changed, nothing renders. No private actor data is shown.
  */
 export function TripChangeLedger({
@@ -77,30 +84,29 @@ export function TripChangeLedger({
   className?: string;
 }) {
   const t = diverTranslator(locale);
-  const latest = new Map<TripChangeEvent["kind"], TripChangeEvent>();
-  for (const event of events) {
-    const held = latest.get(event.kind);
-    if (!held || event.occurredAt >= held.occurredAt) latest.set(event.kind, event);
+  // Each fact at its newest change, across every event: a later event that
+  // touched only the arrival photo must not hide the earlier move of the
+  // meeting point (dive-domain review, B21).
+  const newest = new Map<FactKey, { text: string; occurredAt: Date; id: string }>();
+  for (const event of [...events].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())) {
+    for (const [key, text] of changedFacts(event, t, revealArrivalDetails)) {
+      newest.set(key, { text, occurredAt: event.occurredAt, id: `${event.id}:${key}` });
+    }
   }
-  const entries = [...latest.values()]
-    .sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())
-    .map((event) => ({ event, facts: changedFacts(event, t, revealArrivalDetails) }))
-    .filter((entry) => entry.facts.length > 0);
+  const entries = [...newest.values()].sort(
+    (a, b) => a.occurredAt.getTime() - b.occurredAt.getTime(),
+  );
   if (entries.length === 0) return null;
   return (
     <SectionCard title={t("trip.changeLedgerHeading")} className={className}>
       <ol className="flex flex-col gap-4">
-        {entries.map(({ event, facts }) => (
-          <li key={event.id}>
-            {facts.map((fact) => (
-              <p key={fact} className="text-sm font-medium">
-                {fact}
-              </p>
-            ))}
+        {entries.map(({ text, occurredAt, id }) => (
+          <li key={id}>
+            <p className="text-sm font-medium">{text}</p>
             {/* In the shop's own zone, named (`formatDateTimeTz`), never a
                 bare `toLocaleString` with its seconds (issue #799). */}
             <p className="mt-1 text-sm text-muted">
-              {t("trip.changedAt", { when: formatDateTimeTz(event.occurredAt, locale, timeZone) })}
+              {t("trip.changedAt", { when: formatDateTimeTz(occurredAt, locale, timeZone) })}
             </p>
           </li>
         ))}

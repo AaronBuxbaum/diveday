@@ -13,10 +13,13 @@ export const MEDICAL_ALERT_ANCHOR = "medicalAlert";
  *
  * It is not a step on the rail (optional, one field) and nothing counts it
  * toward the medical step; the questionnaire alone refers a diver to a doctor.
- * Since the visual review of 2026-10-24 (B56) it carries one helper sentence,
- * the first: what to write, and to leave it blank if there is nothing (a bare
- * "N/A" is stored as none anyway). On a minor's release it names the diver,
- * since a guardian is typing.
+ * Since the visual review of 2026-10-24 (B56) it carries the first helper
+ * sentence (what to write, and to leave it blank if there is nothing; a bare
+ * "N/A" is stored as none anyway) and one more that two dive-domain reviews
+ * kept: it does not replace the questions above, and who can read it. Without
+ * it a diver could write a condition here instead of answering the
+ * questionnaire, and would not be told who reads medical data. On a minor's
+ * release it names the diver, since a guardian is typing.
  *
  * The box starts from the link's own draft. With none, and when the same
  * person's latest signed release here carried an alert, it says so and asks
@@ -46,6 +49,7 @@ export function MedicalAlertSection({
           ? t("waiver.medicalAlertIntroMinor", { name: minorName })
           : t("waiver.medicalAlertIntro")}
       </p>
+      <p className="mt-1 text-sm text-muted">{t("waiver.medicalAlertNotQuestionnaire")}</p>
       {prefill.earlierAlert ? (
         <p className="mt-3 text-sm font-medium">{t("waiver.medicalAlertEarlier")}</p>
       ) : null}

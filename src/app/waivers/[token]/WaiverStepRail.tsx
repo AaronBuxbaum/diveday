@@ -87,6 +87,11 @@ export const WAIVER_RAIL_ORDER = ["release", "medical", "questions", "sign"] as 
 /** The rail's names: the three every release has, and Questions when the shop asks any. */
 export type WaiverRailLabels = Record<Exclude<WaiverRailSegmentId, "questions">, string> & {
   questions?: string;
+  /**
+   * Each step's state in words, read after its name ("Release, done"), so a
+   * step's state never rests on ink alone (dive-domain review, B56).
+   */
+  states?: { done: string; open: string };
 };
 
 export type WaiverRailProgress = {
@@ -252,6 +257,23 @@ export function WaiverStepRail({
                   ·
                 </span>
               ) : null}
+              {settled ? (
+                // A drawn check on a settled step, never a ring on an open one:
+                // the step's state by shape as well as ink (B56 review).
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-3.5 shrink-0"
+                  data-rail-done=""
+                >
+                  <path d="M3 8.5l3 3 7-7" />
+                </svg>
+              ) : null}
               {anchor ? (
                 <a
                   href={`#${anchor}`}
@@ -262,6 +284,11 @@ export function WaiverStepRail({
               ) : (
                 <span>{label}</span>
               )}
+              {labels.states ? (
+                <span className="sr-only">
+                  {`, ${settled ? labels.states.done : labels.states.open}`}
+                </span>
+              ) : null}
             </li>
           );
         })}
