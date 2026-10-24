@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openTripAbout } from "./helpers";
+import { openIfClosed, openTripAbout } from "./helpers";
 
 /**
  * **The tide window** (ADR 20260907-noaa-tide-predictions): a site that names
@@ -35,6 +35,10 @@ test.describe("the tide window", () => {
     await page.getByRole("link", { name: "Molasses Reef" }).first().click();
     await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
     const siteUrl = page.url();
+    // Forecast is a closed row of the briefing (visual review 2026-10-24, A11).
+    const forecast = () =>
+      openIfClosed(page.locator("details#briefing-forecast").filter({ visible: true }));
+    await forecast();
     // The demo's Key Largo reef reads Carysfort Reef's table (seed-tides.ts).
     await expect(page.getByLabel("NOAA tide station")).toHaveValue("8723583");
     await expect(page.getByLabel("Dives best")).toHaveValue("any");
@@ -56,15 +60,17 @@ test.describe("the tide window", () => {
 
     // An id of the wrong shape is refused by name, and nothing typed is lost.
     await page.goto(siteUrl);
+    await forecast();
     await page.getByLabel("NOAA tide station").fill("87235");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText(/A NOAA tide station id is seven digits/)).toBeVisible();
     await expect(page.getByLabel("NOAA tide station")).toHaveValue("87235");
 
     // Clearing it takes the line off every surface — a blank says nothing.
     await page.goto(siteUrl);
+    await forecast();
     await page.getByLabel("NOAA tide station").fill("");
-    await page.getByRole("button", { name: "Save dive site" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await page.getByText("Dive site saved").waitFor();
     await expect(page.getByText(STAFF_LINE)).toHaveCount(0);
     await expect(page.getByText(STATION)).toHaveCount(0);

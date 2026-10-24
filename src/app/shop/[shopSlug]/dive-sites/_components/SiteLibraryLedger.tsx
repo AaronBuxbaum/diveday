@@ -202,8 +202,8 @@ function SiteRow({
           // all. The door's chevron is the row's own.
           <div className="pointer-events-none flex items-center gap-3">
             {updateReady ? (
-              <Badge tone="primary" size="sm">
-                {t("diveSites.list.templateUpdateReady", { version: published })}
+              <Badge tone="neutral" size="sm">
+                {t("diveSites.list.templateUpdateReady")}
               </Badge>
             ) : null}
             {requirementWords.length > 0 ? (

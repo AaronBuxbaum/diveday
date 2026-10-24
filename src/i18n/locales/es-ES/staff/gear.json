@@ -215,11 +215,13 @@
       "title": "Historial de alquiler",
       "importedAssignment": "Asignación histórica a {name}"
     },
+    "noServiceOrHistory": "Todavía sin servicio ni historial",
     "details": {
       "title": "Detalles",
       "edit": "Editar los datos",
       "save": "Guardar cambios",
-      "saving": "Guardando…"
+      "saving": "Guardando…",
+      "cancel": "Cancelar"
     },
     "status": {
       "title": "Estado",

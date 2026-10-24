@@ -53,13 +53,10 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  resendShoreAlertConfirmationAction,
-  saveCrewLeadAction,
-  saveDockDayRhythmAction,
-  saveEmergencyReferenceAction,
-} = await import("./boat-actions");
-const { saveDeskPaymentAction } = await import("./dock-day/desk-payment-actions");
+const { resendShoreAlertConfirmationAction, saveEmergencyReferenceAction } = await import(
+  "./boat-actions"
+);
+const { saveDockDayAction } = await import("./dock-day/actions");
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
@@ -100,6 +97,9 @@ function dockDayForm(overrides: Record<string, string> = {}) {
     boatRideMinutes: "20",
     bottomTimeMinutes: "45",
     surfaceIntervalMinutes: "60",
+    crewLeadMinutes: "30",
+    minTurnaroundMinutes: "30",
+    deskPayment: "",
   };
   for (const [field, value] of Object.entries({ ...defaults, ...overrides })) {
     formData.set(field, value);
@@ -295,21 +295,15 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings?notice=not-authorized`,
     );
 
-    expect(await redirectedTo(() => saveDockDayRhythmAction(dockDayForm()))).toBe(
-      `/shop/${shop.slug}/settings?notice=not-authorized`,
-    );
-
-    const desk = new FormData();
-    desk.set("deskPayment", "cash");
-    expect(await redirectedTo(() => saveDeskPaymentAction(desk))).toBe(
-      `/shop/${shop.slug}/settings?notice=not-authorized`,
-    );
-
-    const crew = new FormData();
-    crew.set("crewLeadMinutes", "90");
-    expect(await redirectedTo(() => saveCrewLeadAction(crew))).toBe(
-      `/shop/${shop.slug}/settings?notice=not-authorized`,
-    );
+    // The whole dock day is one form now (visual review 2026-10-24, A01): a
+    // captain's post with every section filled in changes none of them.
+    expect(
+      await redirectedTo(() =>
+        saveDockDayAction(
+          dockDayForm({ crewLeadMinutes: "90", deskPayment: "cash", dockCallMinutes: "120" }),
+        ),
+      ),
+    ).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
 
     const after = await getShopById(db, shop.id);
     expect(after?.crewLeadMinutes).toBe(before?.crewLeadMinutes);
@@ -485,51 +479,52 @@ describe("every settings mutation refuses the daily crew", () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
 
-    expect(await redirectedTo(() => saveDockDayRhythmAction(dockDayForm()))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=dock-saved`,
-    );
-    expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);
+    const page = `/shop/${shop.slug}/settings/dock-day`;
+    // One Save writes all four sections, with one notice.
+    expect(
+      await redirectedTo(() =>
+        saveDockDayAction(
+          dockDayForm({ crewLeadMinutes: "45", minTurnaroundMinutes: "90", deskPayment: "cash" }),
+        ),
+      ),
+    ).toBe(`${page}?notice=dock-day-saved`);
+    const saved = await getShopById(db, shop.id);
+    expect(saved?.dockCallMinutes).toBe(90);
+    expect(saved?.crewLeadMinutes).toBe(45);
+    expect(saved?.minTurnaroundMinutes).toBe(90);
+    expect(saved?.deskPayment).toBe("cash");
 
-    // "Crew arrive before divers" (H-149): a number, then empty to clear it,
-    // and an out-of-range post changes nothing.
-    const crew = (minutes: string) => {
-      const posted = new FormData();
-      posted.set("crewLeadMinutes", minutes);
-      return posted;
-    };
-    expect(await redirectedTo(() => saveCrewLeadAction(crew("45")))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=crew-lead-saved`,
-    );
-    expect((await getShopById(db, shop.id))?.crewLeadMinutes).toBe(45);
-    expect(await redirectedTo(() => saveCrewLeadAction(crew("0")))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=crew-lead-invalid`,
-    );
-    expect((await getShopById(db, shop.id))?.crewLeadMinutes).toBe(45);
-    expect(await redirectedTo(() => saveCrewLeadAction(crew("")))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=crew-lead-saved`,
-    );
-    expect((await getShopById(db, shop.id))?.crewLeadMinutes).toBeNull();
+    // Each section keeps its own refusal, and a refusal anywhere saves nothing
+    // anywhere: the out-of-range crew time leaves the new rhythm unwritten too.
+    expect(
+      await redirectedTo(() =>
+        saveDockDayAction(dockDayForm({ crewLeadMinutes: "0", dockCallMinutes: "60" })),
+      ),
+    ).toBe(`${page}?notice=crew-lead-invalid`);
+    const refused = await getShopById(db, shop.id);
+    expect(refused?.crewLeadMinutes).toBe(45);
+    expect(refused?.dockCallMinutes).toBe(90);
+    expect(
+      await redirectedTo(() => saveDockDayAction(dockDayForm({ dockCallMinutes: "-5" }))),
+    ).toBe(`${page}?notice=dock-invalid`);
+    expect(
+      await redirectedTo(() => saveDockDayAction(dockDayForm({ minTurnaroundMinutes: "999" }))),
+    ).toBe(`${page}?notice=turnaround-invalid`);
+    expect(
+      await redirectedTo(() => saveDockDayAction(dockDayForm({ deskPayment: "bitcoin" }))),
+    ).toBe(`${page}?notice=desk-payment-invalid`);
+    expect((await getShopById(db, shop.id))?.deskPayment).toBe("cash");
 
-    // How divers pay at the desk (fifth-loop ideas, item 21): cash, then
-    // "Don't say", and a forged value changes nothing.
-    const desk = new FormData();
-    desk.set("deskPayment", "cash");
-    expect(await redirectedTo(() => saveDeskPaymentAction(desk))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=desk-payment-saved`,
-    );
-    expect((await getShopById(db, shop.id))?.deskPayment).toBe("cash");
-    const forged = new FormData();
-    forged.set("deskPayment", "bitcoin");
-    expect(await redirectedTo(() => saveDeskPaymentAction(forged))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=desk-payment-invalid`,
-    );
-    expect((await getShopById(db, shop.id))?.deskPayment).toBe("cash");
-    const unsaid = new FormData();
-    unsaid.set("deskPayment", "");
-    expect(await redirectedTo(() => saveDeskPaymentAction(unsaid))).toBe(
-      `/shop/${shop.slug}/settings/dock-day?notice=desk-payment-saved`,
-    );
-    expect((await getShopById(db, shop.id))?.deskPayment).toBeNull();
+    // Empty crew minutes clear them (crew read the divers' time), and "Don't
+    // say" clears how divers pay.
+    expect(
+      await redirectedTo(() =>
+        saveDockDayAction(dockDayForm({ crewLeadMinutes: "", deskPayment: "" })),
+      ),
+    ).toBe(`${page}?notice=dock-day-saved`);
+    const cleared = await getShopById(db, shop.id);
+    expect(cleared?.crewLeadMinutes).toBeNull();
+    expect(cleared?.deskPayment).toBeNull();
   });
 
   /**

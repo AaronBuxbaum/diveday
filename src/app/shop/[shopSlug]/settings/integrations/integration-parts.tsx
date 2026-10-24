@@ -1,10 +1,8 @@
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { disconnectIntegrationAction } from "./actions";
 import { EVENT_OPTIONS, type EventLabelKey } from "./event-options";
 
@@ -35,10 +33,31 @@ export function EventCheckboxes({
   );
 }
 
-export function statusBadge(t: StaffTranslator, row: { status: string } | undefined) {
-  if (!row) return <Badge tone="neutral">{t("integrations.status.notConnected")}</Badge>;
-  if (row.status === "error") return <Badge tone="danger">{t("integrations.status.error")}</Badge>;
-  return <Badge tone="success">{t("integrations.status.connected")}</Badge>;
+/**
+ * A card's description, then its state as a line of text under it (visual
+ * review 2026-10-24, A20): a pill on every card that said the same thing was
+ * a row of labels, not news. Only a connection that needs attention takes ink.
+ */
+export function describedWithStatus(
+  t: StaffTranslator,
+  description: string,
+  row: { status: string } | undefined,
+) {
+  const status = !row
+    ? t("integrations.status.notConnected")
+    : row.status === "error"
+      ? t("integrations.status.error")
+      : t("integrations.status.connected");
+  return (
+    <>
+      <span className="block">{description}</span>
+      <span
+        className={`mt-1 block font-medium ${row?.status === "error" ? "text-danger" : "text-foreground"}`}
+      >
+        {status}
+      </span>
+    </>
+  );
 }
 
 export function ConnectedMeta({
@@ -74,28 +93,6 @@ export function ConnectedMeta({
         </div>
       ) : null}
     </dl>
-  );
-}
-
-/**
- * A provider this deployment carries no credentials for. One muted line and
- * **no control**: the three pale "Not configured" buttons that stood here read
- * as disabled primaries a shop could fix by clicking, and nothing on this page
- * can fix them (principle 8 — a control that cannot act is not a control).
- */
-/**
- * A card whose provider is not switched on. With `askedAbove` the way to ask
- * for it is said once, over the cards, and each card keeps only its state:
- * four cards each ending in the same support address read as a page of
- * repeated small print, worst on a phone where they stack.
- */
-export function NotAvailable({ t, askedAbove }: { t: StaffTranslator; askedAbove: boolean }) {
-  return (
-    <p className="text-sm text-muted">
-      {askedAbove
-        ? t("integrations.common.notAvailableShort")
-        : t("integrations.common.notAvailable", { email: SUPPORT_EMAIL })}
-    </p>
   );
 }
 

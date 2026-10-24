@@ -1156,14 +1156,12 @@ export async function requireCourseForm(
   title: string,
 ): Promise<void> {
   await page.goto(`/shop/blue-mantis/courses/${courseSlug}/edit`);
-  const forms = page.locator("form", {
-    has: page.getByRole("button", { name: "Save forms" }),
-  });
+  // A closed row of the course page's one form (visual review 2026-10-24, A11).
+  const forms = page.locator("#forms");
+  await forms.locator("> summary").click();
   await forms.getByRole("checkbox", { name: title, exact: true }).check();
-  await forms.getByRole("button", { name: "Save forms" }).click();
-  await expect(
-    page.getByText("Saved. Students on this course now sign these forms."),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Course page saved")).toBeVisible();
 }
 
 /**

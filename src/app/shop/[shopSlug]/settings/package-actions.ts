@@ -26,7 +26,7 @@ const packageForm = z.object({
 const packageIdForm = z.object({ packageId: text() });
 
 /**
- * Dive packages switched off (the Features page): the packages page lands on
+ * Dive packages switched off (the Features page): the post lands on
  * Discounts, and so does a hand-built post, having changed no price.
  */
 async function packagesOn(shopId: string, page: string) {
@@ -45,7 +45,9 @@ async function packagesOn(shopId: string, page: string) {
  */
 export async function createDivePackageAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "promos", "packages");
+  // Packages are a section of Promos (visual review 2026-10-24, A26).
+  const page = shopPath(session.user.shopSlug, "promos");
+  const section = `${page}#dive-packages`;
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   await packagesOn(session.user.shopId, page);
@@ -66,14 +68,14 @@ export async function createDivePackageAction(formData: FormData) {
     validUntil: validUntilRaw === "" ? null : validUntilRaw,
   });
   if (!validated.ok) {
-    redirect(noticeUrl(page, "package-invalid"));
+    redirect(noticeUrl(section, "package-invalid"));
   }
   await createDivePackage(db, {
     shopId: session.user.shopId,
     createdByPersonId: session.user.personId,
     ...validated.value,
   });
-  revalidateAndRedirect(page, noticeUrl(page, "package-saved"));
+  revalidateAndRedirect(page, noticeUrl(section, "package-saved"));
 }
 
 /**
@@ -83,7 +85,9 @@ export async function createDivePackageAction(formData: FormData) {
  */
 export async function deleteDivePackageAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "promos", "packages");
+  // Packages are a section of Promos (visual review 2026-10-24, A26).
+  const page = shopPath(session.user.shopSlug, "promos");
+  const section = `${page}#dive-packages`;
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   await packagesOn(session.user.shopId, page);
@@ -93,10 +97,10 @@ export async function deleteDivePackageAction(formData: FormData) {
   // (`security-reviewer`, issue #706).
   const packageId = uuidParam(readForm(packageIdForm, formData).packageId);
   if (!packageId) {
-    redirect(noticeUrl(page, "package-invalid"));
+    redirect(noticeUrl(section, "package-invalid"));
   }
   // Deliberately the same notice whether or not a row matched: a cross-tenant
   // id must not be distinguishable from a real one.
   await deleteDivePackage(await getDb(), session.user.shopId, packageId);
-  revalidateAndRedirect(page, noticeUrl(page, "package-deleted"));
+  revalidateAndRedirect(page, noticeUrl(section, "package-deleted"));
 }

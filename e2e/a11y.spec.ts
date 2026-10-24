@@ -449,7 +449,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     // (src/lib/staff-destinations.ts, `addBooking`) with a palette row, and
     // until now scanned by nothing.
     await page.goto("/shop/blue-mantis/bookings/new", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeVisible();
     await expectNoA11yViolations(page);
 
     // Step two: who. Reached by id rather than by clicking the first row of the
@@ -466,7 +466,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     const doorPath = `/shop/blue-mantis/bookings/new/${tripId}`;
 
     await page.goto(doorPath, { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeVisible();
     await expectNoA11yViolations(page);
 
     // The same page carrying search results — a list of per-diver submit forms

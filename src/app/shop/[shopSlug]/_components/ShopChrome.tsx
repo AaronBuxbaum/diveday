@@ -26,7 +26,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff, staffDestinationGates } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
@@ -283,8 +282,6 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
             return {
               ...role,
               title,
-              desc: demoT(DEMO_ROLE_KEYS[role.id].desc),
-              tryThis: demoT(DEMO_ROLE_KEYS[role.id].tryThis),
               switchAriaLabel: demoT("demo.switchToAria", { role: title }),
             };
           })}
@@ -293,10 +290,6 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
             viewingAs: demoT("demo.viewingAs"),
             switchRole: demoT("demo.switchRole"),
             sharedWarning: demoT("demo.sharedWarning"),
-            sessionExpired: demoT("demo.sessionExpired"),
-            withCredentials: demoT("demo.withCredentials"),
-            active: demoT("demo.active"),
-            tryLabel: demoT("demo.tryLabel"),
             current: demoT("demo.current"),
             switchAction: demoT("demo.switchAction"),
             switchFailed: demoT("demo.switchFailed"),
@@ -305,8 +298,6 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
           // by anyone who has it, so warn against entering real customer data;
           // the canonical fixture demo holds only sample data and stays quiet.
           isMintedDemo={shop?.slug !== DEMO_SHOP_SLUG}
-          currentEmail={session?.user?.email}
-          demoPassword={DEMO_BYPASS_PASSWORD}
         />
       ) : null}
       {showNav && session?.user && shop ? (

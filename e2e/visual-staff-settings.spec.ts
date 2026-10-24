@@ -235,8 +235,9 @@ for (const scheme of ["light", "dark"] as const) {
        * turns itself on.
        */
       test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
+        // The old address lands on Promos' packages section (A26).
         await page.goto("/shop/blue-mantis/promos/packages");
-        await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
+        await page.getByRole("heading", { level: 2, name: "Dive packages" }).waitFor();
         await page.locator("#package-new summary").waitFor();
         await capture(page, "settings-dive-packages", scheme);
         await page.locator("#package-new summary").click();

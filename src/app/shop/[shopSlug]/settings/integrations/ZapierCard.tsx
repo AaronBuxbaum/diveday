@@ -12,17 +12,14 @@ import { EVENT_OPTIONS } from "./event-options";
 import {
   ConnectedMeta,
   DisconnectForm,
+  describedWithStatus,
   EventCheckboxes,
-  NotAvailable,
-  statusBadge,
 } from "./integration-parts";
 
 /** The Zapier card: connected controls, or the way in, or the line saying it is not on yet. */
 export function ZapierCard({
   t,
   zapier,
-  configured,
-  askOnce,
   locale,
   timezone,
 }: {
@@ -37,8 +34,6 @@ export function ZapierCard({
         settings: { eventTypes?: string[] };
       }
     | undefined;
-  configured: boolean;
-  askOnce: boolean;
   locale: string;
   timezone: string;
 }) {
@@ -46,8 +41,7 @@ export function ZapierCard({
     <SectionCard
       padding="lg"
       title={t("integrations.zapier.name")}
-      description={t("integrations.zapier.description")}
-      actions={statusBadge(t, zapier)}
+      description={describedWithStatus(t, t("integrations.zapier.description"), zapier)}
     >
       {zapier ? (
         <div className="space-y-5">
@@ -76,7 +70,7 @@ export function ZapierCard({
             <DisconnectForm provider="zapier" t={t} />
           </div>
         </div>
-      ) : configured ? (
+      ) : (
         <FieldGrid as="form" action={saveZapierIntegrationAction}>
           <Field
             label={t("integrations.zapier.webhookLabel")}
@@ -96,8 +90,6 @@ export function ZapierCard({
             </SubmitButton>
           </FieldActions>
         </FieldGrid>
-      ) : (
-        <NotAvailable t={t} askedAbove={askOnce} />
       )}
     </SectionCard>
   );

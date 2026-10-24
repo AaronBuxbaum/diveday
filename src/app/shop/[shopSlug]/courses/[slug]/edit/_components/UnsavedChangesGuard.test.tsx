@@ -255,6 +255,59 @@ describe("UnsavedChangesGuard", () => {
     render(<Editor subhead="Untouched" />);
     expect((screen.getByLabelText("Subhead") as HTMLInputElement).value).toBe("Untouched");
   });
+
+  /**
+   * **A draft never changes which forms a course asks for** (dive-domain
+   * review, visual review 2026-10-24). The forms save with the page's one Save
+   * from a section closed at rest; a draft that unticked the medical statement
+   * would ride the next price save, and readiness would clear a student it
+   * should hold. Adversarial: the stored draft unticks a required form, ticks
+   * an unrequired one, reorders and changes an age limit, beside a subhead edit
+   * that is put back as usual.
+   */
+  it("never restores the course's form selection, its order or its age limits", () => {
+    window.sessionStorage.setItem(
+      KEY,
+      JSON.stringify([
+        { name: "subhead", index: 0, value: "Rewritten", checked: false },
+        { name: "formsSection", index: 0, value: "0", checked: false },
+        { name: "formId", index: 0, value: "medical", checked: false },
+        { name: "formId", index: 1, value: "liability", checked: true },
+        { name: "order-medical", index: 0, value: "2", checked: false },
+        { name: "maxAge-medical", index: 0, value: "99", checked: false },
+      ]),
+    );
+    const { container } = render(
+      <UnsavedChangesGuard storageKey={KEY}>
+        <form>
+          <input type="hidden" name="expectedVersion" value="7" readOnly />
+          <label htmlFor="subhead">Subhead</label>
+          <input id="subhead" name="subhead" defaultValue="Become a diver" />
+          <input type="hidden" name="formsSection" value="1" readOnly />
+          <label htmlFor="medical">Medical statement</label>
+          <input id="medical" name="formId" value="medical" type="checkbox" defaultChecked />
+          <label htmlFor="liability">Liability release</label>
+          <input id="liability" name="formId" value="liability" type="checkbox" />
+          <label htmlFor="order">Order</label>
+          <input id="order" name="order-medical" defaultValue="1" />
+          <label htmlFor="max-age">Up to age</label>
+          <input id="max-age" name="maxAge-medical" defaultValue="" />
+          <UnsavedChangesNote
+            unsavedLabel="Unsaved changes"
+            restoredLabel="Put back"
+            sections={[]}
+            countSentences={[]}
+          />
+        </form>
+      </UnsavedChangesGuard>,
+    );
+    expect(screen.getByLabelText("Subhead")).toHaveValue("Rewritten");
+    expect(screen.getByLabelText("Medical statement")).toBeChecked();
+    expect(screen.getByLabelText("Liability release")).not.toBeChecked();
+    expect(screen.getByLabelText("Order")).toHaveValue("1");
+    expect(screen.getByLabelText("Up to age")).toHaveValue("");
+    expect(container.querySelector<HTMLInputElement>("[name=formsSection]")?.value).toBe("1");
+  });
 });
 
 const SECTIONS = [

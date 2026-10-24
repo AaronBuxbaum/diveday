@@ -40,6 +40,26 @@ export function courseEditNotices(t: StaffTranslator) {
     // its own braces to a diver — see saveCourseContentAction.
     "depth-placeholder": t("courses.edit.errorDepthPlaceholder"),
     "template-update-unavailable": t("courses.edit.templateUpdates.unavailable"),
+    // The summary's Spanish rides the one Save (visual review 2026-10-24,
+    // A11), so its two refusals are the save's now, in the box's own words.
+    "spanish-stale": t("deskAssists.translate.staleSave"),
+    "spanish-refused": t("deskAssists.translate.error"),
   };
   return { messages, errors };
+}
+
+/**
+ * The section a refused save sends the writer back to, from its `?field=`. The
+ * save names a field, not always its section's id: the FAQ is posted as
+ * `faqsJson`, and Included / Not included sit in what the fee covers. A closed
+ * section it names opens, so the box to fix is in view.
+ */
+const FIELD_SECTION: Readonly<Record<string, string>> = {
+  faqsJson: "faq",
+  includes: "fee-covers",
+  excludes: "fee-covers",
+};
+
+export function refusedSectionId(error?: string, field?: string): string | undefined {
+  return error && field ? (FIELD_SECTION[field] ?? field) : undefined;
 }

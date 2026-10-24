@@ -36,7 +36,7 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
     `/s/${SHOP}`,
   );
 
-  await page.goto(`/shop/${SHOP}/promos/packages`);
+  await page.goto(`/shop/${SHOP}/promos`);
   await page.locator("#package-new summary").click();
   await page.getByLabel("What you call it").fill("Ten-dive card");
   await page.getByLabel("Dives included").fill("10");

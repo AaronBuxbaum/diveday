@@ -61,16 +61,13 @@ export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMess
   };
 }
 
-/** `/settings/dock-day` — `saveDockDayRhythmAction`. */
+/** `/settings/dock-day` — `saveDockDayAction`: one success, and each section's own refusal. */
 export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
-    "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
+    "dock-day-saved": { tone: "success", text: t("settings.dockDay.saved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
-    "turnaround-saved": { tone: "success", text: t("settings.main.notice.turnaroundSaved") },
     "turnaround-invalid": { tone: "danger", text: t("settings.main.notice.turnaroundInvalid") },
-    "crew-lead-saved": { tone: "success", text: t("settings.main.notice.crewLeadSaved") },
     "crew-lead-invalid": { tone: "danger", text: t("settings.main.notice.crewLeadInvalid") },
-    "desk-payment-saved": { tone: "success", text: t("settings.main.notice.deskPaymentSaved") },
     "desk-payment-invalid": { tone: "danger", text: t("settings.main.notice.deskPaymentInvalid") },
   };
 }
@@ -83,7 +80,7 @@ export function profileNoticeMessages(t: StaffTranslator): NoticeMessages {
   };
 }
 
-/** `/promos/packages` — `createDivePackageAction`, `deleteDivePackageAction`. */
+/** Promos' packages section — `createDivePackageAction`, `deleteDivePackageAction`. */
 export function divePackageNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },

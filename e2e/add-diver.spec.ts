@@ -418,7 +418,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.goto("/shop/blue-mantis/schedule/board");
   await page.getByRole("link", { name: "Add a booking" }).click();
   await expect(page).toHaveURL(/\/bookings\/new/);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "New booking" })).toBeVisible();
 
   // Slice 9g of ADR 20260827-the-shops-shelves: the picker is one ledger
   // grouped by day. The date is the group heading — said once, above the run

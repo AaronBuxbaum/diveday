@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
+import { UnsavedSections } from "@/components/editor/EditorRail";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -67,11 +67,9 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
   const sections = siteFormSections(t, shop.fieldGuideEnabled);
 
   return (
-    // Wider from `lg` up than the 3xl it was: the rail takes a column of its
-    // own beside the form rather than out of it, so the fields keep the
-    // measure they had (ADR 20260827-the-shops-shelves, the long-form editor
-    // pattern).
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
+    // The form's own measure: the jump rail that widened this page from `lg`
+    // up is gone (visual review 2026-10-24, A11).
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
@@ -81,39 +79,36 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
           descriptionIsCaption
         />
       </div>
-      <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
-        <EditorRail sections={sections} navLabel={t("diveSites.form.sectionsLabel")} />
-        <div className="min-w-0">
-          <SiteFormShell
-            action={createDiveSiteAction}
-            errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
-            actions={
-              <>
-                <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
-                  {t("diveSites.new.saveSiteBriefing")}
-                </SubmitButton>
-                <UnsavedSections
-                  sections={sections}
-                  copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
-                />
-              </>
-            }
-          >
-            <SiteFields
-              fieldGuideOn={shop.fieldGuideEnabled}
-              t={t}
-              depthUnit={depthUnit}
-              routeCopy={routeEditorCopy(t)}
-              landmarkCopy={landmarkEditorCopy(t)}
-              fieldGuideCopy={fieldGuideEditorCopy(t)}
-              marineLifeCatalog={marineLifeCatalogEntries(diverT)}
-              locale={locale}
-              timezone={shop.timezone}
-              certificationDescription={t("diveSites.new.certificationDescription")}
-              briefAssist={siteBriefAssist(shopSlug, canAssist, t)}
-            />
-          </SiteFormShell>
-        </div>
+      <div className="mt-8">
+        <SiteFormShell
+          action={createDiveSiteAction}
+          errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
+          actions={
+            <>
+              <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
+                {t("diveSites.form.save")}
+              </SubmitButton>
+              <UnsavedSections
+                sections={sections}
+                copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
+              />
+            </>
+          }
+        >
+          <SiteFields
+            fieldGuideOn={shop.fieldGuideEnabled}
+            t={t}
+            depthUnit={depthUnit}
+            routeCopy={routeEditorCopy(t)}
+            landmarkCopy={landmarkEditorCopy(t)}
+            fieldGuideCopy={fieldGuideEditorCopy(t)}
+            marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+            locale={locale}
+            timezone={shop.timezone}
+            certificationDescription={t("diveSites.new.certificationDescription")}
+            briefAssist={siteBriefAssist(shopSlug, canAssist, t)}
+          />
+        </SiteFormShell>
       </div>
     </main>
   );

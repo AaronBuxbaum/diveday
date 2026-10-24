@@ -1,7 +1,4 @@
 import Link from "next/link";
-import { EditorSection } from "@/components/editor/EditorSection";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, controlClass, FormStatus } from "@/components/ui/form";
 import { StatusInView } from "@/components/ui/StatusInView";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
@@ -20,6 +17,7 @@ import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { courseFormAwaitingText } from "@/lib/course-forms";
 import type { NoticeTone } from "@/lib/staff-notices";
+import { CourseSection } from "./CourseSection";
 
 /**
  * What the Forms section needs, read for one course and one reader: every
@@ -57,7 +55,6 @@ function courseFormsNotice(
   notice: string | undefined,
   t: StaffTranslator,
 ): { tone: NoticeTone; text: string } | undefined {
-  if (notice === "forms-saved") return { tone: "success", text: t("courses.edit.forms.saved") };
   if (notice === "forms-invalid") return { tone: "danger", text: t("courses.edit.forms.invalid") };
   if (notice === "forms-invalid-age") {
     return { tone: "danger", text: t("courses.edit.forms.invalidAge") };
@@ -100,11 +97,12 @@ function courseFormsNotice(
 export function CourseFormsRequirement({
   id,
   label,
+  closed,
+  open,
   forms,
   required,
   ageBounds,
   notice,
-  action,
   waiversPath,
   canWriteForms,
   addImpact,
@@ -112,13 +110,16 @@ export function CourseFormsRequirement({
 }: {
   id: string;
   label: string;
+  /** Closed behind its name on the editor (visual review 2026-10-24, A11). */
+  closed?: boolean;
+  /** Opened by a forms notice, so the answer is not behind a shut disclosure. */
+  open?: boolean;
   forms: readonly CourseFormSummary[];
   /** The ids this course requires now, in order. */
   required: readonly string[];
   /** The age bound on each required form that has one (issue #2265). */
   ageBounds?: ReadonlyMap<string, number>;
   notice: { tone: NoticeTone; text: string } | undefined;
-  action: (formData: FormData) => Promise<void>;
   /** The waivers page, where forms are written; each form is an anchor on it. */
   waiversPath: string;
   /** Whether the reader may write forms (owner or manager), so the link goes somewhere. */
@@ -134,131 +135,125 @@ export function CourseFormsRequirement({
       (position.get(b.id) ?? Number.POSITIVE_INFINITY),
   );
   return (
-    <form action={action} className="mt-8">
-      <EditorSection
-        unsavedTag={t("shared.formDraft.unsavedSection")}
-        id={id}
-        label={label}
-        as="fieldset"
-        description={t("courses.edit.forms.description")}
-      >
-        {forms.length === 0 ? (
-          <p className="text-sm text-muted">{t("courses.edit.forms.none")}</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {ordered.map((form) => {
-              const at = position.get(form.id);
-              return (
-                <li key={form.id} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    {at !== undefined && !canWriteForms ? (
-                      <>
-                        <input type="hidden" name="formId" value={form.id} />
-                        <ChoiceRow type="checkbox" checked disabled readOnly>
-                          {form.title}
-                        </ChoiceRow>
-                      </>
-                    ) : (
-                      <ChoiceRow
-                        type="checkbox"
-                        name="formId"
-                        value={form.id}
-                        defaultChecked={at !== undefined}
-                      >
+    <CourseSection
+      unsavedTag={t("shared.formDraft.unsavedSection")}
+      id={id}
+      label={label}
+      closed={closed}
+      open={open}
+      as="fieldset"
+      description={t("courses.edit.forms.description")}
+    >
+      {/* Part of the editor's one form now, saved by its one Save (visual
+            review 2026-10-24, A11). The marker says this reader was shown the
+            list, so a save without it never reads as "ask for no forms". */}
+      <input type="hidden" name="formsSection" value="1" />
+      {forms.length === 0 ? (
+        <p className="text-sm text-muted">{t("courses.edit.forms.none")}</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {ordered.map((form) => {
+            const at = position.get(form.id);
+            return (
+              <li key={form.id} className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  {at !== undefined && !canWriteForms ? (
+                    <>
+                      <input type="hidden" name="formId" value={form.id} />
+                      <ChoiceRow type="checkbox" checked disabled readOnly>
                         {form.title}
                       </ChoiceRow>
-                    )}
-                    {/* A form made from the course's template starts with no
+                    </>
+                  ) : (
+                    <ChoiceRow
+                      type="checkbox"
+                      name="formId"
+                      value={form.id}
+                      defaultChecked={at !== undefined}
+                    >
+                      {form.title}
+                    </ChoiceRow>
+                  )}
+                  {/* A form made from the course's template starts with no
                         text, and asks nobody anything until it has some. */}
-                    {courseFormAwaitingText(form.body) ? (
-                      <p className="text-sm text-warning-strong" data-course-form-awaiting-text>
-                        {canWriteForms ? (
-                          <Link
-                            href={`${waiversPath}#course-form-${form.id}`}
-                            className="font-medium hover:underline"
-                          >
-                            {t("courses.edit.forms.pasteWording")}
-                          </Link>
-                        ) : (
-                          t("courses.edit.forms.pasteWording")
-                        )}
-                        {". "}
-                        {t("courses.edit.forms.awaitingText")}
-                      </p>
-                    ) : null}
-                    {/* A medical statement is every student's: no age (G3). */}
-                    {form.medicalScreening ? null : (
-                      <label className="mt-2 flex items-center gap-2 text-sm text-muted">
-                        {t("courses.edit.forms.maxAgeLabel")}
-                        <span className="w-20 shrink-0">
-                          <input
-                            type="number"
-                            name={`maxAge-${form.id}`}
-                            min={COURSE_FORM_MAX_AGE_MIN}
-                            max={COURSE_FORM_MAX_AGE_MAX}
-                            defaultValue={ageBounds?.get(form.id) ?? ""}
-                            aria-label={t("courses.edit.forms.maxAgeAria", { form: form.title })}
-                            className={controlClass}
-                          />
-                        </span>
-                      </label>
-                    )}
-                  </div>
-                  {/* Sized by its wrapper: `controlClass` is full width. */}
-                  <div className="w-20 shrink-0">
-                    <input
-                      type="number"
-                      name={`order-${form.id}`}
-                      min={1}
-                      max={forms.length}
-                      defaultValue={at === undefined ? "" : at + 1}
-                      aria-label={t("courses.edit.forms.orderLabel", { form: form.title })}
-                      className={controlClass}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {canWriteForms ? (
-          <p className="text-sm">
-            <Link
-              href={`${waiversPath}#course-form-new`}
-              className="font-medium text-primary hover:underline"
-            >
-              {t("courses.edit.forms.writeLink")}
-            </Link>
-          </p>
-        ) : null}
-        {!canWriteForms && required.length > 0 ? (
-          <p className="text-sm text-muted">{sayWords(t, ownerOrManagerWords("courseForm"))}</p>
-        ) : null}
-        {forms.length > required.length && addImpact.students > 0 ? (
-          <p className="text-sm text-muted" data-course-form-add-impact>
-            {t("courses.edit.forms.addImpact", {
-              students: addImpact.students,
-              sessions: addImpact.sessions,
-            })}
-          </p>
-        ) : null}
-        {forms.length === 0 ? null : (
-          <div className="flex flex-wrap items-center gap-3">
-            <SubmitButton
-              pendingLabel={t("courses.edit.saving")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("courses.edit.forms.save")}
-            </SubmitButton>
-          </div>
-        )}
-        {notice ? (
-          <>
-            <FormStatus tone={notice.tone}>{notice.text}</FormStatus>
-            <StatusInView />
-          </>
-        ) : null}
-      </EditorSection>
-    </form>
+                  {courseFormAwaitingText(form.body) ? (
+                    <p className="text-sm text-warning-strong" data-course-form-awaiting-text>
+                      {canWriteForms ? (
+                        <Link
+                          href={`${waiversPath}#course-form-${form.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {t("courses.edit.forms.pasteWording")}
+                        </Link>
+                      ) : (
+                        t("courses.edit.forms.pasteWording")
+                      )}
+                      {". "}
+                      {t("courses.edit.forms.awaitingText")}
+                    </p>
+                  ) : null}
+                  {/* A medical statement is every student's: no age (G3). */}
+                  {form.medicalScreening ? null : (
+                    <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+                      {t("courses.edit.forms.maxAgeLabel")}
+                      <span className="w-20 shrink-0">
+                        <input
+                          type="number"
+                          name={`maxAge-${form.id}`}
+                          min={COURSE_FORM_MAX_AGE_MIN}
+                          max={COURSE_FORM_MAX_AGE_MAX}
+                          defaultValue={ageBounds?.get(form.id) ?? ""}
+                          aria-label={t("courses.edit.forms.maxAgeAria", { form: form.title })}
+                          className={controlClass}
+                        />
+                      </span>
+                    </label>
+                  )}
+                </div>
+                {/* Sized by its wrapper: `controlClass` is full width. */}
+                <div className="w-20 shrink-0">
+                  <input
+                    type="number"
+                    name={`order-${form.id}`}
+                    min={1}
+                    max={forms.length}
+                    defaultValue={at === undefined ? "" : at + 1}
+                    aria-label={t("courses.edit.forms.orderLabel", { form: form.title })}
+                    className={controlClass}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {canWriteForms ? (
+        <p className="text-sm">
+          <Link
+            href={`${waiversPath}#course-form-new`}
+            className="font-medium text-primary hover:underline"
+          >
+            {t("courses.edit.forms.writeLink")}
+          </Link>
+        </p>
+      ) : null}
+      {!canWriteForms && required.length > 0 ? (
+        <p className="text-sm text-muted">{sayWords(t, ownerOrManagerWords("courseForm"))}</p>
+      ) : null}
+      {forms.length > required.length && addImpact.students > 0 ? (
+        <p className="text-sm text-muted" data-course-form-add-impact>
+          {t("courses.edit.forms.addImpact", {
+            students: addImpact.students,
+            sessions: addImpact.sessions,
+          })}
+        </p>
+      ) : null}
+      {notice ? (
+        <>
+          <FormStatus tone={notice.tone}>{notice.text}</FormStatus>
+          <StatusInView />
+        </>
+      ) : null}
+    </CourseSection>
   );
 }

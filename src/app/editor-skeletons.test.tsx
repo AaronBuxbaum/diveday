@@ -5,9 +5,11 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { EditorRail } from "@/components/editor/EditorRail";
 import EditCourseLoading from "./shop/[shopSlug]/courses/[slug]/edit/loading";
-import { SITE_FORM_SECTION_ORDER } from "./shop/[shopSlug]/dive-sites/_components/site-form-sections";
+import {
+  SITE_FORM_OPEN_SECTIONS,
+  SITE_FORM_SECTION_ORDER,
+} from "./shop/[shopSlug]/dive-sites/_components/site-form-sections";
 import DiveSiteLoading from "./shop/[shopSlug]/dive-sites/[id]/loading";
 import NewDiveSiteLoading from "./shop/[shopSlug]/dive-sites/new/loading";
 
@@ -29,44 +31,43 @@ function courseSectionCount(): number {
   return [...list.matchAll(/\{\s*id:/g)].length;
 }
 
-/** The rail's two boxes as the loaded page renders them. */
-function railClasses(): { nav: string; list: string } {
-  const { container } = render(
-    <EditorRail sections={[{ id: "a", label: "A" }]} navLabel="On this page" />,
-  );
-  const nav = container.querySelector("nav");
-  const classes = { nav: nav?.className ?? "", list: nav?.querySelector("ul")?.className ?? "" };
-  cleanup();
-  return classes;
-}
-
 /**
- * **An editor's skeleton draws its rail where the rail will be**
- * (docs/design/pixel-craft.md, class 11: 0px of shift on load): the rail's
- * own boxes, one stub per section, from `lg` up and nothing on a phone, where
- * the loaded editor has no rail either.
+ * **An editor's skeleton draws the editor it stands for** (docs/design/
+ * pixel-craft.md, class 11): no rail, since the loaded editors have none
+ * (visual review 2026-10-24, A11), then a bar group per open section and one
+ * row per closed section in a single card.
  */
-const SKELETONS: [name: string, Skeleton: ComponentType, sections: () => number][] = [
-  ["the new dive site", NewDiveSiteLoading, () => SITE_FORM_SECTION_ORDER.length],
-  ["a dive site's briefing", DiveSiteLoading, () => SITE_FORM_SECTION_ORDER.length],
-  ["the course editor", EditCourseLoading, courseSectionCount],
+const SKELETONS: [
+  name: string,
+  Skeleton: ComponentType,
+  open: () => number,
+  closed: () => number,
+][] = [
+  [
+    "the new dive site",
+    NewDiveSiteLoading,
+    () => SITE_FORM_OPEN_SECTIONS.size,
+    () => SITE_FORM_SECTION_ORDER.length - SITE_FORM_OPEN_SECTIONS.size,
+  ],
+  [
+    "a dive site's briefing",
+    DiveSiteLoading,
+    () => SITE_FORM_OPEN_SECTIONS.size,
+    () => SITE_FORM_SECTION_ORDER.length - SITE_FORM_OPEN_SECTIONS.size,
+  ],
+  ["the course editor", EditCourseLoading, () => 4, () => courseSectionCount() - 4],
 ];
 
 describe("an editor's loading skeleton", () => {
   it.each(SKELETONS)(
-    "draws %s's rail in the rail's own boxes, one 44px stub per section",
-    (_name, Skeleton, sections) => {
-      const rail = railClasses();
+    "draws %s with no rail, its open sections and a row per closed one",
+    (_name, Skeleton, open, closed) => {
       const { container } = render(<Skeleton />);
-      const wrappers = [...container.querySelectorAll("div")].filter(
-        (element) => element.className === rail.nav,
-      );
-      expect(wrappers).toHaveLength(1);
-      const list = wrappers[0].firstElementChild;
-      expect(list?.className).toBe(rail.list);
-      expect(sections()).toBeGreaterThan(3);
-      expect(list?.children).toHaveLength(sections());
-      for (const stub of list?.children ?? []) expect(stub).toHaveClass("h-11");
+      expect(container.querySelector("nav")).toBeNull();
+      expect(container.querySelector(".lg\\:grid")).toBeNull();
+      expect(container.querySelectorAll("[data-open-section-stub]")).toHaveLength(open());
+      expect(container.querySelectorAll("[data-closed-section-stub]")).toHaveLength(closed());
+      expect(closed()).toBeGreaterThan(3);
     },
   );
 });
@@ -116,7 +117,7 @@ describe("a dive site's loading skeleton", () => {
     const { container } = render(<DiveSiteLoading />);
     const pulse = container.querySelector(".animate-pulse");
     const children = [...(pulse?.children ?? [])];
-    const grid = children.findIndex((child) => child.classList.contains("lg:grid"));
+    const grid = children.findIndex((child) => child.querySelector("[data-editor-form-skeleton]"));
     const card = children.slice(0, grid).find((child) => child.classList.contains("rounded-panel"));
     expect(card).toBeDefined();
     expect(card?.querySelectorAll(".h-17")).toHaveLength(3);
@@ -136,30 +137,4 @@ describe("the course editor's loading header", () => {
     expect(meta).not.toBeNull();
     expect(meta?.firstElementChild).toHaveClass("h-5");
   });
-});
-
-/**
- * **Below `lg` the skeleton is the folded editor** (issue #2437): the loaded
- * course and dive-site editors open one section and fold the rest, 2,300px
- * against the 7,400 and 8,000 of three open sections' worth of fields, so the
- * skeleton draws one open section and a ~90px stub per folded header. From
- * `lg` up nothing folds, and the stubs are not drawn.
- */
-describe("an editor's loading skeleton on a phone", () => {
-  it.each(SKELETONS)(
-    "draws %s as one open section and a stub for every other, 90px each",
-    (_name, Skeleton, sections) => {
-      const { container } = render(<Skeleton />);
-      const stubs = [...container.querySelectorAll("[data-folded-stub]")];
-      expect(stubs).toHaveLength(sections() - 1);
-      for (const stub of stubs) {
-        expect(stub).toHaveClass("h-22.5", "lg:hidden");
-      }
-      // The open placeholders after the first are for the desktop only.
-      const sectionsDrawn = [...container.querySelectorAll(".max-lg\\:hidden")].filter(
-        (element) => !element.className.includes("lg:sticky"),
-      );
-      expect(sectionsDrawn).toHaveLength(2);
-    },
-  );
 });
