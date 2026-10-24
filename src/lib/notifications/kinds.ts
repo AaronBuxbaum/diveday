@@ -1931,7 +1931,7 @@ const bookkeeperNoticeSchema = z.object({
   email: emailAddressSchema.optional(),
   /** Who saved it: on `set`, `changed`, `vouched` and a staff `cleared`. */
   actorName: z.string().trim().min(1).max(120).optional(),
-  /** `YYYY-MM`, on `sent` and `bounced`. */
+  /** `YYYY-MM`, on `sent`. */
   month: z
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/)

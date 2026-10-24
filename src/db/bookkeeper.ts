@@ -98,7 +98,8 @@ export const BOOKKEEPER_CLEARED = {
  * cleared with the old one, so nothing is sent until the new inbox confirms.
  * It also counts the month already due as sent (`bookkeeperMonthOnSet`), so
  * its first email is the next 2nd's. Saving the address already on file moves
- * only who set it and when, never the claim or the confirmation; when the
+ * who set it and when, and takes back a bounce warning, never the claim or
+ * the confirmation; when the
  * saver is not its setter that is `vouched`, decided here under the lock,
  * since it can restart files held because the setter lost access.
  */
@@ -126,7 +127,13 @@ export async function setBookkeeper(
     if (current.email === input.email) {
       await tx
         .update(shops)
-        .set({ bookkeeperEmailSetAt: input.now, bookkeeperEmailSetByPersonId: input.personId })
+        // Saving the address again is the owner saying it is right, which is
+        // what the bounce notice asks of them (issue #2798).
+        .set({
+          bookkeeperEmailSetAt: input.now,
+          bookkeeperEmailSetByPersonId: input.personId,
+          bookkeeperBouncedAt: null,
+        })
         .where(eq(shops.id, input.shopId));
       const change = current.setByPersonId === input.personId ? "resaved" : "vouched";
       return { change, confirmed: current.confirmedAt !== null };
@@ -418,16 +425,16 @@ export async function recordBookkeeperDeliveryOutcome(
     .update(shops)
     .set({ bookkeeperBouncedAt: input.at })
     .where(and(sameAddress, isNull(shops.bookkeeperBouncedAt)))
-    .returning({ email: shops.bookkeeperEmail, month: shops.bookkeeperSentMonth });
+    .returning({ email: shops.bookkeeperEmail });
   if (!stamped?.email) return "unchanged";
-  if (stamped.month) {
-    await tellOwnersAboutBookkeeper(db, {
-      shopId: input.shopId,
-      what: { event: "bounced", email: stamped.email, month: stamped.month },
-      at: input.at,
-      ...delivery(input),
-    });
-  }
+  // No month: the event does not say which send bounced, and the month on
+  // the shop row may already be the next one's claim (security review 3, N2).
+  await tellOwnersAboutBookkeeper(db, {
+    shopId: input.shopId,
+    what: { event: "bounced", email: stamped.email },
+    at: input.at,
+    ...delivery(input),
+  });
   return "bounced";
 }
 
@@ -506,7 +513,7 @@ export type BookkeeperOwnerEvent =
   | { event: "cleared"; by: "erasure" }
   | { event: "confirmed"; email: string }
   | { event: "sent"; email: string; month: string }
-  | { event: "bounced"; email: string; month: string };
+  | { event: "bounced"; email: string };
 
 export type BookkeeperNoticeRecipient = {
   personId: string | null;

@@ -5930,7 +5930,7 @@
       "confirmed": "{email} confirmed it wants the month-end files. The first ones go there on the next 2nd of the month.",
       "clearedByRecipient": "{email} used the link in a month-end email to stop them. No month-end files will be sent until you set an address again and it confirms.",
       "clearedByErasure": "The bookkeeper’s email was removed when that person’s data was erased at their request. No month-end files will be sent until you set an address again.",
-      "bounced": "The {month} files to {email} bounced, so the bookkeeper did not get them. Check the address in Settings, and save it again or change it."
+      "bounced": "The month-end files to {email} bounced, so the bookkeeper did not get them. Check the address in Settings, and save it again or change it."
     }
   },
   "brand": {

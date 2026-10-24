@@ -94,7 +94,7 @@ export type BookkeeperNoticeInput = {
  * To each owner (security review B1 and F1): one line on what happened to the
  * bookkeeper's address, or where this month's files went, and the way to
  * Reports to change it. A stop by the bookkeeper and an erasure each say so,
- * and so does a month whose files bounced (issue #2798).
+ * and so do month-end files that bounced (issue #2798).
  */
 export function bookkeeperNoticeEmail(input: BookkeeperNoticeInput): NotificationEmail {
   const t = diverTranslator(input.locale);

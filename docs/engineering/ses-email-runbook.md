@@ -301,8 +301,9 @@ The bookkeeper's month-end email keeps no delivery row, so the webhook matches i
 instead (issue #2798): an event tagged `diveday_kind=bookkeeper_month_end` with a `diveday_shop`,
 for the address that shop names now, stamps `shops.bookkeeper_bounced_at` on a permanent bounce
 (SES reports a suppressed address as one: `OnAccountSuppressionList` or `Suppressed`) and clears it
-on a later `Delivery`. A transient bounce changes nothing. The stamp tells every owner once and
-puts a warning under the bookkeeper's field; the monthly pass keeps sending. The
+on a later `Delivery` or when the address is saved again. A transient bounce changes
+nothing. The stamp tells every owner once and puts a warning under the bookkeeper's field; the
+monthly pass keeps sending. A second bounce while the first stands tells nobody again. The
 `ses_webhook.bookkeeper_outcome` line names the shop and the outcome, never the address.
 
 ## Production access: the request

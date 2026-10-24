@@ -48,4 +48,5 @@ someone outside its staff, every month with nobody pressing Send.
 - Only the newest email's stop link works.
 - A send accepted but answered with an error is retried, so a month can arrive twice (N1).
 - A bounced or suppressed address is told (N2, #2798): each owner once, and a warning on the
-  field until the address changes or a send is delivered. The pass keeps sending.
+  field until the address is saved again or changed, or a send is delivered. The pass keeps
+  sending. The notice names no month: SES does not say which send bounced.
