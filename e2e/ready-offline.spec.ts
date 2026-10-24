@@ -114,10 +114,11 @@ test("Remove saved copy takes the page off this device", async ({ page, context 
     ),
   ).not.toContain("/ready/");
 
-  // With no signal there is nothing saved to show, reload after reload.
+  // With no signal there is nothing saved to show, however often it is opened.
+  // (A reload would only repeat the browser's own error page, which resolves.)
   await context.setOffline(true);
   await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
-  await expect(page.reload({ waitUntil: "domcontentloaded" })).rejects.toThrow();
+  await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
 
   // "Until you next open this link": opening it again with signal keeps it
   // again, and the page says so rather than still saying "Removed".
