@@ -66,7 +66,7 @@ describe("messageFor", () => {
     for (const email of [confirmation, reminder]) {
       expect(email.text).toContain("\n\nBlue Mantis\n+1 305 555 0142\ndesk@bluemantis.dive\n");
       expect(email.html).toContain(
-        '<p class="dd-signoff" style="margin-top: 24px;">Blue Mantis<br>+1 305 555 0142<br><a href="mailto:desk@bluemantis.dive">desk@bluemantis.dive</a></p>',
+        '<p class="dd-signoff" style="margin-top: 24px;">Blue Mantis<br>+1 305 555 0142<br>desk@bluemantis.dive</p>',
       );
       expect(email.html.split('class="dd-signoff"')).toHaveLength(2);
     }

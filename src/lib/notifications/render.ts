@@ -145,7 +145,10 @@ export function withShopSignOff(
   const htmlLines = [
     escapeHtml(shopName),
     ...(phone ? [escapeHtml(phone)] : []),
-    ...(email ? [`<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`] : []),
+    // Plain text, never an anchor: some shop-voice mail promises "no link at
+    // all" (the guardian's copy of a release), and a reader's mail app links
+    // an address on its own.
+    ...(email ? [escapeHtml(email)] : []),
   ];
   return {
     ...message,

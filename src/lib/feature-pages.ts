@@ -27,7 +27,6 @@ import type { DemoRoleId } from "./demo-roles";
  */
 export const FEATURE_PAGE_SLUGS = [
   "online-booking",
-  "website",
   "waivers",
   "certifications",
   "messages",
@@ -35,6 +34,7 @@ export const FEATURE_PAGE_SLUGS = [
   "boat-manifest",
   "dive-sites",
   "rental-gear",
+  "website",
   "schedule",
   "courses",
   "payments",
