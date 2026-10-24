@@ -195,33 +195,56 @@ export default async function DiveSitePage({
           is empty on purpose: the `<h1>` two lines above says which reef this
           is, and an alt text repeating it makes a screen reader say the name
           twice for a picture that carries no other fact. */}
-      {cover ? (
-        <StoredPhoto
-          src={cover}
-          alt=""
-          className="aspect-[3/2] w-full rounded-panel sm:aspect-[5/2]"
-          sizes="(min-width: 896px) 56rem, 100vw"
-          priority
-        />
-      ) : null}
-      {/* **Every photo the shop uploaded, not only the first.** The form takes
-          six and this page drew one, so five reached no diver. The rest sit
-          under the cover as a grid of tiles: two across on a phone, three
-          from `sm`. Decorative for the same reason the cover is. */}
-      {gallery.length > 0 ? (
-        <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {gallery.map((url) => (
-            <li key={url}>
-              <StoredPhoto
-                src={url}
-                alt=""
-                className="aspect-[4/3] w-full rounded-inset"
-                sizes="(min-width: 896px) 17rem, (min-width: 640px) 30vw, 45vw"
-              />
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {/* A lone second photo joins the cover in one strip (visual review
+          2026-10-24, B50); it stood alone under the cover, a third of the
+          width, with nothing beside it. */}
+      {cover && gallery.length === 1 ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StoredPhoto
+            src={cover}
+            alt=""
+            className="aspect-[3/2] w-full rounded-panel sm:col-span-2 sm:aspect-auto sm:h-full"
+            sizes="(min-width: 1280px) 50rem, (min-width: 640px) 66vw, 100vw"
+            priority
+          />
+          <StoredPhoto
+            src={gallery[0] ?? cover}
+            alt=""
+            className="aspect-[3/2] w-full rounded-panel sm:aspect-[4/5]"
+            sizes="(min-width: 1280px) 25rem, (min-width: 640px) 33vw, 100vw"
+          />
+        </div>
+      ) : (
+        <>
+          {cover ? (
+            <StoredPhoto
+              src={cover}
+              alt=""
+              className="aspect-[3/2] w-full rounded-panel sm:aspect-[5/2]"
+              sizes="(min-width: 896px) 56rem, 100vw"
+              priority
+            />
+          ) : null}
+          {/* **Every photo the shop uploaded, not only the first.** The form takes
+            six and this page drew one, so five reached no diver. The rest sit
+            under the cover as a grid of tiles: two across on a phone, three
+            from `sm`. Decorative for the same reason the cover is. */}
+          {gallery.length > 0 ? (
+            <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {gallery.map((url) => (
+                <li key={url}>
+                  <StoredPhoto
+                    src={url}
+                    alt=""
+                    className="aspect-[4/3] w-full rounded-inset"
+                    sizes="(min-width: 896px) 17rem, (min-width: 640px) 30vw, 45vw"
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      )}
       <TripRoutes briefings={briefings} locale={locale} />
       <TripSiteNotes briefings={briefings} locale={locale} />
       <TripLookFor briefings={briefings} locale={locale} />
