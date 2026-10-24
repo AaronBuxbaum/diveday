@@ -170,6 +170,22 @@ export type WeeklyDigestFacts = {
    * crew on them, and incident reports filed last week. Zero for staff.
    */
   safety: WeeklyDigestSafety;
+  /**
+   * Last week's emergency reads of a diver's medical alert (issue #2990), in
+   * the order they happened: who opened whose alert, on which departure and
+   * when. Reports grade only (the owner and managers, who read the diver's
+   * trail anyway); empty for staff, so the section is never built for crew.
+   */
+  emergencyReads: readonly WeeklyDigestEmergencyRead[];
+};
+
+/** One `medical_alert_emergency_read` line, as the Monday email names it (issue #2990). */
+export type WeeklyDigestEmergencyRead = {
+  diver: string;
+  departureTitle: string;
+  departureStartsAt: Date;
+  reader: string;
+  at: Date;
 };
 
 /** A departure this week worth a last-minute deal (fifth loop, item 29). */
@@ -298,6 +314,7 @@ export type WeeklyDigestSection =
   | { kind: "date_requests"; waiting: number }
   | { kind: "overdue"; count: number }
   | ({ kind: "safety" } & WeeklyDigestSafety)
+  | { kind: "emergency_reads"; reads: WeeklyDigestEmergencyRead[] }
   | { kind: "gear_service"; due: number };
 
 export type WeeklyDigestSectionKind = WeeklyDigestSection["kind"];
@@ -322,6 +339,10 @@ export function weeklyDigestSections(facts: WeeklyDigestFacts): WeeklyDigestSect
   const { safety } = facts;
   if (safety.openRollCalls > 0 || safety.uncrewed > 0 || safety.incidents > 0) {
     sections.push({ kind: "safety", ...safety });
+  }
+  // Every emergency read of a medical alert last week, beside the safety line.
+  if (facts.emergencyReads.length > 0) {
+    sections.push({ kind: "emergency_reads", reads: [...facts.emergencyReads] });
   }
   if (reviews.received > 0 || reviews.awaitingModeration > 0) {
     sections.push({ kind: "reviews", ...reviews });
@@ -355,6 +376,7 @@ export const WEEKLY_DIGEST_SECTION_PATHS: Record<WeeklyDigestSectionKind, readon
   date_requests: ["requests"],
   overdue: [],
   safety: [],
+  emergency_reads: ["divers"],
   gear_service: ["gear"],
 };
 

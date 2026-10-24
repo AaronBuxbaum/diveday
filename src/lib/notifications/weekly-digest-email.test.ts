@@ -154,6 +154,51 @@ describe("the weekly_digest notification", () => {
     expect(text).toContain("Open Gear: https://diveday.example/shop/blue-mantis/gear");
   });
 
+  it("lists last week's emergency reads of a medical alert: who, whose, which departure, when (issue #2990)", () => {
+    const section = {
+      kind: "emergency_reads",
+      reads: [
+        {
+          diver: "Ana <Ruiz>",
+          departureTitle: "Dawn Two-Tank",
+          departureStartsAt: new Date("2026-09-30T11:00:00.000Z"),
+          reader: "Sal Captain",
+          at: new Date("2026-09-30T12:40:00.000Z"),
+        },
+        {
+          diver: "Ben Ito",
+          departureTitle: "Night Dive",
+          departureStartsAt: new Date("2026-10-02T23:00:00.000Z"),
+          reader: "Kai Divemaster",
+          at: new Date("2026-10-02T23:05:00.000Z"),
+        },
+      ],
+      url: "https://diveday.example/shop/blue-mantis/divers",
+    } as const;
+    const parsed = notificationSchema.parse({ ...BASE, sections: [section] });
+    const { text: sent, html } = messageFor(parsed);
+    // Times keep their parts together with no-break spaces (`keepUnitsWhole`).
+    const text = sent.replace(/[\u00a0\u202f]/g, " ");
+    expect(text).toContain(
+      "Medical alerts opened in an emergency\nWednesday 8:40 AM: Sal Captain opened Ana <Ruiz>’s medical alert on Dawn Two-Tank, leaving Wednesday 7:00 AM.\nFriday 7:05 PM: Kai Divemaster opened Ben Ito’s medical alert on Night Dive, leaving Friday 7:00 PM.",
+    );
+    expect(text).toContain("Open Divers: https://diveday.example/shop/blue-mantis/divers");
+    // The diver's name is the shop's data: escaped in the html body.
+    expect(html).toContain("Ana &lt;Ruiz&gt;");
+    expect(html).not.toContain("Ana <Ruiz>");
+  });
+
+  it("names no emergency read in a week that had none", () => {
+    const { text } = messageFor(BASE);
+    expect(text).not.toContain("emergency");
+    expect(() =>
+      notificationSchema.parse({
+        ...BASE,
+        sections: [{ kind: "emergency_reads", reads: [], url: "https://diveday.example/x" }],
+      }),
+    ).toThrow();
+  });
+
   it("validates, and keys one email per person per week", () => {
     const parsed = notificationSchema.parse(BASE);
     expect(notificationIdempotencyKey(parsed)).toBe(

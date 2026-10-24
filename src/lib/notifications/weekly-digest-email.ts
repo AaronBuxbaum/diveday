@@ -215,6 +215,23 @@ function blockFor(
         linkLabel: t("notifications.weeklyDigest.safety.link"),
       };
     }
+    // Every emergency read of a medical alert last week (issue #2990): who,
+    // whose, when, and the departure, in the shop's zone. Never the words.
+    case "emergency_reads":
+      return {
+        heading: t("notifications.weeklyDigest.emergencyReads.heading"),
+        lines: section.reads.map((read) =>
+          t("notifications.weeklyDigest.emergencyReads.line", {
+            reader: read.reader,
+            diver: read.diver,
+            when: formatWeekdayTime(read.at, input.locale, input.timezone),
+            departure: read.departureTitle,
+            departureWhen: formatWeekdayTime(read.departureStartsAt, input.locale, input.timezone),
+          }),
+        ),
+        url: section.url,
+        linkLabel: t("notifications.weeklyDigest.emergencyReads.link"),
+      };
     case "gear_service":
       return {
         heading: t("notifications.weeklyDigest.gearService.heading"),
@@ -226,9 +243,10 @@ function blockFor(
 }
 
 /**
- * The zone the weeks are cut in, named in full. The email holds no times, but
- * "last week" is the shop's week, and an owner reading it on a trip abroad
- * should not have to guess whose Monday it is.
+ * The zone the weeks are cut in, named in full. "Last week" is the shop's
+ * week, and the few times the email holds (the weakest boat, an emergency
+ * read) are the shop's clock, so an owner reading it on a trip abroad should
+ * not have to guess whose Monday it is.
  */
 function zoneNote(input: WeeklyDigestEmailInput, t: ReturnType<typeof diverTranslator>): string {
   const [year, month, day] = input.thisWeekFrom.split("-").map(Number);

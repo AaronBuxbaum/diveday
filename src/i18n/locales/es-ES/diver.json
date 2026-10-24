@@ -5580,6 +5580,11 @@
         "incidents": "{count, plural, one {Se presentó # informe de incidente la semana pasada.} other {Se presentaron # informes de incidente la semana pasada.}}",
         "link": "Abrir Hoy"
       },
+      "emergencyReads": {
+        "heading": "Alertas médicas abiertas en una emergencia",
+        "line": "{when}: {reader} abrió la alerta médica de {diver} en {departure} (salida: {departureWhen}).",
+        "link": "Abrir Buceadores"
+      },
       "gearService": {
         "heading": "Equipo",
         "body": "{count, plural, one {# equipo necesita mantenimiento.} other {# equipos necesitan mantenimiento.}}",

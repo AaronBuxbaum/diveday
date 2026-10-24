@@ -23,6 +23,7 @@ import {
   noMoney,
   overdueTodayActions,
   WEEKLY_DIGEST_SECTION_PATHS,
+  type WeeklyDigestEmergencyRead,
   type WeeklyDigestFactGrades,
   type WeeklyDigestSection,
   weakestDeparture,
@@ -38,6 +39,7 @@ import { readOwed } from "./owed";
 import { getMonthlyReport } from "./reporting";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
+  activityEvents,
   bookings,
   incidentReports,
   interests,
@@ -249,6 +251,58 @@ async function countIncidentsFiled(
   return row?.n ?? 0;
 }
 
+/** At most this many emergency reads in one email: the section's schema cap. */
+const EMERGENCY_READS_LISTED = 50;
+
+/**
+ * **Last week's emergency reads of a medical alert** (issue #2990): every
+ * `medical_alert_emergency_read` line on this shop's trails in the window,
+ * oldest first, with the departure it was read for. The names are the
+ * trail's own, as they stood when the read was recorded. Never the words.
+ */
+async function readEmergencyReads(
+  db: DbExecutor,
+  shopId: string,
+  from: Date,
+  to: Date,
+): Promise<WeeklyDigestEmergencyRead[]> {
+  const rows = await db
+    .select({
+      params: activityEvents.params,
+      at: activityEvents.occurredAt,
+      departureTitle: trips.title,
+      departureStartsAt: trips.startsAt,
+    })
+    .from(activityEvents)
+    .innerJoin(
+      trips,
+      and(
+        eq(trips.shopId, activityEvents.shopId),
+        sql`${trips.id}::text = ${activityEvents.params}->>'departure'`,
+      ),
+    )
+    .where(
+      and(
+        eq(activityEvents.shopId, shopId),
+        eq(activityEvents.code, "medical_alert_emergency_read"),
+        gte(activityEvents.occurredAt, from),
+        lt(activityEvents.occurredAt, to),
+      ),
+    )
+    .orderBy(activityEvents.occurredAt, activityEvents.id)
+    .limit(EMERGENCY_READS_LISTED);
+  return rows.map((row) => {
+    const params = (row.params ?? {}) as { actor?: unknown; diver?: unknown };
+    return {
+      diver: typeof params.diver === "string" ? params.diver : "",
+      reader: typeof params.actor === "string" ? params.actor : "",
+      departureTitle: row.departureTitle,
+      departureStartsAt: row.departureStartsAt,
+      at: row.at,
+    };
+  });
+}
+
 /** The Today rows the safety line counts: a roll call still open, a boat with no crew. */
 const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set<TodayActionKind>([
   "roll_call_missing_diver",
@@ -336,6 +390,7 @@ export async function readWeeklyDigestFacts(
     dateRequestsWaiting,
     owed,
     incidents,
+    emergencyReads,
     neverSentDeal,
     suitedToADeal,
     dealsOffered,
@@ -346,6 +401,7 @@ export async function readWeeklyDigestFacts(
     countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
     readOwed(db, shop, now),
     countIncidentsFiled(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+    readEmergencyReads(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
     tripIdsNeverSentLastMinuteDeal(
       db,
       shop.id,
@@ -420,6 +476,8 @@ export async function readWeeklyDigestFacts(
           uncrewed: countKinds(UNCREWED_KINDS),
           incidents,
         },
+        // The owner and managers read the diver's trail anyway (issue #2990).
+        emergencyReads,
       },
       staff: {
         ...shared,
@@ -428,9 +486,19 @@ export async function readWeeklyDigestFacts(
         money: noMoney(shop.currency),
         gearServiceDue: 0,
         safety: NO_SAFETY,
+        emergencyReads: [],
       },
     },
   };
+}
+
+/**
+ * The sections the `monday` assist may write about: all but the emergency
+ * reads (issue #2990), which carry names and no count, and which the owner
+ * reads line by line rather than as a sentence written about them.
+ */
+function forTheRead(sections: WeeklyDigestEmailSection[]): WeeklyDigestEmailSection[] {
+  return sections.filter((section) => section.kind !== "emergency_reads");
 }
 
 /** Each grade's sections, linked once per shop rather than once per recipient. */
@@ -534,7 +602,7 @@ export async function previewWeeklyDigest(
     weekOf: weeks.weekOf,
     grade,
     locale: recipientLocale(recipient.locale, input.shop.defaultLocale),
-    sections,
+    sections: forTheRead(sections),
   });
   return digestNotification({
     shop: input.shop,
@@ -621,7 +689,7 @@ export async function sendWeeklyDigestForShop(
         weekOf: weeks.weekOf,
         grade,
         locale,
-        sections: linked[grade],
+        sections: forTheRead(linked[grade]),
       });
       reads.set(key, read);
     }

@@ -5580,6 +5580,11 @@
         "incidents": "{count, plural, one {# incident report was filed last week.} other {# incident reports were filed last week.}}",
         "link": "Open Today"
       },
+      "emergencyReads": {
+        "heading": "Medical alerts opened in an emergency",
+        "line": "{when}: {reader} opened {diver}’s medical alert on {departure}, leaving {departureWhen}.",
+        "link": "Open Divers"
+      },
       "gearService": {
         "heading": "Gear",
         "body": "{count, plural, one {# unit is due for service.} other {# units are due for service.}}",

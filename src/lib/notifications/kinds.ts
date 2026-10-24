@@ -1267,6 +1267,27 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
     due: z.number().int().min(1),
     url: z.url().max(2_000),
   }),
+  z.object({
+    /**
+     * Last week's emergency reads of a diver's medical alert (issue #2990),
+     * Reports grade only: who opened whose alert, for which departure, when.
+     * Names, never the alert's words.
+     */
+    kind: z.literal("emergency_reads"),
+    reads: z
+      .array(
+        z.object({
+          diver: z.string().trim().min(1).max(200),
+          departureTitle: z.string().trim().min(1).max(200),
+          departureStartsAt: z.date(),
+          reader: z.string().trim().min(1).max(200),
+          at: z.date(),
+        }),
+      )
+      .min(1)
+      .max(50),
+    url: z.url().max(2_000),
+  }),
 ]);
 
 export type WeeklyDigestEmailSection = z.infer<typeof weeklyDigestSectionSchema>;
@@ -1287,7 +1308,8 @@ const weeklyDigestSchema = z.object({
   lastWeekTo: calendarDateSchema,
   thisWeekFrom: calendarDateSchema,
   thisWeekTo: calendarDateSchema,
-  sections: z.array(weeklyDigestSectionSchema).min(1).max(6),
+  // One of each kind at most (`weeklyDigestSections`), so the cap is the count of kinds.
+  sections: z.array(weeklyDigestSectionSchema).min(1).max(10),
   /**
    * Claude's opening sentences (the `monday` assist), each about one of the
    * sections above and linked to that section's page. Absent while assists are

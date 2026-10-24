@@ -6,6 +6,7 @@ import { messageFor } from "@/lib/notifications/render";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { readOwed } from "./owed";
 import {
+  activityEvents,
   bookings,
   courses,
   interests,
@@ -13,6 +14,7 @@ import {
   paymentOperationIntents,
   people,
   shops,
+  trips,
   userAccounts,
   weeklyDigestSends,
 } from "./schema";
@@ -573,5 +575,159 @@ describe("previewWeeklyDigest", () => {
         now: monday,
       }),
     ).toBeNull();
+  });
+});
+
+/**
+ * **Last week's emergency reads of a medical alert** (issue #2990): the
+ * owner's Monday email lists each one (diver, departure, reader, when); the
+ * crew's lists none, and a week without one names nothing.
+ */
+describe("the emergency reads in the Monday email", () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  async function emergencyRead(
+    db: Awaited<ReturnType<typeof context>>["db"],
+    input: {
+      shopId: string;
+      actor: { id: string; name: string };
+      diver: { id: string; name: string };
+      departureId: string;
+      at: Date;
+      code?: "medical_alert_emergency_read" | "medical_alert_read";
+    },
+  ) {
+    await db.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: null,
+      bookingId: null,
+      actorPersonId: input.actor.id,
+      subjectPersonId: input.diver.id,
+      code: input.code ?? "medical_alert_emergency_read",
+      params: { actor: input.actor.name, diver: input.diver.name, departure: input.departureId },
+      occurredAt: input.at,
+    });
+  }
+
+  it("lists each of last week's reads for the owner, and none for the crew", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const [departure] = await db
+      .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    const [diver] = await db
+      .select({ id: people.id, name: people.fullName })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), ne(people.id, owner.personId)))
+      .limit(1);
+    if (!departure || !diver) throw new Error("expected a seeded departure and diver");
+    const actor = { id: captain.personId, name: "Sal Captain" };
+    const lastWeek = new Date(monday.getTime() - 3 * DAY_MS);
+    await emergencyRead(db, {
+      shopId: shop.id,
+      actor,
+      diver,
+      departureId: departure.id,
+      at: lastWeek,
+    });
+    // A second read of the same alert a minute later is its own line.
+    const minuteLater = new Date(lastWeek.getTime() + 60_000);
+    await emergencyRead(db, {
+      shopId: shop.id,
+      actor,
+      diver,
+      departureId: departure.id,
+      at: minuteLater,
+    });
+    // Not listed: two weeks ago, this week, an ordinary read, another shop.
+    await emergencyRead(db, {
+      shopId: shop.id,
+      actor,
+      diver,
+      departureId: departure.id,
+      at: new Date(monday.getTime() - 10 * DAY_MS),
+    });
+    await emergencyRead(db, {
+      shopId: shop.id,
+      actor,
+      diver,
+      departureId: departure.id,
+      at: monday,
+    });
+    await emergencyRead(db, {
+      shopId: shop.id,
+      actor,
+      diver,
+      departureId: departure.id,
+      at: lastWeek,
+      code: "medical_alert_read",
+    });
+    const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
+    if (elsewhere) {
+      const [stranger] = await db
+        .select({ id: people.id, name: people.fullName })
+        .from(people)
+        .where(eq(people.shopId, elsewhere.id))
+        .limit(1);
+      if (stranger) {
+        await emergencyRead(db, {
+          shopId: elsewhere.id,
+          actor: stranger,
+          diver: stranger,
+          departureId: departure.id,
+          at: lastWeek,
+        });
+      }
+    }
+
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    const expected = {
+      diver: diver.name,
+      departureTitle: departure.title,
+      departureStartsAt: departure.startsAt,
+      reader: "Sal Captain",
+    };
+    expect(facts.grades.reports.emergencyReads).toEqual([
+      { ...expected, at: lastWeek },
+      { ...expected, at: minuteLater },
+    ]);
+    expect(facts.grades.staff.emergencyReads).toEqual([]);
+
+    const sectionsFor = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview.sections;
+    };
+    const ownerSection = (await sectionsFor(owner.personId)).find(
+      (section) => section.kind === "emergency_reads",
+    );
+    expect(ownerSection).toMatchObject({
+      kind: "emergency_reads",
+      url: `${ORIGIN}/shop/${shop.slug}/divers`,
+    });
+    expect((await sectionsFor(captain.personId)).map((section) => section.kind)).not.toContain(
+      "emergency_reads",
+    );
+  });
+
+  it("names nothing in a week with no emergency read", async () => {
+    const { db, shop, owner, monday } = await context();
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    expect(facts.grades.reports.emergencyReads).toEqual([]);
+    const preview = await previewWeeklyDigest(db, {
+      shop,
+      personId: owner.personId,
+      origin: ORIGIN,
+      now: monday,
+    });
+    if (preview?.kind === "weekly_digest") {
+      expect(preview.sections.map((section) => section.kind)).not.toContain("emergency_reads");
+    }
   });
 });
