@@ -22,6 +22,21 @@ export type MedicalAlertRevealCopy = {
   fromSavedCopy?: string;
 };
 
+/**
+ * The emergency read's words (issue #2990): offered under `unreadable` to a
+ * staffer the crew rule refuses, on the day of the departure only.
+ */
+export type MedicalAlertEmergencyCopy = {
+  /** "Emergency: show the alert". */
+  offer: string;
+  /** The confirm step: for emergencies only, and the owner will see it. */
+  confirmBody: string;
+  confirm: string;
+  cancel: string;
+  /** No signal: an emergency read needs the server, and nothing is offered offline. */
+  noSignal: string;
+};
+
 type Revealed = { text: string; savedBy?: string };
 
 /**
@@ -81,6 +96,7 @@ export function MedicalAlertReveal({
   copy,
   keepAs,
   savedCopy,
+  emergency,
 }: {
   /** The bound action, for a reader allowed the words here. */
   show?: () => Promise<MedicalAlertResult>;
@@ -91,6 +107,13 @@ export function MedicalAlertReveal({
   keepAs?: string;
   /** The seat on this device's saved copies, for the no-signal fallback. */
   savedCopy?: { tripId: string; bookingId: string };
+  /**
+   * "Emergency: show the alert" (issue #2990), bound only for a staffer the
+   * crew rule refuses on the day of the departure; absent everywhere else,
+   * offline copies and bearer pages included. Its words are never kept for
+   * the visit: every reopen asks, confirms and records again.
+   */
+  emergency?: { show: () => Promise<MedicalAlertResult>; copy: MedicalAlertEmergencyCopy };
 }) {
   const [revealed, setRevealed] = useState<Revealed | null>(() =>
     keepAs ? (revealedThisVisit.get(keepAs) ?? null) : null,
@@ -113,7 +136,25 @@ export function MedicalAlertReveal({
       </div>
     );
   }
-  if (!show) return <p className="text-sm text-muted">{unreadable}</p>;
+  if (!show) {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <p className="text-sm text-muted">{unreadable}</p>
+        {emergency ? (
+          <EmergencyRead
+            show={emergency.show}
+            copy={emergency.copy}
+            showing={copy.showing}
+            failed={copy.failed}
+            onRead={(text) => {
+              setProblem(null);
+              setRevealed({ text });
+            }}
+          />
+        ) : null}
+      </div>
+    );
+  }
 
   const keep = (words: Revealed) => {
     if (keepAs) revealedThisVisit.set(keepAs, words);
@@ -156,6 +197,91 @@ export function MedicalAlertReveal({
       {problem ? (
         <p role="alert" className="text-xs font-medium text-danger">
           {problem === "no_signal" ? copy.noSignal : copy.failed}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * **"Emergency: show the alert", then a confirm step** (issue #2990, H-153
+ * amendment of 2026-10-24). The first tap only asks: it says this is for
+ * emergencies and that the owner will see it. The confirm calls the server,
+ * which checks the reader again and records the read before it answers.
+ * Never offline: with the radio off it says so and calls nothing. A failed
+ * call says so and never throws to the page.
+ */
+function EmergencyRead({
+  show,
+  copy,
+  showing,
+  failed,
+  onRead,
+}: {
+  show: () => Promise<MedicalAlertResult>;
+  copy: MedicalAlertEmergencyCopy;
+  showing: string;
+  failed: string;
+  onRead: (text: string) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [problem, setProblem] = useState<"failed" | "no_signal" | null>(null);
+  const [pending, startTransition] = useTransition();
+  const confirm = () =>
+    startTransition(async () => {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setProblem("no_signal");
+        return;
+      }
+      try {
+        const result = await show();
+        if (result.ok) onRead(result.text);
+        else setProblem("failed");
+      } catch {
+        // A server-action fetch that never reached the server.
+        setProblem("no_signal");
+      }
+    });
+  return (
+    <div className="flex flex-col items-start gap-2 print:hidden">
+      {confirming ? (
+        <div className="flex flex-col items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+          <p className="text-sm font-medium">{copy.confirmBody}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={confirm}
+              disabled={pending}
+              aria-busy={pending}
+              className={buttonClass({ variant: "primary", size: "sm", busy: true })}
+            >
+              {pending ? showing : copy.confirm}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirming(false);
+                setProblem(null);
+              }}
+              disabled={pending}
+              className={buttonClass({ variant: "ghost", size: "sm" })}
+            >
+              {copy.cancel}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {copy.offer}
+        </button>
+      )}
+      {problem ? (
+        <p role="alert" className="text-xs font-medium text-danger">
+          {problem === "no_signal" ? copy.noSignal : failed}
         </p>
       ) : null}
     </div>

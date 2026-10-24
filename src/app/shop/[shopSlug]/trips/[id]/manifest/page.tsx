@@ -325,6 +325,7 @@ export default async function TripManifestPage({
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
             showMedicalAlert: actions.showMedicalAlert,
+            emergencyShowMedicalAlert: actions.emergencyShowMedicalAlert,
             t,
           }}
         />

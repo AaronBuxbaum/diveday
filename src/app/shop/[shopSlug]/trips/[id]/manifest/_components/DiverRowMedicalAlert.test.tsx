@@ -27,6 +27,7 @@ type BindShow = (bookingId: string) => () => Promise<MedicalAlertResult>;
 function renderPanel(
   showMedicalAlert: BindShow | undefined,
   overrides: Parameters<typeof diver>[0] = {},
+  emergencyShowMedicalAlert?: BindShow,
 ) {
   const row = diver({ bookingId: "b-1", medicalAlert: true, ...overrides });
   return render(
@@ -37,6 +38,7 @@ function renderPanel(
         divers: [row],
         crew: CREW,
         showMedicalAlert,
+        emergencyShowMedicalAlert,
       })}
       diver={row}
       state={diverRowState(row, "departure", true, "America/New_York")}
@@ -152,5 +154,120 @@ describe("a medical alert on the manifest", () => {
     expect(container).toHaveTextContent(t("manifest.medicalAlertPrinted"));
     expect(t("manifest.medicalAlertPrinted")).toContain("DiveDay");
     expect(container).not.toHaveTextContent(ALERT);
+  });
+});
+
+/**
+ * Issue #2990: a staffer the crew rule refuses may open the words in an
+ * emergency on the day, behind a confirm step, every open recorded.
+ */
+describe("the emergency read in the reveal sheet", () => {
+  const OFFER = t("manifest.medicalAlertEmergencyOffer");
+  const CONFIRM = t("manifest.medicalAlertEmergencyConfirm");
+
+  it("offers it under who can read it, and asks before it calls anything", async () => {
+    const emergency = vi.fn(async () => ({ ok: true, text: ALERT }) as const);
+    const bind = vi.fn((_bookingId: string) => emergency);
+    renderPanel(undefined, {}, bind);
+    expect(bind).toHaveBeenCalledWith("b-1");
+    expect(screen.getByText(UNREADABLE)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: OFFER }));
+    // The confirm step: for emergencies only, and the owner will see it.
+    const body = t("manifest.medicalAlertEmergencyConfirmBody");
+    expect(screen.getByText(body)).toBeInTheDocument();
+    expect(body).toContain("emergency");
+    expect(body).toContain("owner");
+    expect(emergency).not.toHaveBeenCalled();
+    expect(screen.queryByText(ALERT)).toBeNull();
+    // Cancel goes back without a call.
+    fireEvent.click(
+      screen.getByRole("button", { name: t("manifest.medicalAlertEmergencyCancel") }),
+    );
+    expect(screen.queryByText(body)).toBeNull();
+    expect(emergency).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: OFFER }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+    });
+    expect(emergency).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(ALERT)).toBeInTheDocument();
+    expect(screen.getByText(t("manifest.medicalAlertNotReviewed"))).toBeInTheDocument();
+  });
+
+  it("keeps nothing for the visit: reopening the sheet asks and calls again", async () => {
+    const emergency = vi.fn(async () => ({ ok: true, text: ALERT }) as const);
+    const first = renderPanel(undefined, {}, () => emergency);
+    fireEvent.click(screen.getByRole("button", { name: OFFER }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+    });
+    expect(await screen.findByText(ALERT)).toBeInTheDocument();
+    first.unmount();
+    renderPanel(undefined, {}, () => emergency);
+    expect(screen.queryByText(ALERT)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: OFFER }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+    });
+    expect(emergency).toHaveBeenCalledTimes(2);
+  });
+
+  it("never reads offline: with the radio off it says so and calls nothing", async () => {
+    const emergency = vi.fn(async () => ({ ok: true, text: ALERT }) as const);
+    const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    try {
+      renderPanel(undefined, {}, () => emergency);
+      fireEvent.click(screen.getByRole("button", { name: OFFER }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+      });
+      expect(
+        await screen.findByText(t("manifest.medicalAlertEmergencyNoSignal")),
+      ).toBeInTheDocument();
+      expect(emergency).not.toHaveBeenCalled();
+      expect(screen.queryByText(ALERT)).toBeNull();
+    } finally {
+      online.mockRestore();
+    }
+  });
+
+  it("says a refused or failed read failed, shows nothing, and never throws to the page", async () => {
+    const refused = vi.fn(async () => ({ ok: false }) as const);
+    const first = renderPanel(undefined, {}, () => refused);
+    fireEvent.click(screen.getByRole("button", { name: OFFER }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+    });
+    expect(await screen.findByText(t("manifest.medicalAlertShowFailed"))).toBeInTheDocument();
+    expect(screen.queryByText(ALERT)).toBeNull();
+    first.unmount();
+    const thrown = vi.fn(async (): Promise<MedicalAlertResult> => {
+      throw new TypeError("Failed to fetch");
+    });
+    renderPanel(undefined, {}, () => thrown);
+    fireEvent.click(screen.getByRole("button", { name: OFFER }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: CONFIRM }));
+    });
+    expect(
+      await screen.findByText(t("manifest.medicalAlertEmergencyNoSignal")),
+    ).toBeInTheDocument();
+  });
+
+  it("is not offered to a reader the crew rule admits, nor where nothing is bound", () => {
+    const show = vi.fn(async () => ({ ok: true, text: ALERT }) as const);
+    const emergency = vi.fn(async () => ({ ok: true, text: ALERT }) as const);
+    const first = renderPanel(
+      () => show,
+      {},
+      () => emergency,
+    );
+    expect(screen.queryByRole("button", { name: OFFER })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t("manifest.medicalAlertShow") }),
+    ).toBeInTheDocument();
+    first.unmount();
+    renderPanel(undefined);
+    expect(screen.queryByRole("button", { name: OFFER })).toBeNull();
   });
 });

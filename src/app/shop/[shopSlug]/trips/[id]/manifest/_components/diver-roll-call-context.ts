@@ -4,6 +4,7 @@ import type {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import type { MedicalAlertResult } from "@/components/MedicalAlertReveal";
 import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
+import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import type { MissingDiverRowActions } from "./missing-diver-controls";
@@ -63,5 +64,18 @@ export type DiverRollCallContext = {
    * wears its chip and says who can read it.
    */
   showMedicalAlert?: (bookingId: string) => () => Promise<MedicalAlertResult>;
+  /**
+   * One seat's "Emergency: show the alert" (issue #2990), bound only for a
+   * staffer the crew rule refuses, on the day the departure leaves. The
+   * action re-checks and records every confirm.
+   */
+  emergencyShowMedicalAlert?: (bookingId: string) => () => Promise<MedicalAlertResult>;
+  /**
+   * The words a packet printed **with** the medical alerts carries (issue
+   * #2990), by booking id, and who printed them when. Only the "Print with
+   * medical alerts" route sets it, through a key no URL can carry
+   * (`PRINTED_MEDICAL_ALERTS`); absent on the screen and on every other print.
+   */
+  printedMedicalAlerts?: PrintedMedicalAlerts;
   t: StaffTranslator;
 };

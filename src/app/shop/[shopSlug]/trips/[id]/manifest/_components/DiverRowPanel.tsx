@@ -52,6 +52,7 @@ export function DiverRowPanel({
     rollCallButtonCopy,
     rollCallClosed,
     showMedicalAlert,
+    emergencyShowMedicalAlert,
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
@@ -141,6 +142,7 @@ export function DiverRowPanel({
           <MedicalAlertReveal
             {...medicalAlertView({
               show: showMedicalAlert?.(diver.bookingId),
+              emergencyShow: emergencyShowMedicalAlert?.(diver.bookingId),
               tripId,
               bookingId: diver.bookingId,
               t,
