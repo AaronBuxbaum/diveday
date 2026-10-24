@@ -1,8 +1,8 @@
-import { and, desc, eq, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { type AppDb, getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { bookings, shops, tripReviews, trips } from "@/db/schema";
+import { bookings, people, shops, tripReviews, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { armClaudeFixtures, e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import { nowDate } from "@/lib/clock";
@@ -52,6 +52,7 @@ async function seedWaitingReview(db: AppDb, shopId: string): Promise<void> {
     .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
     .leftJoin(tripReviews, eq(tripReviews.bookingId, bookings.id))
     .where(
       and(
@@ -61,7 +62,10 @@ async function seedWaitingReview(db: AppDb, shopId: string): Promise<void> {
         isNull(tripReviews.id),
       ),
     )
-    .orderBy(desc(trips.startsAt))
+    // Every seat on one departure shares its `startsAt`, and a booking id is a
+    // random uuid per database, so the departure alone picked a different diver
+    // each run (#2973). The name, then the id, is the same seat every time.
+    .orderBy(desc(trips.startsAt), asc(people.fullName), asc(bookings.id))
     .limit(1);
   if (!seat?.personId) return;
   await db.insert(tripReviews).values({
