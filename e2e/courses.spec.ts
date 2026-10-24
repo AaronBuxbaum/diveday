@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, makeActivitySafe, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -76,6 +77,8 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
+  // The session's own afternoon rides along on her thread (issue #2795).
+  await expect(page.getByRole("region", { name: "Your afternoon" })).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
   // open at rest (ADR 20260827-the-divers-thread, decision 3).
@@ -86,6 +89,49 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   // The page-level notice the redirect carries, for the reason `nitrox.spec.ts`
   // gives: the form's own "Saved." is inside the gear step, which comes back shut.
   await expect(page.getByText("the crew will have your sizes")).toBeVisible();
+});
+
+/**
+ * **A course whose fee includes the gear rents nothing at booking** (issue
+ * #2795). With cards taken and gear priced online, an ordinary departure's
+ * booking form asks "Need rental gear?" and prices each piece; the seed's
+ * Discover Scuba session, whose course includes its gear, asks nothing and
+ * prices nothing, so the card is charged the course fee alone. A shop of its
+ * own: connecting Stripe is shop configuration.
+ */
+test("a gear-included course session quotes no rental at booking", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  const diver = diverTranslator("en-US");
+  const SHOP = privateShop.slug;
+  const connected = await request.post(
+    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  );
+  expect(connected.ok()).toBe(true);
+  await page.context().clearCookies();
+
+  await page.goto(`/s/${SHOP}`);
+  await page
+    .getByRole("link", { name: /Night Dive — City of Washington/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]{36}/);
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel(diver("bookingGear.needGear"))).toBeVisible();
+
+  await page.goto(`/s/${SHOP}`);
+  await page
+    .getByRole("link", { name: /Discover Scuba — Pool & Reef/ })
+    .first()
+    .click();
+  await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  // Pay at booking is on here too: the button says so.
+  await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
+  await expect(page.getByLabel(diver("bookingGear.needGear"))).toHaveCount(0);
+  await expect(page.locator("#book").getByText(/Gear for this diver/)).toHaveCount(0);
 });
 
 test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({

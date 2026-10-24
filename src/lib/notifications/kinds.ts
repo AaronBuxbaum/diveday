@@ -207,6 +207,7 @@ const bookingConfirmationSchema = z.object({
   /** When `waiverUrl` stops working; required with it so the line can say so. */
   waiverExpiresAt: z.date().optional(),
   packingList: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
+  packingLogbook: z.boolean().optional(),
   learningMaterials: learningMaterialsSchema,
   meetingPoint: meetingPointSchema.optional(),
   /**

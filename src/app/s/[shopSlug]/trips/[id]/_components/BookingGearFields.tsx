@@ -8,10 +8,10 @@ import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { isDiver, type ParticipantType, rentsKind } from "@/lib/participant-types";
 import {
+  checkoutRentableItems,
   hasAnyRentalPricing,
   type LastGear,
   nitroxAvailableOn,
-  offeredRentableItems,
   quoteRentalFit,
   type RentableItemKind,
   type RentalPricing,
@@ -50,6 +50,11 @@ import {
  * `BookSpotSection` renders one of these per party slot and only when the
  * shop has priced rental gear online (`hasAnyRentalPricing`) — a shop that
  * hasn't priced anything keeps today's flow unchanged.
+ *
+ * **A course whose fee includes the gear rents nothing here** (issue #2795,
+ * `checkoutRentableItems`): no rental question, no rental price and no gear
+ * total. Its sizes are asked on `/ready`. The nitrox fill, where the course
+ * runs on it, is the step's one question and keeps its price.
  */
 export function BookingGearFields({
   index,
@@ -70,11 +75,11 @@ export function BookingGearFields({
   rentalItems: string[];
   /**
    * The course this departure teaches, or null on an ordinary charter — read
-   * only for whether it may run on enriched air (`nitroxAvailableOn`). A
-   * course that runs on air has no nitrox box, however much nitrox the shop
-   * fills.
+   * for whether it may run on enriched air (`nitroxAvailableOn`), so a course
+   * that runs on air has no nitrox box however much nitrox the shop fills, and
+   * whether its fee includes the gear, which takes the rental off this step.
    */
-  course: { nitroxCompatible: boolean } | null;
+  course: { nitroxCompatible: boolean; gearIncluded: boolean } | null;
   pricing: RentalPricing;
   plannedDives: number;
   currency: ShopCurrency;
@@ -95,7 +100,8 @@ export function BookingGearFields({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const offered = offeredRentableItems(rentalItems).filter((item) =>
+  const gearIncluded = course?.gearIncluded === true;
+  const offered = checkoutRentableItems(rentalItems, course).filter((item) =>
     rentsKind(participantType, item.kind),
   );
   const nitroxOffered = isDiver(participantType) && nitroxAvailableOn(rentalItems, course);
@@ -123,6 +129,30 @@ export function BookingGearFields({
 
   if (!hasAnyRentalPricing(pricing) || (offered.length === 0 && !nitroxOffered)) return null;
   const widestPrice = widestItemPrice(offered, pricing, currency, locale);
+
+  if (gearIncluded) {
+    // Nothing to rent, so no "Need rental gear?" and no gear total: the step
+    // is the nitrox box alone, priced in its own label.
+    return (
+      <div className="rise-in border-t border-border pt-4">
+        <fieldset>
+          <legend className="text-sm font-semibold text-muted">
+            {showDiverLabel
+              ? t("bookingGear.diverNHeading", { number: index + 1 })
+              : t("rental.nitroxLegend")}
+          </legend>
+          <NitroxPill
+            index={index}
+            checked={nitroxRequested}
+            onChange={setNitroxRequested}
+            pricing={pricing}
+            currency={currency}
+            className="mt-1"
+          />
+        </fieldset>
+      </div>
+    );
+  }
 
   return (
     // A step of one sheet, not a box inside the booking card's box (ADR
@@ -214,25 +244,14 @@ export function BookingGearFields({
               </div>
             ) : null}
             {nitroxOffered ? (
-              <ChoicePill
-                type="checkbox"
-                name={`nitrox-${index}`}
+              <NitroxPill
+                index={index}
                 checked={nitroxRequested}
-                onChange={(event) => setNitroxRequested(event.target.checked)}
+                onChange={setNitroxRequested}
+                pricing={pricing}
+                currency={currency}
                 className="mt-3"
-                aside={
-                  <InfoHint
-                    label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
-                    detail={t("rental.jargonHints.nitrox")}
-                  />
-                }
-              >
-                {pricing.nitroxCents !== null
-                  ? t("rental.nitroxReserveWithPrice", {
-                      price: formatMoneyCents(pricing.nitroxCents, currency, locale),
-                    })
-                  : t("rental.nitroxReserveNoPrice")}
-              </ChoicePill>
+              />
             ) : null}
             {quote.subtotalCents > 0 ? (
               <p className="mt-2 text-sm tabular-nums">
@@ -263,5 +282,46 @@ export function BookingGearFields({
         )}
       </fieldset>
     </div>
+  );
+}
+
+/** The nitrox request, with what a dive of it costs when the shop prices it online. */
+function NitroxPill({
+  index,
+  checked,
+  onChange,
+  pricing,
+  currency,
+  className,
+}: {
+  index: number;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  pricing: RentalPricing;
+  currency: ShopCurrency;
+  className: string;
+}) {
+  const t = useTranslations();
+  const locale = useLocale();
+  return (
+    <ChoicePill
+      type="checkbox"
+      name={`nitrox-${index}`}
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      className={className}
+      aside={
+        <InfoHint
+          label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
+          detail={t("rental.jargonHints.nitrox")}
+        />
+      }
+    >
+      {pricing.nitroxCents !== null
+        ? t("rental.nitroxReserveWithPrice", {
+            price: formatMoneyCents(pricing.nitroxCents, currency, locale),
+          })
+        : t("rental.nitroxReserveNoPrice")}
+    </ChoicePill>
   );
 }

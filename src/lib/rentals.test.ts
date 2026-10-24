@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkoutRentableItems,
   DEFAULT_SHOP_RENTAL_ITEMS,
   EMPTY_RENTAL_PRICING,
   hasAnyRentalPricing,
@@ -102,6 +103,31 @@ describe("rentable items", () => {
 
   it("offers nothing when the catalog is empty", () => {
     expect(offeredRentableItems([])).toEqual([]);
+  });
+});
+
+/**
+ * **What the booking form may charge for** (issue #2795). A course whose fee
+ * includes the gear puts no rental on the card at booking: its scuba unit is
+ * the fee's, and its sizes and the suit are asked on `/ready`. The booking form
+ * and `bookSpot` both read this list, so neither can offer what the other
+ * would refuse.
+ */
+describe("checkoutRentableItems", () => {
+  const catalog = ["bcd", "regulator", "wetsuit", "fins", "weights", "gopro", "nitrox"];
+
+  it("offers the shop's whole rental catalog on an ordinary charter", () => {
+    expect(checkoutRentableItems(catalog, null)).toEqual(offeredRentableItems(catalog));
+  });
+
+  it("offers the whole catalog on a course whose fee leaves the gear out", () => {
+    expect(checkoutRentableItems(catalog, { gearIncluded: false })).toEqual(
+      offeredRentableItems(catalog),
+    );
+  });
+
+  it("offers nothing to rent on a course whose fee includes the gear", () => {
+    expect(checkoutRentableItems(catalog, { gearIncluded: true })).toEqual([]);
   });
 });
 

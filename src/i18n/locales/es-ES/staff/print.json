@@ -5,6 +5,7 @@
     "pass": {
       "eyebrow": "Tu pase",
       "bringHeading": "Trae",
+      "logbook": "Bitácora de buceo",
       "show": "Muestra esto en el mostrador o di tu nombre.",
       "code": "El código es tu reserva y nada más.",
       "beAtDock": "Preséntate en el muelle a las {time}",

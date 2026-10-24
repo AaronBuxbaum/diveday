@@ -29,6 +29,7 @@ import { MoveAsk } from "./MoveAsk";
 import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
 import { PartySection, partyClaimSeats } from "./PartySection";
 import { RunningLate } from "./RunningLate";
+import { SessionDayPlan } from "./SessionDayPlan";
 
 /** What the thread's streamed reads hand the sections under the spine. */
 export type ReadyThreadSectionsContext = {
@@ -162,6 +163,18 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             // has nowhere else to land — and the morning of a dive is exactly
             // when a diver is deciding what to put in the car.
             temperatureStatedAbove={false}
+            holdsCertification={data.holdsCertification}
+            locale={locale}
+          />
+        ) : null}
+        {/* A course session's own afternoon, where a charter's dock-day
+                rhythm stands (issue #2795). */}
+        {fullShop && fullTrip ? (
+          <SessionDayPlan
+            course={fullTrip.course}
+            meetingDays={data.meetingDayCount}
+            depthUnit={fullShop.depthUnit}
+            t={t}
             locale={locale}
           />
         ) : null}

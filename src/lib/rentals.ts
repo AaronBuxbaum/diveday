@@ -222,6 +222,23 @@ export function offeredRentableItems(
 }
 
 /**
+ * **What the booking form may put on the card for gear** (issue #2795): the
+ * shop's rental catalog on an ordinary departure, and nothing on a session of a
+ * course whose fee includes the gear (`courses.gear_included`). There the scuba
+ * unit is the fee's, and its sizes and the suit are asked after booking, on
+ * `/ready` (`RentalFitForm`), where a suit's price is an estimate settled at the
+ * shop. `BookingGearFields` renders from this list and `bookSpot` parses and
+ * charges from it, so a hand-built post cannot buy what the form never offered.
+ * Nitrox is a fill, not a rental, and is gated apart (`nitroxAvailableOn`).
+ */
+export function checkoutRentableItems(
+  rentalItems: readonly string[],
+  course: { gearIncluded: boolean } | null | undefined,
+): RentableItem[] {
+  return course?.gearIncluded ? [] : offeredRentableItems(rentalItems);
+}
+
+/**
  * Which `rental_fit_profiles` boolean columns a shop's current catalog has
  * anything to say about — the offered items' fields, so a writer can tell a box
  * the diver unticked from a question no form ever put to them (issue #1755).
