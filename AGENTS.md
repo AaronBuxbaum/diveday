@@ -74,7 +74,7 @@ Other sessions share this checkout ([rules](docs/agents/working-rules.md#paralle
   thread's model.
 - Unique branch slug; early draft PR naming owned paths, schema changes and ADR ids; trial-merge
   the target before calling work done.
-- **A thread that steers never builds**: each layer goes to a fresh worker with a
+- **A thread builds one layer itself**; independent parallel layers go to fresh workers with a
   [spec](docs/agents/spec-template.md); past ~150k context, write a state note, retire.
 - **Stack everything, across threads**: cut from the newest open branch, draft with `base` on it,
   push one layer at a time, one PR's CI at a time (**stacked-prs**).
