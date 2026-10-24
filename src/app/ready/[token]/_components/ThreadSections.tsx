@@ -29,6 +29,7 @@ import { MoveAsk } from "./MoveAsk";
 import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
 import { PartySection, partyClaimSeats } from "./PartySection";
 import { RunningLate } from "./RunningLate";
+import { SessionDayPlan } from "./SessionDayPlan";
 
 /** What the thread's streamed reads hand the sections under the spine. */
 export type ReadyThreadSectionsContext = {
@@ -46,6 +47,8 @@ export type ReadyThreadSectionsContext = {
   partyAllSet: boolean;
   /** When to fly home, as a plan (fifth-loop ideas, item 18); null when nothing honest can be said. */
   flySafePlan: PlannedFlySafe | null;
+  /** How many days this departure meets on (`trip_schedule_days`): a course session's day plan reads it. */
+  meetingDayCount: number;
 };
 
 /**
@@ -68,6 +71,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     partySeatClaims,
     partyAllSet,
     flySafePlan,
+    meetingDayCount,
   } = context;
   const { detail } = data;
   const partySeats = partyClaimSeats(partySeatClaims);
@@ -163,6 +167,17 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             // when a diver is deciding what to put in the car.
             temperatureStatedAbove={false}
             holdsCertification={data.holdsCertification}
+            locale={locale}
+          />
+        ) : null}
+        {/* A course session's own afternoon, where a charter's dock-day
+                rhythm stands (issue #2795). */}
+        {fullShop && fullTrip ? (
+          <SessionDayPlan
+            course={fullTrip.course}
+            meetingDays={meetingDayCount}
+            depthUnit={fullShop.depthUnit}
+            t={t}
             locale={locale}
           />
         ) : null}

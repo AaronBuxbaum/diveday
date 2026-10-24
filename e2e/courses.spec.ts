@@ -77,6 +77,8 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
+  // The session's own afternoon rides along on her thread (issue #2795).
+  await expect(page.getByRole("region", { name: "Your afternoon" })).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
   // open at rest (ADR 20260827-the-divers-thread, decision 3).

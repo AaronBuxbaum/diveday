@@ -93,6 +93,7 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
     partySeatClaims: [],
     partyAllSet: false,
     flySafePlan: null,
+    meetingDayCount: 1,
     ...over,
   };
 }
@@ -107,6 +108,33 @@ describe("ThreadSections", () => {
     expect(order.every((at) => at > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(screen.getByRole("button", { name: t("ready.cancelSpot") })).toBeTruthy();
+  });
+
+  // Issue #2795: a course session's own afternoon, under the packing list.
+  it("lays out a course session's afternoon under the packing list, and nothing on a charter", () => {
+    const { container } = render(
+      <ThreadSections
+        context={context({
+          fullShop: {
+            ...context().fullShop,
+            depthUnit: "meters",
+          } as unknown as ReadyThreadSectionsContext["fullShop"],
+          fullTrip: {
+            id: "trip-1",
+            course: {
+              gearIncluded: true,
+              scheduleDays: [{ title: "Your afternoon", items: ["Confined water skills"] }],
+            },
+          } as unknown as ReadyThreadSectionsContext["fullTrip"],
+        })}
+      />,
+    );
+    const text = container.textContent ?? "";
+    expect(screen.getByRole("region", { name: "Your afternoon" })).toBeTruthy();
+    expect(text.indexOf("packing")).toBeLessThan(text.indexOf("Confined water skills"));
+    cleanup();
+    render(<ThreadSections context={context()} />);
+    expect(screen.queryByTestId("ready-session-day")).toBeNull();
   });
 
   it("names the planned sites in order, and leaves the dock call to the masthead (ideas item 23)", () => {
