@@ -16,13 +16,18 @@ import type { FunnelSource } from "@/lib/funnel";
  * demo's staff screens and its email preview wear it; blank, the demo keeps the
  * name it generated. The storefront never wears it. Nothing typed here is
  * stored: it rides in a cookie bound to the minted shop
- * (`src/lib/demo-shop-name.ts`).
+ * (`src/lib/demo-shop-name.ts`). Its one line says what it is for (visual
+ * review 2026-10-24, B45): a bare "optional" field before the demo read as a
+ * form to fill in.
  */
 export function SetUpDemoDoor({ t, source }: { t: DiverTranslator; source: FunnelSource }) {
   return (
     <form action={enterDemoAction} className="flex w-full flex-col items-stretch gap-3 text-start">
       <FunnelTag source={source} />
-      <Field label={t("marketing.common.demoShopName")} hint={t("common.optional")}>
+      <Field
+        label={t("marketing.common.demoShopName")}
+        hint={t("marketing.common.demoShopNameHint")}
+      >
         <input
           type="text"
           name="shopName"

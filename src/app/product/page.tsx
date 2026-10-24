@@ -2,24 +2,20 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FunnelCtas } from "@/app/_components/FunnelCtas";
-import { heroPriceLine } from "@/app/_components/HeroFootnotes";
+import { Eyebrow } from "@/app/_components/Eyebrow";
+import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { FeatureDirectory } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
-import {
-  DISPLAY_TITLE_CLASS,
-  LEAD_TITLE_CLASS,
-  MARKETING_EYEBROW_CLASS,
-} from "@/components/ui/typography";
+import { DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { switchingHref } from "@/lib/funnel";
-import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
+import { sharedLinkCard } from "@/lib/marketing";
 import { requestPricingOffer } from "@/lib/pricing-arm-request";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
@@ -96,13 +92,6 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   cacheLife("max");
   const t = diverTranslator(locale);
 
-  // Every line in the full list below, counted once so the sentence closing
-  // it and the rows themselves can never disagree.
-  const capabilityCount = productCapabilityIndex.reduce(
-    (total, group) => total + group.items.length,
-    0,
-  );
-
   return (
     <main className="flex-1">
       <MarketingSectionMotion />
@@ -114,7 +103,7 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
           read as two bands. */}
       <section>
         <div className="mx-auto max-w-6xl px-6 pt-20 pb-12 lg:pt-28">
-          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.eyebrow")}</p>
+          <Eyebrow>{t("marketing.product.eyebrow")}</Eyebrow>
           <h1 className={`mt-5 max-w-4xl ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
             {t("marketing.product.heroTitle")}
           </h1>
@@ -125,9 +114,7 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               on the site; without its own CTA the first offered action was
               the nav's trial link — the wrong ask while a buyer is still
               verifying claims. Same one-primary block as the home hero. */}
-          <FunnelCtas locale={locale} source="product" className="mt-8" />
-          <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
-          <p className="mt-2 text-sm text-muted">{heroPriceLine(t, offer, locale)}</p>
+          <FunnelCtas locale={locale} source="product" footnotes={{ offer }} className="mt-8" />
         </div>
       </section>
 
@@ -156,45 +143,29 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
           pressure that retired `home-mid`. */}
       <section id="full-list" className="mx-auto max-w-6xl scroll-mt-10 px-6 pb-20 lg:pb-24">
         <FeatureDirectory locale={locale} headingLevel="h2" lines />
+        {/* The sections' names, never a count of the rows (B44), and the
+            export promise as a link to the one place it is written (B10). */}
         <p className="mt-12 max-w-2xl text-lg leading-8 text-muted">
-          {t("marketing.product.boxDescription", { count: capabilityCount })}
+          {t("marketing.product.boxDescription")}
         </p>
-        {/* Safe-to-leave, said where the objection actually peaks: one third
-            of the positioning spine and the named counter to "you're new and
-            unproven" (docs/product/marketing.md). The terms come from the
-            shared `fullShopExport` claim, so this page and the pricing FAQ can
-            never drift apart. It used to close a "What DiveDay doesn't do"
-            band, cut 2026-10-06 (Aaron). */}
-        <p className="mt-6 max-w-3xl text-lg leading-8 text-muted">
-          {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
-        </p>
-      </section>
-
-      <section className="border-t border-border bg-surface">
-        {/* `max-w-6xl`, like every band above it. At 7xl this one sat 64px
-            further left than the rest of the page at desktop width — the only
-            section whose left edge missed the column. */}
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">
-          <div>
-            <h2 className={LEAD_TITLE_CLASS}>{t("marketing.product.closingTitle")}</h2>
-            <p className="mt-2 text-muted">{t("marketing.product.closingDescription")}</p>
-            {/* Tagged, like the homepage's two doors onto the same surface:
-                the question that put a direct spreadsheet door on `/` is which
-                door a spreadsheet shop takes, and an untagged one here would
-                have left it read against a denominator missing the page a
-                reader reaches *after* the homepage convinced them. */}
-            <Link
-              href={switchingHref("/switching/spreadsheet", "product-spreadsheet")}
-              className={buttonClass({ variant: "link", flush: true, className: "mt-2 text-left" })}
-            >
-              {t("marketing.product.spreadsheetLink")}
-            </Link>
-          </div>
-          {/* `shrink-0` matters: without it the closing text squeezes both
-              buttons into ~140px three-line blobs at tablet widths. */}
-          <FunnelCtas locale={locale} source="product" className="shrink-0" />
+        <div className="mt-4 flex flex-col items-start gap-1">
+          <Link
+            href="/pricing#export"
+            className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+          >
+            {t("marketing.common.recordsLink")}
+          </Link>
+          {/* Tagged, like the homepage's doors onto the same surface. */}
+          <Link
+            href={switchingHref("/switching/spreadsheet", "product-spreadsheet")}
+            className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+          >
+            {t("marketing.product.spreadsheetLink")}
+          </Link>
         </div>
       </section>
+
+      <ClosingCta locale={locale} source="product" title={t("marketing.product.closingTitle")} />
     </main>
   );
 }

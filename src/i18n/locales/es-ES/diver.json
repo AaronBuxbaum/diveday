@@ -3477,7 +3477,8 @@
       "importReadyBody": "La lista de buceadores, las tallas y los registros de certificación entran de una vez, marcados como importados con una confirmación de un toque para el personal. Solo una inmersión que exige una especialidad espera esa confirmación.",
       "openImportCta": "Abrir Importar en tu centro",
       "midCtaTitle": "Míralo en la demo en vivo",
-      "midCtaBody": "La demo es el centro de muestra en el que caería tu archivo: las mismas verificaciones de certificación, exenciones y pase de lista, como propietario, capitán o buceador."
+      "midCtaBody": "La demo es el centro de muestra en el que caería tu archivo: las mismas verificaciones de certificación, exenciones y pase de lista, como propietario, capitán o buceador.",
+      "previewLink": "La pantalla de vista previa, con nuestras notas →"
     },
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
@@ -3495,7 +3496,8 @@
       "previewDoor": "Abre la demo como propietario →",
       "previewMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
       "dontSeeSystem": "No está en la lista",
-      "dontSeeSystemBody": "Una exportación entra tal cual: una columna de nombre es lo único que una fila necesita, y las de certificación y talla vienen cuando existen."
+      "dontSeeSystemBody": "Una exportación entra tal cual: una columna de nombre es lo único que una fila necesita, y las de certificación y talla vienen cuando existen.",
+      "closingTitle": "Tus buceadores, certificaciones y tallas llegan antes de tu primera salida"
     },
     "competitor": {
       "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
@@ -3871,8 +3873,7 @@
       "seats": "{booked} de {capacity}",
       "add": "Agregar",
       "rowActions": "Mover, copiar o quitar"
-    },
-    "afterDiveRollCallHeading": "Pase de lista · Después de la inmersión 1"
+    }
   },
   "demo": {
     "shopLabel": "Centro de demostración",
@@ -3947,10 +3948,7 @@
         },
         "aboard": {
           "when": "En el muelle, y después de cada inmersión",
-          "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella",
-          "note1": "El recuento de cada inmersión, buceadores y tripulación por su nombre, sigue abierto hasta contar a bordo a todos los que zarparon.",
-          "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal.",
-          "mockupLabel": "El pase de lista de la tripulación después de la inmersión 1: 8 de 9 buceadores a bordo, un nombre marcado a bordo y el último aún por llamar."
+          "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella"
         },
         "recap": {
           "when": "Después de que vuelva el barco",
@@ -3965,7 +3963,6 @@
       "exportTitle": "Cómo llegan los registros, y cómo se van",
       "arrivingLabel": "Al entrar",
       "exportDescription1": "Sube una hoja de cálculo. Antes de guardar nada, la vista previa muestra en qué se convirtió cada columna y qué filas va a saltar. O envíanos el archivo por correo y una persona hace la importación contigo, gratis.",
-      "importMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
       "spreadsheetLink": "Tu hoja de cálculo, columna por columna →",
       "leavingLabel": "Lo que sale",
       "exportDescription2": "El botón Exportación de datos en Ajustes descarga un ZIP con todo esto dentro. {terms}",
@@ -3974,13 +3971,7 @@
       "exportItem3": "Un archivo de contactos con el formato del asistente de importación de otro sistema",
       "exportItem4": "Una guía en lenguaje claro de cada archivo",
       "guidesLink": "Guías para dejar {competitors}, y una para una hoja de cálculo →",
-      "tryTitle": "Lo que cuesta, y las condiciones",
-      "tryDescription": "Cada acceso del personal está en el precio y no hay cuota de alta. La prueba dura tres semanas y no pide tarjeta, y el botón de exportar está desde el primer día.",
-      "priceLine": "Un precio único de {price} {cadence}, congelado dos años para los centros fundadores.",
-      "seeIncluded": "Ver qué incluye →",
-      "contactTitle": "Pregúntanos primero",
-      "contactBody": "Escríbenos con lo que te haría decidir.",
-      "contactCta": "Escribir a {email}",
+      "tryTitle": "Cada buceador reservado, firmado y contado a bordo, desde tu primera salida",
       "stepLink": "{name} →",
       "percentArm": {
         "heroPriceLine": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes, sin cuota de alta.} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay, sin cuota mensual.}}",
@@ -3991,18 +3982,16 @@
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
       "demoShopName": "El nombre de tu centro",
+      "demoShopNameHint": "Lo usamos para nombrar tu demo.",
       "getSetUp": "Pide tu centro",
       "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
-      "setUpNote": "Una persona lee cada solicitud y prepara tu centro contigo."
+      "closingSupport": "Una persona lee cada solicitud, y cualquier otra pregunta puede ir a {email}.",
+      "recordsLink": "Llevarte tus registros"
     },
     "price": {
       "name": "Centro fundador",
       "cadence": "por ubicación / mes",
-      "item1": "Reservas, cursos, exenciones, certificaciones, tallas de alquiler, sitios de buceo, nitrox y el manifiesto listo para funcionar sin conexión",
-      "item2": "Cada rol del personal, de recepción a capitán",
       "item3": "Las funciones nuevas según salen, sin un nivel superior",
-      "item4": "El centro de demostración, precargado con salidas, para formar al personal nuevo",
-      "item6": "Soporte por correo. Lo lee una persona real",
       "item7": "Un escaparate con tu marca y piezas para pegar en tu propia web, o una web que construimos contigo cuando la pidas"
     },
     "export": {
@@ -4620,7 +4609,7 @@
         },
         "yourRecords": {
           "title": "Descarga cada registro de tu centro, cualquier día",
-          "body": "Llega como un solo ZIP de archivos simples que abres donde quieras. {terms} El plan va mes a mes, sin cuota de alta y sin contrato."
+          "body": "Llega como un solo ZIP de archivos simples que abres donde quieras. El plan va mes a mes, sin cuota de alta y sin contrato."
         }
       },
       "workEyebrow": "Cómo trabajamos con los centros",
@@ -4636,7 +4625,6 @@
       "whoAnswersLabel": "Quién te responde",
       "whoAnswersValue": "Una de las personas que construyen DiveDay, en {email}.",
       "closingTitle": "La demo es un centro en marcha, con buceadores en el barco de hoy",
-      "closingDescription": "Ábrela como propietario, capitán o buceador y recorre el día completo: reserva un asiento, firma la exención, registra la llegada de alguien y pasa lista con el teléfono en modo avión. Cuando quieras un centro propio, escríbenos y lo armamos contigo.",
       "percentArm": {
         "onePriceTitle": "Un plan cubre el centro",
         "onePriceBody": "El plan es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {, sin cuota mensual}}, y cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. Las propinas nunca cuentan. La página de precios enumera cada cosa que cubre.",
@@ -4647,18 +4635,16 @@
       "eyebrow": "Funciones",
       "heroTitle": "De la primera reserva al pase de lista después de la última inmersión",
       "heroDescription": "Reservas, exenciones, control de certificaciones, el manifiesto del barco, equipo de alquiler, cursos y pagos funcionan en una sola aplicación. Cada función de abajo tiene una página que muestra su pantalla y lleva a la demo ahí mismo.",
-      "boxDescription": "Hay un solo plan, con {count, plural, one {# tarea} other {las # tareas}} dentro.",
-      "boxGroupCount": "{count, plural, one {# tarea} other {# tareas}}",
-      "leavingNote": "Ajustes tiene un botón Exportación de datos que descarga los registros de tu centro en un solo ZIP, cualquier día. {terms}",
-      "closingTitle": "El centro de demostración tiene salidas en el tablero y buceadores reservados en ellas",
-      "closingDescription": "Un selector dentro te mueve entre el propietario, la tripulación y un buceador. Tu propio centro empieza vacío, y lo configuramos contigo.",
+      "boxDescription": "Antes del día de buceo, el propio día y toda la temporada están en un solo plan.",
+      "whatsInIt": "Qué incluye",
+      "closingTitle": "Cada tarea de esta página funciona en el centro de demostración, como la haría tu equipo",
       "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →",
       "alsoInPlan": "También en el plan"
     },
     "pricing": {
       "heroTitle": "Lo que paga un centro, línea por línea",
       "lockNote": "El precio de hoy, congelado dos años para los centros fundadores.",
-      "trialNote": "La prueba es un centro tuyo: gratis 3 semanas, sin tarjeta, y nada se apaga cuando termina el plazo.",
+      "trialNote": "La prueba es un centro tuyo, gratis 3 semanas sin tarjeta, y nada se apaga cuando termina.",
       "earlyAccessBadge": "Acceso anticipado",
       "invoice": {
         "title": "La factura",
@@ -4692,15 +4678,13 @@
         }
       },
       "notes": {
-        "title": "Notas sobre la factura",
+        "title": "Notas",
         "note1": "Cada acceso del personal está en el precio, de recepción a capitán. Nada se cuenta por asiento.",
         "note2": "Las exenciones, la revisión médica y el control de certificación están en el precio. Nada de eso es un extra."
       },
-      "includedLead": "Qué cubre el precio",
       "seeFullList": "La lista completa está en la página del producto →",
       "feeAnchor": {
         "title": "Lo que cobran dos canales de reservas, en sus propias palabras",
-        "body": "Las dos filas son los términos que publica cada canal, citados en su guía de cambio. Nada de esto es una cifra de lo que paga un centro en la práctica.",
         "rezdy": "El precio publicado actualmente por {competitor} combina una suscripción mensual con un 3% de cada reserva en línea.",
         "fareharbor": "{competitor} no publica ninguna tarifa. No hay cobro mensual. En su lugar, una comisión por cada reserva se agrega al precio que paga tu cliente mientras lo uses, y terceros sitúan esa comisión en torno al 6%.",
         "ours": "DiveDay no se lleva ninguna parte de una reserva. Lo que pagas es el número de arriba, en agosto y en enero.",
@@ -4710,7 +4694,7 @@
       "dataExit": {
         "eyebrow": "Tus registros",
         "title": "Una exportación completa cuando la necesites",
-        "note1": "“Descargar exportación” te da un ZIP con los CSV y las fotos guardadas, incluso el primer día de la prueba.",
+        "note1": "“Descargar exportación” te da un ZIP con los CSV y las fotos guardadas.",
         "note2": "contacts.csv tiene una fila por persona, con el formato que espera el importador de otro sistema.",
         "note3": "waiver_records.csv guarda el hash de integridad de cada exención y el texto exacto que firmó el buceador.",
         "note4": "Cada archivo muestra su número de filas, para compararlo con los totales de tu propio sistema.",
@@ -4722,27 +4706,15 @@
       "faq": {
         "billing": {
           "question": "¿Cómo funciona la facturación?",
-          "answer": "Mes a mes, por ubicación, sin cuota de alta y sin contrato anual. La exportación funciona desde el primer día."
+          "answer": "Mes a mes, por ubicación, sin cuota de alta y sin contrato anual."
         },
         "crewSize": {
           "question": "¿Pago más según crece mi equipo?",
           "answer": "No. El precio es por ubicación, esté quien esté en el turno: recepción, instructores, divemasters, capitanes y tripulación tienen cada uno su acceso. Los buceadores nunca necesitan una cuenta. Reservan en las páginas de tu centro y abren su salida desde un enlace."
         },
-        "trialMeaning": {
-          "question": "¿Qué significa “prueba” ahora mismo?",
-          "answer": "Lo que montes sigue funcionando cuando termina el plazo, así que un centro cuya temporada empieza dentro de meses no pierde nada por armar el tablero ahora. La prueba es gratis durante 3 semanas y sin tarjeta. Para pasar al plan de pago, escribe a {email}."
-        },
-        "seeBefore": {
-          "question": "¿Puedo verlo antes de comprometerme?",
-          "answer": "Sí. La demo en vivo es un centro de muestra con salidas ya en el tablero, y un selector dentro te mueve entre el propietario, un instructor, un divemaster, el capitán y un buceador. Tu propio centro empieza vacío, y lo configuramos contigo."
-        },
         "setupTime": {
           "question": "¿Qué tengo que hacer para ponerlo en marcha?",
           "answer": "Envía el formulario “Pide tu centro” y configuramos el nombre de tu centro, su dirección web y su zona horaria, y tu propio acceso. Traer una hoja de cálculo de buceadores es un paso aparte, y una persona puede hacer esa importación contigo, gratis."
-        },
-        "dataIfNotWorking": {
-          "question": "¿Cómo accedo a los registros de mi centro?",
-          "answer": "Cualquier día, desde Ajustes. {claim} {terms}"
         },
         "shutdown": {
           "question": "¿Qué pasa con mi centro si DiveDay cierra?"
@@ -4769,16 +4741,12 @@
           "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una, escribe a {email}."
         }
       },
-      "closingTitle": "Ese es el precio completo",
-      "closingBody": "{price} {cadence}, mes a mes, y la exportación funciona cualquier día.",
-      "stillQuestion": "Lo que esta página no haya respondido, escríbelo por correo. Lo lee una persona real.",
-      "emailCta": "Escribe a {email}",
+      "closingTitle": "Todas las funciones y todos los accesos del personal están en el precio",
       "percentArm": {
         "cadence": "{hasBase, select, yes {del dinero cobrado con tarjeta a través de DiveDay, más {base} al mes} other {del dinero cobrado con tarjeta a través de DiveDay, cada mes}}",
         "invoiceFeeLabel": "La tarifa de DiveDay",
         "invoiceFeeValue": "{percent} del dinero cobrado con tarjeta a través de DiveDay",
         "ours": "{hasBase, select, yes {DiveDay cobra {base} al mes más el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.} other {DiveDay no tiene cuota mensual. Su tarifa es el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.}} No se suma nada al precio de tu cliente.",
-        "closingBody": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay}}, mes a mes, y la exportación funciona cualquier día.",
         "whatCountsQuestion": "¿Qué cuenta para el {percent}?",
         "whatCountsAnswer": "El dinero que tu centro cobra con tarjeta a través de DiveDay: las reservas hechas por internet, y las facturas y los paquetes que los buceadores pagan con tarjeta. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el dinero cobrado en el mostrador y el historial importado del sistema que usabas antes nunca cuentan. Un reembolso registrado antes de que cierre el mes se descuenta de ese mes."
       }
@@ -4968,11 +4936,9 @@
         "day": "El día de la salida",
         "season": "A lo largo de la temporada"
       },
-      "closePrice": "{price} {cadence}, con todas las funciones incluidas.",
       "demoNote": "La demo se abre en {place}. Es un centro de muestra en funcionamiento, sin registro y sin tarjeta.",
       "percentArm": {
         "includedPrice": "Cada línea de esta lista entra en el único plan, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}.",
-        "closePrice": "Todas las funciones incluidas, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}.",
         "paymentsNote3": "Ninguna fila lleva una comisión de DiveDay. El {percent} de DiveDay se te cobra una vez al mes, en una factura aparte.",
         "paymentsFaq1A": "Sí. La tarifa es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, no {} other {, más {base} al mes}}, cobrada una vez al mes. Las propinas, los impuestos y el dinero cobrado en el mostrador nunca cuentan, y no se suma nada al precio de tu cliente. Stripe cobra sus propias comisiones de tarjeta en tu cuenta de Stripe."
       }
@@ -5341,9 +5307,10 @@
     "tryAgain": "Intentar de nuevo"
   },
   "notFound": {
-    "heading": "No pudimos encontrar esa página",
-    "body": "El enlace puede ser antiguo, o la página puede haberse movido. Revisa la dirección.",
-    "backHome": "Volver a la página de inicio",
+    "heading": "Esa página no está aquí",
+    "body": "Revisa el enlace o empieza desde la página de inicio.",
+    "backHome": "Inicio",
+    "findBooking": "Encuentra tu reserva",
     "shop": {
       "heading": "Esa página no está aquí",
       "action": "Ver las próximas salidas"

@@ -120,25 +120,15 @@ export function ChecklistRow({
  * staff bundle's: the page's own copy can move without a marketing claim
  * moving under it.
  *
- * **Two checkpoints of one roll call.** `departure` is the dock, where the
- * hero's phone and the boat manifest page show it: four of nine aboard, Priya
- * tapped, Tom still to call. `afterDive` is the same list after the first dive
- * (the homepage's roll-call step, which would otherwise repeat the hero): the
- * switcher on Dive 1, eight of nine back aboard, Priya counted and Tom the one
- * still open.
+ * It shows the dock checkpoint, where the hero's phone and the boat manifest
+ * page draw it: four of nine aboard, Priya tapped, Tom still to call. A page
+ * draws it once (visual review 2026-10-24, B14).
  */
-export function CaptainRollCallFallback({
-  locale,
-  checkpoint = "departure",
-}: {
-  locale: DiverLocale;
-  checkpoint?: "departure" | "afterDive";
-}) {
+export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
-  const afterDive = checkpoint === "afterDive";
   // i18n-exempt: sample diver names used only in marketing mockups
   const divers = ["Priya Sharma", "Tom Okafor"];
-  const aboard = afterDive ? 8 : 4;
+  const aboard = 4;
   return (
     <div className="bg-background text-foreground">
       <AppBar label={t("fallback.boatLabel")} inset={PHONE_INSET_X} />
@@ -170,8 +160,8 @@ export function CaptainRollCallFallback({
             checkpoint raised on it. */}
         <div className="inline-flex rounded-lg border border-border bg-surface-sunken p-0.5">
           {[
-            [t("fallback.checkpointDock"), !afterDive],
-            [t("fallback.checkpointDive", { n: 1 }), afterDive],
+            [t("fallback.checkpointDock"), true],
+            [t("fallback.checkpointDive", { n: 1 }), false],
             [t("fallback.checkpointDive", { n: 2 }), false],
           ].map(([label, current]) => (
             <span
@@ -185,13 +175,11 @@ export function CaptainRollCallFallback({
           ))}
         </div>
         <div>
-          <h3 className="text-sm font-semibold">
-            {afterDive ? t("fallback.afterDiveRollCallHeading") : t("fallback.rollCallHeading")}
-          </h3>
+          <h3 className="text-sm font-semibold">{t("fallback.rollCallHeading")}</h3>
           <div className="mt-2 overflow-hidden rounded-lg border border-border">
             {divers.map((name, index) => {
-              // Priya has been tapped aboard at either checkpoint; Tom is the
-              // one the crew is still to call.
+              // Priya has been tapped aboard; Tom is the one the crew is
+              // still to call.
               const isAboard = index === 0;
               return (
                 <div
@@ -614,7 +602,11 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
                 // it is a drawn mark in a fallback screenshot.
                 aria-hidden="true"
                 viewBox="0 0 18 18"
-                className="size-5 fill-warning"
+                // Empty, as the real form is before the diver rates the day
+                // (visual review 2026-10-24, B48).
+                className="size-5 fill-none stroke-border-strong"
+                strokeWidth={1.25}
+                strokeLinejoin="round"
                 focusable="false"
               >
                 <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />

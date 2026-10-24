@@ -663,7 +663,7 @@ test("a dead departure link keeps the diver at the shop they were trying to reac
   // The shop's own chrome, from the namespace layout: whose page this is, and
   // the nav a diver can carry on browsing from.
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Find your booking" })).toHaveCount(0);
 
   await page.getByRole("link", { name: "See what’s coming up" }).click();
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);
@@ -684,7 +684,7 @@ test("a mistyped page under a shop keeps the diver at that shop", async ({ page 
 
   await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Find your booking" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
     "href",
     "/s/blue-mantis",

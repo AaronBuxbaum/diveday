@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // reference, not the session and database behind it.
 vi.mock("@/app/actions/demo", () => ({ enterDemoAction: vi.fn() }));
 
-const { FunnelCtas, isClosingSource } = await import("./FunnelCtas");
+const { ClosingCta, FunnelCtas } = await import("./FunnelCtas");
 
 afterEach(cleanup);
 
@@ -111,35 +111,51 @@ describe("where the demo opens", () => {
   });
 });
 
-/** Who reads a set-up request is said at a page's close, and only there (#2097). */
-describe("the note under a closing pair", () => {
-  const NOTE = "A person reads every request and sets your shop up with you.";
+/**
+ * The terms stand under the first pair on a page and nowhere else (visual
+ * review 2026-10-24, B09): seven pairs on four pages had carried them.
+ */
+describe("the footnotes under a pair", () => {
+  const DEMO_NOTE = "The demo opens a working sample shop in one click. No sign-up and no card.";
+  const offer = { plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 } as const;
 
-  it("stands under every closing pair", () => {
-    for (const source of [
-      "home-closing",
-      "pricing-close",
-      "about-closing",
-      "feature-online-booking-close",
-    ] as const) {
+  it("stand under the hero's pair, with the price line", () => {
+    render(<FunnelCtas locale="en-US" source="home-hero" footnotes={{ offer }} />);
+    expect(screen.getByText(DEMO_NOTE)).toBeInTheDocument();
+    expect(screen.getByText(/^One flat price of \$99/)).toBeInTheDocument();
+  });
+
+  it("are absent from every pair that does not ask for them", () => {
+    for (const source of ["home-closing", "pricing-close", "product", "about-rules"] as const) {
       render(<FunnelCtas locale="en-US" source={source} />);
-      expect(screen.getByText(NOTE)).toBeInTheDocument();
+      expect(screen.queryByText(DEMO_NOTE)).toBeNull();
+      expect(screen.queryByText(/One flat price/)).toBeNull();
       cleanup();
     }
   });
+});
 
-  it("is absent from every other pair", () => {
-    for (const source of [
-      "home-hero",
-      "pricing",
-      "about-rules",
-      "feature-online-booking",
-      "product",
-    ] as const) {
-      expect(isClosingSource(source)).toBe(false);
-      render(<FunnelCtas locale="en-US" source={source} />);
-      expect(screen.queryByText(NOTE)).toBeNull();
-      cleanup();
-    }
+/** One close for every marketing page (B15), saying who reads a request once (#2097). */
+describe("the closing band", () => {
+  it("is a left-aligned heading, the support line and the pair, and no footnotes", () => {
+    const { container } = render(
+      <ClosingCta
+        locale="en-US"
+        source="pricing-close"
+        title="Every staff login is in the price"
+      />,
+    );
+    const heading = screen.getByRole("heading", { level: 2 });
+    expect(heading).toHaveTextContent("Every staff login is in the price");
+    expect(container.firstElementChild?.firstElementChild).not.toHaveClass("text-center");
+    expect(screen.getByText(/A person reads every set-up request/)).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "support@dive.day" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Try the live demo" })).toBeInTheDocument();
+    expect(screen.queryByText(/One flat price/)).toBeNull();
+  });
+
+  it("speaks Spanish", () => {
+    render(<ClosingCta locale="es-ES" source="about-closing" title="Título" />);
+    expect(screen.getByText(/Una persona lee cada solicitud/)).toBeInTheDocument();
   });
 });
