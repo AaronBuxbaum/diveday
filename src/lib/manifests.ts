@@ -874,7 +874,6 @@ export type RollCallCompleteness = {
  */
 export function isTurnedAwayOffBoat(seat: {
   turnedAway?: boolean | null;
-  notHere?: boolean | null;
   rollCall?: unknown;
 }): boolean {
   return seat.turnedAway === true && !seat.rollCall;

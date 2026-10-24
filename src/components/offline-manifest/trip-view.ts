@@ -167,9 +167,16 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   );
   // A seat the desk turned away is off the boat until somebody at the rail
   // records a result for it: the live manifest's own predicate, read off this
-  // device's taps (`isTurnedAwayOffBoat`, issue #2907).
-  const offBoat = manifest.divers.map((diver, index) =>
-    isTurnedAwayOffBoat({ turnedAway: diver.turnedAway, rollCall: localStates[index] }),
+  // device's taps (`isTurnedAwayOffBoat`, issue #2907). **Only while this copy
+  // is current**: the desk can put the diver back on the list after the save,
+  // and a phone with no signal never hears it, so an aging or stale copy
+  // counts her as awaiting again. One tap too many, never "all aboard" with
+  // her uncounted (independent domain review of #2907).
+  const turnAwayStands = freshness === "current";
+  const offBoat = manifest.divers.map(
+    (diver, index) =>
+      turnAwayStands &&
+      isTurnedAwayOffBoat({ turnedAway: diver.turnedAway, rollCall: localStates[index] }),
   );
   const countedDivers = offBoat.filter((off) => !off).length;
   const boarded = localStates.filter((state) => state?.state === "boarded").length;

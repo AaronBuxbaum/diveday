@@ -51,7 +51,8 @@ describe("isTurnedAwayOffBoat", () => {
     expect(isTurnedAwayOffBoat({ turnedAway: true, rollCall: notBoardedAt() })).toBe(false);
     // A plain "Not here" is not a turn-away: nobody saw that diver, so the
     // boat still has to say where they are.
-    expect(isTurnedAwayOffBoat({ notHere: true, rollCall: undefined })).toBe(false);
+    const writtenOff = seat("booking-gone", { notHere: true });
+    expect(isTurnedAwayOffBoat(writtenOff)).toBe(false);
     expect(isTurnedAwayOffBoat({ rollCall: undefined })).toBe(false);
     expect(isTurnedAwayOffBoat({ turnedAway: false, rollCall: undefined })).toBe(false);
   });
