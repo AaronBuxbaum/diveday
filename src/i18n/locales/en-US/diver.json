@@ -133,7 +133,6 @@
     "shopfront": {
       "bookThisBoat": "Book this boat"
     },
-    "poweredByDiveDay": "Powered by DiveDay",
     "moreWaysHeading": "Other ways we can help",
     "boatsHeading": "The boats",
     "monthSeen": {
@@ -5917,7 +5916,8 @@
   },
   "embed": {
     "book": "Book",
-    "enrol": "Enroll"
+    "enrol": "Enroll",
+    "askToBeTold": "Ask to be told"
   },
   "shopYear": {
     "card": {

@@ -133,7 +133,6 @@
     "shopfront": {
       "bookThisBoat": "Reservar esta salida"
     },
-    "poweredByDiveDay": "Con la tecnología de DiveDay",
     "moreWaysHeading": "Otras formas de ayudarte",
     "boatsHeading": "Las embarcaciones",
     "monthSeen": {
@@ -5917,7 +5916,8 @@
   },
   "embed": {
     "book": "Reservar",
-    "enrol": "Inscribirme"
+    "enrol": "Inscribirme",
+    "askToBeTold": "Avísenme si se libera un asiento"
   },
   "shopYear": {
     "card": {

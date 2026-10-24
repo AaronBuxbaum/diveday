@@ -21,7 +21,7 @@ import {
   resolveCourseContentDepths,
 } from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
-import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
@@ -110,17 +110,15 @@ export default async function EmbedWidgetPage({
 
   const money = (cents: number | null) =>
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
-  // The day and the time *range* — a diver reading a card on a blog post
-  // wants to know when they are back, not only when they leave.
-  const when = (startsAt: Date, endsAt: Date) => {
-    const parts = formatDayParts(startsAt, locale, tz);
-    return `${parts.weekday} ${parts.day} ${parts.month} · ${formatTimeRange(startsAt, endsAt, locale, tz)}`;
-  };
+  // The day and the time *range*, in the trip page's own words and zone
+  // (visual review 2026-10-24, B33): "Sat, Oct 24 · 1:30 PM – 5:00 PM EDT".
+  const when = (startsAt: Date, endsAt: Date) =>
+    `${formatShortDate(startsAt, locale, tz)} · ${formatTimeRangeTz(startsAt, endsAt, locale, tz)}`;
   // Seats on sale under the boat's certificate, never the stated capacity (#2321).
   const seats = (trip: { capacity: number; sellableCapacity: number; booked: number }) => {
     const label = capacityLabel(seatsOnSale(trip));
-    if (label.kind === "full") return t("fallback.full");
-    return t("fallback.spotsLeft", { count: label.remaining });
+    if (label.kind === "full") return { text: t("fallback.full"), full: true };
+    return { text: t("fallback.spotsLeft", { count: label.remaining }), full: false };
   };
 
   let body: React.ReactNode;
@@ -214,6 +212,7 @@ export default async function EmbedWidgetPage({
         price={money(perDiverBookingPriceCents(trip, trip.course))}
         seats={seats(trip)}
         href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
+        waitlist={shop.waitlistEnabled}
         t={t}
       />
     );
@@ -262,7 +261,7 @@ export default async function EmbedWidgetPage({
                 <Link
                   href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
                   target="_top"
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                  className={buttonClass({ size: "sm" })}
                 >
                   {t("embed.enrol")}
                 </Link>
@@ -303,6 +302,7 @@ export default async function EmbedWidgetPage({
             price={money(perDiverBookingPriceCents(trip, trip.course))}
             seats={seats(trip)}
             href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
+            waitlist={shop.waitlistEnabled}
             t={t}
           />
         ))}
@@ -320,7 +320,7 @@ export default async function EmbedWidgetPage({
               <Link
                 href={`${origin}${publicCoursePath(shopSlug, course.slug)}`}
                 target="_top"
-                className={buttonClass({ variant: "secondary", size: "sm" })}
+                className={buttonClass({ size: "sm" })}
               >
                 {t("embed.enrol")}
               </Link>
@@ -336,7 +336,7 @@ export default async function EmbedWidgetPage({
       {body}
       {hostCarriesCredit ? null : (
         <EmbedCredit href={`${origin}${publicSchedulePath(shopSlug)}`} target="_top">
-          {t("schedule.poweredByDiveDay")}
+          {t("shopChrome.credit")}
         </EmbedCredit>
       )}
       <EmbedHeightReporter />
@@ -344,6 +344,12 @@ export default async function EmbedWidgetPage({
   );
 }
 
+/**
+ * One departure as a card. A full boat has no Book button (visual review
+ * 2026-10-24, B32): the muted "Full" says so, and when the shop keeps a wait
+ * list one link goes to it on the trip page, whose wait-list form carries the
+ * same `#book` anchor.
+ */
 function DepartureCard({
   title,
   when,
@@ -351,14 +357,17 @@ function DepartureCard({
   price,
   seats,
   href,
+  waitlist,
   t,
 }: {
   title: string;
   when: string;
   site: string | null;
   price: string | null;
-  seats: string;
+  seats: { text: string; full: boolean };
   href: string;
+  /** The shop keeps a wait list, so a full boat offers to tell the diver. */
+  waitlist: boolean;
   t: DiverTranslator;
 }) {
   return (
@@ -374,12 +383,22 @@ function DepartureCard({
           {price ? <span className="font-semibold tabular-nums">{price}</span> : null}
           <span className="text-sm">
             {price ? " · " : ""}
-            <span className="text-muted">{seats}</span>
+            <span className="text-muted">{seats.text}</span>
           </span>
         </span>
-        <Link href={href} target="_top" className={buttonClass({ size: "sm" })}>
-          {t("embed.book")}
-        </Link>
+        {!seats.full ? (
+          <Link href={href} target="_top" className={buttonClass({ size: "sm" })}>
+            {t("embed.book")}
+          </Link>
+        ) : waitlist ? (
+          <Link
+            href={href}
+            target="_top"
+            className="text-sm font-medium text-primary hover:underline focus-visible:focus-ring"
+          >
+            {t("embed.askToBeTold")}
+          </Link>
+        ) : null}
       </div>
     </article>
   );
