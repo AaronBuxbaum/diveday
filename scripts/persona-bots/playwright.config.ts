@@ -33,7 +33,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   forbidOnly: !!process.env.CI,
-  // A visit is a navigation, an axe scan and a handful of DOM reads against a
+  // A visit is a navigation and a handful of DOM reads against a
   // warm server; the first one also pays the one-time migrate and seed. The
   // ceiling only ever bounds a hung navigation, never a passing visit.
   timeout: 120_000,

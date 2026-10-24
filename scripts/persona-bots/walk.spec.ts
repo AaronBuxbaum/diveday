@@ -1,6 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import AxeBuilder from "@axe-core/playwright";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../../src/db/dev-credentials";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "../subprocess.mjs";
@@ -18,8 +17,8 @@ import {
  * **The weekly persona walk** (N-61): every surface `docs/product/personas.md`
  * names, opened as the persona who lives on it, against the demo shop.
  *
- * Each visit runs the probes in `scripts/persona-bots/personas.mjs` — an axe
- * scan plus a short list of DOM-level checks, all of them deterministic — and
+ * Each visit runs the probes in `scripts/persona-bots/personas.mjs` — a short
+ * list of DOM-level checks, all of them deterministic — and
  * writes what fired to `persona-bots/findings.json`. `scripts/persona-bots.mjs`
  * reads that file, shapes the findings into `needs-triage` issues, and applies
  * the volume policy in `scripts/persona-bots/findings.mjs`.
@@ -111,7 +110,7 @@ for (const visit of walkPlan()) {
   }) => {
     // **One retry, and only on a renderer that went away.** Measured on the
     // third dry run: the Spanish storefront's tab crashed between the
-    // navigation and the axe scan, and both the scan and the probe after it
+    // navigation and the first probe, and every probe after it
     // came back "Target page, context or browser has been closed". That is the
     // runner running out of room, not a defect on the page — the same surface
     // passed in English seconds earlier and in Spanish on the run before — and
@@ -186,9 +185,8 @@ async function visitSurface(
         status >= 500 ? "critical" : "serious",
       );
     }
-    // A document with a title is the settled-document signal `e2e/a11y.spec.ts`
-    // gates its own scan on; without it axe reads a half-streamed page and
-    // reports `document-title` about a state nobody sees.
+    // A document with a title is the settled-document signal; without it the
+    // probes read a half-streamed page and report a state nobody sees.
     await expect(page).toHaveTitle(/.+/);
     await settlePaint(page);
     rendered = true;
@@ -202,7 +200,6 @@ async function visitSurface(
   }
 
   if (rendered) {
-    await scanWithAxe(page, record);
     await probeSkipLink(page, record);
     await probeMessageKeys(page, record);
     await probeShopIdentity(page, visit.path, record);
@@ -405,11 +402,11 @@ async function signIn(context: BrowserContext, role: string) {
 }
 
 /**
- * A settled paint, not merely a settled document: `color-contrast` measures
- * what is on screen, so an element halfway through an entrance animation is
- * measured at whatever opacity it had reached. Waits on the animations
+ * A settled paint, not merely a settled document: the walk photographs what is
+ * on screen, so an element halfway through an entrance animation would be
+ * caught at whatever opacity it had reached. Waits on the animations
  * themselves rather than a duration, skipping the infinite ones (skeletons and
- * spinners never finish) — the same barrier `e2e/a11y.spec.ts` uses.
+ * spinners never finish).
  */
 async function settlePaint(page: Page) {
   await page.evaluate(() =>
@@ -434,36 +431,6 @@ async function settlePaint(page: Page) {
         );
       }),
   );
-}
-
-/** June's lens: the same WCAG 2.0 A/AA + 2.2 AA rule set `e2e/a11y.spec.ts` runs, no exclusions. */
-async function scanWithAxe(
-  page: Page,
-  record: (probe: string, detail: string, impact?: string) => void,
-) {
-  let results: Awaited<ReturnType<AxeBuilder["analyze"]>>;
-  try {
-    results = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-  } catch (error) {
-    // A crashed tab belongs to the caller's one retry, not to a warning that
-    // leaves the visit looking complete with no scan in it.
-    if (TARGET_GONE.test(String(error))) throw error;
-    console.warn(`persona-bots: the axe scan did not run — ${short(error)}`);
-    return;
-  }
-  for (const violation of results.violations) {
-    const nodes = violation.nodes
-      .slice(0, 3)
-      .map((node) => node.target.join(" "))
-      .join(", ");
-    record(
-      `axe:${violation.id}`,
-      `${violation.nodes.length} node(s): ${nodes}. ${violation.help}.`,
-      violation.impact ?? "moderate",
-    );
-  }
 }
 
 /** June's line: every page keeps a skip link. */

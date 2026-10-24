@@ -9,7 +9,7 @@
  *
  * **A probe is deterministic or it is not here.** No judgement, no model, no
  * "this copy feels long": every probe below answers yes or no from the DOM,
- * the response status, or axe's own rule set, so a finding is a fact a reader
+ * or the response status, so a finding is a fact a reader
  * can reproduce by opening the page. The persona doc's softer lines (does the
  * refusal state a *true* reason, is the jargon explained) stay a human's
  * reading — a bot that guessed at them would fill the triage inbox with
@@ -205,9 +205,9 @@ export const PERSONAS = Object.freeze([
     number: 14,
     name: "June",
     lens: "assistive tech and low vision",
-    // June's surfaces are everybody else's: the axe scan and the skip-link
-    // probe run on every page the walk opens, so her list is the short one of
-    // the surfaces no other persona happens to visit.
+    // June's surfaces are everybody else's: the skip-link probe runs on every
+    // page the walk opens, so her list is the short one of the surfaces no
+    // other persona happens to visit.
     surfaces: [{ path: `/shop/${DEMO_SHOP_SLUG}/orders`, as: "owner" }],
   },
   {
@@ -279,10 +279,6 @@ export function personaById(id, personas = PERSONAS) {
 
 /**
  * The probes, and the persona whose line each one holds.
- *
- * `axe:<rule>` findings are minted at walk time rather than declared here —
- * axe carries hundreds of rules and the walk reports whichever ones fire — so
- * `probeFor` falls back to the axe template for any id with that prefix.
  *
  * `touches` is the `**Touches:**` line the filed issue carries, and every path
  * on it has to exist on `main` (docs/agents/issue-tracker.md): a path only an
@@ -357,15 +353,6 @@ function surfaceCount(count) {
   return count === 1 ? "one persona surface" : `${count} persona surfaces`;
 }
 
-/** The axe template, used for every `axe:<rule>` finding the walk reports. */
-export const AXE_PROBE = Object.freeze({
-  persona: "june",
-  kind: "risk",
-  effort: "M",
-  line: "every tool-detectable accessibility defect is a fix, not an exclusion (persona 14, June)",
-  touches: ["e2e/a11y.spec.ts", "docs/product/personas.md"],
-});
-
 /**
  * A judged probe id: `judged:<persona>:<url path>:<8 hex of the normalised claim>`.
  * Built in `judge.mjs`; parsed here so `probeFor` stays the one place a probe id
@@ -374,7 +361,7 @@ export const AXE_PROBE = Object.freeze({
  */
 const JUDGED_PROBE = /^judged:([a-z][\w-]*):(.+):([0-9a-f]{8})$/;
 
-/** The probe record behind a finding id, axe rules included. */
+/** The probe record behind a finding id, judged ids included. */
 export function probeFor(probeId) {
   const judged = JUDGED_PROBE.exec(probeId);
   if (judged) {
@@ -388,14 +375,6 @@ export function probeFor(probeId) {
       line: `the "hold the line on" list in ${persona.name}'s entry (persona ${persona.number}, ${persona.name})`,
       touches: ["docs/product/personas.md", "scripts/persona-bots/judge.mjs"],
       title: () => `Decide whether ${persona.name} is right about ${urlPath}`,
-    };
-  }
-  if (probeId.startsWith("axe:")) {
-    const rule = probeId.slice("axe:".length);
-    return {
-      ...AXE_PROBE,
-      title: (count) =>
-        `Fix the ${rule} accessibility violations axe reports on ${surfaceCount(count)}`,
     };
   }
   return PROBES[probeId] ?? null;

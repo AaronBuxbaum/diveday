@@ -50,7 +50,7 @@ assertion: the screenshot shows the overlap gone.
 `e2e/a11y-map.spec.ts`, `e2e/a11y-scan.ts`) were removed 2026-10-24: the scans were the week's top
 failure site and the product does not prioritize automated a11y (Aaron, 2026-10-24). Markup fixes
 that are free still land: a name on a control, a label on an input, a real heading. The weekly
-persona walk keeps its own axe probe, which files issues and never blocks a PR.
+persona walk's axe probe went the same day, and `@axe-core/playwright` with it.
 
 ## How a change decides its tests
 
@@ -247,11 +247,10 @@ and in Spanish for Ingrid, whose findings are invisible in English — runs a fi
 each, photographs the surfaces the findings name, and files what it found as `needs-triage` issues.
 
 **Every probe is deterministic.** Each one answers yes or no from the rendered DOM, the response
-status, or axe's own WCAG 2.0 A/AA + 2.2 AA rule set (the walk's own probe; the suite runs no
-scan since 2026-10-24), a missing skip link, a message key that reached the screen instead of a sentence, a page that did not
-render, a browser console error, a `/s/**` page that does not name its shop, an image with neither
-dimensions nor lazy loading. The persona doc's softer lines stay a human's reading — a bot guessing
-at those would file opinions into a tracker one person reads.
+status: a missing skip link, a message key that reached the screen instead of a sentence, a page
+that did not render, a browser console error, a `/s/**` page that does not name its shop, an image
+with neither dimensions nor lazy loading. The persona doc's softer lines stay a human's reading — a
+bot guessing at those would file opinions into a tracker one person reads.
 
 **It may file three issues a week, and stops filing at forty.** The volume policy is
 `scripts/persona-bots/findings.mjs`, unit-tested in `findings.test.mjs`: one issue per finding
@@ -337,15 +336,11 @@ Until that is fixed, read a survivor list as noise.
 ### Why `playwright-core` is pinned in devDependencies
 
 `playwright-core` is declared explicitly at the exact version `@playwright/test` resolves to. It is
-not a dependency anything imports directly — it is there to decide which copy `@axe-core/playwright`
-binds its `playwright-core` **peer** to, for the persona walk's probe
-(`scripts/persona-bots/walk.spec.ts`).
-
-Without the pin, two copies sit in the tree: `@playwright/test`'s, and the exact alpha that
-`@playwright/mcp` pins for its own use. pnpm picked the higher one for the peer, so `AxeBuilder`
-wanted a `Page` from one copy while the spec calling it had one from the other — structurally the
-same object, a hard `tsc` error, and nothing about the message says "you have two Playwrights". That
-is how `main` went red on typecheck after a routine package bump.
+not a dependency anything imports directly. It was added to decide which copy `@axe-core/playwright`
+bound its `playwright-core` **peer** to: without it, two copies sat in the tree (`@playwright/test`'s
+and the exact alpha `@playwright/mcp` pins), and `AxeBuilder` wanted a `Page` from the other copy, a
+hard `tsc` error that turned `main` red after a routine bump. The axe package went on 2026-10-24;
+the pin stays so the tree keeps one browser driver.
 
 Keep the pin equal to `@playwright/test`'s version when either moves. One browser driver in the
 tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.

@@ -1101,7 +1101,7 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   photographs it), and `scripts/route-coverage.json`
   holds only the exceptions — specs and captures that reach a route by clicks, and exemptions.
   `--write` prunes the file back to them, `--absorb` records a merge-in loss, `--report` prints the
-  table. `loadCoverage` is the computed ledger `pnpm agent:health` reads for the axe share.
+  table. `loadCoverage` is the computed ledger `pnpm agent:health` reads for the visual share.
 - **Fixtures**: prefer `staffContext.newPage()` and the exported fixtures; `pnpm check:e2e-fixtures`
   flags a hand-built context.
 - **The clock is frozen at the harness boundary** (`TEST_FROZEN_CLOCK`); never stabilise a capture

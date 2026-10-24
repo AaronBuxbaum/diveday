@@ -223,38 +223,14 @@ describe("auditLedger", () => {
     expect(messages(result)).toContain('names visual capture "ghost-surface"');
   });
 
-  /**
-   * Issue #1056. The axe share used to be counted off the `e2e` list — the
-   * routes whose specs happened to include `a11y.spec.ts` — which is a list
-   * maintained to say which specs *navigate* a route, not which ones scan it.
-   * It read 22% while the spec was in fact scanning better than forty routes.
-   * The column makes the two facts separable.
-   */
-  it("accepts an a11y column and holds its spec names to the same rule", async () => {
-    const healthy = await audit({
+  it("refuses an a11y column, which went with the scans on 2026-10-24", async () => {
+    const result = await audit({
       ledger: {
         ...HEALTHY.ledger,
         "/": { e2e: ["booking.spec.ts"], visual: ["landing"], a11y: ["booking.spec.ts"] },
       },
     });
-    expect(healthy.violations).toEqual([]);
-
-    const ghost = await audit({
-      ledger: {
-        ...HEALTHY.ledger,
-        "/": { e2e: ["booking.spec.ts"], visual: ["landing"], a11y: ["nope.spec.ts"] },
-      },
-    });
-    expect(messages(ghost)).toContain('names a11y spec "nope.spec.ts"');
-  });
-
-  it("never makes a missing scan a violation — that half is a human decision", async () => {
-    // Every route in the healthy ledger carries no `a11y` at all, and the
-    // audit passes. Turning coverage into a ratchet is a call about how much
-    // the product pays per route, and it is not an agent's to impose.
-    const result = await audit();
-    expect(result.violations).toEqual([]);
-    expect(result.stats.a11y).toBe(0);
+    expect(messages(result)).toContain('unknown key "a11y"');
   });
 
   it("fails an uncovered route that carries no exempt reason", async () => {
@@ -484,36 +460,6 @@ describe("planLedgerWrite (the ratchet)", () => {
     expect(auditLedger({ ...world, ledger: next }).violations).toEqual([]);
   });
 
-  /**
-   * The column the writer forgot entirely. Every `a11y` list — 56 of them in the
-   * real ledger — was dropped by any `--write`, and `scripts/agent-health.mjs`
-   * reads that column specifically because it is the one number nothing else
-   * states.
-   */
-  it("carries the a11y column through, and refuses to drop a scan that vanished", async () => {
-    const scanned = {
-      ledger: {
-        ...HEALTHY.ledger,
-        "/": { e2e: ["booking.spec.ts"], visual: ["landing"], a11y: ["a11y.spec.ts"] },
-      },
-    };
-
-    const kept = await plan({ ...scanned, specs: [...HEALTHY.specs, "a11y.spec.ts"] });
-    expect(kept.next["/"].a11y).toEqual(["a11y.spec.ts"]);
-    expect(kept.drops).toEqual([]);
-
-    // And it survives the trip through the serializer, which had the same
-    // omission one layer down: its field list was e2e/visual/exempt.
-    expect(ledgerEntries(JSON.parse(serializeLedger(kept.next)))["/"].a11y).toEqual([
-      "a11y.spec.ts",
-    ]);
-
-    // A scan that genuinely vanished is a coverage drop like any other, so
-    // `--write` refuses rather than quietly shortening the list.
-    const gone = await plan(scanned);
-    expect(gone.drops).toEqual(['/: a11y spec "a11y.spec.ts" no longer exists under e2e/']);
-  });
-
   it("drops the entry for a route that was deleted", async () => {
     const result = await plan({ routes: ["/"] });
     expect(Object.keys(result.next)).toEqual(["/"]);
@@ -601,19 +547,6 @@ describe("derived coverage", () => {
     expect([...derived.get("/s/[shopSlug]").e2e]).toEqual([]);
   });
 
-  it("counts an axe scan only from a spec that runs one", () => {
-    const derived = deriveCoverage({
-      routes: ROUTES,
-      specSources: new Map([
-        ["a11y.spec.ts", 'await page.goto("/");\nawait expectNoA11yViolations(page);'],
-        ["booking.spec.ts", 'await page.goto("/s/blue-mantis");'],
-      ]),
-    });
-    expect([...derived.get("/").a11y]).toEqual(["a11y.spec.ts"]);
-    expect([...derived.get("/s/[shopSlug]").e2e]).toEqual(["booking.spec.ts"]);
-    expect([...derived.get("/s/[shopSlug]").a11y]).toEqual([]);
-  });
-
   it("passes a route the tree covers with no ledger entry at all", async () => {
     const root = await fixture({
       routes: ["/s/[shopSlug]"],
@@ -647,52 +580,4 @@ describe("derived coverage", () => {
     expect(result.next).toEqual({ "/s/[shopSlug]": { visual: ["storefront"] } });
     expect(result.derivedNames).toEqual(['/s/[shopSlug]: e2e "booking.spec.ts"']);
   });
-});
-
-it("credits only a scan's last literal navigation in the same test", () => {
-  const result = deriveCoverage({
-    routes: ["/a", "/b", "/setup"],
-    specSources: new Map([
-      [
-        "demo.spec.ts",
-        `
-    test.beforeEach(async()=>{await page.goto('/setup')});
-    test('scan', async()=>{await page.goto('/a'); await expectNoA11yViolations(page)});
-    test('ordinary',async()=>{await page.goto('/b')});
-    // await expectNoA11yViolations(page)
-  `,
-      ],
-    ]),
-  });
-  expect([...result.get("/a").a11y]).toEqual(["demo.spec.ts"]);
-  expect([...result.get("/b").a11y]).toEqual([]);
-  expect([...result.get("/setup").a11y]).toEqual([]);
-});
-
-it("does not borrow unrelated literals, commented scans or stale dynamic navigation", () => {
-  const result = deriveCoverage({
-    routes: ["/a", "/b", "/c"],
-    specSources: new Map([
-      [
-        "demo.spec.ts",
-        `
-    test('scan',async()=>{const unrelated='/b';await page.goto('/a');await expectNoA11yViolations(page);await page.goto('/b');await page.goto(destination);await expectNoA11yViolations(page)});
-    test('comment',async()=>{await page.goto('/c');/* expectNoA11yViolations(page) */});
-    test.skip('disabled',async()=>{await page.goto('/c');await expectNoA11yViolations(page)});
-  `,
-      ],
-    ]),
-  });
-  expect([...result.get("/a").a11y]).toEqual(["demo.spec.ts"]);
-  expect([...result.get("/b").a11y]).toEqual([]);
-  expect([...result.get("/c").a11y]).toEqual([]);
-});
-
-it("does not credit scans inside a quarantined function-callback suite", () => {
-  const source = `test.describe('suite', {tag:'@quarantine'}, function () { test('critical', async function(){await page.goto('/a');await expectNoA11yViolations(page)}) })`;
-  expect([
-    ...deriveCoverage({ routes: ["/a"], specSources: new Map([["demo.spec.ts", source]]) }).get(
-      "/a",
-    ).a11y,
-  ]).toEqual([]);
 });

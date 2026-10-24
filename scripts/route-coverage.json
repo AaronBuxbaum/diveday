@@ -1,5 +1,5 @@
 {
-  "//": "Only what scripts/check-route-coverage.mjs cannot derive from the tree. A route's specs, captures and a11y scans are read from the path literals in e2e/ (see that script); an entry here adds `e2e` specs and `visual` captures that reach the route by clicks a literal cannot show, `a11y` scans likewise, or an `exempt` reason saying why the route warrants less than both. `node scripts/check-route-coverage.mjs --write` prunes it; it never adds an exemption.",
+  "//": "Only what scripts/check-route-coverage.mjs cannot derive from the tree. A route's specs and captures are read from the path literals in e2e/ (see that script); an entry here adds `e2e` specs and `visual` captures that reach the route by clicks a literal cannot show, or an `exempt` reason saying why the route warrants less than both. `node scripts/check-route-coverage.mjs --write` prunes it; it never adds an exemption.",
   "/claim/[token]": {
     "visual": ["seat-claim"]
   },
