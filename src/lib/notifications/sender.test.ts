@@ -31,8 +31,18 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
       ),
     ).toEqual({
       replyTo: "desk@bluemantis.dive",
+      contactEmail: "desk@bluemantis.dive",
       postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
     });
+  });
+
+  // Visual review 2026-10-24, B31: the sign-off every shop email ends on.
+  it("carries the shop's phone and confirmed address for the sign-off", () => {
+    expect(shopSenderOf({ ...nothing, contactPhone: " +1 305 555 0142 " }, off)).toEqual({
+      contactPhone: "+1 305 555 0142",
+    });
+    expect(shopSenderOf({ ...nothing, contactPhone: "  " }, off)).toBeUndefined();
+    expect(shopSenderOf({ ...nothing, contactEmail: "desk@bluemantis.dive" }, off)).toBeUndefined();
   });
 
   it("is nothing at all for a shop with nothing on file", () => {
@@ -88,7 +98,7 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
         },
         off,
       ),
-    ).toEqual({ replyTo: "desk@bluemantis.dive" });
+    ).toEqual({ replyTo: "desk@bluemantis.dive", contactEmail: "desk@bluemantis.dive" });
   });
 
   it("drops an address the notification schema would refuse rather than failing every send", () => {
@@ -105,7 +115,10 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
       addressPostalCode: "P".repeat(20),
       addressCountry: "US",
     };
-    expect(shopSenderOf(long, off)).toEqual({ replyTo: "desk@bluemantis.dive" });
+    expect(shopSenderOf(long, off)).toEqual({
+      replyTo: "desk@bluemantis.dive",
+      contactEmail: "desk@bluemantis.dive",
+    });
     expect(shopSenderOf({ ...long, contactEmail: null }, off)).toBeUndefined();
   });
 
@@ -120,6 +133,7 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
     };
     expect(shopSenderOf(shop, {})).toEqual({
       replyTo: `reply+${token}@inbound.ses.dive.day`,
+      contactEmail: "desk@bluemantis.dive",
     });
     // An unconfirmed front desk changes nothing about the inbound address.
     expect(shopSenderOf({ ...shop, contactEmailConfirmedAt: null }, {})).toEqual({
@@ -128,6 +142,7 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
     // Inbound switched off: the confirmed front desk, and its proof rule.
     expect(shopSenderOf(shop, { EMAIL_INBOUND_DOMAIN: "" })).toEqual({
       replyTo: "desk@bluemantis.dive",
+      contactEmail: "desk@bluemantis.dive",
     });
     expect(
       shopSenderOf({ ...shop, contactEmailConfirmedAt: null }, { EMAIL_INBOUND_DOMAIN: "" }),

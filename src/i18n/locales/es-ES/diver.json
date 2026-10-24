@@ -5329,7 +5329,6 @@
       "greetingGeneric": "Hola:",
       "genericName": "amigo",
       "dockCallMinutes": "{minutes, plural, one {# minuto} other {# minutos}}",
-      "trackWhatsLeft": "Sigue lo que te falta antes de salir",
       "seeWhatsLeft": "Consulta lo que te falta antes de salir",
       "outstandingHeading": "Aún por resolver antes de embarcar:",
       "courtesyUnsubscribe": "Dejar de recibir correos opcionales de {shopName}"

@@ -1977,6 +1977,14 @@ export const notificationSenderSchema = z.object({
     .max(2_000)
     .refine((value) => value.startsWith("https://"))
     .optional(),
+  /**
+   * The shop's published phone and its confirmed contact address, for the
+   * sign-off every shop email ends on (`withShopSignOff`, visual review
+   * 2026-10-24, B31). The address only once the shop has confirmed it
+   * (`deliverableShopContactEmail`), the same rule `Reply-To` keeps.
+   */
+  contactPhone: z.string().trim().min(1).max(40).optional(),
+  contactEmail: emailAddressSchema.optional(),
   /** The shop's brand colour, `#rrggbb` (`shops.brand_color`), for the wrapper's accents. */
   brandColor: z
     .string()
