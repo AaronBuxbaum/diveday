@@ -1,4 +1,4 @@
-import type { listTripBuddyTeams, PartyTeamPlan } from "@/db/buddy-pairs";
+import { type listTripBuddyTeams, type PartyTeamPlan, partyConfirmKey } from "@/db/buddy-pairs";
 import { partyLeftReasonText } from "@/i18n/buddy-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -121,7 +121,11 @@ export function buddyBuilderView({
   // seat, the one "Team up each party" reads (dive-domain review of layer
   // r5-4, second pass, N7), so the lines and the tap cannot disagree.
   const nameOf = (bookingId: string) => partyPlan.names.get(bookingId) ?? "";
-  const together = [...partyPlan.teamable, ...partyPlan.left.map((party) => party.bookingIds)];
+  const together = [
+    ...partyPlan.teamable,
+    ...partyPlan.ageUnconfirmed,
+    ...partyPlan.left.map((party) => party.bookingIds),
+  ];
   const groupList = cachedListFormat(locale, { type: "unit", style: "short" });
   const partyLines =
     together.length === 0
@@ -146,6 +150,15 @@ export function buddyBuilderView({
           ),
           /** Parties "Team up each party" would make a team of: the action's own plan. */
           teamable: partyPlan.teamable.length,
+          // Each party the tap teams only once the staffer says everyone in it
+          // is 18 or over (issue 2808): its tick box carries the party's exact
+          // seats, so a confirmation never reaches a party that changed since.
+          confirmAdults: partyPlan.ageUnconfirmed.map((bookingIds) => ({
+            key: partyConfirmKey(bookingIds),
+            label: t("manifest.buddyPartyConfirmAdults", {
+              names: teamNameList.format(bookingIds.map(nameOf)),
+            }),
+          })),
         };
   return {
     buddyTeamLabel,

@@ -187,6 +187,8 @@
   "buddyCameTogether": "Llegaron juntos: {parties}",
   "buddyCameAlone": "Llegaron solos: {names}",
   "buddyTeamUpParties": "Formar una pareja por grupo",
+  "buddyPartyConfirmHint": "En cada grupo de abajo alguien no tiene fecha de nacimiento ni la casilla “Menor de 18 años”. Marca un grupo para formar su pareja.",
+  "buddyPartyConfirmAdults": "{names} tienen todos 18 años o más",
   "buddyPartyLeft": "Para que los emparejes tú: {names} ({reason})",
   "buddyPartyLeftReason": {
     "intro_course": "bautismo",

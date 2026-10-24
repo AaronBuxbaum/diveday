@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import {
   getShopById,
   setShopCustomerRegulatorServiceMonths,
+  setShopNitroxFillMethod,
   setShopRentalItems,
   setShopRentalPricing,
   setShopRentalTerms,
@@ -13,6 +14,7 @@ import {
 import { formValue, readForm } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { parseNitroxFillMethod } from "@/lib/nitrox-fill";
 import { parseRentalTerms } from "@/lib/rental-terms";
 import {
   RENTABLE_ITEMS,
@@ -58,7 +60,8 @@ function parsePriceAmount(
 /**
  * **The Rentals page's one save** (#2815): what the shop rents, what each piece
  * costs, the terms every rental ticket prints (ADR 20260815-minimal-gear-register,
- * amended 2026-10-08) and how often a customer's regulator is serviced (#2272).
+ * amended 2026-10-08), how often a customer's regulator is serviced (#2272)
+ * and how the shop fills nitrox (issue 3004).
  * Two settings pages and four rail rows were one job; this is its one action.
  *
  * It asks both gates the rental catalog always asked, then validates the whole
@@ -117,6 +120,14 @@ export async function saveRentalsAction(formData: FormData) {
     redirect(noticeUrl(page, "regulator-service-invalid"));
   }
 
+  // How the shop fills nitrox (issue 3004): the form always posts it; a post
+  // without it leaves the stored method, and anything but the two is refused.
+  const fillMethod =
+    fields.nitroxFillMethod === undefined ? null : parseNitroxFillMethod(fields.nitroxFillMethod);
+  if (fields.nitroxFillMethod !== undefined && fillMethod === null) {
+    redirect(noticeUrl(page, "nitrox-fill-invalid"));
+  }
+
   await setShopRentalItems(db, session.user.shopId, rentalItems);
   await setShopRentalPricing(db, session.user.shopId, {
     setCents: set.cents,
@@ -125,5 +136,6 @@ export async function saveRentalsAction(formData: FormData) {
   });
   await setShopRentalTerms(db, session.user.shopId, terms.terms);
   if (months !== null) await setShopCustomerRegulatorServiceMonths(db, session.user.shopId, months);
+  if (fillMethod !== null) await setShopNitroxFillMethod(db, session.user.shopId, fillMethod);
   revalidateAndRedirect(page, noticeUrl(page, "rentals-saved"));
 }

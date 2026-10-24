@@ -19,6 +19,7 @@
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
       "regulatorServiceInvalid": "Choose 12 or 24 months.",
+      "nitroxFillInvalid": "Choose how you fill nitrox.",
       "contactSaved": "Contact details saved",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
@@ -339,6 +340,14 @@
         "label": "Customer regulator service, every",
         "hint": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
         "months": "{months} months"
+      },
+      "nitroxFill": {
+        "label": "How you fill nitrox",
+        "hint": "Rent out warns when an EANx fill goes into a tank with no current O2-clean record. Blending puts pure oxygen in the tank at any mix, so it warns on every EANx fill. Membrane or premix warns only above 40%.",
+        "options": {
+          "blending": "Partial-pressure blending",
+          "membrane_premix": "Membrane or premix only"
+        }
       },
       "submit": "Save rentals",
       "submitting": "Saving…",

@@ -2,6 +2,7 @@ import type { Certification, SpecialtyCertification } from "@/db/schema";
 import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
 import type { CertificationLevel } from "./certification-levels";
 import type { GearItemKind } from "./gear";
+import type { NitroxFillMethod } from "./nitrox-fill";
 import { certificationRank, holdsSpecialtyCard, validVerifiedCertification } from "./readiness";
 import {
   CORE_RENTAL_KINDS,
@@ -192,6 +193,20 @@ export function parseTankFill(raw: string): number | null | "invalid" {
 /** Above air. */
 export function isEnrichedFill(o2Percent: number): boolean {
   return o2Percent > TANK_FILL_O2_PERCENT.air;
+}
+
+/** The highest mix a membrane or premix fill goes into a tank without an O2-clean warning. */
+export const MEMBRANE_PREMIX_O2_CLEAN_UP_TO = 40;
+
+/**
+ * Whether an EANx fill into a tank with no current O2-clean record is warned
+ * about: above air for a blending shop, above 40% for a membrane or premix one.
+ * A warning only (issue #2719): the fill is accepted either way.
+ */
+export function o2CleanWarnsForFill(method: NitroxFillMethod, o2Percent: number): boolean {
+  const upTo =
+    method === "membrane_premix" ? MEMBRANE_PREMIX_O2_CLEAN_UP_TO : TANK_FILL_O2_PERCENT.air;
+  return o2Percent > upTo;
 }
 
 export type CounterTankFillRefusal =

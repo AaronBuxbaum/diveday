@@ -4929,6 +4929,22 @@
         "heading": "El dinero",
         "body": "Los buceadores pagan al centro, no a nosotros. Los pagos con tarjeta pasan por la cuenta de Stripe del propio centro, así que el dinero del centro nunca está con DiveDay e irse no significa sacarnos fondos. A esos pagos se les aplican las comisiones y condiciones de Stripe. Lo que cobra DiveDay por sí mismo está en la página de precios."
       },
+      "percentPlan": {
+        "heading": "Planes con precio en un porcentaje de los pagos con tarjeta",
+        "intro": "A un centro que se da de alta con una solicitud nueva le podemos ofrecer un plan con precio en una parte del dinero que recibe en pagos con tarjeta a través de DiveDay, en lugar del precio fijo. Los centros que ya usan DiveDay siguen con el precio fijo mensual. En ese plan:",
+        "feeTerm": "La tarifa",
+        "feeBody": "el {percent} del dinero que tu centro recibe en pagos con tarjeta a través de DiveDay en un mes calendario{hasBase, select, yes {, con una cuota base de {base} cada mes además} other {}}. El mes sigue la zona horaria de tu centro.",
+        "countsTerm": "Qué cuenta",
+        "countsBody": "los pagos con tarjeta que tu centro recibe a través de DiveDay con Stripe Connect: reservas por internet, facturas y paquetes. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el efectivo del mostrador, el dinero marcado como pagado en el mostrador y el historial importado de otro sistema nunca cuentan.",
+        "refundsTerm": "Reembolsos",
+        "refundsBody": "un reembolso se descuenta del dinero del mes en que se cobró el pago, si se registra antes de que se emita el estado de cuenta de ese mes. Un reembolso registrado después no se acredita.",
+        "statementTerm": "Un estado de cuenta mensual",
+        "statementBody": "a principios del mes siguiente, Ajustes le muestra a tu centro el dinero del mes, la tasa y la tarifa, y la tarifa se cobra con tu suscripción a DiveDay.",
+        "whoPaysTerm": "Quién paga la tarifa",
+        "whoPaysBody": "el centro, nunca el buceador. DiveDay no suma nada al precio ni al pago del buceador.",
+        "noticeTerm": "Cambios en el plan",
+        "noticeBody": "avisamos a tu centro con al menos 30 días de anticipación antes de cambiar la tasa, la cuota base o lo que cuenta para la tarifa."
+      },
       "data": {
         "heading": "De quién son los datos",
         "body": "Los registros del centro son del centro. Los guardamos para hacer funcionar el producto y para nada más: no se venden, no se usan para entrenar nada y se quedan dentro del espacio del propio centro. Un centro puede descargarlo todo en un solo ZIP desde sus ajustes cualquier día, sin pedirlo y sin tarifa. Cómo se tratan mientras los guardamos está en la página de privacidad."

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type PartyDeparture, type PartyMember, partyLeftReason } from "./party-teams";
+import {
+  type PartyDeparture,
+  type PartyMember,
+  partyAgesUnconfirmed,
+  partyLeftReason,
+} from "./party-teams";
 
 /**
  * **Safety-critical: who one tap may put in the water together** (dive-domain
@@ -146,5 +151,43 @@ describe("partyLeftReason", () => {
     expect(
       partyLeftReason({ course: { intro: true } }, [child(10), child(11), adult(), adult()]),
     ).toBe("intro_course");
+  });
+});
+
+/**
+ * **Safety-critical: a party nobody has said is adult** (issue 2808). With no
+ * date of birth and no "Under 18" box, a seat reads as an adult to
+ * `partyLeftReason`, so two undeclared thirteen-year-olds would pass it. One
+ * tap teams such a party only after a staffer confirms everyone in it is 18 or
+ * over; this says which parties need that.
+ */
+describe("partyAgesUnconfirmed", () => {
+  it("asks about two divers with no date of birth and no box: they could be thirteen", () => {
+    expect(partyAgesUnconfirmed([adult({ age: null }), adult({ age: null })])).toBe(true);
+  });
+
+  it("asks when only one member is undeclared, even beside a certified adult of forty", () => {
+    expect(partyAgesUnconfirmed([adult(), adult({ age: null })])).toBe(true);
+    expect(partyAgesUnconfirmed([adult(), adult(), adult({ age: null })])).toBe(true);
+  });
+
+  it("asks whatever card the undeclared member holds: a card says nothing about age", () => {
+    expect(partyAgesUnconfirmed([adult(), adult({ age: null, verifiedCard: true })])).toBe(true);
+  });
+
+  it("does not ask when every member has a date of birth", () => {
+    expect(partyAgesUnconfirmed([adult(), adult({ age: 18 })])).toBe(false);
+    expect(partyAgesUnconfirmed([child(15), child(15)])).toBe(false);
+  });
+
+  it("does not ask about a ticked box: that seat is a minor, and partyLeftReason places it", () => {
+    expect(partyAgesUnconfirmed([adult(), child(null)])).toBe(false);
+    expect(partyLeftReason(FUN_DIVE, [adult(), child(null)])).toBe("minor_age_unknown");
+  });
+
+  it("asks about every party partyLeftReason clears with an undeclared member", () => {
+    const party = [adult({ age: null }), adult({ age: null })];
+    expect(partyLeftReason(FUN_DIVE, party)).toBeNull();
+    expect(partyAgesUnconfirmed(party)).toBe(true);
   });
 });
