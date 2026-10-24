@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { bookings, people, trips, waiverRecords } from "@/db/schema";
@@ -113,11 +113,31 @@ describe("the doctor's page", () => {
     expect(html).not.toContain("Mar 9");
     expect(html).not.toContain("Question 3");
     expect(html).not.toContain("moderate exercise");
+    // The upload leads; the shop's email is the fallback (issue #2797).
+    expect(html).toContain("Send a photo or PDF of the signed form here.");
+    expect(html).toContain('name="doctorForm"');
     if (shop.contactEmail) {
       expect(html).toContain(
-        `Send a photo of the signed form to <a href="mailto:${shop.contactEmail}"`,
+        `Can’t send it here? Email a photo to <a href="mailto:${shop.contactEmail}"`,
       );
+      expect(html.indexOf('name="doctorForm"')).toBeLessThan(html.indexOf("mailto:"));
     }
+  });
+
+  it("says the shop has the form once it is sent, and never prints where it is stored", async () => {
+    const { db, token, person } = await signedLink(medicalReferralAnswers);
+    const stored = "https://media.example.com/medical-clearances/sent.jpg";
+    await db
+      .update(waiverRecords)
+      .set({ diverMedicalFormUrl: stored, diverMedicalFormSentAt: now })
+      .where(
+        and(eq(waiverRecords.personId, person.id), eq(waiverRecords.status, "medical_review")),
+      );
+    const html = await render(token);
+    expect(html).toContain("The shop has your signed form.");
+    expect(html).not.toContain('name="doctorForm"');
+    expect(html).not.toContain("media.example.com");
+    expect(html).not.toContain("Can’t send it here?");
   });
 
   it("prints with no page margin, so the browser has nowhere to print the link", async () => {
