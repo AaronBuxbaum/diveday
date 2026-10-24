@@ -25,18 +25,17 @@ of shops, results are directional.
   cookie, no request read, today's copy. One invalid value resets all five.
 - The proxy gives a new marketing visitor's GET an arm cookie (`dd_pricing`, 90 days, HttpOnly)
   and a request header for the first render. The setup request stores the arm; shop creation
-  copies it to `shop_subscriptions` (with none, the new shop's id bucket). **A shop with no stored
-  arm is flat**, so existing shops never move. `pnpm billing:pricing-plan` sets an
+  stores it in `shop_subscriptions`, or, with none recorded and the test on, the new shop's id
+  bucket. **A shop read with no stored arm is flat**, so existing shops never move. `pnpm billing:pricing-plan` sets an
   override, never under an open Checkout.
 - Checkout snapshots the numbers it sells, and a live subscription keeps them. Any fee but today's
   is `price_data` on the existing product; the percent plan adds a metered price.
 - A cron on the 2nd and 3rd writes each percent shop's statement once, then reports its fee to a
   Stripe Billing Meter (`diveday-fee-<shop>-<yyyy-mm>`), reading the meter before re-sending past
   Stripe's dedupe.
-- **`/terms` carries the percent-plan clause** (en-US, es-ES), rate and base fee from
+- **`/terms` carries the percent-plan clause**, rate and base fee from
   `pricingConfig`, test on or off: the fee base above, a monthly statement, the shop pays and never
   the diver, 30 days' notice of any change.
-- Aaron sets `PRICING_TEST=on` (#3012).
 
 ## Alternatives considered
 
