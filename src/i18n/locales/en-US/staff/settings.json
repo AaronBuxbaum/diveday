@@ -343,7 +343,7 @@
       },
       "nitroxFill": {
         "label": "How you fill nitrox",
-        "hint": "Rent out warns when an EANx fill goes into a tank with no current O2-clean record. Blending puts pure oxygen in the tank at any mix, so it warns on every EANx fill. Membrane or premix warns only above 40%.",
+        "hint": "Rent out warns when an EANx fill goes into a tank with no current O2-clean record. With blending it warns on every EANx fill. The fill menu stops at 40%, so with membrane or premix it never warns. Choose blending if you ever add pure oxygen to a tank.",
         "options": {
           "blending": "Partial-pressure blending",
           "membrane_premix": "Membrane or premix only"

@@ -343,7 +343,7 @@
       },
       "nitroxFill": {
         "label": "Cómo llenas nitrox",
-        "hint": "Al alquilar, DiveDay avisa cuando un llenado EANx va a un tanque sin limpieza de O2 vigente. La mezcla por presión parcial mete oxígeno puro en el tanque con cualquier mezcla, así que avisa en todo llenado EANx. Con membrana o premezcla avisa solo por encima del 40 %.",
+        "hint": "Al alquilar, DiveDay avisa cuando un llenado EANx va a un tanque sin limpieza de O2 vigente. Con mezcla por presión parcial avisa en todo llenado EANx. El menú de llenado llega hasta el 40 %, así que con membrana o premezcla nunca avisa. Elige la mezcla por presión parcial si alguna vez metes oxígeno puro en un tanque.",
         "options": {
           "blending": "Mezcla por presión parcial",
           "membrane_premix": "Solo membrana o premezcla"
