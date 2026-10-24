@@ -23,7 +23,13 @@ vi.mock("@/lib/storage", async (importOriginal) => {
   return { ...actual, readS3Object: vi.fn() };
 });
 
+vi.mock("@/db/operations", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/operations")>();
+  return { ...actual, recordDiverActivity: vi.fn(actual.recordDiverActivity) };
+});
+
 const { auth } = await import("@/lib/auth");
+const { recordDiverActivity } = await import("@/db/operations");
 const { getDb } = await import("@/db/client");
 const { readS3Object } = await import("@/lib/storage");
 const { GET: getDiverForm } = await import("./route");
@@ -121,6 +127,11 @@ describe("GET /api/medical-clearances/[recordId]/diver-form", () => {
       prefix: "medical-clearances",
     });
     expect(await opensOnTrail(db)).toEqual([{ actor: crew.person.id, subject: person.id }]);
+    const [line] = await db
+      .select({ params: activityEvents.params })
+      .from(activityEvents)
+      .where(eq(activityEvents.code, "diver_medical_form_opened"));
+    expect(line?.params.record).toBe(record.id);
   });
 
   it("is a wider door than the evaluation's, on purpose: the same crew member cannot open that", async () => {
@@ -194,6 +205,16 @@ describe("GET /api/medical-clearances/[recordId]/diver-form", () => {
       throw new Error("trail is down");
     });
     await expect(open(record.id)).rejects.toThrow("trail is down");
+  });
+
+  it("does not hand the file over when the trail cannot name the reader", async () => {
+    // A staffer removed after their roles were read: the trail line needs a
+    // live actor, writes nothing, and the file stays put.
+    const { db, shop, record, crew } = await sentForm();
+    signIn(crew.person.id, shop.id, crew.roles);
+    vi.mocked(recordDiverActivity).mockResolvedValueOnce(false);
+    await expect(open(record.id)).resolves.toMatchObject({ status: 404 });
+    expect(await opensOnTrail(db)).toEqual([]);
   });
 
   /** A second held release with a form, on the same seat, for the erased case. */
