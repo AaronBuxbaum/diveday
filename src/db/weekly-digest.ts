@@ -52,6 +52,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { mondayReadFor } from "./monday-read";
 import { sendNotification } from "./notifications";
 import { readOwed } from "./owed";
+import { queryAll } from "./query-helpers";
 import { getMonthlyReport } from "./reporting";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
@@ -287,39 +288,50 @@ async function readEmergencyReads(
     eq(trips.shopId, activityEvents.shopId),
     sql`${trips.id}::text = ${activityEvents.params}->>'departure'`,
   );
-  const inWindow = and(
-    eq(activityEvents.shopId, shopId),
-    eq(activityEvents.code, "medical_alert_emergency_read"),
-    gte(activityEvents.occurredAt, from),
-    lt(activityEvents.occurredAt, to),
-  );
   const readerName = sql<string | null>`max(${activityEvents.params}->>'actor')`;
   const reads = sql<number>`count(*)::int`;
-  const [rows, readers] = await Promise.all([
-    db
-      .select({
-        params: activityEvents.params,
-        at: activityEvents.occurredAt,
-        departureTitle: trips.title,
-        departureStartsAt: trips.startsAt,
-      })
-      .from(activityEvents)
-      .innerJoin(trips, departure)
-      .where(inWindow)
-      .orderBy(
-        activityEvents.occurredAt,
-        sql`${activityEvents.params}->>'diver'`,
-        activityEvents.id,
-      )
-      .limit(EMERGENCY_READS_LISTED),
-    db
-      .select({ reader: readerName, count: reads })
-      .from(activityEvents)
-      .innerJoin(trips, departure)
-      .where(inWindow)
-      .groupBy(activityEvents.actorPersonId)
-      .orderBy(desc(reads), readerName)
-      .limit(EMERGENCY_READERS_LISTED),
+  const [rows, readers] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          params: activityEvents.params,
+          at: activityEvents.occurredAt,
+          departureTitle: trips.title,
+          departureStartsAt: trips.startsAt,
+        })
+        .from(activityEvents)
+        .innerJoin(trips, departure)
+        .where(
+          and(
+            eq(activityEvents.shopId, shopId),
+            eq(activityEvents.code, "medical_alert_emergency_read"),
+            gte(activityEvents.occurredAt, from),
+            lt(activityEvents.occurredAt, to),
+          ),
+        )
+        .orderBy(
+          activityEvents.occurredAt,
+          sql`${activityEvents.params}->>'diver'`,
+          activityEvents.id,
+        )
+        .limit(EMERGENCY_READS_LISTED),
+    // The same scope, counted per reader.
+    () =>
+      db
+        .select({ reader: readerName, count: reads })
+        .from(activityEvents)
+        .innerJoin(trips, departure)
+        .where(
+          and(
+            eq(activityEvents.shopId, shopId),
+            eq(activityEvents.code, "medical_alert_emergency_read"),
+            gte(activityEvents.occurredAt, from),
+            lt(activityEvents.occurredAt, to),
+          ),
+        )
+        .groupBy(activityEvents.actorPersonId)
+        .orderBy(desc(reads), readerName)
+        .limit(EMERGENCY_READERS_LISTED),
   ]);
   if (readers.length === 0) return NO_EMERGENCY_READS;
   return {

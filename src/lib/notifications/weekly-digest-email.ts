@@ -220,22 +220,27 @@ function blockFor(
     // the shop's zone, for the first of them, and how many more. A blank name
     // is said as "a diver", "a staffer" or "a departure". Never the words.
     case "emergency_reads": {
-      const key = "notifications.weeklyDigest.emergencyReads";
-      const reader = (name: string | null) => name ?? t(`${key}.unnamedReader`);
+      const reader = (name: string | null) =>
+        name ?? t("notifications.weeklyDigest.emergencyReads.unnamedReader");
       const more = section.total - section.reads.length;
       return {
-        heading: t(`${key}.heading`),
+        heading: t("notifications.weeklyDigest.emergencyReads.heading"),
         lines: [
-          t(`${key}.total`, { count: section.total }),
+          t("notifications.weeklyDigest.emergencyReads.total", { count: section.total }),
           ...section.byReader.map((entry) =>
-            t(`${key}.byReader`, { count: entry.count, reader: reader(entry.reader) }),
+            t("notifications.weeklyDigest.emergencyReads.byReader", {
+              count: entry.count,
+              reader: reader(entry.reader),
+            }),
           ),
           ...section.reads.map((read) =>
-            t(`${key}.line`, {
+            t("notifications.weeklyDigest.emergencyReads.line", {
               reader: reader(read.reader),
-              diver: read.diver ?? t(`${key}.unnamedDiver`),
+              diver: read.diver ?? t("notifications.weeklyDigest.emergencyReads.unnamedDiver"),
               when: formatWeekdayTime(read.at, input.locale, input.timezone),
-              departure: read.departureTitle ?? t(`${key}.unnamedDeparture`),
+              departure:
+                read.departureTitle ??
+                t("notifications.weeklyDigest.emergencyReads.unnamedDeparture"),
               departureWhen: formatWeekdayTime(
                 read.departureStartsAt,
                 input.locale,
@@ -243,10 +248,12 @@ function blockFor(
               ),
             }),
           ),
-          ...(more > 0 ? [t(`${key}.more`, { count: more })] : []),
+          ...(more > 0
+            ? [t("notifications.weeklyDigest.emergencyReads.more", { count: more })]
+            : []),
         ],
         url: section.url,
-        linkLabel: t(`${key}.link`),
+        linkLabel: t("notifications.weeklyDigest.emergencyReads.link"),
       };
     }
     case "gear_service":
