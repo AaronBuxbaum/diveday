@@ -36,6 +36,13 @@ vi.mock("@/db/authz", () => ({
   canPersonConfigureTrips: vi.fn(async () => true),
   canPersonManageWaiverTemplates: vi.fn(async () => true),
 }));
+vi.mock("@/db/shops", () => ({ getShopById: vi.fn(async () => ({ currency: "USD" })) }));
+vi.mock("@/db/media-deletions", () => ({ queueAndAttemptMediaDeletion: vi.fn() }));
+vi.mock("@/lib/storage", () => ({ storeCourseImage: vi.fn() }));
+vi.mock("@/db/shop-text-translations", () => ({
+  readTranslations: vi.fn(async () => new Map()),
+  saveTranslation: vi.fn(async () => "saved"),
+}));
 vi.mock("@/db/course-forms", () => ({
   listCourseFormRequirements: vi.fn(async () => []),
   listCourseFormAgeBounds: vi.fn(async () => new Map()),
@@ -43,18 +50,15 @@ vi.mock("@/db/course-forms", () => ({
 }));
 
 const { revalidatePath } = await import("next/cache");
-const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility } = await import(
-  "@/db/courses"
-);
+const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility, updateCourseContent } =
+  await import("@/db/courses");
+const { readTranslations, saveTranslation } = await import("@/db/shop-text-translations");
 const { requireStaffSession } = await import("@/lib/session");
 const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
 const { listCourseFormAgeBounds, listCourseFormRequirements, setCourseFormRequirements } =
   await import("@/db/course-forms");
-const {
-  pullCourseTemplateUpdatesAction,
-  saveCourseFormRequirementsAction,
-  setCourseVisibilityAction,
-} = await import("./actions");
+const { pullCourseTemplateUpdatesAction, saveCourseContentAction, setCourseVisibilityAction } =
+  await import("./actions");
 
 const SHOP_ID = "3f4b1a2c-1111-4222-8333-444444444444";
 const COURSE_ID = "11111111-1111-4111-8111-111111111111";
@@ -77,8 +81,47 @@ beforeEach(() => {
   vi.mocked(getCourseBySlug).mockResolvedValue({
     id: COURSE_ID,
     slug: "open-water-diver",
+    heroImageUrl: null,
+    galleryPhotos: [],
+    learningMaterials: [],
   } as never);
+  vi.mocked(updateCourseContent).mockResolvedValue({ ok: true } as never);
 });
+
+/** A course page as the editor posts it: every content field, valid and blank. */
+function coursePage(fields: [string, string][] = []): FormData {
+  const formData = new FormData();
+  for (const [key, value] of [
+    ["summary", "A first breath underwater."],
+    ["overview", ""],
+    ["durationText", ""],
+    ["groupSizeText", ""],
+    ["prerequisiteNote", ""],
+    ["includes", ""],
+    ["excludes", ""],
+    ["scheduleDaysJson", "[]"],
+    ["faqsJson", "[]"],
+    ["price", ""],
+    ["eLearningPrice", ""],
+    ["privatePrice", ""],
+    ...fields,
+  ]) {
+    formData.append(key, value);
+  }
+  return formData;
+}
+
+/** Where the editor's one Save sent the browser. */
+async function savedTo(formData: FormData) {
+  try {
+    await saveCourseContentAction("blue-mantis", "open-water-diver", formData);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+    throw error;
+  }
+  throw new Error("action returned without redirecting");
+}
 
 afterEach(() => vi.clearAllMocks());
 
@@ -108,22 +151,19 @@ describe("pullCourseTemplateUpdatesAction", () => {
   });
 });
 
-describe("saveCourseFormRequirementsAction", () => {
+/**
+ * **The forms a course asks for are saved by the editor's one Save** (visual
+ * review 2026-10-24, A11). The section's own form and Save are gone; the page
+ * posts `formsSection` with the list it drew, and a refused list refuses the
+ * whole save before anything is written.
+ */
+describe("saveCourseContentAction, with the forms a course asks for", () => {
   const FORM_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const FORM_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const FORM_C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
   async function posted(fields: [string, string][]) {
-    const formData = new FormData();
-    for (const [key, value] of fields) formData.append(key, value);
-    try {
-      await saveCourseFormRequirementsAction("open-water-diver", formData);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
-      throw error;
-    }
-    throw new Error("action returned without redirecting");
+    return savedTo(coursePage([["formsSection", "1"], ...fields]));
   }
 
   it("saves the ticked forms in the order their boxes give, blanks last", async () => {
@@ -138,7 +178,7 @@ describe("saveCourseFormRequirementsAction", () => {
       [`order-${FORM_C}`, "1"],
     ]);
 
-    expect(to).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms");
+    expect(to).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=saved");
     expect(setCourseFormRequirements).toHaveBeenCalledWith(
       {},
       {
@@ -217,6 +257,16 @@ describe("saveCourseFormRequirementsAction", () => {
       "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-not-authorized#forms",
     );
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
+    // The whole save is refused, the course page with it.
+    expect(updateCourseContent).not.toHaveBeenCalled();
+  });
+
+  it("leaves the forms alone when the page drew no forms list", async () => {
+    expect(await savedTo(coursePage())).toBe(
+      "/shop/blue-mantis/courses/open-water-diver/edit?notice=saved",
+    );
+    expect(updateCourseContent).toHaveBeenCalled();
+    expect(setCourseFormRequirements).not.toHaveBeenCalled();
   });
 
   it("refuses an id that is not a uuid before it reaches the database", async () => {
@@ -237,7 +287,7 @@ describe("saveCourseFormRequirementsAction", () => {
         ["formId", FORM_A],
         ["formId", FORM_B],
       ]),
-    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms");
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=saved");
     vi.mocked(setCourseFormRequirements).mockClear();
 
     // Dropping A — even while adding B — is refused, and writes nothing.
@@ -270,14 +320,14 @@ describe("saveCourseFormRequirementsAction", () => {
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
     // Raising A, or clearing it, asks more: theirs to do.
     expect(await both(["14", ""])).toBe(
-      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms",
+      "/shop/blue-mantis/courses/open-water-diver/edit?notice=saved",
     );
     expect(setCourseFormRequirements).toHaveBeenLastCalledWith(
       {},
       expect.objectContaining({ mayNarrow: false }),
     );
     expect(await both(["", ""])).toBe(
-      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms",
+      "/shop/blue-mantis/courses/open-water-diver/edit?notice=saved",
     );
     vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(true);
     vi.mocked(listCourseFormRequirements).mockResolvedValue([]);
@@ -300,6 +350,54 @@ describe("saveCourseFormRequirementsAction", () => {
     expect(await posted([["formId", FORM_A]])).toBe(
       "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid#forms",
     );
+  });
+});
+
+/**
+ * **The summary's Spanish rides the same Save** (visual review 2026-10-24,
+ * A11): a refused box refuses the save before anything is written, and an
+ * accepted one is written after the English it translates.
+ */
+describe("saveCourseContentAction, with the summary's Spanish", () => {
+  it("writes typed Spanish once the course page is saved", async () => {
+    expect(
+      await savedTo(coursePage([["spanish.summary", "Tu primera respiración bajo el agua."]])),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=saved");
+    expect(updateCourseContent).toHaveBeenCalled();
+    expect(saveTranslation).toHaveBeenCalledWith(
+      {},
+      SHOP_ID,
+      { kind: "course", id: COURSE_ID, field: "summary" },
+      expect.objectContaining({ text: "Tu primera respiración bajo el agua." }),
+    );
+  });
+
+  it("refuses Spanish written from other English, and writes nothing", async () => {
+    expect(
+      await savedTo(
+        coursePage([
+          ["spanish.summary", "Hola"],
+          ["spanishFrom.summary", "a-digest-of-other-english"],
+        ]),
+      ),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?error=spanish-stale");
+    expect(updateCourseContent).not.toHaveBeenCalled();
+    expect(saveTranslation).not.toHaveBeenCalled();
+  });
+
+  it("leaves Spanish nobody touched alone, whatever the English did", async () => {
+    vi.mocked(readTranslations).mockResolvedValueOnce(
+      new Map([[`${COURSE_ID}:summary`, { text: "Hola", sourceDigest: "old" }]]),
+    );
+    expect(
+      await savedTo(
+        coursePage([
+          ["spanish.summary", "Hola"],
+          ["spanishFrom.summary", "old"],
+        ]),
+      ),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=saved");
+    expect(saveTranslation).not.toHaveBeenCalled();
   });
 });
 

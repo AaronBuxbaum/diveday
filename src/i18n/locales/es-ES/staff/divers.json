@@ -145,6 +145,7 @@
     "noticeNotAuthorized": "Eliminar o restaurar a un buceador está limitado a propietarios y gerentes.",
     "noticeInvalid": "Revisa el nombre, correo y teléfono del buceador.",
     "newDiverTitle": "Agregar un buceador",
+    "newDiverLead": "Con el nombre basta para empezar. Agrega los datos de contacto cuando los tengas.",
     "backToRoster": "Todos los buceadores",
     "backToTripGuests": "Volver a los participantes de la salida",
     "addDiverWithName": "Agregar buceador",
@@ -153,7 +154,6 @@
     "addToBoatButton": "Agregar al barco",
     "fullNameLabel": "Nombre completo",
     "emailLabel": "Correo electrónico",
-    "optionalHint": "(opcional)",
     "phoneLabel": "Teléfono",
     "adding": "Agregando…",
     "cancel": "Cancelar",
@@ -615,10 +615,9 @@
     "newInvoice": "Nueva factura"
   },
   "file": {
-    "certificationsNone": "Ninguna registrada",
     "conversationUnanswered": "{count, plural, one {# sin responder} other {# sin responder}}",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
-    "noNotes": "Ninguna",
+    "noneOnFile": "Sin datos",
     "gearHeading": "Equipo y tallas",
     "rentalFitOnFile": "Ajuste de alquiler registrado",
     "rentsFromUs": "Renta con nosotros",
@@ -646,7 +645,6 @@
   },
   "lastDive": {
     "heading": "Última inmersión",
-    "notKnown": "No se sabe",
     "monthsAgo": "{count, plural, =0 {hace menos de un mes} one {hace # mes} other {hace # meses}}",
     "yearsAgo": "{count, plural, one {hace # año} other {hace # años}}",
     "fromShop": "Su última inmersión en una de tus salidas.",

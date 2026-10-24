@@ -129,7 +129,7 @@ describe("actions behind a switched-off feature", () => {
         form({ name: "Hand-built card", diveCount: "5", priceDollars: "100", scope: "all" }),
       ),
     );
-    expect(to).toBe(`/shop/${shop.slug}/promos/packages`);
+    expect(to).toBe(`/shop/${shop.slug}/promos`);
     const made = await db
       .select({ id: divePackages.id })
       .from(divePackages)

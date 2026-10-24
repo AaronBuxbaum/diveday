@@ -38,9 +38,7 @@
     "orderPaid": "An order is paid",
     "orderRefunded": "An order is refunded",
     "orderVoided": "An order is voided",
-    "notAvailable": "Not available yet. Email {email} and we’ll switch it on.",
-    "notAvailableShort": "Not available yet",
-    "notAvailableAsk": "Want one of these? Email {email} and we’ll switch it on."
+    "notAvailableAsk": "More integrations come later. Ask us at {email}."
   },
   "shopify": {
     "name": "Shopify",

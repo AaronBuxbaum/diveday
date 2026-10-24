@@ -48,16 +48,12 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
 
     // Discounts is Money's tab now, so Settings carries no door to it; dive
-    // packages are tucked under it, and their way back is the eyebrow
-    // (ADR 20261001-logbook).
+    // packages are a section of it (ADR 20261001-logbook; visual review
+    // 2026-10-24, A26), and their old address lands there.
     await expect(page.getByRole("main").locator(`a[href="/shop/${SHOP}/promos"]`)).toHaveCount(0);
-    await page.goto(`/shop/${SHOP}/promos`);
-    await page.getByRole("link", { name: "Edit packages" }).click();
-    await expect(page).toHaveURL(`/shop/${SHOP}/promos/packages`);
-    await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
-    // The positive half of the absence above: the same href, found where it lives.
-    await page.getByRole("main").locator(`a[href="/shop/${SHOP}/promos"]`).first().click();
-    await expect(page).toHaveURL(`/shop/${SHOP}/promos`);
+    await page.goto(`/shop/${SHOP}/promos/packages`);
+    await expect(page).toHaveURL(`/shop/${SHOP}/promos#dive-packages`);
+    await expect(page.getByRole("heading", { level: 2, name: "Dive packages" })).toBeVisible();
   });
 
   test("a settings sub-page keeps the map beside it, and its own way back", async ({ page }) => {
@@ -198,7 +194,7 @@ test.describe("settings that change the shop", () => {
     await tagline.fill(draftTagline);
     const savedPagePromise = page.context().waitForEvent("page");
     const savedPageLink = page.getByRole("link", {
-      name: staffTranslator("en-US")("settings.main.profile.viewSavedStorefront"),
+      name: staffTranslator("en-US")("settings.main.profile.viewStorefront"),
       exact: true,
     });
     await savedPageLink.focus();

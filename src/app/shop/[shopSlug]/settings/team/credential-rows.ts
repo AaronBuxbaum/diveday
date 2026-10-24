@@ -2,7 +2,6 @@ import type { listStaffCredentials } from "@/db/staff-credentials";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
-import type { CredentialRow, RenewalState } from "./_components/StaffCredentials";
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
 
 /** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
@@ -22,21 +21,30 @@ export const CREDENTIALED_ROLES: readonly Role[] = [
   "captain",
 ];
 
-/** One person's credentials, as their own card reads them. */
+/** Where a credential's renewal date sits relative to the shop's own today. */
+export type RenewalState = "not-recorded" | "current" | "due-soon" | "overdue";
+
+/** One person's credential, as their own card reads it. */
 export type CardCredential = {
   id: string;
   name: string;
   kind: string;
+  /** The kind and the issuer, joined: "Captain’s license · USCG". */
+  detail?: string;
+  /** The renewal word, when the clock has something to say. Never colour alone. */
   renewalWord: string | null;
+  renewal?: RenewalState;
+  /** Somebody has looked at it; until then the card says "Needs review". */
+  reviewed?: boolean;
 };
 
-/** The ledger's rows, each renewal measured against the shop's own today. */
+/** Every credential, each renewal measured against the shop's own today. */
 export function credentialRowsFor(
   credentials: Awaited<ReturnType<typeof listStaffCredentials>>,
   today: string,
   locale: string,
   t: StaffTranslator,
-): (CredentialRow & { personId: string; name: string; kind: string })[] {
+): (Required<CardCredential> & { personId: string })[] {
   const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
   return credentials.map(({ credential, person }) => {
     const renewal: RenewalState = !credential.renewsAt
@@ -48,14 +56,10 @@ export function credentialRowsFor(
           : "current";
     return {
       id: credential.id,
-      title: `${person.fullName} · ${credential.name}`,
-      detail: [
-        credential.status === "verified"
-          ? t("staffing.credentials.verified")
-          : t("staffing.credentials.pending"),
-        t(CREDENTIAL_KIND_KEYS[credential.kind]),
-        credential.issuingBody,
-      ]
+      personId: person.id,
+      name: credential.name,
+      kind: credential.kind,
+      detail: [t(CREDENTIAL_KIND_KEYS[credential.kind]), credential.issuingBody]
         .filter(Boolean)
         .join(" · "),
       // The word is what carries the state; the ink only seconds it. A
@@ -72,14 +76,7 @@ export function credentialRowsFor(
                 })
               : null,
       renewal,
-      personId: person.id,
-      name: credential.name,
-      kind: credential.kind,
       reviewed: credential.status === "verified",
-      reviewLabel:
-        credential.status === "verified"
-          ? t("staffing.credentials.markPending")
-          : t("staffing.credentials.markVerified"),
     };
   });
 }

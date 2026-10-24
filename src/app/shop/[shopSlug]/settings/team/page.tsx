@@ -18,7 +18,7 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { InsetGroup, ledgerRowBoxClass } from "@/components/ui/ledger";
+import { InsetGroup } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
@@ -38,7 +38,6 @@ import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-not
 import { settingsPaneClass } from "../_components/settings-pane";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { StaffCardCredentials } from "./_components/StaffCardCredentials";
-import { StaffCredentials } from "./_components/StaffCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
@@ -162,7 +161,7 @@ function StaffRow({
   year,
 }: {
   member: StaffMember;
-  /** This person's credentials on file, from the ledger at the foot. */
+  /** This person's credentials on file: the card is their whole ledger (A09). */
   credentials: readonly CardCredential[];
   /** The page's one resolved notice, already told which form it belongs to. */
   notice: FormNotice | undefined;
@@ -305,6 +304,8 @@ function StaffRow({
         credentials={credentials}
         locale={locale}
         t={t}
+        reviewAction={reviewStaffCredentialAction}
+        deleteAction={deleteStaffCredentialAction}
       />
 
       {/* Who to call for this person, and the one place a shop can say so.
@@ -545,6 +546,7 @@ export default async function TeamSettingsPage({
   // as due soon or expired.
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
   const credentialRows = credentialRowsFor(credentials, today, locale, t);
+  const needReview = credentialRows.filter((row) => !row.reviewed).length;
   return (
     <main className={settingsPaneClass("5xl")}>
       <FlashParams
@@ -564,6 +566,11 @@ export default async function TeamSettingsPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.team.title")}
+        description={
+          needReview > 0
+            ? t("settings.team.credentialsNeedReview", { count: needReview })
+            : undefined
+        }
       />
 
       {notice === "removed" && undoPersonId && undoUserAccountId && undoRoles ? (
@@ -615,9 +622,7 @@ export default async function TeamSettingsPage({
                 <StaffRow
                   key={member.personId}
                   member={member}
-                  credentials={credentialRows
-                    .filter((row) => row.personId === member.personId)
-                    .map(({ id, name, kind, renewalWord }) => ({ id, name, kind, renewalWord }))}
+                  credentials={credentialRows.filter((row) => row.personId === member.personId)}
                   notice={pageNotice}
                   priorRoles={rolesFor === member.personId ? undoRolesFor : []}
                   locale={locale}
@@ -628,86 +633,72 @@ export default async function TeamSettingsPage({
               ))}
             </InsetGroup>
           )}
-        </section>
-
-        <StaffCredentials
-          label={t("staffing.credentials.heading")}
-          rows={credentialRows}
-          words={{
-            saving: t("staffing.credentials.saving"),
-            remove: t("staffing.credentials.remove"),
-            removing: t("staffing.credentials.removing"),
-          }}
-          reviewAction={reviewStaffCredentialAction}
-          deleteAction={deleteStaffCredentialAction}
-          door={
-            // A native disclosure on the list's tail row, so the form opens in
-            // place under the ledger it adds to.
-            <li className={`list-none ${ledgerRowBoxClass}`}>
-              <AutoOpenDetails
-                id="add-credential"
-                openOnHash="add-credential"
-                className="scroll-mt-8"
+          {/* Every credential is read, reviewed and removed on its person's
+              card above (A09); adding one is the door under the team. */}
+          <div id="credentials" className="mt-4 scroll-mt-24">
+            <AutoOpenDetails
+              id="add-credential"
+              openOnHash="add-credential"
+              className="scroll-mt-8"
+            >
+              <summary
+                className={buttonClass({
+                  variant: "link",
+                  flush: true,
+                  className: "list-none select-none [&::-webkit-details-marker]:hidden",
+                })}
               >
-                <summary
-                  className={buttonClass({
-                    variant: "link",
-                    flush: true,
-                    className: "list-none select-none [&::-webkit-details-marker]:hidden",
-                  })}
-                >
-                  {t("staffing.credentials.add")}
-                </summary>
-                <div className="pt-1 pb-6">
-                  <FieldGrid as="form" action={saveStaffCredentialAction} columns={2}>
-                    <Field label={t("staffing.credentials.person")}>
-                      <select name="personId" required className={controlClass}>
-                        <option value="">{t("staffing.credentials.choosePerson")}</option>
-                        {staff.map((member) => (
-                          <option key={member.personId} value={member.personId}>
-                            {member.fullName}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label={t("staffing.credentials.kind")}>
-                      <select name="kind" required className={controlClass}>
-                        {Object.entries(CREDENTIAL_KIND_KEYS).map(([kind, key]) => (
-                          <option key={kind} value={kind}>
-                            {t(key)}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label={t("staffing.credentials.name")}>
-                      <input name="name" required maxLength={160} className={controlClass} />
-                    </Field>
-                    <Field label={t("staffing.credentials.issuer")}>
-                      <input name="issuingBody" maxLength={160} className={controlClass} />
-                    </Field>
-                    <Field label={t("staffing.credentials.identifier")}>
-                      <input name="identifier" maxLength={120} className={controlClass} />
-                    </Field>
-                    <Field label={t("staffing.credentials.issuedAt")}>
-                      <DateField name="issuedAt" />
-                    </Field>
-                    <Field label={t("staffing.credentials.renewsAt")}>
-                      <DateField name="renewsAt" />
-                    </Field>
-                    <FieldActions>
-                      <SubmitButton
-                        pendingLabel={t("staffing.credentials.saving")}
-                        className={buttonClass()}
-                      >
-                        {t("staffing.credentials.add")}
-                      </SubmitButton>
-                    </FieldActions>
-                  </FieldGrid>
-                </div>
-              </AutoOpenDetails>
-            </li>
-          }
-        />
+                {t("staffing.credentials.add")}
+              </summary>
+              <div className="pt-1 pb-6">
+                <FieldGrid as="form" action={saveStaffCredentialAction} columns={2}>
+                  <Field label={t("staffing.credentials.person")}>
+                    <select name="personId" required className={controlClass}>
+                      <option value="">{t("staffing.credentials.choosePerson")}</option>
+                      {staff.map((member) => (
+                        <option key={member.personId} value={member.personId}>
+                          {member.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={t("staffing.credentials.kind")}>
+                    <select name="kind" required className={controlClass}>
+                      {Object.entries(CREDENTIAL_KIND_KEYS).map(([kind, key]) => (
+                        <option key={kind} value={kind}>
+                          {t(key)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={t("staffing.credentials.name")}>
+                    <input name="name" required maxLength={160} className={controlClass} />
+                  </Field>
+                  <Field label={t("staffing.credentials.issuer")}>
+                    <input name="issuingBody" maxLength={160} className={controlClass} />
+                  </Field>
+                  <Field label={t("staffing.credentials.identifier")}>
+                    <input name="identifier" maxLength={120} className={controlClass} />
+                  </Field>
+                  <Field label={t("staffing.credentials.issuedAt")}>
+                    <DateField name="issuedAt" />
+                  </Field>
+                  <Field label={t("staffing.credentials.renewsAt")}>
+                    <DateField name="renewsAt" />
+                  </Field>
+                  <FieldActions>
+                    <SubmitButton
+                      pendingLabel={t("staffing.credentials.saving")}
+                      className={buttonClass()}
+                    >
+                      {t("staffing.credentials.add")}
+                    </SubmitButton>
+                  </FieldActions>
+                </FieldGrid>
+              </div>
+            </AutoOpenDetails>
+          </div>
+        </section>
       </div>
     </main>
   );

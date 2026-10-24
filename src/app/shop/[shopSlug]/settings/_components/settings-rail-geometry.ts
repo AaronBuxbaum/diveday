@@ -25,7 +25,7 @@ export const SETTINGS_RAIL_COLUMN_CLASS = "hidden lg:block lg:w-[264px] lg:shrin
  * (`overflow-y-auto`); the skeleton clips.
  */
 export const SETTINGS_RAIL_FRAME_CLASS =
-  "sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] pe-2";
+  "sticky top-(--chrome-h) max-h-[calc(100svh-var(--chrome-h))] bg-background pe-2";
 
 /**
  * What the box holds: the groups `space-y-5` apart inside `py-6`. On the
@@ -41,6 +41,10 @@ export const SETTINGS_RAIL_LABEL_CLASS = "mb-2";
 /**
  * A group label's words: a 24px box, the text-xs line's 16px in `py-1`, inset
  * `px-3` onto the rows' text edge. A box of its own because it is what the
- * stuck label fills (`.settings-rail-label > span`, globals.css).
+ * stuck label fills (`.settings-rail-label > span`, globals.css). Filled
+ * always, not only when the scroll-state query says the label is stuck:
+ * where that query is missing or late, a stuck label's words printed over
+ * the row beneath them (visual review 2026-10-24, A45). On the rail's own
+ * ground (`bg-background` on the frame) the fill shows only over a row.
  */
-export const SETTINGS_RAIL_LABEL_WORDS_CLASS = "block px-3 py-1";
+export const SETTINGS_RAIL_LABEL_WORDS_CLASS = "block bg-background! px-3 py-1";

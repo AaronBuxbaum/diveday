@@ -1,9 +1,29 @@
 import Link from "next/link";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import {
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
+import type { AppDb } from "@/db/client";
+import { listDivePackages } from "@/db/dive-packages";
+import { packageDivesOwedAt } from "@/db/report-lines";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
+import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
+import { formatMoneyScanned } from "@/lib/format";
+import { noticeFromParam } from "@/lib/staff-notices";
+import { createDivePackageAction, deleteDivePackageAction } from "../../settings/package-actions";
+import { divePackageNoticeMessages } from "../../settings/sub-page-notices";
 import { TripDealLedger, type TripDealRow } from "./PromoLedger";
 
 /**
@@ -66,21 +86,150 @@ export function TripDealsSection({
 
 /**
  * **Prepaid packages are the third price this tab holds** (ADR
- * 20261001-logbook): set up once, so a door rather than a list. Drawn only
- * while the shop sells dive packages (the Features page).
+ * 20261001-logbook), listed here rather than behind a door (visual review
+ * 2026-10-24, A26): a row per package (name, dives, price, scope) with its
+ * Delete, what the shop still owes in dives, and "Add a package" opening the
+ * form. `/promos/packages` redirects here. Packages have no edit: a package is
+ * a price already sold against, so a change is a new package and a Delete.
+ * Drawn only while the shop sells dive packages (the Features page).
  */
-export function DivePackagesDoor({ t, shopSlug }: { t: StaffTranslator; shopSlug: string }) {
+export async function DivePackagesSection({
+  db,
+  shop,
+  t,
+  notice,
+  locale,
+}: {
+  db: AppDb;
+  shop: { id: string; currency: string };
+  t: StaffTranslator;
+  /** The page's `?notice=`; a package save or delete answers beside the list it changed. */
+  notice: string | undefined;
+  locale: string;
+}) {
+  // What the shop still owes in dives (fourth UX review, item 20): sold, not
+  // yet taken, at what each was bought for. The month report's figure, at now.
+  const [packages, owed] = await Promise.all([
+    listDivePackages(db, shop.id),
+    packageDivesOwedAt(db, shop.id, nowDate()),
+  ]);
+  const currency = shop.currency;
+  const status = noticeFromParam(notice, divePackageNoticeMessages(t));
   return (
-    <>
-      <GroupLabel as="h2" id="dive-packages" className="mt-10">
+    <section aria-labelledby="dive-packages" className="mt-10 scroll-mt-24">
+      <GroupLabel as="h2" id="dive-packages">
         {t("settings.main.divePackages.heading")}
       </GroupLabel>
-      <Link
-        href={`/shop/${shopSlug}/promos/packages`}
-        className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+      {status ? (
+        <FormStatus tone={status.tone} className="mt-2">
+          {status.text}
+        </FormStatus>
+      ) : null}
+      {owed.dives > 0 ? (
+        <p className="mt-2 text-sm tabular-nums text-muted">
+          {t("settings.main.divePackages.owed", {
+            dives: owed.dives,
+            value: formatMoneyScanned(owed.valueCents, currency, locale),
+          })}
+        </p>
+      ) : null}
+      {packages.length > 0 ? (
+        <ul className="mt-3" aria-labelledby="dive-packages">
+          {packages.map((pkg) => (
+            <LedgerRow
+              key={pkg.id}
+              stacked
+              trailing={
+                <form action={deleteDivePackageAction}>
+                  <input type="hidden" name="packageId" value={pkg.id} />
+                  <SubmitButton
+                    pendingLabel={t("settings.main.divePackages.deleting")}
+                    className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                  >
+                    {t("settings.main.divePackages.delete")}
+                  </SubmitButton>
+                </form>
+              }
+            >
+              <span className="block min-w-0">
+                <span className="font-medium">{pkg.name}</span>{" "}
+                <span className="text-base text-muted tabular-nums">
+                  {t("settings.main.divePackages.summary", {
+                    dives: pkg.diveCount,
+                    price: formatMoneyScanned(pkg.priceCents, currency, locale),
+                    scope: t(
+                      pkg.scope === "fun_dives"
+                        ? "settings.main.divePackages.scopeFunDives"
+                        : "settings.main.divePackages.scopeAll",
+                    ),
+                  })}
+                </span>
+              </span>
+            </LedgerRow>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-muted">{t("settings.main.divePackages.empty")}</p>
+      )}
+      <AutoOpenDetails
+        id="package-new"
+        openOnHash="package-new"
+        open={notice === "package-invalid"}
+        className="group/package mt-4 scroll-mt-24"
       >
-        {t("promos.packages.open")}
-      </Link>
-    </>
+        <summary
+          className={`${buttonClass({ variant: "secondary", size: "sm" })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+        >
+          {t("settings.main.divePackages.createTitle")}
+        </summary>
+        <FieldGrid as="form" action={createDivePackageAction} columns={2} className="mt-4">
+          <Field label={t("settings.main.divePackages.nameLabel")}>
+            <input name="name" required maxLength={80} className={controlClass} />
+          </Field>
+          <Field label={t("settings.main.divePackages.diveCountLabel")}>
+            <input
+              name="diveCount"
+              type="number"
+              inputMode="numeric"
+              required
+              min={1}
+              max={MAX_PACKAGE_DIVE_COUNT}
+              className={`${controlClass} tabular-nums`}
+            />
+          </Field>
+          <Field label={t("settings.main.divePackages.priceLabel")}>
+            <input
+              name="priceDollars"
+              type="number"
+              inputMode="decimal"
+              required
+              min={1}
+              step="0.01"
+              className={`${controlClass} tabular-nums`}
+            />
+          </Field>
+          <Field
+            label={t("settings.main.divePackages.validityLabel")}
+            description={t("settings.main.divePackages.validityDescription")}
+          >
+            <DateField name="validUntil" className="tabular-nums" />
+          </Field>
+          <Field label={t("settings.main.divePackages.scopeLabel")}>
+            <select name="scope" defaultValue="fun_dives" className={controlClass}>
+              <option value="all">{t("settings.main.divePackages.scopeAll")}</option>
+              <option value="fun_dives">{t("settings.main.divePackages.scopeFunDives")}</option>
+            </select>
+          </Field>
+          <FieldActions>
+            <SubmitButton
+              pendingLabel={t("settings.main.divePackages.submitting")}
+              className={buttonClass()}
+            >
+              {t("settings.main.divePackages.submit")}
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      </AutoOpenDetails>
+    </section>
   );
 }

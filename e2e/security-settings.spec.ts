@@ -54,14 +54,19 @@ test.describe("account security settings", () => {
     await expect(page.getByRole("button", { name: "Disable two-factor" })).toBeVisible();
     await expect(page.getByText("Not enabled")).toHaveCount(0);
 
-    // A narrow keyboard walk checks that the server-identified session is
-    // labeled and its technical fingerprint stays behind a native disclosure.
+    // A narrow keyboard walk checks that the server-identified session's
+    // device is labeled and its sessions, with their technical fingerprint,
+    // stay behind the device row's native disclosure.
     await page.setViewportSize({ width: 390, height: 844 });
     const staff = staffTranslator("en-US");
-    await expect(page.getByText(staff("settings.security.thisDevice"))).toBeVisible();
-    const details = page.getByText(staff("settings.security.details"), { exact: true });
-    await details.focus();
-    await details.press("Enter");
+    await expect(
+      page.getByText(staff("settings.security.sessions.thisDevice")).first(),
+    ).toBeVisible();
+    const sessions = page.getByText(staff("settings.security.sessions.showSessions"), {
+      exact: true,
+    });
+    await sessions.first().focus();
+    await sessions.first().press("Enter");
     // The line is "Browser: <user agent>"; its label half is enough to find it.
     const browserLabel = staff("settings.security.browserLine", { browser: "" }).trim();
     await expect(page.getByText(browserLabel)).toBeVisible();
@@ -83,6 +88,7 @@ test.describe("account security settings", () => {
     // eject you or the control is decorative. Where it lands is not the point
     // and is not asserted: signed out under DIVEDAY_E2E the app shows the demo
     // shell rather than /sign-in.
+    // The Revoke sits inside the device row's "Show sessions", opened above.
     await page.getByRole("button", { name: "Revoke", exact: true }).first().click();
     await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toHaveCount(0);
     await page.goto(`/shop/${privateShop.slug}/settings/security`);

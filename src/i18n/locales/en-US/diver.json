@@ -3856,39 +3856,25 @@
     "viewingAs": "Viewing as",
     "switchRole": "Switch role",
     "sharedWarning": "Shared demo link. Do not enter real customer details.",
-    "sessionExpired": "Session expired? Sign back in at",
-    "withCredentials": "with",
-    "active": "Active",
-    "tryLabel": "Try:",
     "current": "Current",
     "switchAction": "Switch",
     "switchFailed": "That role switch didn’t go through.",
     "switchToAria": "Switch to {role}",
     "roles": {
       "owner": {
-        "title": "Owner",
-        "desc": "You’re steering the whole shop. Today is your work queue: bookings, blockers, and today’s departures in one place.",
-        "tryThis": "Open Schedule to see this week’s departures."
+        "title": "Owner"
       },
       "instructor": {
-        "title": "Instructor",
-        "desc": "You’re teaching and certifying divers. Divers holds every diver’s certification records and specialty history.",
-        "tryThis": "Open Divers to check a certification record before class."
+        "title": "Instructor"
       },
       "divemaster": {
-        "title": "Divemaster",
-        "desc": "You’re getting divers ready to board. Today lists every diver who can’t board yet, with the one tap that fixes each one.",
-        "tryThis": "Open Today to see who still needs prep."
+        "title": "Divemaster"
       },
       "captain": {
-        "title": "Captain",
-        "desc": "You’re running the boat. The manifest is your boarding pass and roll call, built for wet hands and spotty signal.",
-        "tryThis": "Open today’s manifest to see who’s on the boat."
+        "title": "Captain"
       },
       "diver": {
-        "title": "Diver",
-        "desc": "You’re booking a dive. This is what the shop’s divers see: the schedule, the booking, the waiver.",
-        "tryThis": "Pick a trip on the schedule and book a seat."
+        "title": "Diver"
       }
     }
   },
