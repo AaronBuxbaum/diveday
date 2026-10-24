@@ -274,7 +274,7 @@ export async function FeaturePageBody({
               <div className="mt-6 border-t border-border pt-5">
                 <Link
                   href="/pricing#export"
-                  className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+                  className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
                 >
                   {t("marketing.common.recordsLink")}
                 </Link>

@@ -99,7 +99,7 @@ export function CourseHero({
             t("course.photoAltFallback", { course: course.title, n: 1 }),
           )}
           className="aspect-video w-full"
-          sizes="(min-width: 1280px) 1216px, 100vw"
+          sizes="(min-width: 1152px) 1104px, 100vw"
           priority
         />
       ) : null}
@@ -371,7 +371,7 @@ export function CourseGallery({
                   t("course.photoAltFallback", { course: title, n: index + 2 }),
                 )}
                 className="h-40 w-full rounded-inset border border-border sm:h-48"
-                sizes="(min-width: 1280px) 25rem, (min-width: 640px) 33vw, 16rem"
+                sizes="(min-width: 1152px) 360px, (min-width: 640px) 31vw, 16rem"
               />
               {alt.trim() ? (
                 <figcaption className="mt-2 text-sm text-muted">{alt}</figcaption>

@@ -538,7 +538,7 @@
         }
       }
     ],
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 420,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 415,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 316,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": 305,
@@ -568,9 +568,8 @@
   },
   "logical-properties": {
     "//": "Physical directional utilities still in components, per file. Written by `node scripts/check-logical-properties.mjs --write`. This number may only go down — see scripts/check-logical-properties.mjs. Use ms-/me-/ps-/pe-/start-/end-/text-start/text-end instead.",
-    "src/app/page.tsx": 6,
-    "src/app/pricing/page.tsx": 3,
-    "src/app/product/page.tsx": 1,
+    "src/app/page.tsx": 5,
+    "src/app/pricing/page.tsx": 1,
     "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx": 4,
     "src/app/s/[shopSlug]/trips/[id]/_components/PackingSection.tsx": 6,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx": 2,
@@ -611,11 +610,10 @@
       }
     ],
     "src/app/onboard/page.tsx": 479,
-    "src/app/page.tsx": 558,
-    "src/app/pricing/page.tsx": 426,
-    "src/app/ready/[token]/page.tsx": 652,
-    "src/app/s/[shopSlug]/page.tsx": 869,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 509,
+    "src/app/page.tsx": 491,
+    "src/app/ready/[token]/page.tsx": 649,
+    "src/app/s/[shopSlug]/page.tsx": 847,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 504,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,

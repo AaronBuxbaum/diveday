@@ -558,7 +558,7 @@ export function ImportPhase({
           2026-10-24, B14); every guide links to it. */}
       <Link
         href="/switching#preview"
-        className={buttonClass({ variant: "link", flush: true, className: "mt-4 text-left" })}
+        className={buttonClass({ variant: "link", flush: true, className: "mt-4 text-start" })}
       >
         {t("switching.common.previewLink")}
       </Link>

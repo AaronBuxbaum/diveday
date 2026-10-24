@@ -23,6 +23,10 @@ const labelTextBase = "text-(length:--text-base) leading-6";
  * Rendered once, in the **last** card: the diver's signature card for an
  * adult, the guardian's card for a minor (ADR 20260907-guardian-co-signature).
  * `expiresAt` arrives formatted in the reader's locale and the shop's zone.
+ *
+ * "Your typed name, agreement, and completion time are saved with this exact
+ * version" is not here: the page says it once, at its foot (visual review
+ * 2026-10-24, B56).
  */
 export function WaiverSignBlock({
   token,

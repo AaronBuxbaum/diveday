@@ -243,7 +243,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                       className={buttonClass({
                         variant: "link",
                         flush: true,
-                        className: "mt-1 text-left",
+                        className: "mt-1 text-start",
                       })}
                     >
                       {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
@@ -281,7 +281,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                     className={buttonClass({
                       variant: "link",
                       flush: true,
-                      className: "mt-1 text-left",
+                      className: "mt-1 text-start",
                     })}
                   >
                     {item.link.label}

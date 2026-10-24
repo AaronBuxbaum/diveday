@@ -55,12 +55,14 @@ describe("messageFor", () => {
   it("signs every shop email off the same way: name, then phone, then address", () => {
     const sender = { contactPhone: "+1 305 555 0142", contactEmail: "desk@bluemantis.dive" };
     const confirmation = messageFor({ kind: "booking_confirmation", ...trip, sender });
+    const { diverName: _diverName, endsAt: _endsAt, userAccountId: _account, ...base } = trip;
     const reminder = messageFor({
       kind: "trip_reminder_24h",
-      ...trip,
+      ...base,
+      open: 1,
       sender,
       readinessUrl: "https://diveday.test/ready/abc.def",
-    } as Notification);
+    });
     for (const email of [confirmation, reminder]) {
       expect(email.text).toContain("\n\nBlue Mantis\n+1 305 555 0142\ndesk@bluemantis.dive\n");
       expect(email.html).toContain(

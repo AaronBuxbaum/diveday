@@ -204,14 +204,14 @@ export default async function DiveSitePage({
             src={cover}
             alt=""
             className="aspect-[3/2] w-full rounded-panel sm:col-span-2 sm:aspect-auto sm:h-full"
-            sizes="(min-width: 1280px) 50rem, (min-width: 640px) 66vw, 100vw"
+            sizes="(min-width: 896px) 35rem, (min-width: 640px) 62vw, 100vw"
             priority
           />
           <StoredPhoto
             src={gallery[0] ?? cover}
             alt=""
             className="aspect-[3/2] w-full rounded-panel sm:aspect-[4/5]"
-            sizes="(min-width: 1280px) 25rem, (min-width: 640px) 33vw, 100vw"
+            sizes="(min-width: 896px) 17rem, (min-width: 640px) 30vw, 100vw"
           />
         </div>
       ) : (

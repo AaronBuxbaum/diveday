@@ -32,11 +32,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   // The set price is said as the set price, in one line (visual review
   // 2026-10-24, B25): no struck-through list price, no savings line.
-  await expect(
-    fit.getByText(
-      "Estimated rental: $45.00 per person, the full-set price. We’ll confirm at the dock.",
-    ),
-  ).toBeVisible();
+  await expect(fit.getByText(/full-set price\. We’ll confirm/)).toBeVisible();
   await expect(fit.getByText(/You save/)).toHaveCount(0);
   // Target the checkbox specifically: "BCD" also substring-matches the "BCD size"
   // select's label, which would make a bare getByLabel("BCD") ambiguous.

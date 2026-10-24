@@ -151,14 +151,14 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
         <div className="mt-4 flex flex-col items-start gap-1">
           <Link
             href="/pricing#export"
-            className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+            className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
           >
             {t("marketing.common.recordsLink")}
           </Link>
           {/* Tagged, like the homepage's doors onto the same surface. */}
           <Link
             href={switchingHref("/switching/spreadsheet", "product-spreadsheet")}
-            className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+            className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
           >
             {t("marketing.product.spreadsheetLink")}
           </Link>

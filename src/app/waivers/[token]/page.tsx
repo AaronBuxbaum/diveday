@@ -394,8 +394,6 @@ export default async function WaiverPage({
         </form>
       </WaiverPacing>
       <WaiverHelpLine shop={shop} t={t} />
-      {/* What is kept with the signature, once, at the page foot (visual
-          review 2026-10-24, B56): it used to sit inside the signature card. */}
       <p className="mt-2 text-center text-sm text-muted">{t("waiver.signatureNote")}</p>
     </ThreadShell>
   );

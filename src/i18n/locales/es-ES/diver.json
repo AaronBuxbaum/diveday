@@ -3946,8 +3946,7 @@
       "tryTitle": "Cada buceador reservado, firmado y contado a bordo, desde tu primera salida",
       "stepLink": "{name} →",
       "percentArm": {
-        "heroPriceLine": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes, sin cuota de alta.} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay, sin cuota mensual.}}",
-        "priceLine": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes, congelado dos años para los centros fundadores.} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay, congelado dos años para los centros fundadores.}}"
+        "heroPriceLine": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes, sin cuota de alta.} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay, sin cuota mensual.}}"
       }
     },
     "common": {

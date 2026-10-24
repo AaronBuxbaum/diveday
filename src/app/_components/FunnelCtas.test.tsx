@@ -137,7 +137,7 @@ describe("the footnotes under a pair", () => {
 
 /** One close for every marketing page (B15), saying who reads a request once (#2097). */
 describe("the closing band", () => {
-  it("is a left-aligned heading, the support line and the pair, and no footnotes", () => {
+  it("is a start-aligned heading, the support line and the pair, and no footnotes", () => {
     const { container } = render(
       <ClosingCta
         locale="en-US"

@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { expect, test } from "./fixtures";
@@ -280,7 +281,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // 2026-10-05; the sentence under them names the sections, never a count of
   // the rows (visual review 2026-10-24, B44).
   await expect(
-    page.getByText("Before the dive day, on the day and across the season are all in one plan."),
+    page.getByText(diverTranslator("en-US")("marketing.product.boxDescription")),
   ).toBeVisible();
 
   // The hub is the directory of the feature pages (H-93), and the offline

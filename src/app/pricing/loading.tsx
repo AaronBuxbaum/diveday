@@ -5,55 +5,20 @@ import { SkeletonLineBars } from "@/components/ShopPageHeader";
 /** The invoice's seven lines, as the page lists them. */
 const INVOICE_ROWS = ["setup", "logins", "tiers", "cut", "cards", "contract", "leaving"] as const;
 
-/**
- * What the plan covers, one entry per item with the lines it wraps to on a
- * phone (`base`, 314px of text at 390) and in the two-column list from `sm`
- * (measured at 1280, 440px of text a column on the hero's `max-w-5xl`, K-404).
- * A grid row is as tall as its taller item, so the rows are two lines, one,
- * then two: the practice-shop line, about 420px, fits on one there where
- * `max-w-4xl`'s 376px wrapped it.
- */
-const COVERS_LINES = [
-  ["item1", { base: 3, sm: 2 }],
-  ["item2", { base: 1, sm: 1 }],
-  ["item3", { base: 2, sm: 1 }],
-  ["item4", { base: 2, sm: 1 }],
-  ["item6", { base: 1, sm: 1 }],
-  ["item7", { base: 3, sm: 2 }],
-] as const;
+/** The marketing shell's container, the page's one left edge (B12). */
+const CONTAINER = "mx-auto w-full max-w-7xl px-6";
 
 /**
  * The `/pricing` segment's `<Suspense>` boundary, and what a client navigation
  * into it paints (ADR 20260804-instant-navigation). Same arrangement, and the
  * same reason, as `src/app/product/loading.tsx`: the page's `requestLocale()`
  * read sits above everything it renders, so the chrome is here too, and the
- * body is bars rather than a second English render of itself
- * (FU-20260812-marketing-suspense-swap-discards-interaction). Nothing in here
- * is interactive; anything interactive added reopens that bug.
+ * body is bars rather than a second English render of itself.
  *
- * **Shaped like the hero, in the hero's order and on its measure** (K-408):
- * the plan line, the headline, the figure, its cadence and the lock note, the
- * annotated invoice beside its notes, the two doors and their terms, then
- * the hairline turn into what the number buys. It predated the invoice and
- * drew the older order on `max-w-3xl`, so the doors painted where the invoice
- * lands and dropped 425px when it did. Its measure is whatever the page's
- * hero column wears, which the test reads from the page, since nothing else
- * holds the two together. The numbers are the page's line boxes
- * (src/app/pricing/page.tsx), measured at 390 and 1280:
- *   - the eyebrow, one 20px `text-sm` line; the headline `mt-5`, two 40px
- *     `text-4xl` lines on a phone and one 48px `sm:text-5xl` line from `sm`;
- *   - the figure `mt-10`, `leading-none` at `text-7xl`/`sm:text-8xl`: 72/96px;
- *   - the cadence `mt-4`, one 24px line; the lock note `mt-2`, 24px lines,
- *     two on a phone;
- *   - the invoice `mt-12`: seven `py-3` rows of one 24px line between
- *     hairlines, beside (from `lg`) or over the notes, a 20px heading and
- *     two notes `space-y-3` under it, each two lines on `max-w-4xl` and
- *     `max-w-5xl` alike (329px and 386px of text beside the ledger);
- *   - the doors `mt-12`, 48px, stacked below `sm`; the demo note `mt-6` (two
- *     lines on a phone, one from `sm`) and the trial note `mt-2` (three, then
- *     two), 24px lines;
- *   - the hairline `mt-14`, its 20px heading, the list `mt-5 gap-y-3`, the
- *     48px link `mt-4`.
+ * Shaped like the page since the visual review of 2026-10-24 (B11, B12): one
+ * container, start-aligned; the hero's eyebrow, title, figure and lock line;
+ * the invoice beside one "Notes" list; the button pair; then the fee anchor
+ * and the FAQ.
  */
 export default function PricingLoading() {
   return (
@@ -61,28 +26,20 @@ export default function PricingLoading() {
       <MarketingNavFallback />
       <main className="flex-1 animate-pulse">
         <section className="border-b border-border">
-          <div className="mx-auto max-w-5xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
-            <div className="mx-auto flex max-w-3xl flex-col items-center">
-              <div className="h-5 w-52 rounded bg-surface-sunken" />
-              <div className="mt-5 w-full">
-                <SkeletonLineBars
-                  lines={{ base: 2, sm: 1 }}
-                  height="h-10 sm:h-12"
-                  width="mx-auto w-full max-w-xl"
-                />
-              </div>
-              <div className="mt-10 h-18 w-40 rounded bg-surface-sunken sm:h-24 sm:w-52" />
-              <div className="mt-4 h-6 w-32 rounded bg-surface-sunken" />
-              <div className="mt-2 w-full">
-                <SkeletonLineBars
-                  lines={{ base: 2, sm: 1 }}
-                  height="h-6"
-                  width="mx-auto w-96 max-w-full"
-                />
-              </div>
+          <div className={`${CONTAINER} pt-20 pb-16 lg:pt-28 lg:pb-20`}>
+            <div className="h-5 w-52 rounded bg-surface-sunken" />
+            <div className="mt-5">
+              <SkeletonLineBars
+                lines={{ base: 2, sm: 1 }}
+                height="h-10 sm:h-12"
+                width="w-full max-w-xl"
+              />
             </div>
+            <div className="mt-10 h-18 w-40 rounded bg-surface-sunken sm:h-24 sm:w-52" />
+            <div className="mt-4 h-6 w-32 rounded bg-surface-sunken" />
+            <div className="mt-2 h-6 w-96 max-w-full rounded bg-surface-sunken" />
 
-            {/* The annotated invoice, and the builder's notes beside it. */}
+            {/* The annotated invoice, and the one Notes list beside it. */}
             <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
               <div className="divide-y divide-border border-y border-border">
                 {INVOICE_ROWS.map((row) => (
@@ -93,70 +50,43 @@ export default function PricingLoading() {
                 ))}
               </div>
               <div>
-                <div className="h-5 w-44 rounded bg-surface-sunken" />
+                <div className="h-4 w-20 rounded bg-surface-sunken" />
                 <div className="mt-4 space-y-3">
-                  {["note1", "note2"].map((note) => (
-                    <div key={note}>
-                      <SkeletonLineBars lines={2} height="h-6" width="w-full" />
-                    </div>
+                  {["note1", "note2", "note3", "note4", "note5"].map((note) => (
+                    <div key={note} className="h-6 w-full rounded bg-surface-sunken" />
                   ))}
+                </div>
+                <div className="mt-4 flex h-12 items-center">
+                  <div className="h-4 w-56 rounded bg-surface-sunken" />
                 </div>
               </div>
             </div>
 
-            {/* The two doors, and what each one costs. */}
-            <div className="mx-auto flex max-w-3xl flex-col items-center">
-              <div className="mt-12 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
-                <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-48" />
-                <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-36" />
-              </div>
-              <div className="mt-6 w-full">
-                <SkeletonLineBars
-                  lines={{ base: 2, sm: 1 }}
-                  height="h-6"
-                  width="mx-auto w-full max-w-lg"
-                />
-              </div>
-              <div className="mt-2 w-full">
-                <SkeletonLineBars
-                  lines={{ base: 3, sm: 2 }}
-                  height="h-6"
-                  width="mx-auto w-full max-w-xl"
-                />
-              </div>
+            {/* The two doors, and the hero's footnotes under them. */}
+            <div className="mt-12 flex flex-col gap-3 sm:flex-row">
+              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-48" />
+              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-36" />
             </div>
-
-            {/* What the number buys: the hairline, then a two-column list. */}
-            <div className="mt-14 border-t border-border pt-10">
-              <div className="h-5 w-44 rounded bg-surface-sunken" />
-              <div className="mt-5 grid gap-x-10 gap-y-3 sm:grid-cols-2">
-                {COVERS_LINES.map(([item, lines]) => (
-                  <div key={item}>
-                    <SkeletonLineBars lines={lines} height="h-6" width="w-full max-w-xs" />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex h-12 items-center">
-                <div className="h-4 w-56 rounded bg-surface-sunken" />
-              </div>
+            <div className="mt-6">
+              <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-6" width="w-full max-w-xl" />
             </div>
           </div>
         </section>
 
-        {/* The fee anchor: heading, a line of argument, two quiet rows. */}
+        {/* The fee anchor: heading, two quiet rows, the one line in full ink. */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-3xl px-6 py-16 lg:py-24">
-            <div className="h-9 w-full max-w-lg rounded bg-surface-sunken" />
-            <div className="mt-6 h-4 w-full rounded bg-surface-sunken" />
-            <div className="mt-2 h-4 w-5/6 rounded bg-surface-sunken" />
-            <div className="mt-10 space-y-8">
-              {[0, 1].map((row) => (
-                <div key={row}>
-                  <div className="h-4 w-32 rounded bg-surface-sunken" />
-                  <div className="mt-3 h-4 w-full max-w-xl rounded bg-surface-sunken" />
-                  <div className="mt-2 h-4 w-48 rounded bg-surface-sunken" />
-                </div>
-              ))}
+          <div className={`${CONTAINER} py-16 lg:py-24`}>
+            <div className="max-w-3xl">
+              <div className="h-9 w-full max-w-lg rounded bg-surface-sunken" />
+              <div className="mt-10 space-y-8">
+                {[0, 1].map((row) => (
+                  <div key={row}>
+                    <div className="h-4 w-32 rounded bg-surface-sunken" />
+                    <div className="mt-3 h-4 w-full max-w-xl rounded bg-surface-sunken" />
+                    <div className="mt-2 h-4 w-48 rounded bg-surface-sunken" />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>

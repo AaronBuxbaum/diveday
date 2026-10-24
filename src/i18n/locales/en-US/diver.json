@@ -3946,8 +3946,7 @@
       "tryTitle": "Every diver booked, signed and counted aboard, from your first trip",
       "stepLink": "{name} →",
       "percentArm": {
-        "heroPriceLine": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month, and no setup fee.} other {{percent} of the card money taken through DiveDay, and no monthly fee.}}",
-        "priceLine": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month, locked for two years for founding shops.} other {{percent} of the card money taken through DiveDay, locked for two years for founding shops.}}"
+        "heroPriceLine": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month, and no setup fee.} other {{percent} of the card money taken through DiveDay, and no monthly fee.}}"
       }
     },
     "common": {
