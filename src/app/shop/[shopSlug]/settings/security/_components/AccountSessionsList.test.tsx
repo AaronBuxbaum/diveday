@@ -7,31 +7,44 @@ afterEach(cleanup);
 
 const labels = {
   thisDevice: "This device",
-  details: "Details",
+  includesThisDevice: "Includes this device",
   browserLine: (browser: string) => `Browser: ${browser}`,
   networkLine: (network: string) => `Network: ${network}`,
   unknownDevice: "Unknown device",
   unknownIp: "Unknown network",
   revoke: "Revoke",
   revoking: "Revoking…",
+  group: (count: number) => `${count} sessions`,
+  showSessions: "Show sessions",
+  showAll: "Show all",
 };
 
-describe("active account sessions", () => {
-  it("keeps a long list reachable and marks only the server-identified session", () => {
-    const currentId = "session-17";
-    const rows: AccountSessionDisplayRow[] = Array.from({ length: 36 }, (_, index) => {
-      const id = `session-${index}`;
-      return {
-        id,
-        deviceLabel: `Chrome on Windows ${index}`,
-        isCurrent: id === currentId,
-        lastSeen: `last seen ${index}`,
-        userAgent: `Chrome/125 Windows ${index}`,
-        ipAddress: `192.0.2.${index}`,
-      };
-    });
+function row(
+  id: string,
+  deviceLabel: string,
+  day: number,
+  isCurrent = false,
+): AccountSessionDisplayRow {
+  return {
+    id,
+    deviceLabel,
+    isCurrent,
+    lastSeenAt: new Date(Date.UTC(2026, 9, day, 12)),
+    lastSeen: `last seen Oct ${day}`,
+    userAgent: `${deviceLabel} agent`,
+    ipAddress: `192.0.2.${day}`,
+  };
+}
 
-    render(
+describe("active account sessions", () => {
+  it("draws one row per device, current first, with every session's Revoke inside it", () => {
+    const rows = [
+      ...Array.from({ length: 30 }, (_, index) =>
+        row(`chrome-${index}`, "Chrome · Linux", index + 1),
+      ),
+      row("phone", "Safari · iOS", 2, true),
+    ];
+    const { container } = render(
       <AccountSessionsList
         rows={rows}
         labels={labels}
@@ -40,48 +53,68 @@ describe("active account sessions", () => {
       />,
     );
 
-    const list = screen.getByRole("list");
-    const items = within(list).getAllByRole("listitem");
-    expect(items).toHaveLength(rows.length);
-    expect(within(list).getByText("Chrome on Windows 35")).toBeVisible();
-    expect(within(list).getAllByText(labels.thisDevice)).toHaveLength(1);
+    const groups = container.querySelectorAll("li.py-3");
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toHaveTextContent("Safari · iOS");
+    expect(within(groups[0] as HTMLElement).getAllByText("This device").length).toBeGreaterThan(0);
+    expect(groups[1]).toHaveTextContent("30 sessions");
+    // Every session keeps its own Revoke, posting its own id.
+    const ids = Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[name="sessionId"]'),
+    ).map((input) => input.value);
+    expect(ids.sort()).toEqual(rows.map((session) => session.id).sort());
+    expect(screen.getAllByRole("button", { name: "Revoke", hidden: true })).toHaveLength(31);
+  });
 
-    for (const [index, item] of items.entries()) {
-      const id = rows[index]?.id;
-      expect(item.querySelector<HTMLInputElement>('input[name="sessionId"]')?.value).toBe(id);
-      expect(within(item).getByRole("button", { name: labels.revoke })).toBeVisible();
-      expect(within(item).queryByText(labels.thisDevice) !== null).toBe(id === currentId);
-    }
+  it("marks a device row of several as including this device, and the session itself as this device", () => {
+    const { container } = render(
+      <AccountSessionsList
+        rows={[row("today", "Chrome · Linux", 1, true), row("yesterday", "Chrome · Linux", 2)]}
+        labels={labels}
+        shopSlug="blue-mantis"
+        revokeAction={vi.fn(async () => {})}
+      />,
+    );
+    const group = container.querySelector("li.py-3") as HTMLElement;
+    const header = group.firstElementChild as HTMLElement;
+    expect(header).toHaveTextContent("Includes this device");
+    expect(header).not.toHaveTextContent(/^.*\bThis device/);
+    expect(within(group).getAllByText("This device", { exact: true })).toHaveLength(1);
+  });
+
+  it("shows five devices and folds the rest behind Show all", () => {
+    const devices = ["A", "B", "C", "D", "E", "F", "G"];
+    const { container } = render(
+      <AccountSessionsList
+        rows={devices.map((name, index) => row(name, `${name} · Linux`, index + 1))}
+        labels={labels}
+        shopSlug="blue-mantis"
+        revokeAction={vi.fn(async () => {})}
+      />,
+    );
+    const showAll = screen.getByText("Show all");
+    const folded = showAll.closest("details") as HTMLElement;
+    expect(folded.querySelectorAll("li.py-3")).toHaveLength(2);
+    expect(container.querySelectorAll("li.py-3")).toHaveLength(7);
+    // Newest first: G and F are seen latest, so A and B are the folded two.
+    expect(folded).toHaveTextContent("A · Linux");
+    expect(folded).toHaveTextContent("B · Linux");
   });
 
   it("says each detail as one bundle sentence, falling back to the unknown words", () => {
     render(
       <AccountSessionsList
         rows={[
-          {
-            id: "known",
-            deviceLabel: "Chrome on Windows",
-            isCurrent: false,
-            lastSeen: "last seen today",
-            userAgent: "Chrome/125 Windows",
-            ipAddress: "192.0.2.1",
-          },
-          {
-            id: "unknown",
-            deviceLabel: "Unknown device",
-            isCurrent: false,
-            lastSeen: "last seen today",
-            userAgent: null,
-            ipAddress: null,
-          },
+          row("known", "Chrome · Windows", 3),
+          { ...row("unknown", "Unknown device", 4), userAgent: null, ipAddress: null },
         ]}
         labels={labels}
         shopSlug="blue-mantis"
         revokeAction={vi.fn(async () => {})}
       />,
     );
-    expect(screen.getByText("Browser: Chrome/125 Windows")).toBeInTheDocument();
-    expect(screen.getByText("Network: 192.0.2.1")).toBeInTheDocument();
+    expect(screen.getByText("Browser: Chrome · Windows agent")).toBeInTheDocument();
+    expect(screen.getByText("Network: 192.0.2.3")).toBeInTheDocument();
     expect(screen.getByText("Browser: Unknown device")).toBeInTheDocument();
     expect(screen.getByText("Network: Unknown network")).toBeInTheDocument();
   });

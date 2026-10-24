@@ -141,17 +141,17 @@ describe("the roster ledger", () => {
     expect(hidden?.textContent).toContain("Hidden");
   });
 
-  it("carries the row's own acts beside it", () => {
-    const withActs: CourseRosterRow = {
+  it("is one link per row, with no act of its own beside it (A39)", () => {
+    const row: CourseRosterRow = {
       id: "padi-dsd",
       agency: "padi",
       title: "Discover Scuba Diving",
       href: "/shop/blue-mantis/courses/discover-scuba-diving/edit",
       linkLabel: "Edit Discover Scuba Diving",
       meta: "Open to uncertified divers",
-      actions: <button type="button">Schedule</button>,
     };
-    render(<CourseRoster rows={[withActs]} />);
-    expect(screen.getByRole("button", { name: "Schedule" })).toBeTruthy();
+    render(<CourseRoster rows={[row]} />);
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

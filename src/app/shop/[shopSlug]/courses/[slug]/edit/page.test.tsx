@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -44,6 +44,7 @@ vi.mock("@/db/authz", () => ({
 }));
 vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
+  courseIdsEverOnBoard: vi.fn(async () => new Set<string>()),
   getCourseTemplateUpdate: vi.fn(),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
@@ -138,16 +139,12 @@ describe("EditCoursePage template update panel", () => {
 });
 
 /**
- * The editor rail's pin — ADR 20260827-the-shops-shelves, decision 2: *every
- * section reachable from the rail*, and the refusal anchors still landing.
- *
- * Stated against the real page rather than against a fixture list, because the
- * failure this catches is a section added to the form and forgotten in the
- * rail (unreachable on a four-thousand-pixel page) or a rail entry whose
- * section was renamed (an anchor that jumps nowhere). Both render fine.
+ * **One form, no rail** (visual review 2026-10-24, A11): the sections the
+ * writer works in every time stand open, the rest are closed rows under them,
+ * and the refusal anchors still land on a section of the form.
  */
-describe("EditCoursePage editor rail", () => {
-  async function renderEditor() {
+describe("EditCoursePage sections", () => {
+  async function renderEditor(query: { error?: string; field?: string } = {}) {
     vi.mocked(requireShopSurface).mockResolvedValue({
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
@@ -158,31 +155,39 @@ describe("EditCoursePage editor rail", () => {
     return render(
       await EditCoursePage({
         params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
-        searchParams: Promise.resolve({}),
+        searchParams: Promise.resolve(query),
       }),
     );
   }
 
-  it("lands every one of its anchors on a section of this form", async () => {
+  it("opens the everyday sections and closes the rest, with no rail", async () => {
     const { container } = await renderEditor();
-    const rail = screen.getByRole("navigation", { name: "courses.edit.sectionsLabel" });
-    const targets = within(rail)
-      .getAllByRole("link")
-      .map((link) => link.getAttribute("href") ?? "");
-
-    expect(targets.length).toBeGreaterThan(3);
-    for (const target of targets) {
-      expect(
-        container.querySelector(`${target}[data-editor-section]`),
-        `${target} names no section of the form`,
-      ).not.toBeNull();
+    expect(screen.queryByRole("navigation", { name: /sections/i })).toBeNull();
+    const open = [...container.querySelectorAll("[data-editor-section]")]
+      .filter((section) => !section.closest("details"))
+      .map((section) => section.id);
+    expect(open).toEqual(["pitch", "pricing", "glance", "scheduleDaysJson"]);
+    const closed = [...container.querySelectorAll("details[id]")].map((row) => row.id);
+    for (const id of ["photos", "enroll", "fee-covers", "learningMaterialsJson", "faq"]) {
+      expect(closed, `${id} is a closed row`).toContain(id);
     }
-    // And nothing sectioned is missing from the rail: a section the writer can
-    // scroll to but not jump to is the same defect from the other side.
-    const rendered = [...container.querySelectorAll("[data-editor-section]")].map(
-      (section) => `#${section.id}`,
-    );
-    expect(rendered).toEqual(targets);
+  });
+
+  it("opens the closed section holding the field a refused save names", async () => {
+    // The FAQ posts as `faqsJson`, and Included / Not included sit in what the
+    // fee covers: a refusal names the field, and its section opens around it.
+    for (const [field, section] of [
+      ["faqsJson", "faq"],
+      ["includes", "fee-covers"],
+      ["learningMaterialsJson", "learningMaterialsJson"],
+    ] as const) {
+      const { container, unmount } = await renderEditor({ error: "invalid", field });
+      expect(container.querySelector<HTMLDetailsElement>(`details#${section}`)?.open, field).toBe(
+        true,
+      );
+      expect(container.querySelector<HTMLDetailsElement>("details#photos")?.open).toBe(false);
+      unmount();
+    }
   });
 
   it("keeps the id a refused day-by-day save is sent back to", async () => {
@@ -191,10 +196,6 @@ describe("EditCoursePage editor rail", () => {
     // this section's id would break the refusal silently.
     const { container } = await renderEditor();
     expect(container.querySelector("#scheduleDaysJson")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "courses.edit.dayByDayLegend" })).toHaveAttribute(
-      "href",
-      "#scheduleDaysJson",
-    );
   });
 });
 

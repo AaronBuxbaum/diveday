@@ -5,23 +5,13 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
-import {
-  getShopById,
-  setShopCrewLead,
-  setShopDockDayRhythm,
-  setShopEmergencyReference,
-  setShopMinTurnaround,
-  setShopShoreAlertContact,
-} from "@/db/shops";
+import { getShopById, setShopEmergencyReference, setShopShoreAlertContact } from "@/db/shops";
 import { issueShoreAlertConfirmation } from "@/db/shore-alert-tokens";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
-import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
-import { parseCrewLeadMinutes } from "@/lib/dock-call";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
-import { checkbox, formValue, readForm, text } from "@/lib/form-parse";
-import { parseMinTurnaroundMinutes } from "@/lib/move-preflight";
+import { checkbox, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -29,20 +19,6 @@ import { requireStaffSession } from "@/lib/session";
 import { nextShoreAlertContact } from "@/lib/shore-alert-contact";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { settingsBlock } from "./action-helpers";
-
-/** Each dock-day amount as posted, `null` when absent; `parseDockDayRhythm` holds the bounds. */
-const dockDayForm = z.object(
-  Object.fromEntries(DOCK_DAY_FIELDS.map((field) => [field, formValue()])) as Record<
-    (typeof DOCK_DAY_FIELDS)[number],
-    ReturnType<typeof formValue>
-  >,
-);
-
-/** The minimum turnaround as posted; `parseMinTurnaroundMinutes` holds the bounds. */
-const turnaroundForm = z.object({ minTurnaroundMinutes: text() });
-
-/** The crew time as posted; `parseCrewLeadMinutes` holds the bounds, and empty clears it. */
-const crewLeadForm = z.object({ crewLeadMinutes: text() });
 
 /**
  * The reference's fixed lines, the shore contact's alert address and its
@@ -60,65 +36,6 @@ const emergencyForm = z
     shoreAlertConsentFor: text(),
   })
   .catchall(text());
-
-/**
- * The shop's whole dock-day rhythm: the arrival call plus the five minute
- * amounts the rest of the day is built from (src/lib/diver-planning.ts).
- *
- * One save for all six, and `parseDockDayRhythm` refuses the lot if any one of
- * them is not a whole number inside its own bounds — the same bounds the form's
- * `min`/`max` carry and the same the table's CHECK constraints enforce, read
- * from the one table rather than retyped here.
- */
-export async function saveDockDayRhythmAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "dock-day");
-  await settingsBlock(session);
-  const rhythm = parseDockDayRhythm(readForm(dockDayForm, formData));
-  if (!rhythm) {
-    redirect(noticeUrl(page, "dock-invalid"));
-  }
-  await setShopDockDayRhythm(await getDb(), session.user.shopId, rhythm);
-  revalidateAndRedirect(page, noticeUrl(page, "dock-saved"));
-}
-
-/**
- * **The shortest turnaround the shop wants between departures** (issue #2141):
- * on the same hull, or for crew leaving from a different meeting point. The
- * schedule builder's Move panel names a closer departure as advice; nothing
- * refuses a move on it. Zero turns the line off.
- */
-export async function saveTurnaroundAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "dock-day");
-  await settingsBlock(session);
-  const { minTurnaroundMinutes } = readForm(turnaroundForm, formData);
-  const minutes = parseMinTurnaroundMinutes(minTurnaroundMinutes);
-  if (minutes === null) {
-    redirect(noticeUrl(page, "turnaround-invalid"));
-  }
-  await setShopMinTurnaround(await getDb(), session.user.shopId, minutes);
-  revalidateAndRedirect(page, noticeUrl(page, "turnaround-saved"));
-}
-
-/**
- * **"Crew arrive N minutes before divers"** (ux-delight sheet 2026-10-22,
- * item 2; H-149): one number, its own save. Crew "Your week" lines read it
- * when no shift of theirs covers the departure; an empty field clears it, and
- * crew read the divers' time.
- */
-export async function saveCrewLeadAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "dock-day");
-  await settingsBlock(session);
-  const { crewLeadMinutes } = readForm(crewLeadForm, formData);
-  const parsed = parseCrewLeadMinutes(crewLeadMinutes);
-  if (!parsed.ok) {
-    redirect(noticeUrl(page, "crew-lead-invalid"));
-  }
-  await setShopCrewLead(await getDb(), session.user.shopId, parsed.minutes);
-  revalidateAndRedirect(page, noticeUrl(page, "crew-lead-saved"));
-}
 
 /**
  * **The numbers a crew dials during** — chamber, dive-accident hotline,

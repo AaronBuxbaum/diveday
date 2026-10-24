@@ -57,7 +57,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   // And the hub is a directory: none of the editors' controls is on it.
   await expect(main.getByRole("button", { name: "Add a boat" })).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add package" })).toHaveCount(0);
-  for (const save of ["Save emergency reference", "Save dock-day rhythm", "Save profile"]) {
+  for (const save of ["Save emergency reference", "Save profile"]) {
     await expect(main.getByRole("button", { name: save })).toHaveCount(0);
   }
 });
@@ -159,14 +159,17 @@ test("a hull is added on its own page, and the save lands back on it", async ({
   await expect(page.locator("summary").filter({ hasText: "Second Wind II" })).toBeVisible();
 });
 
-test("a package is added on its own page, and the save lands back on it", async ({
+test("a package is added on Promos, and the save lands back on its section", async ({
   page,
   privateShop,
 }) => {
   test.setTimeout(60_000);
   const SHOP = privateShop.slug;
+  // The old address is kept for bookmarks and lands on Promos' packages
+  // section (visual review 2026-10-24, A26).
   await page.goto(`/shop/${SHOP}/promos/packages`);
-  await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
+  await expect(page).toHaveURL(`/shop/${SHOP}/promos#dive-packages`);
+  await expect(page.getByRole("heading", { level: 2, name: "Dive packages" })).toBeVisible();
 
   await expect(page.getByLabel("What you call it")).not.toBeVisible();
   await openEditor(page, "package-new");
@@ -176,7 +179,7 @@ test("a package is added on its own page, and the save lands back on it", async 
   await page.getByRole("button", { name: "Add package" }).click();
 
   await expect(page.getByText("Package added")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Dive packages" })).toBeVisible();
   const packageRow = page.getByRole("listitem").filter({ hasText: "Ten-dive card" });
   await expect(packageRow).toContainText("10 dives");
   await expect(packageRow).toContainText("$450");

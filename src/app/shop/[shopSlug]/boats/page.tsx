@@ -311,10 +311,7 @@ export default async function BoatsSettingsPage({
               </p>
             ) : null}
             <FieldActions>
-              <SubmitButton
-                pendingLabel={t("boats.submitting")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
+              <SubmitButton pendingLabel={t("boats.submitting")} className={buttonClass()}>
                 {t("boats.addBoat")}
               </SubmitButton>
             </FieldActions>

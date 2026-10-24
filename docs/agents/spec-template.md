@@ -1,6 +1,6 @@
 # A build spec, for a fresh worker
 
-A thread that steers never builds ([working-rules.md](working-rules.md#parallel-work)): each
+When a thread steers parallel layers ([working-rules.md](working-rules.md#parallel-work)), each
 ticket or stack layer goes to a fresh worker, a subagent or a new thread, with one file written
 from this template. The spec is the worker's whole brief. Write it so a session with none of your
 context can finish the work from it alone, and save it beside the run's other notes (the

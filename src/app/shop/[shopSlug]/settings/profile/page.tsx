@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { buttonClass } from "@/components/ui/button";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { ProfileForm } from "../_components/editors/ProfileForm";
@@ -46,6 +48,18 @@ export default async function ProfileSettingsPage({
       title={t("settings.main.profile.heading")}
       description={t("settings.main.profile.description")}
       banner={noticeFromParam(notice, profileNoticeMessages(t))}
+      // The saved storefront opens in a new tab, so a draft in this form
+      // survives the look (visual review 2026-10-24, A30).
+      actions={
+        <a
+          href={publicSchedulePath(shop.slug)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonClass({ variant: "link", flush: true })}
+        >
+          {t("settings.main.profile.viewStorefront")}
+        </a>
+      }
     >
       <ProfileForm shop={shop} t={t} />
     </SettingsEditorPage>

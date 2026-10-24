@@ -2,13 +2,13 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type DiveSiteFormError, submittedValues } from "@/lib/dive-sites";
-import { type SiteFormAction, SiteFormShell } from "./SiteFormShell";
+import { submittedValues } from "@/lib/dive-sites";
+import { type SiteFormAction, SiteFormShell, type SiteSaveRefusal } from "./SiteFormShell";
 
 afterEach(cleanup);
 
 /** The sentences the page resolves from the staff bundle before rendering. */
-const MESSAGES: Record<DiveSiteFormError, string> = {
+const MESSAGES: Record<SiteSaveRefusal, string> = {
   invalid: "That didn’t save. Check the required name and links, then try again.",
   coordinatesIncomplete: "Add both forecast coordinates, or leave both blank.",
   tideStationInvalid: "A NOAA tide station id is seven digits.",
@@ -19,10 +19,12 @@ const MESSAGES: Record<DiveSiteFormError, string> = {
   planningNoteTooLong: "Keep the planning note under 280 characters.",
   conflict: "Somebody else changed this briefing while you had it open.",
   nameTaken: "Another dive site here already goes by that name.",
+  spanishStale: "The English changed since this Spanish was written.",
+  spanishRefused: "That Spanish didn’t save.",
 };
 
 /** Stands in for the server action: refuses, and hands the submission back. */
-function refusing(errorCode: DiveSiteFormError) {
+function refusing(errorCode: SiteSaveRefusal) {
   return vi.fn<SiteFormAction>(async (_state, formData) => ({
     errorCode,
     values: submittedValues(formData),
@@ -158,5 +160,27 @@ describe("SiteFormShell", () => {
 
     const alert = await screen.findByRole("alert");
     expect(document.activeElement?.contains(alert)).toBe(true);
+  });
+
+  /**
+   * A refusal about a section closed behind its disclosure opens it (visual
+   * review 2026-10-24, A11): the coordinates to fix are not left behind a
+   * shut summary beside the sentence that names them.
+   */
+  it("opens the closed section a refusal is about", async () => {
+    render(
+      <SiteFormShell action={refusing("coordinatesIncomplete")} errorMessages={MESSAGES}>
+        <details id="briefing-forecast">
+          <summary>Forecast</summary>
+          <input aria-label="Latitude" name="forecastLatitude" defaultValue="" />
+        </details>
+        <button type="submit">Save</button>
+      </SiteFormShell>,
+    );
+    const details = document.getElementById("briefing-forecast") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText(MESSAGES.coordinatesIncomplete);
+    expect(details.open).toBe(true);
   });
 });

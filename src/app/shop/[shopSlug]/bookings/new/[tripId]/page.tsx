@@ -36,7 +36,7 @@ import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Add a booking — DiveDay",
+  title: "New booking — DiveDay",
   // Staff-only operations surface, never a public document.
   robots: { index: false, follow: false },
 };

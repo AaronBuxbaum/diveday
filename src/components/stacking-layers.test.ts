@@ -31,7 +31,13 @@ const ROOTS = ["src/app", "src/components"];
  * with the reason it earns the exception. An entry here is a decision; the
  * empty-by-default state is what makes the rule mean something.
  */
-const ABOVE_HEADER_BY_DESIGN: Record<string, string> = {};
+const ABOVE_HEADER_BY_DESIGN: Record<string, string> = {
+  // The demo banner sits above the chrome bar, outside it, so its role picker
+  // drops straight across the bar; under it, the bar would cut the picker's
+  // first rows off (visual review 2026-10-24, A41).
+  [path.join("src", "components", "DemoBanner.tsx")]:
+    "The role picker opens from the banner above the bar and must cover it.",
+};
 
 /** Every class string on one line that positions something and gives it a layer. */
 const POSITIONED_LAYER =

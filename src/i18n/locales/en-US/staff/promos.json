@@ -82,9 +82,6 @@
   "retrying": "Trying again…",
   "delete": "Delete",
   "deleting": "Deleting…",
-  "packages": {
-    "open": "Edit packages"
-  },
   "tripDeals": {
     "heading": "Trip deals",
     "description": "One-trip discounts sent from a departure’s page.",

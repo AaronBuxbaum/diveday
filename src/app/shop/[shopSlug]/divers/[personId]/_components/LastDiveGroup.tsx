@@ -88,7 +88,7 @@ export function LastDiveGroup({
           ? t("divers.lastDive.yearsAgo", { count: Math.floor(months / 12) })
           : t("divers.lastDive.monthsAgo", { count: months ?? 0 })
       }`
-    : t("divers.lastDive.notKnown");
+    : t("divers.file.noneOnFile");
   const said = newerSaid(diver, known.on, timezoneDay);
   const source =
     known.source === "with_shop"
