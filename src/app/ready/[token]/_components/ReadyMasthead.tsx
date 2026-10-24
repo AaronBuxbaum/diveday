@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ThreadShell } from "@/components/thread/ThreadShell";
-import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -18,7 +17,6 @@ import {
 import { publicAppUrl } from "@/lib/notifications";
 import { firstNameOf } from "@/lib/person-name";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
-import { isDiveDay } from "@/lib/thread-steps";
 import type { DiveDayMilestone } from "@/lib/visit-milestones";
 
 /**
@@ -118,19 +116,14 @@ export function ReadyMastheadMeta({
   now: Date;
   t: DiverTranslator;
 }) {
-  const diveDay = isDiveDay({
-    startsAt: facts.trip.startsAt,
-    endsAt: facts.trip.endsAt,
-    timeZone: facts.shop.timezone,
-  });
+
   return (
     <>
       <MastheadWhen facts={facts} locale={locale} now={now} />
-      {/* Today. Said once, above the only number that matters this morning:
-          plain ink, no motion. */}
-      {diveDay ? <p className={`mt-2 ${ITEM_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p> : null}
       {/* The one number that matters on the morning of the trip, a shade
-          stronger than the line above it, never shouting. */}
+          stronger than the date line, never shouting. "Today" is said once,
+          on the date line (visual review 2026-10-24, B24); "Today’s the
+          day." under it said it twice. */}
       <p className="mt-1 text-base font-medium">{mastheadArrivalLine(facts, locale, t)}</p>
       <MastheadDoors facts={facts} t={t} />
     </>

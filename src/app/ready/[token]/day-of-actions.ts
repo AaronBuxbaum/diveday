@@ -121,10 +121,17 @@ export async function saveDayOfDetailsFromReady(token: string, formData: FormDat
     }
     if (answers.welcomeAsked && data.welcomeOffer) {
       const shared = answers.welcomeShare === "on";
-      // The word that goes with the yes (#2425): asked of a first trip only,
-      // and kept only with the yes. An unticked box clears it in the write.
+      // The word that goes with the yes (#2425): kept only with the yes, so an
+      // unticked box clears it in the write. The thread no longer asks for it
+      // (visual review 2026-10-24, B27: the day-of step asks one question,
+      // the crew note), so a save without the field leaves a word already on
+      // file where it was rather than clearing it.
       const hello =
-        shared && data.welcomeOffer.kind === "first_trip" ? answers.welcomeHello || null : null;
+        shared && data.welcomeOffer.kind === "first_trip"
+          ? answers.welcomeHello === undefined
+            ? data.welcomeHello
+            : answers.welcomeHello || null
+          : null;
       if (shared !== data.welcomeShared || (shared && hello !== data.welcomeHello)) {
         writes.push(
           setWelcomeConsent(ctx.db, { shopId, bookingId, shared, hello }).then(

@@ -1078,11 +1078,6 @@
     "welcomeAudience": "Only the crew on this boat, only today, and you can take it back.",
     "welcomeShareLabel": "Yes, tell the crew",
     "welcomeShared": "Your crew will know.",
-    "welcomeHelloLegend": "Anything to add for the crew? You can skip this.",
-    "welcomeHelloNone": "Nothing to add",
-    "welcomeHelloFirstOceanDive": "It is my first ocean dive",
-    "welcomeHelloCelebrating": "I am celebrating something",
-    "welcomeHelloNervous": "I am a little nervous",
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
@@ -1118,7 +1113,6 @@
     "stepGear": "Gear and sizes",
     "stepChanges": "Anything changed?",
     "stepDayOf": "Day-of details",
-    "diveDayLine": "Today’s the day.",
     "partyAllSet": "Everyone’s set. See you at the dock.",
     "afterGreeting": "Welcome back, {name}"
   },
@@ -1393,7 +1387,8 @@
       "regulator": "The mouthpiece and hose that let you breathe air from your tank underwater.",
       "drysuit": "A sealed suit that keeps you dry in cold water. On most rentals the boots are part of the suit, so you won’t be handed a separate pair.",
       "nitrox": "A breathing gas with extra oxygen that lets specially trained divers spend a bit more time underwater on some dives."
-    }
+    },
+    "estimatedRentalFullSet": "Estimated rental: {price} per person, the full-set price."
   },
   "party": {
     "numberOfDivers": "Number of divers",

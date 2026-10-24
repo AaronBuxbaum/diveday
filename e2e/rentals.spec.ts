@@ -30,11 +30,14 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // decision 3) — so this opens it exactly as a diver does, then scopes to it.
   const fit = await openThreadStep(page, "gear");
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
-  // The set discount is *shown*, not just silently applied: the piece-by-piece
-  // price is struck through and the saving is named. It used to be invisible —
-  // the total simply read $45 with nothing to say anything had come off.
-  await expect(fit.getByText("Before the full-set discount: $65.00")).toBeVisible();
-  await expect(fit.getByText("Full-set price. You save $20.00.")).toBeVisible();
+  // The set price is said as the set price, in one line (visual review
+  // 2026-10-24, B25): no struck-through list price, no savings line.
+  await expect(
+    fit.getByText(
+      "Estimated rental: $45.00 per person, the full-set price. We’ll confirm at the dock.",
+    ),
+  ).toBeVisible();
+  await expect(fit.getByText(/You save/)).toHaveCount(0);
   // Target the checkbox specifically: "BCD" also substring-matches the "BCD size"
   // select's label, which would make a bare getByLabel("BCD") ambiguous.
   await fit.getByRole("checkbox", { name: /BCD/ }).uncheck();
@@ -42,8 +45,9 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // pieces billed individually (regulator $15 + wetsuit $12 + mask & fins $8 +
   // weights $5 + dive computer $10 = $50) would cost more than the set, and a
   // diver skipping one piece is never charged more than the full set (H-06, HD-9).
-  await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
-  await expect(fit.getByText("Full-set price. You save $5.00.")).toBeVisible();
+  await expect(
+    fit.getByText(/Estimated rental: \$45\.00 per person, the full-set price/),
+  ).toBeVisible();
   // Each piece is independently selectable, and boot sizing stays separate.
   await fit.getByRole("checkbox", { name: /^Mask/ }).uncheck();
   await expect(fit.getByRole("checkbox", { name: /^Fins/ })).toBeChecked();

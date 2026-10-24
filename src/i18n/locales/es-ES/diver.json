@@ -1078,11 +1078,6 @@
     "welcomeAudience": "Solo la tripulación de este barco, solo hoy, y puedes quitarlo cuando quieras.",
     "welcomeShareLabel": "Sí, avísale a la tripulación",
     "welcomeShared": "Tu tripulación lo sabrá.",
-    "welcomeHelloLegend": "¿Algo que agregar para la tripulación? Puedes saltarlo.",
-    "welcomeHelloNone": "Nada que agregar",
-    "welcomeHelloFirstOceanDive": "Es mi primera inmersión en mar abierto",
-    "welcomeHelloCelebrating": "Estoy celebrando algo",
-    "welcomeHelloNervous": "Estoy un poco nervioso",
     "intentHeading": "¿Para qué es esta inmersión?",
     "intentChoose": "Prefiero no decirlo",
     "signCourseForms": "Firmar formularios del curso",
@@ -1118,7 +1113,6 @@
     "stepGear": "Equipo y tallas",
     "stepChanges": "¿Cambió algo?",
     "stepDayOf": "Detalles del día",
-    "diveDayLine": "Hoy es el día.",
     "partyAllSet": "Todos están listos. Nos vemos en el muelle.",
     "afterGreeting": "Nos alegra verte de vuelta, {name}"
   },
@@ -1393,7 +1387,8 @@
       "regulator": "La boquilla y la manguera que te dejan respirar aire de tu tanque bajo el agua.",
       "drysuit": "Un traje estanco que te mantiene seco en agua fría. En la mayoría de los de alquiler los escarpines van integrados en el traje, así que no te darán un par aparte.",
       "nitrox": "Una mezcla respirable con más oxígeno que permite a buceadores con formación específica pasar algo más de tiempo bajo el agua en algunas inmersiones."
-    }
+    },
+    "estimatedRentalFullSet": "Alquiler estimado: {price} por persona, precio del equipo completo."
   },
   "party": {
     "numberOfDivers": "Número de buceadores",
