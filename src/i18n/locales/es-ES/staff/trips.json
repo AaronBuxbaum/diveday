@@ -617,7 +617,7 @@
     "lunchNoteAdd": "Agregar una nota para el almuerzo",
     "lunchNoteEdit": "Editar la nota para el almuerzo",
     "lunchNoteLabel": "Preferencia para el almuerzo",
-    "lunchNoteHint": "Solo para la cocina. Una alergia alimentaria es un tema médico: avísale tú a la tripulación.",
+    "lunchNoteHint": "Solo para la cocina. Una alergia alimentaria es un tema médico: va en la alerta médica del buceador para la tripulación, no aquí.",
     "lunchNotePlaceholder": "Vegetariano, halal, sin cerdo…",
     "lunchNoteSave": "Guardar nota",
     "saving": "Guardando…",

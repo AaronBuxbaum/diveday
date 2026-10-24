@@ -1058,7 +1058,7 @@
     "hotelPickupFieldLabel": "Dónde te alojas",
     "hotelPickupPlaceholder": "Nombre del hotel, habitación o punto de referencia",
     "dietaryLabel": "¿Alguna preferencia para el almuerzo a bordo?",
-    "dietaryHint": "Solo para tu almuerzo. Una alergia alimentaria es un tema médico: avísale al centro antes de bucear.",
+    "dietaryHint": "Solo para tu almuerzo. Una alergia alimentaria es un tema médico: escríbela en el recuadro “Para la tripulación, en una emergencia” de la exención.",
     "dietaryPlaceholder": "Vegetariano, halal, sin cerdo…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Recogida a las {time}",

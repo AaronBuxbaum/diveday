@@ -1058,7 +1058,7 @@
     "hotelPickupFieldLabel": "Where you’re staying",
     "hotelPickupPlaceholder": "Hotel name, room, or landmark",
     "dietaryLabel": "Any preference for lunch aboard?",
-    "dietaryHint": "For your lunch only. A food allergy is medical: tell the shop before you dive.",
+    "dietaryHint": "For your lunch only. A food allergy is medical: write it in the waiver’s “For the crew, in an emergency” box.",
     "dietaryPlaceholder": "Vegetarian, halal, no pork…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Pickup at {time}",
