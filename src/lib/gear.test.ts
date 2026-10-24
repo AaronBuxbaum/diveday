@@ -19,7 +19,7 @@ import {
   gearServiceIsDue,
   gearServiceState,
   groupUnitsForSize,
-  hasCurrentO2Clean,
+  o2CleanStanding,
   parseWetsuitThicknessMm,
   pickDisplayReservation,
   rankUnitsForSize,
@@ -858,7 +858,7 @@ describe("parseWetsuitThicknessMm", () => {
   });
 });
 
-describe("hasCurrentO2Clean (issue #2719)", () => {
+describe("o2CleanStanding (issue #2719)", () => {
   const today = "2026-10-24" as CalendarDate;
   const clean = (servicedOn: string, nextDueOn: string | null): GearServiceClock => ({
     kind: "o2_clean",
@@ -866,23 +866,23 @@ describe("hasCurrentO2Clean (issue #2719)", () => {
     nextDueOn: nextDueOn as CalendarDate | null,
   });
 
-  it("is false with no O2-clean record at all, whatever else the tank holds", () => {
-    expect(hasCurrentO2Clean([], today)).toBe(false);
+  it("is never with no O2-clean record at all, whatever else the tank holds", () => {
+    expect(o2CleanStanding([], today)).toBe("never");
     expect(
-      hasCurrentO2Clean(
+      o2CleanStanding(
         [{ kind: "hydro_test", servicedOn: "2026-01-01" as CalendarDate, nextDueOn: null }],
         today,
       ),
-    ).toBe(false);
+    ).toBe("never");
   });
 
-  it("is true through its due day and false the day after", () => {
-    expect(hasCurrentO2Clean([clean("2025-10-24", "2026-10-24")], today)).toBe(true);
-    expect(hasCurrentO2Clean([clean("2025-10-23", "2026-10-23")], today)).toBe(false);
+  it("is current through its due day and lapsed the day after", () => {
+    expect(o2CleanStanding([clean("2025-10-24", "2026-10-24")], today)).toBe("current");
+    expect(o2CleanStanding([clean("2025-10-23", "2026-10-23")], today)).toBe("lapsed");
   });
 
   it("reads a record with no due date on the conventional twelve months", () => {
-    expect(hasCurrentO2Clean([clean("2025-11-01", null)], today)).toBe(true);
-    expect(hasCurrentO2Clean([clean("2025-10-01", null)], today)).toBe(false);
+    expect(o2CleanStanding([clean("2025-11-01", null)], today)).toBe("current");
+    expect(o2CleanStanding([clean("2025-10-01", null)], today)).toBe("lapsed");
   });
 });

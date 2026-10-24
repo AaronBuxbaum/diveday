@@ -121,13 +121,13 @@ describe("gear register readers: the picker and a departure's assignments", () =
       );
     const first = await read("2026-09-01");
     expect([cleaned, lapsed, never, vest].map((unit) => first.get(unit.id))).toEqual([
-      true,
-      true,
-      false,
+      "current",
+      "current",
+      "never",
       null,
     ]);
     const third = await read("2026-09-03");
-    expect(third.get(lapsed.id)).toBe(false);
+    expect(third.get(lapsed.id)).toBe("lapsed");
   });
 
   it("the picker offers only free, working units for the window", async () => {

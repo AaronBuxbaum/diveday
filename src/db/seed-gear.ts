@@ -170,10 +170,10 @@ export async function seedGear(
   };
 
   // Care history: regulators and BCDs on an annual bench cycle at staggered
-  // dates, tanks on VIP + hydro clocks. AL80-03's inspection lands inside the
-  // due-soon window so the register shows the amber grammar without putting a
-  // row on Today; Reg #4's pull is recorded as the condition note that
-  // benched it.
+  // dates, tanks on VIP + hydro clocks and an O2 cleaning. AL80-03's
+  // inspection lands inside the due-soon window so the register shows the
+  // amber grammar without putting a row on Today; Reg #4's pull is recorded
+  // as the condition note that benched it.
   const serviceRows: (typeof gearServiceEvents.$inferInsert)[] = [];
   const annual = (label: string, kind: "service" | "visual_inspection", monthsAgo: number) => {
     serviceRows.push({
@@ -227,6 +227,29 @@ export async function seedGear(
       kind: "hydro_test",
       servicedOn: months(-((index % 4) * 9) - 6),
       nextDueOn: months(60 - (index % 4) * 9 - 6),
+    });
+    // O2 cleaning (issue #2719), so the counter's EANx warning tells tanks
+    // apart: most were cleaned a month after their VIP, which keeps the VIP
+    // the register's nearest clock. AL80-06's cleaning ran out last season,
+    // written without a due date as a paper card often is, so the register's
+    // service-due view stays as it was and only an EANx fill hears about it.
+    // AL63-01 never had one.
+    if (label === "AL63-01") continue;
+    if (label === "AL80-06") {
+      serviceRows.push({
+        shopId,
+        gearItemId: idOf(label),
+        kind: "o2_clean",
+        servicedOn: months(-14),
+      });
+      continue;
+    }
+    serviceRows.push({
+      shopId,
+      gearItemId: idOf(label),
+      kind: "o2_clean",
+      servicedOn: shiftCalendarDateMonths(vipDue, -11),
+      nextDueOn: shiftCalendarDateMonths(vipDue, 1),
     });
   }
   serviceRows.push({

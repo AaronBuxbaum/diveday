@@ -250,9 +250,11 @@ export default async function RentOutPage({
       // Read on the window's last day, as the service clocks are; the cart
       // shows it only once the tank's gas is EANx (issue #2719).
       o2CleanWarning:
-        unit.o2Clean === false
-          ? t("counterRentals.new.o2CleanMissing", { label: unit.label })
-          : null,
+        unit.o2Clean === "lapsed"
+          ? t("counterRentals.new.o2CleanLapsed", { label: unit.label })
+          : unit.o2Clean === "never"
+            ? t("counterRentals.new.o2CleanNever", { label: unit.label })
+            : null,
       order: blocked ? 2 : flagged ? 1 : 0,
     };
   };
