@@ -42,7 +42,7 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
-import { recordFlySafeTold } from "./fly-safe-correction";
+import { rememberFlySafeTold } from "./fly-safe-correction";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import {
   notificationProviderForDb,
@@ -371,6 +371,25 @@ function seatEarnsItsSend(
     courseMaterialsDue,
     weekOutHello: shop.weekOutReminderEnabled,
   });
+}
+
+/**
+ * One reminder email's outcome, recorded; and when it went out carrying the
+ * fly-safe line, the figure the seat now holds, so marking the departure as
+ * decompression diving later can correct it (#2927).
+ */
+async function settleReminderEmail(
+  db: AppDb,
+  work: { shopId: string; bookingId: string; kind: ReminderKind; notification: Notification },
+  delivery: Parameters<typeof recordNotificationDelivery>[1]["delivery"],
+): Promise<void> {
+  await recordNotificationDelivery(db, {
+    shopId: work.shopId,
+    bookingId: work.bookingId,
+    kind: work.kind,
+    delivery,
+  });
+  await rememberFlySafeTold(db, { ...work, sent: delivery.status === "sent" });
 }
 
 /**
@@ -772,25 +791,7 @@ export async function sendDueReminders(
           { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
         );
       }
-      await recordNotificationDelivery(db, {
-        shopId: work.shopId,
-        bookingId: work.bookingId,
-        kind: work.kind,
-        delivery,
-      });
-      // The seat now holds a fly-safe figure: remembered, so marking the
-      // departure as decompression diving later can correct it (#2927).
-      if (
-        delivery.status === "sent" &&
-        work.notification.kind === "trip_reminder_24h" &&
-        work.notification.flySafeHours !== undefined
-      ) {
-        await recordFlySafeTold(db, {
-          shopId: work.shopId,
-          bookingId: work.bookingId,
-          hours: work.notification.flySafeHours,
-        });
-      }
+      await settleReminderEmail(db, work, delivery);
       links.settle(summary, work.bookingId, delivery);
     }
 

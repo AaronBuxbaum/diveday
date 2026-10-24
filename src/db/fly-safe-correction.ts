@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
+import { type Notification, type NotificationProvider, recipientLocale } from "@/lib/notifications";
 import type { AppDb, DbExecutor } from "./client";
 import { notificationProviderForDb, sendNotification } from "./notifications";
 import { bookings, people, shops, trips } from "./schema";
@@ -38,6 +38,25 @@ export async function recordFlySafeTold(
     .update(bookings)
     .set({ flySafeHoursTold: input.hours })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+}
+
+/**
+ * After a reminder goes out: a sent night-before email that carried the
+ * fly-safe line leaves the seat holding that figure, so marking the departure
+ * as decompression diving later can correct it.
+ */
+export async function rememberFlySafeTold(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; notification: Notification; sent: boolean },
+): Promise<void> {
+  const { notification } = input;
+  if (!input.sent || notification.kind !== "trip_reminder_24h") return;
+  if (notification.flySafeHours === undefined) return;
+  await recordFlySafeTold(db, {
+    shopId: input.shopId,
+    bookingId: input.bookingId,
+    hours: notification.flySafeHours,
+  });
 }
 
 /**
@@ -92,6 +111,7 @@ export async function sendFlySafeCorrections(
     )
     .limit(1);
   if (row?.trip.status !== "scheduled" || !row.trip.exceedsNoDecoLimits) return outcome;
+  // diveday:allow-departure-offset: the longest fly-safe wait after the boat is due back, not a lateness grace.
   if (now.getTime() > row.trip.endsAt.getTime() + FLY_SAFE_CORRECTION_WINDOW_MS) return outcome;
   const { trip, shop } = row;
 
@@ -137,6 +157,7 @@ export async function sendFlySafeCorrections(
           people.id,
           claimed.map((seat) => seat.personId),
         ),
+        livePerson(),
       ),
     );
   const personById = new Map(recipients.map((person) => [person.id, person]));

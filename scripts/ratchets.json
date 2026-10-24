@@ -408,7 +408,6 @@
       {
         "why": "email_bounces joins the census tests that classify every table (erasure, export, retention fixtures); each needs its one entry",
         "files": {
-          "src/db/export.test.ts": "1565 -> 1566",
           "src/db/retention.test.ts": "1277 -> 1291"
         }
       },
@@ -416,7 +415,6 @@
         "why": "claude_call_content table (ADR 20261023-claude-call-content): its row in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
         "files": {
           "src/db/erasure-coverage.test.ts": "1173 -> 1175",
-          "src/db/export.test.ts": "1566 -> 1567",
           "src/db/retention.test.ts": "1291 -> 1310"
         }
       },
@@ -424,7 +422,6 @@
         "why": "claude_call_content_erasures table (ADR 20261023-claude-call-content, security review): its row in each schema guard's classification list (retention, export exclusion, erasure closure and helper writes); none can live in a sibling",
         "files": {
           "src/db/erasure-coverage.test.ts": "1175 -> 1181",
-          "src/db/export.test.ts": "1567 -> 1568",
           "src/db/retention.test.ts": "1310 -> 1311"
         }
       }
@@ -461,7 +458,7 @@
     "src/db/divers.test.ts": 3056,
     "src/db/erasure-coverage.test.ts": 1181,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1568,
+    "src/db/export.test.ts": 1535,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3692,
@@ -551,7 +548,7 @@
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 312,
     "src/db/readiness.ts#listTripsReadiness": 305,
-    "src/db/reminders.ts#sendDueReminders": 308,
+    "src/db/reminders.ts#sendDueReminders": 303,
     "src/db/reporting.ts#getMonthlyReport": 321,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 680,
