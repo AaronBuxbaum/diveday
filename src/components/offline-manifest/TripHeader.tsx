@@ -66,7 +66,7 @@ export function OfflineTripHeader({
       ) : (
         <p className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}>
           {servedWithoutAnswer
-            ? t("shared.offlineManifest.single.unansweredBanner", { when: savedAt })
+            ? t("shared.offlineManifest.single.unansweredBanner")
             : t("shared.offlineManifest.single.freshnessBanner", {
                 freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
               })}
