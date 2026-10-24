@@ -208,10 +208,12 @@ export type AfterStateProps = {
    * (security review of layer r5-4, F3).
    */
   canShareWithBoat: boolean;
-  /** The four recap actions, already bound to a signed recap token. */
+  /** The recap actions, already bound to a signed recap token (the upload, on `/ready`, to its own). */
   actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
     uploadPhoto: (formData: FormData) => void | Promise<void>;
+    /** "Stop sharing" on the diver's own photo shared with the boat (#2806). */
+    unsharePhoto: (formData: FormData) => void | Promise<void>;
     startTip: (formData: FormData) => void | Promise<void>;
     submitPulse: (formData: FormData) => void | Promise<void>;
   };

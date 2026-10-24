@@ -642,11 +642,16 @@ export const test = base.extend<
       if (!url.startsWith("http://") && !url.startsWith("https://")) {
         url = workerBaseURL;
       }
+      // At the origin's root, whatever page is open: a cookie set from a URL
+      // takes that URL's directory as its path, so "true" set on
+      // `/ready/<token>` and "false" set later from the error page's fallback
+      // (path `/`) would both be sent there, the deeper one first, and the
+      // page would read itself offline for good.
       await context.addCookies([
         {
           name: "playwright_offline",
           value: offline ? "true" : "false",
-          url,
+          url: new URL("/", url).href,
         },
       ]);
       await originalSetOffline(offline);

@@ -37,6 +37,7 @@ function unit(id: string, kind: PickerUnit["kind"], label: string, size: string)
     priceAria: t("counterRentals.new.priceAria", { label }),
     removeAria: t("counterRentals.new.removeAria", { label }),
     fillAria: kind === "tank" ? t("counterRentals.new.fillAria", { label }) : null,
+    o2CleanWarning: null,
   };
 }
 
@@ -356,5 +357,73 @@ describe("issue 2723 refused cart", () => {
     });
     expect(fill(tank1)).toHaveValue("32");
     expect(fill(tank2)).toHaveValue("");
+  });
+});
+
+describe("an EANx fill in a tank with no current O2-clean record (issue #2719)", () => {
+  const uncleaned: PickerUnit = {
+    ...unit("tank-4", "tank", "Tank 004", "AL80"),
+    o2CleanWarning: t("counterRentals.new.o2CleanNever", { label: "Tank 004" }),
+  };
+  const lapsedWarning = t("counterRentals.new.o2CleanLapsed", { label: "Tank 005" });
+  const lapsed: PickerUnit = {
+    ...unit("tank-5", "tank", "Tank 005", "AL80"),
+    o2CleanWarning: lapsedWarning,
+  };
+  const groups = [{ kind: "tank" as const, kindLabel: "Tank", units: [tank1, uncleaned, lapsed] }];
+  const warning = t("counterRentals.new.o2CleanNever", { label: "Tank 004" });
+
+  it("warns on that tank's row once its gas is EANx, and only then", () => {
+    render(<Cart groups={groups} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 004· AL80" }));
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    expect(screen.queryByText(warning)).toBeNull();
+
+    fireEvent.change(fill(uncleaned), { target: { value: "21" } });
+    expect(screen.queryByText(warning)).toBeNull();
+
+    fireEvent.change(fill(uncleaned), { target: { value: "32" } });
+    const row = within(bill())
+      .getAllByRole("listitem")
+      .find((item) => within(item).queryByText("Tank 004"));
+    expect(row && within(row).getByText(warning)).toBeTruthy();
+    expect(screen.getAllByText(warning)).toHaveLength(1);
+  });
+
+  it("says nothing for a tank whose O2-clean record is current", () => {
+    render(<Cart groups={groups} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    fireEvent.change(fill(tank1), { target: { value: "32" } });
+    expect(
+      screen.queryByText(t("counterRentals.new.o2CleanNever", { label: "Tank 001" })),
+    ).toBeNull();
+  });
+
+  it("takes the warning back when the gas goes from EANx 32 to air", () => {
+    render(<Cart groups={groups} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 004· AL80" }));
+    fireEvent.change(fill(uncleaned), { target: { value: "32" } });
+    expect(screen.getByText(warning)).toBeTruthy();
+    fireEvent.change(fill(uncleaned), { target: { value: "21" } });
+    expect(screen.queryByText(warning)).toBeNull();
+  });
+
+  it("says a lapsed cleaning apart from one never recorded", () => {
+    render(<Cart groups={groups} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 004· AL80" }));
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 005· AL80" }));
+    fireEvent.change(fill(uncleaned), { target: { value: "32" } });
+    fireEvent.change(fill(lapsed), { target: { value: "32" } });
+    expect(screen.getByText(warning)).toBeTruthy();
+    expect(screen.getByText(lapsedWarning)).toBeTruthy();
+    expect(warning).not.toBe(lapsedWarning);
+  });
+
+  it("warns without stopping the rental", () => {
+    render(<Cart groups={groups} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 004· AL80" }));
+    fireEvent.change(fill(uncleaned), { target: { value: "36" } });
+    expect(screen.getByText(warning)).toBeTruthy();
+    expect(screen.getByRole("button", { name: props.words.submit })).toBeEnabled();
   });
 });

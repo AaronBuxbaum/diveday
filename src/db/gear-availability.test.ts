@@ -78,6 +78,58 @@ describe("gear register readers: the picker and a departure's assignments", () =
     ]);
   });
 
+  it("says whether a tank's O2-clean record stands on the service day, and nothing for other kinds (issue #2719)", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const cleaned = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "Tank cleaned" }),
+    );
+    const lapsed = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "Tank lapsed" }),
+    );
+    const never = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "Tank never" }),
+    );
+    const vest = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "Vest" }),
+    );
+    for (const [unit, servicedOn, nextDueOn] of [
+      [cleaned, "2026-03-01", "2027-03-01"],
+      [lapsed, "2025-08-01", "2026-09-02"],
+    ] as const) {
+      expect(
+        await recordGearService(db, {
+          shopId: shop.id,
+          gearItemId: unit.id,
+          kind: "o2_clean",
+          servicedOn,
+          nextDueOn,
+        }),
+      ).toMatchObject({ ok: true });
+    }
+    // Read on the window's last day, as the counter reads every clock: the
+    // lapsed tank is current on the 1st and not on the 3rd.
+    const read = async (until: string) =>
+      new Map(
+        (
+          await listAvailableGearUnits(db, shop.id, {
+            from: "2026-09-01",
+            until,
+            todayLocal: TODAY,
+            serviceAsOf: until,
+          })
+        ).map((unit) => [unit.id, unit.o2Clean]),
+      );
+    const first = await read("2026-09-01");
+    expect([cleaned, lapsed, never, vest].map((unit) => first.get(unit.id))).toEqual([
+      "current",
+      "current",
+      "never",
+      null,
+    ]);
+    const third = await read("2026-09-03");
+    expect(third.get(lapsed.id)).toBe("lapsed");
+  });
+
   it("the picker offers only free, working units for the window", async () => {
     const { db, shop } = await gearShopContext(ctx);
     mustCreate(

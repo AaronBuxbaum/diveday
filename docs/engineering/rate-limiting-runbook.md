@@ -33,6 +33,7 @@ cannot see it.
 | RFC 8058 one-click unsubscribe | `src/app/unsubscribe/[token]/one-click/route.ts` | IP, then capability token, both checked before the token is looked up | `RATE_LIMITS.oneClickUnsubscribeByIp` (300/hour) + `RATE_LIMITS.oneClickUnsubscribe` (10/hour); the IP bucket is generous because mail providers POST from shared addresses |
 | Second factor (TOTP or recovery code): step-up, enable, disable | `src/app/shop/[shopSlug]/settings/security/actions.ts` | signed-in account **and** IP | `RATE_LIMITS.secondFactorByAccount` (5/15min) + `RATE_LIMITS.secondFactorByIp` (20/15min) |
 | Recap photo upload | `src/app/recap/[token]/actions.ts` | IP **and** booking (post-verification) | `RATE_LIMITS.recapUploadByIp` (30/hour) + `RATE_LIMITS.recapUploadByToken` (10/hour) |
+| Recap photo: stop sharing with the boat | same file | IP **and** booking (IP before the token is verified) | `RATE_LIMITS.recapUnshareByIp` (60/hour) + `RATE_LIMITS.recapUnshareByToken` (20/hour) |
 | Post-trip tip checkout | same file, `startTipAction` | IP **and** booking | `RATE_LIMITS.tipStart` (10/hour), spent on both dimensions |
 | Review submit / revise | same file, `submitReviewAction` | IP **and** booking | `RATE_LIMITS.reviewSubmitByIp` (30/hour) + `RATE_LIMITS.reviewSubmitByToken` (10/hour) |
 | Recap pulse: submit, revise or withdraw | same file, `submitRecapPulseAction` | IP **and** booking (IP before the token is verified) | `RATE_LIMITS.recapPulseByIp` (30/hour) + `RATE_LIMITS.recapPulseByToken` (10/hour) |

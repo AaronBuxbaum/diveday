@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   consumeBookkeeperConfirmation,
   issueBookkeeperConfirmation,
+  readBookkeeper,
+  recordBookkeeperDeliveryOutcome,
   setBookkeeper,
 } from "@/db/bookkeeper";
-import { personRoles, shops } from "@/db/schema";
+import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
 import { fileScopedShopContext } from "@/test/db";
@@ -160,5 +162,185 @@ describe("sendDueMonthEndEmails", () => {
     expect(sent).toEqual([]);
     const [row] = await db.select().from(shops).where(eq(shops.id, shopId));
     expect(row?.bookkeeperSentMonth).toBe("2026-09");
+  });
+});
+
+describe("a month-end send that bounced (issue #2798)", () => {
+  const BOUNCED_AT = new Date("2026-11-02T15:05:00Z");
+
+  async function sentOnce() {
+    const setup = await shopWithBookkeeper();
+    const { provider } = capturing();
+    await sendDueMonthEndEmails(setup.db, { now: SECOND, provider, origin: ORIGIN });
+    return setup;
+  }
+
+  const outcome = (
+    db: Parameters<typeof recordBookkeeperDeliveryOutcome>[0],
+    shopId: string,
+    input: { outcome: "bounced" | "delivered"; at?: Date; recipient?: string },
+    provider: NotificationProvider,
+  ) =>
+    recordBookkeeperDeliveryOutcome(db, {
+      shopId,
+      recipient: input.recipient ?? "Books@Example.com",
+      outcome: input.outcome,
+      at: input.at ?? BOUNCED_AT,
+      origin: ORIGIN,
+      provider,
+    });
+
+  it("is held on the shop and told to every owner once, naming the address", async () => {
+    const { db, shopId } = await sentOnce();
+    const { sent, provider } = capturing();
+    expect(await outcome(db, shopId, { outcome: "bounced" }, provider)).toBe("bounced");
+    expect((await readBookkeeper(db, shopId))?.bouncedAt).toEqual(BOUNCED_AT);
+    const notices = ofKind(sent, "bookkeeper_notice");
+    expect(notices.length).toBeGreaterThan(0);
+    for (const notice of notices) {
+      expect(notice).toMatchObject({ event: "bounced", email: BOOKS });
+      // SES does not say which month's send bounced, so the notice names none.
+      expect(notice.month).toBeUndefined();
+      expect(messageFor(notice).subject).toContain(BOOKS);
+    }
+    expect(sent.filter((n) => n.kind !== "bookkeeper_notice")).toEqual([]);
+
+    // SES saying it again tells nobody again.
+    const again = capturing();
+    expect(await outcome(db, shopId, { outcome: "bounced", at: SECOND }, again.provider)).toBe(
+      "unchanged",
+    );
+    expect(again.sent).toEqual([]);
+  });
+
+  it("does not stop the next month's send, and a delivery after it clears it", async () => {
+    const { db, shopId } = await sentOnce();
+    const { provider } = capturing();
+    await outcome(db, shopId, { outcome: "bounced" }, provider);
+    const december = new Date("2026-12-02T15:00:00Z");
+    const next = capturing();
+    expect(
+      await sendDueMonthEndEmails(db, { now: december, provider: next.provider, origin: ORIGIN }),
+    ).toMatchObject({ sent: 1 });
+    // A delivery older than the bounce is not the later send.
+    expect(
+      await outcome(
+        db,
+        shopId,
+        { outcome: "delivered", at: new Date("2026-11-02T15:00:00Z") },
+        provider,
+      ),
+    ).toBe("unchanged");
+    expect(await outcome(db, shopId, { outcome: "delivered", at: december }, provider)).toBe(
+      "cleared",
+    );
+    expect((await readBookkeeper(db, shopId))?.bouncedAt).toBeNull();
+  });
+
+  it("is cleared by a change of address, and never set for an address no longer on file", async () => {
+    const { db, shopId, owner } = await sentOnce();
+    const { sent, provider } = capturing();
+    await outcome(db, shopId, { outcome: "bounced" }, provider);
+    await setBookkeeper(db, {
+      shopId,
+      timeZone: "America/New_York",
+      email: "fixed@example.com",
+      personId: owner,
+      now: new Date("2026-11-03T15:00:00Z"),
+    });
+    expect((await readBookkeeper(db, shopId))?.bouncedAt).toBeNull();
+    sent.length = 0;
+    // The old address bouncing late is about an address the shop no longer names.
+    expect(await outcome(db, shopId, { outcome: "bounced" }, provider)).toBe("unchanged");
+    expect((await readBookkeeper(db, shopId))?.bouncedAt).toBeNull();
+    expect(sent).toEqual([]);
+  });
+
+  it("is cleared by the owner saving the same address again, as the notice asks", async () => {
+    const { db, shopId, owner } = await sentOnce();
+    const { provider } = capturing();
+    await outcome(db, shopId, { outcome: "bounced" }, provider);
+    const saved = await setBookkeeper(db, {
+      shopId,
+      timeZone: "America/New_York",
+      email: BOOKS,
+      personId: owner,
+      now: new Date("2026-11-03T15:00:00Z"),
+    });
+    expect(saved).toEqual({ change: "resaved", confirmed: true });
+    expect((await readBookkeeper(db, shopId))?.bouncedAt).toBeNull();
+  });
+
+  it("leaves another real shop naming the same address untouched, and both keep sending", async () => {
+    const { db, shopId } = await sentOnce();
+    const [other] = await db
+      .insert(shops)
+      .values({
+        name: "Coral Ledge Divers",
+        slug: "coral-ledge-bounce",
+        timezone: "America/New_York",
+        isDemo: false,
+      })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("no second shop");
+    const [otherOwner] = await db
+      .insert(people)
+      .values({ shopId: other.id, fullName: "Coral Owner" })
+      .returning({ id: people.id });
+    if (!otherOwner) throw new Error("no second owner");
+    await db.insert(personRoles).values({ personId: otherOwner.id, role: "owner" });
+    await db.insert(userAccounts).values({
+      personId: otherOwner.id,
+      email: "owner@coral-ledge.example",
+      hashedPassword: "x",
+    });
+    const setAt = new Date("2026-10-20T15:00:00Z");
+    await setBookkeeper(db, {
+      shopId: other.id,
+      timeZone: "America/New_York",
+      email: BOOKS,
+      personId: otherOwner.id,
+      now: setAt,
+    });
+    const issued = await issueBookkeeperConfirmation(db, {
+      shopId: other.id,
+      email: BOOKS,
+      now: setAt,
+    });
+    await consumeBookkeeperConfirmation(db, {
+      token: issued?.token ?? "",
+      now: setAt,
+      origin: null,
+    });
+
+    const { sent, provider } = capturing();
+    await outcome(db, shopId, { outcome: "bounced" }, provider);
+    expect((await readBookkeeper(db, shopId))?.bouncedAt).toEqual(BOUNCED_AT);
+    expect((await readBookkeeper(db, other.id))?.bouncedAt).toBeNull();
+    const bouncedNotices = ofKind(sent, "bookkeeper_notice");
+    expect(bouncedNotices.length).toBeGreaterThan(0);
+    expect(bouncedNotices.every((notice) => notice.shopId === shopId)).toBe(true);
+
+    const december = capturing();
+    expect(
+      await sendDueMonthEndEmails(db, {
+        now: new Date("2026-12-02T15:00:00Z"),
+        provider: december.provider,
+        origin: ORIGIN,
+      }),
+    ).toMatchObject({ sent: 2, failed: 0 });
+    expect(
+      ofKind(december.sent, "bookkeeper_month_end")
+        .map((email) => email.shopId)
+        .sort(),
+    ).toEqual([shopId, other.id].sort());
+  });
+
+  it("is never set on another shop that names the same address", async () => {
+    const { db, shopId } = await sentOnce();
+    const { provider } = capturing();
+    const otherShop = "3f2504e0-4f89-41d3-9a0c-0305e82c3302";
+    expect(await outcome(db, otherShop, { outcome: "bounced" }, provider)).toBe("unchanged");
+    expect((await readBookkeeper(db, shopId))?.bouncedAt).toBeNull();
   });
 });

@@ -10,6 +10,9 @@
  */
 export const READY_WORKER_SCOPE = "/ready/";
 
+/** The Cache Storage cache that holds the one kept copy (`src/worker/ready-page-cache.ts`). */
+export const READY_CACHE_NAME = "diveday-ready-page-v1";
+
 /**
  * The `<meta name>` the live trip-prep page carries to say **until when** the
  * phone may keep its copy (security review of layer 8, D2). The worker keeps
@@ -71,6 +74,45 @@ export async function keepReadyPageOnDevice(): Promise<boolean> {
       };
       worker.postMessage({ type: "KEEP_READY_PAGE" }, [channel.port2]);
     });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * **Take the kept copy off this browser** (issue #2693): "Remove saved copy" on
+ * `/ready`, and every staff sign-out (`forgetThisDevice`), since a shop tablet
+ * that opened a diver's link may still hold their page. Unregisters the
+ * diver's `/ready/` worker first and only then deletes the copy's cache, so a
+ * save another tab's worker was making cannot land after the delete (security
+ * review 2, N2). The staff worker at `/` stays: it holds the crew's offline
+ * manifests.
+ *
+ * A worker already controlling an open tab keeps running until that tab
+ * closes, and opening the link again keeps the page again, so the copy is
+ * gone **until the link is next opened** — what "Removed" says.
+ *
+ * One step failing does not skip the other. Answers whether the cache was
+ * deleted; never throws.
+ */
+export async function forgetReadyPageCopy(): Promise<boolean> {
+  const worker = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;
+  if (worker) {
+    try {
+      const registrations = await worker.getRegistrations();
+      await Promise.all(
+        registrations
+          .filter((registration) => new URL(registration.scope).pathname === READY_WORKER_SCOPE)
+          .map((registration) => registration.unregister().catch(() => false)),
+      );
+    } catch {
+      // No registrations to read: still delete the copy below.
+    }
+  }
+  try {
+    if (typeof caches === "undefined" || !caches) return false;
+    await caches.delete(READY_CACHE_NAME);
+    return true;
   } catch {
     return false;
   }

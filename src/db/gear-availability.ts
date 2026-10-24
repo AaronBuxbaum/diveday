@@ -23,6 +23,8 @@ import {
   type GearItemStatus,
   type GearServiceState,
   gearServiceState,
+  type O2CleanStanding,
+  o2CleanStanding,
   serviceConcernStillOpen,
 } from "@/lib/gear";
 import type { AppDb, DbExecutor } from "./client";
@@ -51,6 +53,12 @@ export type AvailableGearUnit = {
    * picker the way a lapsed clock is; never proposed.
    */
   serviceConcern: boolean;
+  /**
+   * Where a tank's oxygen cleaning stands on the service day
+   * (`o2CleanStanding`), so the counter can warn on an EANx fill without a
+   * current one (issue #2719); null for every other kind. Informs, never gates.
+   */
+  o2Clean: O2CleanStanding | null;
   /** Only the counter's opt-in read includes reasons for units it cannot lend. */
   unavailable?: "unit_out_of_service" | "unit_unavailable" | null;
 };
@@ -229,6 +237,13 @@ export async function listAvailableGearUnits(
         options.serviceAsOf ?? options.todayLocal,
       ),
       serviceConcern: concerns.has(unit.id),
+      o2Clean:
+        unit.kind === "tank"
+          ? o2CleanStanding(
+              clocksByItem.get(unit.id) ?? [],
+              options.serviceAsOf ?? options.todayLocal,
+            )
+          : null,
     };
   });
 }

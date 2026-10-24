@@ -488,6 +488,27 @@ describe("the /ready/ registration's fetch", () => {
     expect(navigate(`https://dive.day${PATH}/forms`).responded).toBeUndefined();
   });
 
+  /**
+   * The diver's registration never fetches the staff shell (issue #2693): a
+   * page under `/ready/` that posts the staff worker's message gets a refusal,
+   * and nothing is asked of the network.
+   */
+  it("refuses to cache the staff shell from the diver's registration", async () => {
+    const handler = listeners.get("message");
+    if (!handler) throw new Error("no message listener");
+    const replies: unknown[] = [];
+    const waits: Promise<unknown>[] = [];
+    handler({
+      data: { type: "CACHE_OFFLINE_MANIFEST_SHELL" },
+      ports: [{ postMessage: (reply: unknown) => replies.push(reply) }],
+      source: { url: `https://dive.day${PATH}` },
+      waitUntil: (promise: Promise<unknown>) => waits.push(promise),
+    });
+    await Promise.allSettled(waits);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(replies).toEqual([{ ok: false }]);
+  });
+
   it("keeps nothing under the staff registration", async () => {
     scope.registration.scope = "https://dive.day/";
     const load = navigate(`https://dive.day${PATH}`);

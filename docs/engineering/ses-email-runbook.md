@@ -297,6 +297,15 @@ not also mail each bounce to `notifications@ses.dive.day`, a mailbox nobody read
 publishes its own reputation metrics beside the account-level ones the two alarms read, so when the
 account rate moves the graph says whether it was DiveDay's mail.
 
+The bookkeeper's month-end email keeps no delivery row, so the webhook matches its outcome by tags
+instead (issue #2798): an event tagged `diveday_kind=bookkeeper_month_end` with a `diveday_shop`,
+for the address that shop names now, stamps `shops.bookkeeper_bounced_at` on a permanent bounce
+(SES reports a suppressed address as one: `OnAccountSuppressionList` or `Suppressed`) and clears it
+on a later `Delivery` or when the address is saved again. A transient bounce changes
+nothing. The stamp tells every owner once and puts a warning under the bookkeeper's field; the
+monthly pass keeps sending. A second bounce while the first stands tells nobody again. The
+`ses_webhook.bookkeeper_outcome` line names the shop and the outcome, never the address.
+
 ## Production access: the request
 
 The sandbox is **per region**, and each request is judged on its own text. What decides one is

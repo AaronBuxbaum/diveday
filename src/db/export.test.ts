@@ -420,9 +420,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "bookkeeper_confirm_token_hash",
     "bookkeeper_confirm_expires_at",
     "bookkeeper_stop_token_hash",
-    // #2450: DiveDay's own review of the name at sign-up and a human's clearing
-    // of it; a bundle says nothing about either, and an import joins a shop
-    // already reviewed.
+    "bookkeeper_bounced_at",
+    // #2450: DiveDay's own review of the name and a human's clearing of it; a
+    // bundle says nothing about either, and an import joins a reviewed shop.
     "name_flagged_at",
     "name_cleared_at",
   ], // DiveDay-side config, not shop records

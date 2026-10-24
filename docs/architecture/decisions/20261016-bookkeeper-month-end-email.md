@@ -47,4 +47,5 @@ someone outside its staff, every month with nobody pressing Send.
 - A departed manager's address stops by itself until someone else vouches for it.
 - Only the newest email's stop link works.
 - A send accepted but answered with an error is retried, so a month can arrive twice (N1).
-- A bounced address still reads as sent; nothing tells the owner yet (N2, a follow-up).
+- A bounced address is told once to each owner, without a month, and warned on the field until
+  saved again or a send is delivered (N2, #2798). The pass keeps sending.

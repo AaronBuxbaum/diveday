@@ -162,6 +162,28 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The sharer's own photo, shared with the boat** (H-129, issue #2806):
+       * marked as shared, with "Stop sharing" under it. Through a test route
+       * because an e2e build has no media store to upload to; the demo's own
+       * recap stays the unshared one photographed above.
+       */
+      test(`a recap with a photo the diver shared renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-shared-recap-photo");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        await page
+          .getByRole("button", { name: "Stop sharing" })
+          .filter({ visible: true })
+          .waitFor();
+        await capture(page, "recap-shared-photo", scheme);
+      });
+
+      /**
        * **The session that certified its diver** (fourth review, item 55).
        *
        * The record names the level the shop issued from this session, under

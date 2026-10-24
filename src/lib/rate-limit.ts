@@ -452,6 +452,10 @@ export const RATE_LIMITS = {
   recapUploadByToken: perHour(10),
   /** Recap photo uploads, per IP — catches one visitor spamming many tokens. */
   recapUploadByIp: perHour(30),
+  /** A diver taking a shared recap photo back from the boat, per capability token (#2806). */
+  recapUnshareByToken: perHour(20),
+  /** The same, per IP — throttles token guessing before the signature is checked. */
+  recapUnshareByIp: perHour(60),
   /**
    * Address suggestions from the settings card, per signed-in staff member.
    *

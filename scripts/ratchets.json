@@ -538,7 +538,6 @@
         }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 302,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 420,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 316,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
@@ -614,7 +613,7 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 558,
     "src/app/pricing/page.tsx": 426,
-    "src/app/ready/[token]/page.tsx": 654,
+    "src/app/ready/[token]/page.tsx": 652,
     "src/app/s/[shopSlug]/page.tsx": 869,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 509,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,

@@ -159,7 +159,8 @@
     "setBy": "Puesto por {name}, {date}",
     "setByGone": "Puesto el {date} por alguien que ya no está en el equipo",
     "waiting": "Esperando a que {email} confirme; no se envía nada hasta entonces.",
-    "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala."
+    "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala.",
+    "bounced": "Los últimos archivos de fin de mes a {email} rebotaron. Revisa la dirección y guárdala."
   },
   "tipsSplit": "A partes iguales: {shares}"
 }

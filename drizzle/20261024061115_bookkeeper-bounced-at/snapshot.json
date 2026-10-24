@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "aa5aa2c4-74b9-493d-9bfb-e9d1ac1cfb6e",
+  "prevIds": [
+    "4f0217e0-be1a-48cd-af30-12bdf140e6ba"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "bookkeeper_bounced_at"
+      ],
+      "writes": [
+        "s|col|public.shops.bookkeeper_bounced_at",
+        "n|col|public.shops.bookkeeper_bounced_at",
+        "e|col|public.shops.bookkeeper_bounced_at"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "shops"
+      ],
+      "writes": [
+        "s|ck|public.shops.shops_bookkeeper_bounce_has_address",
+        "n|ck|public.shops.shops_bookkeeper_bounce_has_address",
+        "e|ck|public.shops.shops_bookkeeper_bounce_has_address",
+        "n|con|public.shops.shops_bookkeeper_bounce_has_address"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.shops.bookkeeper_email",
+        "n|col|public.shops.bookkeeper_bounced_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "bookkeeper_bounced_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "shops_bookkeeper_bounce_has_address",
+        "value": "\"bookkeeper_email\" is not null or \"bookkeeper_bounced_at\" is null",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, lt, or } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { BOOKKEEPER_CONFIRMATION_TTL_MS, bookkeeperMonthOnSet } from "@/lib/bookkeeper";
 import { nowDate } from "@/lib/clock";
@@ -27,6 +27,8 @@ export type BookkeeperSetting = {
   /** The setter's name as the people row holds it today; null when gone. */
   setByName: string | null;
   confirmedAt: Date | null;
+  /** The last month-end files to this address bounced (issue #2798); null otherwise. */
+  bouncedAt: Date | null;
 };
 
 /** The shop's bookkeeper address, or null while the email is off. */
@@ -41,6 +43,7 @@ export async function readBookkeeper(
       setByPersonId: shops.bookkeeperEmailSetByPersonId,
       setByName: people.fullName,
       confirmedAt: shops.bookkeeperConfirmedAt,
+      bouncedAt: shops.bookkeeperBouncedAt,
     })
     .from(shops)
     .leftJoin(
@@ -56,6 +59,7 @@ export async function readBookkeeper(
     setByPersonId: row.setByPersonId,
     setByName: row.setByName,
     confirmedAt: row.confirmedAt,
+    bouncedAt: row.bouncedAt,
   };
 }
 
@@ -76,6 +80,7 @@ const BOOKKEEPER_ADDRESS_CLEARED = {
   bookkeeperConfirmedAt: null,
   bookkeeperConfirmTokenHash: null,
   bookkeeperConfirmExpiresAt: null,
+  bookkeeperBouncedAt: null,
 } as const;
 
 /** Every bookkeeper column empty, the last email's stop link included. */
@@ -93,7 +98,8 @@ export const BOOKKEEPER_CLEARED = {
  * cleared with the old one, so nothing is sent until the new inbox confirms.
  * It also counts the month already due as sent (`bookkeeperMonthOnSet`), so
  * its first email is the next 2nd's. Saving the address already on file moves
- * only who set it and when, never the claim or the confirmation; when the
+ * who set it and when, and takes back a bounce warning, never the claim or
+ * the confirmation; when the
  * saver is not its setter that is `vouched`, decided here under the lock,
  * since it can restart files held because the setter lost access.
  */
@@ -121,7 +127,13 @@ export async function setBookkeeper(
     if (current.email === input.email) {
       await tx
         .update(shops)
-        .set({ bookkeeperEmailSetAt: input.now, bookkeeperEmailSetByPersonId: input.personId })
+        // Saving the address again is the owner saying it is right, which is
+        // what the bounce notice asks of them (issue #2798).
+        .set({
+          bookkeeperEmailSetAt: input.now,
+          bookkeeperEmailSetByPersonId: input.personId,
+          bookkeeperBouncedAt: null,
+        })
         .where(eq(shops.id, input.shopId));
       const change = current.setByPersonId === input.personId ? "resaved" : "vouched";
       return { change, confirmed: current.confirmedAt !== null };
@@ -370,6 +382,62 @@ export async function releaseBookkeeperMonth(
     );
 }
 
+/** What SES said about a month-end send, as the delivery webhook reads it. */
+export type BookkeeperDeliveryOutcome = "bounced" | "delivered";
+
+/**
+ * **A month-end send's outcome, on the shop** (issue #2798, security review
+ * N2). The webhook matches the send by the shop its tag names and the address
+ * SES reports, compared with the address on file, so an outcome for an address
+ * since changed or removed changes nothing; no attachment and no address is
+ * kept or logged.
+ *
+ * A permanent bounce (or a suppressed address, which SES reports as one)
+ * stamps `bookkeeper_bounced_at` once and tells every owner, naming the last
+ * month claimed; a second bounce while it stands tells nobody again. A
+ * delivery after the bounce clears it. The pass is untouched either way.
+ * Returns what changed.
+ */
+export async function recordBookkeeperDeliveryOutcome(
+  db: AppDb,
+  input: {
+    shopId: string;
+    recipient: string;
+    outcome: BookkeeperDeliveryOutcome;
+    at: Date;
+    origin?: string | null;
+    provider?: NotificationProvider;
+  },
+): Promise<"bounced" | "cleared" | "unchanged"> {
+  const sameAddress = and(
+    eq(shops.id, input.shopId),
+    eq(sql`lower(${shops.bookkeeperEmail})`, input.recipient.trim().toLowerCase()),
+  );
+  if (input.outcome === "delivered") {
+    const cleared = await db
+      .update(shops)
+      .set({ bookkeeperBouncedAt: null })
+      .where(and(sameAddress, lt(shops.bookkeeperBouncedAt, input.at)))
+      .returning({ id: shops.id });
+    return cleared.length > 0 ? "cleared" : "unchanged";
+  }
+  const [stamped] = await db
+    .update(shops)
+    .set({ bookkeeperBouncedAt: input.at })
+    .where(and(sameAddress, isNull(shops.bookkeeperBouncedAt)))
+    .returning({ email: shops.bookkeeperEmail });
+  if (!stamped?.email) return "unchanged";
+  // No month: the event does not say which send bounced, and the month on
+  // the shop row may already be the next one's claim (security review 3, N2).
+  await tellOwnersAboutBookkeeper(db, {
+    shopId: input.shopId,
+    what: { event: "bounced", email: stamped.email },
+    at: input.at,
+    ...delivery(input),
+  });
+  return "bounced";
+}
+
 export type BookkeeperStopContext = {
   shopName: string;
   /** The address this link went to is no longer on file. */
@@ -444,7 +512,8 @@ export type BookkeeperOwnerEvent =
   | { event: "cleared"; by: "recipient"; email: string }
   | { event: "cleared"; by: "erasure" }
   | { event: "confirmed"; email: string }
-  | { event: "sent"; email: string; month: string };
+  | { event: "sent"; email: string; month: string }
+  | { event: "bounced"; email: string };
 
 export type BookkeeperNoticeRecipient = {
   personId: string | null;
@@ -481,8 +550,9 @@ export async function bookkeeperNoticeRecipients(
 /**
  * One email to each of `bookkeeperNoticeRecipients` (security review B1 and
  * F1, second pass): when the address is set, changed, vouched for, confirmed
- * or removed, and on every month-end send, so an address nobody meant to keep
- * shows up in an owner's inbox rather than at the bottom of a Reports month.
+ * or removed, on every month-end send, and when one bounces (issue #2798), so
+ * an address nobody meant to keep shows up in an owner's inbox rather than at
+ * the bottom of a Reports month.
  * Never throws: the act it reports already happened. A demo shop sends
  * nothing. Returns how many went.
  */

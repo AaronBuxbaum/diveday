@@ -1,4 +1,5 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { bookASeatAndOpenThread, e2eNow, publicTripUrl, signOut, tripPathByTitle } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
@@ -18,6 +19,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  */
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
 const COPY_CACHE = "diveday-ready-page-v1";
+const diver = diverTranslator("en-US");
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -28,10 +30,11 @@ function keptCopies(page: Page): Promise<number> {
   return page.evaluate(async (name) => (await (await caches.open(name)).keys()).length, COPY_CACHE);
 }
 
-test("the saved /ready copy shows with no signal, and a cancel landing forgets it", async ({
-  page,
-  context,
-}) => {
+/**
+ * Books a seat as a new diver and opens their readiness link with a full load,
+ * then waits for the phone to hold the page. Returns the link's path.
+ */
+async function openKeptReadyPage(page: Page, context: BrowserContext, who: string) {
   // The harness freezes the page's clock and the server's, never a service
   // worker's, which would read the real date and find the seeded trip's copy
   // long out of date. The worker script is served with the same frozen clock
@@ -53,8 +56,8 @@ globalThis.Date = new Proxy(__RealDate, {
   await page.goto(publicTripUrl(staffTrip), { waitUntil: "domcontentloaded" });
   await bookASeatAndOpenThread(
     page,
-    `Olive Offline ${stamp}`,
-    `olive-offline-${stamp}@example.com`,
+    `${who} ${stamp}`,
+    `${who.toLowerCase().replace(/ /g, "-")}-${stamp}@example.com`,
   );
   const readyPath = new URL(page.url()).pathname;
   // The booking lands here by a client-side navigation, and a service worker
@@ -65,6 +68,14 @@ globalThis.Date = new Proxy(__RealDate, {
 
   // Online, the page asks its worker to keep a copy; wait for the phone to hold it.
   await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBeGreaterThan(0);
+  return readyPath;
+}
+
+test("the saved /ready copy shows with no signal, and a cancel landing forgets it", async ({
+  page,
+  context,
+}) => {
+  const readyPath = await openKeptReadyPage(page, context, "Olive Offline");
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
 
   // No signal: the reload is answered from the saved copy, and says so.
@@ -72,6 +83,8 @@ globalThis.Date = new Proxy(__RealDate, {
   await page.reload();
   await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: "No signal" })).toBeVisible();
+  // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
+  await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
 
   // Back online, the diver lands on the page their own cancel redirects to.
   await context.setOffline(false);
@@ -82,4 +95,36 @@ globalThis.Date = new Proxy(__RealDate, {
   await context.setOffline(true);
   await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
   await context.setOffline(false);
+});
+
+/**
+ * **A diver takes the copy off a device that is not theirs** (issue #2693):
+ * the page is kept on any browser that opens the link, a hotel PC among them.
+ */
+test("Remove saved copy takes the page off this device", async ({ page, context }) => {
+  const readyPath = await openKeptReadyPage(page, context, "Remy Remove");
+  await page.getByRole("button", { name: diver("ready.offlineRemove") }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: diver("ready.offlineRemoved") }),
+  ).toBeVisible();
+  await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBe(0);
+  expect(
+    await page.evaluate(async () =>
+      (await navigator.serviceWorker.getRegistrations()).map((r) => new URL(r.scope).pathname),
+    ),
+  ).not.toContain("/ready/");
+
+  // With no signal there is nothing saved to show, however often it is opened.
+  // (A reload would only repeat the browser's own error page, which resolves.)
+  await context.setOffline(true);
+  await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
+  await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
+
+  // "Until you next open this link": opening it again with signal keeps it
+  // again, and the page says so rather than still saying "Removed".
+  await context.setOffline(false);
+  await page.goto(readyPath, { waitUntil: "domcontentloaded" });
+  await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toBeVisible();
+  await expect(page.getByText(diver("ready.offlineRemoved"))).toHaveCount(0);
 });

@@ -36,6 +36,7 @@ vi.mock("@/db/recap", async (importOriginal) => {
     isRecapOpen: vi.fn(async () => true),
     canAddRecapPhoto: vi.fn(async () => ({ ok: true })),
     addRecapPhoto: vi.fn(async () => ({ ok: true, photo: { id: "photo" } })),
+    unshareRecapPhoto: vi.fn(async () => ({ ok: true })),
   };
 });
 vi.mock("@/db/reviews", () => ({ submitTripReview: vi.fn() }));
@@ -69,12 +70,19 @@ const { submitRecapPulse } = await import("@/db/recap-pulses");
 const { verifyRecapToken } = await import("@/lib/recap-links");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { startTipCheckout } = await import("@/db/tips");
-const { addRecapPhoto, canAddRecapPhoto, isRecapOpen } = await import("@/db/recap");
+const { addRecapPhoto, canAddRecapPhoto, isRecapOpen, unshareRecapPhoto } = await import(
+  "@/db/recap"
+);
 const { recordDiverOwnLocaleForBooking } = await import("@/db/people");
 const { submitTripReview } = await import("@/db/reviews");
 const { storeRecapImage } = await import("@/lib/storage");
-const { startTipAction, submitRecapPulseAction, submitReviewAction, uploadRecapPhotoAction } =
-  await import("./actions");
+const {
+  startTipAction,
+  submitRecapPulseAction,
+  submitReviewAction,
+  unshareRecapPhotoAction,
+  uploadRecapPhotoAction,
+} = await import("./actions");
 
 const TOKEN = "signed-recap-token";
 const BOOKING_ID = "0f2a9c1e-1111-4222-8333-444444444444";
@@ -328,5 +336,94 @@ describe("uploadRecapPhotoAction and the share tick", () => {
       bookingId: BOOKING_ID,
       shareWithBoat: false,
     });
+  });
+});
+
+/**
+ * **The sharer takes a photo back** (issue #2806). The booking comes from the
+ * signed token and only the photo id from the form, so a crafted post can name
+ * any photo and still clears only one this booking uploaded (the writer's own
+ * `booking_id` match, pinned in `src/db/recap-shared-photos.test.ts`).
+ */
+describe("unshareRecapPhotoAction", () => {
+  const PHOTO_ID = "5b1d7e2a-aaaa-4bbb-8ccc-dddddddddddd";
+
+  async function unshareRedirect(data: FormData): Promise<string> {
+    try {
+      await unshareRecapPhotoAction(TOKEN, data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+      throw error;
+    }
+    throw new Error("action returned without redirecting");
+  }
+
+  it("throttles on IP before it ever verifies the token (CR-013)", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({ allowed: false, retryAfterMs: 1_000 });
+    expect(await unshareRedirect(form([["photoId", PHOTO_ID]]))).toBe(
+      `/recap/${TOKEN}?photo=error`,
+    );
+    expect(verifyRecapToken).not.toHaveBeenCalled();
+    expect(unshareRecapPhoto).not.toHaveBeenCalled();
+  });
+
+  it("throttles per booking once the token is known good", async () => {
+    vi.mocked(checkRateLimit)
+      .mockResolvedValueOnce({ allowed: true, retryAfterMs: 0 })
+      .mockResolvedValueOnce({ allowed: false, retryAfterMs: 1_000 });
+    expect(await unshareRedirect(form([["photoId", PHOTO_ID]]))).toBe(
+      `/recap/${TOKEN}?photo=error`,
+    );
+    expect(unshareRecapPhoto).not.toHaveBeenCalled();
+  });
+
+  it("refuses a token that verifies to nothing", async () => {
+    vi.mocked(verifyRecapToken).mockReturnValue(null);
+    expect(await unshareRedirect(form([["photoId", PHOTO_ID]]))).toBe(
+      `/recap/${TOKEN}?photo=error`,
+    );
+    expect(unshareRecapPhoto).not.toHaveBeenCalled();
+  });
+
+  it("refuses a photo id that is not one", async () => {
+    expect(await unshareRedirect(form([["photoId", "'; drop table"]]))).toBe(
+      `/recap/${TOKEN}?photo=error`,
+    );
+    expect(unshareRecapPhoto).not.toHaveBeenCalled();
+  });
+
+  it("clears the photo for the token's own booking, never one the form names", async () => {
+    expect(
+      await unshareRedirect(
+        form([
+          ["photoId", PHOTO_ID],
+          ["bookingId", "22222222-2222-2222-2222-222222222222"],
+        ]),
+      ),
+    ).toBe(`/recap/${TOKEN}?photo=unshared`);
+    expect(unshareRecapPhoto).toHaveBeenCalledWith(expect.anything(), {
+      bookingId: BOOKING_ID,
+      photoId: PHOTO_ID,
+    });
+  });
+
+  it("says it failed when no photo of this booking's was cleared", async () => {
+    vi.mocked(unshareRecapPhoto).mockResolvedValueOnce({ ok: false });
+    expect(await unshareRedirect(form([["photoId", PHOTO_ID]]))).toBe(
+      `/recap/${TOKEN}?photo=error`,
+    );
+  });
+
+  /**
+   * Taking a photo back is never refused for the recap's state: a seat that
+   * leaves the boat already stops publishing, and withdrawing is the safe
+   * direction, so it does not ask `isRecapOpen`.
+   */
+  it("works on a recap that is not open", async () => {
+    vi.mocked(isRecapOpen).mockResolvedValue(false);
+    expect(await unshareRedirect(form([["photoId", PHOTO_ID]]))).toBe(
+      `/recap/${TOKEN}?photo=unshared`,
+    );
   });
 });

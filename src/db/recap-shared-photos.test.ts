@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { addRecapPhoto, getRecapPageData, listRecapPhotosForTrips } from "./recap";
+import {
+  addRecapPhoto,
+  getRecapPageData,
+  listRecapPhotosForTrips,
+  unshareRecapPhoto,
+} from "./recap";
 import { bookings, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -135,5 +140,64 @@ describe("a photo shared with the boat (H-129)", () => {
     const gallery = await listRecapPhotosForTrips(db, shop.id, [reef.id]);
     expect(gallery.find((photo) => photo.id === shared.photo.id)?.sharedWithBoat).toBe(true);
     expect(gallery.find((photo) => photo.id === kept.photo.id)?.sharedWithBoat).toBe(false);
+  });
+});
+
+/**
+ * **The sharer can take a photo back** (issue #2806; ADR
+ * 20261016-shared-boat-photos, Consequences). Clearing the column is the act,
+ * and only the booking that owns the photo may clear it.
+ */
+describe("a diver stops sharing a photo with the boat", () => {
+  const SAM = { fullName: "Sam Shutter", email: "recap-sam@example.com" };
+
+  it("takes it off the other recaps and keeps it on the sharer's own", async () => {
+    const { db, bookingId } = await recapContext();
+    const { bookingId: samBooking } = await recapContext(SAM);
+    const shared = await addRecapPhoto(db, {
+      bookingId,
+      imageUrl: "https://img/shared.jpg",
+      shareWithBoat: true,
+    });
+    if (!shared.ok) throw new Error("photo not added");
+    expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(true);
+
+    expect(await unshareRecapPhoto(db, { bookingId, photoId: shared.photo.id })).toEqual({
+      ok: true,
+    });
+
+    expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(false);
+    const raes = await getRecapPageData(db, bookingId);
+    expect(raes?.photos.find((photo) => photo.id === shared.photo.id)).toEqual({
+      id: shared.photo.id,
+      imageUrl: "https://img/shared.jpg",
+      caption: null,
+    });
+  });
+
+  it("refuses another booking on the same boat, and the photo stays shared", async () => {
+    const { db, bookingId } = await recapContext();
+    const { bookingId: samBooking } = await recapContext(SAM);
+    const shared = await addRecapPhoto(db, {
+      bookingId,
+      imageUrl: "https://img/shared.jpg",
+      shareWithBoat: true,
+    });
+    if (!shared.ok) throw new Error("photo not added");
+
+    expect(
+      await unshareRecapPhoto(db, { bookingId: samBooking, photoId: shared.photo.id }),
+    ).toEqual({ ok: false });
+
+    expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(true);
+  });
+
+  it("does nothing to a photo that was never shared", async () => {
+    const { db, bookingId } = await recapContext();
+    const kept = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/mine.jpg" });
+    if (!kept.ok) throw new Error("photo not added");
+    expect(await unshareRecapPhoto(db, { bookingId, photoId: kept.photo.id })).toEqual({
+      ok: false,
+    });
   });
 });

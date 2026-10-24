@@ -739,6 +739,9 @@
     "sharedByCaption": "{name}: {caption}",
     "sharedWithBoat": "Shared with the boat",
     "sharedWithBoatCaption": "{caption} · shared with the boat",
+    "stopSharing": "Stop sharing",
+    "stoppingSharing": "Stopping…",
+    "photoUnshared": "It’s on your recap alone now.",
     "seeWhatsNext": "See what’s next",
     "buddyHeading": "Bring a buddy next time",
     "buddyBody": "A seat beside yours on any boat. They book with your link.",
@@ -1011,6 +1014,9 @@
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
     "logEntryWaiting": "After you dive, your log entry is waiting here.",
     "offlineCopy": "No signal: this is the copy your phone saved. Anything you change here needs signal.",
+    "offlineSaved": "Saved on this device for when there’s no signal.",
+    "offlineRemove": "Remove saved copy",
+    "offlineRemoved": "Removed from this device until you next open this link.",
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesUsed": "{line} · Uses {used, plural, one {# package dive} other {# package dives}} ({left} left), one per tank",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
@@ -5918,7 +5924,8 @@
         "cleared": "{shopName}: month-end files turned off",
         "sent": "{shopName}: {month} files sent to {email}",
         "vouched": "{shopName}: {actor} re-confirmed the bookkeeper’s email",
-        "confirmed": "{shopName}: {email} confirmed the month-end files"
+        "confirmed": "{shopName}: {email} confirmed the month-end files",
+        "bounced": "{shopName}: the month-end files to {email} bounced"
       },
       "set": "{actor} set {email} as the bookkeeper’s email. Once that inbox confirms, last month’s report, orders and crew sheet go there on the 2nd of each month.",
       "changed": "{actor} changed the bookkeeper’s email to {email}. Nothing goes to it until that inbox confirms.",
@@ -5928,7 +5935,8 @@
       "vouched": "{actor} re-confirmed {email} as the bookkeeper’s email. Month-end files resume going there on the 2nd of each month.",
       "confirmed": "{email} confirmed it wants the month-end files. The first ones go there on the next 2nd of the month.",
       "clearedByRecipient": "{email} used the link in a month-end email to stop them. No month-end files will be sent until you set an address again and it confirms.",
-      "clearedByErasure": "The bookkeeper’s email was removed when that person’s data was erased at their request. No month-end files will be sent until you set an address again."
+      "clearedByErasure": "The bookkeeper’s email was removed when that person’s data was erased at their request. No month-end files will be sent until you set an address again.",
+      "bounced": "The month-end files to {email} bounced, so the bookkeeper did not get them. Check the address in Settings, and save it again or change it."
     }
   },
   "brand": {

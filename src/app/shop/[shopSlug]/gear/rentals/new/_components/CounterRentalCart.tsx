@@ -14,7 +14,7 @@ import {
   StickyFormActions,
 } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { isOneCoreSet } from "@/lib/counter-rentals";
+import { isOneCoreSet, TANK_FILL_O2_PERCENT } from "@/lib/counter-rentals";
 import { formatMoneyCents } from "@/lib/format";
 import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
@@ -55,6 +55,12 @@ export type PickerUnit = {
   removeAria: string;
   /** A tank's fill menu label; null for every other kind, which takes no fill. */
   fillAria: string | null;
+  /**
+   * Said under a tank once its gas is EANx, when it has no current O2-clean
+   * record (issue #2719); null otherwise. A warning only: the server accepts
+   * the fill exactly as before.
+   */
+  o2CleanWarning: string | null;
 };
 
 export type PaymentChoice = { value: RentalPayment; label: string; hint?: string };
@@ -349,7 +355,7 @@ export function CounterRentalCart({
                     ) : null}
                     {unit.fillAria ? (
                       <TankFillField
-                        unitId={unit.id}
+                        unit={unit}
                         aria={unit.fillAria}
                         hintId={`${billId}-fill-hint`}
                         words={words}
@@ -443,13 +449,28 @@ export function CounterRentalCart({
 }
 
 /**
+ * Enriched air going into a tank whose oxygen cleaning nobody recorded (issue
+ * #2719): said on the tank's row once its gas is above air, and nothing more.
+ * No gate: the server accepts the fill exactly as before.
+ */
+function O2CleanWarning({ warning, fill }: { warning: string | null; fill: string }) {
+  if (!warning || !(Number(fill) > TANK_FILL_O2_PERCENT.air)) return null;
+  return (
+    <FormStatus tone="warning">
+      <span className="text-base">{warning}</span>
+    </FormStatus>
+  );
+}
+
+/**
  * A tank's gas (#2257): a menu, never a typed figure, so nothing is rounded
  * into a different mix. Required, opening on a placeholder nobody can submit
  * (domain review F1); the writer refuses a tank with no gas, and EANx without
- * a nitrox card.
+ * a nitrox card. Under it, the warning for EANx in a tank with no current
+ * O2-clean record (issue #2719).
  */
 function TankFillField({
-  unitId,
+  unit,
   aria,
   hintId,
   words,
@@ -457,7 +478,7 @@ function TankFillField({
   onChange,
   error,
 }: {
-  unitId: string;
+  unit: Pick<PickerUnit, "id" | "o2CleanWarning">;
   aria: string;
   hintId: string;
   words: Pick<CartWords, "fillLabel" | "fillOptions">;
@@ -465,13 +486,13 @@ function TankFillField({
   onChange: (value: string) => void;
   error?: string;
 }) {
-  return (
+  const field = (
     <Field
       label={words.fillLabel}
       error={error ? <span className="text-base">{error}</span> : undefined}
     >
       <select
-        name={`${FILL_FIELD_PREFIX}${unitId}`}
+        name={`${FILL_FIELD_PREFIX}${unit.id}`}
         value={value}
         onChange={(event) => onChange(event.currentTarget.value)}
         required
@@ -486,5 +507,11 @@ function TankFillField({
         ))}
       </select>
     </Field>
+  );
+  return (
+    <>
+      {field}
+      <O2CleanWarning warning={unit.o2CleanWarning} fill={value} />
+    </>
   );
 }

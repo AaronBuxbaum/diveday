@@ -1924,7 +1924,7 @@ const bookkeeperNoticeSchema = z.object({
   recipientName: z.string().trim().min(1).max(120).nullable(),
   shopName: z.string().trim().min(1).max(120),
   reportsUrl: z.url().max(2_000),
-  event: z.enum(["set", "changed", "vouched", "cleared", "confirmed", "sent"]),
+  event: z.enum(["set", "changed", "vouched", "cleared", "confirmed", "sent", "bounced"]),
   /** On `cleared`: the bookkeeper's own stop link, or an erasure; absent when staff removed it. */
   by: z.enum(["recipient", "erasure"]).optional(),
   /** The bookkeeper's address: absent on a `cleared` by staff or by erasure. */

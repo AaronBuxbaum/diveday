@@ -7,6 +7,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/courtesy-email", () => ({ optOutAddressAfterComplaint: vi.fn() }));
 vi.mock("@/db/email-bounces", () => ({ recordEmailBounces: vi.fn() }));
+vi.mock("@/db/bookkeeper", () => ({ recordBookkeeperDeliveryOutcome: vi.fn() }));
 vi.mock("@/lib/notifications/sns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
@@ -16,6 +17,7 @@ const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { optOutAddressAfterComplaint } = await import("@/db/courtesy-email");
 const { recordEmailBounces } = await import("@/db/email-bounces");
+const { recordBookkeeperDeliveryOutcome } = await import("@/db/bookkeeper");
 const { verifySnsMessage, confirmSnsSubscription } = await import("@/lib/notifications/sns");
 const { POST } = await import("./route");
 const { forgetWebhookRefusalReports } = await import("@/lib/webhook-refusal");
@@ -34,6 +36,7 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ people: 1, listEntries: 0 });
   vi.mocked(recordEmailBounces).mockReset().mockResolvedValue(1);
+  vi.mocked(recordBookkeeperDeliveryOutcome).mockReset().mockResolvedValue("unchanged");
   vi.mocked(verifySnsMessage).mockReset();
   vi.mocked(confirmSnsSubscription).mockReset();
 });
@@ -285,6 +288,96 @@ describe("ses webhook route — delivery events", () => {
     );
     await POST(webhookRequest("{}"));
     expect(recordEmailBounces).not.toHaveBeenCalled();
+  });
+
+  describe("a month-end send to the bookkeeper (issue #2798)", () => {
+    const SHOP = "3f2504e0-4f89-41d3-9a0c-0305e82c3302";
+    const monthEnd = (event: Record<string, unknown>, kind = "bookkeeper_month_end") =>
+      verifiedNotification(
+        JSON.stringify({
+          mail: {
+            messageId: "ses_books",
+            destination: ["Books@Example.dive"],
+            tags: { diveday_shop: [SHOP], diveday_kind: [kind] },
+          },
+          ...event,
+        }),
+      );
+
+    it("records a permanent bounce on the shop the tag names, and logs no address", async () => {
+      const info = vi.spyOn(console, "log").mockImplementation(() => {});
+      vi.mocked(recordBookkeeperDeliveryOutcome).mockResolvedValue("bounced");
+      vi.mocked(verifySnsMessage).mockResolvedValue(
+        monthEnd({
+          eventType: "Bounce",
+          bounce: {
+            timestamp: "2026-11-02T14:00:00.000Z",
+            bounceType: "Permanent",
+            bounceSubType: "General",
+            bouncedRecipients: [
+              { emailAddress: "Books@Example.dive", diagnosticCode: "smtp; 550 5.1.1 <books@>" },
+            ],
+          },
+        }),
+      );
+      const response = await POST(webhookRequest("{}"));
+      const lines = info.mock.calls.map((call) => String(call[0]));
+      info.mockRestore();
+      expect(response.status).toBe(200);
+      expect(recordBookkeeperDeliveryOutcome).toHaveBeenCalledWith(FAKE_DB, {
+        shopId: SHOP,
+        recipient: "books@example.dive",
+        outcome: "bounced",
+        at: new Date("2026-11-02T14:00:00.000Z"),
+      });
+      const line = lines
+        .map((raw) => JSON.parse(raw))
+        .find((parsed) => parsed.event === "ses_webhook.bookkeeper_outcome");
+      expect(line).toMatchObject({ shopId: SHOP, outcome: "bounced", result: "bounced" });
+      expect(lines.join("\n").toLowerCase()).not.toContain("books@");
+    });
+
+    it("reads an address on the suppression list as a bounce", async () => {
+      vi.mocked(verifySnsMessage).mockResolvedValue(
+        monthEnd({
+          eventType: "Bounce",
+          bounce: { bounceType: "Permanent", bounceSubType: "OnAccountSuppressionList" },
+        }),
+      );
+      await POST(webhookRequest("{}"));
+      expect(recordBookkeeperDeliveryOutcome).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ recipient: "books@example.dive", outcome: "bounced" }),
+      );
+    });
+
+    it("records a delivery, which clears an earlier bounce", async () => {
+      vi.mocked(verifySnsMessage).mockResolvedValue(
+        monthEnd({ eventType: "Delivery", delivery: { timestamp: "2026-12-02T14:00:00.000Z" } }),
+      );
+      await POST(webhookRequest("{}"));
+      expect(recordBookkeeperDeliveryOutcome).toHaveBeenCalledWith(FAKE_DB, {
+        shopId: SHOP,
+        recipient: "books@example.dive",
+        outcome: "delivered",
+        at: new Date("2026-12-02T14:00:00.000Z"),
+      });
+    });
+
+    it("ignores a full mailbox, a complaint, and any other kind's bounce", async () => {
+      for (const message of [
+        monthEnd({ eventType: "Bounce", bounce: { bounceType: "Transient" } }),
+        monthEnd({
+          eventType: "Complaint",
+          complaint: { complainedRecipients: [{ emailAddress: "books@example.dive" }] },
+        }),
+        monthEnd({ eventType: "Bounce", bounce: { bounceType: "Permanent" } }, "bookkeeper_notice"),
+      ]) {
+        vi.mocked(verifySnsMessage).mockResolvedValue(message);
+        expect((await POST(webhookRequest("{}"))).status).toBe(200);
+      }
+      expect(recordBookkeeperDeliveryOutcome).not.toHaveBeenCalled();
+    });
   });
 
   it("leaves a complaint on untagged mail to the suppression list alone", async () => {

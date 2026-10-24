@@ -789,3 +789,26 @@ describe("the photo door", () => {
     expect(screen.queryByText("recap.yourPhotos")).toBeNull();
   });
 });
+
+/**
+ * **"Stop sharing" sits on the diver's own shared photos and nowhere else**
+ * (issue #2806): never on a photo another diver shared, and never on one of
+ * the diver's own that only they can see.
+ */
+describe("stopping sharing a photo", () => {
+  const photos = [
+    { id: "own-shared", imageUrl: "https://img/a.jpg", caption: null, sharedWithBoat: true },
+    { id: "own-kept", imageUrl: "https://img/b.jpg", caption: null },
+    { id: "from-sam", imageUrl: "https://img/c.jpg", caption: null, sharedBy: "Sam" },
+  ];
+
+  it("offers one control, posting the diver's own shared photo", () => {
+    const { container } = render(<AfterState context={props({ photos })} />);
+    const buttons = screen.getAllByRole("button", { name: "recap.stopSharing" });
+    expect(buttons).toHaveLength(1);
+    const posted = [...container.querySelectorAll<HTMLInputElement>('input[name="photoId"]')].map(
+      (input) => input.value,
+    );
+    expect(posted).toEqual(["own-shared"]);
+  });
+});

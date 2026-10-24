@@ -2,10 +2,10 @@ import { readBookkeeper } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateWithYear } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { saveBookkeeperAction } from "../bookkeeper-actions";
 import { BookkeeperForm } from "./BookkeeperForm";
+import { bookkeeperStatusLine } from "./bookkeeper-status";
 
 /**
  * **The bookkeeper's address, under the month's downloads** (fifth loop, item
@@ -15,7 +15,8 @@ import { BookkeeperForm } from "./BookkeeperForm";
  * Under the field, one line says who stands behind the address and when
  * (security review F1), whether its inbox has confirmed yet (B1), and, when
  * whoever set it can no longer export the shop's data, that nothing is sent
- * until someone who can saves it again.
+ * until someone who can saves it again. When the last month's files to it
+ * bounced, the line says so (issue #2798).
  */
 export async function MonthEndSection({
   shopSlug,
@@ -33,7 +34,14 @@ export async function MonthEndSection({
   const db = await getDb();
   if (!(await canPersonExportShopData(db, user.shopId, user.personId))) return null;
   const bookkeeper = await readBookkeeper(db, user.shopId);
-  const status = bookkeeper ? await bookkeeperStatus(bookkeeper) : null;
+  const status = bookkeeper
+    ? bookkeeperStatusLine(bookkeeper, {
+        setterCanExport: await canPersonExportShopData(db, user.shopId, bookkeeper.setByPersonId),
+        t,
+        locale,
+        timeZone,
+      })
+    : null;
   return (
     <section
       id="bookkeeper"
@@ -58,21 +66,4 @@ export async function MonthEndSection({
       />
     </section>
   );
-
-  async function bookkeeperStatus(setting: NonNullable<typeof bookkeeper>) {
-    const date = formatDateWithYear(setting.setAt, locale, timeZone);
-    const setBy = setting.setByName
-      ? t("reports.bookkeeper.setBy", { name: setting.setByName, date })
-      : t("reports.bookkeeper.setByGone", { date });
-    if (!(await canPersonExportShopData(db, user.shopId, setting.setByPersonId))) {
-      return { tone: "warning" as const, text: `${setBy} ${t("reports.bookkeeper.setterLapsed")}` };
-    }
-    if (!setting.confirmedAt) {
-      return {
-        tone: "warning" as const,
-        text: `${setBy} ${t("reports.bookkeeper.waiting", { email: setting.email })}`,
-      };
-    }
-    return { tone: "muted" as const, text: setBy };
-  }
 }

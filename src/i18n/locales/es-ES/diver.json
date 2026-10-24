@@ -739,6 +739,9 @@
     "sharedByCaption": "{name}: {caption}",
     "sharedWithBoat": "Compartida con el barco",
     "sharedWithBoatCaption": "{caption} · compartida con el barco",
+    "stopSharing": "Dejar de compartir",
+    "stoppingSharing": "Dejando de compartir…",
+    "photoUnshared": "Ahora solo está en tu resumen.",
     "seeWhatsNext": "Ver la próxima salida",
     "buddyHeading": "Trae a alguien la próxima vez",
     "buddyBody": "Una plaza junto a la tuya en cualquier barco. Reservan con tu enlace.",
@@ -1011,6 +1014,9 @@
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera aquí.",
     "offlineCopy": "Sin cobertura: esta es la copia que guardó tu teléfono. Para cambiar algo aquí necesitas cobertura.",
+    "offlineSaved": "Guardada en este dispositivo para cuando no haya cobertura.",
+    "offlineRemove": "Quitar la copia guardada",
+    "offlineRemoved": "Quitada de este dispositivo hasta que vuelvas a abrir este enlace.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesUsed": "{line} · Usa {used, plural, one {# inmersión del paquete} other {# inmersiones del paquete}} ({left, plural, one {te queda #} other {te quedan #}}), una por tanque",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
@@ -5918,7 +5924,8 @@
         "cleared": "{shopName}: archivos de fin de mes desactivados",
         "sent": "{shopName}: archivos de {month} enviados a {email}",
         "vouched": "{shopName}: {actor} volvió a confirmar el correo del contador",
-        "confirmed": "{shopName}: {email} confirmó los archivos de fin de mes"
+        "confirmed": "{shopName}: {email} confirmó los archivos de fin de mes",
+        "bounced": "{shopName}: los archivos de fin de mes a {email} rebotaron"
       },
       "set": "{actor} puso {email} como correo del contador. Cuando esa bandeja lo confirme, el informe, los pedidos y la hoja de tripulación del mes anterior se enviarán allí el día 2 de cada mes.",
       "changed": "{actor} cambió el correo del contador a {email}. No se envía nada hasta que esa bandeja lo confirme.",
@@ -5928,7 +5935,8 @@
       "vouched": "{actor} volvió a confirmar {email} como correo del contador. Los archivos de fin de mes vuelven a enviarse allí el día 2 de cada mes.",
       "confirmed": "{email} confirmó que quiere recibir los archivos de fin de mes. Los primeros llegarán allí el próximo día 2 del mes.",
       "clearedByRecipient": "{email} usó el enlace de un correo de fin de mes para dejar de recibirlos. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección y se confirme.",
-      "clearedByErasure": "Se quitó el correo del contador al borrar los datos de esa persona a petición suya. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección."
+      "clearedByErasure": "Se quitó el correo del contador al borrar los datos de esa persona a petición suya. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección.",
+      "bounced": "Los archivos de fin de mes a {email} rebotaron, así que el contador no los recibió. Revisa la dirección en Ajustes y guárdala de nuevo o cámbiala."
     }
   },
   "brand": {

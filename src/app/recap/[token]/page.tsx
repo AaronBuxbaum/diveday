@@ -22,6 +22,7 @@ import {
   startTipAction,
   submitRecapPulseAction,
   submitReviewAction,
+  unshareRecapPhotoAction,
   uploadRecapPhotoAction,
 } from "./actions";
 
@@ -227,6 +228,7 @@ export default async function DiveRecapPage({
     actions: {
       submitReview: submitReviewAction.bind(null, token),
       uploadPhoto: uploadRecapPhotoAction.bind(null, token),
+      unsharePhoto: unshareRecapPhotoAction.bind(null, token),
       startTip: startTipAction.bind(null, token),
       submitPulse: submitRecapPulseAction.bind(null, token),
     },

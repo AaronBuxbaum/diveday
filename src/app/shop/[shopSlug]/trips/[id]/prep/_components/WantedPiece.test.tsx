@@ -24,6 +24,7 @@ const unit = (id: string, label: string, size: string | null) => ({
   serviceConcern: false,
   nitroxDesignated: null as boolean | null,
   thicknessMm: null as number | null,
+  o2Clean: null,
 });
 
 function prepWith(free: ReturnType<typeof unit>[], proposed?: ReturnType<typeof unit>): TripPrep {

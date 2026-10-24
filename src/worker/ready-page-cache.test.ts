@@ -1,11 +1,10 @@
 // The default `node` environment, as the worker's own test: this module runs
 // in a service worker, never in a DOM context.
 import { beforeEach, describe, expect, it } from "vitest";
-import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
 import {
   forgetReadyPage,
   isReadyScope,
-  READY_CACHE_NAME,
   READY_COPY_MAX_AGE_MS,
   readyPageFallback,
   readyPagePath,
@@ -161,6 +160,47 @@ describe("saveReadyPage and readyPageFallback", () => {
 
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     expect(await served?.text()).not.toContain(claim);
+  });
+
+  /**
+   * **No way to pay, and no other link's capability, in the kept copy** (issue
+   * #2693). A pending tip's Stripe checkout link opens a live checkout, and a
+   * bound server action carries its bound arguments in the page twice: as the
+   * form's `$ACTION_*` hidden fields and in the inline Flight payload. On the
+   * after-state those arguments are a recap token, a second bearer credential
+   * this copy has no business holding.
+   */
+  it("keeps no checkout link and no bound action payload", async () => {
+    const recapToken = `cmVjYXA6${"r".repeat(70)}.${"S".repeat(43)}`;
+    const body = [
+      `<a href="https://checkout.stripe.com/c/pay/cs_test_a1B2c3#fidkdWxOYHwn">Finish your tip</a>`,
+      `<form action="" method="POST" enctype="multipart/form-data">`,
+      `<input type="hidden" name="$ACTION_REF_«R1»"/>`,
+      `<input type="hidden" name="$ACTION_«R1»:0" value="{&quot;id&quot;:&quot;7f00aa&quot;,&quot;bound&quot;:&quot;$@1&quot;}"/>`,
+      `<input type="hidden" name="$ACTION_«R1»:1" value="[&quot;${recapToken}&quot;]"/>`,
+      `<input type="hidden" name="$ACTION_KEY" value="k1234"/>`,
+      `<input type="hidden" name="photoId" value="5b1d7e2a"/>`,
+      `</form>`,
+      // The Flight payload is a JS string of JSON: its quotes arrive escaped.
+      String.raw`<script>self.__next_f.push([1,"5:{\"id\":\"7f00aa\",\"bound\":\"$@6\"}\n6:[\"` +
+        recapToken +
+        String.raw`\"]\n7:[\"$\",\"a\",null,{\"href\":\"https://checkout.stripe.com/c/pay/cs_test_a1B2c3\"}]\n"])</script>`,
+    ].join("");
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+
+    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
+    const stored = (await kept?.clone().text()) ?? "";
+    expect(stored).toContain("Finish your tip");
+    expect(stored).not.toContain("checkout.stripe.com");
+    expect(stored).not.toContain("$ACTION_");
+    expect(stored).not.toContain(recapToken);
+    // A form's own hidden fields are the page, not a capability.
+    expect(stored).toContain(`name="photoId" value="5b1d7e2a"`);
+
+    const served =
+      (await (await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW))?.text()) ?? "";
+    expect(served).not.toContain("checkout.stripe.com");
+    expect(served).not.toContain(recapToken);
   });
 
   /**

@@ -83,7 +83,7 @@ export type BookkeeperNoticeInput = {
   recipientName: string | null;
   shopName: string;
   reportsUrl: string;
-  event: "set" | "changed" | "vouched" | "cleared" | "confirmed" | "sent";
+  event: "set" | "changed" | "vouched" | "cleared" | "confirmed" | "sent" | "bounced";
   by?: "recipient" | "erasure" | undefined;
   email?: string | undefined;
   actorName?: string | undefined;
@@ -93,7 +93,8 @@ export type BookkeeperNoticeInput = {
 /**
  * To each owner (security review B1 and F1): one line on what happened to the
  * bookkeeper's address, or where this month's files went, and the way to
- * Reports to change it. A stop by the bookkeeper and an erasure each say so.
+ * Reports to change it. A stop by the bookkeeper and an erasure each say so,
+ * and so do month-end files that bounced (issue #2798).
  */
 export function bookkeeperNoticeEmail(input: BookkeeperNoticeInput): NotificationEmail {
   const t = diverTranslator(input.locale);

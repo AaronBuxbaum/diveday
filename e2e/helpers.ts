@@ -954,11 +954,14 @@ export async function openOnThisPhone(page: Page): Promise<void> {
  */
 export async function openManifestPerson(row: Locator): Promise<void> {
   const body = row.locator("xpath=ancestor::body");
-  const existingDialog = body.getByRole("dialog");
-  if (await existingDialog.count()) {
-    await existingDialog.getByRole("button", { name: "Close person details" }).click();
-    await expect(existingDialog).toHaveCount(0);
+  // A sheet just closed stays mounted, `inert`, for its exit animation
+  // (`useDialogBehaviour`): its × is out of the accessibility tree, so only a
+  // sheet still open is closed here, and one on its way out is waited away.
+  const openDialog = body.locator('[role="dialog"]:not([inert])');
+  if (await openDialog.count()) {
+    await openDialog.getByRole("button", { name: "Close person details" }).click();
   }
+  await expect(body.locator('[role="dialog"]')).toHaveCount(0);
   const trigger = row.locator('button[aria-haspopup="dialog"]').first();
   // The sheet opens client-side only: a click on the server-rendered trigger
   // before hydration (a fresh load, or the router's hard-navigation fallback

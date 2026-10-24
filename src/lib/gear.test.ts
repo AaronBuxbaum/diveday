@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { shiftCalendarDateMonths } from "./calendar-date";
+import { type CalendarDate, shiftCalendarDateMonths } from "./calendar-date";
 import {
   benchReturnConcerns,
   GEAR_KIND_ORDER,
@@ -9,6 +9,7 @@ import {
   GEAR_SERVICE_DUE_SOON_DIVES,
   GEAR_SERVICE_KINDS_FOR,
   type GearRegisterGroupName,
+  type GearServiceClock,
   type GearServiceKind,
   gearAssignmentNeeds,
   gearKindIsLifeSupport,
@@ -18,6 +19,7 @@ import {
   gearServiceIsDue,
   gearServiceState,
   groupUnitsForSize,
+  o2CleanStanding,
   parseWetsuitThicknessMm,
   pickDisplayReservation,
   rankUnitsForSize,
@@ -853,5 +855,34 @@ describe("parseWetsuitThicknessMm", () => {
       expect(parseWetsuitThicknessMm(bad)).toBeNull();
     }
     expect(parseWetsuitThicknessMm(5)).toBeNull();
+  });
+});
+
+describe("o2CleanStanding (issue #2719)", () => {
+  const today = "2026-10-24" as CalendarDate;
+  const clean = (servicedOn: string, nextDueOn: string | null): GearServiceClock => ({
+    kind: "o2_clean",
+    servicedOn: servicedOn as CalendarDate,
+    nextDueOn: nextDueOn as CalendarDate | null,
+  });
+
+  it("is never with no O2-clean record at all, whatever else the tank holds", () => {
+    expect(o2CleanStanding([], today)).toBe("never");
+    expect(
+      o2CleanStanding(
+        [{ kind: "hydro_test", servicedOn: "2026-01-01" as CalendarDate, nextDueOn: null }],
+        today,
+      ),
+    ).toBe("never");
+  });
+
+  it("is current through its due day and lapsed the day after", () => {
+    expect(o2CleanStanding([clean("2025-10-24", "2026-10-24")], today)).toBe("current");
+    expect(o2CleanStanding([clean("2025-10-23", "2026-10-23")], today)).toBe("lapsed");
+  });
+
+  it("reads a record with no due date on the conventional twelve months", () => {
+    expect(o2CleanStanding([clean("2025-11-01", null)], today)).toBe("current");
+    expect(o2CleanStanding([clean("2025-10-01", null)], today)).toBe("lapsed");
   });
 });

@@ -47,7 +47,7 @@ import {
   type PaymentChoice,
   type PickerUnit,
 } from "./_components/CounterRentalCart";
-import { counterRentalCartWords } from "./_components/counter-rental-cart-words";
+import { counterRentalCartWords, o2CleanWarning } from "./_components/counter-rental-cart-words";
 import { RentalCardSeen } from "./_components/RentalCardSeen";
 import { RentalPersonStep } from "./_components/RentalPersonStep";
 import { RentalWindowFields } from "./_components/RentalWindowFields";
@@ -247,6 +247,7 @@ export default async function RentOutPage({
       removeAria: t("counterRentals.new.removeAria", { label: unit.label }),
       fillAria:
         unit.kind === "tank" ? t("counterRentals.new.fillAria", { label: unit.label }) : null,
+      o2CleanWarning: o2CleanWarning(t, unit.label, unit.o2Clean),
       order: blocked ? 2 : flagged ? 1 : 0,
     };
   };

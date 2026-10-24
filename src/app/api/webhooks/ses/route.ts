@@ -1,10 +1,15 @@
+import { recordBookkeeperDeliveryOutcome } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import { optOutAddressAfterComplaint } from "@/db/courtesy-email";
 import { recordEmailBounces } from "@/db/email-bounces";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { parseSesBounceReports, parseSesEmailEvent } from "@/lib/notifications/ses-events";
+import {
+  parseSesBookkeeperOutcomes,
+  parseSesBounceReports,
+  parseSesEmailEvent,
+} from "@/lib/notifications/ses-events";
 import {
   confirmSnsSubscription,
   readWebhookPayload,
@@ -115,6 +120,23 @@ export async function POST(request: Request) {
       providerMessageId: event.providerMessageId,
       shopId: event.shopId,
       ...optedOut,
+    });
+  }
+  // A month-end send to the bookkeeper that bounced, or was delivered after
+  // one did (issue #2798). Matched by the message's shop tag and the address
+  // on file; the line carries the shop and the outcome, never the address.
+  for (const outcome of parseSesBookkeeperOutcomes(message.Message, nowDate())) {
+    const result = await recordBookkeeperDeliveryOutcome(db, {
+      shopId: outcome.shopId,
+      recipient: outcome.recipient,
+      outcome: outcome.outcome,
+      at: outcome.occurredAt,
+    });
+    log("ses_webhook.bookkeeper_outcome", "info", {
+      providerMessageId: event.providerMessageId,
+      shopId: outcome.shopId,
+      outcome: outcome.outcome,
+      result,
     });
   }
   return new Response(null, { status: 200 });

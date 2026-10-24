@@ -8,6 +8,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
  */
 const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessageKey }> = {
   added: { tone: "success", key: "recap.photoAdded" },
+  unshared: { tone: "success", key: "recap.photoUnshared" },
   none: { tone: "danger", key: "recap.photoMissing" },
   limit: { tone: "danger", key: "recap.photoLimit" },
   unconfigured: { tone: "danger", key: "recap.photoUnsupported" },

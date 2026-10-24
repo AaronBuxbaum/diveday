@@ -1,12 +1,13 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, min, ne, sql } from "drizzle-orm";
 import { nowMs } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
-import { type WaiverRecord, waiverRecords } from "./schema";
+import { bookings, trips, type WaiverRecord, waiverRecords } from "./schema";
 import { at, withinDeskHours } from "./seed-clock";
+import { liveTrip } from "./trips-live";
 
 /**
  * What the shop's signed evidence actually looks like — the Signatures tab's
@@ -87,6 +88,57 @@ export function signedAtFor(index: number): Date {
   return new Date(at(-daysBack, hour, minute).getTime() + (index % 1_000));
 }
 
+/**
+ * How long before a boat sails its last release is signed, at the latest: the
+ * desk wants paperwork done before the dock, not at the rail.
+ */
+const SIGNING_LEAD_MS = 45 * 60_000;
+
+/**
+ * **A release is signed before the boat it covers sails** (issue #2698). The
+ * spread above knows nothing of departures, so a release it lays "35 minutes
+ * ago" reads, on a boat that left at dawn, as signed hours after boarding, and
+ * the departure log is the record an insurer reads. A signature later than the
+ * diver's earliest departure in the window, less a desk lead, moves to just
+ * before it, a few minutes apart per index so a boatload never ties, then
+ * back into desk hours, which for a dawn boat is the evening before: nobody
+ * signs a release at four in the morning. A signature already earlier is
+ * returned as it is.
+ */
+export function signedBeforeDeparture(signedAt: Date, departsAt: Date | null, index: number): Date {
+  if (!departsAt) return signedAt;
+  const latest = departsAt.getTime() - SIGNING_LEAD_MS - (index % 30) * 60_000;
+  if (signedAt.getTime() <= latest) return signedAt;
+  const clamped = new Date(latest - (latest % 1_000) + (index % 1_000));
+  return withinDeskHours(clamped);
+}
+
+/**
+ * Each diver's earliest departure the re-dated signatures could fall after:
+ * any live seat on a live trip sailing inside the spread's window or later.
+ */
+async function earliestDepartureByPerson(
+  db: DbExecutor,
+  shopId: string,
+): Promise<Map<string, Date>> {
+  const rows = await db
+    .select({ personId: bookings.personId, startsAt: min(trips.startsAt) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+        liveTrip(),
+        gte(trips.startsAt, at(-SIGNING_SPREAD_DAYS - 1, 0)),
+      ),
+    )
+    .groupBy(bookings.personId);
+  return new Map(
+    rows.flatMap((row) => (row.startsAt ? [[row.personId, row.startsAt] as const] : [])),
+  );
+}
+
 /** Recorded by a staffer from a signature made in front of them. */
 function staffRecorded(record: WaiverRecord): boolean {
   return record.signatureMethod === "in_person_attested";
@@ -117,13 +169,18 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
   const todayStart = at(0, 0).getTime();
   const sealFrom = SEAL_ENABLED_AT().getTime();
 
+  const departsAt = await earliestDepartureByPerson(db, shopId);
   let spreadIndex = 0;
   const updates: { id: string; next: WaiverRecord }[] = [];
   for (const record of records) {
     const stampedNow = (record.signedAt?.getTime() ?? 0) >= todayStart;
     const spread = stampedNow ? signedAtFor(spreadIndex) : record.signedAt;
-    const signedAt =
+    const inDeskHours =
       spread && stampedNow && staffRecorded(record) ? withinDeskHours(spread) : spread;
+    const signedAt =
+      inDeskHours && stampedNow
+        ? signedBeforeDeparture(inDeskHours, departsAt.get(record.personId) ?? null, spreadIndex)
+        : inDeskHours;
     if (stampedNow) spreadIndex += 1;
     const sealed = (signedAt?.getTime() ?? 0) >= sealFrom;
     if (!stampedNow && !sealed) continue;

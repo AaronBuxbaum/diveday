@@ -13,7 +13,12 @@
  * never here — these rules only *word* and *rank* what the rows already say.
  */
 
-import { type CalendarDate, calendarDateInTimezone, calendarDaysBetween } from "./calendar-date";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  calendarDaysBetween,
+  shiftCalendarDateMonths,
+} from "./calendar-date";
 import type { RentalItemKind } from "./dive-prep";
 
 /**
@@ -396,6 +401,33 @@ export function gearServiceState(
     if (!worst || outranks(state, worst)) worst = state;
   }
   return worst ?? { state: "no_clock" };
+}
+
+/**
+ * Where a tank's oxygen cleaning stands on a day (issue #2719): `current` when
+ * its newest `o2_clean` record is due on or after the day;
+ * `lapsed` when that record ran out; `never` when the tank has none.
+ */
+export type O2CleanStanding = "current" | "lapsed" | "never";
+
+/**
+ * **A tank's oxygen cleaning on this day** (issue #2719): its newest
+ * `o2_clean` record is due on or after `onDate`, or, written with no due date,
+ * was done within the conventional interval
+ * (`GEAR_SERVICE_INTERVAL_MONTHS.o2_clean`). Informs the counter's EANx
+ * warning, which says a lapsed cleaning apart from one never recorded; gates
+ * nothing.
+ */
+export function o2CleanStanding(
+  clocks: readonly GearServiceClock[],
+  onDate: CalendarDate,
+): O2CleanStanding {
+  const clock = clocks.find((candidate) => candidate.kind === "o2_clean");
+  if (!clock) return "never";
+  const dueOn =
+    clock.nextDueOn ??
+    shiftCalendarDateMonths(clock.servicedOn, GEAR_SERVICE_INTERVAL_MONTHS.o2_clean ?? 12);
+  return calendarDaysBetween(onDate, dueOn) >= 0 ? "current" : "lapsed";
 }
 
 /** One clock's own verdict, taking whichever of its two intervals bites first. */

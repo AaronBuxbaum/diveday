@@ -69,7 +69,13 @@ export function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps
     fieldGuide: [],
     observedSpecies: [],
     canShareWithBoat: true,
-    actions: { submitReview: noop, uploadPhoto: noop, startTip: noop, submitPulse: noop },
+    actions: {
+      submitReview: noop,
+      uploadPhoto: noop,
+      unsharePhoto: noop,
+      startTip: noop,
+      submitPulse: noop,
+    },
     ...overrides,
   };
 }
