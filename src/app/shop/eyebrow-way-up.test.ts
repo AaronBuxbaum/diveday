@@ -55,6 +55,8 @@ const WAY_UP_EXEMPT: Record<string, string> = {
     "A first-class destination wearing two URL segments: `/schedule` has no page, so the board is a depth-1 surface and its eyebrow is its own name, per principle 10's first bullet.",
   "print/pass/[bookingId]":
     "A printed sheet, not a screen. `SheetDocument` carries the way back to the counter as its own `print:hidden` link, because paper has no eyebrow.",
+  "trips/[id]/print/medical-alerts":
+    "The trip packet with the medical alerts' words: it composes the packet's own `TripPacket` (`../_components`), whose `TripPageHeader` carries the way up to the board, exactly as `trips/[id]/print` does.",
   "print/counter-card":
     "A printed sheet, not a screen. `SheetDocument` carries the way back to Settings as its own `print:hidden` link, because paper has no eyebrow.",
 };

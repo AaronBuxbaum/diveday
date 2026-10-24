@@ -1,6 +1,8 @@
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
+import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import {
   canPersonAddDiver,
@@ -14,12 +16,14 @@ import {
   canPersonManageStaffAccounts,
   canPersonManageWaiverTemplates,
   canPersonOverrideGearRequest,
+  canPersonPrintMedicalAlerts,
   canPersonReadEveryIncidentReport,
   canPersonReadMedicalAlert,
   canPersonReadMedicalAlertOnTrip,
   canPersonReadMedicalAnswers,
   canPersonReadPrivateRecapPulse,
   canPersonRefund,
+  emergencyMedicalAlertStanding,
   loadActiveStaffRoles,
   loadActiveStaffRolesByPerson,
 } from "./authz";
@@ -403,6 +407,235 @@ describe("the medical alert for the crew (canPersonReadMedicalAlertOnTrip, issue
         .insert(tripAssignments)
         .values({ tripId: otherTrip.id, personId: crewing, assignedByPersonId: manager });
       expect(await canPersonReadMedicalAlertOnTrip(db, shop.id, crewing, otherTrip.id)).toBe(false);
+    }
+  });
+});
+
+describe("printing the medical alerts' words (canPersonPrintMedicalAlerts, issue #2990)", () => {
+  it("admits the owner and a manager, and refuses crew, an instructor and another shop's staff", async () => {
+    const { db, shop } = ctx;
+    for (const role of ["owner", "manager"] as const) {
+      expect(
+        await canPersonPrintMedicalAlerts(db, shop.id, await makeStaff(db, shop.id, [role])),
+      ).toBe(true);
+    }
+    for (const role of ["crew", "instructor", "divemaster", "captain"] as const) {
+      expect(
+        await canPersonPrintMedicalAlerts(db, shop.id, await makeStaff(db, shop.id, [role])),
+      ).toBe(false);
+    }
+    const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
+    if (!elsewhere) throw new Error("expected a second seeded shop");
+    const outsider = await makeStaff(db, elsewhere.id, ["owner"]);
+    expect(await canPersonPrintMedicalAlerts(db, shop.id, outsider)).toBe(false);
+    // A manager demoted or disabled since prints the flag only.
+    const manager = await makeStaff(db, shop.id, ["manager"], { status: "disabled" });
+    expect(await canPersonPrintMedicalAlerts(db, shop.id, manager)).toBe(false);
+  });
+});
+
+/** Whether the emergency read is open to this staffer on this departure now. */
+async function canPersonEmergencyReadMedicalAlertOnTrip(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  tripId: string,
+  now?: Date,
+): Promise<boolean> {
+  return (await emergencyMedicalAlertStanding(db, shopId, personId, tripId, now)) === "open";
+}
+
+describe("the emergency read (emergencyMedicalAlertStanding, issue #2990)", () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  async function departureAt(db: AppDb, shopId: string, startsAt: Date) {
+    const [row] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shopId), isNull(trips.deletedAt)))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!row) throw new Error("expected a seeded departure");
+    await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(trips.id, row.id));
+    return row.id;
+  }
+
+  it("admits any active staffer of the shop on the day the departure leaves", async () => {
+    const { db, shop } = ctx;
+    const trip = await departureAt(db, shop.id, nowDate());
+    for (const role of ["instructor", "divemaster", "crew", "captain", "owner"] as const) {
+      const person = await makeStaff(db, shop.id, [role]);
+      expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, person, trip)).toBe(true);
+    }
+  });
+
+  it("refuses the day before and the day after", async () => {
+    const { db, shop } = ctx;
+    const instructor = await makeStaff(db, shop.id, ["instructor"]);
+    const tomorrow = await departureAt(db, shop.id, new Date(nowDate().getTime() + DAY_MS));
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, instructor, tomorrow)).toBe(
+      false,
+    );
+    const yesterday = await departureAt(db, shop.id, new Date(nowDate().getTime() - DAY_MS));
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, instructor, yesterday)).toBe(
+      false,
+    );
+  });
+
+  it("reads today in the shop's zone, not in UTC", async () => {
+    const { db, shop } = ctx;
+    const instructor = await makeStaff(db, shop.id, ["instructor"]);
+    // 13:30Z on the frozen day is 03:30 in Honolulu; 01:00Z the next UTC day
+    // is still 15:00 the same Honolulu day.
+    await db.update(shops).set({ timezone: "Pacific/Honolulu" }).where(eq(shops.id, shop.id));
+    const now = nowDate();
+    const sameLocalDay = new Date(now.getTime() + 11.5 * 60 * 60 * 1000);
+    const trip = await departureAt(db, shop.id, sameLocalDay);
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, instructor, trip, now)).toBe(
+      true,
+    );
+    // Eight hours earlier in UTC is 19:30 the evening before in Honolulu: that
+    // boat was back by 20:30, so its days are over by 03:30.
+    const eveningBefore = new Date(now.getTime() - 8 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt: eveningBefore, endsAt: new Date(eveningBefore.getTime() + 60 * 60 * 1000) })
+      .where(eq(trips.id, trip));
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, instructor, trip, now)).toBe(
+      false,
+    );
+  });
+
+  it("refuses a disabled or removed staffer, a diver, another shop's staff and another shop's departure", async () => {
+    const { db, shop } = ctx;
+    const trip = await departureAt(db, shop.id, nowDate());
+    const disabled = await makeStaff(db, shop.id, ["divemaster"], { status: "disabled" });
+    const deleted = await makeStaff(db, shop.id, ["divemaster"], { deleted: true });
+    const diver = await makeStaff(db, shop.id, ["diver"]);
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, disabled, trip)).toBe(false);
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, deleted, trip)).toBe(false);
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, diver, trip)).toBe(false);
+    const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
+    if (!elsewhere) throw new Error("expected a second seeded shop");
+    const outsider = await makeStaff(db, elsewhere.id, ["owner"]);
+    // Their own shop's id with this departure, and this shop's id with them.
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, elsewhere.id, outsider, trip)).toBe(
+      false,
+    );
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, outsider, trip)).toBe(false);
+    const insider = await makeStaff(db, shop.id, ["instructor"]);
+    const [otherTrip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, elsewhere.id))
+      .limit(1);
+    if (otherTrip) {
+      await db
+        .update(trips)
+        .set({ startsAt: nowDate(), endsAt: new Date(nowDate().getTime() + 4 * 60 * 60 * 1000) })
+        .where(eq(trips.id, otherTrip.id));
+      expect(
+        await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, insider, otherTrip.id),
+      ).toBe(false);
+    }
+  });
+});
+
+describe("the emergency read's window: the days of the trip (emergencyMedicalAlertStanding)", () => {
+  const ZONE = "America/New_York";
+  const at = (year: number, month: number, day: number, hour: number, minute = 0, zone = ZONE) =>
+    wallTimeToUtc({ year, month, day, hour, minute }, zone);
+
+  async function departureBetween(db: AppDb, shopId: string, startsAt: Date, endsAt: Date) {
+    const [row] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shopId), isNull(trips.deletedAt)))
+      .orderBy(trips.id)
+      .limit(1);
+    if (!row) throw new Error("expected a seeded departure");
+    await db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, row.id));
+    return row.id;
+  }
+
+  it("is open for a 23:00 departure read at 00:15 the next day", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ timezone: ZONE }).where(eq(shops.id, shop.id));
+    const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
+    const trip = await departureBetween(db, shop.id, at(2026, 7, 21, 23), at(2026, 7, 21, 23, 45));
+    const now = at(2026, 7, 22, 0, 15);
+    expect(await emergencyMedicalAlertStanding(db, shop.id, divemaster, trip, now)).toBe("open");
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, divemaster, trip, now)).toBe(
+      true,
+    );
+  });
+
+  it("is open on day 2 of a three-day trip", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ timezone: ZONE }).where(eq(shops.id, shop.id));
+    const instructor = await makeStaff(db, shop.id, ["instructor"]);
+    const trip = await departureBetween(db, shop.id, at(2026, 7, 21, 8), at(2026, 7, 23, 16));
+    const now = at(2026, 7, 22, 10);
+    expect(await emergencyMedicalAlertStanding(db, shop.id, instructor, trip, now)).toBe("open");
+    expect(await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, instructor, trip, now)).toBe(
+      true,
+    );
+  });
+
+  it("is closed the day after endsAt, and not yet open before the start date", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ timezone: ZONE }).where(eq(shops.id, shop.id));
+    const captain = await makeStaff(db, shop.id, ["captain"]);
+    const trip = await departureBetween(db, shop.id, at(2026, 7, 21, 8), at(2026, 7, 21, 16));
+    const dayAfter = at(2026, 7, 22, 10);
+    expect(await emergencyMedicalAlertStanding(db, shop.id, captain, trip, dayAfter)).toBe(
+      "closed",
+    );
+    expect(
+      await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, captain, trip, dayAfter),
+    ).toBe(false);
+    const eveningBefore = at(2026, 7, 20, 21);
+    expect(await emergencyMedicalAlertStanding(db, shop.id, captain, trip, eveningBefore)).toBe(
+      "not_yet",
+    );
+    expect(
+      await canPersonEmergencyReadMedicalAlertOnTrip(db, shop.id, captain, trip, eveningBefore),
+    ).toBe(false);
+  });
+
+  it("reads the days in a shop zone far from UTC", async () => {
+    const { db, shop } = ctx;
+    // Kiritimati is UTC+14: its 2026-07-21 runs from 10:00Z on the 20th.
+    const LINE_ISLANDS = "Pacific/Kiritimati";
+    await db.update(shops).set({ timezone: LINE_ISLANDS }).where(eq(shops.id, shop.id));
+    const crew = await makeStaff(db, shop.id, ["crew"]);
+    const trip = await departureBetween(
+      db,
+      shop.id,
+      at(2026, 7, 21, 8, 0, LINE_ISLANDS),
+      at(2026, 7, 21, 12, 0, LINE_ISLANDS),
+    );
+    const standing = (iso: string) =>
+      emergencyMedicalAlertStanding(db, shop.id, crew, trip, new Date(iso));
+    expect(await standing("2026-07-20T09:59:00Z")).toBe("not_yet");
+    expect(await standing("2026-07-20T10:00:00Z")).toBe("open");
+    expect(await standing("2026-07-21T09:59:00Z")).toBe("open");
+    expect(await standing("2026-07-21T10:00:00Z")).toBe("closed");
+  });
+
+  it("tells someone the rule never admits nothing about the window", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ timezone: ZONE }).where(eq(shops.id, shop.id));
+    const disabled = await makeStaff(db, shop.id, ["divemaster"], { status: "disabled" });
+    const diver = await makeStaff(db, shop.id, ["diver"]);
+    const trip = await departureBetween(db, shop.id, at(2026, 7, 21, 8), at(2026, 7, 21, 16));
+    for (const person of [disabled, diver]) {
+      for (const now of [at(2026, 7, 20, 21), at(2026, 7, 21, 10), at(2026, 7, 22, 10)]) {
+        expect(await emergencyMedicalAlertStanding(db, shop.id, person, trip, now)).toBe("refused");
+      }
     }
   });
 });

@@ -5,6 +5,7 @@
  * — the proxy is never the only layer (ADR-0006).
  */
 
+import type { EmergencyReadWindow } from "./medical-alert";
 import type { StaffDestinationGates } from "./staff-destinations";
 
 export const ALL_ROLES = [
@@ -386,6 +387,42 @@ export function canReadMedicalAlert(
 ): boolean {
   if (isOwnerOrManager(roles)) return true;
   return isStaff(roles) && scope.crewsDiversDeparture;
+}
+
+/**
+ * Who prints a departure's packet **with the medical alerts' words on it**
+ * (issue #2990, H-153 amendment of 2026-10-24): the owner and a manager, the
+ * readers who hold the words on every departure. Paper records no read of its
+ * own, so the print is the read: the server writes one `medical_alert_printed`
+ * line per diver when it produces the sheet. Crew who read the words on
+ * screen do not print them; the default print keeps the flag only. Never the
+ * dispute sheet, the day's paper or any other print.
+ */
+export function canPrintMedicalAlerts(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
+ * Who may open a diver's medical alert **in an emergency** when
+ * {@link canReadMedicalAlert} refuses them (issue #2990, H-153 amendment of
+ * 2026-10-24): any active staffer of the shop, only on the days of the
+ * diver's trip in the shop's zone (`emergencyReadWindow`: from the start of
+ * the day it leaves until the later of the end of the day it is due back and
+ * the moment it is marked returned). A captain not on the crew list, or a
+ * divemaster added at the dock, can still find where the EpiPen is, on a
+ * night boat past midnight and on day two of a course as well. Every such
+ * read is loud: `medical_alert_emergency_read` on the diver's trail, never
+ * de-duplicated, and listed in the owner's Monday email.
+ *
+ * `window` is the caller's answer, read from the clock and the shop's zone
+ * (`emergencyMedicalAlertStanding`, src/db/authz.ts). Never a bearer page,
+ * never an offline copy.
+ */
+export function canEmergencyReadMedicalAlert(
+  roles: readonly Role[] | undefined,
+  scope: { window: EmergencyReadWindow },
+): boolean {
+  return isStaff(roles) && scope.window === "open";
 }
 
 /**

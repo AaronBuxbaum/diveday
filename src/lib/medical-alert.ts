@@ -1,3 +1,6 @@
+import { hasReturned } from "./trips";
+import { shopDayBounds } from "./zoned";
+
 /**
  * **The medical alert for the crew** (glossary *Medical alert for the crew*,
  * issue #2960): one optional free-text field on the waiver where a diver
@@ -101,4 +104,30 @@ export function readDraftMedicalAlert(raw: string | null | undefined): string | 
     .slice(0, MEDICAL_ALERT_MAX)
     .trim();
   return mended === "" || saysNothing(mended) ? null : mended;
+}
+
+/**
+ * Where a departure stands for **"Emergency: show the alert"** (issue #2990,
+ * H-153 amendment of 2026-10-24): `not_yet` before its start date, `open` on
+ * the days of the trip, `closed` after.
+ *
+ * Open from 00:00 of the date the departure starts in the shop's zone until
+ * the later of the end of the date `endsAt` falls on and the moment the
+ * departure is marked returned (`hasReturned`). So a night boat still out
+ * after midnight and every day of a multi-day trip are covered (domain
+ * reviews 1 and 2, B1): a boat at sea is still the trip. The same reading as
+ * the *Trip phase*'s Aboard, which also holds a late boat past midnight.
+ */
+export type EmergencyReadWindow = "not_yet" | "open" | "closed";
+
+export function emergencyReadWindow(
+  departure: { startsAt: Date; endsAt: Date },
+  timeZone: string,
+  now: Date,
+): EmergencyReadWindow {
+  if (now.getTime() < shopDayBounds(departure.startsAt, timeZone).from.getTime()) {
+    return "not_yet";
+  }
+  const lastDayOver = now.getTime() >= shopDayBounds(departure.endsAt, timeZone).to.getTime();
+  return lastDayOver && hasReturned(departure.endsAt, now) ? "closed" : "open";
 }

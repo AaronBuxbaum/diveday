@@ -9,6 +9,7 @@ import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { DiverRollCallRow } from "./DiverRollCallRow";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import { HoldPlace } from "./HoldPlace";
+import { PrintedMedicalAlertsNote } from "./PrintedMedicalAlertsNote";
 import { rollCallRowState, rollCallScrollMargin } from "./RollCallControls";
 import { SharedDepthAdvisories, sharedDepthAdvisories } from "./SharedDepthAdvisories";
 
@@ -73,6 +74,16 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
         <DecompressionReminder text={t("manifest.decompressionReminder")} />
       ) : null}
       <SharedDepthAdvisories sharedAdvisories={sharedAdvisories} locale={locale} t={t} />
+      {/* Only on a packet printed with the medical alerts (issue #2990). */}
+      {context.printedMedicalAlerts && context.printedMedicalAlerts.texts.size > 0 ? (
+        <PrintedMedicalAlertsNote
+          printed={context.printedMedicalAlerts}
+          divers={divers}
+          locale={locale}
+          timezone={context.timezone}
+          t={t}
+        />
+      ) : null}
       {/* **A flex column, and no `divide-y`** (decision 4, issue #1054).
           A diver recorded not back aboard is pulled to the top *on screen* with
           `order-first`, because that row is where a crew member taps to record

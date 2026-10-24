@@ -1,4 +1,17 @@
-import { and, count, eq, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { isStaff, type Role } from "@/lib/authz";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
@@ -17,12 +30,16 @@ import { countsAsJob, type TodayActionKind } from "@/lib/today";
 import {
   type DigestWeeks,
   digestWeeks,
+  EMERGENCY_READERS_LISTED,
+  EMERGENCY_READS_LISTED,
   isWeeklyDigestDue,
+  NO_EMERGENCY_READS,
   NO_LAST_WEEK,
   NO_SAFETY,
   noMoney,
   overdueTodayActions,
   WEEKLY_DIGEST_SECTION_PATHS,
+  type WeeklyDigestEmergencyReads,
   type WeeklyDigestFactGrades,
   type WeeklyDigestSection,
   weakestDeparture,
@@ -35,9 +52,11 @@ import type { AppDb, DbExecutor } from "./client";
 import { mondayReadFor } from "./monday-read";
 import { sendNotification } from "./notifications";
 import { readOwed } from "./owed";
+import { queryAll } from "./query-helpers";
 import { getMonthlyReport } from "./reporting";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
+  activityEvents,
   bookings,
   incidentReports,
   interests,
@@ -249,6 +268,97 @@ async function countIncidentsFiled(
   return row?.n ?? 0;
 }
 
+/**
+ * **Last week's emergency reads of a medical alert** (issue #2990): every
+ * `medical_alert_emergency_read` line on this shop's trails in the window,
+ * with the departure it was read for. All of them are counted, in total and
+ * per reader (most first); the first {@link EMERGENCY_READS_LISTED} are
+ * listed, oldest first (domain review 1, S1; security L2). The three reads
+ * share one scope. The names are the trail's own, as they stood when the read
+ * was recorded; a blank one is `null` and never fails the email (security
+ * L3). Never the words.
+ */
+async function readEmergencyReads(
+  db: DbExecutor,
+  shopId: string,
+  from: Date,
+  to: Date,
+): Promise<WeeklyDigestEmergencyReads> {
+  const departure = and(
+    eq(trips.shopId, activityEvents.shopId),
+    sql`${trips.id}::text = ${activityEvents.params}->>'departure'`,
+  );
+  const readerName = sql<string | null>`max(${activityEvents.params}->>'actor')`;
+  const reads = sql<number>`count(*)::int`;
+  const [rows, readers] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          params: activityEvents.params,
+          at: activityEvents.occurredAt,
+          departureTitle: trips.title,
+          departureStartsAt: trips.startsAt,
+        })
+        .from(activityEvents)
+        // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
+        .innerJoin(trips, departure)
+        .where(
+          and(
+            eq(activityEvents.shopId, shopId),
+            eq(activityEvents.code, "medical_alert_emergency_read"),
+            gte(activityEvents.occurredAt, from),
+            lt(activityEvents.occurredAt, to),
+          ),
+        )
+        .orderBy(
+          activityEvents.occurredAt,
+          sql`${activityEvents.params}->>'diver'`,
+          activityEvents.id,
+        )
+        .limit(EMERGENCY_READS_LISTED),
+    // The same scope, counted per reader.
+    () =>
+      db
+        .select({ reader: readerName, count: reads })
+        .from(activityEvents)
+        // diveday:allow-rehearsal: an emergency read on a rehearsal still opened a real diver's words, and the owner hears of every one.
+        .innerJoin(trips, departure)
+        .where(
+          and(
+            eq(activityEvents.shopId, shopId),
+            eq(activityEvents.code, "medical_alert_emergency_read"),
+            gte(activityEvents.occurredAt, from),
+            lt(activityEvents.occurredAt, to),
+          ),
+        )
+        .groupBy(activityEvents.actorPersonId)
+        .orderBy(desc(reads), readerName)
+        .limit(EMERGENCY_READERS_LISTED),
+  ]);
+  if (readers.length === 0) return NO_EMERGENCY_READS;
+  return {
+    total: readers.reduce((sum, entry) => sum + entry.count, 0),
+    byReader: readers.map((entry) => ({ reader: digestName(entry.reader), count: entry.count })),
+    listed: rows.map((row) => {
+      const params = (row.params ?? {}) as { actor?: unknown; diver?: unknown };
+      return {
+        diver: digestName(params.diver),
+        reader: digestName(params.actor),
+        departureTitle: digestName(row.departureTitle),
+        departureStartsAt: row.departureStartsAt,
+        at: row.at,
+      };
+    }),
+  };
+}
+
+/** A name as the Monday email may carry it: trimmed and at most 200 long, or `null` when blank. */
+function digestName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.trim().slice(0, 200).trim();
+  return name === "" ? null : name;
+}
+
 /** The Today rows the safety line counts: a roll call still open, a boat with no crew. */
 const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set<TodayActionKind>([
   "roll_call_missing_diver",
@@ -336,6 +446,7 @@ export async function readWeeklyDigestFacts(
     dateRequestsWaiting,
     owed,
     incidents,
+    emergencyReads,
     neverSentDeal,
     suitedToADeal,
     dealsOffered,
@@ -346,6 +457,7 @@ export async function readWeeklyDigestFacts(
     countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
     readOwed(db, shop, now),
     countIncidentsFiled(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+    readEmergencyReads(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
     tripIdsNeverSentLastMinuteDeal(
       db,
       shop.id,
@@ -420,6 +532,8 @@ export async function readWeeklyDigestFacts(
           uncrewed: countKinds(UNCREWED_KINDS),
           incidents,
         },
+        // The owner and managers read the diver's trail anyway (issue #2990).
+        emergencyReads,
       },
       staff: {
         ...shared,
@@ -428,9 +542,19 @@ export async function readWeeklyDigestFacts(
         money: noMoney(shop.currency),
         gearServiceDue: 0,
         safety: NO_SAFETY,
+        emergencyReads: NO_EMERGENCY_READS,
       },
     },
   };
+}
+
+/**
+ * The sections the `monday` assist may write about: all but the emergency
+ * reads (issue #2990), which carry names and no count, and which the owner
+ * reads line by line rather than as a sentence written about them.
+ */
+function forTheRead(sections: WeeklyDigestEmailSection[]): WeeklyDigestEmailSection[] {
+  return sections.filter((section) => section.kind !== "emergency_reads");
 }
 
 /** Each grade's sections, linked once per shop rather than once per recipient. */
@@ -534,7 +658,7 @@ export async function previewWeeklyDigest(
     weekOf: weeks.weekOf,
     grade,
     locale: recipientLocale(recipient.locale, input.shop.defaultLocale),
-    sections,
+    sections: forTheRead(sections),
   });
   return digestNotification({
     shop: input.shop,
@@ -621,7 +745,7 @@ export async function sendWeeklyDigestForShop(
         weekOf: weeks.weekOf,
         grade,
         locale,
-        sections: linked[grade],
+        sections: forTheRead(linked[grade]),
       });
       reads.set(key, read);
     }

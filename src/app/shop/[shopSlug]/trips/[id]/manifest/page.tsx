@@ -4,7 +4,6 @@ import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { SkipLink } from "@/components/SkipLink";
-import { assistsAvailable } from "@/db/assists";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -34,6 +33,7 @@ import { headCountView } from "./_components/head-count-view";
 import { ManifestDeviceSettings } from "./_components/ManifestDeviceSettings";
 import { ManifestMilestones } from "./_components/ManifestMilestones";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
+import { manifestCanAssist } from "./_components/manifest-assist";
 import {
   catchUpStripView,
   emergencyReferenceCopy,
@@ -142,7 +142,7 @@ export default async function TripManifestPage({
   const completeness = manifest.completeness;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext, reader);
+  const actions = bindManifestActions(actionContext, reader, await searchParams);
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -153,7 +153,7 @@ export default async function TripManifestPage({
     shopPickedSpecies,
     catalogSpecies,
     speciesBySite,
-    canAssist: checkpoint !== "departure" && (await assistsAvailable(db, shop.id)),
+    canAssist: await manifestCanAssist(db, shop.id, checkpoint === "departure"),
     sightingsOn: shop.sightingsEnabled,
     t,
   });
@@ -324,7 +324,7 @@ export default async function TripManifestPage({
             missingDiver: actions.missingDiver,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
-            showMedicalAlert: actions.showMedicalAlert,
+            ...actions.medicalAlert,
             t,
           }}
         />

@@ -3,6 +3,7 @@ import {
   digestWeeks,
   isWeeklyDigestDue,
   mondayOnOrBefore,
+  NO_EMERGENCY_READS,
   NO_SAFETY,
   noMoney,
   overdueTodayActions,
@@ -15,6 +16,14 @@ import {
   weeklyDigestSections,
   weeklyDigestWanted,
 } from "./weekly-digest";
+
+const EMERGENCY_READ = {
+  diver: "Ana Ruiz",
+  departureTitle: "Dawn Two-Tank",
+  departureStartsAt: new Date("2026-07-15T11:00:00.000Z"),
+  reader: "Sal Captain",
+  at: new Date("2026-07-15T12:40:00.000Z"),
+};
 
 const QUIET: WeeklyDigestFacts = {
   lastWeek: { bookingsMade: 0, departures: 0, seatsFilled: 0, seats: 0 },
@@ -32,6 +41,13 @@ const QUIET: WeeklyDigestFacts = {
   },
   gearServiceDue: 0,
   safety: NO_SAFETY,
+  emergencyReads: NO_EMERGENCY_READS,
+};
+
+const ONE_READ = {
+  total: 1,
+  byReader: [{ reader: "Sal Captain", count: 1 }],
+  listed: [EMERGENCY_READ],
 };
 
 describe("mondayOnOrBefore", () => {
@@ -275,6 +291,7 @@ describe("weeklyDigestSections", () => {
       },
       gearServiceDue: 2,
       safety: { openRollCalls: 1, uncrewed: 0, incidents: 0 },
+      emergencyReads: ONE_READ,
     });
     expect(sections.map((section) => section.kind)).toEqual([
       "last_week",
@@ -282,6 +299,7 @@ describe("weeklyDigestSections", () => {
       "this_week",
       "waivers",
       "safety",
+      "emergency_reads",
       "reviews",
       "date_requests",
       "overdue",
@@ -404,5 +422,35 @@ describe("weakestDeparture", () => {
       boat("gone", "2026-10-05T11:00:00Z", 0),
     ];
     expect(weakestDeparture(trips, new Set(["half", "gone"]), NOW)).toBeNull();
+  });
+});
+
+/**
+ * **Last week's emergency reads of a medical alert** (issue #2990): the
+ * owner's email lists each one, and a week with none says nothing.
+ */
+describe("the emergency reads section", () => {
+  it("carries the total, the count per reader, and the reads listed, in the order they happened", () => {
+    const later = { ...EMERGENCY_READ, diver: "Ben Ito", at: new Date("2026-07-16T09:00:00Z") };
+    const reads = {
+      total: 61,
+      byReader: [
+        { reader: "Sal Captain", count: 60 },
+        { reader: "Kai Divemaster", count: 1 },
+      ],
+      listed: [EMERGENCY_READ, later],
+    };
+    expect(weeklyDigestSections({ ...QUIET, emergencyReads: reads })).toEqual([
+      {
+        kind: "emergency_reads",
+        total: 61,
+        byReader: reads.byReader,
+        reads: [EMERGENCY_READ, later],
+      },
+    ]);
+  });
+
+  it("names nothing when there were none", () => {
+    expect(weeklyDigestSections({ ...QUIET, emergencyReads: NO_EMERGENCY_READS })).toEqual([]);
   });
 });

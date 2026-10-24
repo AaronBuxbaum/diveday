@@ -19,7 +19,11 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import type { OfflineMedicalAlertsResponse } from "@/lib/offline-manifests";
-import { canPersonReadMedicalAlertOnTrip } from "./authz";
+import {
+  canPersonPrintMedicalAlerts,
+  canPersonReadMedicalAlertOnTrip,
+  emergencyMedicalAlertStanding,
+} from "./authz";
 import type { DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { listTripReadiness } from "./readiness";
@@ -106,6 +110,19 @@ export async function medicalAlertsForTrip(
     if (row?.text) alerts.set(bookingId, { personId: row.personId, text: row.text });
   }
   return alerts;
+}
+
+/**
+ * Whether any seat on the departure has an alert on its standing release: the
+ * fact, never the text, for whether "Print with medical alerts" is offered.
+ */
+export async function tripHasMedicalAlert(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const releaseByBooking = standingReleaseByBooking(await listTripReadiness(db, shopId, tripId));
+  return (await bookingsWithMedicalAlert(db, shopId, releaseByBooking)).size > 0;
 }
 
 /** The texts alone, by booking id (`medicalAlertsForTrip`). */
@@ -334,4 +351,98 @@ export async function medicalAlertsForOfflineSave(
       savedBy: { personId: input.readerId, name: reader.name, savedAt: nowDate().toISOString() },
     },
   };
+}
+
+/**
+ * What a packet printed **with** the medical alerts carries (issue #2990):
+ * the words by booking id, who printed them and when.
+ */
+export type PrintedMedicalAlerts = {
+  texts: ReadonlyMap<string, string>;
+  printedBy: string;
+  printedAt: Date;
+};
+
+/**
+ * **Hands one departure's medical alert words to "Print with medical alerts"**
+ * (issue #2990, H-153 amendment of 2026-10-24). `not_found` for a departure
+ * that is not this shop's live one; `forbidden` unless
+ * `canPersonPrintMedicalAlerts` admits the printer now (the owner or a
+ * manager). Otherwise one `medical_alert_printed` line per diver on the trail
+ * first, every print its own line (each one is another sheet), and the words
+ * of each diver whose line the trail took. A held seat prints none.
+ */
+export async function medicalAlertsForPrint(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; printerId: string },
+): Promise<
+  { ok: true; printed: PrintedMedicalAlerts } | { ok: false; reason: "not_found" | "forbidden" }
+> {
+  const [trip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    .limit(1);
+  if (!trip) return { ok: false, reason: "not_found" };
+  if (!(await canPersonPrintMedicalAlerts(db, input.shopId, input.printerId))) {
+    return { ok: false, reason: "forbidden" };
+  }
+  const [printer] = await db
+    .select({ name: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, input.printerId), eq(people.shopId, input.shopId), livePerson()))
+    .limit(1);
+  if (!printer) return { ok: false, reason: "forbidden" };
+  const texts = new Map<string, string>();
+  for (const [bookingId, alert] of await medicalAlertsForTrip(db, input.shopId, trip.id)) {
+    const recorded = await recordDiverActivity(db, {
+      shopId: input.shopId,
+      personId: alert.personId,
+      actorPersonId: input.printerId,
+      code: "medical_alert_printed",
+      departureId: trip.id,
+    });
+    if (recorded) texts.set(bookingId, alert.text);
+  }
+  return { ok: true, printed: { texts, printedBy: printer.name, printedAt: nowDate() } };
+}
+
+/**
+ * **"Emergency: show the alert"** for one seat (issue #2990, H-153 amendment
+ * of 2026-10-24): a staffer the crew rule refuses, on the days of the trip in
+ * the shop's zone (`emergencyMedicalAlertStanding`, re-read here on every
+ * confirm). The seat must be on this departure and its standing release must
+ * carry an alert. The read goes on the diver's trail as
+ * `medical_alert_emergency_read` before the words are handed back, and it is
+ * **never de-duplicated**: two confirms are two lines. A trail that refuses
+ * the line shows nothing.
+ *
+ * A refusal says why only when the reason is the window and the reader is
+ * someone the rule admits on the trip's days: `not_yet` (it opens on the day
+ * of the trip) or `closed` (over: ask the owner or a manager). Every other
+ * refusal is the same bare `{ ok: false }`, which says nothing about the seat.
+ */
+export async function emergencyReadMedicalAlert(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; bookingId: string; readerId: string },
+): Promise<{ ok: true; text: string } | { ok: false; reason?: "not_yet" | "closed" }> {
+  const standing = await emergencyMedicalAlertStanding(
+    db,
+    input.shopId,
+    input.readerId,
+    input.tripId,
+  );
+  if (standing === "refused") return { ok: false };
+  if (standing !== "open") return { ok: false, reason: standing };
+  const alert = await medicalAlertForSeat(db, input.shopId, input.tripId, input.bookingId);
+  if (!alert) return { ok: false };
+  const recorded = await recordDiverActivity(db, {
+    shopId: input.shopId,
+    personId: alert.personId,
+    actorPersonId: input.readerId,
+    code: "medical_alert_emergency_read",
+    departureId: input.tripId,
+  });
+  if (!recorded) return { ok: false };
+  return { ok: true, text: alert.text };
 }

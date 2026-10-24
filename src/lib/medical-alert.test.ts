@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MEDICAL_ALERT_MAX, readDraftMedicalAlert, readMedicalAlert } from "./medical-alert";
+import {
+  emergencyReadWindow,
+  MEDICAL_ALERT_MAX,
+  readDraftMedicalAlert,
+  readMedicalAlert,
+} from "./medical-alert";
+import { wallTimeToUtc } from "./zoned";
 
 describe("readMedicalAlert (glossary *Medical alert for the crew*)", () => {
   it("keeps the diver's words, trimmed and NFC, with newlines", () => {
@@ -113,6 +119,77 @@ describe("readDraftMedicalAlert", () => {
     expect(readMedicalAlert(mended)).toEqual({ ok: true, value: mended });
     expect(readDraftMedicalAlert("a".repeat(MEDICAL_ALERT_MAX + 1))).toBe(
       "a".repeat(MEDICAL_ALERT_MAX),
+    );
+  });
+});
+
+describe("emergencyReadWindow (the days of the trip, H-153 amendment of 2026-10-24)", () => {
+  const KEY_LARGO = "America/New_York";
+  const at = (wall: string, timeZone = KEY_LARGO) => {
+    const [date = "", time = "00:00"] = wall.split(" ");
+    const [year, month, day] = date.split("-").map(Number);
+    const [hour, minute] = time.split(":").map(Number);
+    return wallTimeToUtc(
+      { year: year ?? 0, month: month ?? 0, day: day ?? 0, hour: hour ?? 0, minute: minute ?? 0 },
+      timeZone,
+    );
+  };
+  const nightBoat = { startsAt: at("2026-07-21 23:00"), endsAt: at("2026-07-21 23:59") };
+
+  it("is open all of a day boat's own day, from midnight to midnight in the shop's zone", () => {
+    const morning = { startsAt: at("2026-07-21 08:00"), endsAt: at("2026-07-21 12:00") };
+    expect(emergencyReadWindow(morning, KEY_LARGO, at("2026-07-21 00:00"))).toBe("open");
+    expect(emergencyReadWindow(morning, KEY_LARGO, at("2026-07-21 23:59"))).toBe("open");
+  });
+
+  it("is still open for a 23:00 departure read at 00:15 the next day", () => {
+    expect(emergencyReadWindow(nightBoat, KEY_LARGO, at("2026-07-22 00:15"))).toBe("open");
+  });
+
+  it("stays open past midnight until the boat is marked returned, then closes", () => {
+    const lateBack = { startsAt: at("2026-07-21 20:00"), endsAt: at("2026-07-21 23:30") };
+    // The hour past the scheduled return runs to 00:30.
+    expect(emergencyReadWindow(lateBack, KEY_LARGO, at("2026-07-22 00:29"))).toBe("open");
+    expect(emergencyReadWindow(lateBack, KEY_LARGO, at("2026-07-22 00:30"))).toBe("closed");
+  });
+
+  it("is open on every day of a three-day trip, day 2 included", () => {
+    const threeDays = { startsAt: at("2026-07-21 08:00"), endsAt: at("2026-07-23 16:00") };
+    expect(emergencyReadWindow(threeDays, KEY_LARGO, at("2026-07-21 07:00"))).toBe("open");
+    expect(emergencyReadWindow(threeDays, KEY_LARGO, at("2026-07-22 10:00"))).toBe("open");
+    expect(emergencyReadWindow(threeDays, KEY_LARGO, at("2026-07-23 22:00"))).toBe("open");
+  });
+
+  it("is closed the day after endsAt", () => {
+    const morning = { startsAt: at("2026-07-21 08:00"), endsAt: at("2026-07-21 16:00") };
+    expect(emergencyReadWindow(morning, KEY_LARGO, at("2026-07-22 00:00"))).toBe("closed");
+    expect(emergencyReadWindow(morning, KEY_LARGO, at("2026-07-22 10:00"))).toBe("closed");
+  });
+
+  it("is not yet open before the start date", () => {
+    const morning = { startsAt: at("2026-07-21 08:00"), endsAt: at("2026-07-21 16:00") };
+    expect(emergencyReadWindow(morning, KEY_LARGO, at("2026-07-20 23:59"))).toBe("not_yet");
+    expect(emergencyReadWindow(morning, KEY_LARGO, at("2026-07-20 09:00"))).toBe("not_yet");
+  });
+
+  it("reads the days in a shop zone far from UTC", () => {
+    // Kiritimati is UTC+14: its 2026-07-21 starts at 10:00Z on the 20th.
+    const LINE_ISLANDS = "Pacific/Kiritimati";
+    const morning = {
+      startsAt: at("2026-07-21 08:00", LINE_ISLANDS),
+      endsAt: at("2026-07-21 12:00", LINE_ISLANDS),
+    };
+    expect(emergencyReadWindow(morning, LINE_ISLANDS, new Date("2026-07-20T09:59:00Z"))).toBe(
+      "not_yet",
+    );
+    expect(emergencyReadWindow(morning, LINE_ISLANDS, new Date("2026-07-20T10:00:00Z"))).toBe(
+      "open",
+    );
+    expect(emergencyReadWindow(morning, LINE_ISLANDS, new Date("2026-07-21T09:59:00Z"))).toBe(
+      "open",
+    );
+    expect(emergencyReadWindow(morning, LINE_ISLANDS, new Date("2026-07-21T10:00:00Z"))).toBe(
+      "closed",
     );
   });
 });

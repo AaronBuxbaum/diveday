@@ -1,3 +1,16 @@
+import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
+
+/**
+ * **The key "Print with medical alerts" hands the words to this page under**
+ * (issue #2990). A symbol, so no URL can set it: Next builds `searchParams`
+ * from the query string, whose keys are strings, and a hand-typed
+ * `?printedMedicalAlerts=` is just another string key this page never reads.
+ * Only the print route (`trips/[id]/print/medical-alerts`), which checked the
+ * printer and recorded one trail line per diver first, composes the page with
+ * it, through `TripPacket`.
+ */
+export const PRINTED_MEDICAL_ALERTS: unique symbol = Symbol("printedMedicalAlerts");
+
 /** What the manifest reads off its URL. */
 export type ManifestSearchParams = {
   checkpoint?: string;
@@ -17,4 +30,6 @@ export type ManifestSearchParams = {
    * changes nothing.
    */
   idPrefix?: string;
+  /** The words for a packet printed with them; see {@link PRINTED_MEDICAL_ALERTS}. */
+  [PRINTED_MEDICAL_ALERTS]?: PrintedMedicalAlerts;
 };

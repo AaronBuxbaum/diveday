@@ -8,6 +8,7 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canEmergencyReadMedicalAlert,
   canErasePersonalData,
   canExportDisputeSheet,
   canExportIncidentRecord,
@@ -24,6 +25,7 @@ import {
   canManageWaiverTemplates,
   canOverrideCertBlock,
   canOverrideGearRequest,
+  canPrintMedicalAlerts,
   canReadCrewAwayNote,
   canReadEveryIncidentReport,
   canReadMedicalAlert,
@@ -153,6 +155,46 @@ describe("canReadMedicalAlert (owner, manager, and the diver's own crew)", () =>
     expect(canReadMedicalAlert(["diver"], crewing)).toBe(false);
     expect(canReadMedicalAlert([], crewing)).toBe(false);
     expect(canReadMedicalAlert(undefined, crewing)).toBe(false);
+  });
+});
+
+describe("canPrintMedicalAlerts (owner and manager, issue #2990)", () => {
+  it("admits the owner and a manager", () => {
+    for (const role of ["owner", "manager"] as const) {
+      expect(canPrintMedicalAlerts([role])).toBe(true);
+    }
+  });
+
+  it("refuses every other staff role, a diver and nobody, crew included", () => {
+    for (const role of STAFF_ROLES.filter((role) => role !== "owner" && role !== "manager")) {
+      expect(canPrintMedicalAlerts([role])).toBe(false);
+    }
+    expect(canPrintMedicalAlerts(["diver"])).toBe(false);
+    expect(canPrintMedicalAlerts([])).toBe(false);
+    expect(canPrintMedicalAlerts(undefined)).toBe(false);
+  });
+});
+
+describe("canEmergencyReadMedicalAlert (any staffer, on the days of the trip, issue #2990)", () => {
+  const today = { window: "open" } as const;
+
+  it("admits every staff role while the trip's days are open", () => {
+    for (const role of STAFF_ROLES) {
+      expect(canEmergencyReadMedicalAlert([role], today)).toBe(true);
+    }
+  });
+
+  it("refuses every staff role before the trip's first day and after it is over", () => {
+    for (const role of STAFF_ROLES) {
+      expect(canEmergencyReadMedicalAlert([role], { window: "not_yet" })).toBe(false);
+      expect(canEmergencyReadMedicalAlert([role], { window: "closed" })).toBe(false);
+    }
+  });
+
+  it("never admits a diver or nobody, even on the day", () => {
+    expect(canEmergencyReadMedicalAlert(["diver"], today)).toBe(false);
+    expect(canEmergencyReadMedicalAlert([], today)).toBe(false);
+    expect(canEmergencyReadMedicalAlert(undefined, today)).toBe(false);
   });
 });
 

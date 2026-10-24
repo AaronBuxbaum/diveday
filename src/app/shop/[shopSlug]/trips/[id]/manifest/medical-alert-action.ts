@@ -1,11 +1,20 @@
 "use server";
 
+import { headers } from "next/headers";
 import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
-import { medicalAlertForSeat, recordMedicalAlertTrailLine } from "@/db/medical-alerts";
+import {
+  emergencyReadMedicalAlert,
+  medicalAlertForSeat,
+  recordMedicalAlertTrailLine,
+} from "@/db/medical-alerts";
+import { isCrossSiteHeaders } from "@/lib/same-origin";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
-export type ShowSeatMedicalAlertResult = { ok: true; text: string } | { ok: false };
+export type ShowSeatMedicalAlertResult =
+  | { ok: true; text: string }
+  /** `reason` only on the emergency read, and only for its window (`emergencyReadMedicalAlert`). */
+  | { ok: false; reason?: "not_yet" | "closed" };
 
 /**
  * **Opening a diver's medical alert on the manifest or roll call** (issue
@@ -43,4 +52,37 @@ export async function showSeatMedicalAlertAction(
   });
   if (!recorded) return { ok: false };
   return { ok: true, text: alert.text };
+}
+
+/**
+ * **"Emergency: show the alert"**, confirmed (issue #2990, H-153 amendment of
+ * 2026-10-24). Offered in the reveal sheet to a staffer the crew rule refuses,
+ * while the trip's days have not ended; this re-checks everything on the
+ * server (`emergencyReadMedicalAlert`): an active staffer of this shop, the
+ * days of the trip in the shop's zone, the seat on this departure. The read
+ * goes on the diver's trail as `medical_alert_emergency_read` first, every
+ * confirm its own line, and the owner's Monday email lists last week's.
+ * Signed-in staff only (`requireShopSurface`), so no bearer page reaches it;
+ * a cross-site call is refused before anything is read, by the same rule the
+ * print with medical alerts and the offline route ask (`isCrossSiteHeaders`,
+ * on top of Next's own server-action check). A refusal names the window when
+ * that is the reason (`not_yet`, `closed`), and is otherwise a bare
+ * `{ ok: false }`.
+ */
+export async function emergencyShowSeatMedicalAlertAction(
+  shopSlug: string,
+  tripId: string,
+  bookingId: string,
+): Promise<ShowSeatMedicalAlertResult> {
+  if (isCrossSiteHeaders(await headers())) return { ok: false };
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const trip = uuidParam(tripId);
+  const seat = uuidParam(bookingId);
+  if (!trip || !seat) return { ok: false };
+  return emergencyReadMedicalAlert(db, {
+    shopId: shop.id,
+    tripId: trip,
+    bookingId: seat,
+    readerId: session.user.personId,
+  });
 }

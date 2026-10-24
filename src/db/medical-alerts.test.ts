@@ -1,14 +1,27 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { Role } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { getTripManifest } from "./manifests";
 import {
+  emergencyReadMedicalAlert,
   medicalAlertForSeat,
   medicalAlertPrefill,
+  medicalAlertsForPrint,
   medicalAlertTextsForTrip,
 } from "./medical-alerts";
-import { bookings, people, waiverRecords } from "./schema";
+import {
+  activityEvents,
+  bookings,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+  waiverRecords,
+} from "./schema";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { saveWaiverTemplate } from "./waivers-templates";
@@ -237,5 +250,225 @@ describe("medicalAlertPrefill", () => {
     const [moved] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
     if (!moved) throw new Error("moved record missing");
     expect(await medicalAlertPrefill(db, moved)).toEqual({ draft: null, earlierAlert: false });
+  });
+});
+
+/** A staffer of `shopId` with `roles`, active unless told otherwise. */
+async function staffer(
+  db: AppDb,
+  shopId: string,
+  roles: Role[],
+  opts: { status?: "active" | "disabled" } = {},
+): Promise<string> {
+  seq += 1;
+  const [person] = await db
+    .insert(people)
+    .values({ shopId, fullName: `Alert Staff ${seq}` })
+    .returning({ id: people.id });
+  if (!person) throw new Error("failed to insert staff");
+  await db.insert(personRoles).values(roles.map((role) => ({ personId: person.id, role })));
+  await db.insert(userAccounts).values({
+    personId: person.id,
+    email: `alert.staff.${seq}@example.com`,
+    hashedPassword: "x",
+    status: opts.status ?? "active",
+  });
+  return person.id;
+}
+
+async function trailLines(db: AppDb, personId: string, code: string) {
+  return db
+    .select({ actor: activityEvents.actorPersonId, params: activityEvents.params })
+    .from(activityEvents)
+    .where(and(eq(activityEvents.subjectPersonId, personId), eq(activityEvents.code, code)));
+}
+
+/**
+ * **"Print with medical alerts"** (issue #2990): owner and manager only; the
+ * print is the read, one `medical_alert_printed` line per diver on the sheet.
+ */
+describe("medicalAlertsForPrint", () => {
+  it("hands the owner and a manager every alert on the departure, one trail line per printed diver", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    for (const [index, role] of (["owner", "manager"] as const).entries()) {
+      const printer = await staffer(db, shop.id, [role]);
+      const printed = await medicalAlertsForPrint(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        printerId: printer,
+      });
+      if (!printed.ok) throw new Error(`expected the ${role} to print`);
+      expect([...printed.printed.texts]).toEqual([[booking.id, alert]]);
+      expect(printed.printed.printedAt).toEqual(nowDate());
+      expect(printed.printed.printedBy).toMatch(/^Alert Staff /);
+      const lines = await trailLines(db, person.id, "medical_alert_printed");
+      expect(lines).toHaveLength(index + 1);
+      expect(lines.at(-1)).toMatchObject({ actor: printer, params: { departure: trip.id } });
+    }
+  });
+
+  it("writes a line for every print, even one straight after another", async () => {
+    const { db, shop, trip, person } = await signedWith(alert);
+    const owner = await staffer(db, shop.id, ["owner"]);
+    for (let print = 0; print < 2; print++) {
+      const printed = await medicalAlertsForPrint(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        printerId: owner,
+      });
+      expect(printed.ok).toBe(true);
+    }
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toHaveLength(2);
+  });
+
+  it("refuses crew, an instructor, a disabled manager and another shop's owner, and writes nothing", async () => {
+    const { db, shop, trip, person } = await signedWith(alert);
+    const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
+    if (!elsewhere) throw new Error("expected a second seeded shop");
+    const refused = [
+      await staffer(db, shop.id, ["crew"]),
+      await staffer(db, shop.id, ["instructor"]),
+      await staffer(db, shop.id, ["captain"]),
+      await staffer(db, shop.id, ["manager"], { status: "disabled" }),
+      await staffer(db, elsewhere.id, ["owner"]),
+    ];
+    for (const printerId of refused) {
+      await expect(
+        medicalAlertsForPrint(db, { shopId: shop.id, tripId: trip.id, printerId }),
+      ).resolves.toEqual({ ok: false, reason: "forbidden" });
+    }
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
+  });
+
+  it("answers not found for another shop's departure or one that is gone", async () => {
+    const { db, shop, trip, person } = await signedWith(alert);
+    const owner = await staffer(db, shop.id, ["owner"]);
+    const [otherShopTrip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(ne(trips.shopId, shop.id))
+      .limit(1);
+    if (otherShopTrip) {
+      await expect(
+        medicalAlertsForPrint(db, { shopId: shop.id, tripId: otherShopTrip.id, printerId: owner }),
+      ).resolves.toEqual({ ok: false, reason: "not_found" });
+    }
+    await db.update(trips).set({ deletedAt: now }).where(eq(trips.id, trip.id));
+    await expect(
+      medicalAlertsForPrint(db, { shopId: shop.id, tripId: trip.id, printerId: owner }),
+    ).resolves.toEqual({ ok: false, reason: "not_found" });
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
+  });
+
+  it("prints no words for a held seat", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now, identityBookedAs: "Someone Else" })
+      .where(eq(bookings.id, booking.id));
+    const owner = await staffer(db, shop.id, ["owner"]);
+    const printed = await medicalAlertsForPrint(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      printerId: owner,
+    });
+    if (!printed.ok) throw new Error("expected a print");
+    expect(printed.printed.texts.has(booking.id)).toBe(false);
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
+  });
+});
+
+/**
+ * **"Emergency: show the alert"** (issue #2990): any active staffer of the
+ * shop, on the day; every read its own `medical_alert_emergency_read` line.
+ */
+describe("emergencyReadMedicalAlert", () => {
+  async function leavingAt(db: AppDb, tripId: string, startsAt: Date) {
+    await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(trips.id, tripId));
+  }
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  it("hands an instructor not on the crew the words today and records every read, two in a row included", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    await leavingAt(db, trip.id, nowDate());
+    const instructor = await staffer(db, shop.id, ["instructor"]);
+    for (let read = 0; read < 2; read++) {
+      await expect(
+        emergencyReadMedicalAlert(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId: booking.id,
+          readerId: instructor,
+        }),
+      ).resolves.toEqual({ ok: true, text: alert });
+    }
+    const lines = await trailLines(db, person.id, "medical_alert_emergency_read");
+    expect(lines).toHaveLength(2);
+    for (const line of lines) {
+      expect(line).toMatchObject({ actor: instructor, params: { departure: trip.id } });
+    }
+    // Never filed as an ordinary read.
+    expect(await trailLines(db, person.id, "medical_alert_read")).toEqual([]);
+  });
+
+  it("refuses tomorrow as not yet open and yesterday as over, and writes nothing", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    const instructor = await staffer(db, shop.id, ["instructor"]);
+    for (const [offset, reason] of [
+      [DAY_MS, "not_yet"],
+      [-DAY_MS, "closed"],
+    ] as const) {
+      await leavingAt(db, trip.id, new Date(nowDate().getTime() + offset));
+      await expect(
+        emergencyReadMedicalAlert(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId: booking.id,
+          readerId: instructor,
+        }),
+      ).resolves.toEqual({ ok: false, reason });
+    }
+    expect(await trailLines(db, person.id, "medical_alert_emergency_read")).toEqual([]);
+  });
+
+  it("refuses a disabled staffer, another shop's staff, and a seat on another departure", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    await leavingAt(db, trip.id, nowDate());
+    const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
+    if (!elsewhere) throw new Error("expected a second seeded shop");
+    for (const readerId of [
+      await staffer(db, shop.id, ["divemaster"], { status: "disabled" }),
+      await staffer(db, elsewhere.id, ["owner"]),
+    ]) {
+      await expect(
+        emergencyReadMedicalAlert(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId: booking.id,
+          readerId,
+        }),
+      ).resolves.toEqual({ ok: false });
+    }
+    // Today's other departure, named with this seat, reads nothing.
+    const [other] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), ne(trips.id, trip.id)))
+      .limit(1);
+    if (!other) throw new Error("expected a second departure");
+    await leavingAt(db, other.id, nowDate());
+    const instructor = await staffer(db, shop.id, ["instructor"]);
+    await expect(
+      emergencyReadMedicalAlert(db, {
+        shopId: shop.id,
+        tripId: other.id,
+        bookingId: booking.id,
+        readerId: instructor,
+      }),
+    ).resolves.toEqual({ ok: false });
+    expect(await trailLines(db, person.id, "medical_alert_emergency_read")).toEqual([]);
   });
 });

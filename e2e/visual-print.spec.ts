@@ -5,6 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed-medical-alert";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 import {
@@ -87,6 +88,21 @@ test.describe("print", () => {
     for (const link of await chrome.all()) await expect(link).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
+  });
+
+  // **The packet with the medical alerts' words** (issue #2990): each alert
+  // under its diver's row, the note once above them. The owner prints it; the
+  // seeded alert is on tomorrow's crewed departure.
+  test("the trip packet prints with the medical alerts", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(page, DEMO_MEDICAL_ALERT_TRIP);
+    const tripPath = new URL(page.url()).pathname.replace(/\/(manifest|prep)$/, "");
+    await page.goto(`${tripPath}/print/medical-alerts`);
+    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
+    await page.emulateMedia({ media: "print" });
+    await expect(page.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
+    await page.emulateMedia({ media: "screen" });
+    await capturePrint(page, "trip-packet-medical-alerts");
   });
 
   // **The whole day on paper** (N-54). The same three sections the trip packet

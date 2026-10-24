@@ -20,7 +20,11 @@ import {
   setTripStageAction,
   teamUpPartiesAction,
 } from "../actions";
-import { showSeatMedicalAlertAction } from "../medical-alert-action";
+import {
+  emergencyShowSeatMedicalAlertAction,
+  showSeatMedicalAlertAction,
+} from "../medical-alert-action";
+import { type ManifestSearchParams, PRINTED_MEDICAL_ALERTS } from "./manifest-search-params";
 
 /**
  * **Every mutation on this page, bound once to the departure and checkpoint it
@@ -43,7 +47,11 @@ export function bindManifestActions(
     alerted?: ReadonlySet<string>;
     /** Whether the reader may read the medical alerts on this departure (issue #2960). */
     mayReadMedicalAlerts?: boolean;
+    /** Whether to offer them in an emergency instead, until the trip's days end (issue #2990). */
+    mayEmergencyReadMedicalAlerts?: boolean;
   } = { mayStartIncidentReport: false },
+  /** The page's own search params: the printed words ride on them, never on the URL. */
+  query: ManifestSearchParams = {},
 ) {
   const { shopSlug, tripId } = actionContext;
   return {
@@ -81,11 +89,24 @@ export function bindManifestActions(
         : null,
       missingAlerted: reader.alerted ?? new Set<string>(),
     },
-    // One seat's "Show the alert", only for a reader allowed the words here;
-    // the action re-checks and records the read before it answers.
-    showMedicalAlert: reader.mayReadMedicalAlerts
-      ? (bookingId: string) => showSeatMedicalAlertAction.bind(null, shopSlug, tripId, bookingId)
-      : undefined,
+    // What a diver row's medical alert block is handed (`DiverRollCallContext`).
+    medicalAlert: {
+      // One seat's "Show the alert", only for a reader allowed the words here;
+      // the action re-checks and records the read before it answers.
+      showMedicalAlert: reader.mayReadMedicalAlerts
+        ? (bookingId: string) => showSeatMedicalAlertAction.bind(null, shopSlug, tripId, bookingId)
+        : undefined,
+      // One seat's "Emergency: show the alert", only for a reader the crew rule
+      // refuses until the trip's days end; the action decides and records every confirm.
+      emergencyShowMedicalAlert:
+        !reader.mayReadMedicalAlerts && reader.mayEmergencyReadMedicalAlerts
+          ? (bookingId: string) =>
+              emergencyShowSeatMedicalAlertAction.bind(null, shopSlug, tripId, bookingId)
+          : undefined,
+      // The words, only when "Print with medical alerts" composed this page,
+      // under a key no URL can carry (`PRINTED_MEDICAL_ALERTS`, issue #2990).
+      printedMedicalAlerts: query[PRINTED_MEDICAL_ALERTS],
+    },
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {
       formBuddyTeamAction: formBuddyTeamAction.bind(null, actionContext),

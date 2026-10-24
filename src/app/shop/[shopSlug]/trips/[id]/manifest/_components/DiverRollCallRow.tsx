@@ -218,6 +218,7 @@ export function DiverRollCallRow({
           who-and-when are already on the sheet and are not repeated. */}
         <DiverRowPrint
           diver={diver}
+          printedAlert={context.printedMedicalAlerts?.texts.get(diver.bookingId)}
           state={state}
           checkpoint={checkpoint}
           auditLabel={auditLabel}

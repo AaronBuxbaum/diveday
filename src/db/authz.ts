@@ -6,6 +6,7 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canEmergencyReadMedicalAlert,
   canErasePersonalData,
   canExportDisputeSheet,
   canExportIncidentRecord,
@@ -22,6 +23,7 @@ import {
   canMergeDiver,
   canOverrideCertBlock,
   canOverrideGearRequest,
+  canPrintMedicalAlerts,
   canReadEveryIncidentReport,
   canReadMedicalAlert,
   canReadMedicalAnswers,
@@ -34,9 +36,11 @@ import {
   canViewShopActivity,
   type Role,
 } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
+import { type EmergencyReadWindow, emergencyReadWindow } from "@/lib/medical-alert";
 import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today";
 import type { DbExecutor } from "./client";
-import { people, personRoles, tripAssignments, trips, userAccounts } from "./schema";
+import { people, personRoles, shops, tripAssignments, trips, userAccounts } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 
 /**
@@ -323,6 +327,48 @@ export const canPersonReadMedicalAlert = (db: DbExecutor, shopId: string, person
   canPerson(db, shopId, personId, (roles) =>
     canReadMedicalAlert(roles, { crewsDiversDeparture: false }),
   );
+
+/**
+ * The live check behind "Print with medical alerts" (`canPrintMedicalAlerts`,
+ * issue #2990): the owner and a manager, read from `person_roles` now, so a
+ * manager demoted this morning prints the flag only.
+ */
+export const canPersonPrintMedicalAlerts = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canPrintMedicalAlerts);
+
+/**
+ * **Where one staffer stands for "Emergency: show the alert" on one
+ * departure** (`canEmergencyReadMedicalAlert`, issue #2990): `refused` unless
+ * they are an active staffer of this shop (live roles) and the departure is
+ * a live one of this shop; otherwise the departure's `emergencyReadWindow`
+ * in the shop's zone, from the clock (`nowDate()`, never the device's).
+ *
+ * `open` is the only answer that reads the words. The manifest offers the
+ * button while it is `not_yet` too, so a tab opened the night before still
+ * has it at sea, and the server answers again on the confirm. The caller
+ * still confirms the diver is booked on `tripId`, and offers it only where
+ * `canPersonReadMedicalAlertOnTrip` refused.
+ */
+export async function emergencyMedicalAlertStanding(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  tripId: string,
+  now: Date = nowDate(),
+): Promise<EmergencyReadWindow | "refused"> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  if (roles === null) return "refused";
+  const [departure] = await db
+    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt, timezone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!departure) return "refused";
+  // Someone the rule would never admit, even on the day, hears nothing about the window.
+  if (!canEmergencyReadMedicalAlert(roles, { window: "open" })) return "refused";
+  return emergencyReadWindow(departure, departure.timezone, now);
+}
 
 /** The live check behind "Send a new waiver" on a refused seat (`retireMedicalRefusal`). */
 export const canPersonRetireMedicalRefusal = (db: DbExecutor, shopId: string, personId: string) =>

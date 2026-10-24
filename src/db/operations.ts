@@ -138,6 +138,8 @@ export type DiverActivityCode =
   | "medical_answers_read"
   | "medical_alert_read"
   | "medical_alert_saved_offline"
+  | "medical_alert_printed"
+  | "medical_alert_emergency_read"
   | "date_of_birth_cleared_as_adult"
   | "record_exported"
   | "dispute_sheet_printed"

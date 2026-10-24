@@ -1,4 +1,8 @@
-import type { MedicalAlertResult, MedicalAlertRevealCopy } from "@/components/MedicalAlertReveal";
+import type {
+  MedicalAlertEmergencyCopy,
+  MedicalAlertResult,
+  MedicalAlertRevealCopy,
+} from "@/components/MedicalAlertReveal";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /** What a diver row's medical alert block needs. */
@@ -12,6 +16,8 @@ export type MedicalAlertView = {
   keepAs: string;
   /** This seat on the device's saved copy, for the no-signal fallback. */
   savedCopy: { tripId: string; bookingId: string };
+  /** "Emergency: show the alert", for a reader the crew rule refuses, until the trip's days end (issue #2990). */
+  emergency?: { show: () => Promise<MedicalAlertResult>; copy: MedicalAlertEmergencyCopy };
 };
 
 /**
@@ -25,11 +31,14 @@ export type MedicalAlertView = {
  */
 export function medicalAlertView({
   show,
+  emergencyShow,
   tripId,
   bookingId,
   t,
 }: {
   show?: () => Promise<MedicalAlertResult>;
+  /** Bound only when `show` is not: a staffer the crew rule refuses, until the trip's days end. */
+  emergencyShow?: () => Promise<MedicalAlertResult>;
   tripId: string;
   bookingId: string;
   t: StaffTranslator;
@@ -48,5 +57,20 @@ export function medicalAlertView({
     },
     keepAs: `${tripId}:${bookingId}`,
     savedCopy: { tripId, bookingId },
+    emergency:
+      !show && emergencyShow
+        ? {
+            show: emergencyShow,
+            copy: {
+              offer: t("manifest.medicalAlertEmergencyOffer"),
+              confirmBody: t("manifest.medicalAlertEmergencyConfirmBody"),
+              confirm: t("manifest.medicalAlertEmergencyConfirm"),
+              cancel: t("manifest.medicalAlertEmergencyCancel"),
+              noSignal: t("manifest.medicalAlertEmergencyNoSignal"),
+              notYet: t("manifest.medicalAlertEmergencyNotYet"),
+              closed: t("manifest.medicalAlertEmergencyClosed"),
+            },
+          }
+        : undefined,
   };
 }
