@@ -258,3 +258,71 @@ test("an intrinsically undersized geographic pin still fails target-size", async
   ).toBe(true);
   await expect(expectNoA11yViolations(page)).rejects.toThrow("tiny-pin-target");
 });
+
+/**
+ * **Every press on the map takes 44px, at a phone and at a desk** (issue
+ * #2889). Measured where a finger lands, not read from a class: the zoom
+ * buttons, each site pin and cluster, the shop's badge (which must sit wholly
+ * inside the map, never clipped at its edge), and the popup's close, whose
+ * visible circle is smaller and whose press reaches 22px from its center on
+ * every side. The selection is made at 1280 and carried to 390, as the
+ * selected-pin capture does, and the close still closes.
+ */
+for (const width of [390, 1280]) {
+  test(`map controls and markers take a 44px press at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openLibraryMap(page);
+    await page.clock.install({ time: E2E_FROZEN_CLOCK });
+    await page.locator(".leaflet-site-marker button").first().press("Enter");
+    await expect(page.locator(".leaflet-site-popup")).toHaveCount(1);
+    if (width !== 1280) await page.setViewportSize({ width, height: 844 });
+    await page.locator(".leaflet-container").scrollIntoViewIfNeeded();
+
+    const map = await page.locator(".leaflet-container").boundingBox();
+    if (!map) throw new Error("Site map has no bounds");
+    for (const selector of [
+      ".leaflet-control-zoom-in",
+      ".leaflet-control-zoom-out",
+      ".leaflet-site-marker button",
+      "button.leaflet-site-cluster",
+      ".leaflet-shop-landmark",
+    ]) {
+      const targets = page.locator(selector).filter({ visible: true });
+      for (const box of await targets.evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const rect = node.getBoundingClientRect();
+          return { width: rect.width, height: rect.height, left: rect.left, right: rect.right };
+        }),
+      )) {
+        expect(box.width, selector).toBeGreaterThanOrEqual(44);
+        expect(box.height, selector).toBeGreaterThanOrEqual(44);
+        if (selector === ".leaflet-shop-landmark") {
+          expect(box.left, "the shop badge inside the map's left edge").toBeGreaterThanOrEqual(
+            map.x,
+          );
+          expect(box.right).toBeLessThanOrEqual(map.x + map.width);
+        }
+      }
+    }
+
+    const close = page.getByRole("button", { name: "Close popup" });
+    await expect(close).toBeVisible();
+    const reach = await close.evaluate((control) => {
+      const rect = control.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      return [
+        [-21, 0],
+        [21, 0],
+        [0, -21],
+        [0, 21],
+      ].map(([dx, dy]) => {
+        const hit = document.elementFromPoint(x + dx, y + dy);
+        return hit !== null && control.contains(hit);
+      });
+    });
+    expect(reach).toEqual([true, true, true, true]);
+    await close.click();
+    await expect(page.locator(".leaflet-site-popup")).toHaveCount(0);
+  });
+}
