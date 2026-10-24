@@ -238,6 +238,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Legal hold
 - Lunch aboard
 - Manifest
+- Medical alert for the crew
 - Medical hold
 - Medical questionnaire
 - Meeting point

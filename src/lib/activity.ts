@@ -264,6 +264,18 @@ type ActivityParamShapes = {
   /** An owner or manager read a diver's full medical questionnaire (issue #2157). */
   medical_answers_read: { actor: string; diver: string };
   /**
+   * A staffer read a diver's medical alert for the crew, on a manifest they
+   * crew or on the signed record (issue #2960). Never written offline.
+   */
+  medical_alert_read: { actor: string; diver: string; departure?: string };
+  /**
+   * A permitted reader saved a departure's copy for offline with the medical
+   * alerts' words in it (issue #2960, H-153 amendment): one line per diver on
+   * that departure, written by the server when it hands the words out.
+   * Opening the copy at sea writes nothing more.
+   */
+  medical_alert_saved_offline: { actor: string; diver: string; departure?: string };
+  /**
    * A staffer cleared a diver's stored date of birth by answering "They're 18
    * or older" (issue #2167). On the trail, because a date typed later drops
    * the record's own answer columns and must not drop who said it.
@@ -520,6 +532,8 @@ export const ACTIVITY_CODES = [
   "medical_clearance_opened",
   "medical_answered_by_earlier_letter",
   "medical_answers_read",
+  "medical_alert_read",
+  "medical_alert_saved_offline",
   "date_of_birth_cleared_as_adult",
   "record_exported",
   "drysuit_experience_recorded",

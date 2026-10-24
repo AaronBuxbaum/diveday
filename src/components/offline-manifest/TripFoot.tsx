@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { OfflineTripControls } from "./controls";
 import { offlineRollCallRowId } from "./shared";
-import type { OfflineTripView } from "./trip-view";
+import { liveManifestHref, type OfflineTripView } from "./trip-view";
 
 /** Below the roll call: the faces still to call, this phone's settings, the live page, and the milestone. */
 export function OfflineTripFoot({
@@ -125,7 +125,7 @@ export function OfflineTripFoot({
 
       <footer className="mt-8 flex flex-wrap items-center gap-4 border-t border-border pt-5">
         <a
-          href={`/shop/${envelope.snapshot.shop.slug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`}
+          href={liveManifestHref(envelope, tripId, checkpoint)}
           className={buttonClass({
             size: "boat",
             className: "w-full sm:w-auto",

@@ -11,11 +11,11 @@ describe("offlineManifestPayload", () => {
         tripManifest({ checkpoint: "after_dive_1", divers: [diver()] }),
       ],
       shop: {
+        slug: "blue-mantis",
         name: "Blue Mantis",
         timezone: "America/New_York",
         emergencyReference: null as never,
       },
-      shopSlug: "blue-mantis",
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
@@ -35,11 +35,11 @@ describe("offlineManifestPayload", () => {
     const payload = offlineManifestPayload({
       completeManifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
       shop: {
+        slug: "blue-mantis",
         name: "Blue Mantis",
         timezone: "America/New_York",
         emergencyReference: null as never,
       },
-      shopSlug: "blue-mantis",
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,

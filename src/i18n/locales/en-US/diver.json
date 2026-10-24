@@ -1240,7 +1240,17 @@
     "shopQuestionsIntroMinor": "Answer these about {name}. {shop} keeps the answers with this waiver.",
     "errorShopQuestionRequired": "Answer this question to sign.",
     "errorShopQuestionInvalid": "That answer doesn’t fit this question. Check it and try again.",
-    "shopQuestionsHealthNote": "Health questions are in the medical questionnaire above. If one applies to you, answer it there, not here."
+    "shopQuestionsHealthNote": "Health questions are in the medical questionnaire above. If one applies to you, answer it there, not here.",
+    "medicalAlertHeading": "For the crew, in an emergency",
+    "medicalAlertIntro": "Anything the crew should know if something goes wrong on the boat: an allergy and where your medicine is, diabetes, an inhaler. Leave it blank if there’s nothing.",
+    "medicalAlertIntroMinor": "Anything the crew should know about {name} if something goes wrong on the boat: an allergy and where the medicine is, diabetes, an inhaler. Leave it blank if there’s nothing.",
+    "medicalAlertNotQuestionnaire": "This does not replace the medical questions above. Nobody reviews it to decide who can dive.",
+    "medicalAlertReaders": "The shop’s owner, its managers and the crew on the boat can read it; tell the crew at the briefing as well.",
+    "medicalAlertEarlier": "Your last waiver here had a medical alert for the crew. If it still applies, write it again.",
+    "medicalAlertCounterOne": "1 character left",
+    "medicalAlertCounterOther": "{count} characters left",
+    "medicalAlertLabel": "What the crew should know",
+    "errorMedicalAlert": "Keep this to 500 characters of plain text to sign."
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",

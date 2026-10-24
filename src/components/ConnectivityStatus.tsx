@@ -10,6 +10,7 @@ export type ConnectivityStatusCopy = {
 
 export function ConnectivityStatus({
   offlineLabel,
+  unanswered,
   onlyWhenOffline = false,
   className = "",
   copy,
@@ -17,6 +18,13 @@ export function ConnectivityStatus({
   /** What "offline" means on this surface (the manifest has a device copy; a
    * live-only surface like boarding warns its board may be stale instead). */
   offlineLabel: string;
+  /**
+   * The device is online but the server did not answer it, and this surface
+   * knows it (the offline manifest the service worker opened for a live page
+   * that timed out). Drawn in the offline tone: "Online" there would read as
+   * "this is live" on a copy that is not.
+   */
+  unanswered?: { label: string; title: string };
   /**
    * Render nothing at all while the connection is up.
    *
@@ -59,27 +67,28 @@ export function ConnectivityStatus({
     };
   }, []);
 
-  if (online && onlyWhenOffline) return null;
+  const connected = online && !unanswered;
+  if (connected && onlyWhenOffline) return null;
   return (
     <span
       role="status"
       aria-live="polite"
-      title={online ? copy.onlineTitle : copy.offlineTitle}
+      title={connected ? copy.onlineTitle : online ? unanswered?.title : copy.offlineTitle}
       className={
         // Badge doesn't fit here (role/title/live-region props, min-h-9, its
         // own glyph pair) — but the AA rule from ui/badge.tsx still applies:
         // -strong text on the tinted fill.
         `${
-          online
+          connected
             ? "border-success/30 bg-success-tint text-success-strong"
             : "border-warning/40 bg-warning-tint text-warning-strong"
         } inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold ${className}`
       }
     >
       <span aria-hidden="true" className="text-base leading-none">
-        {online ? "●" : "×"}
+        {connected ? "●" : "×"}
       </span>
-      {online ? copy.online : offlineLabel}
+      {connected ? copy.online : online ? unanswered?.label : offlineLabel}
     </span>
   );
 }

@@ -536,9 +536,9 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const recentsKey = recentsStorageKey(shopSlug, readerId);
-  // A shared desk's next staffer does not inherit these.
-  const signOutForgetting = useCallback(() => {
-    forgetThisDevice();
+  // A shared desk's next staffer inherits none of these; the wipe is awaited.
+  const signOutForgetting = useCallback(async () => {
+    await forgetThisDevice();
     return signOutAction();
   }, [signOutAction]);
   const inputRef = useRef<HTMLInputElement>(null);

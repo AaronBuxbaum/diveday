@@ -7,17 +7,20 @@ import {
   canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
   isOfflineManifestExpired,
+  medicalAlertWordsOf,
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineArrivalEvent,
   type OfflineChecklistEvent,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
+  type OfflineMedicalAlertsSavedBy,
   type OfflineRollCallEvent,
   offlineArrivalEvents,
   offlineManifestExpiresAt,
   offlineRollCallSubject,
   pendingOfflineEventCount,
+  withMedicalAlertWords,
 } from "./offline-manifests";
 
 const DB_NAME = "diveday-offline-manifests";
@@ -590,7 +593,17 @@ export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): 
 
 export async function saveOfflineManifest(
   payload: OfflineManifestPayload,
+  options: {
+    /**
+     * False when the server says this viewer may no longer hold the words
+     * (`offlineManifestMayHoldMedicalAlertWords`, security review 2, L3): the
+     * refresh drops any saved words along with who saved them. The manifest
+     * page's own save, whose viewer the page just checked, leaves it true.
+     */
+    keepMedicalAlertWords?: boolean;
+  } = {},
 ): Promise<OfflineManifestEnvelope> {
+  const keepMedicalAlertWords = options.keepMedicalAlertWords ?? true;
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   return withManifestLock(trip.id, async () => {
@@ -600,9 +613,24 @@ export async function saveOfflineManifest(
     // for good instead of just losing that record's own queued events.
     const existing = await loadOfflineManifest(trip.id).catch(() => null);
     const savedAt = nowDate();
+    // **The medical alerts' words** (H-153 amendment). A payload from the
+    // server never carries them, and any it did carry are dropped here. Words
+    // an explicit save already put on this copy stay through the background
+    // refreshes that follow, for every diver the fresh board still flags, so
+    // the divemaster's tap at the dock survives the five-minute refresh,
+    // unless the server says this viewer may no longer hold them
+    // (`keepMedicalAlertWords`). Signing out or another person signing in
+    // removes them too (`wipeOfflineMedicalAlerts`).
+    const kept =
+      keepMedicalAlertWords && existing?.medicalAlertsSavedBy
+        ? medicalAlertWordsOf(existing.snapshot.manifests)
+        : {};
+    const manifests = withMedicalAlertWords(payload.manifests, kept);
+    const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
     const envelope: OfflineManifestEnvelope = {
       snapshot: {
         ...payload,
+        manifests,
         version: OFFLINE_MANIFEST_RECORD_VERSION,
         snapshotId: crypto.randomUUID(),
         savedAt: savedAt.toISOString(),
@@ -611,6 +639,9 @@ export async function saveOfflineManifest(
       events: existing?.events ?? [],
       checklistEvents: existing?.checklistEvents ?? [],
       arrivalEvents: existing?.arrivalEvents ?? [],
+      ...(carriesWords && existing?.medicalAlertsSavedBy
+        ? { medicalAlertsSavedBy: existing.medicalAlertsSavedBy }
+        : {}),
     };
     const db = await openDatabase();
     try {
@@ -620,6 +651,81 @@ export async function saveOfflineManifest(
     }
     return envelope;
   });
+}
+
+/**
+ * **Puts the medical alerts' words on this device's copy of one departure**
+ * (H-153 amendment), after a permitted reader tapped save-for-offline and
+ * `POST /api/offline-manifests/[tripId]/medical-alerts` recorded the save on
+ * each diver's trail. Only divers the copy already flags take words, and the
+ * copy records who saved them. Null when there is no copy to put them on.
+ */
+export async function saveOfflineMedicalAlerts(
+  tripId: string,
+  texts: Readonly<Record<string, string>>,
+  savedBy: OfflineMedicalAlertsSavedBy,
+): Promise<OfflineManifestEnvelope | null> {
+  return withManifestLock(tripId, async () => {
+    const existing = await loadOfflineManifest(tripId).catch(() => null);
+    if (!existing) return null;
+    const manifests = withMedicalAlertWords(existing.snapshot.manifests, texts);
+    const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
+    const { medicalAlertsSavedBy: _previous, ...rest } = existing;
+    const envelope: OfflineManifestEnvelope = {
+      ...rest,
+      snapshot: { ...existing.snapshot, manifests },
+      ...(carriesWords ? { medicalAlertsSavedBy: savedBy } : {}),
+    };
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, envelope);
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
+/**
+ * **Takes the medical alerts' words off every copy on this device** (H-153
+ * amendment), keeping the rest of each copy: the roster, the fact of each
+ * alert, and every queued roll-call event. Run on sign-out with no argument,
+ * and with `keepSavedBy` whenever the server names who is signed in now
+ * (`/api/offline-manifests/upcoming`), so a shared tablet never shows one
+ * person's saved words to the next.
+ */
+export async function wipeOfflineMedicalAlerts(keepSavedBy?: string): Promise<void> {
+  const saved = await listOfflineManifests();
+  await Promise.all(
+    saved
+      .filter(
+        (envelope) =>
+          envelope.medicalAlertsSavedBy &&
+          (!keepSavedBy || envelope.medicalAlertsSavedBy.personId !== keepSavedBy),
+      )
+      .map((envelope) => {
+        const tripId = envelope.snapshot.manifests[0]?.trip.id;
+        if (!tripId) return Promise.resolve();
+        return withManifestLock(tripId, async () => {
+          const current = await loadOfflineManifest(tripId).catch(() => null);
+          if (!current?.medicalAlertsSavedBy) return;
+          if (keepSavedBy && current.medicalAlertsSavedBy.personId === keepSavedBy) return;
+          const { medicalAlertsSavedBy: _wiped, ...rest } = current;
+          const db = await openDatabase();
+          try {
+            await persistEnvelope(db, {
+              ...rest,
+              snapshot: {
+                ...current.snapshot,
+                manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+              },
+            });
+          } finally {
+            db.close();
+          }
+        });
+      }),
+  );
 }
 
 export async function deleteOfflineManifest(
@@ -797,6 +903,65 @@ export async function appendOfflineArrival(
   });
 }
 
+/**
+ * How long one sync waits for the server before it gives up and leaves the
+ * events for the next pass. Dock Wi-Fi can show full bars and carry nothing,
+ * and on that network a request neither answers nor fails: it waits, and
+ * every later reconcile on the page used to wait behind it until a reload.
+ * Ten seconds is long enough for a cold database and a full boat's batch.
+ */
+export const SYNC_TIMEOUT_MS = 10_000;
+
+/**
+ * The one round trip, under a deadline that covers the reply's body as well
+ * as its headers. Every way it can fail — no answer, an error status, a body
+ * that stops halfway, a body that is not JSON — is the same
+ * `sync_unreachable`, and every one of them leaves the device's events
+ * exactly as they were: still `pending`, same `clientEventId`.
+ *
+ * Giving up does not mean the server never got it. A request abandoned here
+ * may still have landed, or still be running, which is safe only because the
+ * next pass resends the same ids and the server dedupes on
+ * `(shop_id, client_event_id)` (the unique indexes in
+ * `src/db/schema/dive-day.ts`): each writer asks again under its lock, so a
+ * resend that overlaps the abandoned request is answered as a duplicate
+ * instead of a second row, a 500, or a refusal (`roll-call.postgres.test.ts`).
+ */
+async function postPendingEvents(batch: {
+  events: OfflineRollCallEvent[];
+  checklistEvents: OfflineChecklistEvent[];
+  arrivalEvents: OfflineArrivalEvent[];
+}): Promise<{ results: OfflineSyncResult[] }> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new OfflineManifestError("sync_unreachable"));
+    }, SYNC_TIMEOUT_MS);
+  });
+  const roundTrip = (async () => {
+    const response = await fetch("/api/offline-manifests/sync", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(batch),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new OfflineManifestError("sync_unreachable");
+    return (await response.json()) as { results: OfflineSyncResult[] };
+  })();
+  try {
+    // Raced as well as aborted: a fetch (or a body stream) that ignores its
+    // signal still cannot hold this past the deadline.
+    return await Promise.race([roundTrip, deadline]);
+  } catch {
+    throw new OfflineManifestError("sync_unreachable");
+  } finally {
+    clearTimeout(timer);
+    roundTrip.catch(() => undefined);
+  }
+}
+
 export async function syncOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
@@ -808,17 +973,11 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     (event) => event.syncStatus === "pending",
   );
   if (pendingOfflineEventCount(envelope) === 0 || !navigator.onLine) return envelope;
-  const response = await fetch("/api/offline-manifests/sync", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      events: pending,
-      checklistEvents: pendingChecklist,
-      arrivalEvents: pendingArrivals,
-    }),
+  const body = await postPendingEvents({
+    events: pending,
+    checklistEvents: pendingChecklist,
+    arrivalEvents: pendingArrivals,
   });
-  if (!response.ok) throw new OfflineManifestError("sync_unreachable");
-  const body = (await response.json()) as { results: OfflineSyncResult[] };
   // One map for both arrays: a roll-call event id and a checklist event id are
   // both `crypto.randomUUID()`, so they never collide, and the sync route
   // returns one flat `results` list naming whichever kind each id belongs to.

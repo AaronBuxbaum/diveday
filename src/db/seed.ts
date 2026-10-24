@@ -156,6 +156,7 @@ import { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
 import { seedListedShops } from "./seed-listed-shops";
+import { seedMedicalAlert } from "./seed-medical-alert";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
 import { seedMixedBoat } from "./seed-mixed-boat";
@@ -1312,6 +1313,7 @@ export async function seedDemoSchedule(
   }
 
   await seedWaiverQuestions(db, shopId); // the shop's questions and one release answering them
+  await seedMedicalAlert(db, shopId); // one diver's medical alert for the crew on tomorrow's boat
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated
   // across the weeks divers actually signed in rather than all at this instant,

@@ -80,6 +80,8 @@ export function controls(): OfflineTripControls {
     locale: DEFAULT_DIVER_LOCALE,
     message: "",
     setCheckpoint: vi.fn(),
+    servedWithoutAnswer: false,
+    liveOffer: null,
     busyBooking: null,
     busyChecklistItem: null,
     busyArrival: null,

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
+import {
+  DEMO_MEDICAL_ALERT,
+  DEMO_MEDICAL_ALERT_DIVER,
+  DEMO_MEDICAL_ALERT_TRIP,
+} from "@/db/seed-medical-alert";
 import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { fileScopedShopContext } from "@/test/db";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { readManifestPage } from "./manifest-reads";
 
 const ctx = fileScopedShopContext();
@@ -41,5 +47,27 @@ describe("readManifestPage (in-memory PGlite)", () => {
       staff?.person.id ?? "",
     );
     expect(reads.completeManifests?.[0]).toBeUndefined();
+  });
+
+  it("carries no diver's medical alert words, even for the owner (H-153: only a recorded tap or an explicit offline save)", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const departure = trips.find((trip) => trip.title === DEMO_MEDICAL_ALERT_TRIP);
+    if (!departure) throw new Error("seeded alert departure missing");
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+
+    const reads = await readManifestPage(db, shop.id, departure.id, owner);
+
+    // The fact rides, so the chip shows and the reveal is offered.
+    expect(reads.reader.mayReadMedicalAlerts).toBe(true);
+    const flagged = reads.completeManifests?.[0]?.divers.filter((diver) => diver.medicalAlert);
+    expect(flagged?.map((diver) => diver.fullName)).toEqual([DEMO_MEDICAL_ALERT_DIVER]);
+    // The words do not: not in anything the page renders, serializes or
+    // builds its offline payload from.
+    const everything = JSON.stringify(reads, (_key, value) =>
+      value instanceof Map || value instanceof Set ? [...value] : value,
+    );
+    expect(everything).not.toContain(DEMO_MEDICAL_ALERT);
+    expect(everything).not.toContain("EpiPen");
   });
 });

@@ -119,6 +119,10 @@ export function ShopIdentityMenu({
   // focus back on the trigger, close on navigation — via the one shared
   // contract every staff menu uses (useMenuDismissal).
   const close = useCallback(() => setOpen(false), []);
+  const signOutForgetting = useCallback(async () => {
+    await forgetThisDevice();
+    await signOutAction();
+  }, [signOutAction]);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   // 180ms matches .animate-scale-out in globals.css — the two must move together.
   const { mounted, closing } = useExitAnimation(open, motionMs("base"));
@@ -242,9 +246,10 @@ export function ShopIdentityMenu({
           {/* Signing out is the destructive end of the menu, so it sits below
               the rule rather than in the same stack as the language rows. */}
           <form
-            action={signOutAction}
-            // A shared tablet keeps no recents or kept forms past a sign-out.
-            onSubmit={forgetThisDevice}
+            // A shared tablet keeps no recents, kept forms or offline medical
+            // alert words past a sign-out; the wipe is awaited before the
+            // sign-out navigates away.
+            action={signOutForgetting}
             data-scroll-reset="true"
             className="mt-1 border-t border-border pt-1"
           >

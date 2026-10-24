@@ -5,6 +5,7 @@ import {
   primeOfflineManifestShell,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
+  wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestPayload } from "@/lib/offline-manifests";
 import { OfflineManifestAutoSave } from "./OfflineManifestAutoSave";
@@ -13,6 +14,7 @@ vi.mock("@/lib/offline-manifest-store", () => ({
   primeOfflineManifestShell: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn(),
   saveOfflineManifest: vi.fn(),
+  wipeOfflineMedicalAlerts: vi.fn(),
 }));
 
 function payloadFor(tripId: string): OfflineManifestPayload {
@@ -52,8 +54,20 @@ function payloadFor(tripId: string): OfflineManifestPayload {
   };
 }
 
-function upcomingResponse(payloads: OfflineManifestPayload[]) {
-  return new Response(JSON.stringify({ shop: { slug: "blue-mantis" }, payloads }), { status: 200 });
+function upcomingResponse(
+  payloads: OfflineManifestPayload[],
+  viewer?: { personId: string },
+  mayHoldMedicalAlertWords?: Record<string, boolean>,
+) {
+  return new Response(
+    JSON.stringify({
+      shop: { slug: "blue-mantis" },
+      payloads,
+      ...(viewer ? { viewer } : {}),
+      ...(mayHoldMedicalAlertWords ? { mayHoldMedicalAlertWords } : {}),
+    }),
+    { status: 200 },
+  );
 }
 
 function setOnline(online: boolean) {
@@ -71,6 +85,7 @@ function deferred<T>() {
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
   vi.mocked(purgeOfflineManifestsExceptShop).mockResolvedValue(undefined);
+  vi.mocked(wipeOfflineMedicalAlerts).mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -273,5 +288,53 @@ describe("OfflineManifestAutoSave", () => {
 
     first.resolve(upcomingResponse([]));
     await waitFor(() => expect(saveOfflineManifest).not.toHaveBeenCalled());
+  });
+
+  it("wipes medical alert words another person saved before saving, and all of them when the body names nobody (H-153)", async () => {
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue({} as never);
+    vi.mocked(fetch).mockResolvedValue(
+      upcomingResponse([payloadFor("trip-1")], { personId: "person-now" }),
+    );
+    const first = render(<OfflineManifestAutoSave />);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith("person-now");
+    expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0] ?? 0,
+    );
+    first.unmount();
+
+    vi.mocked(fetch).mockResolvedValue(upcomingResponse([payloadFor("trip-1")]));
+    render(<OfflineManifestAutoSave />);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
+    expect(wipeOfflineMedicalAlerts).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it("tells each save whether this viewer may still hold that departure's words (security review 2, L3)", async () => {
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue({} as never);
+    vi.mocked(fetch).mockResolvedValue(
+      upcomingResponse(
+        [payloadFor("trip-1"), payloadFor("trip-2"), payloadFor("trip-3")],
+        {
+          personId: "person-now",
+        },
+        { "trip-1": true, "trip-2": false },
+      ),
+    );
+    render(<OfflineManifestAutoSave />);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(3));
+    const keep = new Map(
+      vi
+        .mocked(saveOfflineManifest)
+        .mock.calls.map(([payload, options]) => [
+          payload.manifests[0]?.trip.id,
+          options?.keepMedicalAlertWords,
+        ]),
+    );
+    // Taken off the boat (false), or not named at all: the words go.
+    expect(Object.fromEntries(keep)).toEqual({ "trip-1": true, "trip-2": false, "trip-3": false });
   });
 });

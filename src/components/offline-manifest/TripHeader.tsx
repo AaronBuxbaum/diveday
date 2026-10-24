@@ -2,6 +2,7 @@ import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import type { OfflineTripControls } from "./controls";
 import type { OfflineTripView } from "./trip-view";
 
@@ -17,7 +18,8 @@ export function OfflineTripHeader({
   controls: OfflineTripControls;
 }) {
   const { envelope, manifest, expired, freshness, pending, rejected, dateTime } = view;
-  const { t, message } = controls;
+  const { t, message, servedWithoutAnswer, liveOffer } = controls;
+  const savedAt = dateTime.format(new Date(envelope.snapshot.savedAt));
   return (
     <div className="border-b border-border pb-6">
       <ShopPageHeader
@@ -25,22 +27,33 @@ export function OfflineTripHeader({
         printActions
         eyebrow={t("shared.offlineManifest.single.eyebrow")}
         title={manifest.trip.title}
-        description={t("shared.offlineManifest.single.savedAt", {
-          when: dateTime.format(new Date(envelope.snapshot.savedAt)),
-        })}
+        description={t("shared.offlineManifest.single.savedAt", { when: savedAt })}
         actions={
           <>
             <ConnectivityStatus
               offlineLabel={t("shared.connectivity.offlineWithCopy")}
+              unanswered={
+                servedWithoutAnswer
+                  ? {
+                      label: t("shared.connectivity.unansweredWithCopy"),
+                      title: t("shared.connectivity.unansweredTitle"),
+                    }
+                  : undefined
+              }
               copy={{
                 online: t("shared.connectivity.online"),
                 onlineTitle: t("shared.connectivity.onlineTitle"),
                 offlineTitle: t("shared.connectivity.offlineTitle"),
               }}
             />
-            <OfflineFreshnessPill freshness={freshness}>
-              {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
-            </OfflineFreshnessPill>
+            {/* How fresh a copy is answers "should I trust it?" for a copy the
+              captain chose. One the worker chose because DiveDay was silent is
+              not the live list however young it is, so it gets no "Fresh". */}
+            {servedWithoutAnswer ? null : (
+              <OfflineFreshnessPill freshness={freshness}>
+                {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
+              </OfflineFreshnessPill>
+            )}
           </>
         }
       />
@@ -52,11 +65,21 @@ export function OfflineTripHeader({
         </p>
       ) : (
         <p className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}>
-          {t("shared.offlineManifest.single.freshnessBanner", {
-            freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
-          })}
+          {servedWithoutAnswer
+            ? t("shared.offlineManifest.single.unansweredBanner", { when: savedAt })
+            : t("shared.offlineManifest.single.freshnessBanner", {
+                freshnessNote: t(`shared.offlineManifest.freshnessCopy.${freshness}`),
+              })}
         </p>
       )}
+      {servedWithoutAnswer && liveOffer ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3" role="status" aria-live="polite">
+          <p className="text-sm font-medium">{t("shared.offlineManifest.single.liveAnswering")}</p>
+          <a href={liveOffer} className={buttonClass({ size: "boat" })}>
+            {t("shared.offlineManifest.single.openLiveManifest")}
+          </a>
+        </div>
+      ) : null}
       <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
         {message}
       </p>

@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
@@ -26,7 +26,14 @@ describe("seeded shop questions", () => {
     const answered = await db
       .select()
       .from(waiverRecords)
-      .where(and(eq(waiverRecords.shopId, shop.id), isNotNull(waiverRecords.shopAnswers)));
+      .where(
+        and(
+          eq(waiverRecords.shopId, shop.id),
+          isNotNull(waiverRecords.shopAnswers),
+          // The medical alert's release answers them too (seed-medical-alert.ts).
+          isNull(waiverRecords.medicalAlert),
+        ),
+      );
     expect(answered).toHaveLength(1);
     const [record] = answered;
     if (!record) throw new Error("answered release missing");

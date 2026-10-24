@@ -273,6 +273,11 @@ export async function getSignedWaiverForDiver(
      * (issue #2157).
      */
     withholdAnswers?: boolean;
+    /**
+     * `canReadMedicalAlert` with no departure in hand (owner or manager): the
+     * medical alert's words, unless `withholdAnswers` keeps them for the tap.
+     */
+    readsMedicalAlert?: boolean;
   },
 ) {
   if (!isUuid(input.recordId) || !isUuid(input.personId)) return null;
@@ -311,6 +316,7 @@ export async function getSignedWaiverForDiver(
   // on the roster.
   const identityHeld = Boolean(row.identityUnconfirmedAt);
   const answers = identityHeld ? null : record.medicalAnswers;
+  const medicalAlert = identityHeld ? null : record.medicalAlert;
   return {
     id: record.id,
     personId: record.personId,
@@ -356,6 +362,15 @@ export async function getSignedWaiverForDiver(
       : null,
     medicalClearanceDocumentOnFile: Boolean(record.medicalClearanceDocumentUrl),
     supersededAt: record.supersededAt,
+    /**
+     * The medical alert for the crew (issue #2960): whether one is on file,
+     * which every staff role that opens the record sees, and its words for an
+     * owner or manager only after a recorded tap. A held seat says neither.
+     */
+    medicalAlertOnFile: medicalAlert !== null,
+    medicalAlert: input.readsMedicalAlert && !input.withholdAnswers ? medicalAlert : null,
+    /** When the diver's personal data was erased from this record, which nulls the alert. */
+    erasedAt: record.anonymizedAt,
   };
 }
 

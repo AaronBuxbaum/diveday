@@ -149,6 +149,15 @@ export type ManifestDiverInput = {
   email: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  /**
+   * **The diver wrote a medical alert for the crew** on their standing
+   * release (glossary *Medical alert for the crew*, issue #2960): the fact,
+   * never the text, which only the owner, a manager and this departure's
+   * crew read, one tap at a time (`showMedicalAlertAction`). False on a held
+   * seat. Informs and never gates: no count, readiness or roll-call rule
+   * reads it. Optional: absent on a manifest built by hand reads as none.
+   */
+  medicalAlert?: boolean;
   readiness?: ReadinessResult;
   /**
    * The name a held seat was booked under and why it was matched to this

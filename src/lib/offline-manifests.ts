@@ -95,6 +95,43 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  */
 export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
 
+/**
+ * The query parameter the service worker puts on its own redirect to the
+ * offline shell, naming why it sent the captain there: `slow` when the live
+ * page did not answer within its deadline, `failed` when the request failed.
+ * The shell reads it to say plainly that this is the saved list and not the
+ * live one, and the worker reads it to serve the shell from its cache at once
+ * rather than spending a second deadline on the hop it just made.
+ */
+export const OFFLINE_FALLBACK_PARAM = "fallback";
+export type OfflineFallbackReason = "slow" | "failed";
+
+/**
+ * Why the worker sent the captain to the shell, read from its URL; `null`
+ * when the captain opened the saved copy themselves. A value the worker never
+ * writes still means the worker sent them, and reads as `failed`: the cost
+ * of a wrong guess here is a screen calling a saved list live.
+ */
+export function offlineFallbackReason(
+  params: Pick<URLSearchParams, "get">,
+): OfflineFallbackReason | null {
+  const why = params.get(OFFLINE_FALLBACK_PARAM);
+  if (why === null) return null;
+  return why === "slow" ? "slow" : "failed";
+}
+
+/**
+ * A saved trip's address in the shell. It keeps the reason the shell was
+ * opened with, so a trip reached from the list the worker swapped in says it
+ * is the saved copy as the list did, rather than "Fresh copy · current"
+ * (layer 1 re-review, R2).
+ */
+export function offlineTripHref(tripId: string, fallback: OfflineFallbackReason | null): string {
+  const params = new URLSearchParams({ trip: tripId });
+  if (fallback) params.set(OFFLINE_FALLBACK_PARAM, fallback);
+  return `/offline-manifest?${params}`;
+}
+
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * MINUTE_MS;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
@@ -460,6 +497,22 @@ export type OfflineManifestPayload = {
             ridingReferredOn?: CalendarDate;
           };
           /**
+           * **The diver's medical alert for the crew** (glossary *Medical
+           * alert for the crew*, issue #2960). The fact rides on every copy,
+           * so a deckhand with no signal still sees the chip. `text` is never
+           * in a payload the server builds (H-153 amendment): it is written on
+           * the device by `saveOfflineMedicalAlerts`, after a permitted
+           * reader's explicit save, which the server records per diver, and
+           * wiped on sign-out or another person's sign-in. Opening it at sea
+           * writes no event. Inside the same encrypted, expiring record as
+           * the emergency contact, never on a held seat, and it gates nothing.
+           *
+           * Optional and additive (no `OFFLINE_MANIFEST_RECORD_VERSION` bump;
+           * a bump purges unsynced roll calls). Absent when the diver wrote
+           * none, and a copy saved before it reads as none.
+           */
+          medicalAlert?: { text?: string };
+          /**
            * **A training mark that stands on this seat** (issue #2275): the
            * course the dive counts toward and whether an instructor was on the
            * crew when the copy was saved — the live manifest's fact and
@@ -737,7 +790,61 @@ export type OfflineManifestEnvelope = {
    * surface a crew has with no signal.
    */
   arrivalEvents?: OfflineArrivalEvent[];
+  /**
+   * **Who saved the medical alerts' words onto this copy** (H-153
+   * amendment), and when. Set only by `saveOfflineMedicalAlerts`, after a
+   * permitted reader's explicit save on this departure; absent, the copy
+   * carries no words. Signing out, or another person signing in on this
+   * device, takes the words and this together (`wipeOfflineMedicalAlerts`).
+   */
+  medicalAlertsSavedBy?: OfflineMedicalAlertsSavedBy;
 };
+
+/** The person behind a copy's medical alert words (`medicalAlertsSavedBy`). */
+export type OfflineMedicalAlertsSavedBy = { personId: string; name: string; savedAt: string };
+
+/**
+ * What `POST /api/offline-manifests/[tripId]/medical-alerts` answers a
+ * permitted reader: the words by booking id, and the reader as the copy
+ * records them.
+ */
+export type OfflineMedicalAlertsResponse = {
+  texts: Record<string, string>;
+  savedBy: OfflineMedicalAlertsSavedBy;
+};
+
+/**
+ * A snapshot's manifests with each alerted diver's words set from `texts`
+ * (by booking id), and every other diver's words taken off. Only a diver the
+ * copy already flags gets words: the fact comes from the server's board, the
+ * words never add a flag.
+ */
+export function withMedicalAlertWords(
+  manifests: OfflineManifestPayload["manifests"],
+  texts: Readonly<Record<string, string>>,
+): OfflineManifestPayload["manifests"] {
+  return manifests.map((manifest) => ({
+    ...manifest,
+    divers: manifest.divers.map((diver) => {
+      if (!diver.medicalAlert) return diver;
+      const text = Object.hasOwn(texts, diver.bookingId) ? texts[diver.bookingId] : undefined;
+      return { ...diver, medicalAlert: text ? { text } : {} };
+    }),
+  }));
+}
+
+/** The words each alerted diver carries on a copy, by booking id. */
+export function medicalAlertWordsOf(
+  manifests: OfflineManifestPayload["manifests"],
+): Record<string, string> {
+  const texts: Record<string, string> = {};
+  for (const manifest of manifests) {
+    for (const diver of manifest.divers) {
+      if (diver.medicalAlert?.text) texts[diver.bookingId] = diver.medicalAlert.text;
+    }
+  }
+  return texts;
+}
 
 /** The arrival queue on an envelope of any age. */
 export function offlineArrivalEvents(
@@ -802,6 +909,21 @@ function countOfflineEvents(
 export type OfflineManifestUpcomingResponse = {
   shop: OfflineManifestPayload["shop"];
   payloads: OfflineManifestPayload[];
+  /**
+   * Who asked (H-153 amendment): a device that holds medical alert words
+   * another person saved wipes them before it saves anything for this one
+   * (`wipeOfflineMedicalAlerts`).
+   */
+  viewer: { personId: string };
+  /**
+   * Per departure in `payloads`, whether this viewer may still hold that
+   * departure's medical alert words (`canPersonReadMedicalAlertOnTrip`, read
+   * live; security review 2, L3). A background refresh drops saved words for
+   * any departure this does not answer true for, so a crew member taken off
+   * the boat, or a manager demoted, loses them at the next refresh while the
+   * device is online. One already at sea keeps them until it expires (H-153).
+   */
+  mayHoldMedicalAlertWords: Record<string, boolean>;
 };
 
 /**
@@ -846,6 +968,37 @@ export function offlineManifestShopSlug(body: unknown): string | null {
   const { shop } = (body ?? {}) as Partial<OfflineManifestIdentityResponse>;
   const slug: unknown = shop?.slug;
   return typeof slug === "string" && slug.length > 0 ? slug : null;
+}
+
+/**
+ * Who asked, out of an unvalidated `/upcoming` body: a person id, or nothing.
+ * Nothing means no wipe-for-another-person round runs, and the caller saves
+ * the board as before; the board never carries alert words either way.
+ */
+export function offlineManifestViewerPersonId(body: unknown): string | null {
+  const { viewer } = (body ?? {}) as Partial<OfflineManifestUpcomingResponse>;
+  const personId: unknown = viewer?.personId;
+  return typeof personId === "string" && personId.length > 0 ? personId : null;
+}
+
+/**
+ * Whether an unvalidated `/upcoming` body lets this viewer keep the medical
+ * alert words saved on `tripId`'s copy. Anything but an explicit `true`,
+ * including a body from before the field existed, answers false: the words
+ * are dropped, never kept, when the server's answer cannot be read.
+ */
+export function offlineManifestMayHoldMedicalAlertWords(
+  body: unknown,
+  tripId: string | undefined,
+): boolean {
+  if (!tripId) return false;
+  const { mayHoldMedicalAlertWords } = (body ?? {}) as Partial<OfflineManifestUpcomingResponse>;
+  if (typeof mayHoldMedicalAlertWords !== "object" || mayHoldMedicalAlertWords === null) {
+    return false;
+  }
+  return (
+    Object.hasOwn(mayHoldMedicalAlertWords, tripId) && mayHoldMedicalAlertWords[tripId] === true
+  );
 }
 
 /**
@@ -1021,6 +1174,7 @@ export function serializeManifests(
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
+        ...offlineMedicalAlert(diver),
         ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
         ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
@@ -1068,6 +1222,20 @@ function offlineMedicalWarnings(
 }
 
 type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][number];
+
+/**
+ * The dock copy's medical alert for one (already withheld) diver: the fact
+ * alone. The server never serializes the words into a payload (H-153); they
+ * reach a stored copy only through `saveOfflineMedicalAlerts`, after a
+ * permitted reader's explicit save. Nothing on a held seat or a diver who
+ * wrote none.
+ */
+function offlineMedicalAlert(diver: TripManifest["divers"][number]): {
+  medicalAlert?: NonNullable<OfflineDiverRow["medicalAlert"]>;
+} {
+  if (!diver.medicalAlert || diver.identityWithheld) return {};
+  return { medicalAlert: {} };
+}
 
 export function offlineManifestExpiresAt(savedAt: Date, tripEndsAt: Date): Date {
   return new Date(

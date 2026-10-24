@@ -56,6 +56,11 @@ export function DiverRowPrint({
           </Badge>
         )}
         {diver.checkedIn ? <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge> : null}
+        {/* The fact only (issue #2960): paper records no read, so the words
+          stay on the screen behind the tap and on the crew's offline copy. */}
+        {diver.medicalAlert && !diver.identityWithheld ? (
+          <Badge tone="primary">{t("manifest.medicalAlertPrinted")}</Badge>
+        ) : null}
         {diver.hotelPickupLocation ? (
           <Badge tone="neutral">
             {diver.hotelPickupLocation}

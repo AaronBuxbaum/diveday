@@ -242,8 +242,12 @@ describe("ShopQuestionsEditor", () => {
       expect(container.querySelector("form")?.checkValidity()).toBe(true);
     });
 
-    it("says an answer is never checked or shown to the crew as a medical alert", () => {
+    it("says an answer is never checked or shown to the crew, and points at the medical alert", () => {
       expect(COPY.healthWarning).toContain("never checked");
+      // Issue #2960: the field the crew does read.
+      expect(COPY.healthWarning).toContain(
+        "every release already asks for a medical alert for the crew",
+      );
       expect(COPY.healthWarning).toContain("never shown to the crew as a medical alert");
     });
 

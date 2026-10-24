@@ -107,6 +107,7 @@ export const WAIVER_SEALED_FIELDS = [
   "medicalAnswers",
   "medicalReviewRequired",
   "shopAnswers",
+  "medicalAlert",
   "guardianName",
   "guardianRelationship",
   "guardianEmail",
@@ -182,6 +183,12 @@ export function signedIntegrityVersionFor(
  * keeps the key honest by never writing `[]` and never leaving null under a
  * template that asked something (`buildShopAnswers`). Recorded as an
  * amendment to ADR 20260729-staffing-waiver-audit-and-localized-copy.
+ *
+ * **A second conditional key: `medicalAlert`** (glossary *Medical alert for
+ * the crew*, issue #2960), on exactly the same terms: present only when the
+ * diver wrote one (`medical_alert` not null; `readMedicalAlert` never stores
+ * `""`), inherited by versions 3 and 4, left out of version 2, and a version 2
+ * row that carries one reads `invalid`. Recorded in the same ADR amendment.
  */
 function signedMetadata(record: WaiverSealedFields): { [key: string]: IntegrityValue } {
   return {
@@ -190,6 +197,7 @@ function signedMetadata(record: WaiverSealedFields): { [key: string]: IntegrityV
     ...(record.shopAnswers != null
       ? { shopAnswers: record.shopAnswers as unknown as IntegrityValue }
       : {}),
+    ...(record.medicalAlert != null ? { medicalAlert: record.medicalAlert } : {}),
     id: record.id,
     shopId: record.shopId,
     bookingId: record.bookingId,
@@ -359,9 +367,10 @@ export function verifyWaiverIntegrity(
     /**
      * Read when the caller holds the whole row (the signed record page,
      * erasure's re-seal check): an erased record never keeps a draft of its
-     * shop answers either. Never part of any digest.
+     * shop answers or its medical alert either. Never part of any digest.
      */
     draftShopAnswers?: unknown;
+    draftMedicalAlert?: string | null;
   },
 ): WaiverIntegrityState {
   if (!record.integrityHash || !record.integrityVersion) return "unsealed";
@@ -369,10 +378,14 @@ export function verifyWaiverIntegrity(
   // A version 2 seal means "erased", and erasure destroys the shop's
   // questions as answered and any draft of them. Answers back on such a row
   // were put there afterwards, and the seal must not vouch for them (security
-  // review L2), the way version 4 refuses a guardian address put back.
+  // review L2), the way version 4 refuses a guardian address put back. The
+  // medical alert for the crew is destroyed the same way (issue #2960).
   if (
     record.integrityVersion === WAIVER_INTEGRITY_VERSION_ERASED &&
-    (record.shopAnswers != null || record.draftShopAnswers != null)
+    (record.shopAnswers != null ||
+      record.draftShopAnswers != null ||
+      record.medicalAlert != null ||
+      record.draftMedicalAlert != null)
   )
     return "invalid";
   // A version 4 seal is the shop's own redaction, and only means that while

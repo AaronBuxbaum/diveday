@@ -8,15 +8,40 @@ import {
   subscribePushAction,
   unsubscribePushAction,
 } from "../actions";
+import { MedicalAlertOfflineSave } from "./MedicalAlertOfflineSave";
 import { pushOptInCopy } from "./push-opt-in-copy";
 
 /**
- * **What this phone does**, inside the offline copy's disclosure: wake for a
- * refresh, and buzz. Per-device preferences, not facts about the departure.
+ * **What this phone does**, inside the offline copy's disclosure: carry the
+ * medical alerts' words for a reader allowed them (H-153 amendment), wake for
+ * a refresh, and buzz. Per-device, not facts about the departure.
  */
-export function ManifestDeviceSettings({ tripId, t }: { tripId: string; t: StaffTranslator }) {
+export function ManifestDeviceSettings({
+  tripId,
+  t,
+  reader,
+}: {
+  tripId: string;
+  t: StaffTranslator;
+  /** `readManifestPage`'s reader: whether to offer the medical alerts' explicit save. */
+  reader?: { mayCarryMedicalAlertsOffline?: boolean };
+}) {
   return (
     <div className="grid gap-5">
+      {reader?.mayCarryMedicalAlertsOffline ? (
+        <MedicalAlertOfflineSave
+          tripId={tripId}
+          copy={{
+            heading: t("manifest.medicalAlertSaveHeading"),
+            body: t("manifest.medicalAlertSaveBody"),
+            button: t("manifest.medicalAlertSaveButton"),
+            saving: t("manifest.medicalAlertSaving"),
+            done: t.raw("manifest.medicalAlertSaveDone"),
+            noCopy: t("manifest.medicalAlertSaveNoCopy"),
+            failed: t("manifest.medicalAlertSaveFailed"),
+          }}
+        />
+      ) : null}
       {/* Push is an optional device capability. The empty guard keeps a
         browser without notification support from leaving a blank inset
         behind while the device settings below keep their place. */}
