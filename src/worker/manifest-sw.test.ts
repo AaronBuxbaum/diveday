@@ -458,6 +458,55 @@ describe("the /ready/ registration's fetch", () => {
     expect(kept.size).toBe(0);
   });
 
+  /**
+   * Issue #2979: the load right after a cancel is the one the deadline must
+   * not answer from the copy. Slow or dead, the pre-cancel page with its links
+   * is never served, and the copy is gone before the network is asked.
+   */
+  it("forgets the copy and never serves it when a cancelled landing is slow", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    let served: Response | undefined;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      fetchMock.mockImplementationOnce(() => new Promise<Response>(() => {}));
+      const slow = navigate(`https://dive.day${PATH}?cancelled=1`);
+      void slow.responded?.then((response) => {
+        served = response;
+      });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(served).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+    // The path's hash is worked out off the event loop the fake clock drives.
+    await vi.waitFor(() => expect(kept.size).toBe(0));
+    expect(served).toBeUndefined();
+
+    // With no signal at all it is the ordinary offline error, not the old page.
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const failed = navigate(`https://dive.day${PATH}?cancelled=1`);
+    expect((await failed.responded)?.type).toBe("error");
+  });
+
+  it("forgets the copy on a cancelled landing even when the network fails outright", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const failed = navigate(`https://dive.day${PATH}?cancelled=1`);
+    expect((await failed.responded)?.type).toBe("error");
+    await failed.settle();
+    expect(kept.size).toBe(0);
+  });
+
   /** The landing's own keep request must not put back the copy its navigation just forgot. */
   it("keeps nothing when a cancelled landing asks to keep its page", async () => {
     const handler = listeners.get("message");

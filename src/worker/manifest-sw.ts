@@ -635,6 +635,18 @@ self.addEventListener("fetch", (event) => {
   if (inReadyScope() && event.request.mode === "navigate") {
     const path = readyPagePath(url, self.location.origin);
     if (!path) return;
+    if (url.searchParams.has("cancelled")) {
+      // The diver just cancelled this seat (`cancelMyBookingAction`): the copy
+      // goes with it (security review of layer 8, D2), **before** the network
+      // is asked, and this load never falls back to it (issue #2979). A slow
+      // answer is waited for and a failed one is the browser's own offline
+      // error: the pre-cancel page, links and all, is never what a cancel
+      // lands on.
+      const forgotten = forgetReadyPage(caches, path).catch(() => undefined);
+      event.waitUntil(forgotten);
+      event.respondWith(forgotten.then(() => fetch(event.request)).catch(() => Response.error()));
+      return;
+    }
     event.respondWith(
       // Network-first: online, the diver always gets the live page. Only a
       // clean load is kept (a `?saved=` notice is a moment, not the page).
@@ -645,10 +657,6 @@ self.addEventListener("fetch", (event) => {
               event.waitUntil(
                 saveReadyPage(caches, path, response.clone(), nowMs()).catch(() => false),
               );
-            } else if (url.searchParams.has("cancelled")) {
-              // The diver just cancelled this seat (`cancelMyBookingAction`):
-              // the copy goes with it (security review of layer 8, D2).
-              event.waitUntil(forgetReadyPage(caches, path).catch(() => undefined));
             }
             return response;
           }),
