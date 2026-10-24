@@ -231,12 +231,6 @@ export function CounterRentalCart({
       previous.includes(id) ? previous.filter((other) => other !== id) : [...previous, id],
     );
   const fillOf = (unit: PickerUnit) => fills[unit.id] ?? "";
-  // Enriched air goes in a tank whose oxygen cleaning nobody recorded: say so
-  // on its row, and stop nothing (issue #2719).
-  const o2CleanWarningOf = (unit: PickerUnit) =>
-    unit.o2CleanWarning && Number(fillOf(unit)) > TANK_FILL_O2_PERCENT.air
-      ? unit.o2CleanWarning
-      : null;
   // Save the supported cart before per-row fields use up the 80-name draft.
   // Separate price fields let each raw price keep its own value-length budget.
   const keptPicked = picked.slice(0, KEPT_CART_UNITS_MAX);
@@ -361,7 +355,7 @@ export function CounterRentalCart({
                     ) : null}
                     {unit.fillAria ? (
                       <TankFillField
-                        unitId={unit.id}
+                        unit={unit}
                         aria={unit.fillAria}
                         hintId={`${billId}-fill-hint`}
                         words={words}
@@ -371,11 +365,6 @@ export function CounterRentalCart({
                         }
                         error={rowError(unit)}
                       />
-                    ) : null}
-                    {o2CleanWarningOf(unit) ? (
-                      <FormStatus tone="warning">
-                        <span className="text-base">{o2CleanWarningOf(unit)}</span>
-                      </FormStatus>
                     ) : null}
                     {unit.confirmLabel ? (
                       <ChoiceRow
@@ -460,13 +449,28 @@ export function CounterRentalCart({
 }
 
 /**
+ * Enriched air going into a tank whose oxygen cleaning nobody recorded (issue
+ * #2719): said on the tank's row once its gas is above air, and nothing more.
+ * No gate: the server accepts the fill exactly as before.
+ */
+function O2CleanWarning({ warning, fill }: { warning: string | null; fill: string }) {
+  if (!warning || !(Number(fill) > TANK_FILL_O2_PERCENT.air)) return null;
+  return (
+    <FormStatus tone="warning">
+      <span className="text-base">{warning}</span>
+    </FormStatus>
+  );
+}
+
+/**
  * A tank's gas (#2257): a menu, never a typed figure, so nothing is rounded
  * into a different mix. Required, opening on a placeholder nobody can submit
  * (domain review F1); the writer refuses a tank with no gas, and EANx without
- * a nitrox card.
+ * a nitrox card. Under it, the warning for EANx in a tank with no current
+ * O2-clean record (issue #2719).
  */
 function TankFillField({
-  unitId,
+  unit,
   aria,
   hintId,
   words,
@@ -474,7 +478,7 @@ function TankFillField({
   onChange,
   error,
 }: {
-  unitId: string;
+  unit: Pick<PickerUnit, "id" | "o2CleanWarning">;
   aria: string;
   hintId: string;
   words: Pick<CartWords, "fillLabel" | "fillOptions">;
@@ -482,13 +486,13 @@ function TankFillField({
   onChange: (value: string) => void;
   error?: string;
 }) {
-  return (
+  const field = (
     <Field
       label={words.fillLabel}
       error={error ? <span className="text-base">{error}</span> : undefined}
     >
       <select
-        name={`${FILL_FIELD_PREFIX}${unitId}`}
+        name={`${FILL_FIELD_PREFIX}${unit.id}`}
         value={value}
         onChange={(event) => onChange(event.currentTarget.value)}
         required
@@ -503,5 +507,11 @@ function TankFillField({
         ))}
       </select>
     </Field>
+  );
+  return (
+    <>
+      {field}
+      <O2CleanWarning warning={unit.o2CleanWarning} fill={value} />
+    </>
   );
 }
