@@ -4783,7 +4783,7 @@
         "ours": "{hasBase, select, yes {DiveDay charges {base} a month plus {percent} of the card money your shop takes through it.} other {DiveDay has no monthly charge. Its fee is {percent} of the card money your shop takes through it.}} Nothing is added to your guest’s price.",
         "closingBody": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month} other {{percent} of the card money taken through DiveDay}}, month to month, and the export works on any day.",
         "whatCountsQuestion": "What counts toward the {percent}?",
-        "whatCountsAnswer": "Card money your shop takes through DiveDay: online bookings, and the invoices and packages divers pay by card. Tips, tax, park and other pass-through fees, money taken at the counter and history imported from your old system never count. A refund recorded before the month closes comes off it."
+        "whatCountsAnswer": "Card money your shop takes through DiveDay: online bookings, and the invoices and packages divers pay by card. Tips, tax, park and other pass-through fees, money taken at the counter and history imported from your old system never count. A refund comes off the month it is recorded in."
       }
     },
     "privacy": {
@@ -4939,7 +4939,7 @@
         "countsTerm": "What counts",
         "countsBody": "card payments your shop takes through DiveDay with Stripe Connect: online bookings, invoices and packages. Tips, tax, park and other pass-through fees, cash at the counter, money marked paid at the counter and history imported from another system never count.",
         "refundsTerm": "Refunds",
-        "refundsBody": "a refund comes off the card money of the month the payment was taken in, when it is recorded before that month’s statement is written. A refund recorded after that is not credited.",
+        "refundsBody": "a refund nets in the month the refund is recorded: it comes off the card money of the first monthly statement written after it is recorded, whichever month the payment was taken in. What that month’s card money cannot cover carries to the following statement, so a fee never goes below zero.",
         "statementTerm": "A monthly statement",
         "statementBody": "early in the next month, Settings shows your shop the month’s card money, the rate and the fee, and the fee is billed with your DiveDay subscription.",
         "whoPaysTerm": "Who pays the fee",

@@ -18,8 +18,8 @@ of shops, results are directional.
   points of the month's volume, plus an optional base fee); a shop or visitor is in one **pricing
   arm**.
 - **Volume** is card money paid through DiveDay in the shop's calendar month
-  (`cardMoneyThroughDiveDayCents`): Stripe invoices and online booking checkouts, net of
-  refunds recorded by the close, never tips, tax, pass-through fees, counter money, hand-marked
+  (`cardMoneyThroughDiveDayCents`): Stripe invoices and online booking checkouts, less
+  refunds, each netted on the next statement, never tips, tax, pass-through fees, counter money, hand-marked
   payments or imported history. Free-term money is not billed. The fee is integer cents, half up.
 - Five optional env vars, read by `src/lib/pricing-flags.ts`. Unset, the **test is off**: no
   cookie, no request read, today's copy. One invalid value resets all five.
@@ -50,6 +50,6 @@ of shops, results are directional.
 - Flat-only claims ("no cut of your bookings") are the flat arm's alone; the percent arm has its
   own lines, and no per-booking-fee box on the guides or JSON-LD `Offer` on `/`.
 - A visitor can edit the arm cookie to pick either arm, never other numbers.
-- A month's statement is never recomputed; a refund recorded after the close is not credited.
+- A closed statement is never recomputed; a late refund nets next month, excess carried.
 - A meter event in an already invoiced Stripe period may bill late or never.
 - With the test off, an override stands and `PRICING_FLAT_MONTHLY_CENTS` applies.
