@@ -62,9 +62,9 @@ import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { partnerFromReferralCookie, REFERRAL_COOKIE } from "@/lib/referrals";
 import {
+  checkoutRentableItems,
   hasAnyRentalPricing,
   nitroxAvailableOn,
-  offeredRentableItems,
   quoteRentalFit,
   type RentableItemKind,
   rentalFlagsFromKinds,
@@ -303,7 +303,11 @@ export async function bookSpot(
     payablePerDiverCentsForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
   );
   const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
-  const offeredGearItems = offeredRentableItems(shopNow.rentalItems);
+  // Nothing to rent on a course whose fee includes the gear (issue #2795): the
+  // form offers no box there, so a `gear-N-*` arriving anyway is hand-built and
+  // buys nothing, and the student's fit is left for `/ready` to ask.
+  const offeredGearItems = checkoutRentableItems(shopNow.rentalItems, tripForGear?.course);
+  const rentsAtCheckout = offersGearAtCheckout && offeredGearItems.length > 0;
   // Both gates, re-derived server-side: the shop fills nitrox, and this
   // departure's course runs on it. The checkbox is absent from the form in
   // either case (`BookingGearFields`), so a `nitrox-N=on` arriving anyway is
@@ -539,27 +543,31 @@ export async function bookSpot(
         if (!selection) return;
         const rents = rentalFlagsFromKinds(selection.rentedKinds);
         try {
-          // **A held seat writes nothing to the person it matched.** The row
-          // is an existing diver's, reached by an email whose name on file
-          // does not match (H-13), so whoever booked may not be them, and the
-          // fit is theirs. A rented wetsuit ticked here would clear their
-          // `dives_dry`, and with it the drysuit weight check on every later
-          // trip (`security-reviewer`, layer 2). The paid gear still stands on
-          // the order, and on the booking itself (`paid_rental_kinds`), where
-          // prep racks it unsized and "Same person" can carry it to the fit;
-          // the nitrox request below is this booking's own too. `/ready`
-          // refuses a held seat's fit for the same reason.
-          await recordPaidRentalKinds(dbi, {
-            shopId: shopNow.id,
-            bookingId,
-            kinds: selection.rentedKinds,
-          });
-          if (!identityUnconfirmed) {
-            await saveRentalFit(dbi, {
+          // Not asked, so not answered: a gear-included course session writes
+          // no fit, which would otherwise read as "rents nothing" on `/ready`.
+          if (rentsAtCheckout) {
+            // **A held seat writes nothing to the person it matched.** The row
+            // is an existing diver's, reached by an email whose name on file
+            // does not match (H-13), so whoever booked may not be them, and the
+            // fit is theirs. A rented wetsuit ticked here would clear their
+            // `dives_dry`, and with it the drysuit weight check on every later
+            // trip (`security-reviewer`, layer 2). The paid gear still stands on
+            // the order, and on the booking itself (`paid_rental_kinds`), where
+            // prep racks it unsized and "Same person" can carry it to the fit;
+            // the nitrox request below is this booking's own too. `/ready`
+            // refuses a held seat's fit for the same reason.
+            await recordPaidRentalKinds(dbi, {
               shopId: shopNow.id,
-              personId,
-              ...rents,
+              bookingId,
+              kinds: selection.rentedKinds,
             });
+            if (!identityUnconfirmed) {
+              await saveRentalFit(dbi, {
+                shopId: shopNow.id,
+                personId,
+                ...rents,
+              });
+            }
           }
           if (nitroxOfferedAtCheckout) {
             await setBookingNitrox(dbi, {

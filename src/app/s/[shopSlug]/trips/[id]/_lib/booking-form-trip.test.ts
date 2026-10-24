@@ -13,6 +13,7 @@ describe("bookingFormTrip", () => {
       course: {
         minimumAge: 12,
         nitroxCompatible: false,
+        gearIncluded: true,
         internalNotes: "instructor ratio waived",
       },
     } as unknown as Trip;
@@ -21,7 +22,7 @@ describe("bookingFormTrip", () => {
       capacity: 12,
       booked: 5,
       plannedDives: 3,
-      course: { minimumAge: 12, nitroxCompatible: false },
+      course: { minimumAge: 12, nitroxCompatible: false, gearIncluded: true },
     });
   });
 
