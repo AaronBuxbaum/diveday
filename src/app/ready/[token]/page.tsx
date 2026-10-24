@@ -17,6 +17,7 @@ import { ReadyBookedPage, ReadyMastheadMeta } from "@/app/ready/[token]/_compone
 import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
+import { readyOfflineWords } from "@/app/ready/[token]/_components/ready-offline-words";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
 import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
@@ -601,10 +602,7 @@ async function DiverReadinessPage({
       {/* Keep this page on the phone for the marina with no signal, on both
           openings (the booked card and the ordinary masthead), and date the
           copy by the live page itself (security review of layer 8, D2). */}
-      <ReadyOfflineCopy
-        offlineNote={t("ready.offlineCopy")}
-        keepUntil={readyCopyKeepUntil(detail.trip)}
-      />
+      <ReadyOfflineCopy copy={readyOfflineWords(t)} keepUntil={readyCopyKeepUntil(detail.trip)} />
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped
           fallback rather than holding the opening above them (UX audit #5). */}

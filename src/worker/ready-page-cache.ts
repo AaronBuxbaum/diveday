@@ -19,6 +19,11 @@
  *   {@link READY_COPY_KEY} and carries only a SHA-256 of its path. A request
  *   is answered only when its own path hashes to the same value, so a phone
  *   that opened two bookings holds only the newer.
+ * - **No other capability rides along** (issue #2693): a party claim link, a
+ *   pending tip's Stripe checkout link, a bound server action's `$ACTION_*`
+ *   fields and a recap token are dropped from the stored body for good.
+ * - **The diver can remove it**: "Remove saved copy" on the page, and every
+ *   staff sign-out, run `forgetReadyPageCopy` (`src/lib/ready-offline.ts`).
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
  *   fails. Its forms post to the server like any page and fail offline like
  *   any page; nothing is queued.
@@ -39,9 +44,7 @@
  * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
-import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
-
-export const READY_CACHE_NAME = "diveday-ready-page-v1";
+import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
 
 /**
  * A readiness link and nothing else: `/ready/` and one bearer token
@@ -69,6 +72,33 @@ const TOKEN_PLACEHOLDER = "__diveday_kept_token__";
  */
 const CLAIM_TOKEN_PATTERN = /\/claim\/[A-Za-z0-9_-]{43}/g;
 const CLAIM_REMOVED = "/claim/__diveday_claim_not_kept__";
+
+/**
+ * **No way to pay from a kept copy** (issue #2693). A pending tip's Stripe
+ * checkout link opens a live checkout session, so the copy carries a link
+ * that opens nothing in its place, in the HTML and in the Flight payload alike
+ * (the character class stops at a JSON string's escaped quote).
+ */
+const CHECKOUT_LINK_PATTERN = /https:\/\/checkout\.stripe\.com\/[^"'\s<>\\]*/g;
+const CHECKOUT_REMOVED = "#checkout-not-kept";
+
+/**
+ * **A bound server action's form fields** (`$ACTION_REF_*`, `$ACTION_<id>:<n>`,
+ * `$ACTION_KEY`; React's `encodeFormAction`) carry the action's bound
+ * arguments. The copy drops the fields whole: a kept page is read-only, and
+ * hydration skips a missing hidden input.
+ */
+const BOUND_ACTION_FIELD_PATTERN = /<input\b[^>]*\bname="\$ACTION_[^"]*"[^>]*>/g;
+
+/**
+ * **A recap token** (`signRecapToken`: base64url of `recap:<booking>:<iat>`,
+ * a dot, a 43-character signature) is what the after-state's actions are
+ * bound to, so it rides in the Flight payload as well as those fields. A
+ * second, 180-day bearer credential the copy never keeps (issue #2693). Its
+ * payload always opens with `cmVjYXA6`, the base64url of `recap:`.
+ */
+const RECAP_TOKEN_PATTERN = /cmVjYXA6[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{43}/g;
+const RECAP_TOKEN_REMOVED = "__diveday_recap_not_kept__";
 
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
 
@@ -138,8 +168,15 @@ export async function saveReadyPage(
   headers.set(PATH_HASH_HEADER, await pathHash(path));
   // The page's links carry the token; a same-origin script reading the stored
   // body must not recover it (residual D1), so it is put back on the way out.
+  // Every other capability on the page is dropped for good: a claim link, a
+  // checkout link, a bound action's fields and a recap token (#2693).
   const copy = new Response(
-    html.replaceAll(tokenOf(path), TOKEN_PLACEHOLDER).replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED),
+    html
+      .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
+      .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED)
+      .replace(CHECKOUT_LINK_PATTERN, CHECKOUT_REMOVED)
+      .replace(BOUND_ACTION_FIELD_PATTERN, "")
+      .replace(RECAP_TOKEN_PATTERN, RECAP_TOKEN_REMOVED),
     {
       status: response.status,
       statusText: response.statusText,

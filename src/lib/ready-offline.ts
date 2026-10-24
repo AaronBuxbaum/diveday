@@ -10,6 +10,9 @@
  */
 export const READY_WORKER_SCOPE = "/ready/";
 
+/** The Cache Storage cache that holds the one kept copy (`src/worker/ready-page-cache.ts`). */
+export const READY_CACHE_NAME = "diveday-ready-page-v1";
+
 /**
  * The `<meta name>` the live trip-prep page carries to say **until when** the
  * phone may keep its copy (security review of layer 8, D2). The worker keeps
@@ -71,6 +74,34 @@ export async function keepReadyPageOnDevice(): Promise<boolean> {
       };
       worker.postMessage({ type: "KEEP_READY_PAGE" }, [channel.port2]);
     });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * **Take the kept copy off this browser** (issue #2693): "Remove saved copy" on
+ * `/ready`, and every staff sign-out (`forgetThisDevice`), since a shop tablet
+ * that opened a diver's link may still hold their page. Deletes the copy's
+ * cache and unregisters the diver's `/ready/` worker, so no later load on this
+ * browser keeps it again until the link is next opened. The staff worker at
+ * `/` stays: it holds the crew's offline manifests.
+ *
+ * Answers whether the cache could be reached; never throws.
+ */
+export async function forgetReadyPageCopy(): Promise<boolean> {
+  try {
+    if (typeof caches === "undefined" || !caches) return false;
+    await caches.delete(READY_CACHE_NAME);
+    const worker = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;
+    if (worker) {
+      for (const registration of await worker.getRegistrations()) {
+        if (new URL(registration.scope).pathname === READY_WORKER_SCOPE) {
+          await registration.unregister();
+        }
+      }
+    }
+    return true;
   } catch {
     return false;
   }
