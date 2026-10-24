@@ -158,6 +158,10 @@ export function TripPitch({
           as="h2"
           folded
           summaryVariant="row"
+          // The diver pages' one disclosure face: the chevron that turns
+          // open, as the course FAQ, the schedule's filters and "Other ways
+          // we can help" wear (visual review 2026-10-24, B35).
+          caret="down"
           label={t("trip.pitchDoor")}
           // What the door *holds*, not what the grid skipped. The artboard's
           // "+ 7 more" was a fourth cell in the tile row, counting faces it had

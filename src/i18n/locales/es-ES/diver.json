@@ -810,7 +810,7 @@
     "nextDiveSeats": "{count, plural, one {# plaza} other {# plazas}}"
   },
   "register": {
-    "title": "Regístrate con {shop}",
+    "title": "Regístrate en {shop}",
     "intro": "Rellena esto una vez y queda archivado. Te enviaremos la exención para que la firmes.",
     "nameLabel": "Tu nombre",
     "emailLabel": "Correo electrónico",
@@ -862,7 +862,8 @@
       "notOnSale": "Ese paquete ya no está a la venta.",
       "unavailable": "{shopName} no puede cobrar este pago en línea ahora mismo. Ponte en contacto y lo resolverán.",
       "failed": "La página de pago no se abrió. No se ha cobrado nada. Inténtalo de nuevo en un momento."
-    }
+    },
+    "introWithScope": "{intro} {scope}."
   },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
@@ -3249,8 +3250,7 @@
     "whereYouAreUpTo": "Tu experiencia de buceo",
     "chooseOne": "Elige una opción",
     "anythingElse": "Algo más",
-    "getInTouch": "Ponte en contacto",
-    "noDateBody": "Cuéntanos lo que sepas y nosotros nos encargamos del resto. No se reserva ni se aparta nada. Esto solo inicia la conversación.",
+    "askAboutCourse": "Pregunta por este curso",
     "namePlaceholder": "Priya Sharma",
     "emailPlaceholder": "tu@ejemplo.com",
     "phonePlaceholder": "+34 600 000 000",

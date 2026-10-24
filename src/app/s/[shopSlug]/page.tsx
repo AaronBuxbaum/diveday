@@ -38,6 +38,7 @@ import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { EmbedFooter } from "./_components/EmbedFooter";
 import { identityBand, monthRailSides } from "./_components/identity-band";
 import { MonthRail } from "./_components/MonthRail";
+import { SHOP_MAIN_CLASS } from "./_components/shop-main";
 import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { MoreWaysRows } from "./_components/MoreWaysRows";
 import { NextBoatCard } from "./_components/NextBoatCard";
@@ -363,7 +364,7 @@ export default async function SchedulePage({
       className={
         isEmbed
           ? "w-full flex-1 px-3 py-4"
-          : "mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
+          : SHOP_MAIN_CLASS
       }
     >
       {/* **The shop leads, not the word "Schedule"** (ADR

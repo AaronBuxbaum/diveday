@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { NaturalPhoto, StoredPhoto } from "@/components/StoredPhoto";
+import { StoredPhoto } from "@/components/StoredPhoto";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/group-label";
@@ -89,14 +90,17 @@ export function CourseHero({
     // outside the shared vocabulary.
     <SectionCard as="div" padding="none" className="overflow-hidden">
       {course.heroImageUrl ? (
-        <NaturalPhoto
+        // A landscape frame the photo fills, never a narrow photo on a gray
+        // letterbox (visual review 2026-10-24, B34).
+        <StoredPhoto
           src={course.heroImageUrl}
           alt={resolveImageAlt(
             course.heroImageAlt,
             t("course.photoAltFallback", { course: course.title, n: 1 }),
           )}
-          maxHeightClass="max-h-56 sm:max-h-80"
-          sizes="(min-width: 896px) 896px, 100vw"
+          className="aspect-video w-full"
+          sizes="(min-width: 1280px) 1216px, 100vw"
+          priority
         />
       ) : null}
       <div className="p-6 sm:p-8">
@@ -308,7 +312,7 @@ export function CourseIncludes({
       <div className="mt-6 grid max-w-3xl gap-x-12 gap-y-8 sm:grid-cols-2">
         {includes.length > 0 ? (
           <div>
-            <h3 className={groupLabelClass("success")}>{t("trip.packProvided")}</h3>
+            <h3 className={groupLabelClass("primary")}>{t("trip.packProvided")}</h3>
             <ul className="mt-3 grid gap-2 text-sm">
               {includes.map((item) => (
                 <li key={item} className="flex gap-2">
@@ -351,27 +355,31 @@ export function CourseGallery({
   return (
     <section className="mt-12">
       <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {/* One scroll-snap row (visual review 2026-10-24, B34): on a phone the
+          tiles run past the edge and the row's own padding lets the last one
+          come fully into view; three fit a desktop row. A caption shows only
+          when the photo's record has one. */}
+      <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0">
         {photos.map(({ url, alt }, index) => (
-          <StoredPhoto
-            key={url}
-            src={url}
-            // The hero photo claims "photo 1"; gallery photos continue from 2.
-            alt={resolveImageAlt(
-              alt,
-              t("course.photoAltFallback", { course: title, n: index + 2 }),
-            )}
-            className="h-40 w-full rounded-inset border border-border sm:h-48"
-            // The third condition is the container, not the viewport: this
-            // grid sits inside the same 896px-capped column the hero above
-            // declares, so past that width a cell stops growing and `33vw`
-            // starts describing a slot three times too wide. Measured at 273px
-            // on a 1920px viewport against a 634px declaration — the browser
-            // fetched a 1920px candidate where 640px covers it (issue #1350).
-            sizes="(min-width: 896px) 17rem, (min-width: 640px) 33vw, 50vw"
-          />
+          <li key={url} className="w-64 shrink-0 snap-start sm:w-[calc((100%-1.5rem)/3)]">
+            <figure>
+              <StoredPhoto
+                src={url}
+                // The hero photo claims "photo 1"; gallery photos continue from 2.
+                alt={resolveImageAlt(
+                  alt,
+                  t("course.photoAltFallback", { course: title, n: index + 2 }),
+                )}
+                className="h-40 w-full rounded-inset border border-border sm:h-48"
+                sizes="(min-width: 1280px) 25rem, (min-width: 640px) 33vw, 16rem"
+              />
+              {alt.trim() ? (
+                <figcaption className="mt-2 text-sm text-muted">{alt}</figcaption>
+              ) : null}
+            </figure>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
@@ -541,15 +549,6 @@ export function CourseSessions({
                 </ul>
               </div>
             ) : null}
-            {inquiryHref ? (
-              <p className="mt-6 text-sm text-muted">
-                {t("course.requestDifferentDateLead")}{" "}
-                <Link href={inquiryHref} className="font-medium text-primary hover:underline">
-                  {t("course.requestDateLink")}
-                </Link>
-                .
-              </p>
-            ) : null}
           </>
         )}
       </div>
@@ -563,18 +562,19 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
     <section id="faqs" className="mt-14 max-w-3xl scroll-mt-8">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.faqsHeading")}</h2>
       {/* Quiet disclosures on hairlines — a question list is a list, not a
-          stack of cards; the borders that survive are the ones that separate. */}
+          stack of cards; the borders that survive are the ones that separate.
+          The chevron is the diver pages' one disclosure face, turning over
+          open (visual review 2026-10-24, B35); it was a "+" that turned to
+          an "×", which read as "add" and "remove". */}
       <div className="mt-4 divide-y divide-border border-y border-border">
         {faqs.map((faq) => (
           <details key={faq.question} className="group">
-            <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 py-3 font-medium">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 font-medium [&::-webkit-details-marker]:hidden">
               {faq.question}
-              <span
-                aria-hidden="true"
-                className="text-muted transition-transform group-open:rotate-45"
-              >
-                +
-              </span>
+              <DisclosureCaret
+                direction="down"
+                className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180"
+              />
             </summary>
             <p className="pb-4 leading-relaxed text-muted">{faq.answer}</p>
           </details>

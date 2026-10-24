@@ -87,8 +87,10 @@ describe("the public packages page with a package on sale", () => {
   it("says what a package is, that courses are not included, and that it never runs out", async () => {
     await renderOnSale([card]);
 
-    expect(screen.getByText("Pay once, then book the dives as you go.")).toBeInTheDocument();
-    expect(document.body.textContent).toContain("Courses not included");
+    // One card, so what it covers is true of every card: said once, in the intro.
+    expect(
+      screen.getByText("Pay once, then book the dives as you go. Courses not included."),
+    ).toBeInTheDocument();
     expect(document.body.textContent).toContain("No expiry date");
     // A dive is a tank, said where the money is decided (H-123).
     expect(document.body.textContent).toContain(
@@ -102,5 +104,29 @@ describe("the public packages page with a package on sale", () => {
     expect(document.body.textContent).toContain("Courses included");
     expect(document.body.textContent).toMatch(/Use by Dec\s31,\s2026/);
     expect(document.body.textContent).not.toContain("No expiry date");
+  });
+
+  /**
+   * Visual review 2026-10-24, B39: the card lists its facts one a line, and a
+   * fact true of every card is said once, in the intro, never on each card.
+   */
+  it("lists each card's facts and lifts the shared scope into the intro", async () => {
+    await renderOnSale([card, { ...card, id: "pkg-2", name: "Ten-dive card", diveCount: 10 }]);
+
+    const lists = screen.getAllByRole("list");
+    expect(lists).toHaveLength(2);
+    expect(
+      [...(lists[0]?.querySelectorAll('[role="listitem"]') ?? [])].map((i) => i.textContent),
+    ).toEqual(["5 dives", "$80 a dive", "No expiry date"]);
+    expect(document.body.textContent?.match(/Courses not included/g)).toHaveLength(1);
+    expect(document.body.textContent?.match(/One dive is one tank/g)).toHaveLength(2);
+  });
+
+  it("keeps the scope on each card when the cards differ", async () => {
+    await renderOnSale([card, { ...card, id: "pkg-2", scope: "all" }]);
+
+    expect(screen.getByText("Pay once, then book the dives as you go.")).toBeInTheDocument();
+    expect(screen.getByText("Courses not included")).toBeInTheDocument();
+    expect(screen.getByText("Courses included")).toBeInTheDocument();
   });
 });

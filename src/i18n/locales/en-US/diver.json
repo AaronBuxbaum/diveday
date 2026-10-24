@@ -810,7 +810,7 @@
     "nextDiveSeats": "{count, plural, one {# seat} other {# seats}}"
   },
   "register": {
-    "title": "Get set up with {shop}",
+    "title": "Register with {shop}",
     "intro": "Fill this in once and it’s on file. We’ll send your release to sign.",
     "nameLabel": "Your name",
     "emailLabel": "Email",
@@ -862,7 +862,8 @@
       "notOnSale": "That package isn’t on sale anymore.",
       "unavailable": "{shopName} can’t take this payment online right now. Get in touch and they’ll sort it out.",
       "failed": "The payment page didn’t open. Nothing was charged. Try again in a moment."
-    }
+    },
+    "introWithScope": "{intro} {scope}."
   },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
@@ -3249,8 +3250,7 @@
     "whereYouAreUpTo": "Your diving experience",
     "chooseOne": "Choose one",
     "anythingElse": "Anything else",
-    "getInTouch": "Get in touch",
-    "noDateBody": "Tell us what you know and we’ll take it from there. Nothing is booked or held. This just starts the conversation.",
+    "askAboutCourse": "Ask about this course",
     "namePlaceholder": "Priya Sharma",
     "emailPlaceholder": "you@example.com",
     "phonePlaceholder": "+1 305 555 0134",

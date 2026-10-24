@@ -22,6 +22,7 @@ import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
 import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { courseRowDate } from "./course-row-date";
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -132,7 +133,7 @@ export default async function PublicCoursesPage({
     target === agencies[0] ? base : `${base}?agency=${encodeURIComponent(target)}`;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={SHOP_MAIN_CLASS}>
       {/* No eyebrow: it read "COURSES" over "Courses" — a caption restating
           its own heading (the public nav already marks Courses current). */}
       <ShopPageHeader

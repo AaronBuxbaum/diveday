@@ -38,6 +38,7 @@ import {
   CourseSessions,
   courseFootBar,
 } from "./_components/CourseSections";
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -181,7 +182,7 @@ export default async function CoursePage({
     : null;
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={SHOP_MAIN_CLASS}>
       {structuredData ? <JsonLd data={structuredData} /> : null}
       {course.isActive ? null : (
         <p

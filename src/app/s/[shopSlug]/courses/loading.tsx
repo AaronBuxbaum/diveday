@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { segmentedTrackClass } from "@/components/ui/segmented";
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 
 /**
  * Catalog-shaped skeleton for the diver-facing course list (design principle
@@ -30,7 +31,7 @@ import { segmentedTrackClass } from "@/components/ui/segmented";
  */
 export default function PublicCoursesLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={SHOP_MAIN_CLASS}>
       <div className="animate-pulse">
         {/* No eyebrow bar: the page's header has none ("COURSES" over
             "Courses" was cut), and the default drew one anyway. The
