@@ -296,11 +296,12 @@ self.addEventListener("message", (event) => {
       port?.postMessage({ ok: false });
       return;
     }
+    const requestedAt = nowMs();
     event.waitUntil(
       fetch(path, { credentials: "same-origin", cache: "no-store" })
         .then(async (response) => {
           const html = await response.clone().text();
-          const kept = await saveReadyPage(caches, path, response, nowMs());
+          const kept = await saveReadyPage(caches, path, response, nowMs(), requestedAt);
           if (kept) await keepStylesheets(readyPageStylesheets(html, self.location.origin));
           return kept;
         })
@@ -308,6 +309,27 @@ self.addEventListener("message", (event) => {
           (ok) => port?.postMessage({ ok }),
           () => port?.postMessage({ ok: false }),
         ),
+    );
+    return;
+  }
+  if (event.data?.type === "FORGET_READY_PAGE") {
+    // **The cancelled landing asks** (issue #2979, security review finding
+    // 1). A self-cancel is a server action whose redirect a hydrated page
+    // follows without a navigation, so the fetch listener below never sees
+    // the `?cancelled=` load; the cancelled card asks here instead. Only the
+    // page that asked, by its own path, so one booking cannot drop another's.
+    const port = event.ports[0];
+    const source = event.source as Client | null;
+    const sourceUrl = source?.url ? new URL(source.url) : null;
+    const path = sourceUrl
+      ? readyPagePath(new URL(sourceUrl.pathname, self.location.origin), self.location.origin)
+      : null;
+    if (!inReadyScope() || !path) {
+      port?.postMessage({ ok: false });
+      return;
+    }
+    event.waitUntil(
+      forgetReadyPage(caches, path, nowMs()).then(() => port?.postMessage({ ok: true })),
     );
     return;
   }
@@ -673,7 +695,7 @@ self.addEventListener("fetch", (event) => {
       // answer is waited for and a failed one is the browser's own offline
       // error: the pre-cancel page, links and all, is never what a cancel
       // lands on.
-      const forgotten = forgetReadyPage(caches, path).catch(() => undefined);
+      const forgotten = forgetReadyPage(caches, path, nowMs());
       event.waitUntil(forgotten);
       event.respondWith(forgotten.then(() => fetch(event.request)).catch(() => Response.error()));
       return;
@@ -682,15 +704,20 @@ self.addEventListener("fetch", (event) => {
       // Network-first: online, the diver always gets the live page. Only a
       // clean load is kept (a `?saved=` notice is a moment, not the page).
       networkFirst(
-        (signal) =>
-          fetch(event.request, { signal }).then((response) => {
+        (signal) => {
+          // A cancel landing that forgets this path after now outranks it (#2979).
+          const requestedAt = nowMs();
+          return fetch(event.request, { signal }).then((response) => {
             if (url.search === "") {
               event.waitUntil(
-                saveReadyPage(caches, path, response.clone(), nowMs()).catch(() => false),
+                saveReadyPage(caches, path, response.clone(), nowMs(), requestedAt).catch(
+                  () => false,
+                ),
               );
             }
             return response;
-          }),
+          });
+        },
         () => readyPageFallback(caches, path, nowMs()),
       ),
     );

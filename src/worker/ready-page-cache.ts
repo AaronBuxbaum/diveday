@@ -41,8 +41,10 @@
  *   the instant its copy expires ({@link READY_KEEP_UNTIL_META}: a day after
  *   the boat is due back), capped at {@link READY_COPY_MAX_AGE_MS}. A page
  *   that names none (a cancelled booking, a departure called off, a dead link)
- *   clears the copy instead of replacing it, and a `?cancelled=` landing
- *   forgets it outright.
+ *   clears the copy instead of replacing it, and a cancelled landing
+ *   forgets it outright: by navigation, or by the cancelled card asking the
+ *   worker when the cancel's redirect was not one (#2979). A save whose fetch
+ *   began before that forget stores nothing.
  *
  * **A residual we accept** (issue #2478, decided 2026-10-16): a staff cancel
  * or a blow-out (`src/db/blowouts.ts`) reaches the copy only when the diver
@@ -56,6 +58,7 @@
 
 import {
   READY_CACHE_NAME,
+  READY_FORGOTTEN_CACHE_NAME,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_NOTE_ATTR,
 } from "@/lib/ready-offline";
@@ -73,6 +76,9 @@ export const READY_COPY_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 export const READY_COPY_KEY = "/ready/kept-copy";
 
 const PATH_HASH_HEADER = "x-diveday-path-sha256";
+const FORGOTTEN_AT_HEADER = "x-diveday-forgotten-at";
+/** A forget marker's key: a fixed prefix and the path's hash, never the token. */
+const FORGOTTEN_KEY_PREFIX = "/ready/forgotten/";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 
 /** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
@@ -187,11 +193,31 @@ function storable(response: Response): boolean {
  * Reads the body (pass a clone). Returns whether it was kept; a page that
  * names no keep-until, or one already past, clears the copy.
  */
+/**
+ * Whether `path` was forgotten at or after `requestedAt`: a page fetched
+ * before a cancel is the pre-cancel page, however late it answers (#2979).
+ */
+async function forgottenSince(
+  storage: CacheStorage,
+  hash: string,
+  requestedAt: number,
+): Promise<boolean> {
+  const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+  const marker = await markers.match(`${FORGOTTEN_KEY_PREFIX}${hash}`);
+  const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
+  return Number.isFinite(at) && marker !== undefined && at >= requestedAt;
+}
+
+/**
+ * `requestedAt` is when the fetch that produced `response` began; a forget
+ * of this path at or after it (a cancel landing first) means nothing is kept.
+ */
 export async function saveReadyPage(
   storage: CacheStorage,
   path: string,
   response: Response,
   now: number,
+  requestedAt: number = now,
 ): Promise<boolean> {
   if (!storable(response)) return false;
   // A body of its own, so the copy is complete before anything is replaced.
@@ -204,7 +230,9 @@ export async function saveReadyPage(
   }
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
-  headers.set(PATH_HASH_HEADER, await pathHash(path));
+  const hash = await pathHash(path);
+  if (await forgottenSince(storage, hash, requestedAt)) return false;
+  headers.set(PATH_HASH_HEADER, hash);
   // The page's links carry the token; a same-origin script reading the stored
   // body must not recover it (residual D1), so it is put back on the way out.
   // Every other capability on the page is dropped for good: the Flight
@@ -227,6 +255,13 @@ export async function saveReadyPage(
   // Replace, then sweep: an offline reload landing mid-save (two saves overlap,
   // the navigation's and the page's keep request) still finds a copy.
   await cache.put(READY_COPY_KEY, copy);
+  // A forget that landed while this was storing: the copy just put down is
+  // the pre-cancel page, so it goes again (it is this path's, by the hash).
+  if (await forgottenSince(storage, hash, requestedAt)) {
+    const kept = await cache.match(READY_COPY_KEY);
+    if (kept?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
+    return false;
+  }
   await clearCopies(cache, READY_COPY_KEY);
   return true;
 }
@@ -254,12 +289,37 @@ export async function readyPageFallback(
   });
 }
 
-/** Drop the kept copy if it is `path`'s: the seat it was for has just been cancelled. */
-export async function forgetReadyPage(storage: CacheStorage, path: string): Promise<void> {
-  const cache = await storage.open(READY_CACHE_NAME);
-  const cached = await cache.match(READY_COPY_KEY);
-  if (cached && cached.headers.get(PATH_HASH_HEADER) === (await pathHash(path))) {
-    await cache.delete(READY_COPY_KEY);
+/**
+ * Drop the kept copy if it is `path`'s: the seat it was for has just been
+ * cancelled. Notes the moment first, so a save whose fetch began before it
+ * stores nothing (#2979), and a forget that cannot finish deletes every copy
+ * on the phone rather than leave this one: never throws.
+ */
+export async function forgetReadyPage(
+  storage: CacheStorage,
+  path: string,
+  now: number,
+): Promise<void> {
+  try {
+    const hash = await pathHash(path);
+    const markers = await storage.open(READY_FORGOTTEN_CACHE_NAME);
+    await markers.put(
+      `${FORGOTTEN_KEY_PREFIX}${hash}`,
+      new Response(null, { headers: { [FORGOTTEN_AT_HEADER]: String(now) } }),
+    );
+    // Old markers go: no fetch outlives the longest copy.
+    for (const request of await markers.keys()) {
+      const marker = await markers.match(request);
+      const at = Number(marker?.headers.get(FORGOTTEN_AT_HEADER));
+      if (!Number.isFinite(at) || at < now - READY_COPY_MAX_AGE_MS) await markers.delete(request);
+    }
+    const cache = await storage.open(READY_CACHE_NAME);
+    const cached = await cache.match(READY_COPY_KEY);
+    if (cached && cached.headers.get(PATH_HASH_HEADER) === hash) {
+      await cache.delete(READY_COPY_KEY);
+    }
+  } catch {
+    await storage.delete(READY_CACHE_NAME).catch(() => false);
   }
 }
 

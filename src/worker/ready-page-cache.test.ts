@@ -24,6 +24,7 @@ function fakeStorage() {
   const pathOf = (key: string | Request) =>
     new URL(typeof key === "string" ? key : key.url, ORIGIN).pathname;
   const storage = {
+    delete: async (name: string) => caches.delete(name),
     open: async (name: string) => {
       const entries = caches.get(name) ?? new Map<string, Response>();
       caches.set(name, entries);
@@ -272,10 +273,64 @@ describe("saveReadyPage and readyPageFallback", () => {
 
   it("forgets the copy for a path, and only that path's", async () => {
     await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(), NOW);
-    await forgetReadyPage(store.storage, `/ready/${OTHER}`);
+    await forgetReadyPage(store.storage, `/ready/${OTHER}`, NOW);
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
-    await forgetReadyPage(store.storage, `/ready/${TOKEN}`);
+    await forgetReadyPage(store.storage, `/ready/${TOKEN}`, NOW);
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
+  });
+
+  /**
+   * Security review 2026-10-24 (#2979, finding 2): on a slow link a keep
+   * request's fetch can start before the cancel and answer after it. What it
+   * brings back is the pre-cancel page, and it must not revive the copy.
+   */
+  it("stores nothing from a fetch that began before the path was forgotten", async () => {
+    const path = `/ready/${TOKEN}`;
+    await forgetReadyPage(store.storage, path, NOW + 10);
+    expect(await saveReadyPage(store.storage, path, page("stale"), NOW + 20, NOW + 5)).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+    // A load asked for after the forget is kept as ever, and another path is untouched.
+    expect(await saveReadyPage(store.storage, path, page("fresh"), NOW + 20, NOW + 15)).toBe(true);
+    expect(
+      await saveReadyPage(store.storage, `/ready/${OTHER}`, page("other"), NOW + 20, NOW + 5),
+    ).toBe(true);
+  });
+
+  it("drops the copy a save put down when the forget lands while it was storing", async () => {
+    const path = `/ready/${TOKEN}`;
+    const open = store.storage.open.bind(store.storage);
+    let forgot = false;
+    const racing = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async (name: string) => {
+        const cache = await open(name);
+        return {
+          ...cache,
+          put: async (key: RequestInfo | URL, response: Response) => {
+            await cache.put(key as string, response);
+            if (!forgot && name === READY_CACHE_NAME) {
+              forgot = true;
+              await forgetReadyPage(store.storage, path, NOW + 10);
+            }
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+    expect(await saveReadyPage(racing, path, page("stale"), NOW + 20, NOW + 5)).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+  });
+
+  /** Finding 3: a forget that cannot read the copy takes the whole cache rather than none of it. */
+  it("deletes the whole copy cache when the forget itself fails", async () => {
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(), NOW);
+    const broken = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async () => {
+        throw new Error("storage gone");
+      },
+    } as unknown as CacheStorage;
+    await forgetReadyPage(broken, `/ready/${TOKEN}`, NOW);
+    expect(store.caches.has(READY_CACHE_NAME)).toBe(false);
   });
 
   it("keeps nothing that is not the page itself", async () => {

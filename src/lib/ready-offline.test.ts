@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { forgetReadyPageCopy, READY_CACHE_NAME, readyCopyKeepUntil } from "./ready-offline";
+import {
+  forgetReadyPageCopy,
+  forgetThisReadyPage,
+  READY_CACHE_NAME,
+  readyCopyKeepUntil,
+} from "./ready-offline";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -134,5 +139,39 @@ describe("forgetReadyPageCopy", () => {
     vi.stubGlobal("caches", undefined);
     vi.stubGlobal("navigator", {});
     expect(await forgetReadyPageCopy()).toBe(false);
+  });
+});
+
+/**
+ * **The cancelled landing tells the worker** (issue #2979, security review
+ * 2026-10-24, finding 1): a self-cancel's redirect is not a navigation the
+ * worker sees, so the card asks it to forget this page's copy.
+ */
+describe("forgetThisReadyPage", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("asks the worker controlling this page to forget its copy, and says what it answered", async () => {
+    const posted: unknown[] = [];
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: {
+          postMessage: (data: unknown, [port]: MessagePort[]) => {
+            posted.push(data);
+            port?.postMessage({ ok: true });
+          },
+        },
+      },
+    });
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect(posted).toEqual([{ type: "FORGET_READY_PAGE" }]);
+  });
+
+  it("answers false, never throws, with no worker controlling the page", async () => {
+    vi.stubGlobal("navigator", { serviceWorker: { controller: null } });
+    expect(await forgetThisReadyPage()).toBe(false);
+    vi.stubGlobal("navigator", {});
+    expect(await forgetThisReadyPage()).toBe(false);
   });
 });

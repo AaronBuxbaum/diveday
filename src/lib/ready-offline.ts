@@ -14,6 +14,13 @@ export const READY_WORKER_SCOPE = "/ready/";
 export const READY_CACHE_NAME = "diveday-ready-page-v1";
 
 /**
+ * Where the worker notes when a readiness link's copy was forgotten (issue
+ * #2979), by a hash of its path: a save whose fetch began earlier stores
+ * nothing. Apart from the copy's cache so that one holds the copy alone.
+ */
+export const READY_FORGOTTEN_CACHE_NAME = "diveday-ready-forgotten-v1";
+
+/**
  * The `<meta name>` the live trip-prep page carries to say **until when** the
  * phone may keep its copy (security review of layer 8, D2). The worker keeps
  * no copy of a page without it, so a cancelled booking, a departure called
@@ -80,6 +87,37 @@ export async function keepReadyPageOnDevice(): Promise<boolean> {
         resolve(event.data?.ok === true);
       };
       worker.postMessage({ type: "KEEP_READY_PAGE" }, [channel.port2]);
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * **A cancelled seat takes its copy with it** (issue #2979, security review
+ * 2026-10-24, finding 1). A self-cancel is a server action, and a hydrated
+ * page follows its redirect without a navigation the worker can see, so the
+ * card the cancel lands on asks the worker controlling it to forget this
+ * page's copy (by its own path: another booking's copy stays). Answers
+ * whether the worker said it did; never throws.
+ */
+export async function forgetThisReadyPage(): Promise<boolean> {
+  try {
+    const worker =
+      typeof navigator === "undefined" ? undefined : navigator.serviceWorker?.controller;
+    if (!worker) return false;
+    return await new Promise<boolean>((resolve) => {
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => {
+        channel.port1.close();
+        resolve(false);
+      }, ACTIVATE_TIMEOUT_MS);
+      channel.port1.onmessage = (event) => {
+        clearTimeout(timer);
+        channel.port1.close();
+        resolve(event.data?.ok === true);
+      };
+      worker.postMessage({ type: "FORGET_READY_PAGE" }, [channel.port2]);
     });
   } catch {
     return false;
