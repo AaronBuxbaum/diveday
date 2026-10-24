@@ -1,11 +1,15 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { DAY_MS, nowMs } from "@/lib/clock";
+import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
-import { waiverRecords } from "./schema";
-import { DEMO_SHOP_TIMEZONE, withinDeskHours } from "./seed-clock";
+import { listTripReadiness } from "./readiness";
+import { trips, waiverRecords } from "./schema";
+import { at, DEMO_SHOP_TIMEZONE, withinDeskHours } from "./seed-clock";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
+import { seedWaiverEvidence } from "./seed-waiver-evidence";
+import { liveTrip } from "./trips";
 import { listWaiverIntegrityAudit } from "./waivers";
 
 /**
@@ -148,5 +152,78 @@ describe("seeded signature methods", () => {
         (record) => record.completedAt && record.signedAt && record.completedAt < record.signedAt,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("a release on a departure", () => {
+  // Today's boats that have already left: the seed's re-dating moves releases
+  // stamped at its own "now", so these are the departures it can push a
+  // signature past. Older departures sign on the day they sailed
+  // (seed-history), before this pass ever runs.
+  it("is never signed after that departure left (issue #2698)", async () => {
+    const { db, shop } = await evidence();
+    const departed = await db
+      .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          liveTrip(),
+          gte(trips.startsAt, at(0, 0)),
+          lte(trips.startsAt, nowDate()),
+        ),
+      );
+    expect(departed.length).toBeGreaterThan(0);
+    const late: string[] = [];
+    for (const trip of departed) {
+      // The governing release as the departure log reads it: as of the boat's
+      // own departure, not as of the printing.
+      const rows = await listTripReadiness(db, shop.id, trip.id, trip.startsAt);
+      for (const row of rows) {
+        const signedAt = row.waiver?.signedAt;
+        if (signedAt && signedAt.getTime() > trip.startsAt.getTime()) {
+          late.push(
+            `${trip.title} ${trip.startsAt.toISOString()}: signed ${signedAt.toISOString()}`,
+          );
+        }
+      }
+    }
+    expect(late).toEqual([]);
+  });
+
+  // The demo dawn boat's log read "signed in person at 12:58 PM" beside a
+  // 5:30 AM boarding: a release stamped at the seed's "now" was moved to
+  // about now, minus minutes, with no regard for the boat it covered. Stamp a
+  // dawn diver's release at "now" again, first in line for the spread, and
+  // replay the pass: the spread's first slot is minutes before the frozen
+  // 9:30 AM clock, hours after the dawn boat sailed.
+  it("moves a release stamped now to before the diver's own boat", async () => {
+    const { db, shop } = await evidence();
+    const [dawn] = await db
+      .select({ id: trips.id, startsAt: trips.startsAt })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)));
+    if (!dawn) throw new Error("the demo has no dawn boat");
+    const before = await listTripReadiness(db, shop.id, dawn.id, dawn.startsAt);
+    const record = before.find((row) => row.waiver?.signedAt)?.waiver;
+    if (!record) throw new Error("no dawn diver has a release");
+    const now = nowDate();
+    await db
+      .update(waiverRecords)
+      .set({
+        signedAt: now,
+        consentedAt: now,
+        completedAt: now,
+        createdAt: at(-30, 0),
+        integrityHash: null,
+        integrityVersion: null,
+      })
+      .where(eq(waiverRecords.id, record.id));
+
+    await seedWaiverEvidence(db, shop.id);
+
+    const [replayed] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
+    expect(replayed?.signedAt?.getTime()).toBeLessThan(dawn.startsAt.getTime());
+    expect(replayed && verifyWaiverIntegrity(replayed)).not.toBe("invalid");
   });
 });
