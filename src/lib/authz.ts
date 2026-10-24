@@ -389,6 +389,39 @@ export function canReadMedicalAlert(
 }
 
 /**
+ * Who prints a departure's packet **with the medical alerts' words on it**
+ * (issue #2990, H-153 amendment of 2026-10-24): the owner and a manager, the
+ * readers who hold the words on every departure. Paper records no read of its
+ * own, so the print is the read: the server writes one `medical_alert_printed`
+ * line per diver when it produces the sheet. Crew who read the words on
+ * screen do not print them; the default print keeps the flag only. Never the
+ * dispute sheet, the day's paper or any other print.
+ */
+export function canPrintMedicalAlerts(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
+ * Who may open a diver's medical alert **in an emergency** when
+ * {@link canReadMedicalAlert} refuses them (issue #2990, H-153 amendment of
+ * 2026-10-24): any active staffer of the shop, only on the day the diver's
+ * departure leaves in the shop's zone. A captain not on the crew list, or a
+ * divemaster added at the dock, can still find where the EpiPen is. Every
+ * such read is loud: `medical_alert_emergency_read` on the diver's trail,
+ * never de-duplicated, and listed in the owner's Monday email.
+ *
+ * `departureIsToday` is the caller's answer, read from the clock and the
+ * shop's zone (`canPersonEmergencyReadMedicalAlertOnTrip`, src/db/authz.ts).
+ * Never a bearer page, never an offline copy.
+ */
+export function canEmergencyReadMedicalAlert(
+  roles: readonly Role[] | undefined,
+  scope: { departureIsToday: boolean },
+): boolean {
+  return isStaff(roles) && scope.departureIsToday;
+}
+
+/**
  * **Retire a physician's refusal so the seat can take a fresh release** — the
  * supersede act the glossary's *Physician clearance* entry named as the thing
  * to build once a shop hit it (Aaron, 2026-10-06).

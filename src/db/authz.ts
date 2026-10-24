@@ -6,6 +6,7 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canEmergencyReadMedicalAlert,
   canErasePersonalData,
   canExportDisputeSheet,
   canExportIncidentRecord,
@@ -22,6 +23,7 @@ import {
   canMergeDiver,
   canOverrideCertBlock,
   canOverrideGearRequest,
+  canPrintMedicalAlerts,
   canReadEveryIncidentReport,
   canReadMedicalAlert,
   canReadMedicalAnswers,
@@ -34,9 +36,11 @@ import {
   canViewShopActivity,
   type Role,
 } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today";
 import type { DbExecutor } from "./client";
-import { people, personRoles, tripAssignments, trips, userAccounts } from "./schema";
+import { people, personRoles, shops, tripAssignments, trips, userAccounts } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 
 /**
@@ -323,6 +327,45 @@ export const canPersonReadMedicalAlert = (db: DbExecutor, shopId: string, person
   canPerson(db, shopId, personId, (roles) =>
     canReadMedicalAlert(roles, { crewsDiversDeparture: false }),
   );
+
+/**
+ * The live check behind "Print with medical alerts" (`canPrintMedicalAlerts`,
+ * issue #2990): the owner and a manager, read from `person_roles` now, so a
+ * manager demoted this morning prints the flag only.
+ */
+export const canPersonPrintMedicalAlerts = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canPrintMedicalAlerts);
+
+/**
+ * The live check behind **"Emergency: show the alert"** on one departure
+ * (`canEmergencyReadMedicalAlert`, issue #2990): an active staffer of this
+ * shop, live roles, on a live departure of this shop whose start falls on
+ * today's date in the shop's zone (`nowDate()`, never the device's clock).
+ * The day before and the day after, the button is gone and the action
+ * refuses. The caller still confirms the diver is booked on `tripId`, and
+ * offers it only where `canPersonReadMedicalAlertOnTrip` refused.
+ */
+export async function canPersonEmergencyReadMedicalAlertOnTrip(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  tripId: string,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  if (roles === null) return false;
+  const [departure] = await db
+    .select({ startsAt: trips.startsAt, timezone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!departure) return false;
+  const departureIsToday =
+    calendarDateInTimezone(departure.startsAt, departure.timezone) ===
+    calendarDateInTimezone(now, departure.timezone);
+  return canEmergencyReadMedicalAlert(roles, { departureIsToday });
+}
 
 /** The live check behind "Send a new waiver" on a refused seat (`retireMedicalRefusal`). */
 export const canPersonRetireMedicalRefusal = (db: DbExecutor, shopId: string, personId: string) =>

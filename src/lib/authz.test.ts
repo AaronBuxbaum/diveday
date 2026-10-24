@@ -26,6 +26,8 @@ import {
   canOverrideGearRequest,
   canReadCrewAwayNote,
   canReadEveryIncidentReport,
+  canEmergencyReadMedicalAlert,
+  canPrintMedicalAlerts,
   canReadMedicalAlert,
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
@@ -153,6 +155,46 @@ describe("canReadMedicalAlert (owner, manager, and the diver's own crew)", () =>
     expect(canReadMedicalAlert(["diver"], crewing)).toBe(false);
     expect(canReadMedicalAlert([], crewing)).toBe(false);
     expect(canReadMedicalAlert(undefined, crewing)).toBe(false);
+  });
+});
+
+describe("canPrintMedicalAlerts (owner and manager, issue #2990)", () => {
+  it("admits the owner and a manager", () => {
+    for (const role of ["owner", "manager"] as const) {
+      expect(canPrintMedicalAlerts([role])).toBe(true);
+    }
+  });
+
+  it("refuses every other staff role, a diver and nobody, crew included", () => {
+    for (const role of STAFF_ROLES.filter((role) => role !== "owner" && role !== "manager")) {
+      expect(canPrintMedicalAlerts([role])).toBe(false);
+    }
+    expect(canPrintMedicalAlerts(["diver"])).toBe(false);
+    expect(canPrintMedicalAlerts([])).toBe(false);
+    expect(canPrintMedicalAlerts(undefined)).toBe(false);
+  });
+});
+
+describe("canEmergencyReadMedicalAlert (any staffer, on the day, issue #2990)", () => {
+  const today = { departureIsToday: true };
+  const notToday = { departureIsToday: false };
+
+  it("admits every staff role on the day of the departure", () => {
+    for (const role of STAFF_ROLES) {
+      expect(canEmergencyReadMedicalAlert([role], today)).toBe(true);
+    }
+  });
+
+  it("refuses every staff role on any other day", () => {
+    for (const role of STAFF_ROLES) {
+      expect(canEmergencyReadMedicalAlert([role], notToday)).toBe(false);
+    }
+  });
+
+  it("never admits a diver or nobody, even on the day", () => {
+    expect(canEmergencyReadMedicalAlert(["diver"], today)).toBe(false);
+    expect(canEmergencyReadMedicalAlert([], today)).toBe(false);
+    expect(canEmergencyReadMedicalAlert(undefined, today)).toBe(false);
   });
 });
 
