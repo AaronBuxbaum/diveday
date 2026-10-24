@@ -374,8 +374,8 @@ function seatEarnsItsSend(
 }
 
 /**
- * One reminder email's outcome, recorded; and when it went out carrying the
- * fly-safe line, the figure the seat now holds, so marking the departure as
+ * One reminder email's outcome, recorded; and when it went out (or was queued
+ * to) carrying the fly-safe line, the figure the seat now holds, so marking the departure as
  * decompression diving later can correct it (#2927).
  */
 async function settleReminderEmail(
@@ -389,7 +389,7 @@ async function settleReminderEmail(
     kind: work.kind,
     delivery,
   });
-  await rememberFlySafeTold(db, { ...work, sent: delivery.status === "sent" });
+  await rememberFlySafeTold(db, { ...work, delivery });
 }
 
 /**

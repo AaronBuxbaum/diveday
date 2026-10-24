@@ -1,6 +1,11 @@
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { type Notification, type NotificationProvider, recipientLocale } from "@/lib/notifications";
+import {
+  type Notification,
+  type NotificationDelivery,
+  type NotificationProvider,
+  recipientLocale,
+} from "@/lib/notifications";
 import type { AppDb, DbExecutor } from "./client";
 import { notificationProviderForDb, sendNotification } from "./notifications";
 import { bookings, people, shops, trips } from "./schema";
@@ -41,16 +46,32 @@ export async function recordFlySafeTold(
 }
 
 /**
- * After a reminder goes out: a sent night-before email that carried the
- * fly-safe line leaves the seat holding that figure, so marking the departure
- * as decompression diving later can correct it.
+ * Whether a send leaves the diver holding what the email said: it went, or it
+ * failed in a way `sendNotification` queues for the next pass, which will
+ * deliver the same words later.
+ */
+export function deliveryCarriesFigure(delivery: NotificationDelivery): boolean {
+  return (
+    delivery.status === "sent" || (delivery.status === "failed" && delivery.retryable === true)
+  );
+}
+
+/**
+ * After a reminder goes out: a night-before email that carried the fly-safe
+ * line, sent or queued to go, leaves the seat holding that figure, so marking
+ * the departure as decompression diving later can correct it.
  */
 export async function rememberFlySafeTold(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; notification: Notification; sent: boolean },
+  input: {
+    shopId: string;
+    bookingId: string;
+    notification: Notification;
+    delivery: NotificationDelivery;
+  },
 ): Promise<void> {
   const { notification } = input;
-  if (!input.sent || notification.kind !== "trip_reminder_24h") return;
+  if (!deliveryCarriesFigure(input.delivery) || notification.kind !== "trip_reminder_24h") return;
   if (notification.flySafeHours === undefined) return;
   await recordFlySafeTold(db, {
     shopId: input.shopId,
@@ -79,28 +100,44 @@ export function flySafeToldUncorrected(
   ).length;
 }
 
-export type FlySafeCorrectionOutcome = { told: number; failed: number };
+/**
+ * What a pass did: how many corrections went, how many did not go now
+ * (`failed`, which counts a send queued for the next pass), and the divers it
+ * could not reach at all (no address, a refused send), by name, so the
+ * staffer who ticked the box knows whom to call.
+ */
+export type FlySafeCorrectionOutcome = { told: number; failed: number; unreached: string[] };
 
 /**
  * **Send each diver told a fly-safe wait the one correction** (issue #2927).
  *
  * Only while the departure is live, scheduled, not a rehearsal, marked as
  * decompression diving, and not more than `FLY_SAFE_CORRECTION_WINDOW_MS`
- * past its end. Only to a seat still on the boat, whose identity is settled,
- * that the night-before email told a figure, by the email on that seat's own
- * person record (the only channel that carried the figure).
+ * past its end. Only to a seat still on the boat that the night-before email
+ * told a figure, held identity or not, by the email on that seat's own person
+ * record (the only channel that carried the figure).
  *
  * **Once per seat.** The seat is claimed (`fly_safe_corrected_at`) in the
  * statement that selects it, before anything is sent, so a second save or a
- * race finds nothing owed. A send refused outright puts the claim back, so the
- * next save tries again; a retryable failure is queued by `sendNotification`
- * and stays claimed, because the queue will deliver it.
+ * race finds nothing owed. Any seat not sent or queued by the end, a refused
+ * send, no address, or the rest of the batch after a provider throws, has its
+ * claim put back, so the next save tries again; a retryable failure is queued
+ * by `sendNotification` and stays claimed, because the queue will deliver it.
+ * A throw still propagates, after the put-back.
  */
 export async function sendFlySafeCorrections(
   db: AppDb,
-  input: { shopId: string; tripId: string; now?: Date; emailProvider?: NotificationProvider },
+  input: {
+    shopId: string;
+    tripId: string;
+    now?: Date;
+    emailProvider?: NotificationProvider;
+    /** The one send door; a test passes one that throws to prove the put-back. */
+    send?: typeof sendNotification;
+  },
 ): Promise<FlySafeCorrectionOutcome> {
-  const outcome: FlySafeCorrectionOutcome = { told: 0, failed: 0 };
+  const outcome: FlySafeCorrectionOutcome = { told: 0, failed: 0, unreached: [] };
+  const send = input.send ?? sendNotification;
   const now = input.now ?? nowDate();
   const [row] = await db
     .select({ trip: trips, shop: shops })
@@ -115,6 +152,8 @@ export async function sendFlySafeCorrections(
   if (now.getTime() > row.trip.endsAt.getTime() + FLY_SAFE_CORRECTION_WINDOW_MS) return outcome;
   const { trip, shop } = row;
 
+  // A held seat (identity unconfirmed) is corrected too: the figure went to
+  // the address on the seat's person, so the correction goes to the same one.
   const owed = await db
     .select({ id: bookings.id })
     .from(bookings)
@@ -126,7 +165,6 @@ export async function sendFlySafeCorrections(
         inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
-        isNull(bookings.identityUnconfirmedAt),
         livePerson(),
       ),
     );
@@ -148,7 +186,12 @@ export async function sendFlySafeCorrections(
   if (claimed.length === 0) return outcome;
 
   const recipients = await db
-    .select({ id: people.id, email: people.email, locale: people.locale })
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      email: people.email,
+      locale: people.locale,
+    })
     .from(people)
     .where(
       and(
@@ -162,24 +205,24 @@ export async function sendFlySafeCorrections(
     );
   const personById = new Map(recipients.map((person) => [person.id, person]));
   const provider = notificationProviderForDb(input.emailProvider);
-  const putBack = (bookingId: string) =>
-    db
-      .update(bookings)
-      .set({ flySafeCorrectedAt: null })
-      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, input.shopId)));
-
-  for (const seat of claimed) {
-    const person = personById.get(seat.personId);
-    // The figure only ever went by email; a seat with no address now has
-    // nobody to correct, and is put back for when it has one.
-    if (!person?.email) {
-      await putBack(seat.id);
-      outcome.failed += 1;
-      continue;
-    }
-    let delivery: Awaited<ReturnType<typeof sendNotification>>;
-    try {
-      delivery = await sendNotification(
+  // Every claimed seat starts unsent. A seat leaves this set only once its
+  // correction went or was queued; whatever is left when the loop ends, by
+  // any exit including a throw, has its claim put back for the next save.
+  const unsent = new Set(claimed.map((seat) => seat.id));
+  const unreached = (personId: string) => {
+    outcome.failed += 1;
+    outcome.unreached.push(personById.get(personId)?.fullName ?? "");
+  };
+  try {
+    for (const seat of claimed) {
+      const person = personById.get(seat.personId);
+      // The figure only ever went by email; a seat with no address now has
+      // nobody to correct by email, and staff are told to call.
+      if (!person?.email) {
+        unreached(seat.personId);
+        continue;
+      }
+      const delivery = await send(
         db,
         {
           kind: "fly_safe_correction",
@@ -194,16 +237,27 @@ export async function sendFlySafeCorrections(
         },
         provider,
       );
-    } catch (error) {
-      await putBack(seat.id);
-      throw error;
+      if (delivery.status === "sent") {
+        outcome.told += 1;
+        unsent.delete(seat.id);
+        continue;
+      }
+      // A retryable failure is queued by `sendNotification` and stays claimed,
+      // because the queue will deliver it: late, but nobody to call.
+      if (delivery.status === "failed" && delivery.retryable) {
+        unsent.delete(seat.id);
+        outcome.failed += 1;
+        continue;
+      }
+      unreached(seat.personId);
     }
-    if (delivery.status === "sent") {
-      outcome.told += 1;
-      continue;
+  } finally {
+    if (unsent.size > 0) {
+      await db
+        .update(bookings)
+        .set({ flySafeCorrectedAt: null })
+        .where(and(eq(bookings.shopId, input.shopId), inArray(bookings.id, [...unsent])));
     }
-    outcome.failed += 1;
-    if (!(delivery.status === "failed" && delivery.retryable)) await putBack(seat.id);
   }
   return outcome;
 }

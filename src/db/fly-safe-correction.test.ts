@@ -1,13 +1,16 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import type { Notification } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import {
+  deliveryCarriesFigure,
   FLY_SAFE_CORRECTION_WINDOW_MS,
   flySafeToldUncorrected,
   recordFlySafeTold,
+  rememberFlySafeTold,
   sendFlySafeCorrections,
 } from "./fly-safe-correction";
 import { bookings, people, trips as tripRows } from "./schema";
@@ -58,7 +61,7 @@ describe("sendFlySafeCorrections (#2927)", () => {
       now,
       emailProvider: mail.provider,
     });
-    expect(first).toEqual({ told: 1, failed: 0 });
+    expect(first).toEqual({ told: 1, failed: 0, unreached: [] });
     const ours = mail.sent.filter((n) => n.kind === "fly_safe_correction");
     expect(ours).toHaveLength(1);
     expect(ours[0]).toMatchObject({ kind: "fly_safe_correction", seatId: bookingId, to: email });
@@ -72,7 +75,7 @@ describe("sendFlySafeCorrections (#2927)", () => {
         now,
         emailProvider: again.provider,
       }),
-    ).toEqual({ told: 0, failed: 0 });
+    ).toEqual({ told: 0, failed: 0, unreached: [] });
     expect(again.sent).toHaveLength(0);
   });
 
@@ -85,11 +88,11 @@ describe("sendFlySafeCorrections (#2927)", () => {
         tripId: reef.id,
         emailProvider: mail.provider,
       }),
-    ).toEqual({ told: 0, failed: 0 });
+    ).toEqual({ told: 0, failed: 0, unreached: [] });
     expect(mail.sent).toHaveLength(0);
   });
 
-  it("tells nobody who was told no figure, nor a cancelled seat, nor a held identity", async () => {
+  it("tells nobody who was told no figure, nor a cancelled seat", async () => {
     const { db, shop, reef, bookingId } = await toldSeat();
     await markDeco(db, reef.id);
     // Never told: the night-before email had no fly-safe line.
@@ -111,19 +114,68 @@ describe("sendFlySafeCorrections (#2927)", () => {
       emailProvider: cancelled.provider,
     });
     expect(cancelled.sent).toHaveLength(0);
+    expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
+  });
 
+  it("corrects a held seat at the address the figure went to", async () => {
+    const { db, shop, reef, bookingId, email } = await toldSeat("flysafe-held@example.com");
+    await markDeco(db, reef.id);
     await db
       .update(bookings)
-      .set({ status: "booked", identityUnconfirmedAt: new Date(reef.startsAt.getTime() - HOUR_MS) })
+      .set({ identityUnconfirmedAt: new Date(reef.startsAt.getTime() - HOUR_MS) })
       .where(eq(bookings.id, bookingId));
     const held = fakeEmail();
-    await sendFlySafeCorrections(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      emailProvider: held.provider,
+    expect(
+      await sendFlySafeCorrections(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        emailProvider: held.provider,
+      }),
+    ).toEqual({ told: 1, failed: 0, unreached: [] });
+    expect(held.sent[0]).toMatchObject({
+      kind: "fly_safe_correction",
+      seatId: bookingId,
+      to: email,
     });
-    expect(held.sent).toHaveLength(0);
+  });
+
+  it("names a diver with no address as unreached, and keeps them owed", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat("flysafe-noaddress@example.com");
+    await markDeco(db, reef.id);
+    const row = await seat(db, bookingId);
+    await db.update(people).set({ email: null }).where(eq(people.id, row.personId));
+    const mail = fakeEmail();
+    expect(
+      await sendFlySafeCorrections(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        emailProvider: mail.provider,
+      }),
+    ).toEqual({ told: 0, failed: 1, unreached: ["Pat Party"] });
+    expect(mail.sent).toHaveLength(0);
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
+  });
+
+  it("remembers the figure for a sent or queued night-before email, not a refused one", async () => {
+    const { db, shop, bookingId } = await toldSeat("flysafe-queued@example.com");
+    await db.update(bookings).set({ flySafeHoursTold: null }).where(eq(bookings.id, bookingId));
+    const notification = { kind: "trip_reminder_24h", flySafeHours: 18 } as Notification;
+    await rememberFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      notification,
+      delivery: { status: "failed", retryable: false },
+    });
+    expect((await seat(db, bookingId)).flySafeHoursTold).toBeNull();
+    await rememberFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      notification,
+      delivery: { status: "failed", retryable: true },
+    });
+    expect((await seat(db, bookingId)).flySafeHoursTold).toBe(18);
+    expect(deliveryCarriesFigure({ status: "sent", providerMessageId: "m" })).toBe(true);
+    expect(deliveryCarriesFigure({ status: "not_configured" })).toBe(false);
   });
 
   it("tells nobody once every figure has run out, or on a departure called off", async () => {
@@ -170,7 +222,7 @@ describe("sendFlySafeCorrections (#2927)", () => {
         tripId: reef.id,
         emailProvider: refused.provider,
       }),
-    ).toEqual({ told: 0, failed: 1 });
+    ).toEqual({ told: 0, failed: 1, unreached: ["Pat Party"] });
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
     const retry = fakeEmail();
     expect(
@@ -194,7 +246,7 @@ describe("sendFlySafeCorrections (#2927)", () => {
         tripId: reef.id,
         emailProvider: mail.provider,
       }),
-    ).toEqual({ told: 0, failed: 0 });
+    ).toEqual({ told: 0, failed: 0, unreached: [] });
     expect(mail.sent).toHaveLength(0);
   });
 
