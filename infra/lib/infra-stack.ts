@@ -2266,6 +2266,7 @@ exports.handler = async (event) => {
           "GitHub repo Settings -> Environments (restore-drill) -> Environment variables (RESTORE_DRILL_ROLE_ARN) -- the CfnOutput is GitHubActionsRestoreDrillRoleArn.",
         verify: [
           "gh variable list --env restore-drill --repo AaronBuxbaum/diveday -- RESTORE_DRILL_ROLE_ARN is listed.",
+          "gh api repos/AaronBuxbaum/diveday/environments/restore-drill --jq '.protection_rules, .deployment_branch_policy' -- a required_reviewers rule is listed and the branch policy admits main only (custom_branch_policies true, with a single branch policy named main). If either is missing, Aaron must fix it before the first run: the role can read every dump.",
         ],
         note: "The role trusts the restore-drill environment, and only that environment's branch rule (main alone) and required reviewer keep a pushed branch from assuming it. Check both before the first run (docs/engineering/backup-and-restore-runbook.md, 'Monthly restore drill').",
       },
