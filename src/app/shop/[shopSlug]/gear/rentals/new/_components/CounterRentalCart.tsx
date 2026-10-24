@@ -14,7 +14,7 @@ import {
   StickyFormActions,
 } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { isOneCoreSet } from "@/lib/counter-rentals";
+import { isOneCoreSet, TANK_FILL_O2_PERCENT } from "@/lib/counter-rentals";
 import { formatMoneyCents } from "@/lib/format";
 import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
@@ -55,6 +55,12 @@ export type PickerUnit = {
   removeAria: string;
   /** A tank's fill menu label; null for every other kind, which takes no fill. */
   fillAria: string | null;
+  /**
+   * Said under a tank once its gas is EANx, when it has no current O2-clean
+   * record (issue #2719); null otherwise. A warning only: the server accepts
+   * the fill exactly as before.
+   */
+  o2CleanWarning: string | null;
 };
 
 export type PaymentChoice = { value: RentalPayment; label: string; hint?: string };
@@ -225,6 +231,12 @@ export function CounterRentalCart({
       previous.includes(id) ? previous.filter((other) => other !== id) : [...previous, id],
     );
   const fillOf = (unit: PickerUnit) => fills[unit.id] ?? "";
+  // Enriched air goes in a tank whose oxygen cleaning nobody recorded: say so
+  // on its row, and stop nothing (issue #2719).
+  const o2CleanWarningOf = (unit: PickerUnit) =>
+    unit.o2CleanWarning && Number(fillOf(unit)) > TANK_FILL_O2_PERCENT.air
+      ? unit.o2CleanWarning
+      : null;
   // Save the supported cart before per-row fields use up the 80-name draft.
   // Separate price fields let each raw price keep its own value-length budget.
   const keptPicked = picked.slice(0, KEPT_CART_UNITS_MAX);
@@ -359,6 +371,11 @@ export function CounterRentalCart({
                         }
                         error={rowError(unit)}
                       />
+                    ) : null}
+                    {o2CleanWarningOf(unit) ? (
+                      <FormStatus tone="warning">
+                        <span className="text-base">{o2CleanWarningOf(unit)}</span>
+                      </FormStatus>
                     ) : null}
                     {unit.confirmLabel ? (
                       <ChoiceRow

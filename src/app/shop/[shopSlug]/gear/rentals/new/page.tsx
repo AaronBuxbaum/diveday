@@ -247,6 +247,12 @@ export default async function RentOutPage({
       removeAria: t("counterRentals.new.removeAria", { label: unit.label }),
       fillAria:
         unit.kind === "tank" ? t("counterRentals.new.fillAria", { label: unit.label }) : null,
+      // Read on the window's last day, as the service clocks are; the cart
+      // shows it only once the tank's gas is EANx (issue #2719).
+      o2CleanWarning:
+        unit.o2Clean === false
+          ? t("counterRentals.new.o2CleanMissing", { label: unit.label })
+          : null,
       order: blocked ? 2 : flagged ? 1 : 0,
     };
   };

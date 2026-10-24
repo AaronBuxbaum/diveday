@@ -13,7 +13,12 @@
  * never here — these rules only *word* and *rank* what the rows already say.
  */
 
-import { type CalendarDate, calendarDateInTimezone, calendarDaysBetween } from "./calendar-date";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  calendarDaysBetween,
+  shiftCalendarDateMonths,
+} from "./calendar-date";
 import type { RentalItemKind } from "./dive-prep";
 
 /**
@@ -396,6 +401,25 @@ export function gearServiceState(
     if (!worst || outranks(state, worst)) worst = state;
   }
   return worst ?? { state: "no_clock" };
+}
+
+/**
+ * **A tank's oxygen cleaning stands on this day** (issue #2719): its newest
+ * `o2_clean` record is due on or after `onDate`, or, written with no due date,
+ * was done within the conventional interval
+ * (`GEAR_SERVICE_INTERVAL_MONTHS.o2_clean`). A tank with no record at all
+ * answers false. Informs the counter's EANx warning; gates nothing.
+ */
+export function hasCurrentO2Clean(
+  clocks: readonly GearServiceClock[],
+  onDate: CalendarDate,
+): boolean {
+  const clock = clocks.find((candidate) => candidate.kind === "o2_clean");
+  if (!clock) return false;
+  const dueOn =
+    clock.nextDueOn ??
+    shiftCalendarDateMonths(clock.servicedOn, GEAR_SERVICE_INTERVAL_MONTHS.o2_clean ?? 12);
+  return calendarDaysBetween(onDate, dueOn) >= 0;
 }
 
 /** One clock's own verdict, taking whichever of its two intervals bites first. */

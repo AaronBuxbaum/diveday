@@ -31,6 +31,7 @@
     "fillAria": "Mezcla de {label}",
     "fillChoose": "Elige la mezcla",
     "fillHint": "Cada tanque indica su mezcla. Por encima del aire hace falta una tarjeta de nitrox verificada.",
+    "o2CleanMissing": "{label} no tiene una limpieza de O2 vigente registrada.",
     "pay": {
       "heading": "Cómo paga",
       "cash": "Efectivo",

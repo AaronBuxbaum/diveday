@@ -31,6 +31,7 @@
     "fillAria": "Fill for {label}",
     "fillChoose": "Choose the gas",
     "fillHint": "Every tank says its gas. Above air needs a verified nitrox card.",
+    "o2CleanMissing": "{label} has no current O2-clean record.",
     "pay": {
       "heading": "How they pay",
       "cash": "Cash",
