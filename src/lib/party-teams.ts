@@ -108,3 +108,13 @@ export function partyLeftReason(
 export function partyAgesUnconfirmed(members: readonly PartyMember[]): boolean {
   return members.some((member) => member.age === null && !member.declaredMinor);
 }
+
+/**
+ * What a "Team up each party" tap that teamed nobody says (issue 2808): when a
+ * party waited on its "18 or over" tick, the staffer is asked for it, never
+ * left with a tap that seemed to do nothing. A code; the words are the
+ * manifest bundle's.
+ */
+export function teamUpRefusal(formed: number, awaitingConfirm: number): "confirm-adults" | null {
+  return formed === 0 && awaitingConfirm > 0 ? "confirm-adults" : null;
+}

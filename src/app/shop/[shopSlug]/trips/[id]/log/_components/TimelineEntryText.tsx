@@ -72,6 +72,11 @@ export function TimelineEntryText({
           })}
         </span>
       ) : null}
+      {/* Issue 2808: the recorder vouched that everyone on the team is 18 or
+          over, where nothing on file said so. */}
+      {entry.kind === "buddy_team" && entry.adultsConfirmed ? (
+        <span className="text-muted">{t("incidentExport.timelineBuddyAdultsConfirmed")}</span>
+      ) : null}
       {(entry.kind === "diver" || entry.kind === "crew") && entry.source === "offline" ? (
         <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
           {t("incidentExport.timelineOfflineTag")}

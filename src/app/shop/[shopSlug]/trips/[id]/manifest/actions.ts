@@ -12,6 +12,7 @@ import {
   dissolveBuddyTeam,
   formBuddyTeam,
   formPartyTeams,
+  planPartyTeams,
   removeBuddyTeamMember,
 } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
@@ -35,6 +36,7 @@ import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
+import { teamUpRefusal } from "@/lib/party-teams";
 import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -806,12 +808,20 @@ export async function teamUpPartiesAction(ctx: ManifestActionContext, formData: 
     .getAll("adultParty")
     .flatMap((value) => (typeof value === "string" && value.length <= 4_000 ? [value] : []))
     .slice(0, 200);
-  await formPartyTeams(await getDb(), {
+  const db = await getDb();
+  const formed = await formPartyTeams(db, {
     shopId: staff.user.shopId,
     tripId: ctx.tripId,
     recordedByPersonId: staff.user.personId,
     confirmedAdultParties,
   });
+  // A tap that teamed nobody while a party waited on its tick says so.
+  const awaiting =
+    formed === 0
+      ? (await planPartyTeams(db, staff.user.shopId, ctx.tripId)).ageUnconfirmed.length
+      : 0;
+  const refusal = teamUpRefusal(formed, awaiting);
+  if (refusal) redirect(`${manifestBack(ctx)}&buddyError=${refusal}`);
   revalidateAndRedirect(manifestPath(ctx), manifestBack(ctx));
 }
 

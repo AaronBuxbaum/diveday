@@ -241,6 +241,11 @@ describe("buddyBuilderView", () => {
    * is said even with no party to team, and a seat the manifest no longer lists
    * keeps the plan's own name for it.
    */
+  it("says a tap that teamed nobody needs a tick (issue 2808)", () => {
+    expect(view("confirm-adults").panel.buddyErrorText).toBe(t("manifest.buddyErrorConfirmAdults"));
+    expect(view("confirm-adults").panel.buddyErrorForm).toBe("panel");
+  });
+
   it("draws every line from the plan's own seats and names", () => {
     const { panel } = view(
       undefined,
@@ -270,12 +275,16 @@ describe("buddyBuilderView", () => {
    * "Under 18" box is named on its own tick box, carrying that party's exact
    * seats, and is counted among the parties who came together.
    */
-  it("asks the staffer to confirm each party whose ages nobody has said", () => {
+  it("asks the staffer to confirm each party whose ages nobody has said, naming who", () => {
     const { panel } = view(
       undefined,
       [],
       plan({
         ageUnconfirmed: [["b-2", "b-1"]],
+        members: new Map([
+          ["b-1", { age: 40, declaredMinor: false, verifiedCard: true }],
+          ["b-2", { age: null, declaredMinor: false, verifiedCard: true }],
+        ]),
         names: new Map([...NAMES, ["b-9", "Dara Ruiz"]]),
       }),
     );
@@ -287,7 +296,10 @@ describe("buddyBuilderView", () => {
       confirmAdults: [
         {
           key: "b-1,b-2",
-          label: t("manifest.buddyPartyConfirmAdults", { names: "Ben Okafor and Ana Ruiz" }),
+          label: t("manifest.buddyPartyConfirmAdults", {
+            names: "Ben Okafor and Ana Ruiz",
+            unknown: "Ben Okafor",
+          }),
         },
       ],
     });

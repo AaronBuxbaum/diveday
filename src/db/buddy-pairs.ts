@@ -334,6 +334,7 @@ async function recordTeamEvent(
     members: readonly ResolvedMember[];
     recordedByPersonId: string;
     occurredAt: Date;
+    adultsConfirmed?: boolean;
   },
 ): Promise<void> {
   // The innermost of the three layers guarding this row's contents. A safety
@@ -355,6 +356,7 @@ async function recordTeamEvent(
     memberNames,
     recordedByPersonId: input.recordedByPersonId,
     occurredAt: input.occurredAt,
+    adultsConfirmed: input.adultsConfirmed ?? false,
   });
 }
 
@@ -372,6 +374,11 @@ export async function formBuddyTeam(
     tripId: string;
     members: readonly BuddyTeamMemberInput[];
     recordedByPersonId: string;
+    /**
+     * The staffer said everyone on the team is 18 or over, where nothing on
+     * file says so ("Team up each party", issue 2808). Written on the trail.
+     */
+    adultsConfirmed?: boolean;
     now?: Date;
   },
 ): Promise<FormBuddyTeamOutcome> {
@@ -397,6 +404,11 @@ async function formBuddyTeamInTx(
     tripId: string;
     members: readonly BuddyTeamMemberInput[];
     recordedByPersonId: string;
+    /**
+     * The staffer said everyone on the team is 18 or over, where nothing on
+     * file says so ("Team up each party", issue 2808). Written on the trail.
+     */
+    adultsConfirmed?: boolean;
     now?: Date;
   },
 ): Promise<FormBuddyTeamOutcome> {
@@ -454,6 +466,7 @@ async function formBuddyTeamInTx(
     members: sortMembers(resolved.members, memberKey),
     recordedByPersonId: staffId,
     occurredAt,
+    adultsConfirmed: input.adultsConfirmed,
   });
   return { ok: true, teamId };
 }
@@ -631,16 +644,19 @@ export async function formPartyTeams(
   const plan = await planPartyTeams(db, input.shopId, input.tripId);
   const confirmed = new Set(input.confirmedAdultParties ?? []);
   const teamable = [
-    ...plan.teamable,
-    ...plan.ageUnconfirmed.filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds))),
+    ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
+    ...plan.ageUnconfirmed
+      .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
+      .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
   ];
   let formed = 0;
-  for (const bookingIds of teamable) {
+  for (const { bookingIds, adultsConfirmed } of teamable) {
     const outcome = await formBuddyTeam(db, {
       shopId: input.shopId,
       tripId: input.tripId,
       members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
       recordedByPersonId: input.recordedByPersonId,
+      adultsConfirmed,
       now: input.now,
     });
     if (outcome.ok) formed += 1;
@@ -1088,6 +1104,8 @@ export type TripBuddyTeamEvent = {
   action: "formed" | "dissolved" | "member_added" | "member_removed";
   memberNames: string[];
   recordedByName: string;
+  /** The recorder said everyone on the team is 18 or over (issue 2808). */
+  adultsConfirmed: boolean;
   occurredAt: Date;
   createdAt: Date;
 };
@@ -1109,6 +1127,7 @@ export async function listTripBuddyTeamEvents(
       action: buddyTeamEvents.action,
       memberNames: buddyTeamEvents.memberNames,
       recordedByName: people.fullName,
+      adultsConfirmed: buddyTeamEvents.adultsConfirmed,
       occurredAt: buddyTeamEvents.occurredAt,
       createdAt: buddyTeamEvents.createdAt,
     })

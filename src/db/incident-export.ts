@@ -288,6 +288,7 @@ export async function getIncidentExport(
     action: event.action,
     memberNames: event.memberNames,
     recordedByName: event.recordedByName,
+    adultsConfirmed: event.adultsConfirmed,
     occurredAt: event.occurredAt,
     createdAt: event.createdAt,
   }));

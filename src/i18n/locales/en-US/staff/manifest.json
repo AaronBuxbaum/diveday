@@ -187,8 +187,8 @@
   "buddyCameTogether": "Came together: {parties}",
   "buddyCameAlone": "Came alone: {names}",
   "buddyTeamUpParties": "Team up each party",
-  "buddyPartyConfirmHint": "Someone in each party below has no date of birth and no Under 18 box. Tick a party to team it.",
-  "buddyPartyConfirmAdults": "{names} are all 18 or over",
+  "buddyPartyConfirmHint": "No date of birth or Under 18 box is on file for the divers named in brackets. Tick a party you know is all adults to team it.",
+  "buddyPartyConfirmAdults": "{names} are all 18 or over (no age on file for {unknown})",
   "buddyPartyLeft": "Left for you: {names} ({reason})",
   "buddyPartyLeftReason": {
     "intro_course": "intro dive",
@@ -314,6 +314,7 @@
     "noteHint": "Divers never see this."
   },
   "buddyErrorNotDiver": "A buddy team is divers only. Snorkelers and riders aren’t on one.",
+  "buddyErrorConfirmAdults": "Nothing was teamed. Tick each party you know is all 18 or over, then tap again.",
   "participantType": {
     "diver": "Diver",
     "snorkeler": "Snorkeler",
