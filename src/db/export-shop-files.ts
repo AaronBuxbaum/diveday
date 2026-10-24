@@ -202,6 +202,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "crew_lead_minutes",
       "review_url",
       "packing_list",
+      "packing_logbook",
       "rental_items",
       "rental_pricing",
       // The shop's own words on every rental ticket (ADR
@@ -314,6 +315,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.crewLeadMinutes ?? "",
         shop.reviewUrl,
         JSON.stringify(shop.packingList),
+        shop.packingLogbook,
         JSON.stringify(shop.rentalItems),
         JSON.stringify(shop.rentalPricing),
         shop.rentalTerms,

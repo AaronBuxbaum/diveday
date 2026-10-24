@@ -206,6 +206,7 @@
     "calendarDockCall": "Dock call {dockCall}. We leave at {departure}.",
     "calendarMeetingPoint": "Meet at {place}.",
     "packBring": "Bring",
+    "packLogbook": "Logbook",
     "packRenting": "Renting",
     "packProvided": "We provide",
     "packNothingRequested": "Nothing requested yet",

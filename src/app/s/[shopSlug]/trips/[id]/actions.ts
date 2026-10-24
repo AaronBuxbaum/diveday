@@ -1089,6 +1089,7 @@ function bookSpotConfirmation(input: {
     waiverUrl: input.waiver?.url,
     waiverExpiresAt: input.waiver?.expiresAt,
     packingList: shop.packingList,
+    packingLogbook: shop.packingLogbook,
     // A course session's learning materials, delivered with the seat
     // (ADR 20261008-course-learning-materials).
     learningMaterials: trip.course

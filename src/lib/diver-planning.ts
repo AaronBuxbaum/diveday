@@ -578,6 +578,22 @@ export function packingConfidence(
   };
 }
 
+/**
+ * Whether the packing list suggests a logbook (issue #2795). The shop decides
+ * whether it suggests one at all (`shops.packing_logbook`); a student on a
+ * course session who holds no certification yet has no dives to log, so it is
+ * left off for them. A flag and two facts, never a match on the shop's own
+ * free-text list.
+ */
+export function packsLogbook(input: {
+  shopSuggests: boolean;
+  courseSession: boolean;
+  /** At least one live certification card on file for this diver, verified or not. */
+  holdsCertification: boolean;
+}): boolean {
+  return input.shopSuggests && (!input.courseSession || input.holdsCertification);
+}
+
 export function conditionsChangedSinceBooking(
   conditionsUpdatedAt: Date | null,
   conditionsBriefedAt: Date | null,

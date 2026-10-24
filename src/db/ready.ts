@@ -317,6 +317,12 @@ export type ReadyPageData = {
    * (`nitroxCardOnFilePersonIds`).
    */
   nitroxCardOnFile: boolean;
+  /**
+   * At least one live certification card on file, verified or not; false
+   * while the seat is held. Decides only whether a course student's packing
+   * list suggests a logbook (`packsLogbook`) — never a gate.
+   */
+  holdsCertification: boolean;
   /** Projected: staff-only fit columns never reach the diver's browser. */
   rentalFit: DiverRentalFit | null;
   /** The one active, non-medical day-of request this booking has made. */
@@ -552,6 +558,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     pendingMoveAsk,
+    holdsCertification,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -591,6 +598,12 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.identityUnconfirmedAt === null
       ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
       : null,
+    // Any live card, verified or not: whether a course student has dives to
+    // log (`packsLogbook`, issue #2795). Nothing is read off a held seat's
+    // matched person, so a held seat holds none.
+    row.identityUnconfirmedAt === null
+      ? holdsAnyCertification(db, row.shopId, row.personId)
+      : false,
   ]);
   if (!trip) return null;
   return {
@@ -609,7 +622,28 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    holdsCertification,
   };
+}
+
+/** At least one live certification card on file for this person at this shop. */
+async function holdsAnyCertification(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+): Promise<boolean> {
+  const [card] = await db
+    .select({ id: certifications.id })
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.shopId, shopId),
+        eq(certifications.personId, personId),
+        isNull(certifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  return card !== undefined;
 }
 
 export async function getReadyPageData(
@@ -644,6 +678,7 @@ export async function getReadyPageData(
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    holdsCertification,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -784,6 +819,7 @@ export async function getReadyPageData(
         : null,
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
+    holdsCertification,
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
     // Said even after the shop stops offering hotel pickups (the Features

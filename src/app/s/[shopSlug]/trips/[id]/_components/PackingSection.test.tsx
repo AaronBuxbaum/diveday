@@ -43,6 +43,7 @@ function renderPacking(overrides: { waterTemperatureC: number | null; statedAbov
       trip={trip}
       multiDay={false}
       temperatureStatedAbove={overrides.statedAbove}
+      holdsCertification={false}
       locale={DEFAULT_DIVER_LOCALE}
     />,
   );
@@ -108,6 +109,7 @@ describe("PackingSection — the dock-day rhythm's meeting point", () => {
         trip={trip}
         multiDay={false}
         temperatureStatedAbove={false}
+        holdsCertification={false}
         locale={DEFAULT_DIVER_LOCALE}
       />,
     );
@@ -146,5 +148,59 @@ describe("PackingSection — the dock-day rhythm's meeting point", () => {
   it("says nothing extra when the departure has no meeting point of its own", () => {
     renderRhythm({ meetingPointLabel: null, meetingPointAddress: null });
     expect(screen.queryByText(/North Jetty/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **No logbook for a student with nothing to log yet** (issue #2795). The
+ * shop's own flag decides whether a logbook is suggested at all; on a course
+ * session it is left off for a student holding no certification. Never decided
+ * by finding "Logbook" in the shop's free-text list.
+ */
+describe("PackingSection — the logbook line", () => {
+  function renderBring(options: {
+    packingLogbook: boolean;
+    course: boolean;
+    holdsCertification: boolean;
+  }) {
+    const trip = {
+      startsAt: new Date("2026-08-12T12:00:00Z"),
+      endsAt: new Date("2026-08-12T16:00:00Z"),
+      plannedDives: 2,
+      waterTemperatureC: null,
+      course: options.course ? { gearIncluded: true } : null,
+    } as unknown as Trip;
+    return render(
+      <PackingSection
+        shop={{ ...shop, packingLogbook: options.packingLogbook } as Shop}
+        trip={trip}
+        multiDay={false}
+        temperatureStatedAbove={false}
+        holdsCertification={options.holdsCertification}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+  }
+
+  it("suggests a logbook on an ordinary departure", () => {
+    renderBring({ packingLogbook: true, course: false, holdsCertification: false });
+    expect(screen.getByText("Logbook")).toBeInTheDocument();
+    expect(screen.getByText("Swimsuit and towel")).toBeInTheDocument();
+  });
+
+  it("leaves it off for an uncertified student on a course session", () => {
+    renderBring({ packingLogbook: true, course: true, holdsCertification: false });
+    expect(screen.queryByText("Logbook")).not.toBeInTheDocument();
+    expect(screen.getByText("Swimsuit and towel")).toBeInTheDocument();
+  });
+
+  it("keeps it for a certified diver taking a course", () => {
+    renderBring({ packingLogbook: true, course: true, holdsCertification: true });
+    expect(screen.getByText("Logbook")).toBeInTheDocument();
+  });
+
+  it("never suggests one the shop has switched off", () => {
+    renderBring({ packingLogbook: false, course: false, holdsCertification: true });
+    expect(screen.queryByText("Logbook")).not.toBeInTheDocument();
   });
 });

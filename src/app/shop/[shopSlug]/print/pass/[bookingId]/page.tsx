@@ -71,6 +71,10 @@ export default async function PaperPassPage({
   // 2026-10-11, item 27): the departure's meeting point, or the shop itself,
   // with the landmark and the parking note a diver without a phone needs most.
   const where = meetingPointOfRows(shop, booking);
+  // The shop's list, then the logbook when it suggests one (`packing_logbook`).
+  const bring = shop.packingLogbook
+    ? [...shop.packingList, t("print.sheet.pass.logbook")]
+    : shop.packingList;
 
   return (
     <SheetDocument
@@ -129,9 +133,9 @@ export default async function PaperPassPage({
             </p>
           ) : null}
         </div>
-        {shop.packingList.length > 0 ? (
+        {bring.length > 0 ? (
           <p className="paper-sheet-muted mt-2 text-xs">
-            {t("print.sheet.pass.bringHeading")}: {shop.packingList.join(", ")}
+            {t("print.sheet.pass.bringHeading")}: {bring.join(", ")}
           </p>
         ) : null}
         {/* `gap-4`, 3.4mm at the print root: the code's quiet zone, four of

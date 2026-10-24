@@ -7,6 +7,7 @@ import {
   dockDayTimeline,
   exposureSuitFor,
   packingConfidence,
+  packsLogbook,
   parseDockDayRhythm,
   siteFit,
 } from "./diver-planning";
@@ -466,6 +467,29 @@ describe("booking delight planning", () => {
 
   it("asks nobody to bring personal gear on an ordinary departure", () => {
     expect(packingConfidence(["Towel"], null).bringPersonal).toEqual([]);
+  });
+
+  // Issue #2795: a student with no card yet has no dives to log. Decided by
+  // the shop's flag and the facts, never by finding "Logbook" in a list.
+  it("suggests a logbook to every diver when the shop does", () => {
+    expect(
+      packsLogbook({ shopSuggests: true, courseSession: false, holdsCertification: false }),
+    ).toBe(true);
+    expect(
+      packsLogbook({ shopSuggests: true, courseSession: true, holdsCertification: true }),
+    ).toBe(true);
+  });
+
+  it("leaves the logbook off for a student on a course session with no certification", () => {
+    expect(
+      packsLogbook({ shopSuggests: true, courseSession: true, holdsCertification: false }),
+    ).toBe(false);
+  });
+
+  it("never suggests a logbook the shop has switched off", () => {
+    expect(
+      packsLogbook({ shopSuggests: false, courseSession: false, holdsCertification: true }),
+    ).toBe(false);
   });
 
   it("turns a water temperature into the suit most divers want", () => {
