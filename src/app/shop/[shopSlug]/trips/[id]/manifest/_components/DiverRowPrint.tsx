@@ -67,7 +67,10 @@ export function DiverRowPrint({
           behind the tap and on the crew's offline copy. "Print with medical
           alerts" puts them under the row instead (below, issue #2990). */}
         {diver.medicalAlert && !diver.identityWithheld && !printedAlert ? (
-          <Badge tone="primary">{t("manifest.medicalAlertPrinted")}</Badge>
+          // Two sentences, wider than a sheet's column: it wraps rather than clips.
+          <Badge tone="primary" wraps>
+            {t("manifest.medicalAlertPrinted")}
+          </Badge>
         ) : null}
         {diver.hotelPickupLocation ? (
           <Badge tone="neutral">
