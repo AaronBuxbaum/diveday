@@ -361,7 +361,8 @@ export type BookingCapabilityContext = {
 /**
  * Resolves a bearer token to its booking context, or null for anything that
  * must read to the caller as "this link isn't available" — unknown token,
- * wrong purpose, expired, revoked, or a since-cancelled booking. Callers
+ * wrong purpose, expired, revoked, a since-cancelled booking, or a departure
+ * since cancelled or deleted. Callers
  * must never distinguish these cases in a public response: this function is
  * the one place that decides, so no response elsewhere can leak a
  * booking-existence oracle.
@@ -385,6 +386,9 @@ export async function verifyBookingCapability(
   // longer runs. Fail closed here too, the same way `issueWaiverRequest`
   // already does for waivers (src/db/waivers.ts).
   if (row.tripStatus === "cancelled") return null;
+  // A deleted departure is gone from every staff surface, so a link to it
+  // reads as dead too, even while its status still says scheduled (#2926).
+  if (row.tripDeleted) return null;
   if (row.capabilityShopId !== row.bookingShopId) return null;
   return {
     bookingId: row.bookingId,
@@ -447,7 +451,7 @@ async function liveCapabilityRow(
     })
     .from(bookingCapabilities)
     .innerJoin(bookings, eq(bookings.id, bookingCapabilities.bookingId))
-    // diveday:allow-deleted-trips: the stranded check reads `tripDeleted` and refuses a deleted departure.
+    // diveday:allow-deleted-trips: both verifiers read `tripDeleted` and refuse a deleted departure.
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(

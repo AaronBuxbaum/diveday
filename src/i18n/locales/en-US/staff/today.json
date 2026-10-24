@@ -311,6 +311,7 @@
   "emergencyCard": {
     "subject": "Your emergency reference has no numbers",
     "detail": "The {time} boat {day} sails without a chamber or coastguard number on it.",
+    "detailOut": "The {time} boat is out without a chamber or coastguard number on it.",
     "action": "Add the numbers"
   },
   "lostItems": {

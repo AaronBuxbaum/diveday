@@ -282,6 +282,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             hasShoreDiving: shop.hasShoreDiving,
             hasPoolDiving: shop.hasPoolDiving,
             rentalItems: shop.rentalItems,
+            flySafeTold: overview.flySafeTold,
           }}
         />
       ) : undefined,

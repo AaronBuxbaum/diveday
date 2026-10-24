@@ -232,6 +232,7 @@
     "dateOfBirthLabel": "Date of birth",
     "adultAttestedHint": "18 or older, per {name}",
     "adultAttestedHintNoName": "18 or older, per staff",
+    "minorDeclaredHint": "Booked as under 18, no date on file",
     "optionalHint": "(optional)",
     "diveInsuranceFieldLabel": "Dive insurance",
     "diveInsurancePlaceholder": "DAN #12345",
@@ -642,7 +643,8 @@
     "summaryEmergency": "Emergency contact: {name}",
     "summaryEmergencyNoPhone": "Emergency contact: {name}, no phone number",
     "summaryEmergencyNoName": "Emergency contact: {phone}, no name",
-    "summaryNoEmergency": "No emergency contact"
+    "summaryNoEmergency": "No emergency contact",
+    "minorDeclaredNoDateOfBirth": "A booking says this diver is under 18, so their waiver needs a parent or guardian’s signature. Add the date of birth to settle it."
   },
   "lastDive": {
     "heading": "Last dive",

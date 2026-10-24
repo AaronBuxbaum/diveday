@@ -438,6 +438,12 @@ export type OpenRollCall = {
    * so a gap assembled by hand says nothing, and nothing softens.
    */
   latestMarkedDive?: number;
+  /**
+   * When the newest standing result at `latestMarkedDive` was taken, diver or
+   * crew, or null when there is none. The close-out softens an open count only
+   * while this is recent (issue #2925). Optional for the same reason.
+   */
+  latestMarkAt?: Date | null;
 };
 
 /**
@@ -771,6 +777,24 @@ export async function listRollCallGaps(
     for (let dive = 1; dive < checkpoints.length; dive++) {
       if ((recorded[dive] ?? 0) > 0 || (crewRecorded[dive] ?? 0) > 0) latestMarkedDive = dive;
     }
+    // The newest standing result at that checkpoint: how recently anybody was
+    // counted there, which tells a count being taken from one left half done.
+    let latestMarkAt: Date | null = null;
+    if (latestMarkedDive > 0) {
+      const checkpoint = checkpoints[latestMarkedDive];
+      const standing = [
+        ...bookingIds.map((bookingId) =>
+          latestByBookingCheckpoint.get(`${bookingId}\0${checkpoint}`),
+        ),
+        ...crewIds.map((personId) =>
+          latestByCrewCheckpoint.get(`${trip.id}\0${personId}\0${checkpoint}`),
+        ),
+      ];
+      for (const event of standing) {
+        if (!event || event.status === "cleared") continue;
+        if (!latestMarkAt || event.occurredAt > latestMarkAt) latestMarkAt = event.occurredAt;
+      }
+    }
 
     const base = {
       tripId: trip.id,
@@ -785,6 +809,7 @@ export async function listRollCallGaps(
       alertedAt: trip.alertedAt,
       shoreAlertedAt: trip.shoreAlertedAt,
       latestMarkedDive,
+      latestMarkAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on

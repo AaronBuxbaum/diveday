@@ -5,7 +5,12 @@ import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
-import { isDiver, isHeldToMedical, participantPriceCents } from "@/lib/participant-types";
+import {
+  isDiver,
+  isHeldToMedical,
+  type ParticipantType,
+  participantPriceCents,
+} from "@/lib/participant-types";
 import type {
   CardUnreviewRefusal,
   CertificationLevel,
@@ -1458,13 +1463,14 @@ export async function listTripReadiness(
   shopId: string,
   tripId: string,
   now: Date = nowDate(),
+  options: ReadinessAsOf = {},
 ) {
   // `queryAll`, not `Promise.all`: this reader runs both on the pool (every
   // roster and manifest render) and inside `checkInBooking`'s transaction,
   // where a `Promise.all` is concurrent queries on one pinned client. See its
   // comment in `src/db/client.ts`.
   const [rows, shopRow, tripMaxDepthMeters, tripRow] = await queryAll(db, [
-    () => listTripsReadiness(db, shopId, [tripId], now),
+    () => listTripsReadiness(db, shopId, [tripId], now, options),
     () =>
       db
         .select({ timezone: shops.timezone, depthUnit: shops.depthUnit })
@@ -1682,6 +1688,53 @@ function formsBookingOf(
     : { bookingId, tripId };
 }
 
+type SeatReleaseInput = Parameters<typeof releaseLapseForBooking>[0];
+
+/**
+ * **The release a seat stands on, and whether it lapsed**, for
+ * {@link listTripsReadiness}.
+ *
+ * **The release's clocks run at the departure** (issue #2611): while the trip
+ * has not started, at its end; once under way, at now. The night-before
+ * roster, Today and the reminder then agree with the dock, a night dive's
+ * release that lapses mid-dive blocks before it sails, and a liveaboard guest
+ * on day two reads at now. Cards, payment and age keep their own instants.
+ *
+ * A rider is held to the release and never to its medical (H-109), so a hold
+ * does not outrank their signatures and a held record is a signed one — read
+ * only while it is itself current, never the hold's own standing. `asOf` is
+ * the departure log's alone (issue #3002).
+ */
+function seatRelease(input: {
+  booking: { participantType: ParticipantType };
+  bookingWaiver: SeatReleaseInput["bookingWaiver"];
+  personSignedWaivers: SeatReleaseInput["personSignedWaivers"];
+  currentTemplateVersion: number | null;
+  now: Date;
+  startsAt: Date | null;
+  endsAt: Date | null;
+  asOf: Date | undefined;
+}) {
+  const heldToMedical = isHeldToMedical(input.booking.participantType);
+  const waiverNow = waiverClockInstant(input);
+  const effectiveWaiver = (
+    heldToMedical ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat
+  )({ ...input, now: waiverNow });
+  const releaseLapse = releaseLapseForBooking({ ...input, heldToMedical });
+  return { effectiveWaiver, releaseLapse };
+}
+
+/**
+ * **Reading a roster as it stood, for the departure log only** (issue #3002).
+ * Live readers pass nothing and see every record however fresh. The log reads
+ * each seat's release as it stood when that diver boarded (`recordsAsOf`, by
+ * booking id) and the release terms in force when the boat left (`termsAsOf`).
+ */
+export type ReadinessAsOf = {
+  recordsAsOf?: (bookingId: string) => Date | undefined;
+  termsAsOf?: Date;
+};
+
 /**
  * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
  * whose training mark stands — the course seat's too, so the charter and the
@@ -1699,6 +1752,7 @@ export async function listTripsReadiness(
   shopId: string,
   tripIds: string[],
   now: Date = nowDate(),
+  options: ReadinessAsOf = {},
 ) {
   if (tripIds.length === 0) return [];
 
@@ -1738,7 +1792,9 @@ export async function listTripsReadiness(
             ),
           ),
       () => listTripsWaiverStatuses(db, shopId, tripIds),
-      () => getCurrentWaiverGeneration(db, shopId),
+      // The live terms; for the departure log, the ones the boat left under
+      // (issue #3002).
+      () => getCurrentWaiverGeneration(db, shopId, options.termsAsOf),
       () =>
         db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
       () =>
@@ -1911,38 +1967,15 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
-    // **The release's clocks run at the departure** (issue #2611): while the
-    // trip has not started, at its end; once under way, at now. The
-    // night-before roster, Today and the reminder then agree with the dock, a
-    // night dive's release that lapses mid-dive blocks before it sails, and a
-    // liveaboard guest on day two reads at now. Cards, payment and age keep
-    // their own instants.
-    const waiverNow = waiverClockInstant({
-      now,
-      startsAt: courseRow?.startsAt ?? null,
-      endsAt: courseRow?.endsAt ?? null,
-    });
-    // A rider is held to the release and never to its medical (H-109), so a
-    // hold does not outrank their signatures and a held record is a signed one
-    // — read only while it is itself current, never the hold's own standing.
-    const effectiveWaiver = (
-      isHeldToMedical(row.booking.participantType)
-        ? effectiveWaiverForBooking
-        : effectiveReleaseForRiderSeat
-    )({
+    const { effectiveWaiver, releaseLapse } = seatRelease({
+      booking: row.booking,
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
-      now: waiverNow,
-    });
-    const releaseLapse = releaseLapseForBooking({
-      bookingWaiver: row.waiver,
-      personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
-      currentTemplateVersion: currentTemplateGeneration,
-      heldToMedical: isHeldToMedical(row.booking.participantType),
       now,
       startsAt: courseRow?.startsAt ?? null,
       endsAt: courseRow?.endsAt ?? null,
+      asOf: options.recordsAsOf?.(row.booking.id),
     });
     const referral = overriddenReferral(
       effectiveWaiver,

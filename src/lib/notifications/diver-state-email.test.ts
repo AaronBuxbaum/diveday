@@ -360,3 +360,38 @@ describe("diverStateEmail: home (the recap)", () => {
     }
   });
 });
+
+describe("diverStateEmail: fly_safe_correction (#2927)", () => {
+  const base = {
+    locale: "en-US" as const,
+    shopName: "Blue Mantis",
+    tripTitle: "Two-Tank Reef",
+    startsAt: new Date("2026-08-01T13:00:00.000Z"),
+    timezone: "America/New_York",
+    state: "fly_safe_correction" as const,
+  };
+
+  it("says the figure no longer applies and to ask the crew, in one sentence and no figure", () => {
+    const email = diverStateEmail(base);
+    expect(email.subject).toBe("A change to when you can fly: Two-Tank Reef");
+    expect(email.text).toBe(
+      [
+        "Two-Tank Reef now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly.",
+        "",
+        "Blue Mantis",
+        "",
+      ].join("\n"),
+    );
+    // No new number to hold instead: DAN gives none for a dive with stops (H-84).
+    expect(email.text).not.toMatch(/\d+ hours?/);
+    expect(email.html).not.toContain("<a ");
+  });
+
+  it("speaks the diver's language and escapes the shop's words", () => {
+    const es = diverStateEmail({ ...base, locale: "es-ES", tripTitle: "Arrecife <dos>" });
+    expect(es.subject).toBe("Cambio en cuándo puedes volar: Arrecife <dos>");
+    expect(es.text).toContain("Pregúntale a la tripulación cuánto esperar antes de volar.");
+    expect(es.html).toContain("Arrecife &lt;dos&gt;");
+    expect(es.html).not.toContain("<dos>");
+  });
+});

@@ -327,6 +327,74 @@ export function waiverClockInstant(input: {
 }
 
 /**
+ * **A record as it stood at `at`** (issue #3002). Null when it was signed after
+ * that instant: it did not exist yet. A supersession, a physician's clearance
+ * or a physician's refusal recorded after `at` had not happened yet either, so
+ * each reads as absent. The record itself comes back untouched when nothing
+ * about it postdates `at`, which is every record a live reader sees.
+ *
+ * The departure log reads the roster as of the boat's cutoff through the same
+ * resolution every live surface uses; this is what keeps a release signed next
+ * season, or a referral cleared after the boat came home, out of that record.
+ */
+export function recordAsOf(record: WaiverRecord, at: Date): WaiverRecord | null {
+  // The signing instant every resolver orders by, down to the row's own
+  // creation for a record with neither stamp.
+  if (signatureTime(record) > at.getTime()) return null;
+  const later = (stamp: Date | null | undefined) =>
+    stamp ? stamp.getTime() > at.getTime() : false;
+  if (
+    !later(record.supersededAt) &&
+    !later(record.medicalClearedAt) &&
+    !later(record.medicalClearanceDeclinedAt)
+  ) {
+    return record;
+  }
+  const asOf = { ...record };
+  if (later(record.supersededAt)) asOf.supersededAt = null;
+  // A physician's answer recorded later had not been given: every field it
+  // wrote goes with it, so nothing downstream names who recorded it.
+  const clearedLater = later(record.medicalClearedAt);
+  const declinedLater = later(record.medicalClearanceDeclinedAt);
+  if (clearedLater) {
+    asOf.medicalClearedAt = null;
+    asOf.medicalClearedByPersonId = null;
+    asOf.medicalClearanceDocumentUrl = null;
+  }
+  if (declinedLater) {
+    asOf.medicalClearanceDeclinedAt = null;
+    asOf.medicalClearanceDeclinedByPersonId = null;
+  }
+  if (!asOf.medicalClearedAt && !asOf.medicalClearanceDeclinedAt) {
+    asOf.medicalClearanceEvaluatedOn = null;
+    asOf.medicalClearancePhysicianName = null;
+  }
+  return asOf;
+}
+
+/**
+ * {@link recordAsOf} over a list, dropping what did not exist yet. With no
+ * `at`, the list as it is: only the departure log passes an instant, so a
+ * live reader whose clock runs a moment behind a fresh write still sees it.
+ */
+function recordsAsOf(
+  records: readonly WaiverRecord[],
+  at: Date | undefined,
+): readonly WaiverRecord[] {
+  if (!at) return records;
+  return records.flatMap((record) => {
+    const asOf = recordAsOf(record, at);
+    return asOf ? [asOf] : [];
+  });
+}
+
+/** A seat's own record as it stood at `at`, or as it is with no `at`. */
+function ownAsOf(record: WaiverRecord | null, at: Date | undefined): WaiverRecord | null {
+  if (!record) return null;
+  return at ? recordAsOf(record, at) : record;
+}
+
+/**
  * The single waiver record that governs a booking's readiness once the
  * sign-once rule is applied.
  *
@@ -344,26 +412,33 @@ export function waiverClockInstant(input: {
  * physician cleared, which still outranks the signatures older than it
  * ({@link isUnclearedReferral}), or a clean signature a fresh link replaced,
  * which no currency check lets stand.
+ *
+ * With `asOf`, every record is read as it stood then ({@link recordAsOf}), so
+ * the departure log names only what existed when the diver boarded (issue
+ * #3002). Live readers pass none and see every record, however fresh.
  */
 export function effectiveWaiverForBooking(input: {
   bookingWaiver: WaiverRecord | null;
   personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
   now?: Date;
+  /** Read every record as it stood then ({@link recordAsOf}); the departure log only. */
+  asOf?: Date;
 }): WaiverRecord | null {
   const now = input.now ?? nowDate();
-  const own = input.bookingWaiver;
+  const own = ownAsOf(input.bookingWaiver, input.asOf);
+  const personSignedWaivers = recordsAsOf(input.personSignedWaivers, input.asOf);
   if (own && isUnresolvedMedicalHold(own)) return own;
 
   const clean = [
     ...(own && isCompletedWaiverCurrent(own, input.currentTemplateVersion, now) ? [own] : []),
-    ...input.personSignedWaivers.filter((record) =>
+    ...personSignedWaivers.filter((record) =>
       isCompletedWaiverCurrent(record, input.currentTemplateVersion, now),
     ),
   ].sort((a, b) => signatureTime(b) - signatureTime(a))[0];
 
   const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
-  const hold = input.personSignedWaivers
+  const hold = personSignedWaivers
     .filter(outranksOlderSignatures)
     .filter((record) => signatureTime(record) >= cleanTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
@@ -395,10 +470,12 @@ export function effectiveReleaseForRiderSeat(input: {
   personSignedWaivers: readonly WaiverRecord[];
   currentTemplateVersion: number | null;
   now?: Date;
+  /** As {@link effectiveWaiverForBooking}'s: the departure log only. */
+  asOf?: Date;
 }): WaiverRecord | null {
   const now = input.now ?? nowDate();
-  const own = input.bookingWaiver;
-  const signed = [...(own ? [own] : []), ...input.personSignedWaivers]
+  const own = ownAsOf(input.bookingWaiver, input.asOf);
+  const signed = [...(own ? [own] : []), ...recordsAsOf(input.personSignedWaivers, input.asOf)]
     .filter((record) => isSignatureCurrent(record, input.currentTemplateVersion, now))
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (signed) return signed;
@@ -429,6 +506,8 @@ export function releaseLapsedForBooking(input: {
   /** False for a rider's seat (H-109); defaults to a seat in the water. */
   heldToMedical?: boolean;
   now?: Date;
+  /** As {@link effectiveWaiverForBooking}'s: the departure log only. */
+  asOf?: Date;
 }): boolean {
   const heldToMedical = input.heldToMedical ?? true;
   const resolve = heldToMedical ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat;
@@ -436,9 +515,11 @@ export function releaseLapsedForBooking(input: {
   const signed = heldToMedical
     ? isCleanCompletion
     : (record: WaiverRecord) => record.status === "completed" || record.status === "medical_review";
-  return [...(input.bookingWaiver ? [input.bookingWaiver] : []), ...input.personSignedWaivers].some(
-    signed,
-  );
+  const records = [
+    ...(input.bookingWaiver ? [input.bookingWaiver] : []),
+    ...input.personSignedWaivers,
+  ];
+  return recordsAsOf(records, input.asOf).some(signed);
 }
 
 /** Why a seat's release does not stand: aged out already, or aging out before the trip. */
@@ -460,6 +541,8 @@ export function releaseLapseForBooking(input: {
   heldToMedical?: boolean;
   /** Real now, never the trip-scoped instant. */
   now: Date;
+  /** As {@link effectiveWaiverForBooking}'s: the departure log only. */
+  asOf?: Date;
   startsAt: Date | null;
   endsAt: Date | null;
 }): ReleaseLapse | null {

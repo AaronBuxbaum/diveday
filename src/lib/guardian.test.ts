@@ -5,8 +5,10 @@ import {
   guardianSignatureOf,
   guardianSignatureRequired,
   isGuardianRelationship,
+  minorDeclaredOnLiveUpcomingSeat,
   signingDate,
 } from "./guardian";
+import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const TZ = "America/New_York";
 /** Signed 2026-07-18 at 23:30 New York — 2026-07-19 in UTC, which is the trap. */
@@ -157,5 +159,74 @@ describe("signing in Pacific/Honolulu on the eve of the 18th birthday", () => {
     expect(guardianSignatureMissing(solo, { ...turnsEighteenOnThe19th, timezone: "UTC" })).toBe(
       false,
     );
+  });
+});
+
+/**
+ * **A person-scoped reader takes the booker's "Under 18" from a live seat
+ * still ahead** (issue #2553, Option A, Aaron 2026-10-24). A seat that no
+ * longer stands, or a dive already over, says nothing about the person today.
+ */
+describe("minorDeclaredOnLiveUpcomingSeat", () => {
+  const now = new Date("2026-10-24T12:00:00.000Z");
+  const later = new Date("2026-10-26T12:00:00.000Z");
+  const declared = new Date("2026-10-20T12:00:00.000Z");
+  function seat(overrides: {
+    status?: string;
+    minorDeclaredAt?: Date | null;
+    deletedAt?: Date | null;
+    tripStatus?: string;
+    endsAt?: Date;
+  }) {
+    return {
+      status: overrides.status ?? "booked",
+      minorDeclaredAt:
+        overrides.minorDeclaredAt === undefined ? declared : overrides.minorDeclaredAt,
+      trip: {
+        deletedAt: overrides.deletedAt ?? null,
+        status: overrides.tripStatus ?? "scheduled",
+        endsAt: overrides.endsAt ?? later,
+      },
+    };
+  }
+
+  it("reads true for a declared seat on a departure still ahead, or still out", () => {
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({})], now)).toBe(true);
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ status: "checked_in" })], now)).toBe(true);
+    // The boat is out: the dive is not over, so the seat still speaks.
+    expect(
+      minorDeclaredOnLiveUpcomingSeat([seat({ endsAt: new Date(now.getTime() + 60_000) })], now),
+    ).toBe(true);
+  });
+
+  it("reads true when any one seat is declared, whatever the others say", () => {
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ minorDeclaredAt: null }), seat({})], now)).toBe(
+      true,
+    );
+  });
+
+  it("reads false with no seats, or no declared seat", () => {
+    expect(minorDeclaredOnLiveUpcomingSeat([], now)).toBe(false);
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ minorDeclaredAt: null })], now)).toBe(false);
+  });
+
+  it("ignores a cancelled seat, a deleted or called-off departure, and a dive already over", () => {
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ status: "cancelled" })], now)).toBe(false);
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ deletedAt: declared })], now)).toBe(false);
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ tripStatus: "cancelled" })], now)).toBe(false);
+    // A boat due back but inside the late-arrival hour is still out.
+    expect(minorDeclaredOnLiveUpcomingSeat([seat({ endsAt: now })], now)).toBe(true);
+    expect(
+      minorDeclaredOnLiveUpcomingSeat(
+        [seat({ endsAt: new Date(now.getTime() - DEPARTURE_BUFFER_MS) })],
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      minorDeclaredOnLiveUpcomingSeat(
+        [seat({ endsAt: new Date("2026-10-01T12:00:00.000Z") })],
+        now,
+      ),
+    ).toBe(false);
   });
 });

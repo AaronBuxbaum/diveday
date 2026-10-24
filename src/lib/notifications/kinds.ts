@@ -1375,6 +1375,27 @@ export type CustomerGearPiece = z.infer<typeof customerGearPieceSchema>;
  * notes never reach this payload.
  */
 /**
+ * **The one correction to a fly-safe wait a diver was told** (issue #2927).
+ * The night-before email said the rule in hours (H-150); a departure marked
+ * as decompression diving after it went out leaves that figure wrong. One
+ * line per seat, once, and no link: the diver's next step is to ask the
+ * crew. `seatId`, not `bookingId`, for the reason `departureNoteSchema`
+ * gives: the seat's own row (`bookings.fly_safe_corrected_at`) is what keeps
+ * it to one, not `notification_deliveries`.
+ */
+const flySafeCorrectionSchema = z.object({
+  kind: z.literal("fly_safe_correction"),
+  seatId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+/**
  * **A note to everyone on a departure** (batch 4, J4): the staffer's own short
  * line, checked before it was held (`departureNoteProblem`), and the diver's
  * own `/ready` link — the one link it may carry. One send per note per seat.
@@ -2017,6 +2038,7 @@ export const notificationSchema = z
     tripReminder7dSchema,
     tripReminder24hSchema,
     tripRescheduledSchema,
+    flySafeCorrectionSchema,
     tripRecapSchema,
     tripConditionsHoldSchema,
     tripMinimumNotMetSchema,
@@ -2328,6 +2350,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per note per seat; the note row exists before the send does.
     case "departure_note":
       return `departure-note/${notification.noteId}/${notification.seatId}`;
+    // One correction per seat, ever (issue #2927).
+    case "fly_safe_correction":
+      return `fly-safe-correction/${notification.seatId}`;
     // One send per tap on Tell.
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;

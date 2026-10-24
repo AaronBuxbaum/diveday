@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -19,7 +19,7 @@ import {
   recordPreDepartureCheck,
 } from "./pre-departure-check";
 import { createCertification, reviewCertification } from "./readiness";
-import { activityEvents, shops, waiverRecords } from "./schema";
+import { activityEvents, rollCallEvents, shops, waiverRecords, waiverTemplates } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -371,6 +371,138 @@ describe("the departure log's roster changes and incident reports", () => {
     expect(stateOf(before)).toBe("complete");
     expect(stateOf(after)).toBe("complete");
     expect(after?.contentHash).toBe(before?.contentHash);
+  });
+
+  /**
+   * **A log names the release that stood when the boat left** (issue #3002).
+   * The diver signed before the departure, then re-signed after it, once the
+   * shop had changed its release: the log printed later must still name the
+   * first signature, against the terms that stood, and never the one dated
+   * after boarding.
+   */
+  it("names the release that stood at the cutoff, not one signed after the boat left (#3002)", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const minutes = (n: number) => new Date(reef.startsAt.getTime() + n * 60_000);
+    const first = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(30));
+    const unsent = first?.roster.find((entry) => entry.waiver?.state === "not_sent");
+    if (!unsent) throw new Error("expected a seat with no waiver");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
+    if (!issued.ok) throw new Error("expected waiver link");
+    const done = await completeWaiver(db, issued.token, {
+      signerName: unsent.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    if (!done.ok) throw new Error("waiver completion failed");
+    const [sailedOn] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, unsent.bookingId));
+    if (!sailedOn) throw new Error("signed record missing");
+    const signedBefore = new Date(reef.startsAt.getTime() - 24 * 60 * 60_000);
+    const resignedAt = minutes(10 * 24 * 60);
+    await db
+      .update(waiverRecords)
+      .set({ signedAt: signedBefore, completedAt: signedBefore, supersededAt: resignedAt })
+      .where(eq(waiverRecords.id, sailedOn.id));
+
+    // The shop changes its release a week after the boat, and the diver signs it.
+    const [template] = await db
+      .select()
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, shop.id))
+      .orderBy(desc(waiverTemplates.version))
+      .limit(1);
+    if (!template) throw new Error("shop release missing");
+    const { id: _templateId, ...templateRest } = template;
+    const [nextTerms] = await db
+      .insert(waiverTemplates)
+      .values({
+        ...templateRest,
+        version: template.version + 1,
+        materialGeneration: template.materialGeneration + 1,
+        body: `${template.body}\n\nAmended.`,
+        createdAt: minutes(7 * 24 * 60),
+      })
+      .returning();
+    if (!nextTerms) throw new Error("amended release insert returned no row");
+    const { id: _recordId, ...recordRest } = sailedOn;
+    const [signedLater] = await db
+      .insert(waiverRecords)
+      .values({
+        ...recordRest,
+        templateId: nextTerms.id,
+        templateVersion: nextTerms.version,
+        templateGeneration: nextTerms.materialGeneration,
+        tokenHash: `${sailedOn.tokenHash}-resigned`,
+        signedAt: resignedAt,
+        completedAt: resignedAt,
+        supersededAt: null,
+        createdAt: resignedAt,
+      })
+      .returning();
+    if (!signedLater) throw new Error("re-signed record insert returned no row");
+
+    const printedLater = await getIncidentExport(
+      db,
+      shop.id,
+      reef.id,
+      staff.id,
+      minutes(30 * 24 * 60),
+    );
+    const governing = printedLater?.roster.find(
+      (entry) => entry.bookingId === unsent.bookingId,
+    )?.waiver;
+    expect(governing?.state).toBe("complete");
+    expect(governing?.signedAt).toBe(signedBefore.toISOString());
+    expect(governing?.templateVersion).toBe(template.version);
+  });
+
+  /**
+   * **A late boat reads each seat when that diver boarded** (domain review of
+   * #3002). The boat was due at the start and cast off 25 minutes late; the
+   * diver signed at the dock ten minutes after the start and was marked aboard
+   * at 25. The log must not show her boarding unsigned.
+   */
+  it("reads a seat at its own departure mark when the boat sailed late (#3002)", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const minutes = (n: number) => new Date(reef.startsAt.getTime() + n * 60_000);
+    const first = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(30));
+    const unsent = first?.roster.find((entry) => entry.waiver?.state === "not_sent");
+    if (!unsent) throw new Error("expected a seat with no waiver");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
+    if (!issued.ok) throw new Error("expected waiver link");
+    const done = await completeWaiver(db, issued.token, {
+      signerName: unsent.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    if (!done.ok) throw new Error("waiver completion failed");
+    await db
+      .update(waiverRecords)
+      .set({ signedAt: minutes(10), completedAt: minutes(10), createdAt: minutes(9) })
+      .where(eq(waiverRecords.bookingId, unsent.bookingId));
+
+    // Not yet marked aboard: read at the scheduled start, she had not signed.
+    const unmarked = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(60));
+    expect(
+      unmarked?.roster.find((entry) => entry.bookingId === unsent.bookingId)?.waiver?.state,
+    ).toBe("not_sent");
+
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: unsent.bookingId,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "departure",
+      source: "live",
+      occurredAt: minutes(25),
+    });
+    const printed = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(60));
+    const governing = printed?.roster.find((entry) => entry.bookingId === unsent.bookingId)?.waiver;
+    expect(governing?.state).toBe("complete");
+    expect(governing?.signedAt).toBe(minutes(10).toISOString());
   });
 
   it("lists a seat removed after the scheduled start, and not one changed before it", async () => {

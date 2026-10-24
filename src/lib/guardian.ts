@@ -1,6 +1,7 @@
 import type { WaiverRecord } from "@/db/schema";
 import { isMinorOnDate } from "./age";
 import { type CalendarDate, calendarDateInTimezone } from "./calendar-date";
+import { hasReturned } from "./trips";
 
 /**
  * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
@@ -40,8 +41,9 @@ export type GuardianSigner = {
   /**
    * Whoever booked the seat said this diver is under 18
    * (`bookings.minor_declared_at`). Required rather than optional so every
-   * caller answers it: `false` where no seat is in hand (a diver record, a
-   * counter rental), never by omission.
+   * caller answers it, never by omission. A reader with no seat in hand (a
+   * diver record, a counter rental) answers it with
+   * `minorDeclaredOnLiveUpcomingSeat` (issue #2553).
    */
   minorDeclared: boolean;
   timezone: string;
@@ -83,6 +85,39 @@ export function guardianSignatureRequired(
   // sign their release alone; the box is the parent saying so.
   if (dateOfBirth) return isMinorOnDate(dateOfBirth, signedOn);
   return minorDeclared;
+}
+
+/**
+ * **Whether a person-scoped reader takes the booker's "Under 18"** (issue
+ * #2553, Option A, Aaron 2026-10-24).
+ *
+ * The diver record and a counter rental read a person with no seat in hand.
+ * They take the stamp from any of this person's seats that still stands: not
+ * cancelled, on a departure that is live, scheduled, and not yet back
+ * (`hasReturned`, so a boat out, or running late, still counts). One such seat is enough, because the roster for that
+ * seat already asks for the guardian, and the record must not say "Signed"
+ * over the release the roster blocks. A seat that no longer stands, or a dive
+ * already over, says nothing about the person today.
+ *
+ * It only feeds `guardianSignatureRequired`, where a date of birth on file
+ * still decides. Nothing ever writes a date of birth from the stamp.
+ */
+export function minorDeclaredOnLiveUpcomingSeat(
+  seats: readonly {
+    status: string;
+    minorDeclaredAt: Date | null;
+    trip: { deletedAt: Date | null; status: string; endsAt: Date };
+  }[],
+  now: Date,
+): boolean {
+  return seats.some(
+    (seat) =>
+      seat.minorDeclaredAt !== null &&
+      seat.status !== "cancelled" &&
+      seat.trip.deletedAt === null &&
+      seat.trip.status === "scheduled" &&
+      !hasReturned(seat.trip.endsAt, now),
+  );
 }
 
 /** The shop-local calendar day a signing instant fell on. */
