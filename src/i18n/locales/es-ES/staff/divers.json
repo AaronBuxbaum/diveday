@@ -618,6 +618,7 @@
     "conversationUnanswered": "{count, plural, one {# sin responder} other {# sin responder}}",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
     "noneOnFile": "Sin datos",
+    "certificationsNone": "Ninguna registrada",
     "gearHeading": "Equipo y tallas",
     "rentalFitOnFile": "Ajuste de alquiler registrado",
     "rentsFromUs": "Renta con nosotros",

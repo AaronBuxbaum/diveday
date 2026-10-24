@@ -1,7 +1,6 @@
 {
   "main": {
     "eyebrow": "Ajustes",
-    "boatMode": "Modo barco",
     "notice": {
       "packingSaved": "Lista de equipo guardada para todas las salidas",
       "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
@@ -1101,6 +1100,7 @@
     "sessions": {
       "group": "{count, plural, one {# sesión} other {# sesiones}} · última vez {when}",
       "thisDevice": "Este dispositivo",
+      "includesThisDevice": "Incluye este dispositivo",
       "showSessions": "Ver sesiones",
       "showAll": "Ver todas"
     },

@@ -52,3 +52,16 @@ export function groupSessions<T extends GroupableSession>(rows: readonly T[]): S
     return b.lastSeenAt.getTime() - a.lastSeenAt.getTime();
   });
 }
+
+/**
+ * **Which words a group's row says about this device** (dive-domain review,
+ * visual review 2026-10-24). "This device" marks a session, so on a row that
+ * stands for several it would claim every one of them; that row says
+ * "Includes this device", and only a group of one may carry "This device".
+ */
+export function groupDeviceTag(
+  group: Pick<SessionGroup<GroupableSession>, "isCurrent" | "sessions">,
+): "thisDevice" | "includesThisDevice" | null {
+  if (!group.isCurrent) return null;
+  return group.sessions.length === 1 ? "thisDevice" : "includesThisDevice";
+}

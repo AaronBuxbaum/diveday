@@ -44,6 +44,7 @@ vi.mock("@/db/shop-text-translations", () => ({
   saveTranslation: vi.fn(async () => "saved"),
 }));
 vi.mock("@/db/course-forms", () => ({
+  courseFormListRefusal: vi.fn(async () => null),
   listCourseFormRequirements: vi.fn(async () => []),
   listCourseFormAgeBounds: vi.fn(async () => new Map()),
   setCourseFormRequirements: vi.fn(),
@@ -55,8 +56,12 @@ const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility, updateC
 const { readTranslations, saveTranslation } = await import("@/db/shop-text-translations");
 const { requireStaffSession } = await import("@/lib/session");
 const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
-const { listCourseFormAgeBounds, listCourseFormRequirements, setCourseFormRequirements } =
-  await import("@/db/course-forms");
+const {
+  courseFormListRefusal,
+  listCourseFormAgeBounds,
+  listCourseFormRequirements,
+  setCourseFormRequirements,
+} = await import("@/db/course-forms");
 const { pullCourseTemplateUpdatesAction, saveCourseContentAction, setCourseVisibilityAction } =
   await import("./actions");
 
@@ -231,6 +236,29 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
         [`maxAge-${FORM_A}`, "0"],
       ]),
     ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid-age#forms");
+  });
+
+  /**
+   * **A forms list the database would refuse refuses the whole save first**
+   * (dive-domain review, visual review 2026-10-24): the page's words and its
+   * prices are written before the forms, so a refusal found only in the forms
+   * write would land after them.
+   */
+  it("refuses a list naming a bound on a medical form before writing the page or its prices", async () => {
+    const { updateCourse } = await import("@/db/courses");
+    vi.mocked(updateCourse).mockClear();
+    vi.mocked(updateCourseContent).mockClear();
+    vi.mocked(setCourseFormRequirements).mockClear();
+    vi.mocked(courseFormListRefusal).mockResolvedValueOnce("medical_bound");
+    expect(
+      await posted([
+        ["formId", FORM_A],
+        [`maxAge-${FORM_A}`, "12"],
+      ]),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-medical-age#forms");
+    expect(updateCourseContent).not.toHaveBeenCalled();
+    expect(updateCourse).not.toHaveBeenCalled();
+    expect(setCourseFormRequirements).not.toHaveBeenCalled();
   });
 
   it("saves an empty list when nothing is ticked: the course asks for no forms", async () => {

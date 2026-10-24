@@ -617,25 +617,30 @@ export default async function TeamSettingsPage({
               className="mt-4"
             />
           ) : (
-            <InsetGroup className="mt-4" bodyAs="ul">
-              {staff.map((member) => (
-                <StaffRow
-                  key={member.personId}
-                  member={member}
-                  credentials={credentialRows.filter((row) => row.personId === member.personId)}
-                  notice={pageNotice}
-                  priorRoles={rolesFor === member.personId ? undoRolesFor : []}
-                  locale={locale}
-                  timezone={shop.timezone}
-                  t={t}
-                  year={years.get(member.personId)}
-                />
-              ))}
-            </InsetGroup>
+            // `#credentials` lands here, on the cards (Today's and the
+            // staffing week's credential lines link to it): an expired or
+            // unreviewed credential stands on its person's card at rest.
+            <div id="credentials" className="mt-4 scroll-mt-24">
+              <InsetGroup bodyAs="ul">
+                {staff.map((member) => (
+                  <StaffRow
+                    key={member.personId}
+                    member={member}
+                    credentials={credentialRows.filter((row) => row.personId === member.personId)}
+                    notice={pageNotice}
+                    priorRoles={rolesFor === member.personId ? undoRolesFor : []}
+                    locale={locale}
+                    timezone={shop.timezone}
+                    t={t}
+                    year={years.get(member.personId)}
+                  />
+                ))}
+              </InsetGroup>
+            </div>
           )}
           {/* Every credential is read, reviewed and removed on its person's
               card above (A09); adding one is the door under the team. */}
-          <div id="credentials" className="mt-4 scroll-mt-24">
+          <div className="mt-4">
             <AutoOpenDetails
               id="add-credential"
               openOnHash="add-credential"

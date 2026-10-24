@@ -18,7 +18,7 @@ export function FeaturesGroup({ view }: { view: SettingsView }) {
           href={`/shop/${shopSlug}/settings/features`}
           heading={t("settings.main.features.door")}
         />
-        <BoatModeRow label={t("settings.main.boatMode")} />
+        <BoatModeRow label={t("shared.shopNav.boatMode")} />
       </InsetGroup>
     </SettingsGroup>
   );

@@ -256,6 +256,7 @@
   },
   "shopNav": {
     "language": "Language",
+    "boatMode": "Boat mode",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
     "signOutPending": "Signing out…",

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import type { CardCredential } from "../credential-rows";
@@ -80,7 +80,7 @@ describe("StaffCardCredentials", () => {
     }
   });
 
-  it("is the ledger: an unreviewed credential says so and offers Mark reviewed and Remove", () => {
+  it("is the ledger: an unreviewed credential says so and offers Mark reviewed and Delete", () => {
     renderCard(
       ["captain"],
       [
@@ -93,15 +93,61 @@ describe("StaffCardCredentials", () => {
     );
     expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mark reviewed" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
     expect(screen.getByText("Expired")).toHaveClass("text-warning-strong");
   });
 
-  it("offers no Mark reviewed once somebody has reviewed it, and Remove disables nothing", () => {
+  it("offers no Mark reviewed once somebody has reviewed it, and Delete disables nothing", () => {
     renderCard(["captain"], [card("USCG OUPV", "captains_licence")]);
     expect(screen.queryByText("Needs review")).toBeNull();
     expect(screen.queryByRole("button", { name: "Mark reviewed" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Remove" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+  });
+
+  /**
+   * **What needs someone stands at rest** (dive-domain review, visual review
+   * 2026-10-24): an expired or unreviewed credential is a row on the card, not
+   * a line inside the closed disclosure; only in-date, reviewed ones fold.
+   */
+  it("shows an expired or unreviewed credential at rest and folds only the in-date ones", () => {
+    renderCard(
+      ["captain", "divemaster"],
+      [
+        card("USCG OUPV", "captains_licence", { renewal: "overdue", renewalWord: "Expired" }),
+        card("EFR", "first_aid_cpr", { reviewed: false }),
+        card("PADI Divemaster", "divemaster_rating", { renewal: "current" }),
+      ],
+    );
+    expect(screen.getByText("Expired")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Mark reviewed" })).toBeVisible();
+    const rest = screen.getByRole("list", { name: "Credentials" });
+    expect(rest).toHaveTextContent("USCG OUPV");
+    expect(rest).toHaveTextContent("EFR");
+    expect(rest).not.toHaveTextContent("PADI Divemaster");
+    expect(rest.closest("details")).toBeNull();
+  });
+
+  it("takes a second, deliberate tap to delete a credential", () => {
+    const deleteAction = vi.fn();
+    render(
+      <StaffCardCredentials
+        personId="p1"
+        roles={["captain"]}
+        credentials={[card("USCG OUPV", "captains_licence", { reviewed: false })]}
+        locale="en-US"
+        t={t}
+        reviewAction={noop}
+        deleteAction={deleteAction}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: "Delete" });
+    expect(trigger).toHaveAttribute("type", "button");
+    fireEvent.click(trigger);
+    expect(deleteAction).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Delete USCG OUPV?" })).toHaveAttribute(
+      "type",
+      "submit",
+    );
   });
 
   it("draws no row for a role that sails on no card and has nothing recorded", () => {

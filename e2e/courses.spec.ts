@@ -7,12 +7,21 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openIfClosed,
   openRosterDetails,
   openThreadStep,
   openTripAbout,
   openTripTab,
   publicTripUrl,
 } from "./helpers";
+
+/**
+ * Open one of the course editor's closed sections (visual review 2026-10-24,
+ * A11): pitch, pricing, at a glance and the day-by-day stand open; the rest are
+ * closed rows whose controls still post with the one Save.
+ */
+const openCourseSection = (page: Page, id: string) =>
+  openIfClosed(page.locator(`details#${id}`).filter({ visible: true }));
 
 /**
  * **"More details" on the date-request composer** (2026-09-17). An alternative
@@ -438,6 +447,7 @@ test.describe("staff", () => {
     await page.getByLabel("Day 4 — what happens").fill("Scenario retest\nDebrief and paperwork");
     // Two boxes per pair now, not one textarea carrying a blank-line format
     // (issue #815). The seeded course already has questions; this adds one.
+    await openCourseSection(page, "faq");
     await page.getByRole("button", { name: "Add a question" }).click();
     await page
       .getByLabel(/^Question \d+$/)
@@ -502,6 +512,7 @@ test.describe("staff", () => {
     await row.getByRole("link", { name: "Edit" }).click();
     await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\/edit/);
 
+    await openCourseSection(page, "photos");
     const heroInput = page.locator('input[name="heroImageFile"]').filter({ visible: true });
     await heroInput.setInputFiles({
       name: "hero.jpg",
@@ -1227,6 +1238,7 @@ test("writes a FAQ pair through two boxes and shows it to a diver", async ({
 }) => {
   test.setTimeout(60_000);
   await page.goto(`/shop/${privateShop.slug}/courses/rescue-diver/edit`);
+  await openCourseSection(page, "faq");
   await page.getByRole("button", { name: "Add a question" }).click();
   await page
     .getByLabel(/^Question \d+$/)
@@ -1268,6 +1280,7 @@ test("a course's learning materials reach the student's thread, and staff tick t
   test.setTimeout(90_000);
   const slug = privateShop.slug;
   await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
+  await openCourseSection(page, "learningMaterialsJson");
   await page.getByRole("button", { name: "Add a material" }).click();
   await page
     .getByLabel(/^Material \d+$/)

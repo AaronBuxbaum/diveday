@@ -618,6 +618,7 @@
     "conversationUnanswered": "{count, plural, one {# unanswered} other {# unanswered}}",
     "noteCount": "{count, plural, one {# note} other {# notes}}",
     "noneOnFile": "None on file",
+    "certificationsNone": "None on file",
     "gearHeading": "Gear and sizes",
     "rentalFitOnFile": "Rental fit on file",
     "rentsFromUs": "Rents from us",

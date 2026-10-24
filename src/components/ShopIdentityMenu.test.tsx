@@ -24,6 +24,7 @@ const COPY = {
   signOut: "Sign out",
   signOutConfirm: "Sign out now?",
   accountSettings: "Account settings",
+  boatMode: "Boat mode",
   signOutPending: "Signing out…",
   tellUs: "Send feedback",
   tellUsSubject: "DiveDay note from blue-mantis",
@@ -360,15 +361,17 @@ describe("ShopIdentityMenu — Send feedback and Account settings", () => {
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
     const account = screen.getByRole("link", { name: "Account settings" });
     expect(account).toHaveAttribute("href", "/shop/blue-mantis/settings/security");
-    const order = ["Language", "Account settings", "Send feedback", "Sign out"].map((words) =>
-      screen.getByText(words),
+    const order = ["Language", "Account settings", "Boat mode", "Send feedback", "Sign out"].map(
+      (words) => screen.getByText(words),
     );
     for (const [index, element] of order.entries()) {
       const next = order[index + 1];
       if (!next) continue;
       expect(element.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
-    expect(screen.queryByRole("button", { name: "Boat mode" })).toBeNull();
+    // Boat mode stays in this menu: every signed-in role reaches it here, and
+    // Settings is gated to owners and managers.
+    expect(screen.getByRole("button", { name: "Boat mode" })).toHaveAttribute("aria-pressed");
     expect(screen.queryByRole("link", { name: "Calendar subscription" })).toBeNull();
   });
 });

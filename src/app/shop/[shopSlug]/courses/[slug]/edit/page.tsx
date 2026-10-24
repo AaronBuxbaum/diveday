@@ -151,12 +151,20 @@ export default async function EditCoursePage({
     { id: "faq", label: t("courses.edit.faqLegend") },
   ];
   const unsavedTag = t("shared.formDraft.unsavedSection");
-  // A closed section a refusal names opens, so the box to fix is in view.
+  // A closed section a refusal names opens, so the box to fix is in view. The
+  // save names a field, not always its section's id: the FAQ is posted as
+  // `faqsJson`, and Included / Not included sit in what the fee covers.
+  const FIELD_SECTION: Readonly<Record<string, string>> = {
+    faqsJson: "faq",
+    includes: "fee-covers",
+    excludes: "fee-covers",
+  };
+  const refusedSection = error && field ? (FIELD_SECTION[field] ?? field) : undefined;
   const closedRef = (section: EditorSectionRef) => ({
     ...section,
     unsavedTag,
     closed: true,
-    open: Boolean(error) && field === section.id,
+    open: refusedSection === section.id,
   });
   const [pitch, pricing, glance, dayByDay] = sections
     .slice(0, 4)
@@ -168,6 +176,12 @@ export default async function EditCoursePage({
     closed: true,
     open: Boolean(notice?.startsWith("forms-")),
   };
+  // The unsaved sentence names the forms section too, when it is drawn: a
+  // change to which forms a course asks for is the change least safe to leave
+  // unnamed behind a closed row.
+  const noteSections: readonly EditorSectionRef[] = formsPanel
+    ? [...sections, { id: formsSection.id, label: formsSection.label }]
+    : sections;
 
   // "Schedule a session" on a course the shop runs (third UX review, item 35):
   // one that has been on the board, ahead or behind, or one the shop wrote
@@ -348,11 +362,11 @@ export default async function EditCoursePage({
               <UnsavedChangesNote
                 unsavedLabel={t("courses.edit.unsavedChanges")}
                 restoredLabel={t("courses.edit.draftRestored")}
-                sections={sections.map((section) => ({
+                sections={noteSections.map((section) => ({
                   id: section.id,
                   unsavedSentence: t("courses.edit.unsavedInSection", { section: section.label }),
                 }))}
-                countSentences={sections.map((_, index) =>
+                countSentences={noteSections.map((_, index) =>
                   t("courses.edit.unsavedInSections", { count: index + 1 }),
                 )}
               />
