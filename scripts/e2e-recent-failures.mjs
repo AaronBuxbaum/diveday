@@ -20,6 +20,7 @@ import { pathToFileURL } from "node:url";
 import { stripVTControlCharacters } from "node:util";
 
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { GH_MAX_BUFFER } from "./tracker.mjs";
 
 const SPEC = /^e2e\/.+\.spec\.ts$/;
 
@@ -96,8 +97,20 @@ function flag(name, fallback) {
   return at === -1 ? fallback : Number(process.argv[at + 1]);
 }
 
-const gh = (args) =>
-  JSON.parse(readBounded("gh", args, { encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli }));
+/**
+ * One `gh api` page, parsed. A page of 100 workflow runs passes execFileSync's default 1 MiB
+ * buffer (1.27 MB on 2026-10-23, which killed gh with ENOBUFS and the flake hunt with it), so
+ * the buffer is the one the tracker uses for its own 100-row pages.
+ */
+export function ghJson(endpoint, read = readBounded) {
+  return JSON.parse(
+    read("gh", ["api", endpoint], {
+      encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+      maxBuffer: GH_MAX_BUFFER,
+    }),
+  );
+}
 
 function main() {
   const days = flag("--days", 7);
@@ -105,9 +118,7 @@ function main() {
   const repo = process.env.GITHUB_REPOSITORY ?? "AaronBuxbaum/diveday";
   const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
   try {
-    const { perJob, runCount } = readFailureHistory(repo, since, (endpoint) =>
-      gh(["api", endpoint]),
-    );
+    const { perJob, runCount } = readFailureHistory(repo, since, (endpoint) => ghJson(endpoint));
     console.error(
       `e2e-recent-failures: inspected ${runCount} failed CI runs since ${since}; Playwright and visual shards`,
     );
