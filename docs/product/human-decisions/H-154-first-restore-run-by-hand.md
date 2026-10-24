@@ -32,7 +32,8 @@ green once.
 
 ## Unblocks / follow-up
 
-- The workflow's AWS role (`RESTORE_DRILL_ROLE_ARN`) is not in the CDK stack yet; until it is, the
-  drill runs by hand as the first-run checklist does.
+- The workflow's AWS role (`GitHubActionsRestoreDrillRole`) is in the CDK stack. Until the stack
+  is deployed and `RESTORE_DRILL_ROLE_ARN` is set on the `restore-drill` environment (manual action
+  `restore-drill-role-variable`), the drill runs by hand as the first-run checklist does.
 
 Part of the [human decision log](README.md#decision-register).

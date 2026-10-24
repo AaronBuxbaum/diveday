@@ -168,7 +168,10 @@ describe("the synthesized stack", () => {
     //
     // Three since #2543: GitHubActionsRegSuitRole carries the same unscoped deny
     // as the diff role, so the bucket-scoped CI role can never read a secret.
-    expect(denials).toHaveLength(3);
+    //
+    // Four since #2986: GitHubActionsRestoreDrillRole, which can read every database dump,
+    // carries it too.
+    expect(denials).toHaveLength(4);
     const deployRoleDeny = denials.find((statement) => statement.includes("NotResource"));
     expect(deployRoleDeny, "the deploy role's deny must be scoped via NotResource").toBeDefined();
     expect(deployRoleDeny).toContain("CredentialsEnvDocument");
