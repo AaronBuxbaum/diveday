@@ -1518,14 +1518,22 @@
   their physician, opened from the held waiver page's "Take this to your doctor" (ADR
   20261016-doctor-referral-page, H-127). It names the official form and the page the examiner
   signs (page 3 of the UHMS/DMSC participant questionnaire, linked rather than restyled), prints the
-  diver's name, and says to send a photo of the signed form to the shop before the dive day. The
+  diver's name, and takes the signed form back as a **diver-sent doctor's form**, the shop's email
+  or counter as the fallback. The
   answers that called for a physician sit behind the diver's **date of birth**, re-entered on the
   page and never printed by it: each one's published prompt (never free-text detail) and the form
   version answered. Twenty wrong dates on one release (`waiver_records.doctor_unlock_failures`)
   lock the answers for the rest of the hold. With no date of birth on file, or nothing to show, it says to go through the
   whole questionnaire. It opens only while the release waits on a physician (`awaitsPhysician`)
   on a held seat whose departure has not ended plus a day, and prints without the browser's
-  URL header and footer. DiveDay records nothing from it; staff record the **physician clearance**.
+  URL header and footer. DiveDay decides nothing from it; staff record the **physician clearance**.
+- **Diver-sent doctor's form** — the signed physician's form a referred diver sends from the
+  **doctor's page** (`waiver_records.diver_medical_form_url`, issue #2797, ADR
+  20261024-diver-sent-doctors-form): one photo or PDF per release, stored privately like the
+  evaluation, never replaced from the link. Not a clearance and not evidence until a staffer records
+  the physician's answer and ticks to use it, when it becomes the evaluation; otherwise recording the
+  answer deletes it. Every live staff role may open it until then, each open on the diver's trail
+  (`diver_medical_form_opened`). Erased with the diver; the day it arrived survives.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
   `medical_review` record itself (a clean later release can stand over it, below), and it is a
