@@ -74,8 +74,10 @@ export {
   hasUnansweredMedicalHold,
   type MedicalEvaluationOutcome,
   type MedicalEvaluationResult,
+  type RejectDiverMedicalFormResult,
   type RetireMedicalRefusalResult,
   recordMedicalEvaluation,
+  rejectDiverMedicalForm,
   retireMedicalRefusal,
   revealDoctorReferral,
 } from "./waivers-medical";

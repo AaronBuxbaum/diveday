@@ -110,12 +110,15 @@ export async function GET(
   // swallowed, which is the same call the diver-export route makes one door
   // over. An audit trail that can be skipped by breaking it is not one: if the
   // shop cannot record who opened this file, the file does not go out.
-  await recordDiverActivity(db, {
+  // A `false` means no line was written (no live actor or diver row to name),
+  // and an unrecorded read is refused like any other.
+  const recorded = await recordDiverActivity(db, {
     shopId: shop.id,
     personId: document.personId,
     actorPersonId: session.user.personId,
     code: "medical_clearance_opened",
   });
+  if (!recorded) return notFound();
 
   return medicalDocumentResponse(object);
 }

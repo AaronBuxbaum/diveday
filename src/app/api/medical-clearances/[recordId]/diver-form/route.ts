@@ -63,12 +63,16 @@ export async function GET(
 
   // Who opened it, on the diver's own record, after the bytes are in hand and
   // not swallowed: if the shop cannot record the read, the file does not go out.
-  await recordDiverActivity(db, {
+  // A `false` (no live actor or diver row to name) is a read nobody recorded.
+  const recorded = await recordDiverActivity(db, {
     shopId: shop.id,
     personId: form.personId,
     actorPersonId: session.user.personId,
     code: "diver_medical_form_opened",
+    // Which form: accepting it as the evaluation asks for this line (issue #2797).
+    waiverRecordId: recordId,
   });
+  if (!recorded) return notFound();
 
   return medicalDocumentResponse(object);
 }

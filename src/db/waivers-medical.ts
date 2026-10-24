@@ -3,7 +3,7 @@
  * evaluation, the hold an unanswered one keeps, and retiring a refusal.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -27,6 +27,7 @@ import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { queueMediaDeletion } from "./media-deletions";
+import { recordDiverActivity } from "./operations";
 import {
   activityEvents,
   bookings,
@@ -88,6 +89,17 @@ export type MedicalEvaluationResult =
          * new hold that can be cleared on its own terms.
          */
         | "answer_already_recorded"
+        /**
+         * The diver-sent form was ticked as the evidence with no physician's
+         * name typed from it (issue #2797, domain review 1): a tick alone
+         * would clear a diver on a photo of anything.
+         */
+        | "diver_form_physician_required"
+        /**
+         * The diver-sent form was ticked by a staffer with no record of having
+         * opened it since it arrived (`diver_medical_form_opened` by them).
+         */
+        | "diver_form_not_opened"
         /** No evaluation date, or one that is not a calendar date. */
         | "evaluation_date_required"
         /**
@@ -462,6 +474,14 @@ export async function recordMedicalEvaluation(
       : null;
     const evidenceUrl = documentUrl ?? usedForm?.url ?? null;
     if (!evidenceUrl && !physicianName) return { ok: false, reason: "evidence_required" };
+    // A diver's file becomes evidence only when the staffer read it: typed the
+    // physician from it, and opened it since it arrived (issue #2797).
+    if (usedForm) {
+      if (!physicianName) return { ok: false, reason: "diver_form_physician_required" };
+      if (!(await staffOpenedDiverForm(tx, input.shopId, input.personId, recordedBy, usedForm))) {
+        return { ok: false, reason: "diver_form_not_opened" };
+      }
+    }
 
     const cleared = input.outcome === "cleared";
     const [written] = await tx
@@ -474,6 +494,7 @@ export async function recordMedicalEvaluation(
         medicalClearanceEvaluatedOn: input.evaluatedOn,
         medicalClearancePhysicianName: physicianName,
         medicalClearanceDocumentUrl: evidenceUrl,
+        medicalClearanceDocumentFromDiver: usedForm !== null,
         diverMedicalFormUrl: null,
       })
       // Both stamps are in the guard, not just the one being written: two
@@ -527,6 +548,25 @@ export async function recordMedicalEvaluation(
         kind: "waiver_document",
         url: openForm,
       });
+    }
+    // Either way the diver's form went, the trail says who decided: accepted
+    // as the evaluation, or received and not used (domain review 2 and 3).
+    const formOutcome = usedForm
+      ? { code: "medical_diver_form_accepted" as const, record: usedForm.recordId }
+      : openForm
+        ? { code: "medical_diver_form_not_used" as const, record: open.id }
+        : null;
+    if (
+      formOutcome &&
+      !(await recordDiverActivity(tx, {
+        shopId: input.shopId,
+        personId: input.personId,
+        actorPersonId: recordedBy,
+        code: formOutcome.code,
+        waiverRecordId: formOutcome.record,
+      }))
+    ) {
+      throw new Error("recordMedicalEvaluation: the diver's form outcome was not recorded");
     }
     if (!covering) {
       return { ok: true, recordId: written.id, outcome: input.outcome, alreadyRecorded: false };
@@ -734,6 +774,102 @@ function diverFormToUse(
       record.medicalClearanceDeclinedAt === null,
   );
   return source?.diverMedicalFormUrl ? { recordId, url: source.diverMedicalFormUrl } : null;
+}
+
+/**
+ * Whether this staffer opened this diver-sent form since it arrived: a
+ * `diver_medical_form_opened` line on the diver's trail, by them, naming the
+ * release, no earlier than the form's sent time (so an open of a form they
+ * turned away does not count for the one sent after it).
+ */
+async function staffOpenedDiverForm(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+  actorPersonId: string,
+  form: { recordId: string },
+): Promise<boolean> {
+  const [source] = await tx
+    .select({ sentAt: waiverRecords.diverMedicalFormSentAt })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.id, form.recordId), eq(waiverRecords.shopId, shopId)))
+    .limit(1);
+  if (!source?.sentAt) return false;
+  const [read] = await tx
+    .select({ id: activityEvents.id })
+    .from(activityEvents)
+    .where(
+      and(
+        eq(activityEvents.shopId, shopId),
+        eq(activityEvents.code, "diver_medical_form_opened"),
+        eq(activityEvents.actorPersonId, actorPersonId),
+        eq(activityEvents.subjectPersonId, personId),
+        sql`${activityEvents.params}->>'record' = ${form.recordId}`,
+        gte(activityEvents.occurredAt, source.sentAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(read);
+}
+
+export type RejectDiverMedicalFormResult =
+  | { ok: true }
+  | { ok: false; reason: "not_authorized" | "no_form" };
+
+/**
+ * **"Can't use this form"** (issue #2797, domain review 3): a staffer turns
+ * away a diver-sent form that is blurry, the wrong page or unsigned. The file
+ * is queued for deletion, both columns are emptied so the diver can send
+ * again from the doctor's page, and `medical_diver_form_not_used` names who
+ * decided. The link alone still cannot replace a form; only this reopens it.
+ *
+ * The same roles that may record the answer (live staff of this shop), and
+ * only a form on one of this diver's unanswered holds here.
+ */
+export async function rejectDiverMedicalForm(
+  db: AppDb,
+  input: { shopId: string; personId: string; recordId: string; actorPersonId: string },
+): Promise<RejectDiverMedicalFormResult> {
+  return db.transaction(async (tx): Promise<RejectDiverMedicalFormResult> => {
+    const actor = await activeStaffAttestorId(tx, input.shopId, input.actorPersonId);
+    if (!actor) return { ok: false, reason: "not_authorized" };
+    if (!isUuid(input.recordId)) return { ok: false, reason: "no_form" };
+    const [held] = await tx
+      .select({ url: waiverRecords.diverMedicalFormUrl })
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.id, input.recordId),
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.personId, input.personId),
+          eq(waiverRecords.status, "medical_review"),
+          isNull(waiverRecords.medicalClearedAt),
+          isNull(waiverRecords.medicalClearanceDeclinedAt),
+          isNull(waiverRecords.anonymizedAt),
+          isNotNull(waiverRecords.diverMedicalFormUrl),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!held?.url) return { ok: false, reason: "no_form" };
+    await tx
+      .update(waiverRecords)
+      .set({ diverMedicalFormUrl: null, diverMedicalFormSentAt: null })
+      .where(eq(waiverRecords.id, input.recordId));
+    await queueMediaDeletion(tx, { shopId: input.shopId, kind: "waiver_document", url: held.url });
+    if (
+      !(await recordDiverActivity(tx, {
+        shopId: input.shopId,
+        personId: input.personId,
+        actorPersonId: actor,
+        code: "medical_diver_form_not_used",
+        waiverRecordId: input.recordId,
+      }))
+    ) {
+      throw new Error("rejectDiverMedicalForm: the trail line was not written");
+    }
+    return { ok: true };
+  });
 }
 
 /**

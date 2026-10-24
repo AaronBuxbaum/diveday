@@ -2,7 +2,16 @@ import { and, eq, ne } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { bookings, mediaDeletionAttempts, people, shops, trips, waiverRecords } from "./schema";
+import { recordDiverActivity } from "./operations";
+import {
+  activityEvents,
+  bookings,
+  mediaDeletionAttempts,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { listStaff } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import {
@@ -12,6 +21,7 @@ import {
   getDiverMedicalFormForHold,
   getDoctorReferral,
   recordMedicalEvaluation,
+  rejectDiverMedicalForm,
 } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
 import {
@@ -227,26 +237,143 @@ describe("the doctor's form a diver sends", () => {
     expect(await getDiverMedicalFormForHold(db, shop.id, person.id)).toBeNull();
   });
 
-  it("becomes the evaluation when the staffer uses it, and counts as the evidence", async () => {
+  /** The trail line the staff route writes when this staffer opens the form. */
+  async function opened(
+    db: Awaited<ReturnType<typeof waiverContext>>["db"],
+    shopId: string,
+    personId: string,
+    actorPersonId: string,
+    recordId: string,
+  ) {
+    expect(
+      await recordDiverActivity(db, {
+        shopId,
+        personId,
+        actorPersonId,
+        code: "diver_medical_form_opened",
+        waiverRecordId: recordId,
+      }),
+    ).toBe(true);
+  }
+
+  async function trail(db: Awaited<ReturnType<typeof waiverContext>>["db"], code: string) {
+    return db
+      .select({ actor: activityEvents.actorPersonId, subject: activityEvents.subjectPersonId })
+      .from(activityEvents)
+      .where(eq(activityEvents.code, code));
+  }
+
+  it("becomes the evaluation only for a staffer who opened it and typed the physician", async () => {
     const { db, shop, person, staff, token, record } = await signed();
     await attachDiverMedicalForm(db, record, FORM_URL, later);
-    const answered = await recordMedicalEvaluation(db, {
-      outcome: "cleared",
-      shopId: shop.id,
-      personId: person.id,
-      recordedByPersonId: staff.id,
-      evaluatedOn: EVALUATED_ON,
-      diverFormRecordId: record.id,
-      now: later,
-    });
-    expect(answered).toMatchObject({ ok: true, alreadyRecorded: false });
+    const answer = (physicianName: string | null) =>
+      recordMedicalEvaluation(db, {
+        outcome: "cleared",
+        shopId: shop.id,
+        personId: person.id,
+        recordedByPersonId: staff.id,
+        evaluatedOn: EVALUATED_ON,
+        diverFormRecordId: record.id,
+        physicianName,
+        now: later,
+      });
+    // The tick alone: a photo of anything would clear the diver.
+    expect(await answer(null)).toEqual({ ok: false, reason: "diver_form_physician_required" });
+    // A name typed without opening the form is not a reading of it.
+    expect(await answer("Dr. Imani Reyes")).toEqual({ ok: false, reason: "diver_form_not_opened" });
+    // Another staffer's open does not count for this one.
+    const [other] = (await listStaff(db, shop.id)).filter((entry) => entry.person.id !== staff.id);
+    if (other) {
+      await opened(db, shop.id, person.id, other.person.id, record.id);
+      expect(await answer("Dr. Imani Reyes")).toEqual({
+        ok: false,
+        reason: "diver_form_not_opened",
+      });
+    }
+    expect((await recordFor(db, token)).medicalClearedAt).toBeNull();
+
+    await opened(db, shop.id, person.id, staff.id, record.id);
+    expect(await answer("Dr. Imani Reyes")).toMatchObject({ ok: true, alreadyRecorded: false });
     const after = await recordFor(db, token);
     expect(after.medicalClearanceDocumentUrl).toBe(FORM_URL);
+    expect(after.medicalClearanceDocumentFromDiver).toBe(true);
     expect(after.diverMedicalFormUrl).toBeNull();
     // The fact stays; the file now lives in one column only.
     expect(after.diverMedicalFormSentAt).toEqual(later);
     expect(await deletionsQueued(db)).not.toContain(FORM_URL);
     expect(await getDiverMedicalFormForHold(db, shop.id, person.id)).toBeNull();
+    // Who accepted it, on the diver's trail.
+    expect(await trail(db, "medical_diver_form_accepted")).toEqual([
+      { actor: staff.id, subject: person.id },
+    ]);
+  });
+
+  it("does not count an open of an earlier form the staffer turned away", async () => {
+    const { db, shop, person, staff, token, record } = await signed();
+    await attachDiverMedicalForm(db, record, FORM_URL, later);
+    await opened(db, shop.id, person.id, staff.id, record.id);
+    expect(
+      await rejectDiverMedicalForm(db, {
+        shopId: shop.id,
+        personId: person.id,
+        recordId: record.id,
+        actorPersonId: staff.id,
+      }),
+    ).toEqual({ ok: true });
+    const resent = new Date("2026-07-22T09:00:00.000Z");
+    expect(await attachDiverMedicalForm(db, await recordFor(db, token), STAFF_URL, resent)).toBe(
+      "sent",
+    );
+    expect(
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
+        shopId: shop.id,
+        personId: person.id,
+        recordedByPersonId: staff.id,
+        evaluatedOn: EVALUATED_ON,
+        diverFormRecordId: record.id,
+        physicianName: "Dr. Imani Reyes",
+        now: resent,
+      }),
+    ).toEqual({ ok: false, reason: "diver_form_not_opened" });
+  });
+
+  it("can be turned away by staff, which deletes it and lets the diver send again", async () => {
+    const { db, shop, person, staff, token, record } = await signed();
+    await attachDiverMedicalForm(db, record, FORM_URL, later);
+    const reject = (input: Partial<Parameters<typeof rejectDiverMedicalForm>[1]>) =>
+      rejectDiverMedicalForm(db, {
+        shopId: shop.id,
+        personId: person.id,
+        recordId: record.id,
+        actorPersonId: staff.id,
+        ...input,
+      });
+    // Wrong shop, wrong diver, not staff, not a record: nothing moves.
+    expect(await reject({ shopId: await otherShopId(db) })).toEqual({
+      ok: false,
+      reason: "not_authorized",
+    });
+    expect(await reject({ actorPersonId: person.id })).toEqual({
+      ok: false,
+      reason: "not_authorized",
+    });
+    expect(await reject({ personId: staff.id })).toEqual({ ok: false, reason: "no_form" });
+    expect(await reject({ recordId: "not-a-uuid" })).toEqual({ ok: false, reason: "no_form" });
+    expect((await recordFor(db, token)).diverMedicalFormUrl).toBe(FORM_URL);
+
+    expect(await reject({})).toEqual({ ok: true });
+    const after = await recordFor(db, token);
+    expect(after.diverMedicalFormUrl).toBeNull();
+    expect(after.diverMedicalFormSentAt).toBeNull();
+    expect(await deletionsQueued(db)).toContain(FORM_URL);
+    expect(await trail(db, "medical_diver_form_not_used")).toEqual([
+      { actor: staff.id, subject: person.id },
+    ]);
+    expect(await reject({})).toEqual({ ok: false, reason: "no_form" });
+    // The slot is open again, for the link only through the page's own gate.
+    expect(await diverMedicalFormOpen(db, after)).toBe("open");
+    expect(await attachDiverMedicalForm(db, after, STAFF_URL, later)).toBe("sent");
   });
 
   it("is deleted when the staffer records the answer with evidence of their own", async () => {
@@ -269,8 +396,13 @@ describe("the doctor's form a diver sends", () => {
       expect(after.diverMedicalFormUrl).toBeNull();
       expect(after.medicalClearanceDocumentUrl).toBe(evidence.documentUrl ?? null);
       expect(await deletionsQueued(db)).toContain(FORM_URL);
+      // A form received and not used says so, and who decided.
+      expect(await trail(db, "medical_diver_form_not_used")).toEqual([
+        { actor: staff.id, subject: person.id },
+      ]);
       await setAside(db, record.id);
       await db.delete(mediaDeletionAttempts);
+      await db.delete(activityEvents).where(eq(activityEvents.code, "medical_diver_form_not_used"));
     }
   });
 

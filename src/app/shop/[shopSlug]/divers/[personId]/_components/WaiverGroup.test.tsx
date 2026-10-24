@@ -12,6 +12,7 @@ import { WaiverGroup } from "./WaiverGroup";
 vi.mock("../waiver-actions", () => ({
   markWaiverInPersonAction: vi.fn(),
   recordMedicalClearanceAction: vi.fn(),
+  rejectDiverMedicalFormAction: vi.fn(),
 }));
 vi.mock("@/app/actions/held-sends", () => ({
   holdSendAction: vi.fn(),
@@ -241,6 +242,8 @@ describe("the waiver group", () => {
       name: /^Open the signed form the diver sent on Sep\s3,\s2026$/,
     });
     expect(link).toHaveAttribute("href", "/api/medical-clearances/rec-9/diver-form");
+    // And a way to turn it away, so a wrong photo is not stuck in the slot.
+    expect(screen.getByRole("button", { name: "Can’t use this form" })).toBeTruthy();
   });
 
   it("offers no doctor's form when the diver sent none", () => {
@@ -539,7 +542,7 @@ describe("the waiver group", () => {
    * behind it answers 404 for exactly that caller, deliberately, so the two
    * would agree on the status and disagree on what it meant.
    */
-  function clearedDiver(documentOnFile: boolean) {
+  function clearedDiver(documentOnFile: boolean, fromDiver = false) {
     return diver({
       waiver: {
         state: "current",
@@ -548,11 +551,19 @@ describe("the waiver group", () => {
           at: new Date("2026-05-01T00:00:00Z"),
           source: "cleared",
           overriddenReferralAt: null,
-          clearance: { recordId: "record-1", documentOnFile },
+          clearance: { recordId: "record-1", documentOnFile, fromDiver },
         },
       } as DiverProfile["waiver"],
     });
   }
+
+  it("says when the evaluation is the form the diver sent", () => {
+    renderCard(clearedDiver(true, true), undefined, true);
+    expect(screen.getByText(/Sent by the diver/)).toBeTruthy();
+    cleanup();
+    renderCard(clearedDiver(true, false), undefined, true);
+    expect(screen.queryByText(/Sent by the diver/)).toBeNull();
+  });
 
   it("offers the evaluation to a reader who may open it", () => {
     renderCard(clearedDiver(true), undefined, true);
