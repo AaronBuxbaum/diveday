@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
+import { DeadLink } from "@/components/DeadLink";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { buttonClass } from "@/components/ui/button";
@@ -120,17 +121,11 @@ export default async function DiveRecapPage({
   const anonT = diverTranslator(await requestLocale());
   const bookingId = verifyRecapToken(token);
   if (!bookingId) {
-    // `ExpiredLinkCard` with no shop: `EntryDone`'s warm terminal pattern
+    // `DeadLink` with no shop: `EntryDone`'s warm terminal pattern
     // (docs/design/principles.md #4) under DiveDay's wordmark, the `expired`
     // mark — a drawn clock (ADR 20260827-first-light, decision 2) — the
     // app-wide "this link has run out" mark, decorative.
-    return (
-      <ExpiredLinkCard
-        title={anonT("recap.unavailableHeading")}
-        text={anonT("recap.unavailableBody")}
-        t={anonT}
-      />
-    );
+    return <DeadLink t={anonT} />;
   }
 
   const db = await getDb();
@@ -141,13 +136,7 @@ export default async function DiveRecapPage({
     // attribute it to without guessing, and a bearer token reveals only its
     // own record, so this is the account-tier door: warm, terminal, naming
     // nobody.
-    return (
-      <ExpiredLinkCard
-        title={anonT("recap.unavailableHeading")}
-        text={anonT("recap.unavailableBody")}
-        t={anonT}
-      />
-    );
+    return <DeadLink t={anonT} />;
   }
 
   if (state.kind !== "recap") {
@@ -203,11 +192,10 @@ export default async function DiveRecapPage({
     // directly beneath, which is what a reader who thinks that is wrong needs.
     const didNotDive = review === "did_not_dive" || photo === "cancelled";
     return (
-      <ExpiredLinkCard
-        title={deadT("recap.unavailableHeading")}
-        text={deadT(didNotDive ? "recap.didNotDiveBody" : "recap.noRecapBody")}
-        shop={state.shop}
+      <DeadLink
         t={deadT}
+        next={deadT(didNotDive ? "recap.didNotDiveBody" : "recap.noRecapBody")}
+        shop={state.shop}
       />
     );
   }

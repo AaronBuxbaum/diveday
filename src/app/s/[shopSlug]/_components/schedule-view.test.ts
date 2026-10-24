@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import {
   aboveStatedLevelIds,
+  nextBoatCardShows,
   type RequirementsByTrip,
   type ScheduleView,
   scheduleDayWords,
@@ -159,9 +160,21 @@ describe("scheduleDayWords", () => {
 
 describe("scheduleSeatState", () => {
   it("words a full boat, a nearly full one and an open one", () => {
-    expect(scheduleSeatState(t, { capacity: 10, booked: 10 }).tone).toBe("full");
-    expect(scheduleSeatState(t, { capacity: 10, booked: 8 }).tone).toBe("low");
+    expect(scheduleSeatState(t, { capacity: 10, booked: 10 })).toEqual({
+      text: "Full",
+      tone: "full",
+    });
     expect(scheduleSeatState(t, { capacity: 10, booked: 2 }).tone).toBe("quiet");
+  });
+
+  /** Visual review 2026-10-24, B19: one neutral count, two seats as plainly as eight. */
+  it("words two seats as plainly as eight, with no urgent tone", () => {
+    expect(scheduleSeatState(t, { capacity: 10, booked: 8 })).toEqual({
+      text: "2 seats",
+      tone: "quiet",
+    });
+    expect(scheduleSeatState(t, { capacity: 10, booked: 9 }).text).toBe("1 seat");
+    expect(scheduleSeatState(t, { capacity: 10, booked: 2 }).text).toBe("8 seats");
   });
 });
 
@@ -236,5 +249,51 @@ describe("scheduleNextBoat", () => {
       activeLens: { slug: "night" },
     });
     expect(view.filteredView).toBe(true);
+  });
+});
+
+/**
+ * Visual review 2026-10-24, B17: the card repeated the list's first row when
+ * that row was the next boat with space. It shows only when it says something
+ * the first row does not.
+ */
+describe("the next-boat card", () => {
+  const base = {
+    isEmbed: false,
+    explicitMonth: null,
+    after: undefined,
+    hasSpaceFilter: false,
+    tripTypeFilter: undefined,
+    hideAboveFilter: false,
+    activeLens: null,
+  } as const;
+
+  it("is suppressed when the next boat with space is the first row", () => {
+    const listed = trips({ booked: 3 }, { booked: 0 });
+    expect(nextBoatCardShows(listed[0], listed)).toBe(false);
+    expect(scheduleNextBoat({ ...base, visibleUpcoming: listed }).nextBoat).toBeNull();
+  });
+
+  it("shows when the first row is full", () => {
+    const listed = trips({ booked: 10 }, { booked: 3 });
+    expect(scheduleNextBoat({ ...base, visibleUpcoming: listed }).nextBoat?.id).toBe("t1");
+  });
+
+  it("shows when the boat with space sails a later day than the list's first", () => {
+    const later = new Date(NOW.getTime() + 2 * 86_400_000);
+    const listed = trips({ booked: 10 }, { booked: 10 }, { booked: 0, startsAt: later });
+    const view = scheduleNextBoat({ ...base, visibleUpcoming: listed });
+    expect(view.nextBoat?.id).toBe("t2");
+    expect(view.skippedBoats).toBe(2);
+  });
+
+  it("is suppressed with no boat, and with an empty list", () => {
+    expect(nextBoatCardShows(null, trips({}))).toBe(false);
+    expect(nextBoatCardShows({ id: "t0" }, [])).toBe(false);
+  });
+
+  it("is suppressed when every boat is full", () => {
+    const listed = trips({ booked: 10 }, { booked: 10 });
+    expect(scheduleNextBoat({ ...base, visibleUpcoming: listed }).nextBoat).toBeNull();
   });
 });

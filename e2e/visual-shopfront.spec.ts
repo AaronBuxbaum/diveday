@@ -95,7 +95,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * The counted sentence that used to sit in the filter row beside it was
        * deleted on 2026-09-17; a URL carrying `canDive` still paints the
-       * "Filter" disclosure open, so the row itself is in this shot.
+       * "More filters" disclosure open, so the row itself is in this shot.
        */
       test(`the public schedule marks what a diver cannot dive (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis?canDive=open_water");

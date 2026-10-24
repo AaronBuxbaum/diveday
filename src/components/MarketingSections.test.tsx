@@ -188,10 +188,11 @@ describe("FeatureDirectory", () => {
     expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
   });
 
-  // On the hub each row's checklist shows only its count, under the link that
-  // names the page. Read as a list of controls, out of that context, twelve
-  // counts would name nothing, so each is named by its page first.
-  it("names each page's checklist on the hub by its page, then its count", () => {
+  // On the hub each row's checklist says "What’s in it" under the link that
+  // names the page, and counts nothing (visual review 2026-10-24, B44). Read
+  // as a list of controls out of context, twelve of those would name nothing,
+  // so each is named by its page first.
+  it("names each page's checklist on the hub by its page, with no count", () => {
     const { container } = render(<FeatureDirectory locale="en-US" lines />);
     const summaries = [...container.querySelectorAll("li > a + details > summary")];
     expect(summaries).toHaveLength(FEATURE_PAGES.length);
@@ -201,8 +202,8 @@ describe("FeatureDirectory", () => {
         .map((id) => container.querySelector(`[id="${id}"]`)?.textContent)
         .join(" "),
     );
-    expect(names[0]).toMatch(/^Online booking \d+ workflows$/);
-    for (const name of names) expect(name).toMatch(/^\S.* \d+ workflows?$/);
+    expect(names[0]).toBe("Online booking What’s in it");
+    for (const name of names) expect(name).not.toMatch(/\d|workflow/);
     expect(new Set(names).size).toBe(names.length);
   });
 

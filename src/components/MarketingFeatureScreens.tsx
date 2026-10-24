@@ -246,9 +246,9 @@ export function StorefrontFallback({ locale }: { locale: DiverLocale }) {
               <p className="mt-0.5 text-xs text-muted">City of Washington</p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <Badge tone="warning" size="sm" tabularNums toneMark={false}>
-                {t("fallback.storefront.onlyLeft", { count: 2 })}
-              </Badge>
+              <p className="text-sm text-muted tabular-nums">
+                {t("fallback.spotsLeft", { count: 2 })}
+              </p>
               <p className="text-sm font-semibold tabular-nums">
                 {t("fallback.storefront.nightPrice")}
               </p>

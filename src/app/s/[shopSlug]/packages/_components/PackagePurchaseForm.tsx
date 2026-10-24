@@ -13,8 +13,13 @@ export type PackageOffer = {
   name: string;
   /** "$450", for the pill and the button. */
   priceText: string;
-  /** "10 dives · $45 a dive · Any departure · Use by Dec 31, 2026". */
-  facts: string;
+  /**
+   * Two or three short facts, one a line: the dives, the price per dive, how
+   * long the card lasts (visual review 2026-10-24, B39).
+   */
+  facts: readonly string[];
+  /** H-123's sentence, which stays on the card where the price is decided. */
+  tankNote: string;
 };
 
 const INITIAL_STATE: PackagePurchaseState = {};
@@ -71,7 +76,16 @@ export function PackagePurchaseForm({
               aside={<span className="font-semibold tabular-nums">{offer.priceText}</span>}
             >
               <span className="block font-semibold">{offer.name}</span>
-              <span className="block text-sm text-muted">{offer.facts}</span>
+              {/* Phrasing content only inside the pill's `<label>`, so the
+                  short list is one span per fact, a line each. */}
+              <span className="mt-1 block text-sm text-muted">
+                {offer.facts.map((fact) => (
+                  <span key={fact} className="block">
+                    {fact}
+                  </span>
+                ))}
+              </span>
+              <span className="mt-1 block text-sm text-muted">{offer.tankNote}</span>
             </ChoicePill>
           ))}
         </div>

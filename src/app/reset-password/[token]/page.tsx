@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EntryDone, EntryShell } from "@/components/account/EntryShell";
+import { EntryShell } from "@/components/account/EntryShell";
 import {
   passwordConfirmErrorField,
   passwordConfirmErrorText,
 } from "@/components/account/passwordConfirmError";
+import { DeadLink } from "@/components/DeadLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
@@ -56,16 +57,11 @@ export default async function ResetPasswordPage({
   // nothing about this dead end leaves the diver wondering who to contact.
   if (!check) {
     return (
-      <EntryDone
-        glyph="expired"
-        title={t("account.resetPassword.unavailableTitle")}
-        text={t("account.resetPassword.unavailableText")}
-        action={
-          <Link href="/sign-in" className="font-medium text-primary hover:underline">
-            {t("account.common.backToSignIn")}
-          </Link>
-        }
-      />
+      <DeadLink t={t} next={t("account.resetPassword.unavailableText")} diveDayDoor={false}>
+        <Link href="/sign-in" className="font-medium text-primary hover:underline">
+          {t("account.common.backToSignIn")}
+        </Link>
+      </DeadLink>
     );
   }
 

@@ -18,7 +18,6 @@ function renderNav(props: Partial<Parameters<typeof MarketingNavView>[0]> = {}) 
     <MarketingNavView
       shopSlug={null}
       locale={DEFAULT_DIVER_LOCALE}
-      hideCta={false}
       // A stub: `enterDemoAction` itself imports `better-auth`, unloadable under
       // jsdom, which is exactly why `demoAction` is a prop rather than an
       // import here (see MarketingNavView's own file comment).
@@ -58,14 +57,9 @@ describe("MarketingNavView", () => {
     }
   });
 
-  it("keeps the way back to the shop on /onboard, which only hides the demo pitch", () => {
-    renderNav({ shopSlug: "blue-mantis", hideCta: true });
-    expect(screen.getByRole("link", { name: "Go to shop" })).toBeInTheDocument();
-  });
-
-  it("hides the demo CTA on /onboard for a signed-out visitor", () => {
-    renderNav({ hideCta: true });
-    expect(screen.queryByRole("button", { name: "Try the live demo" })).not.toBeInTheDocument();
+  it("offers the demo on /onboard and the funnel's own pages too (B43)", () => {
+    renderNav({ compactMobile: true });
+    expect(screen.getByRole("button", { name: "Try the live demo" })).toBeInTheDocument();
   });
 
   // The first row's height is its tallest child. With the CTA gone it used to
@@ -82,8 +76,8 @@ describe("MarketingNavView", () => {
     for (const props of [
       {},
       { shopSlug: "blue-mantis" },
-      { compactMobile: true, hideCta: true },
-      { compactMobile: true, hideCta: true, shopSlug: "blue-mantis" },
+      { compactMobile: true },
+      { compactMobile: true, shopSlug: "blue-mantis" },
     ]) {
       const { unmount } = renderNav(props);
       const nav = screen.getByRole("navigation");
@@ -104,7 +98,7 @@ describe("MarketingNavView", () => {
   // would be two rows.
   it("keeps /onboard's compact bar for as long as the header would be two rows", () => {
     for (const shopSlug of [null, "blue-mantis"]) {
-      const { container, unmount } = renderNav({ compactMobile: true, hideCta: true, shopSlug });
+      const { container, unmount } = renderNav({ compactMobile: true, shopSlug });
       expect(container.querySelector("header")).toHaveClass(
         "border-b-0",
         "lg:border-b",
@@ -125,35 +119,26 @@ describe("MarketingNavView", () => {
   // The compact /onboard bar was `max-sm:px-5`, so its wordmark sat 4px left
   // of every other marketing header's and of the page column under it (K-245).
   it("keeps the compact phone bar on the same 24px gutter as every header", () => {
-    renderNav({ compactMobile: true, hideCta: true });
+    renderNav({ compactMobile: true });
     const nav = screen.getByRole("navigation");
     expect(nav).toHaveClass("px-6");
     expect(nav.className).not.toMatch(/(^|\s)max-[a-z0-9]+:px-/);
   });
 
-  // With no CTA after it, the last link's own `lg:px-3` padding left its word
-  // 13px short of the gutter the footer and the CTA end on (K-512). The row
-  // hangs that padding into the gutter only when the CTA slot is empty.
-  it("hangs the last link's padding into the gutter only when no CTA follows", () => {
-    const rowOf = () => screen.getByRole("link", { name: "Product" }).parentElement;
-
-    const empty = renderNav({ hideCta: true });
-    expect(rowOf()).toHaveClass("lg:-me-3");
-    empty.unmount();
-
-    for (const props of [
-      {},
-      { shopSlug: "blue-mantis" },
-      { shopSlug: "blue-mantis", hideCta: true },
-    ]) {
+  // The CTA slot is never empty since every marketing page carries it (B43),
+  // so the last link's padding is always the gap before the CTA.
+  it("never hangs the last link's padding into the gutter", () => {
+    for (const props of [{}, { shopSlug: "blue-mantis" }, { compactMobile: true }]) {
       const { unmount } = renderNav(props);
-      expect(rowOf()).not.toHaveClass("lg:-me-3");
+      expect(screen.getByRole("link", { name: "Product" }).parentElement).not.toHaveClass(
+        "lg:-me-3",
+      );
       unmount();
     }
   });
 
-  it("keeps the first row at the CTA's 48px when hideCta drops the CTA", () => {
-    renderNav({ hideCta: true });
+  it("keeps the first row at the CTA's 48px", () => {
+    renderNav();
     expect(screen.getByRole("link", { name: "DiveDay." })).toHaveClass("min-h-12");
   });
 });

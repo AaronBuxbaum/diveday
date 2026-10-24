@@ -315,7 +315,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Brain coral 2 Molasses Reef 20080309.jpg",
         "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
       ),
-      durationText: "3 days · 8:00am–5:00pm",
+      // The days and nothing else: each day's hours are in its own schedule row,
+      // written by the shared time-range formatter ("8:00 AM – 5:00 PM"); a
+      // second, hand-typed "8:00am–5:00pm" here read as another product (visual
+      // review 2026-10-24, B38).
+      durationText: "3 days",
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 10,
       prerequisiteNote:

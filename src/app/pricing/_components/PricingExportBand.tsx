@@ -1,7 +1,8 @@
+import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
 import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
-import { BANNER_TITLE_CLASS, MARKETING_EYEBROW_CLASS } from "@/components/ui/typography";
+import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
@@ -14,24 +15,18 @@ export function PricingExportBand({ locale }: { locale: DiverLocale }) {
           day. It sits here rather than in the FAQ because this is where the
           objection actually lands — the fee anchor above has just made
           switching look attractive, and the next thought a shop owner has is
-          about being stuck again. The FAQ row (`faq.dataIfNotWorking`) still
-          answers it in words for someone scanning that far; this answers it
-          with the screen.
+          about being stuck again. The promise itself is written once, on the
+          invoice's leaving row (`#export`); this band shows the screen.
 
           The mockup is a claim, so it mirrors the real Settings → Data export
           element for element — including the "Not included, on purpose:" line
           that says credentials never leave (docs/product/marketing.md). */}
-      {/* `max-w-5xl`, the same measure as the FAQ below it and the hero's
-          invoice above: the page was running three different left edges
-          down the desktop viewport (88px here, 152px at the FAQ, 280px for
-          the single-column bands), which reads as three unrelated pages
-          stacked. Two measures now — narrow for prose, wide for the
-          two-column bands — and the columns land at a more readable ~470px
-          besides. */}
+      {/* The marketing shell's container, like every band on the page
+          (visual review 2026-10-24, B12). */}
       <section className="border-b border-border">
-        <div className="mx-auto grid max-w-5xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
           <div>
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.pricing.dataExit.eyebrow")}</p>
+            <Eyebrow>{t("marketing.pricing.dataExit.eyebrow")}</Eyebrow>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.pricing.dataExit.title")}
             </h2>

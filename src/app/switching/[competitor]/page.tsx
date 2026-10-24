@@ -4,16 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
+import { Eyebrow } from "@/app/_components/Eyebrow";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { groupLabelClass } from "@/components/ui/group-label";
-import {
-  BANNER_TITLE_CLASS,
-  ITEM_TITLE_CLASS,
-  MARKETING_EYEBROW_CLASS,
-} from "@/components/ui/typography";
+import { BANNER_TITLE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -224,9 +221,7 @@ async function GuideBody({
       {guide.coexist && (
         <section className="border-b border-border">
           <div className={GUIDE_BAND_CLASS}>
-            <p className={MARKETING_EYEBROW_CLASS}>
-              {t("switching.competitor.keepOrLeaveEyebrow")}
-            </p>
+            <Eyebrow>{t("switching.competitor.keepOrLeaveEyebrow")}</Eyebrow>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.coexist.heading)}</h2>
             <p className={GUIDE_BAND_LEDE_CLASS}>{t(guide.coexist.intro)}</p>
 
@@ -262,7 +257,7 @@ async function GuideBody({
       {guide.website && (
         <section id={WEBSITE_LEDGER_ID} className="scroll-mt-48 border-b border-border">
           <div className={GUIDE_BAND_CLASS}>
-            <p className={MARKETING_EYEBROW_CLASS}>{t("switching.competitor.websiteEyebrow")}</p>
+            <Eyebrow>{t("switching.competitor.websiteEyebrow")}</Eyebrow>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.website.heading)}</h2>
             <p className={GUIDE_BAND_LEDE_CLASS}>{t(guide.website.intro)}</p>
 

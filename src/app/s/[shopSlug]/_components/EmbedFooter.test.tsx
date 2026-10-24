@@ -23,13 +23,13 @@ describe("EmbedFooter", () => {
     expect(out.getAttribute("href")).toBe("/s/blue-mantis");
     expect(out.getAttribute("target")).toBe("_blank");
     expect(screen.getByText("Times are Eastern")).toBeTruthy();
-    const credit = screen.getByRole("link", { name: t("schedule.poweredByDiveDay") });
+    const credit = screen.getByRole("link", { name: t("shopChrome.credit") });
     expect(credit.getAttribute("href")).toContain("utm_campaign=blue-mantis");
   });
 
   it("draws no credit when the host page carries it", () => {
     render(<EmbedFooter isEmbed shopSlug="blue-mantis" zoneNote={null} hostCarriesCredit t={t} />);
-    expect(screen.queryByRole("link", { name: t("schedule.poweredByDiveDay") })).toBeNull();
+    expect(screen.queryByRole("link", { name: t("shopChrome.credit") })).toBeNull();
   });
 
   it("renders nothing outside the embed", () => {

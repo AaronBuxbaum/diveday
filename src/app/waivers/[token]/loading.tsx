@@ -29,19 +29,16 @@ export default function WaiverLoading() {
           <div className="h-5 w-2/3 rounded bg-surface-sunken" />
         </div>
         {/* The step rail (`WaiverStepRail`): hairlines above and below, three
-            marked segments, the count pushed to the end. It holds the rail's
+            step names on one line, the count pushed to the end. It holds the rail's
             own height, which is the whole job — a skeleton that skipped it
             would drop the release a rail's worth up the page on arrival. */}
-        <div className="mt-6 flex items-center gap-5 border-y border-border py-3">
+        <div className="mt-6 flex items-center gap-4 border-y border-border py-3">
           {[
             ["release", "w-20"],
             ["medical", "w-20"],
             ["sign", "w-14"],
           ].map(([key, width]) => (
-            <div key={key} className="flex items-center gap-2">
-              <div className="size-5 rounded-full bg-surface-sunken" />
-              <div className={`h-4 rounded bg-surface-sunken ${width}`} />
-            </div>
+            <div key={key} className={`h-4 rounded bg-surface-sunken ${width}`} />
           ))}
           <div className="ms-auto h-4 w-20 rounded bg-surface-sunken" />
         </div>

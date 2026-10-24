@@ -13,7 +13,7 @@ test.describe("the widget views", () => {
     const response = await page.goto("/s/blue-mantis/embed/grid");
     expect(response?.status()).toBe(200);
     expect(response?.headers()["x-frame-options"]).toBeUndefined();
-    await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Public shop" })).toHaveCount(0);
     // Every card's action leaves the frame for the real page.
     const first = page.getByRole("link", { name: "Book" }).first();
@@ -38,7 +38,7 @@ test.describe("the widget views", () => {
     await expect(all).toHaveAttribute("target", "_top");
     await expect(all).toHaveAttribute("href", /\/s\/blue-mantis\/reviews$/);
     await expect(page.getByRole("navigation", { name: "Public shop" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeVisible();
   });
 
   test("an unknown widget is a plain 404", async ({ page }) => {
@@ -148,7 +148,7 @@ test.describe("the loader on a host page", () => {
     );
     // The crawlable credit sits on the host page, after the frame, as the old
     // iframe snippet carried it.
-    await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toHaveAttribute(
       "href",
       /utm_source=embed/,
     );
@@ -162,7 +162,7 @@ test.describe("the loader on a host page", () => {
    * **A widget with nothing to show folds away** (#2317). Reef Line Divers is
    * a listed shop with no reviews (`seed-listed-shops.ts`); its reviews widget
    * reports a height of 0, and the loader takes the frame and the credit off
-   * the host page instead of leaving a blank 120px box under "Powered by".
+   * the host page instead of leaving a blank 120px box under "Bookings by DiveDay".
    */
   test("folds a reviews widget with nothing to show, credit and all", async ({ page, baseURL }) => {
     await page.goto("/");
@@ -177,7 +177,7 @@ test.describe("the loader on a host page", () => {
       timeout: 15_000,
     });
     await expect.poll(() => frame.evaluate((el) => el.style.height)).toBe("0px");
-    await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toBeHidden();
+    await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeHidden();
   });
 
   test("a lightbox link opens the booking page over the host page, and Escape closes it", async ({

@@ -394,6 +394,7 @@ export default async function WaiverPage({
         </form>
       </WaiverPacing>
       <WaiverHelpLine shop={shop} t={t} />
+      <p className="mt-2 text-center text-sm text-muted">{t("waiver.signatureNote")}</p>
     </ThreadShell>
   );
 }

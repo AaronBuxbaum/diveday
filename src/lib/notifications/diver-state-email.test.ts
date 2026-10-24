@@ -26,8 +26,8 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
         "",
         "See what’s left before you sail:",
         "https://diveday.test/ready/abc.def",
-        "",
-        "Blue Mantis",
+        // The shop's sign-off is added for every shop email in `render.ts`
+        // (`withShopSignOff`, B31).
         "",
       ].join("\n"),
     );
@@ -193,8 +193,6 @@ describe("diverStateEmail: home (the recap)", () => {
         "",
         "See the recap of your day:",
         "https://diveday.test/recap/abc.def",
-        "",
-        "Blue Mantis",
         "",
         "Stop optional emails from Blue Mantis:",
         "https://diveday.test/unsubscribe/xyz",

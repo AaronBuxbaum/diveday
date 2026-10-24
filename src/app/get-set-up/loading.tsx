@@ -10,7 +10,7 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
 export default function GetSetUpLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNavFallback hideCta compactMobile />
+      <MarketingNavFallback compactMobile />
       <EntryShellSkeleton
         fields={[
           "shopName",

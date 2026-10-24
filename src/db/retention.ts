@@ -560,7 +560,7 @@ export async function reserveRetentionPruneTable(
       .where(eq(retentionPruneState.id, "weekly"))
       .for("update");
     if (!state) throw new Error("retention_prune_state_missing");
-    const cursor = TABLES.findIndex((table) => table === state.nextTable);
+    const cursor = (TABLES as readonly string[]).indexOf(state.nextTable);
     const start = cursor < 0 ? 0 : cursor;
     for (let offset = 0; offset < TABLES.length; offset += 1) {
       const index = (start + offset) % TABLES.length;

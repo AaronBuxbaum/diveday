@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScheduleFilters, type ScheduleFiltersCopy } from "./ScheduleFilters";
 
@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
 afterEach(cleanup);
 
 const copy: ScheduleFiltersCopy = {
-  disclosure: "Filter",
+  disclosure: "More filters",
   tripType: "Trip type",
   allTrips: "All trips",
   funDive: "Fun dive",
@@ -48,22 +48,52 @@ function filters(canDiveFilter: string | null = "open_water") {
 describe("the filter form's layout", () => {
   it("is a column below sm, every control the form's width", () => {
     const { container } = filters();
-    const row = screen.getByRole("combobox", { name: "Trip type" }).closest("details > div");
+    const row = screen.getByRole("combobox", { name: "Trip type" }).closest("[id] > div");
 
-    expect(row).toBe(container.querySelector("details > div"));
+    expect(row).toBe(container.querySelector("form > div[id] > div"));
     expect(row).toHaveClass("flex", "flex-wrap", "max-sm:flex-col", "max-sm:items-stretch");
   });
 
   it("keeps all four controls in that one column", () => {
     filters();
-    const row = screen.getByRole("combobox", { name: "Trip type" }).closest("details > div");
+    const row = screen.getByRole("combobox", { name: "Trip type" }).closest("[id] > div");
 
     for (const control of [
       screen.getByRole("combobox", { name: "What can you dive?" }),
       screen.getByRole("checkbox", { name: "Has space" }),
       screen.getByRole("checkbox", { name: "Hide trips above my level" }),
     ]) {
-      expect(control.closest("details > div")).toBe(row);
+      expect(control.closest("[id] > div")).toBe(row);
     }
+  });
+});
+
+/**
+ * **One row, one toggle** (visual review 2026-10-24, B18/B35): the filters
+ * sit beside the chips and the month rail, and "More filters" opens the
+ * panel under that row. The toggle names its panel and says whether it is
+ * open, as the old `<details>` did by itself.
+ */
+describe("the More filters toggle", () => {
+  it("opens and closes the panel it controls", () => {
+    filters(null);
+    const toggle = screen.getByRole("button", { name: "More filters" });
+    const panel = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+
+    expect(panel).not.toBeNull();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toHaveAttribute("hidden");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(panel).not.toHaveAttribute("hidden");
+  });
+
+  it("starts open while a filter is set", () => {
+    filters("open_water");
+    expect(screen.getByRole("button", { name: "More filters" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
   });
 });

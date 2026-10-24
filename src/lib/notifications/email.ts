@@ -811,9 +811,9 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
-  const trackWhatsLeft = t("notifications.common.trackWhatsLeft");
-  const readyText = input.readinessUrl ? `\n\n${trackWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
-  const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, trackWhatsLeft) : "";
+  const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
+  const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
+  const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
 
   const dock = dockCallPhrase(t, input.dockCallMinutes);
   const packingItems = [

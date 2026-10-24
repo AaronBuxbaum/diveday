@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { submitInquiryAction } from "@/app/actions/inquiry";
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { DateRequestForm } from "@/components/DateRequestForm";
 import { JsonLd } from "@/components/JsonLd";
 import { JumpNav } from "@/components/JumpNav";
@@ -181,7 +182,7 @@ export default async function CoursePage({
     : null;
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={SHOP_MAIN_CLASS}>
       {structuredData ? <JsonLd data={structuredData} /> : null}
       {course.isActive ? null : (
         <p

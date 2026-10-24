@@ -687,6 +687,38 @@ describe("TripSiteNotes", () => {
     expect(screen.getByText(site.conservationNote)).toBeInTheDocument();
   });
 
+  /**
+   * Visual review 2026-10-24, B50: three landmarks in a two-up grid left one
+   * large empty cell. Fewer than four are a list, photos or not; four or more
+   * with a photo keep the grid.
+   */
+  it("lists fewer than four landmarks, and grids four or more with a photo", () => {
+    const mark = (n: number) => ({
+      name: `Mark ${n}`,
+      kind: "reefFormation",
+      note: null,
+      photoUrl: `/marine-life/${n}.jpg`,
+    });
+    const listClass = (count: number) => {
+      render(
+        <TripSiteNotes
+          briefings={[
+            briefing({
+              diveSite: { ...site, landmarks: [1, 2, 3, 4, 5].slice(0, count).map(mark) },
+            } as unknown as Partial<DiveBriefing>),
+          ]}
+          locale={DEFAULT_DIVER_LOCALE}
+        />,
+      );
+      const list = screen.getByText("Mark 1").closest("ul");
+      const className = list?.className ?? "";
+      cleanup();
+      return className;
+    };
+    expect(listClass(3)).not.toContain("grid");
+    expect(listClass(4)).toContain("sm:grid-cols-2");
+  });
+
   it("says what you might see once — the picked species win over the free text", () => {
     render(
       <TripSiteNotes

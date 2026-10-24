@@ -195,9 +195,6 @@ async function DiverReadinessPage({
 }) {
   const alone = terminalCardIn(underBookedHeader, token);
   const data = await getReadyPageData(db, bookingId);
-  // `ready.unavailableBody`, not the waiver subtree's identical sentence
-  // (issue #1334): `/waivers` and `/ready` have different rescues, and a
-  // reword of one should not reach the other by accident.
   if (!data) return alone(<UnavailableReadyLink t={anonT} />);
 
   const { detail, shop, person } = data;
@@ -451,10 +448,10 @@ async function DiverReadinessPage({
     const fitRecall = fitRecallFrom(data);
 
     const stepBody = (step: ThreadStep): React.ReactNode => {
-      const primary = step.id === spine.current;
-      const actionButton = buttonClass(
-        primary ? { size: "sm" } : { variant: "secondary", size: "sm" },
-      );
+      // Every step's one action is the primary button (visual review
+      // 2026-10-24, B26): only one step is open at rest, so the page still
+      // shows one, and a step opened by hand reads as the act it is.
+      const actionButton = buttonClass({ variant: "primary" });
       switch (step.id) {
         case "sign":
           return (

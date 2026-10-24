@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { expect, test } from "./fixtures";
@@ -276,10 +277,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "From the first booking to the roll call after the last dive",
     }),
   ).toBeVisible();
-  // The full capability index, the thing a buyer comparing DiveDay against
-  // an incumbent's feature page goes looking for, lives in the directory's
-  // rows since 2026-10-05 and is counted under them.
-  await expect(page.getByText(/^There is one plan, with all \d+ workflows in it\.$/)).toBeVisible();
+  // The full capability index lives in the directory's rows since
+  // 2026-10-05; the sentence under them names the sections, never a count of
+  // the rows (visual review 2026-10-24, B44).
+  await expect(
+    page.getByText(diverTranslator("en-US")("marketing.product.boxDescription")),
+  ).toBeVisible();
 
   // The hub is the directory of the feature pages (H-93), and the offline
   // claim lives on the one it is about, beside its screen, and nowhere else.

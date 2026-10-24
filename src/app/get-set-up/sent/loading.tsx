@@ -9,7 +9,7 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
 export default function SetUpSentLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNavFallback hideCta compactMobile />
+      <MarketingNavFallback compactMobile />
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:py-16">
         <div className="flex w-full animate-pulse flex-col items-center">
           <div className="size-14 rounded-full bg-surface-sunken" />

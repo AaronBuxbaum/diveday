@@ -33,7 +33,8 @@ import { emailButton, type NotificationEmail } from "./email";
  * a kind, not a field.
  *
  * There is no greeting: a greeting is a second sentence, and the sender is
- * already the shop. The shop's line is the shop's name, alone, last.
+ * already the shop. The shop's line is the sign-off every shop email ends on,
+ * added by `withShopSignOff` in `render.ts` (visual review 2026-10-24, B31).
  */
 export type DiverStateEmailInput = {
   locale: DiverLocale;
@@ -77,7 +78,6 @@ export type DiverStateEmailInput = {
 
 export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const shop = escapeHtml(input.shopName);
 
   if (input.state === "fly_safe_correction") {
     // One sentence, no link: the figure in the diver's inbox no longer
@@ -116,8 +116,8 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
         shopName: input.shopName,
         tripTitle: input.tripTitle,
       }),
-      text: `${sentence}\n\n${label}:\n${input.recapUrl}\n\n${input.shopName}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-      html: `<p>${escapeHtml(sentence)}</p>${emailButton(input.recapUrl, label)}<p>${shop}</p><p><a href="${escapeHtml(input.unsubscribeUrl)}">${escapeHtml(unsubscribe)}</a></p>`,
+      text: `${sentence}\n\n${label}:\n${input.recapUrl}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+      html: `<p>${escapeHtml(sentence)}</p>${emailButton(input.recapUrl, label)}<p><a href="${escapeHtml(input.unsubscribeUrl)}">${escapeHtml(unsubscribe)}</a></p>`,
     };
   }
 
@@ -165,7 +165,7 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
       tripTitle: input.tripTitle,
       day,
     }),
-    text: `${sentence}${flySafe ? `\n\n${flySafe}` : ""}${link ? `\n\n${label}:\n${link}` : ""}\n\n${input.shopName}\n${keywordOffer ? `\n${keywordOffer}\n` : ""}`,
-    html: `<p>${escapeHtml(sentence)}</p>${flySafe ? `<p>${escapeHtml(flySafe)}</p>` : ""}${link ? emailButton(link, label) : ""}<p>${shop}</p>${keywordOffer ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>` : ""}`,
+    text: `${sentence}${flySafe ? `\n\n${flySafe}` : ""}${link ? `\n\n${label}:\n${link}` : ""}\n${keywordOffer ? `\n${keywordOffer}\n` : ""}`,
+    html: `<p>${escapeHtml(sentence)}</p>${flySafe ? `<p>${escapeHtml(flySafe)}</p>` : ""}${link ? emailButton(link, label) : ""}${keywordOffer ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>` : ""}`,
   };
 }

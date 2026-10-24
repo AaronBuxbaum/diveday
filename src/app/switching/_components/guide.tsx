@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Eyebrow } from "@/app/_components/Eyebrow";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/group-label";
 import {
@@ -11,7 +12,6 @@ import {
   DISPLAY_TITLE_CLASS,
   ITEM_TITLE_CLASS,
   LEAD_TITLE_CLASS,
-  MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -113,7 +113,7 @@ export function GuideHero({
             {t("switching.common.backToGuides")}
           </Link>
         </p>
-        <p className={`mt-6 ${MARKETING_EYEBROW_CLASS}`}>{eyebrow}</p>
+        <Eyebrow className="mt-6">{eyebrow}</Eyebrow>
         <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{title}</h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{lede}</p>
 
@@ -170,7 +170,7 @@ export function GuideContext({
   return (
     <section className="border-b border-border">
       <div className={GUIDE_BAND_CLASS}>
-        <p className={MARKETING_EYEBROW_CLASS}>{t("switching.common.contextEyebrow")}</p>
+        <Eyebrow>{t("switching.common.contextEyebrow")}</Eyebrow>
         <div className={CONTEXT_PARAGRAPHS_CLASS}>
           {paragraphs.map((paragraph) => (
             <p key={paragraph} className="text-lg leading-8 text-muted">
@@ -554,6 +554,14 @@ export function ImportPhase({
       intro={t("switching.common.bringFileIntro")}
     >
       <StepList steps={steps} />
+      {/* The preview is drawn once on the site, on the hub (visual review
+          2026-10-24, B14); every guide links to it. */}
+      <Link
+        href="/switching#preview"
+        className={buttonClass({ variant: "link", flush: true, className: "mt-4 text-start" })}
+      >
+        {t("switching.common.previewLink")}
+      </Link>
       {importerNote && (
         <p className="mt-8 max-w-2xl rounded-panel border border-primary/30 bg-primary/5 p-5 text-sm leading-6 text-muted">
           {importerNote}

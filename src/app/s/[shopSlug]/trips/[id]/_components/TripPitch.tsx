@@ -1,6 +1,5 @@
 import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { Badge } from "@/components/ui/badge";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { PublicCrewMember } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
@@ -108,11 +107,11 @@ export function TripPitch({
   return (
     <section>
       {/* 1 — the fact line. */}
-      {fitWord ? (
-        <p>
-          <Badge tone="neutral">{fitWord}</Badge>
-        </p>
-      ) : null}
+      {/* A plain line, never a chip (visual review 2026-10-24, B41), and
+          only for the day that asks something of a diver: "Welcoming dive"
+          stood alone over the faces and said nothing a reader acts on. Each
+          site keeps its own word behind the door. */}
+      {fitWord ? <p className="text-sm font-medium">{fitWord}</p> : null}
       {/* 2 — three faces, and no more. The photo is decorative (`alt=""`): the
           name beside it is the content, so a screen reader hears each species
           once. The full card, with the shop's field note and how to spot it,
@@ -158,6 +157,10 @@ export function TripPitch({
           as="h2"
           folded
           summaryVariant="row"
+          // The diver pages' one disclosure face: the chevron that turns
+          // open, as the course FAQ, the schedule's filters and "Other ways
+          // we can help" wear (visual review 2026-10-24, B35).
+          caret="down"
           label={t("trip.pitchDoor")}
           // What the door *holds*, not what the grid skipped. The artboard's
           // "+ 7 more" was a fourth cell in the tile row, counting faces it had
@@ -235,7 +238,7 @@ export function pitchOpensOnDoor(
 ): boolean {
   return (
     pitchHasDoor(briefings, crew, hasLogEntry) &&
-    dayFitTone(briefings) === null &&
+    dayFitTone(briefings) !== "demanding" &&
     fieldGuideCardsFor(briefings).length === 0
   );
 }
@@ -264,9 +267,7 @@ function dayFitWord(
   briefings: readonly DiveBriefing[],
   t: ReturnType<typeof diverTranslator>,
 ): string | null {
-  const tone = dayFitTone(briefings);
-  if (tone === "demanding") return t("trip.siteFitDemandingLabel");
-  return tone === "welcoming" ? t("trip.siteFitWelcomingLabel") : null;
+  return dayFitTone(briefings) === "demanding" ? t("trip.siteFitDemandingLabel") : null;
 }
 
 /** The tone `dayFitWord` says in a word — whether there is one to say needs no translator. */

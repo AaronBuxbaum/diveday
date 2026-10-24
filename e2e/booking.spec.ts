@@ -69,18 +69,13 @@ test.describe("staff", () => {
     // the list locator above is scoped against, one step later in the flow.
     await page.waitForURL(/\/s\/blue-mantis\/trips\//);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await expect(page.getByText("6 seats left")).toBeVisible();
-    // Two spellings on purpose, one per job: the hero's "$120" is a price
-    // being *scanned*, which drops minor units it does not have
-    // (`formatMoneyScanned`, issue #769); the money block's "$120.00" is the
-    // arithmetic being *shown*, where the total carries its cents like the
-    // addends above it or the sum reads as rounding (principle 6; 2026-08-28
-    // diver-views review, finding 3).
-    await expect(page.getByText("$120", { exact: true })).toHaveCount(1);
-    // Twice inside the card: the fare line's value and the total it sums to.
-    await expect(page.getByLabel("Grab a seat").getByText("$120.00", { exact: true })).toHaveCount(
-      2,
-    );
+    await expect(page.getByText("6 seats", { exact: true })).toBeVisible();
+    // One spelling, twice (visual review 2026-10-24, B20): the hero's price
+    // and the card's pay line, both `formatMoneyScanned`. A lone diver with
+    // nothing added has no fare line, which would only repeat the pay line.
+    await expect(page.getByText("$120", { exact: true })).toHaveCount(2);
+    await expect(page.getByLabel("Grab a seat").getByText("$120", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("$120.00", { exact: true })).toHaveCount(0);
     await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
@@ -127,7 +122,9 @@ test.describe("staff", () => {
     // Both named spots are held atomically.
     await page.goto("/s/blue-mantis");
     const card = page.locator("li").filter({ hasText: title });
-    await expect(card.getByText("4 seats left").filter({ visible: true })).toBeVisible();
+    await expect(
+      card.getByText("4 seats", { exact: true }).filter({ visible: true }),
+    ).toBeVisible();
 
     // Staff sees the diver on the roster. Today is a work queue, so open the trip
     // from the schedule (staff cards link straight to the management view). This
@@ -420,17 +417,10 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .click();
   await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
-  // The two diver forms cross-reference each other (backlog item 147) — a
-  // diver holding a place on this one trip's wait list can also see the
-  // shop-wide last-minute list exists, and following it lands on that form.
-  const anyTripLink = page.getByRole("link", { name: "Join the last-minute list" });
-  await expect(anyTripLink).toHaveAttribute("href", "/s/blue-mantis#last-minute-list");
-  await anyTripLink.click();
-  await expect(
-    page.getByRole("heading", { name: "Want a deal on a last-minute seat?" }),
-  ).toBeVisible();
-  await expect(page.getByText(/Already have one specific trip in mind/)).toBeVisible();
-  await page.goBack();
+  // The panel is the fact, the alternatives and a name-and-email wait list
+  // (visual review 2026-10-24, B57): the last-minute list keeps its own door
+  // on the schedule, not here.
+  await expect(page.getByRole("link", { name: "Join the last-minute list" })).toHaveCount(0);
 
   // The waitlist form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -592,7 +582,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   // A garbage token in the same position must not open the booking.
   await page.goto("/ready/not-a-real-token?booked=1");
   await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).not.toBeVisible();
-  await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /This link no longer works/ })).toBeVisible();
 
   // And the branch this replaced is gone: a real, live capability presented in
   // the old `?booking=` slot on the trip page opens nothing at all. It is the
@@ -663,7 +653,7 @@ test("a dead departure link keeps the diver at the shop they were trying to reac
   // The shop's own chrome, from the namespace layout: whose page this is, and
   // the nav a diver can carry on browsing from.
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Find your booking" })).toHaveCount(0);
 
   await page.getByRole("link", { name: "See what’s coming up" }).click();
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);
@@ -684,7 +674,7 @@ test("a mistyped page under a shop keeps the diver at that shop", async ({ page 
 
   await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Find your booking" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
     "href",
     "/s/blue-mantis",

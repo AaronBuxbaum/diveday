@@ -57,7 +57,7 @@ export function EmbedFooter({
           target="_blank"
           rel="noopener"
         >
-          {t("schedule.poweredByDiveDay")}
+          {t("shopChrome.credit")}
         </EmbedCredit>
       )}
     </>

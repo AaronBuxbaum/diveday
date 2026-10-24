@@ -675,14 +675,11 @@ for (const scheme of ["light", "dark"] as const) {
      * Its own `test.describe` because `signedInAsOwner()` is a describe-scoped
      * `storageState`; the sibling "public" block must stay anonymous.
      *
-     * Shot on `/onboard` rather than the landing page for two reasons. It is
-     * the shortest marketing surface (one sentence and a mail), so the
-     * duplicated body below the header costs the least; and it is the one page
-     * that sets `hideCta`, where the signed-in branch has a documented rule
-     * with nothing watching
-     * it — the CTA *pitch* is suppressed, but the way back to your own shop is
-     * wayfinding and still renders. The header markup is identical on every
-     * marketing route, so this frame is the state, not a special case of it.
+     * Shot on `/onboard` rather than the landing page because it is the
+     * shortest marketing surface (one sentence and a mail), so the duplicated
+     * body below the header costs the least. The header markup is identical
+     * on every marketing route, so this frame is the state, not a special case
+     * of it.
      */
     test.describe("public, signed in", () => {
       signedInAsOwner();

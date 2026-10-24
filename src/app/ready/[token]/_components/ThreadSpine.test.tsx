@@ -2,11 +2,14 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SETTLED_CHECK_TEXT_INSET } from "@/components/ui/settled-mark";
+import { diverTranslator } from "@/i18n/messages";
+import { buildThreadSteps } from "@/lib/thread-steps";
 import {
   THREAD_STATUS_TEST_ID,
   ThreadSpine,
   type ThreadSpineStep,
   ThreadStatus,
+  threadSpineSteps,
 } from "./ThreadSpine";
 
 /**
@@ -283,5 +286,58 @@ describe("ThreadSpine", () => {
     expect(container.querySelectorAll("details")).toHaveLength(1);
     expect(container.querySelectorAll("details[open]")).toHaveLength(0);
     expect(screen.getByText("Your sizes are with the crew.")).toBeVisible();
+  });
+});
+
+/**
+ * **"Your turn" lands on exactly one step** (visual review 2026-10-24, B24):
+ * the step readiness names first, sign, then certification, then gear, then
+ * day-of. Four open steps each saying "Your turn" said nothing about which to
+ * do. A step waiting on the shop keeps its own word.
+ */
+describe("threadSpineSteps' state word", () => {
+  const t = diverTranslator("en-US");
+  const item = (category: string, state: "action" | "waiting" | "done") =>
+    ({ category, state, code: `${category}_code` }) as never;
+
+  function words(spine: ReturnType<typeof buildThreadSteps>) {
+    return threadSpineSteps(
+      spine,
+      t,
+      () => null,
+      () => null,
+    ).map((step) => [step.id, step.stateWord]);
+  }
+
+  it("names only the first open step, in readiness order", () => {
+    const spine = buildThreadSteps({
+      checklist: [item("waiver", "action"), item("certification", "action")],
+      hasPayableOrder: false,
+      rentalFitComplete: false,
+      dayOfComplete: false,
+      carriedFacts: false,
+      carriedFactsConfirmed: false,
+    });
+    expect(spine.current).toBe("sign");
+    expect(words(spine)).toEqual([
+      ["sign", "Your turn"],
+      ["certification", null],
+      ["gear", null],
+      ["dayof", null],
+    ]);
+  });
+
+  it("moves to the certification once the waiver is signed, and keeps the shop's word", () => {
+    const spine = buildThreadSteps({
+      checklist: [item("waiver", "done"), item("certification", "waiting")],
+      hasPayableOrder: false,
+      rentalFitComplete: false,
+      dayOfComplete: false,
+      carriedFacts: false,
+      carriedFactsConfirmed: false,
+    });
+    const labelled = words(spine).filter(([, word]) => word === "Your turn");
+    expect(labelled).toEqual([["gear", "Your turn"]]);
+    expect(words(spine)).toContainEqual(["certification", t("ready.stateWaiting")]);
   });
 });
