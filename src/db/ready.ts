@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
@@ -528,6 +528,10 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
       tripLunchAboard: trips.lunchAboard,
+      // Any live card, verified or not: whether a course student has dives to
+      // log (`packsLogbook`, issue #2795). In this row rather than a query of
+      // its own, so the page stays inside its round-trip budget.
+      holdsAnyCertification: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.deletedAt} is null)`,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -564,7 +568,6 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     pendingMoveAsk,
-    holdsCertification,
     meetingDays,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
@@ -605,12 +608,6 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.identityUnconfirmedAt === null
       ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
       : null,
-    // Any live card, verified or not: whether a course student has dives to
-    // log (`packsLogbook`, issue #2795). Nothing is read off a held seat's
-    // matched person, so a held seat holds none.
-    row.identityUnconfirmedAt === null
-      ? holdsAnyCertification(db, row.shopId, row.personId)
-      : false,
     // How many days a course session meets on, for its own day plan
     // (`SessionDayPlan`, issue #2795); a charter says no plan day.
     row.tripCourseId !== null ? listTripScheduleDays(db, row.shopId, row.tripId) : [],
@@ -632,29 +629,10 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
-    holdsCertification,
+    // Nothing is read off a held seat's matched person, so a held seat holds none.
+    holdsCertification: row.identityUnconfirmedAt === null && row.holdsAnyCertification,
     meetingDayCount: meetingDays.length,
   };
-}
-
-/** At least one live certification card on file for this person at this shop. */
-async function holdsAnyCertification(
-  db: AppDb,
-  shopId: string,
-  personId: string,
-): Promise<boolean> {
-  const [card] = await db
-    .select({ id: certifications.id })
-    .from(certifications)
-    .where(
-      and(
-        eq(certifications.shopId, shopId),
-        eq(certifications.personId, personId),
-        isNull(certifications.deletedAt),
-      ),
-    )
-    .limit(1);
-  return card !== undefined;
 }
 
 export async function getReadyPageData(
