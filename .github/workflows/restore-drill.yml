@@ -1,0 +1,115 @@
+name: Restore drill
+
+# One restore proven, then one a month (pre-mortem 2026-10-23, item 3; H-154). Restores the newest
+# full-cluster dump from s3://diveday-database-dumps/dumps/ into a scratch Neon branch, signs in as
+# the seeded owner, reads tomorrow's manifest, and deletes the branch (`scripts/restore-drill.mjs`).
+# A backup nobody has restored is a hypothesis; this turns the weekly dump into evidence every month.
+#
+# It never touches the production branch: it restores into a new, empty database on a branch it
+# created and named `restore-drill-*`, and deletes only that branch id, after checking it is neither
+# the default nor a protected branch. The branch expires in Neon on its own after three hours, and
+# the `if: always()` sweep step deletes it through the same check when a timeout or a cancel stopped
+# the script before its own delete ran. The runbook's "Monthly restore drill" section names every
+# secret and variable below and where each one comes from
+# (docs/engineering/backup-and-restore-runbook.md).
+#
+# The dump holds every password hash and medical answer in the platform. It lives on the runner
+# only for the job, nothing here uploads an artifact, and the script prints counts and ids, never a
+# row or a connection string; pg_restore's stderr is reduced to SQLSTATEs and object names.
+#
+# Its secrets are safe only while the `restore-drill` environment admits `main` alone, with a
+# required reviewer: `workflow_dispatch` runs this file as the chosen ref has it, so a branch could
+# rewrite every guard here (runbook, "Monthly restore drill"). The job's `if` is a second lock only.
+on:
+  schedule:
+    # 07:00 UTC on the 2nd of each month. The dump is weekly (Mondays 05:30 UTC), so the newest
+    # one is at most a week old whichever weekday the 2nd falls on.
+    - cron: "0 7 2 * *"
+  workflow_dispatch:
+
+concurrency:
+  # One drill at a time: two would each make a branch, and a cancelled one could leave its branch
+  # behind. Never cancel a running drill for the same reason.
+  group: restore-drill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: Restore the newest dump and use it
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    # Every step has its own timeout, and they add up to less than this, so the sweep and the alert
+    # still run after the slowest drill (scripts/restore-drill.test.mjs checks the sums).
+    timeout-minutes: 80
+    # NEON_API_KEY, NEON_PROJECT_ID and RESTORE_DRILL_ROLE_ARN live on this environment only, so
+    # no other workflow's job can read them.
+    environment: restore-drill
+    permissions:
+      contents: read
+      # OIDC, for the role that can list and read the dump bucket and nothing else.
+      id-token: write
+      # The red-run issue at the end.
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 3
+        with:
+          persist-credentials: false
+      - name: Confirm the drill's secrets and variables are set
+        timeout-minutes: 1
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          RESTORE_DRILL_ROLE_ARN: ${{ vars.RESTORE_DRILL_ROLE_ARN }}
+        run: |
+          set -uo pipefail
+          missing=0
+          for name in NEON_API_KEY NEON_PROJECT_ID RESTORE_DRILL_ROLE_ARN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set on the restore-drill environment. docs/engineering/backup-and-restore-runbook.md (\"Monthly restore drill\") says where it comes from."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+      - uses: ./.github/actions/setup
+        timeout-minutes: 8
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        timeout-minutes: 3
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.RESTORE_DRILL_ROLE_ARN }}
+      - name: Restore, sign in, read tomorrow's manifest, delete the branch
+        # Above the script's own worst case (`worstCaseMs`), so its `finally` deletes the branch.
+        timeout-minutes: 55
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          DUMP_BUCKET: ${{ vars.DUMP_BUCKET }}
+        run: node scripts/restore-drill.mjs
+      # Runs after a failure, a step timeout and a cancel alike: deletes this run's branch if it is
+      # still there, and any restore-drill-* branch over an hour old. A refused delete is red.
+      - name: Delete any restore-drill branch left behind
+        if: always()
+        timeout-minutes: 3
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: node scripts/restore-drill.mjs --sweep
+      # A red drill on the default branch opens one `ci-red` issue or comments on the open one; the
+      # first green drill closes it (scripts/workflow-alert.mjs).
+      - name: Open or update the red-run issue
+        if: failure() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        timeout-minutes: 2
+        # The token lives on the two alert steps only, never beside the dump or the Neon key.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/workflow-alert.mjs --workflow restore-drill --outcome failure --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Close the red-run issue
+        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/workflow-alert.mjs --workflow restore-drill --outcome success --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

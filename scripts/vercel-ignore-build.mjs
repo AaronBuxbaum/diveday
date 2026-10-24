@@ -58,6 +58,7 @@
  * build.
  */
 import process from "node:process";
+import { gitDeployRefusal } from "./deploy-gate.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /** Vercel's polarity: exit 1 continues the build, exit 0 cancels it. */
@@ -152,6 +153,15 @@ export function decideBuild({ previousSha, commitSha }, git = gitReader) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  // The deploy gate first (scripts/deploy-gate.mjs, H-158): with
+  // DEPLOY_REQUIRES_GREEN on, a push-triggered production build is cancelled
+  // here and deploy-gate.yml deploys the commit once its CI is green. Off, and
+  // on every preview, this answers null and nothing below changes.
+  const refusal = gitDeployRefusal(process.env);
+  if (refusal) {
+    console.log(`Skipping the build: ${refusal}`);
+    process.exit(EXIT_SKIP);
+  }
   const { build, reason } = decideBuild({
     previousSha: process.env.VERCEL_GIT_PREVIOUS_SHA,
     commitSha: process.env.VERCEL_GIT_COMMIT_SHA,

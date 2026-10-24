@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import type { Browser, Locator, Page } from "@playwright/test";
+import type { Browser, BrowserContext, Locator, Page } from "@playwright/test";
 import { requireFreshBuild } from "../scripts/e2e-build-evidence.mjs";
 import {
   captureBuildBoundary,
@@ -9,6 +9,7 @@ import {
 import { visualSpecs } from "../scripts/visual-specs.mjs";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
+import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -367,7 +368,13 @@ for (const name of TABLET_SURFACES) {
  * `DIVEDAY_E2E`, so production still renders the full-size source through the
  * optimizer. The captures below that render a species therefore photograph a
  * box-sized file rather than a 640px one, which is closer to what a browser is
- * served in production, not further.
+ * served in production, not further. *
+ * **Third correction, 2026-10-23: the shop photo strip stopped being
+ * photographed at all.** #2937 found ten captures whose only diff was the
+ * storefront's strip, same photos on both sides, a fourth variant of this
+ * class. Rather than a fifth mechanism, `tileShopPhotos` (below) answers those
+ * photos with one flat tile in every capture (H-157); a non-visual test keeps
+ * proving the real ones load.
  */
 /**
  * Every wait below is bounded, because `requestAnimationFrame` is not a promise
@@ -1169,6 +1176,48 @@ const visualBuild = captureBuildBoundary(requireFreshBuild);
 export function installVisualBuildGuard() {
   test.beforeAll(() => visualBuild.begin());
   test.afterAll(() => visualBuild.end());
+  test.beforeEach(({ context }) => tileShopPhotos(context));
+}
+
+/**
+ * **A shop photo is one flat tile in every capture** (H-157, issue #2937).
+ * The photo strip under the storefront's cover is the shop's own seed-stock
+ * photographs, and they kept reporting "changed" with the same four photos on
+ * both sides: JPEG decode and resample noise that three corrections above did
+ * not close. A reviewer is checking the layout around the photos, never their
+ * pixels, so every request for one of the demo shop's strip photos (as a file
+ * or through `/_next/image`) is answered with {@link SHOP_PHOTO_TILE}, which
+ * fills its `object-cover` box as one colour on every run. The real photos are
+ * proved to load, at a size and with their alt attribute, by a non-visual test:
+ * `e2e/storefront-brand.spec.ts`. Pages from a context a spec opens itself
+ * still load the real files; no capture of the strip does that today.
+ */
+export const SHOP_PHOTO_TILE = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAEUlEQVR42mOIrurBihgGUgIAXJNCMW/U1hoAAAAASUVORK5CYII=",
+  "base64",
+);
+/** Compared decoded, so a browser's own escaping of a space or a comma cannot miss a photo. */
+function decodedPath(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+const SHOP_PHOTO_PATHS = new Set(DEMO_SHOP_BRAND.shopfrontPhotoUrls.map(decodedPath));
+
+export function isShopPhotoRequest(url: URL): boolean {
+  if (url.pathname === "/_next/image") {
+    const source = url.searchParams.get("url");
+    return source !== null && SHOP_PHOTO_PATHS.has(decodedPath(source));
+  }
+  return SHOP_PHOTO_PATHS.has(decodedPath(url.pathname));
+}
+
+async function tileShopPhotos(context: BrowserContext) {
+  await context.route(isShopPhotoRequest, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: SHOP_PHOTO_TILE }),
+  );
 }
 
 async function assertCaptureState(page: Page) {

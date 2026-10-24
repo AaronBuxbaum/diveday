@@ -22,7 +22,9 @@
 // check here moves that discovery onto the pull request: `repo-safeguards` in
 // .github/workflows/ci.yml checks out the *merge* ref on a `pull_request`, so
 // this sees the graph the merge would actually produce, not the one the branch
-// has in isolation.
+// has in isolation. For a stacked layer that merge is with the layer below, not
+// main, so .github/workflows/main-tip.yml runs this again on the layer merged
+// with main's current tip.
 //
 // It is worth being precise about what this proves, because it is less than it
 // looks. `drizzle-kit check` never connects to a database and never applies

@@ -118,6 +118,41 @@ export const ALERTS = {
     prompt:
       "The weekly mutation run (`.github/workflows/mutation.yml`) is red. Read the newest failed run linked in this issue's body and comments, find the failing leg and step, then read `stryker.config.mjs`, `stryker.vitest.config.ts` and `scripts/mutation-issues.mjs`. Reproduce locally with `pnpm test:mutation --mutate src/lib/trip-admission.ts` (the smaller module). Fix the cause, with a failing test first when the fault is in a script. Done is a manual run of the workflow going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
   },
+  "restore-drill": {
+    title: "Fix the monthly restore drill, which is red on main",
+    kind: "risk",
+    effort: "S",
+    touches: [
+      ".github/workflows/restore-drill.yml",
+      "scripts/restore-drill.mjs",
+      "scripts/restore-drill-verify.ts",
+      "docs/engineering/backup-and-restore-runbook.md",
+    ],
+    noticed:
+      "The scheduled `Restore drill` workflow failed on main. It restores the newest full-cluster dump into a scratch Neon branch, signs in as the seeded owner, reads tomorrow's manifest and deletes the branch. While it is red nobody knows whether last week's dump can be restored, which is the only evidence a backup is a backup. Each red run after this one adds a comment with its link; the first green run closes this issue.",
+    why: "It was found by the scheduled run, not by a change anyone was making. It can fail on configuration (an unset secret, an expired Neon key, a missing AWS role), on the dump itself (missing, small, or refused by pg_restore), or on the app reading a restored database; the run's step summary and log say which. If the log says a branch was NOT deleted, a copy of production is still sitting in Neon.",
+    proposed:
+      "Read the failed run's log and step summary. If a `restore-drill-*` branch was left behind, delete it in the Neon console first. A configuration failure needs the owner: name the secret or variable in a comment here. A pg_restore or sign-in failure is a real restore failure: treat it as an incident per the backup and restore runbook. Do not skip the sign-in or the manifest read to make the run green.",
+    prompt:
+      "The monthly restore drill (`.github/workflows/restore-drill.yml`, which runs `node scripts/restore-drill.mjs`) is red on main. Read the newest failed run linked in this issue's body and comments, its log and its step summary, then `docs/engineering/backup-and-restore-runbook.md` (the Monthly restore drill section), `scripts/restore-drill.mjs` and `scripts/restore-drill-verify.ts`. If the log says a branch was not deleted, ask the owner to delete it in the Neon console before anything else. Configuration failures need the owner; name the missing secret or variable in a comment. A failed pg_restore, sign-in or manifest read is a restore failure: reproduce it against a local Postgres restored from a dump the way the runbook says and fix it with a failing test first. Done is a manual run of the workflow going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
+  },
+  "deploy-gate": {
+    title: "Fix the production deploy gate, which failed to deploy a green commit",
+    kind: "risk",
+    effort: "S",
+    touches: [
+      ".github/workflows/deploy-gate.yml",
+      "scripts/deploy-gate.mjs",
+      "scripts/vercel-build.mjs",
+    ],
+    noticed:
+      "The `Deploy gate` workflow failed. With the gate on, a push to main no longer builds production and this workflow is what deploys a green commit, so production is now behind main: the live site is the last commit it did deploy. Each failed run after this one adds a comment with its link; the first successful deploy closes this issue.",
+    why: "It was found by the deploy itself, not by a change anyone was making. The run can fail on its own credentials, on the Vercel half of the switch being unset, or in the Vercel build (a refused migration, a failed `pnpm build`), and only the run log and the Vercel deployment log say which.",
+    proposed:
+      "Read the failed step. A missing secret or Vercel variable is manual action `production-deploy-gate`. A failed Vercel build is read in the deploy and migrations runbook, which says what a database migrated ahead of the live code means. Fix forward, then redeploy with the workflow's Run workflow button and the green sha.",
+    prompt:
+      "The production deploy gate (`.github/workflows/deploy-gate.yml`) failed. Read the newest failed run linked in this issue's body and comments, find the failing step, then read `scripts/deploy-gate.mjs` and the section on the deploy gate in `docs/engineering/deploy-and-migrations-runbook.md`. A configuration failure is for the owner: name the missing setting in a comment here. A build failure is fixed forward on main with a failing test first. Done is a run of the workflow deploying a green commit, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo` on any fix. Close this issue in the PR that lands the fix.",
+  },
 };
 
 /** The issue body for one workflow's alert; the run that opened it is named first. */

@@ -112,7 +112,8 @@ improvising from memory; the verification step is the one that matters and it is
 
 Two things to know before you start:
 
-- **The PITR window is currently unrecorded** — it is a `TODO(owner)` at the top of that runbook. If
+- **The PITR window is currently unrecorded** — Aaron records it on the first restore run (that
+  runbook's §1 and §4, [H-154](../product/human-decisions/README.md)). If
   the incident is older than whatever Neon's window turns out to be, the fallback is the export
   bundles in S3, which do not contain credentials and may be missing photos. Know that before you
   promise a restore.

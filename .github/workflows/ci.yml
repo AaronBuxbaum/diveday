@@ -809,9 +809,15 @@ jobs:
       # A failed capture whose log carries the harness's renderer probe verdict
       # ("wedged, not slow" — see e2e/visual-harness.ts's `withRendererBound` and
       # `screenshotOrGiveUp`) gets exactly one rerun of only the failed
-      # captures. This is deliberately NOT a retry policy, and it must not
-      # widen into one: the suite runs retries: 0 so every flake is
-      # root-caused, and this wedge *has been* — repeatedly (fa51f893, the
+      # captures. On a pull request that is the only rerun, and it is
+      # deliberately NOT a retry policy: the suite runs retries: 0 so a flake
+      # fails where a reviewer looks and is root-caused. On main (H-156) any
+      # failed capture gets the same one rerun, because there a single flake
+      # costs every branch its baseline; a capture that passes only on the
+      # rerun is filed as a needs-triage issue naming its spec by the
+      # `visual-flakes` job below (scripts/visual-flake-issue.mjs), so it is
+      # still counted and still root-caused. The wedge *has been* root-caused
+      # — repeatedly (fa51f893, the
       # 20260804 bound, run 31147282309) — with the same verdict each time: a
       # non-deterministic Chromium renderer hang that stops answering even a
       # trivial `evaluate(() => true)`, unattributed to any app or spec code,
@@ -850,18 +856,31 @@ jobs:
             exit 0
           fi
           cp e2e-durations/results.json e2e-durations/first-attempt.json
+          wedge=true
           if ! node scripts/e2e-retry-policy.mjs e2e-durations/first-attempt.json; then
-            exit 1
+            wedge=false
+            if [ "${ON_MAIN}" != "true" ]; then
+              exit 1
+            fi
+            echo "::warning title=Rerunning on main::A capture failed without wedge evidence. On main every failed capture reruns once (H-156); one that passes on the rerun is filed as a flake."
+          else
+            echo "::warning title=Renderer wedge detected::Every first-attempt failure has structured wedge evidence; rerunning failed captures once."
           fi
-          echo "::warning title=Renderer wedge detected::Every first-attempt failure has structured wedge evidence; rerunning failed captures once."
           if [ -d test-results ]; then cp -R test-results e2e-durations/first-attempt-results; fi
           rerun=0
           pnpm exec playwright test e2e/visual --last-failed || rerun=$?
           cp e2e-durations/results.json e2e-durations/retry-attempt.json
           if [ -d test-results ]; then cp -R test-results e2e-durations/retry-attempt-results; fi
           cp e2e-durations/first-attempt.json e2e-durations/results.json
+          if [ "$rerun" -eq 0 ] && [ "$wedge" = "false" ]; then
+            mkdir -p visual-flakes
+            node scripts/visual-flake-issue.mjs collect --first e2e-durations/first-attempt.json \
+              --retry e2e-durations/retry-attempt.json --out "visual-flakes/shard-${{ matrix.shard }}.json"
+          fi
           exit "$rerun"
         env:
+          # A push or dispatched run of main: the runs that publish the baseline.
+          ON_MAIN: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
           # Each shard is its own runner, and pinning to 1 worker keeps that
           # shard's one browser+server pair from competing with a second for
           # the runner's cores; the job's own comment above is why the speed
@@ -885,6 +904,13 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
+          name: visual-flakes-${{ matrix.shard }}
+          path: visual-flakes/
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
           name: visual-durations-${{ matrix.shard }}
           path: e2e-durations/visual-${{ matrix.shard }}.json
           if-no-files-found: ignore
@@ -902,6 +928,41 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 7
+
+  # A capture that passed only on main's rerun (the visual job's capture step,
+  # H-156) becomes a needs-triage issue naming its spec, or a comment on the
+  # one already open. Its own job, so the shards keep `contents: read` and only
+  # this holds `issues: write`.
+  visual-flakes:
+    name: File visual flakes
+    needs: visual
+    if: ${{ !cancelled() && needs.visual.result != 'skipped' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          pattern: visual-flakes-*
+          path: visual-flakes
+          merge-multiple: true
+      # A tracker that cannot be reached must not turn main red, since a red
+      # main stops the deploy gate (H-158); the warning names what was missed.
+      - name: File one issue per flaky capture
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p visual-flakes
+          node scripts/visual-flake-issue.mjs file --dir visual-flakes --run-url "$RUN_URL" \
+            || { echo "::warning title=Visual flakes not filed::Read this run's visual-flakes-* artifacts and file them by hand."; exit 1; }
 
   visual-report:
     name: reg-suit visual regression
@@ -1548,6 +1609,7 @@ jobs:
       - changes
       - real-postgres
       - coverage-floors
+      - visual-flakes
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

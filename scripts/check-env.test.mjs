@@ -26,6 +26,9 @@ const UPSTASH = {
   KV_REST_API_TOKEN: "token",
 };
 
+// Every key production must carry: the Upstash pair and the sealing key.
+const PRODUCTION = { ...UPSTASH, SECRET_ENCRYPTION_KEY: "sealing-key" };
+
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
 });
@@ -57,7 +60,7 @@ describe("check-env", () => {
   it("fails production when only half the pair is set", () => {
     const run = checkEnv({
       VERCEL_ENV: "production",
-      KV_REST_API_URL: UPSTASH.KV_REST_API_URL,
+      ...PRODUCTION,
       KV_REST_API_TOKEN: "  ",
     });
 
@@ -65,16 +68,49 @@ describe("check-env", () => {
     expect(run.stderr).toContain("missing KV_REST_API_TOKEN");
   });
 
-  it("passes production when both are set", () => {
-    const run = checkEnv({ VERCEL_ENV: "production", ...UPSTASH });
+  it("passes production when every required key is set", () => {
+    const run = checkEnv({ VERCEL_ENV: "production", ...PRODUCTION });
 
     expect(run.status).toBe(0);
+  });
+
+  it("fails production without the sealing key, naming it and the two-factor lockout", () => {
+    // Without it every staffer who turned on two-factor is locked out and the notification retry
+    // queue drops what it should keep, so a deploy without it fails at build rather than at sign-in.
+    const run = checkEnv({ VERCEL_ENV: "production", ...UPSTASH });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("production is missing SECRET_ENCRYPTION_KEY.");
+    expect(run.stderr).toContain("locked out");
+  });
+
+  it("fails production when the sealing key is only whitespace", () => {
+    const run = checkEnv({ VERCEL_ENV: "production", ...UPSTASH, SECRET_ENCRYPTION_KEY: " " });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("missing SECRET_ENCRYPTION_KEY");
+  });
+
+  it("leaves a preview deployment without the sealing key alone", () => {
+    // Previews are not asked for any production requirement, and a preview never runs check-env
+    // from the build (scripts/vercel-build.mjs gates it on VERCEL_ENV=production).
+    const run = checkEnv({ VERCEL_ENV: "preview", ...UPSTASH });
+
+    expect(run.status).toBe(0);
+  });
+
+  it("does not ask production for the rotation key", () => {
+    // SECRET_ENCRYPTION_KEY_PREVIOUS is set only during a rotation; requiring it would make every
+    // ordinary deploy carry a stale key.
+    const run = checkEnv({ VERCEL_ENV: "production", ...PRODUCTION });
+
+    expect(run.stderr).not.toContain("SECRET_ENCRYPTION_KEY_PREVIOUS");
   });
 
   it("fails production that carries the e2e harness's switches, naming each", () => {
     const run = checkEnv({
       VERCEL_ENV: "production",
-      ...UPSTASH,
+      ...PRODUCTION,
       DIVEDAY_E2E: "1",
       DIVEDAY_E2E_SECRET: "left-over",
     });

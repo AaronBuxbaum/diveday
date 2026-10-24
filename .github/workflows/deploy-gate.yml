@@ -1,0 +1,178 @@
+# Once the gate is on, a push to main no longer builds production; this
+# workflow deploys a commit after its CI on main is green (H-158;
+# scripts/deploy-gate.mjs has the mechanism and why it is this one). It stops
+# push-triggered builds, and with them a red commit's migration. It is not an
+# access control: anyone holding a Vercel token can still deploy production.
+#
+# OFF until the pilot shop's first real booking. It is two switches by one
+# name, because Vercel cannot read a GitHub variable:
+#
+#   * the repository variable DEPLOY_REQUIRES_GREEN=true turns this workflow on;
+#   * the Vercel project's Production variable DEPLOY_REQUIRES_GREEN=true makes
+#     a push-triggered production build cancel itself before it migrates.
+#
+# Unset in both (the default), every push to main deploys as it always has and
+# every job here is skipped. This workflow refuses to deploy while Vercel's
+# half is missing, so a gate turned half on is a red run, not two deploys of
+# every commit. How to turn it on and off: "The deploy gate" in
+# docs/engineering/deploy-and-migrations-runbook.md.
+name: Deploy gate
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # A human redeploys or rolls back to any green commit on main.
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: A commit on main whose CI is green (40 characters)
+        required: true
+
+# One production deploy at a time, in order. Never cancelled midway: a
+# cancelled job does not cancel the Vercel build it started.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  # No credential here. It decides which commit may deploy, from GitHub's own
+  # record of CI on main, and refuses anything else.
+  resolve:
+    name: Choose the commit to deploy
+    # `github.ref` is main for every `workflow_run`. A dispatch runs the
+    # workflow file from the ref the user picks, so one from any other ref is
+    # refused here rather than trusted; the production-deploy environment's
+    # main-only branch rule is the second lock on the same door.
+    if: >-
+      vars.DEPLOY_REQUIRES_GREEN == 'true'
+      && github.ref == 'refs/heads/main'
+      && (github.event_name == 'workflow_dispatch'
+        || (github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.head_branch == 'main'
+          && github.event.workflow_run.head_repository.full_name == github.repository
+          && contains(fromJSON('["push","workflow_dispatch"]'), github.event.workflow_run.event)))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      deploy: ${{ steps.decide.outputs.deploy }}
+      sha: ${{ steps.decide.outputs.sha }}
+    steps:
+      # main's own copy of the decision (the `if:` above holds this job to
+      # main), never the deployed commit's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts
+          persist-credentials: false
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRIGGER: ${{ github.event_name }}
+          SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.sha || github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::\"$SHA\" is not a 40-character commit sha."
+            exit 1
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success&per_page=20" > runs-for-sha.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&status=completed&per_page=30" > recent-runs.json
+          compare=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${SHA}...main" --jq .status || echo unknown)
+          node scripts/deploy-gate.mjs decide --sha "$SHA" --trigger "$TRIGGER" \
+            --runs-for-sha runs-for-sha.json --recent-runs recent-runs.json --compare "$compare" \
+            --github-output | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy the green commit to production
+    needs: resolve
+    if: needs.resolve.outputs.deploy == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    # Its own environment, restricted to the main branch, with no required
+    # reviewer: a green main is the approval. Manual action
+    # "production-deploy-gate" fills it.
+    environment: production-deploy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      # pnpm and Node only, no dependency install: `vercel deploy` uploads the
+      # source and builds on Vercel, so this job needs no node_modules, and no
+      # dependency's lifecycle script runs in the job that holds the token.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
+      - name: Confirm the Vercel credentials and Vercel's half of the switch
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -uo pipefail
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is empty. The production-deploy environment does not carry it yet; complete manual action \"production-deploy-gate\" in docs/engineering/manual-actions.md."
+              exit 1
+            fi
+          done
+          team=""
+          case "$VERCEL_ORG_ID" in team_*) team="?teamId=${VERCEL_ORG_ID}" ;; esac
+          api="https://api.vercel.com"
+          auth="Authorization: Bearer ${VERCEL_TOKEN}"
+          # The list names the variable but returns no value; the by-id read
+          # returns it decrypted, unless it was created as "sensitive", which
+          # nobody can read back. A switch is not a secret: create it plain.
+          id=$(curl -fsS --max-time 30 -H "$auth" "${api}/v10/projects/${VERCEL_PROJECT_ID}/env${team}" \
+            | jq -r '[.envs[] | select(.key == "DEPLOY_REQUIRES_GREEN" and (.target | index("production")))][0].id // empty')
+          value=""
+          if [ -n "$id" ]; then
+            value=$(curl -fsS --max-time 30 -H "$auth" "${api}/v1/projects/${VERCEL_PROJECT_ID}/env/${id}${team}" | jq -r '.value // empty')
+          fi
+          if [ "$value" != "true" ]; then
+            echo "::error::The Vercel project's Production variable DEPLOY_REQUIRES_GREEN is not readable as true (missing, another value, or created as sensitive), so every push to main still deploys before CI answers and the gate stops nothing. Set it to true, not sensitive, on Vercel (manual action \"production-deploy-gate\"), or unset the GitHub variable to turn the gate off."
+            exit 1
+          fi
+      # `vercel deploy` from this exact commit, built on Vercel with the
+      # project's Production variables: the same scripts/vercel-build.mjs, the
+      # same migration. DEPLOY_GATE_SHA is what that build's gate lets through.
+      - name: Deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # The CLI reads VERCEL_TOKEN from the environment; it is never on argv.
+          url=$(pnpm dlx vercel@62.5.0 deploy --prod --archive=tgz --yes --build-env DEPLOY_GATE_SHA="$SHA")
+          echo "Production now serves \`${SHA}\`: ${url}" >> "$GITHUB_STEP_SUMMARY"
+
+  # A failed production deploy is an issue, not a red run nobody opens
+  # (scripts/workflow-alert.mjs). The first green deploy closes it.
+  alert:
+    name: Report a failed deploy
+    needs: [resolve, deploy]
+    if: ${{ !cancelled() && needs.resolve.result != 'skipped' && (needs.resolve.result == 'failure' || needs.deploy.result != 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: node scripts/workflow-alert.mjs --workflow deploy-gate --outcome "${{ needs.resolve.result == 'success' && needs.deploy.result == 'success' && 'success' || 'failure' }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

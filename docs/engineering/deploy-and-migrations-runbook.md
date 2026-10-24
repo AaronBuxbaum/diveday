@@ -15,11 +15,12 @@ this covers what happens to it after you merge.
 ## What actually happens on deploy
 
 `scripts/vercel-build.mjs` in full, in prose: if `VERCEL_ENV === "production"`, run
+`node scripts/deploy-gate.mjs check` (a no-op until [the deploy gate](#the-deploy-gate) is on), then
 `node scripts/check-env.mjs`, then `node scripts/check-migrations.mjs`, then
 `node scripts/check-migration-graph.mjs`, then `pnpm db:migrate`; then, always, run `pnpm build`.
 The first step refuses the build when a `config/env-registry.mjs` row marked `requiredInProduction`
-is unset on the Vercel project (today the Upstash pair), naming the keys and what each one switches
-off, so a missing security-relevant value fails the deploy loudly instead of the feature failing
+is unset on the Vercel project (today the Upstash pair and `SECRET_ENCRYPTION_KEY`), naming the
+keys and what each one switches off, so a missing security-relevant value fails the deploy loudly instead of the feature failing
 quietly in production (decided 2026-10-07, issue #2244). Previews are not asked.
 `pnpm db:migrate` is `drizzle-kit migrate --config drizzle.config.prod.ts`, applying committed
 `drizzle/` SQL against `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a
@@ -118,6 +119,64 @@ its first step naming the empty one; nothing else changes, and production deploy
 
 A docs-only commit therefore never reaches `pnpm db:migrate` either. That is safe by construction:
 `drizzle/` is code, so any commit carrying a migration is a commit that builds.
+
+## The deploy gate
+
+**Off until the pilot shop's first real booking** (H-158). Today every push to `main` builds and
+migrates production at once, about twenty minutes before CI on that commit has an answer, so a
+commit CI would have stopped still runs its migration. With the gate on, a push to `main` no longer
+builds production; a commit deploys once its CI on `main` finished green, and the live site is the
+last green commit: production lags `main` by one CI run. **It stops push-triggered builds; it is
+not an access control against anyone holding a Vercel token.** `DEPLOY_GATE_SHA` is a marker, not a
+credential, and a deployed tree brings its own `scripts/vercel-build.mjs`, so a token that can
+deploy the project can deploy production around the gate. That is why the gate's token is its own,
+on an environment only `main` can use.
+
+Vercel's Git integration cannot wait for a GitHub check, and Vercel's deployment checks hold back
+the alias, not the build, which is where the migration runs. So the gate has two halves, both in
+[`scripts/deploy-gate.mjs`](../../scripts/deploy-gate.mjs):
+
+- **Vercel's push-triggered production build cancels itself.** The Ignored Build Step
+  (`scripts/vercel-ignore-build.mjs`) exits "skip" before the install, so the deployment reads
+  `CANCELED`, not failed. `scripts/vercel-build.mjs` asks the same question before `db:migrate`, for
+  the paths that skip that step, such as a dashboard Redeploy, and fails that build.
+- **`.github/workflows/deploy-gate.yml` deploys the green commit.** When CI on `main` completes
+  green, its `resolve` job (no credentials) checks that the commit is on `main`, has a green CI run
+  there, and is the newest green commit, so a late older run never rolls production back. Its
+  `deploy` job, on the `production-deploy` environment, runs `vercel deploy --prod` from that exact
+  commit with the build variable `DEPLOY_GATE_SHA`, which is the one thing the first half lets
+  through. Run workflow with a green sha redeploys it, which is how a human rolls back to a green
+  commit. Only from `main`: a dispatch from any other ref is refused by `resolve`, and the
+  environment's branch rule refuses it again. **A rollback is unreviewed and can go back past a
+  security fix**, or past a contracting migration to code older than the schema: any green commit
+  on `main` qualifies, so read what lies between it and the tip before you pick it. A failed deploy opens a `ci-red` issue (`scripts/workflow-alert.mjs`); the next
+  successful one closes it.
+
+**The switch is one name in two places**, because Vercel cannot read a GitHub variable:
+`DEPLOY_REQUIRES_GREEN=true` as a GitHub repository variable (the workflow) and as a Vercel
+Production environment variable (the cancel). Unset in both is today's behavior. The workflow
+refuses to deploy while Vercel's half is missing, so a half-on gate is a red run, not every commit
+deployed twice.
+
+To turn it on, in this order:
+
+1. Complete manual action `production-deploy-gate` in [manual-actions.md](manual-actions.md): the
+   `production-deploy` environment, restricted to `main`, with its own Vercel token (never the
+   preview one) and the two project ids. Confirm the branch rule:
+   `gh api repos/AaronBuxbaum/diveday/environments/production-deploy --jq .deployment_branch_policy`
+   shows custom branch policies, and
+   `gh api repos/AaronBuxbaum/diveday/environments/production-deploy/deployment-branch-policies --jq '[.branch_policies[].name]'`
+   is `["main"]`.
+2. Set the Vercel variable: `vercel env add DEPLOY_REQUIRES_GREEN production`, value `true`, not
+   sensitive (the workflow reads the value back, and a sensitive one cannot be read). From here,
+   pushes to `main` stop deploying.
+3. Set the GitHub variable: `gh variable set DEPLOY_REQUIRES_GREEN --body true`.
+4. Run the `Deploy gate` workflow with the newest green commit on `main`, and confirm Vercel shows a
+   production deployment of that sha. The next push to `main` should show a `CANCELED` deployment
+   whose log says the gate is on, then a deployment from the workflow once its CI is green.
+
+To turn it off, remove the Vercel variable first (pushes deploy again), then the GitHub variable.
+The other order leaves a window in which nothing deploys.
 
 ## What CI rehearses, and what it still doesn't
 
@@ -383,7 +442,8 @@ The specific hazard called out above. Symptoms: the deploy is red, but the schem
 
 ## Concurrent deploys
 
-**Nothing serializes production deploys today.** Two merges to `main` in quick succession start two
+**Nothing serializes production deploys today** unless [the deploy gate](#the-deploy-gate) is on,
+whose workflow deploys one commit at a time (`concurrency: production-deploy`). Two merges to `main` in quick succession start two
 Vercel production builds, and each one independently runs `pnpm db:migrate` against the same Neon
 database. `drizzle-kit migrate` records applied migrations in its own tracking table, so the second
 run will usually skip what the first already applied — but "usually" is doing real work in that
