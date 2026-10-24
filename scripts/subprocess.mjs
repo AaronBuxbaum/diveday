@@ -165,7 +165,7 @@ export const SUBPROCESS_TIMEOUTS = {
   simulateDay: 1_500_000,
   /**
    * One `pnpm persona:bots` Playwright run -- the weekly walk over every
-   * surface `docs/product/personas.md` names, with an axe scan and a
+   * surface `docs/product/personas.md` names, with its DOM probes and a
    * screenshot pass on top. Fewer states than the simulated day but more
    * pages, and the screenshot pass spawns one `scripts/screenshot.mjs` per
    * surface it photographs. The ceiling is twenty minutes against the weekly

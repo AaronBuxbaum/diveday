@@ -159,7 +159,7 @@ script again.
 | 20260731-notification-locale | ~~Localize outbound email and SMS~~ → 20260731-per-person-notification-locale |
 | 20260731-per-person-notification-locale | Write to a diver in… |
 | 20260731-shop-currency | The shop declares its currency;… |
-| 20260801-axe-core-playwright-a11y-scans | Automated axe scans in the… |
+| 20260801-axe-core-playwright-a11y-scans | ~~Automated axe scans in the…~~ (deprecated) |
 | 20260801-cache-components-activity-state | ~~Audit `/shop/**` staff surfaces for…~~ |
 | 20260801-cache-components-e2e-activity-migration | Make the e2e suite Activity-safe… |
 | 20260801-checkout-upsells-rental-gear | Move rental-gear selection ahead of… |

@@ -712,8 +712,8 @@ export function StaffingWeek({
           {dayFaces.map((day) => (
             <div key={day.date} className={WEEK_GRID.dayHead}>
               {/* `h2`, not `h3`: the page's own `<h1>` is directly above and a
-                  skipped level is an axe `heading-order` failure on a route
-                  e2e/a11y.spec.ts scans. */}
+                  skipped level is an axe `heading-order` failure (the suite
+                  scanned this route until 2026-10-24). */}
               <h2 className="flex flex-wrap items-baseline gap-x-1.5">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex flex-wrap items-baseline gap-x-1.5">

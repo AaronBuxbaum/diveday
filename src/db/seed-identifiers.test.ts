@@ -23,14 +23,7 @@ describe("browser seed identifiers", () => {
       .filter((file) => /^visual-.+\.spec\.ts$/.test(file))
       .map((file) => file.replace(/\.spec\.ts$/, ""));
     expect(visualSpecs.length).toBeGreaterThan(0);
-    for (const spec of [
-      "a11y",
-      "recap",
-      "reviews",
-      "review-replies",
-      "storefront-brand",
-      ...visualSpecs,
-    ]) {
+    for (const spec of ["recap", "reviews", "review-replies", "storefront-brand", ...visualSpecs]) {
       const source = readFileSync(path.join(root, "e2e", `${spec}.spec.ts`), "utf8");
       expect(source, spec).not.toMatch(/from\s+["']\.\.\/src\/db\/(?:seed|seed-listed-shops)["']/);
     }

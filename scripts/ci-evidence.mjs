@@ -4,10 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
+// `repo-safeguards` runs Lint, Typecheck and check:repo as steps of one job (ci.yml, 2026-10-24).
 const REPRO = {
-  lint: "pnpm lint",
-  typecheck: "pnpm typecheck",
-  "repo-safeguards": "pnpm check:repo",
+  "repo-safeguards": "pnpm lint && pnpm typecheck && pnpm check:repo",
 };
 export function failureGroups(jobs, annotations) {
   const groups = new Map();
