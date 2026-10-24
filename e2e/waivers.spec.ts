@@ -140,7 +140,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // The trip this waiver is for is named on the page itself (task 42) — a
   // diver can verify what they're signing for instead of trusting a link
   // that only ever named the shop.
-  await expect(page.getByText(/Two-Tank Reef — Molasses & French —/)).toBeVisible();
+  await expect(page.getByText(/^Two-Tank Reef — Molasses & French · /)).toBeVisible();
   // The link's own expiry is stated on the page, not just in the email that
   // sent it (task 51).
   await expect(page.getByText(/This link works until/)).toBeVisible();

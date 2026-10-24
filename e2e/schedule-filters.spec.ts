@@ -172,7 +172,10 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // stated, and that is a *URL* condition rather than a hydration one, so it is
   // present in the first paint of a page carrying `?canDive=` and absent from
   // every frame of this one. It is exactly the distinction this test is for.
-  expect([...new Set(samples.map(([count]) => count))]).toEqual([3]);
+  // Four with the "More filters" button, which has sat inside the form since
+  // the row became one row (visual review 2026-10-24, B18): it renders on
+  // first paint for every reader, so it is in every sample or none.
+  expect([...new Set(samples.map(([count]) => count))]).toEqual([4]);
 
   // And no Apply button at any point, for any reader.
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);

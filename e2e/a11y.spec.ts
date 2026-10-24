@@ -886,7 +886,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       // no seeded row, no sign-in. One door, not five — the five are one
       // composition wearing different words, so the marginal scan buys copy
       // rather than structure and costs twenty seconds a run.
-      { path: "/verify/not-a-real-token", heading: /isn’t available/ },
+      { path: "/verify/not-a-real-token", heading: /no longer works/ },
     ]);
 
     // The diver-facing shop. Its `<h1>` is served in the static shell while

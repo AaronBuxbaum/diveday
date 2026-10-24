@@ -195,17 +195,20 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the embed grid renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/embed/grid");
-        await page.getByRole("link", { name: "Book" }).first().waitFor();
+        await page.getByRole("link", { name: "Book", exact: true }).first().waitFor();
         await capture(page, "embed-grid", scheme);
       });
 
       test(`the embed departure card renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/embed/grid");
-        const href = await page.getByRole("link", { name: "Book" }).first().getAttribute("href");
+        const href = await page
+          .getByRole("link", { name: "Book", exact: true })
+          .first()
+          .getAttribute("href");
         const tripId = /\/trips\/([^/#?]+)/.exec(href ?? "")?.[1];
         expect(tripId).toBeTruthy();
         await page.goto(`/s/blue-mantis/embed/departure?show=${tripId}`);
-        await page.getByRole("link", { name: "Book" }).waitFor();
+        await page.getByRole("link", { name: "Book", exact: true }).waitFor();
         await capture(page, "embed-departure", scheme);
       });
 

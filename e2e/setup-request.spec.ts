@@ -48,7 +48,11 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
     "mailto:support@dive.day",
   );
   // The demo is the one thing left to do while the reply is on its way.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  // Scoped to `main`: the nav carries its own demo door on this page too
+  // (visual review 2026-10-24, B43).
+  await expect(
+    page.getByRole("main").getByRole("button", { name: "Try the live demo" }),
+  ).toBeVisible();
 });
 
 test("every closed door to a trial now opens the set-up form", async ({ page }) => {
