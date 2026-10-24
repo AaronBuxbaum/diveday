@@ -78,6 +78,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   medical_answers_read: "safety",
   medical_alert_read: "safety",
   medical_alert_saved_offline: "safety",
+  medical_alert_printed: "safety",
+  medical_alert_emergency_read: "safety",
   date_of_birth_cleared_as_adult: "safety",
   incident_report_filed: "safety",
   incident_report_addendum_added: "safety",

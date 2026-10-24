@@ -276,6 +276,20 @@ type ActivityParamShapes = {
    */
   medical_alert_saved_offline: { actor: string; diver: string; departure?: string };
   /**
+   * An owner or manager printed a departure's packet with the medical alerts'
+   * words on it (issue #2990): one line per diver whose words went on the
+   * sheet, written by the server when it produced the print. Every print is
+   * its own line: each one is another sheet.
+   */
+  medical_alert_printed: { actor: string; diver: string; departure?: string };
+  /**
+   * A staffer the crew rule refuses opened a diver's medical alert in an
+   * emergency on the day of the departure (issue #2990). `actor` is the
+   * reader. Never de-duplicated: every emergency read is its own line, and the
+   * owner's Monday email lists last week's.
+   */
+  medical_alert_emergency_read: { actor: string; diver: string; departure?: string };
+  /**
    * A staffer cleared a diver's stored date of birth by answering "They're 18
    * or older" (issue #2167). On the trail, because a date typed later drops
    * the record's own answer columns and must not drop who said it.
@@ -534,6 +548,8 @@ export const ACTIVITY_CODES = [
   "medical_answers_read",
   "medical_alert_read",
   "medical_alert_saved_offline",
+  "medical_alert_printed",
+  "medical_alert_emergency_read",
   "date_of_birth_cleared_as_adult",
   "record_exported",
   "drysuit_experience_recorded",
