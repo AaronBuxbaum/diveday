@@ -311,6 +311,7 @@
   "emergencyCard": {
     "subject": "Tu referencia de emergencia no tiene números",
     "detail": "La salida de las {time} de {day} zarpa sin un número de cámara hiperbárica ni de guardacostas.",
+    "detailOut": "La salida de las {time} está en el mar sin un número de cámara hiperbárica ni de guardacostas.",
     "action": "Agregar los números"
   },
   "lostItems": {

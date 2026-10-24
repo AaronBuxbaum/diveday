@@ -25,13 +25,19 @@ export type DeskFacts = { emergencyCardHasNumbers: boolean; lostItemsWaiting: nu
  *   the next 48 hours and the shop's emergency reference has no number to dial,
  *   the owner hears it the day before, not the captain at sea. One row for the
  *   shop, under "The desk", naming the first boat that would carry the blank
- *   card and ranked by that boat's urgency.
+ *   card and ranked by that boat's urgency. A boat already out and not back
+ *   is named first (issue #2802): the row stays while she is at sea.
  * - **Item 7, found items waiting to go home.** One counting row while anything
  *   is open, which is also Lost and found's door from Today.
  */
 export function pushDeskRows(actions: TodayAction[], ctx: TodayRowsContext, facts: DeskFacts) {
   const { inWindow, now, timeZone, locale, t, shopSlug } = ctx;
   if (!facts.emergencyCardHasNumbers) {
+    // **A boat at sea comes first** (issue #2802, Aaron's option b): she is
+    // carrying the blank card now, and the desk can still radio her a number.
+    // `boatsOut.out` is every departure past the sailing hour and not back by
+    // the stage pill's own rule, so the row lets go when she is home.
+    const out = [...ctx.wave.boatsOut.out].sort(departureClockOrder((trip) => trip.id))[0];
     const next = inWindow
       .filter(
         (trip) =>
@@ -44,15 +50,17 @@ export function pushDeskRows(actions: TodayAction[], ctx: TodayRowsContext, fact
           (trip) => (trip.boatId ? ctx.wave.boatNames.get(trip.boatId) : null),
         ),
       )[0];
-    if (next) {
+    const boat = out ?? next;
+    if (boat) {
       const words = emergencyCardBlankText(t, {
-        time: at(next.startsAt, timeZone, locale),
-        day: formatRelativeDay(next.startsAt, now, locale, timeZone),
+        time: at(boat.startsAt, timeZone, locale),
+        day: formatRelativeDay(boat.startsAt, now, locale, timeZone),
+        out: boat === out,
       });
       actions.push({
         id: "emergency-card-blank",
         kind: "emergency_card_blank",
-        urgency: urgencyFor(next.startsAt, now),
+        urgency: urgencyFor(boat.startsAt, now),
         subject: words.subject,
         context: null,
         // **A desk row, not a boat's** (Aaron 2026-10-23): the card is the
@@ -63,7 +71,7 @@ export function pushDeskRows(actions: TodayAction[], ctx: TodayRowsContext, fact
         detail: words.detail,
         actionLabel: words.actionLabel,
         href: shopPath(shopSlug, "settings", "emergency-reference"),
-        dueAt: next.startsAt,
+        dueAt: boat.startsAt,
       });
     }
   }

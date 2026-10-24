@@ -1278,11 +1278,14 @@ export function rollCallAlertedText(
  */
 export function emergencyCardBlankText(
   t: StaffTranslator,
-  input: { time: string; day: string },
+  input: { time: string; day: string; out?: boolean },
 ): { subject: string; detail: string; actionLabel: string } {
   return {
     subject: t("today.emergencyCard.subject"),
-    detail: t("today.emergencyCard.detail", input),
+    // A boat already out is named as out, not as one about to sail (#2802).
+    detail: input.out
+      ? t("today.emergencyCard.detailOut", { time: input.time })
+      : t("today.emergencyCard.detail", { time: input.time, day: input.day }),
     actionLabel: t("today.emergencyCard.action"),
   };
 }

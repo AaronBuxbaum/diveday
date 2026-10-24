@@ -1,15 +1,17 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { groupByDeparture } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { countOpenLostItems, openLostItemsByPerson, recordLostItem } from "./lost-items";
-import { lostItems, shops } from "./schema";
+import { lostItems, shops, trips as tripRows } from "./schema";
 import { getTodayWork } from "./today";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 /** One database for the file, one rolled-back transaction per test. */
 const ctx = fileScopedShopContext();
+
+const HOUR = 60 * 60 * 1000;
 
 const BLANK = { lines: [], vessel: "", shoreContact: "", plan: "" };
 
@@ -38,6 +40,93 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
     expect(group?.departure).toBeNull();
     expect(row?.dueAt?.getTime()).toBeGreaterThan(now.getTime() - 60 * 60 * 1000);
     expect((row?.dueAt?.getTime() ?? 0) - now.getTime()).toBeLessThanOrEqual(48 * 60 * 60 * 1000);
+  });
+
+  /**
+   * **A boat at sea keeps the row** (issue #2802, Aaron's option b). The desk
+   * can still radio her a number, so the row must not drop off the moment
+   * she leaves; it names her, ahead of the next boat to sail.
+   */
+  it("keeps the row for a boat out and not back, naming her ahead of the next to sail (#2802)", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ emergencyReference: BLANK }).where(eq(shops.id, shop.id));
+    const now = nowDate();
+    const startsAt = new Date(now.getTime() - 3 * HOUR);
+    await db.insert(tripRows).values({
+      shopId: shop.id,
+      title: "Out Now — Molasses",
+      startsAt,
+      endsAt: new Date(now.getTime() + 2 * HOUR),
+      capacity: 12,
+      plannedDives: 2,
+      priceCents: 13000,
+    });
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const rows = work.actions.filter((action) => action.kind === "emergency_card_blank");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.dueAt?.getTime()).toBe(startsAt.getTime());
+    expect(rows[0]?.detail).toMatch(/is out without a chamber or coastguard number on it\.$/);
+    expect(rows[0]?.urgency).toBe("imminent");
+    // Still the desk's row, not filed on her card.
+    expect(rows[0]?.departure).toBeUndefined();
+  });
+
+  it("raises the row for a boat out when nothing sails in the next 48 hours (#2802)", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ emergencyReference: BLANK }).where(eq(shops.id, shop.id));
+    const now = nowDate();
+    // Nothing ahead: every seeded departure that has not left is moved out
+    // past the window.
+    await db
+      .update(tripRows)
+      .set({ startsAt: new Date(now.getTime() + 30 * 24 * HOUR), endsAt: new Date(now.getTime() + 30 * 24 * HOUR + 4 * HOUR) })
+      .where(and(eq(tripRows.shopId, shop.id), gt(tripRows.startsAt, new Date(now.getTime() - HOUR))));
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    expect(before.actions.some((row) => row.kind === "emergency_card_blank")).toBe(false);
+    await db.insert(tripRows).values({
+      shopId: shop.id,
+      title: "Out Now — French Reef",
+      startsAt: new Date(now.getTime() - 2 * HOUR),
+      endsAt: new Date(now.getTime() + HOUR),
+      capacity: 12,
+      plannedDives: 2,
+      priceCents: 13000,
+    });
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    expect(after.actions.some((row) => row.kind === "emergency_card_blank")).toBe(true);
+  });
+
+  it("lets the row go once the boat is back, or for a departure called off that nobody boarded (#2802)", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ emergencyReference: BLANK }).where(eq(shops.id, shop.id));
+    const now = nowDate();
+    await db
+      .update(tripRows)
+      .set({ startsAt: new Date(now.getTime() + 30 * 24 * HOUR), endsAt: new Date(now.getTime() + 30 * 24 * HOUR + 4 * HOUR) })
+      .where(and(eq(tripRows.shopId, shop.id), gt(tripRows.startsAt, new Date(now.getTime() - HOUR))));
+    await db.insert(tripRows).values([
+      {
+        shopId: shop.id,
+        title: "Back Already — Molasses",
+        startsAt: new Date(now.getTime() - 6 * HOUR),
+        endsAt: new Date(now.getTime() - 2 * HOUR),
+        capacity: 12,
+        plannedDives: 2,
+        priceCents: 13000,
+      },
+      {
+        shopId: shop.id,
+        title: "Called Off — French Reef",
+        startsAt: new Date(now.getTime() - 2 * HOUR),
+        endsAt: new Date(now.getTime() + HOUR),
+        capacity: 12,
+        plannedDives: 2,
+        priceCents: 13000,
+        status: "cancelled",
+      },
+    ]);
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    expect(work.actions.some((row) => row.kind === "emergency_card_blank")).toBe(false);
   });
 
   it("counts a shore contact or a plan with no number as blank", async () => {
