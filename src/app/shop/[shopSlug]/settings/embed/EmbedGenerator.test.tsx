@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
@@ -226,15 +226,27 @@ describe("EmbedGenerator", () => {
    * the label carries; the probe's `small-target` check measures it.
    */
   /**
-   * Each snippet's Copy starts the line under its box, so its word sits on the
-   * box's edge. It sat 12px inside it, at x 446 against 433 (pixel probe,
-   * SETTINGS-2-20, K-06).
+   * Each snippet's Copy is a secondary button in its box's corner (visual
+   * review 2026-10-24, A45), not a bare word under it.
    */
-  it("puts each snippet's Copy on the edge of the box above it", () => {
+  it("draws each snippet's Copy as a small secondary button", () => {
     renderGenerator();
     const triggers = screen.getAllByRole("button", { name: "Copy" });
     expect(triggers.length).toBeGreaterThan(0);
-    for (const trigger of triggers) expect(rendersFlush(trigger, "ghost", "sm")).toBe(true);
+    for (const trigger of triggers) expect(trigger.className).toContain("absolute");
+    for (const trigger of triggers) expect(rendersFlush(trigger, "secondary", "sm")).toBe(false);
+  });
+
+  /**
+   * The preview box is drawn only around a widget that has loaded: before
+   * that there is no box at all (A45).
+   */
+  it("draws no preview box until the frame has loaded", () => {
+    renderGenerator();
+    const frame = screen.getByTitle("Preview") as HTMLIFrameElement;
+    expect(frame.className).toContain("h-0");
+    fireEvent.load(frame);
+    expect((screen.getByTitle("Preview") as HTMLIFrameElement).className).toContain("h-[480px]");
   });
 
   /**

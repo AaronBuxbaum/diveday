@@ -27,6 +27,7 @@ import { DiverHeader } from "./_components/DiverHeader";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
+import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
 import { FoundItemLine } from "./_components/FoundItemLine";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
@@ -240,6 +241,15 @@ export default async function DiverDetailPage({
         locale={locale}
         packages={packages}
         status={cleared ? undefined : detailsStatus}
+        download={
+          canExport ? (
+            <DownloadDiverExportButton
+              href={`/shop/${shopSlug}/divers/${personId}/export`}
+              idleLabel={t("divers.export.downloadButton.idle")}
+              acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
+            />
+          ) : null
+        }
         moment={
           cleared ? (
             <EarnedMomentLine className="-mt-4 mb-4">
@@ -366,7 +376,6 @@ export default async function DiverDetailPage({
         mergeCandidates={canMerge && !removed ? mergeCandidates : []}
         guardianEmails={canErase ? guardianEmails : null}
         canErase={canErase}
-        canExport={canExport}
         canDelete={canDelete}
       />
     </main>

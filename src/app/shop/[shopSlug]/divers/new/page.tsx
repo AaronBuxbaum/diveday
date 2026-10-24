@@ -184,12 +184,20 @@ export default async function NewDiverPage({
   };
   const dobMax = maxPlausibleBirthDate();
 
+  // A wait-list entry is the one departure form that needs a way to reach the
+  // diver when the seat opens.
+  const emailRequired = Boolean(
+    isWaitlist || (surface && !walkIn && SEAT_SURFACES[surface].email === "required"),
+  );
+
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={backLink.label}
         eyebrowHref={backLink.href}
         title={t("divers.page.newDiverTitle")}
+        // Not where the form asks for an email: the lead would say the opposite.
+        description={emailRequired ? undefined : t("divers.page.newDiverLead")}
       />
 
       {noticeText ? (
@@ -300,17 +308,13 @@ export default async function NewDiverPage({
           as="form"
           action={createDiverFormAction}
           name={surface ? "required" : "optional"}
-          // A wait-list entry is the one departure form that needs a way to
-          // reach the diver when the seat opens.
-          email={
-            isWaitlist || (surface && !walkIn && SEAT_SURFACES[surface].email === "required")
-              ? "required"
-              : "optional"
-          }
+          email={emailRequired ? "required" : "optional"}
           nameLabel={t("divers.page.fullNameLabel")}
           emailLabel={t("divers.page.emailLabel")}
           phoneLabel={t("divers.page.phoneLabel")}
-          optionalHint={t("divers.page.optionalHint")}
+          // "Optional" is said once, by the lead line under the heading
+          // (visual review 2026-10-24, A18); a required field keeps its mark.
+          optionalHint=""
           defaultValues={{
             fullName: defaultName,
             email: defaultEmail,

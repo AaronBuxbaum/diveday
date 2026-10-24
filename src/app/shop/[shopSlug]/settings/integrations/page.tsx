@@ -27,7 +27,7 @@ import {
   updateQuickBooksSettingsAction,
 } from "./actions";
 import { EarlierCheckoutsCard } from "./EarlierCheckoutsCard";
-import { ConnectedMeta, DisconnectForm, NotAvailable, statusBadge } from "./integration-parts";
+import { ConnectedMeta, DisconnectForm, describedWithStatus } from "./integration-parts";
 import { ZapierCard } from "./ZapierCard";
 
 export const instant = true;
@@ -95,12 +95,12 @@ export default async function IntegrationsSettingsPage({
         }
       : banner;
 
-  const unavailable = [
-    !shopify && !shopifyConfigured,
-    !quickbooks && !quickbooksConfigured,
-    !zapier && !zapierConfigured,
-  ].filter(Boolean).length;
-  const askOnce = unavailable > 1;
+  // A card only for what this build can connect, or what is already
+  // connected (visual review 2026-10-24, A20); the rest is one line at the foot.
+  const showShopify = Boolean(shopify) || shopifyConfigured;
+  const showQuickbooks = Boolean(quickbooks) || quickbooksConfigured;
+  const showZapier = Boolean(zapier) || zapierConfigured;
+  const comingLater = !showShopify || !showQuickbooks || !showZapier;
 
   return (
     <main className={settingsPaneClass()}>
@@ -108,13 +108,6 @@ export default async function IntegrationsSettingsPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("settings.data.title")}
-        meta={
-          askOnce ? (
-            <p className="text-sm text-muted">
-              {t("integrations.common.notAvailableAsk", { email: SUPPORT_EMAIL })}
-            </p>
-          ) : undefined
-        }
       />
       <DataTabs t={t} shopSlug={session.user.shopSlug} current="integrations" />
       {syncBanner ? (
@@ -122,124 +115,121 @@ export default async function IntegrationsSettingsPage({
       ) : null}
 
       <div className="space-y-10">
-        <SectionCard
-          padding="lg"
-          title={t("integrations.shopify.name")}
-          description={t("integrations.shopify.description")}
-          actions={statusBadge(t, shopify)}
-        >
-          {shopify ? (
-            <div className="space-y-5">
-              <ConnectedMeta t={t} row={shopify} locale={locale} timezone={shop.timezone} />
-              <p className="text-sm text-muted">{t("integrations.shopify.syncDescription")}</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <form action={syncShopifyCatalogAction}>
-                  <SubmitButton
-                    pendingLabel={t("integrations.shopify.syncing")}
-                    className={buttonClass({ variant: "secondary" })}
-                    disabled={!shopifyConfigured}
-                  >
-                    {t("integrations.shopify.sync")}
-                  </SubmitButton>
-                </form>
-                <DisconnectForm provider="shopify" t={t} />
+        {showShopify ? (
+          <SectionCard
+            padding="lg"
+            title={t("integrations.shopify.name")}
+            description={describedWithStatus(t, t("integrations.shopify.description"), shopify)}
+          >
+            {shopify ? (
+              <div className="space-y-5">
+                <ConnectedMeta t={t} row={shopify} locale={locale} timezone={shop.timezone} />
+                <p className="text-sm text-muted">{t("integrations.shopify.syncDescription")}</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <form action={syncShopifyCatalogAction}>
+                    <SubmitButton
+                      pendingLabel={t("integrations.shopify.syncing")}
+                      className={buttonClass({ variant: "secondary" })}
+                      disabled={!shopifyConfigured}
+                    >
+                      {t("integrations.shopify.sync")}
+                    </SubmitButton>
+                  </form>
+                  <DisconnectForm provider="shopify" t={t} />
+                </div>
               </div>
-            </div>
-          ) : shopifyConfigured ? (
-            <FieldGrid as="form" action={startShopifyConnectionAction}>
-              <Field
-                label={t("integrations.shopify.domainLabel")}
-                description={t("integrations.shopify.domainDescription")}
-              >
-                <input
-                  name="shopDomain"
-                  className={controlClass}
-                  placeholder={t("integrations.shopify.domainPlaceholder")}
-                  required
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("integrations.common.connect")}
-                  className={buttonClass()}
-                >
-                  {t("integrations.shopify.connect")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          ) : (
-            <NotAvailable t={t} askedAbove={askOnce} />
-          )}
-        </SectionCard>
-
-        <SectionCard
-          padding="lg"
-          title={t("integrations.quickbooks.name")}
-          description={t("integrations.quickbooks.description")}
-          actions={statusBadge(t, quickbooks)}
-        >
-          {quickbooks ? (
-            <div className="space-y-5">
-              <ConnectedMeta t={t} row={quickbooks} locale={locale} timezone={shop.timezone} />
-              <p className="text-sm text-muted">{t("integrations.quickbooks.setupRequired")}</p>
-              <FieldGrid as="form" action={updateQuickBooksSettingsAction}>
+            ) : (
+              <FieldGrid as="form" action={startShopifyConnectionAction}>
                 <Field
-                  label={t("integrations.quickbooks.incomeAccountLabel")}
-                  description={t("integrations.quickbooks.incomeAccountDescription")}
+                  label={t("integrations.shopify.domainLabel")}
+                  description={t("integrations.shopify.domainDescription")}
                 >
                   <input
-                    name="incomeAccountId"
+                    name="shopDomain"
                     className={controlClass}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder={t("integrations.quickbooks.incomeAccountPlaceholder")}
-                    defaultValue={quickbooks.settings.incomeAccountId ?? ""}
+                    placeholder={t("integrations.shopify.domainPlaceholder")}
+                    required
                   />
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("integrations.common.saving")}
-                    className={buttonClass({ variant: "secondary" })}
+                    pendingLabel={t("integrations.common.connect")}
+                    className={buttonClass()}
                   >
-                    {t("integrations.common.save")}
+                    {t("integrations.shopify.connect")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
-              <div className="flex flex-wrap items-center gap-3">
-                <form action={startQuickBooksConnectionAction}>
-                  <SubmitButton
-                    pendingLabel={t("integrations.common.reconnect")}
-                    className={buttonClass({ variant: "secondary" })}
-                    disabled={!quickbooksConfigured}
-                  >
-                    {t("integrations.common.reconnect")}
-                  </SubmitButton>
-                </form>
-                <DisconnectForm provider="quickbooks" t={t} />
-              </div>
-            </div>
-          ) : quickbooksConfigured ? (
-            <form action={startQuickBooksConnectionAction}>
-              <SubmitButton
-                pendingLabel={t("integrations.common.connect")}
-                className={buttonClass()}
-              >
-                {t("integrations.quickbooks.connect")}
-              </SubmitButton>
-            </form>
-          ) : (
-            <NotAvailable t={t} askedAbove={askOnce} />
-          )}
-        </SectionCard>
+            )}
+          </SectionCard>
+        ) : null}
 
-        <ZapierCard
-          t={t}
-          zapier={zapier}
-          configured={zapierConfigured}
-          askOnce={askOnce}
-          locale={locale}
-          timezone={shop.timezone}
-        />
+        {showQuickbooks ? (
+          <SectionCard
+            padding="lg"
+            title={t("integrations.quickbooks.name")}
+            description={describedWithStatus(
+              t,
+              t("integrations.quickbooks.description"),
+              quickbooks,
+            )}
+          >
+            {quickbooks ? (
+              <div className="space-y-5">
+                <ConnectedMeta t={t} row={quickbooks} locale={locale} timezone={shop.timezone} />
+                <p className="text-sm text-muted">{t("integrations.quickbooks.setupRequired")}</p>
+                <FieldGrid as="form" action={updateQuickBooksSettingsAction}>
+                  <Field
+                    label={t("integrations.quickbooks.incomeAccountLabel")}
+                    description={t("integrations.quickbooks.incomeAccountDescription")}
+                  >
+                    <input
+                      name="incomeAccountId"
+                      className={controlClass}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder={t("integrations.quickbooks.incomeAccountPlaceholder")}
+                      defaultValue={quickbooks.settings.incomeAccountId ?? ""}
+                    />
+                  </Field>
+                  <FieldActions>
+                    <SubmitButton
+                      pendingLabel={t("integrations.common.saving")}
+                      className={buttonClass({ variant: "secondary" })}
+                    >
+                      {t("integrations.common.save")}
+                    </SubmitButton>
+                  </FieldActions>
+                </FieldGrid>
+                <div className="flex flex-wrap items-center gap-3">
+                  <form action={startQuickBooksConnectionAction}>
+                    <SubmitButton
+                      pendingLabel={t("integrations.common.reconnect")}
+                      className={buttonClass({ variant: "secondary" })}
+                      disabled={!quickbooksConfigured}
+                    >
+                      {t("integrations.common.reconnect")}
+                    </SubmitButton>
+                  </form>
+                  <DisconnectForm provider="quickbooks" t={t} />
+                </div>
+              </div>
+            ) : (
+              <form action={startQuickBooksConnectionAction}>
+                <SubmitButton
+                  pendingLabel={t("integrations.common.connect")}
+                  className={buttonClass()}
+                >
+                  {t("integrations.quickbooks.connect")}
+                </SubmitButton>
+              </form>
+            )}
+          </SectionCard>
+        ) : null}
+
+        {showZapier ? (
+          <ZapierCard t={t} zapier={zapier} locale={locale} timezone={shop.timezone} />
+        ) : null}
 
         {ownerBackfill ? (
           <EarlierCheckoutsCard
@@ -254,6 +244,12 @@ export default async function IntegrationsSettingsPage({
             notice={notice}
             count={count}
           />
+        ) : null}
+
+        {comingLater ? (
+          <p className="text-sm text-muted">
+            {t("integrations.common.notAvailableAsk", { email: SUPPORT_EMAIL })}
+          </p>
         ) : null}
       </div>
     </main>

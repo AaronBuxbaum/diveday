@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceFieldset, ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
+import { ChoiceFieldset, ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
+import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { requestLocale } from "@/i18n/request";
@@ -10,13 +11,13 @@ import type { DeskPayment } from "@/lib/desk-payment";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import {
-  CrewLeadForm,
-  DockDayForm,
-  TurnaroundForm,
+  CrewLeadFields,
+  DockDayFields,
+  TurnaroundFields,
 } from "../_components/editors/BoatsSitesEditors";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 import { dockDayNoticeMessages } from "../sub-page-notices";
-import { saveDeskPaymentAction } from "./desk-payment-actions";
+import { saveDockDayAction } from "./actions";
 
 /** The four answers, in the order a shop most often has them; "" is "Don't say". */
 const DESK_PAYMENT_CHOICES = [
@@ -33,14 +34,18 @@ export const instant = true;
 export const metadata: Metadata = { title: "Dock-day rhythm — DiveDay" };
 
 /**
- * The six minute amounts the dock day is built from, one save, and the beats
- * they produce beneath, with the sites whose own bottom time overrides the
- * shop-wide one.
+ * The six minute amounts the dock day is built from and the beats they produce
+ * beneath, with the sites whose own bottom time overrides the shop-wide one;
+ * then the crew's lead time, the turnaround and how divers pay at the desk.
+ *
+ * **One form, one Save** (visual review 2026-10-24, A01; Aaron 2026-10-23):
+ * the four sections were four forms with four Saves. They are headed groups of
+ * one form now, and the Save rides the bottom edge (`StickyFormActions`, as
+ * Features does) with the outcome beside it (`saveDockDayAction`).
  *
  * A row on the settings hub until #1854: a form this long is a page wearing a
  * disclosure, so the hub lists it as a door and this is what the door opens.
- * The editor is the row's own, unchanged, and its action answers here with a
- * plain `?notice=` (`sub-page-notices.ts`).
+ * The action answers here with a plain `?notice=` (`sub-page-notices.ts`).
  */
 export default async function DockDaySettingsPage({
   params,
@@ -63,54 +68,77 @@ export default async function DockDaySettingsPage({
   // nothing, and then the preview says nothing extra.
   const siteBottomTimeOverrides = await listSiteBottomTimeOverrides(db, shop.id);
 
+  const banner = noticeFromParam(notice, dockDayNoticeMessages(t));
+
   return (
     <SettingsEditorPage
       shopSlug={shopSlug}
       t={t}
       title={t("settings.main.dockCall.heading")}
       description={t("settings.main.dockCall.description")}
-      banner={noticeFromParam(notice, dockDayNoticeMessages(t))}
+      // The outcome sits beside Save, in the sticky row, not above the form;
+      // and no card: the sticky row needs the pane's own edges.
+      banner={undefined}
+      unframed
     >
-      <DockDayForm
-        shop={shop}
-        shopSlug={shopSlug}
-        t={t}
-        siteBottomTimeOverrides={siteBottomTimeOverrides}
-      />
-      <CrewLeadForm shop={shop} t={t} />
-      <TurnaroundForm shop={shop} t={t} />
-      {/* How divers pay at the desk (fifth-loop ideas, item 21): one sentence
-          after every "due at the shop", so a visitor brings cash or a card. */}
-      <FieldGrid
-        as="form"
-        action={saveDeskPaymentAction}
-        columns={1}
-        className="mt-8 border-t border-border pt-6"
-      >
-        <ChoiceFieldset legend={t("settings.main.deskPayment.legend")} bodyClassName="grid gap-1">
-          <p className="text-xs text-muted">{t("settings.main.deskPayment.description")}</p>
-          {DESK_PAYMENT_CHOICES.map(({ code, label }) => (
-            <ChoiceRow
-              key={code || "none"}
-              name="deskPayment"
-              type="radio"
-              value={code}
-              defaultChecked={(shop.deskPayment ?? "") === code}
-              className="text-sm"
-            >
-              {t(label)}
-            </ChoiceRow>
-          ))}
-        </ChoiceFieldset>
-        <FieldActions>
+      <form action={saveDockDayAction} className="space-y-8">
+        <section aria-labelledby="dock-day-divers" className="space-y-3">
+          <GroupLabel as="h2" id="dock-day-divers">
+            {t("settings.dockDay.groups.divers")}
+          </GroupLabel>
+          <DockDayFields
+            shop={shop}
+            shopSlug={shopSlug}
+            t={t}
+            siteBottomTimeOverrides={siteBottomTimeOverrides}
+          />
+        </section>
+        <section aria-labelledby="dock-day-crew" className="space-y-3">
+          <GroupLabel as="h2" id="dock-day-crew">
+            {t("settings.dockDay.groups.crew")}
+          </GroupLabel>
+          <CrewLeadFields shop={shop} t={t} />
+        </section>
+        <section aria-labelledby="dock-day-turnaround" className="space-y-3">
+          <GroupLabel as="h2" id="dock-day-turnaround">
+            {t("settings.dockDay.groups.turnaround")}
+          </GroupLabel>
+          <TurnaroundFields shop={shop} t={t} />
+        </section>
+        {/* How divers pay at the desk (fifth-loop ideas, item 21): one sentence
+            after every "due at the shop", so a visitor brings cash or a card. */}
+        <section aria-labelledby="dock-day-desk" className="space-y-3">
+          <GroupLabel as="h2" id="dock-day-desk">
+            {t("settings.dockDay.groups.desk")}
+          </GroupLabel>
+          <ChoiceFieldset legend={t("settings.main.deskPayment.legend")} bodyClassName="grid gap-1">
+            <p className="text-xs text-muted">{t("settings.main.deskPayment.description")}</p>
+            {DESK_PAYMENT_CHOICES.map(({ code, label }) => (
+              <ChoiceRow
+                key={code || "none"}
+                name="deskPayment"
+                type="radio"
+                value={code}
+                defaultChecked={(shop.deskPayment ?? "") === code}
+                className="text-sm"
+              >
+                {t(label)}
+              </ChoiceRow>
+            ))}
+          </ChoiceFieldset>
+        </section>
+        <StickyFormActions>
           <SubmitButton
-            pendingLabel={t("settings.main.deskPayment.submitting")}
-            className={buttonClass({ variant: "secondary" })}
+            pendingLabel={t("settings.main.dockCall.submitting")}
+            className={buttonClass()}
           >
-            {t("settings.main.deskPayment.submit")}
+            {t("settings.dockDay.save")}
           </SubmitButton>
-        </FieldActions>
-      </FieldGrid>
+          <FormStatus tone={banner?.tone} occurrenceKey={notice}>
+            {banner?.text}
+          </FormStatus>
+        </StickyFormActions>
+      </form>
     </SettingsEditorPage>
   );
 }

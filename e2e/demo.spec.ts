@@ -11,20 +11,23 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   // The demo banner rides above every /shop surface.
   await expect(page.getByText("Demo shop")).toBeVisible();
 
-  // **The first frame is not a credential pair.** This used to print a
-  // plaintext email and password on every page of the demo from the first
-  // millisecond, so the first sentence a prospective buyer read inside the
-  // product was recovery instructions for a failure that had not happened
-  // (issue #806). The warning that earns its place stays.
+  // **No credential pair anywhere in the chrome** (issue #806; visual review
+  // 2026-10-24, A41). The fallback sign-in lives in the demo docs, not in a
+  // banner a prospective buyer reads inside the product. The warning that
+  // earns its place stays.
   await expect(page.getByText(/Do not enter real customer details/)).toBeVisible();
-  await expect(page.getByText(/Session expired\? Sign back in at/)).toBeHidden();
+  await expect(page.getByText(/Session expired/)).toHaveCount(0);
 
-  // It is one tap away, behind the control the banner already had — a minted
-  // demo is throwaway data, so the way back in is a courtesy rather than a
-  // secret; it just is not the greeting.
-  await page.getByRole("button", { name: /^Switch role/ }).click();
-  await expect(page.getByText(/Session expired\? Sign back in at/)).toBeVisible();
-  await expect(page.getByText("password").first()).toBeVisible();
+  // The picker is a popover of one row per role, the one in force reading
+  // "Current"; Escape closes it and hands focus back to its button.
+  const trigger = page.getByRole("button", { name: /^Switch role/ });
+  await trigger.click();
+  const picker = page.locator("#demo-role-picker");
+  await expect(picker.getByText("Current", { exact: true })).toBeVisible();
+  await expect(picker.getByText(/Session expired|password/)).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(picker).toHaveCount(0);
+  await expect(trigger).toBeFocused();
 });
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {

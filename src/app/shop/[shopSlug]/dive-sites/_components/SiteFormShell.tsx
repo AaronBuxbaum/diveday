@@ -5,6 +5,14 @@ import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "re
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
 import type { DiveSiteFormError, SubmittedFormValues } from "@/lib/dive-sites";
+import { SITE_FORM_REFUSAL_SECTION } from "./site-form-sections";
+
+/**
+ * Every refusal the briefing's one Save can come back with: the briefing's own
+ * rules, and the two its Spanish boxes add now that the same Save writes them
+ * (visual review 2026-10-24, A11).
+ */
+export type SiteSaveRefusal = DiveSiteFormError | "spanishStale" | "spanishRefused";
 
 /**
  * What a refused site briefing hands back to the form: a code for the rule that
@@ -12,7 +20,7 @@ import type { DiveSiteFormError, SubmittedFormValues } from "@/lib/dive-sites";
  * returns — it redirects to the saved site.
  */
 export type SiteFormState = {
-  errorCode?: DiveSiteFormError;
+  errorCode?: SiteSaveRefusal;
   values?: SubmittedFormValues;
 };
 
@@ -70,7 +78,7 @@ export function SiteFormShell({
 }: {
   action: SiteFormAction;
   /** One already-translated sentence per refusal code the action can return. */
-  errorMessages: Record<DiveSiteFormError, string>;
+  errorMessages: Record<SiteSaveRefusal, string>;
   /**
    * The confirmation for a save that *did* land, already translated. A
    * successful save redirects (that is how the URL stops being a stale draft),
@@ -110,6 +118,11 @@ export function SiteFormShell({
     const form = formRef.current;
     if (!form || !state.values) return;
     for (const field of Array.from(form.elements)) restore(field, state.values);
+    // A refusal about a closed section opens it, so the field to fix is not
+    // behind a shut disclosure beside the sentence that names it.
+    const section = state.errorCode ? SITE_FORM_REFUSAL_SECTION[state.errorCode] : undefined;
+    const details = section ? document.getElementById(section) : null;
+    if (details instanceof HTMLDetailsElement) details.open = true;
   }, [state]);
 
   // Set once React owns the form. A field edited while the server-rendered

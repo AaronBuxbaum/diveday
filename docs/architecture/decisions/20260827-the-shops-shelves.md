@@ -58,6 +58,13 @@ FAQ, landmarks, the route editor, the field-guide picker) keep their behavior an
 boxes. On the phone the rail collapses to a top jump-row. `ConflictGuardedForm`,
 `UnsavedChangesGuard` and the depth-marker refusal are untouched.
 
+**Amended 2026-10-24 (visual review, A11).** The rail is gone from both editors. The sections a
+page is edited for stand open on hairlines (the course's pitch, pricing, at a glance and day by
+day; the site's about, dive and certification); every other section is a closed row of one
+disclosure list, its controls still in the form. One Save writes everything, the Spanish boxes
+and the course's forms included, and the unsaved-changes note still names the section holding
+the edit.
+
 ### 3. The instrument pattern (state said once)
 
 "Instrument" here means the Clearwater discipline of figures-over-chrome — state said once, no

@@ -13,7 +13,7 @@
     "searchPlaceholder": "Name or location",
     "searchClear": "Clear search",
     "noMatchHeading": "No sites match that search",
-    "templateUpdateReady": "Template update v{version} ready",
+    "templateUpdateReady": "Newer site details available",
     "nitroxBadge": "Nitrox",
     "groups": {
       "unrated": "Unrated"
@@ -60,9 +60,9 @@
       "about": "The site",
       "underwater": "What’s down there",
       "dive": "The dive",
-      "planning": "Planning notes"
+      "planning": "Planning notes",
+      "spanish": "Spanish"
     },
-    "sectionsLabel": "On this page",
     "unsavedInSection": "Unsaved changes in {section}",
     "unsavedInSections": "{count, plural, one {Unsaved changes in # section} other {Unsaved changes in # sections}}",
     "nameLabel": "Name",
@@ -210,6 +210,7 @@
     "noLevelRequired": "No level required by the site",
     "nitroxCheckbox": "Nitrox",
     "saving": "Saving…",
+    "save": "Save",
     "optionalHint": "(optional)",
     "errorCoordinates": "Add both GPS coordinates. A location needs a latitude and a longitude.",
     "errorTideStation": "A NOAA tide station id is seven digits, like 8723583.",
@@ -238,7 +239,6 @@
     "certificationDescription": "What this site itself demands.",
     "requiredSpecialties": "Required specialties",
     "scheduleDeparture": "Schedule departure",
-    "saveBriefing": "Save dive site",
     "templateUpdates": {
       "title": "A newer DiveDay template is ready",
       "description": "This site is on template v{current}; the latest published version is v{latest}.",
@@ -289,8 +289,7 @@
     "title": "Add a dive site",
     "description": "Everything is optional except the name.",
     "errorInvalid": "That didn’t save. Check the required name and links, then try again.",
-    "certificationDescription": "These requirements travel with the site into every new trip that uses it.",
-    "saveSiteBriefing": "Save dive site"
+    "certificationDescription": "These requirements travel with the site into every new trip that uses it."
   },
   "import": {
     "description": "Read a dive_sites.csv from your DiveDay export back into this shop’s library. Choose dive_site_creatures.csv with it to bring each site’s field guide back too.",

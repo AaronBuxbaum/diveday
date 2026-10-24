@@ -1,10 +1,11 @@
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceFieldset } from "@/components/ui/form";
 import type { WorkOrder } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { workOrderStatusLabel } from "@/i18n/work-order-labels";
+import { workOrderStatusLabel, workOrderStatusTone } from "@/i18n/work-order-labels";
 import {
   type WorkOrderOutcome,
   type WorkOrderStatus,
@@ -14,10 +15,11 @@ import {
 import { restoreWorkOrderAction, setWorkOrderStatusAction } from "../actions";
 
 /**
- * **Where the ticket goes next**: one button per move this status allows
- * (`workOrderMoves`). The step the bench takes next is the primary button; the
- * others, backwards included, are secondary, so going back is offered without
- * ever being the loudest act on the card.
+ * **Where the ticket goes next**: the status it is in, as a static pill, then
+ * one secondary button per move this status allows (`workOrderMoves`), the
+ * step the bench takes next first. No move is filled: the pill says where the
+ * ticket is, and every button is a place it can go (visual review 2026-10-24,
+ * A29).
  *
  * "Picked up" is the one-way door: a collected ticket has nothing to move to,
  * so the card goes away and the header's badge says where it ended. Where that
@@ -30,7 +32,7 @@ import { restoreWorkOrderAction, setWorkOrderStatusAction } from "../actions";
  * 2026-10-10, item 25). Four status words in a row read as a picker whose
  * filled one was the current status, so "In progress" looked already chosen
  * on a ticket that was Received. The caption "Move to" says each button is a
- * move; the current status is the header's badge, and only there.
+ * move; the current status is a pill, never a button.
  */
 export function WorkOrderStatusCard({
   workOrder,
@@ -69,8 +71,11 @@ export function WorkOrderStatusCard({
         className="min-w-0"
         bodyClassName="flex flex-wrap gap-3"
       >
+        <Badge tone={workOrderStatusTone(workOrder.status)} className="self-center">
+          {label(workOrder.status)}
+        </Badge>
         {forward ? (
-          <MoveButton workOrderId={workOrder.id} status={forward} primary t={t}>
+          <MoveButton workOrderId={workOrder.id} status={forward} t={t}>
             {label(forward)}
           </MoveButton>
         ) : null}
@@ -79,7 +84,6 @@ export function WorkOrderStatusCard({
             key={status}
             workOrderId={workOrder.id}
             status={status}
-            primary={false}
             confirmMessage={
               status === "picked_up" ? t("workOrders.detail.pickedUpConfirm") : undefined
             }
@@ -96,14 +100,12 @@ export function WorkOrderStatusCard({
 function MoveButton({
   workOrderId,
   status,
-  primary,
   confirmMessage,
   t,
   children,
 }: {
   workOrderId: string;
   status: WorkOrderStatus;
-  primary: boolean;
   confirmMessage?: string;
   t: StaffTranslator;
   children: string;
@@ -115,7 +117,7 @@ function MoveButton({
       <SubmitButton
         pendingLabel={t("workOrders.form.saving")}
         confirmMessage={confirmMessage}
-        className={buttonClass(primary ? {} : { variant: "secondary" })}
+        className={buttonClass({ variant: "secondary" })}
       >
         {children}
       </SubmitButton>

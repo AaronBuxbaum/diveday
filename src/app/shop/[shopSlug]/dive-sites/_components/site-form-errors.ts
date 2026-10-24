@@ -1,5 +1,5 @@
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import type { DiveSiteFormError } from "@/lib/dive-sites";
+import type { SiteSaveRefusal } from "./SiteFormShell";
 
 /**
  * The words for every refusal a site briefing can come back with — the one
@@ -13,7 +13,7 @@ import type { DiveSiteFormError } from "@/lib/dive-sites";
 export function siteFormErrorMessages(
   t: StaffTranslator,
   invalidKey: StaffMessageKey,
-): Record<DiveSiteFormError, string> {
+): Record<SiteSaveRefusal, string> {
   return {
     invalid: t(invalidKey),
     coordinatesIncomplete: t("diveSites.form.errorCoordinates"),
@@ -25,5 +25,7 @@ export function siteFormErrorMessages(
     nameTaken: t("diveSites.form.errorNameTaken"),
     planningNoteTooLong: t("diveSites.form.errorPlanningNote"),
     conflict: t("diveSites.form.errorConflict"),
+    spanishStale: t("deskAssists.translate.staleSave"),
+    spanishRefused: t("deskAssists.translate.error"),
   };
 }
