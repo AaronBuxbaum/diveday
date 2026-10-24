@@ -393,9 +393,9 @@ export const shops = pgTable(
     /**
      * The packing list also suggests a logbook (issue #2795). A flag rather
      * than a line of `packing_list`, so the list can leave it off for a
-     * student on a course session with no certification yet, who has no dives
-     * to log, without matching a shop's English, and so it reads in the diver's
-     * language. Set beside the list in Settings.
+     * try-dive student with no certification, who has no dives to log
+     * (`packsLogbook`), without matching a shop's English, and so it reads in
+     * the diver's language. Set beside the list in Settings.
      */
     packingLogbook: boolean("packing_logbook").notNull().default(true),
     /**
