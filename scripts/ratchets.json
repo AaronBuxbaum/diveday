@@ -540,7 +540,6 @@
     ],
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 420,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
-    "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": 305,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,

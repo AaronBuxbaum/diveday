@@ -59,6 +59,7 @@ const props: ComponentProps<typeof CounterRentalCart> = {
   paymentNote: null,
   invoiceExtras: null,
   notice: null,
+  nitroxFillMethod: "blending",
   words: {
     gearHeading: t("counterRentals.new.gearHeading"),
     kindsAria: t("counterRentals.new.kindsAria"),
@@ -84,10 +85,12 @@ function Cart({
   restore = false,
   refusal = null,
   groups = props.groups,
+  nitroxFillMethod = props.nitroxFillMethod,
 }: {
   restore?: boolean;
   refusal?: ComponentProps<typeof CounterRentalCart>["refusal"];
   groups?: ComponentProps<typeof CounterRentalCart>["groups"];
+  nitroxFillMethod?: ComponentProps<typeof CounterRentalCart>["nitroxFillMethod"];
 }) {
   return (
     <form aria-label="Rental" onSubmit={(event) => event.preventDefault()}>
@@ -98,6 +101,7 @@ function Cart({
       <CounterRentalCart
         {...props}
         groups={groups}
+        nitroxFillMethod={nitroxFillMethod}
         restoreKept={restore ? SCOPE : null}
         refusal={refusal}
       />
@@ -425,5 +429,42 @@ describe("an EANx fill in a tank with no current O2-clean record (issue #2719)",
     fireEvent.change(fill(uncleaned), { target: { value: "36" } });
     expect(screen.getByText(warning)).toBeTruthy();
     expect(screen.getByRole("button", { name: props.words.submit })).toBeEnabled();
+  });
+});
+
+/**
+ * **The warning follows how the shop fills nitrox** (issue 3004). A blending
+ * shop puts pure oxygen into the tank at any mix, so it is warned above air; a
+ * membrane or premix shop is warned only above 40%, which the menu never
+ * offers. Advisory either way: the rental still goes.
+ */
+describe("the O2-clean warning by the shop's nitrox fill method (issue 3004)", () => {
+  const uncleaned: PickerUnit = {
+    ...unit("tank-4", "tank", "Tank 004", "AL80"),
+    o2CleanWarning: t("counterRentals.new.o2CleanNever", { label: "Tank 004" }),
+  };
+  const groups = [{ kind: "tank" as const, kindLabel: "Tank", units: [uncleaned] }];
+  const warning = t("counterRentals.new.o2CleanNever", { label: "Tank 004" });
+
+  function warnsAt(method: "blending" | "membrane_premix", mix: string) {
+    render(<Cart groups={groups} nitroxFillMethod={method} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 004· AL80" }));
+    fireEvent.change(fill(uncleaned), { target: { value: mix } });
+    const shown = screen.queryByText(warning) !== null;
+    expect(screen.getByRole("button", { name: props.words.submit })).toBeEnabled();
+    cleanup();
+    return shown;
+  }
+
+  it("warns a blending shop at 32 and 40, never on air", () => {
+    expect(warnsAt("blending", "21")).toBe(false);
+    expect(warnsAt("blending", "32")).toBe(true);
+    expect(warnsAt("blending", "40")).toBe(true);
+  });
+
+  it("does not warn a membrane or premix shop at 21, 32 or 40", () => {
+    expect(warnsAt("membrane_premix", "21")).toBe(false);
+    expect(warnsAt("membrane_premix", "32")).toBe(false);
+    expect(warnsAt("membrane_premix", "40")).toBe(false);
   });
 });

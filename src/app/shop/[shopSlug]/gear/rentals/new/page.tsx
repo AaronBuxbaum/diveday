@@ -357,6 +357,7 @@ export default async function RentOutPage({
               <CounterRentalCart
                 groups={byKind}
                 coreKinds={counterRentalCoreKinds(shop.rentalItems)}
+                nitroxFillMethod={shop.nitroxFillMethod}
                 setPrice={setPrice}
                 currency={currency}
                 locale={locale}

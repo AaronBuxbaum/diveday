@@ -14,6 +14,7 @@ import { TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { catalogItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { currencySymbol, minorToMajor, toShopCurrency } from "@/lib/money";
+import { NITROX_FILL_METHODS } from "@/lib/nitrox-fill";
 import { RENTAL_TERMS_MAX_LENGTH } from "@/lib/rental-terms";
 import { SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { CUSTOMER_REGULATOR_SERVICE_MONTHS } from "@/lib/work-orders";
@@ -159,6 +160,24 @@ export function RentalsForm({
             </select>
           </Field>
         ) : null}
+        {/* Issue 3004: where Rent out's O2-clean warning starts. Shown to every
+            shop, because the counter's fill menu offers EANx to every shop. */}
+        <Field
+          label={t("settings.main.rentals.nitroxFill.label")}
+          description={t("settings.main.rentals.nitroxFill.hint")}
+        >
+          <select
+            name="nitroxFillMethod"
+            defaultValue={shop.nitroxFillMethod}
+            className={controlClass}
+          >
+            {NITROX_FILL_METHODS.map((method) => (
+              <option key={method} value={method}>
+                {t(`settings.main.rentals.nitroxFill.options.${method}`)}
+              </option>
+            ))}
+          </select>
+        </Field>
         <FieldActions>
           <SubmitButton
             pendingLabel={t("settings.main.rentals.submitting")}

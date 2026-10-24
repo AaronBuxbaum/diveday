@@ -14,10 +14,11 @@ import {
   StickyFormActions,
 } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { isOneCoreSet, TANK_FILL_O2_PERCENT } from "@/lib/counter-rentals";
+import { isOneCoreSet, o2CleanWarnsForFill } from "@/lib/counter-rentals";
 import { formatMoneyCents } from "@/lib/format";
 import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
+import type { NitroxFillMethod } from "@/lib/nitrox-fill";
 import {
   CART_CONFIRMED_FIELD,
   CART_FILLS_FIELD,
@@ -102,6 +103,33 @@ function centsOf(raw: string, currency: string): number {
     : 0;
 }
 
+/** What the page hands Rent out's cart. */
+type CounterRentalCartProps = {
+  groups: { kind: GearItemKind; kindLabel: string; units: PickerUnit[] }[];
+  coreKinds: GearItemKind[];
+  /** The set price for these days, in major units, or null when the shop has none. */
+  setPrice: string | null;
+  currency: string;
+  locale: string;
+  step: string;
+  payments: PaymentChoice[];
+  /** A line under the payment choices: why an invoice is not one of them, when it is not. */
+  paymentNote: ReactNode;
+  invoiceExtras: ReactNode;
+  words: CartWords;
+  notice: ReactNode;
+  /** How the shop fills nitrox (issue 3004): where the O2-clean warning starts. */
+  nitroxFillMethod: NitroxFillMethod;
+  refusal?: { code: string; unitId: string | null; message: string } | null;
+  /**
+   * The page came back with this form's refusal: put back the picks, prices
+   * and payment this tab just submitted (fifth loop, item 14), so the staffer
+   * swaps the one unit that was refused rather than building the bill again.
+   * The kept form's scope (`keptTypedScope`) when it did, else null.
+   */
+  restoreKept?: string | null;
+};
+
 /**
  * **Rent out's gear, bill and payment**, as one client island inside the
  * page's form.
@@ -138,31 +166,10 @@ export function CounterRentalCart({
   invoiceExtras,
   words,
   notice,
+  nitroxFillMethod,
   refusal = null,
   restoreKept = null,
-}: {
-  groups: { kind: GearItemKind; kindLabel: string; units: PickerUnit[] }[];
-  coreKinds: GearItemKind[];
-  /** The set price for these days, in major units, or null when the shop has none. */
-  setPrice: string | null;
-  currency: string;
-  locale: string;
-  step: string;
-  payments: PaymentChoice[];
-  /** A line under the payment choices: why an invoice is not one of them, when it is not. */
-  paymentNote: ReactNode;
-  invoiceExtras: ReactNode;
-  words: CartWords;
-  notice: ReactNode;
-  refusal?: { code: string; unitId: string | null; message: string } | null;
-  /**
-   * The page came back with this form's refusal: put back the picks, prices
-   * and payment this tab just submitted (fifth loop, item 14), so the staffer
-   * swaps the one unit that was refused rather than building the bill again.
-   * The kept form's scope (`keptTypedScope`) when it did, else null.
-   */
-  restoreKept?: string | null;
-}) {
+}: CounterRentalCartProps) {
   const billId = useId();
   const keptAnchor = useRef<HTMLInputElement>(null);
   const [pickedIds, setPickedIds] = useState<readonly string[]>([]);
@@ -359,6 +366,7 @@ export function CounterRentalCart({
                         aria={unit.fillAria}
                         hintId={`${billId}-fill-hint`}
                         words={words}
+                        nitroxFillMethod={nitroxFillMethod}
                         value={fillOf(unit)}
                         onChange={(value) =>
                           setFills((previous) => ({ ...previous, [unit.id]: value }))
@@ -450,11 +458,20 @@ export function CounterRentalCart({
 
 /**
  * Enriched air going into a tank whose oxygen cleaning nobody recorded (issue
- * #2719): said on the tank's row once its gas is above air, and nothing more.
- * No gate: the server accepts the fill exactly as before.
+ * #2719): said on the tank's row once its gas passes the shop's fill method's
+ * line (above air for blending, above 40% for membrane or premix, issue 3004),
+ * and nothing more. No gate: the server accepts the fill exactly as before.
  */
-function O2CleanWarning({ warning, fill }: { warning: string | null; fill: string }) {
-  if (!warning || !(Number(fill) > TANK_FILL_O2_PERCENT.air)) return null;
+function O2CleanWarning({
+  warning,
+  fill,
+  nitroxFillMethod,
+}: {
+  warning: string | null;
+  fill: string;
+  nitroxFillMethod: NitroxFillMethod;
+}) {
+  if (!warning || !o2CleanWarnsForFill(nitroxFillMethod, Number(fill))) return null;
   return (
     <FormStatus tone="warning">
       <span className="text-base">{warning}</span>
@@ -474,6 +491,7 @@ function TankFillField({
   aria,
   hintId,
   words,
+  nitroxFillMethod,
   value,
   onChange,
   error,
@@ -482,6 +500,7 @@ function TankFillField({
   aria: string;
   hintId: string;
   words: Pick<CartWords, "fillLabel" | "fillOptions">;
+  nitroxFillMethod: NitroxFillMethod;
   value: string;
   onChange: (value: string) => void;
   error?: string;
@@ -511,7 +530,11 @@ function TankFillField({
   return (
     <>
       {field}
-      <O2CleanWarning warning={unit.o2CleanWarning} fill={value} />
+      <O2CleanWarning
+        warning={unit.o2CleanWarning}
+        fill={value}
+        nitroxFillMethod={nitroxFillMethod}
+      />
     </>
   );
 }

@@ -404,7 +404,13 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(
       await redirectedTo(() => saveRentalsAction(form({ regulatorServiceMonths: "18" }))),
     ).toBe(`${page}regulator-service-invalid`);
+    expect(
+      await redirectedTo(() =>
+        saveRentalsAction(form({ nitroxFillMethod: "membrane", rentalTerms: "Changed." })),
+      ),
+    ).toBe(`${page}nitrox-fill-invalid`);
     const after = await getShopById(db, shop.id);
+    expect(after?.nitroxFillMethod).toBe("blending");
     expect(after?.rentalItems).toEqual(before?.rentalItems);
     expect(after?.rentalPricing).toEqual(before?.rentalPricing);
     expect(after?.rentalTerms).toEqual(before?.rentalTerms);
@@ -423,8 +429,10 @@ describe("every settings mutation refuses the daily crew", () => {
     first.set("setPrice", "60");
     first.set("rentalTerms", "Rinse it.");
     first.set("regulatorServiceMonths", "24");
+    first.set("nitroxFillMethod", "membrane_premix");
     expect(await redirectedTo(() => saveRentalsAction(first))).toBe(`${page}rentals-saved`);
     const saved = await getShopById(db, shop.id);
+    expect(saved?.nitroxFillMethod).toBe("membrane_premix");
     expect(saved?.rentalPricing.setCents).toBe(6000);
     expect(saved?.rentalPricing.perItemCents.drysuit).toBe(4000);
     expect(saved?.rentalTerms).toBe("Rinse it.");
@@ -442,6 +450,8 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(after?.rentalPricing.perItemCents.drysuit).toBe(4500);
     expect(after?.rentalPricing.perItemCents.fins).toBe(500);
     expect(after?.rentalTerms).toBeNull();
+    // A post with no fill method leaves the stored one as it was.
+    expect(after?.nitroxFillMethod).toBe("membrane_premix");
   });
 
   /**

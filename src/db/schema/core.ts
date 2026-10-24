@@ -19,6 +19,7 @@ import {
 import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import type { EmergencyReference } from "@/lib/emergency-reference";
+import { NITROX_FILL_METHODS } from "@/lib/nitrox-fill";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 import { appNowTimestamp } from "./columns";
@@ -60,6 +61,9 @@ export const temperatureUnit = pgEnum("temperature_unit", ["celsius", "fahrenhei
 
 /** How a shop takes money at the desk (src/lib/desk-payment.ts). */
 export const deskPayment = pgEnum("desk_payment", DESK_PAYMENTS);
+
+/** How a shop fills nitrox, for the counter's O2-clean warning (src/lib/nitrox-fill.ts). */
+export const nitroxFillMethod = pgEnum("nitrox_fill_method", NITROX_FILL_METHODS);
 
 export const shops = pgTable(
   "shops",
@@ -451,6 +455,15 @@ export const shops = pgTable(
     customerRegulatorServiceMonths: integer("customer_regulator_service_months")
       .notNull()
       .default(12),
+    /**
+     * **How the shop fills nitrox** (issue 3004): `blending` (partial-pressure
+     * blending) or `membrane_premix`. Read only by Rent out's O2-clean warning
+     * (`o2CleanWarnsForFill`, `src/lib/counter-rentals.ts`), which starts above
+     * air for blending and above 40% for membrane or premix. Advisory: it never
+     * gates a fill. Defaults to blending, so a shop that never sets it keeps the
+     * warning on every EANx fill.
+     */
+    nitroxFillMethod: nitroxFillMethod("nitrox_fill_method").notNull().default("blending"),
     /**
      * **The numbers a crew reaches for during, not after** — the shop's own
      * chamber, dive-accident hotline, coastguard, vessel and shore contact, and
