@@ -19,7 +19,7 @@ import { openRecapDoor, openRosterDetails, openSettingsRow, signOut } from "./he
 // their forms are reachable.
 test("a tampered recap token reveals nothing", async ({ page }) => {
   await page.goto("/recap/not-a-real-token");
-  await expect(page.getByRole("heading", { name: /recap link isn.t available/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /This link no longer works/ })).toBeVisible();
 });
 
 test("an oversize recap photo is rejected client-side before it ever reaches the server (CR-011)", async ({

@@ -2,16 +2,14 @@ import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import {
-  loadTranslationBox,
-  ShopTextTranslation,
-  type TranslationBox,
-} from "../../_components/ShopTextTranslation";
-import { draftSiteBriefAction } from "../../content-assist-actions";
+import { translationBoxId } from "@/lib/assists/shop-translate";
+import { loadTranslationBox, type TranslationBox } from "../../_components/ShopTextTranslation";
+import { draftSiteBriefAction, draftTranslationAction } from "../../content-assist-actions";
+import { type SpanishBoxCopy, SpanishBoxField } from "./SpanishBoxField";
 
 /**
  * A dive site's Claude assists: "Draft from these fields" inside the briefing
- * form (`site-brief`), and the briefing's Spanish below it (`shop-translate`).
+ * form (`site-brief`), and the briefing's Spanish inside it (`shop-translate`).
  */
 export type SiteAssists = {
   canAssist: boolean;
@@ -46,27 +44,65 @@ export function siteBriefAssist(shopSlug: string, canAssist: boolean, t: StaffTr
   ) : undefined;
 }
 
-/** The briefing's Spanish, each its own small form below the save form (forms cannot nest). */
-export function SiteTranslations({
+/** The words every Spanish box in an editor's form says. */
+export function spanishBoxCopy(t: StaffTranslator, label?: string): SpanishBoxCopy {
+  return {
+    label: label ?? t("deskAssists.translate.label"),
+    draft: t("deskAssists.translate.draft"),
+    drafting: t("deskAssists.drafting"),
+    nothing: t("deskAssists.nothing"),
+    stale: t("deskAssists.translate.stale"),
+  };
+}
+
+/** One Spanish box as a field of the editor's form, or nothing when there is none to draw. */
+export function SpanishBox({
   shopSlug,
-  assists,
+  box,
+  canAssist,
+  maxLength,
   t,
+  label,
 }: {
   shopSlug: string;
-  assists: SiteAssists;
+  box: TranslationBox | null;
+  canAssist: boolean;
+  maxLength: number;
   t: StaffTranslator;
+  label?: string;
 }) {
+  if (!box) return null;
+  const { kind, id, field } = box;
+  return (
+    <SpanishBoxField
+      boxId={translationBoxId(kind, id, field)}
+      field={field}
+      defaultValue={box.text}
+      translatedFrom={box.translatedFrom}
+      stale={box.stale}
+      maxLength={maxLength}
+      draft={canAssist ? draftTranslationAction.bind(null, shopSlug, kind, id, field) : undefined}
+      copy={spanishBoxCopy(t, label)}
+    />
+  );
+}
+
+/**
+ * The briefing's Spanish, as fields of the one briefing form (visual review
+ * 2026-10-24, A11): the save that writes the English writes them too.
+ */
+export function siteSpanishFields(shopSlug: string, assists: SiteAssists, t: StaffTranslator) {
   if (!assists.description && !assists.marineLife) return null;
   return (
-    <div className="mt-8 flex flex-col gap-6">
-      <ShopTextTranslation
+    <div className="flex flex-col gap-6">
+      <SpanishBox
         shopSlug={shopSlug}
         box={assists.description}
         canAssist={assists.canAssist}
         t={t}
         maxLength={1200}
       />
-      <ShopTextTranslation
+      <SpanishBox
         shopSlug={shopSlug}
         box={assists.marineLife}
         canAssist={assists.canAssist}

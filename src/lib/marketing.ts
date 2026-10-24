@@ -48,28 +48,16 @@ export const earlyAccessPrice = {
   price: "$99", // i18n-exempt: currency figure, the H-12 single source — never restate elsewhere
   nameKey: "marketing.price.name",
   cadenceKey: "marketing.price.cadence",
-  // Five things the price covers, every one of them a thing rather than a
-  // reassurance. `item5` ("no surprise increases while you help shape what
-  // ships next") was retired on 2026-08-28: under a heading reading "What the
-  // price covers" it was the one negation among positives, and once the
-  // two-year lock moved under the figure (`marketing.pricing.lockNote`) what
-  // it still carried was a founding-cohort rationale rather than something the
-  // price buys — `faq.whyFounding` says that whole. The numbering is
-  // deliberately not resequenced: `item6` keeps naming the string it has
-  // always named.
-  // `item7` is the one service line among product lines: the storefront in the
-  // shop's brand and the embeds are shipped, and the website built to order is
-  // the second authorized service offer (H-64/H-65, docs/product/marketing.md)
-  // — a person's commitment, priced inside the subscription until the owner
-  // says otherwise, never a turnaround time or a page count.
-  includedKeys: [
-    "marketing.price.item1",
-    "marketing.price.item2",
-    "marketing.price.item3",
-    "marketing.price.item4",
-    "marketing.price.item6",
-    "marketing.price.item7",
-  ],
+  // The price's lines in `/pricing`'s one "Notes" list, beside the invoice
+  // notes and the trial (visual review 2026-10-24, B11). "What the price
+  // covers" was a second list restating the invoice and `/product`, so only
+  // the two lines the invoice cannot say stayed. The numbering is not
+  // resequenced: each key keeps naming the string it always named.
+  // `item7` is the one service line: the storefront in the shop's brand and
+  // the embeds are shipped, and the website built to order is the second
+  // authorized service offer (H-64/H-65, docs/product/marketing.md), a
+  // person's commitment, never a turnaround time or a page count.
+  includedKeys: ["marketing.price.item3", "marketing.price.item7"],
 } as const satisfies {
   price: string;
   nameKey: DiverMessageKey;

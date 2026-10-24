@@ -43,7 +43,7 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
       await expect(page.getByRole("heading", { name: "Email confirmed" })).toBeVisible();
       await capture(page, "account-verify-confirmed", "light");
       await page.goto(`/verify/${token}`);
-      await page.getByRole("heading", { name: copy("account.verify.unavailableTitle") }).waitFor();
+      await page.getByRole("heading", { name: copy("common.deadLinkHeading") }).waitFor();
       await capture(page, "account-verify-consumed", "light");
     });
 
@@ -69,9 +69,7 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
       await page.getByRole("button", { name: "Set new password" }).click();
       await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}`));
       await page.goto(`/reset-password/${token}`);
-      await page
-        .getByRole("heading", { name: copy("account.resetPassword.unavailableTitle") })
-        .waitFor();
+      await page.getByRole("heading", { name: copy("common.deadLinkHeading") }).waitFor();
       await capture(page, "account-reset-consumed", "light");
     });
 
@@ -109,7 +107,7 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
       await page.getByRole("button", { name: "Set password & sign in" }).click();
       await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}`));
       await page.goto(`/invite/${token}`);
-      await page.getByRole("heading", { name: copy("account.invite.unavailableTitle") }).waitFor();
+      await page.getByRole("heading", { name: copy("common.deadLinkHeading") }).waitFor();
       await capture(page, "account-invite-consumed", "light");
     });
 
@@ -165,18 +163,14 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
         );
       });
 
-      test(`an expired ${family} confirmation renders its own unavailable wording`, async ({
+      test(`an expired ${family} confirmation renders the dead-link page`, async ({
         page,
         privateShop,
       }) => {
         await page.goto(await visualLink(page, privateShop.slug, `${family}-confirm`, "expired"));
         await page
           .getByRole("heading", {
-            name: copy(
-              family === "shore"
-                ? "shoreConfirm.unavailableTitle"
-                : "bookkeeperConfirm.unavailableTitle",
-            ),
+            name: copy("common.deadLinkHeading"),
           })
           .waitFor();
         if (family === "shore") await capture(page, "shore-confirm-expired", "light");

@@ -50,7 +50,9 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   await page.getByLabel("Ride out to the first site").fill("0");
   await page.getByLabel("Time in the water per dive").fill("40");
   await page.getByLabel("Surface interval between dives").fill("50");
-  await page.getByRole("button", { name: "Save dock-day rhythm" }).click();
+  // One form, one Save for the whole dock day (visual review 2026-10-24, A01).
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Dock day saved");
 
   // The strip under the form is the same arithmetic the booking page runs,
   // so it is what tells the shop the save landed — no beat they turned off,
@@ -115,8 +117,8 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   await page.goto(`/shop/${SHOP}/settings/dock-day`);
   await expect(page.getByRole("radio", { name: "Don’t say" })).toBeChecked();
   await page.getByRole("radio", { name: "Cash", exact: true }).check();
-  await page.getByRole("button", { name: "Save how divers pay" }).click();
-  await expect(page.getByRole("status")).toContainText("says how to pay");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Dock day saved");
   await expect(page.getByRole("radio", { name: "Cash", exact: true })).toBeChecked();
 
   // **Crew arrive before divers** (ux-delight sheet 2026-10-22, item 2;
@@ -125,12 +127,12 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   const crewLead = page.getByLabel("Crew arrive before divers");
   await expect(crewLead).toHaveValue("30");
   await crewLead.fill("45");
-  await page.getByRole("button", { name: "Save crew minutes" }).click();
-  await expect(page.getByRole("status")).toContainText("Crew minutes saved");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Dock day saved");
   await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("45");
   await page.getByLabel("Crew arrive before divers").fill("");
-  await page.getByRole("button", { name: "Save crew minutes" }).click();
-  await expect(page.getByRole("status")).toContainText("Crew minutes saved");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Dock day saved");
   await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("");
 });
 

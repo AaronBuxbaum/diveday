@@ -72,10 +72,10 @@ describe("TripAlternatives", () => {
     );
     expect(screen.getByText("Benwood & French")).toBeInTheDocument();
     expect(screen.getByText("The same site, another day")).toBeInTheDocument();
-    expect(screen.getByText("7 seats left")).toBeInTheDocument();
+    expect(screen.getByText("7 seats")).toBeInTheDocument();
     expect(screen.getByText("Macro Afternoon")).toBeInTheDocument();
     expect(screen.getByText("The shop rates this site for beginners.")).toBeInTheDocument();
-    expect(screen.getByText("4 seats left")).toBeInTheDocument();
+    expect(screen.getByText("4 seats")).toBeInTheDocument();
   });
 
   it("says which part of the day, not merely that it is the same one", () => {

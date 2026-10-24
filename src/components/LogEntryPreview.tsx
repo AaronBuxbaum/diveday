@@ -28,6 +28,7 @@ export function LogEntryPreview({
   date,
   siteNames,
   isCourse = false,
+  fill = false,
   t,
 }: {
   /** The sentence that points at the card, already in the reader's language. */
@@ -37,6 +38,12 @@ export function LogEntryPreview({
   /** The day's planned sites, in plan order; a repeat is named once. */
   siteNames: string[];
   isCourse?: boolean;
+  /**
+   * Take the full width of the column, as on the `/ready` thread, where every
+   * other card does (visual review 2026-10-24, B30). The trip page keeps the
+   * small miniature beside its pitch.
+   */
+  fill?: boolean;
   t: DiverTranslator;
 }) {
   // A two-tank on one site plans the site twice; the card names it once
@@ -48,7 +55,7 @@ export function LogEntryPreview({
       <div
         aria-hidden="true"
         data-testid="log-entry-preview"
-        className="mt-3 max-w-xs overflow-hidden rounded-panel border border-border bg-surface"
+        className={`mt-3 ${fill ? "w-full" : "max-w-xs"} overflow-hidden rounded-panel border border-border bg-surface`}
       >
         <div className="flex items-center gap-3 bg-primary-tint px-4 py-3">
           <SiteMark

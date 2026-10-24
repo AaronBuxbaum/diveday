@@ -20,8 +20,6 @@ describe("the demo roster", () => {
     for (const id of DEMO_ROLE_IDS) {
       const keys = DEMO_ROLE_KEYS[id];
       expect(keys.title).toBe(`demo.roles.${id}.title`);
-      expect(keys.desc).toBe(`demo.roles.${id}.desc`);
-      expect(keys.tryThis).toBe(`demo.roles.${id}.tryThis`);
     }
   });
 });

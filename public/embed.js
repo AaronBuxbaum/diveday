@@ -119,7 +119,7 @@
     credit.target = "_blank";
     credit.rel = "noopener";
     credit.setAttribute("data-diveday-credit", "");
-    credit.textContent = el.getAttribute("data-credit") || "Powered by DiveDay";
+    credit.textContent = el.getAttribute("data-credit") || "Bookings by DiveDay";
     credit.style.cssText =
       "display:block;margin-top:6px;font:12px/1.4 inherit;color:#5b6f77;text-decoration:none";
     el.appendChild(credit);

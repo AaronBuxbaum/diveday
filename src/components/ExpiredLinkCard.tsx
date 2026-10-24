@@ -55,6 +55,7 @@ export function ExpiredLinkCard({
   glyph = "expired",
   shop,
   t,
+  wordmark = !shop,
   children,
 }: {
   title: string;
@@ -63,6 +64,12 @@ export function ExpiredLinkCard({
   glyph?: DoorGlyphId;
   shop?: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
   t?: DiverTranslator;
+  /**
+   * DiveDay's mark above the card. On by default only where no shop is named;
+   * `DeadLink` turns it on everywhere, so every dead link looks the same
+   * (visual review 2026-10-24, B29).
+   */
+  wordmark?: boolean;
   children?: React.ReactNode;
 }) {
   const contact =
@@ -98,7 +105,7 @@ export function ExpiredLinkCard({
       // No shop to name: DiveDay's mark says whose page this is, so a diver on
       // a dead link is not left on a blank screen (UX audit #28), and the
       // DiveDay door below is the way off it.
-      wordmark={!shop}
+      wordmark={wordmark}
       glyph={glyph}
       title={title}
       text={text}

@@ -94,11 +94,10 @@ for (const scheme of ["light", "dark"] as const) {
       // save bar as the page's one rare act.
       test(`the course editor renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
-        // The rail is the frame of this composition, and it is client-rendered;
-        // waiting on the server-rendered legend alone let the capture land
-        // mid-mount. ("Day by day" now names two elements — the rail's anchor
-        // and the section's own legend — so it is no longer a locator.)
-        await page.getByRole("navigation", { name: "Sections", exact: true }).waitFor();
+        // The sections are client components; the hydration flag is what says
+        // they have mounted (the rail that framed this composition is gone,
+        // visual review 2026-10-24, A11).
+        await page.locator('[data-hydrated="true"]:has([name="summary"])').waitFor();
         await page.getByLabel("Day 1 — what happens").waitFor();
         await capture(page, "course-edit", scheme);
       });
@@ -122,7 +121,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Same wait as the full-page shot. The folded sections' preview lines
         // are filled in after hydration; `captureStickyFoot` waits for each
         // to say so (`waitForClientFills`).
-        await page.getByRole("navigation", { name: "Sections", exact: true }).waitFor();
+        await page.locator('[data-hydrated="true"]:has([name="summary"])').waitFor();
         await page.getByLabel("Day 1 — what happens").waitFor();
         await captureStickyFoot(page, "course-edit-save-bar", scheme);
       });
@@ -562,7 +561,9 @@ test.describe("light mode — course date requests without a shop email", () => 
     // PADI Rescue has a seeded session; this catalog-only course proves the empty state.
     await page.goto(`/s/${privateShop.slug}/courses/sdi-rescue-diver`);
     await expect(page.getByText(diverCopy("course.noDatesLead"), { exact: false })).toBeVisible();
-    await expect(page.getByRole("region", { name: diverCopy("inquiry.getInTouch") })).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: diverCopy("inquiry.askAboutCourse") }),
+    ).toBeVisible();
     await capture(page, "course-request-no-email", "light");
   });
 });

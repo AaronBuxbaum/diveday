@@ -71,7 +71,7 @@ export default async function GetSetUpPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav hideCta compactMobile />
+      <MarketingNav compactMobile />
       <EntryShell
         title={t("marketing.setUp.title")}
         description={t("marketing.setUp.description")}

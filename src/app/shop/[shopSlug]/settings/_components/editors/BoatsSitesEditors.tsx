@@ -23,10 +23,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { MIN_TURNAROUND_LIMITS } from "@/lib/move-preflight";
 import {
   resendShoreAlertConfirmationAction,
-  saveCrewLeadAction,
-  saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
-  saveTurnaroundAction,
 } from "../../boat-actions";
 import type { SettingsShop } from "../groups/kit";
 import { ShoreAlertTickReset } from "../ShoreAlertTickReset";
@@ -354,10 +351,12 @@ export function EmergencyReferenceForm({
 }
 
 /**
- * The six numbers of the dock day, one save, and the beats they produce
- * beneath, with the sites that override the shop-wide bottom time.
+ * The six numbers of the dock day and the beats they produce beneath, with the
+ * sites that override the shop-wide bottom time. Fields only: the dock-day
+ * page wraps them, the crew minutes, the turnaround and the desk payment in
+ * one form with one Save (visual review 2026-10-24, A01).
  */
-export function DockDayForm({
+export function DockDayFields({
   shop,
   shopSlug,
   t,
@@ -370,7 +369,7 @@ export function DockDayForm({
 }) {
   return (
     <>
-      <FieldGrid as="form" action={saveDockDayRhythmAction} columns={2}>
+      <FieldGrid columns={2}>
         {DOCK_DAY_FIELDS.map((field) => (
           <Field
             key={field}
@@ -390,14 +389,6 @@ export function DockDayForm({
             />
           </Field>
         ))}
-        <FieldActions>
-          <SubmitButton
-            pendingLabel={t("settings.main.dockCall.submitting")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("settings.main.dockCall.submit")}
-          </SubmitButton>
-        </FieldActions>
       </FieldGrid>
       {/* The answer to "where do I set the dock-day rhythm?" — which used
         to be nowhere a reader could see. Showing the beats the fields
@@ -470,13 +461,13 @@ export function DockDayForm({
 
 /**
  * **The turnaround between departures** (issue #2141, Aaron's decision (b)):
- * one number, its own save. Advice for the schedule builder's Move panel when
+ * one number, saved with the rest of the dock day. Advice for the schedule builder's Move panel when
  * a hull, or a crew member leaving from another meeting point, would get less
  * than this between one departure and the next; it never refuses a move.
  */
-export function TurnaroundForm({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {
+export function TurnaroundFields({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {
   return (
-    <FieldGrid as="form" action={saveTurnaroundAction} columns={2} className="mt-8">
+    <FieldGrid columns={2}>
       <Field
         label={t("settings.main.turnaround.label")}
         description={t("settings.main.turnaround.description")}
@@ -493,26 +484,18 @@ export function TurnaroundForm({ shop, t }: { shop: SettingsShop; t: StaffTransl
           className={`${controlClass} tabular-nums`}
         />
       </Field>
-      <FieldActions>
-        <SubmitButton
-          pendingLabel={t("settings.main.dockCall.submitting")}
-          className={buttonClass({ variant: "secondary" })}
-        >
-          {t("settings.main.turnaround.submit")}
-        </SubmitButton>
-      </FieldActions>
     </FieldGrid>
   );
 }
 
 /**
  * **"Crew arrive N minutes before divers"** (ux-delight sheet 2026-10-22,
- * item 2; H-149): one number, its own save, empty for "crew come with the
+ * item 2; H-149): one number, saved with the dock day, empty for "crew come with the
  * divers". A crew member's own shift still wins (`crewCallAt`).
  */
-export function CrewLeadForm({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {
+export function CrewLeadFields({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {
   return (
-    <FieldGrid as="form" action={saveCrewLeadAction} columns={2} className="mt-8">
+    <FieldGrid columns={2}>
       <Field
         label={t("settings.main.crewLead.label")}
         description={t("settings.main.crewLead.description")}
@@ -528,14 +511,6 @@ export function CrewLeadForm({ shop, t }: { shop: SettingsShop; t: StaffTranslat
           className={`${controlClass} tabular-nums`}
         />
       </Field>
-      <FieldActions>
-        <SubmitButton
-          pendingLabel={t("settings.main.dockCall.submitting")}
-          className={buttonClass({ variant: "secondary" })}
-        >
-          {t("settings.main.crewLead.submit")}
-        </SubmitButton>
-      </FieldActions>
     </FieldGrid>
   );
 }

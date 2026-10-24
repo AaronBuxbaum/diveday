@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
+import { DeadLink } from "@/components/DeadLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { resolveBookkeeperStopToken } from "@/db/bookkeeper";
@@ -184,11 +185,5 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
     );
   }
 
-  return (
-    <EntryDone
-      glyph="expired"
-      title={t("lastMinute.unsubscribe.unavailableTitle")}
-      text={t("lastMinute.unsubscribe.unavailableText")}
-    />
-  );
+  return <DeadLink t={t} next={t("lastMinute.unsubscribe.unavailableText")} diveDayDoor={false} />;
 }

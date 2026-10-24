@@ -261,19 +261,17 @@ function CapabilityLines({
 }) {
   const t = diverTranslator(locale);
   const group = capabilityGroup(id);
-  const countId = `capabilities-${id}-count`;
+  const labelId = `capabilities-${id}-label`;
   const count = (
     <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
-      <span id={countId} className="tabular-nums">
-        {t("marketing.product.boxGroupCount", { count: group.items.length })}
-      </span>
+      <span id={labelId}>{t("marketing.product.whatsInIt")}</span>
       <DisclosureCaret direction="down" className="group-open:rotate-180" />
     </span>
   );
   return (
     <details className="group">
       <summary
-        aria-labelledby={titled ? undefined : `${pageNameId(id)} ${countId}`}
+        aria-labelledby={titled ? undefined : `${pageNameId(id)} ${labelId}`}
         className={`flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden ${
           titled ? "min-h-14 justify-between gap-4 py-4" : "min-h-11"
         }`}

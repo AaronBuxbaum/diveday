@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MarketingNav } from "@/app/_components/MarketingNav";
 import { EntryDone } from "@/components/account/EntryShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import { proseLinkClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
@@ -41,7 +41,7 @@ export default async function SetUpSentPage({
   const advice = setupSentAdvice(uses, guide);
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav hideCta compactMobile />
+      <MarketingNav compactMobile />
       <EntryDone
         glyph="sent"
         title={t("marketing.setUp.sent.title")}
@@ -61,12 +61,14 @@ export default async function SetUpSentPage({
                 ) : null}
               </p>
             ) : null}
-            <p>
-              <Link href={`mailto:${SUPPORT_EMAIL}`} className={proseLinkClass}>
-                {t("marketing.setUp.sent.support")}
-              </Link>
-            </p>
             <SetUpDemoDoor t={t} source="setup-sent" />
+            {/* A button like every other action on the page (B45). */}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className={buttonClass({ variant: "secondary", className: "w-full" })}
+            >
+              {t("marketing.setUp.sent.support")}
+            </a>
           </div>
         }
       />

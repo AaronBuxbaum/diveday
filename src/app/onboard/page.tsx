@@ -262,7 +262,7 @@ export default async function OnboardPage({
       {/* The nav's demo CTA would repeat the one the footer already offers
           here, and would compete with the form's own "Create shop & start
           trial" — the one primary here. */}
-      <MarketingNav hideCta compactMobile />
+      <MarketingNav compactMobile />
       <EntryShell
         width="lg"
         eyebrow={t("account.onboard.eyebrow")}

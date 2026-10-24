@@ -2,30 +2,21 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { Eyebrow } from "@/app/_components/Eyebrow";
+import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { groupLabelClass } from "@/components/ui/group-label";
-import {
-  BANNER_TITLE_CLASS,
-  MARKETING_EYEBROW_CLASS,
-  SUB_TITLE_CLASS,
-} from "@/components/ui/typography";
+import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { planCopyParams } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { setUpHref, switchingHref } from "@/lib/funnel";
-import {
-  continuityPromise,
-  earlyAccessPrice,
-  fullShopExport,
-  sharedLinkCard,
-} from "@/lib/marketing";
+import { continuityPromise, earlyAccessPrice, sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { requestPricingOffer } from "@/lib/pricing-arm-request";
 
@@ -146,9 +137,10 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
       // The export terms are the one shared claim (`fullShopExport`), composed
       // here as on every other page that states them, so the card cannot drift
       // from the pricing FAQ or the homepage's records band.
-      body: t("marketing.about.rules.yourRecords.body", {
-        terms: t(fullShopExport.termsKey),
-      }),
+      body: t("marketing.about.rules.yourRecords.body"),
+      // The export promise is written once, on /pricing's table; this card
+      // links to it rather than restating it (visual review 2026-10-24, B10).
+      link: { href: "/pricing#export", label: t("marketing.common.recordsLink") },
       // What happens to the records if DiveDay itself closes: the shared
       // continuity promise (`continuityPromise`, H-101), on the card that is
       // already about taking them away, rather than a band of its own.
@@ -176,7 +168,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
       <section className="border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
           <div className="max-w-2xl">
-            <h1 className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.eyebrow")}</h1>
+            <Eyebrow as="h1">{t("marketing.about.eyebrow")}</Eyebrow>
             <p className="mt-6 max-w-2xl text-xl leading-8 sm:text-2xl sm:leading-9">
               {t("marketing.about.heroDescription")}
             </p>
@@ -202,7 +194,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
               the 40px column gap only once there are columns (K-577). */}
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10">
             <div>
-              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.peopleEyebrow")}</p>
+              <Eyebrow>{t("marketing.about.peopleEyebrow")}</Eyebrow>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.about.peopleTitle")}
               </h2>
@@ -220,7 +212,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
           it to, which is the order a reader asks in. */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
         <div className="max-w-2xl">
-          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.buildEyebrow")}</p>
+          <Eyebrow>{t("marketing.about.buildEyebrow")}</Eyebrow>
           <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.about.buildTitle")}
           </h2>
@@ -242,6 +234,14 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
               <h3 className={SUB_TITLE_CLASS}>{rule.title}</h3>
               <p className="mt-3 leading-7 text-muted">{rule.body}</p>
               {"note" in rule ? <p className="mt-3 leading-7 text-muted">{rule.note}</p> : null}
+              {"link" in rule ? (
+                <Link
+                  href={rule.link.href}
+                  className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
+                >
+                  {rule.link.label}
+                </Link>
+              ) : null}
             </SectionCard>
           ))}
         </div>
@@ -251,12 +251,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
             No words of its own: the four cards above are the caption, and a
             heading here would restate the section it closes. Left-aligned on
             the section's rail, like the heading block and the grid. */}
-        <FunnelCtas locale={locale} source="about-rules" className="mt-10" />
-        {/* The demo's cost, stated once on this page, at its first door
-            (docs/product/marketing.md, "The demo's cost is stated once per
-            page, at the first door"). The closing band repeats the door, not
-            the note. */}
-        <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
+        <FunnelCtas locale={locale} source="about-rules" footnotes={{ offer }} className="mt-10" />
       </section>
 
       {/* How a shop gets set up and who answers afterwards, beside the
@@ -267,7 +262,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div className="max-w-2xl">
-              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.workEyebrow")}</p>
+              <Eyebrow>{t("marketing.about.workEyebrow")}</Eyebrow>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.about.workTitle")}
               </h2>
@@ -328,21 +323,15 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
                 an answer for a card that is not `bg-surface`. */}
             <dl className="divide-y divide-border rounded-panel border border-border bg-background">
               <div className="p-6">
-                <dt className={groupLabelClass("primary")}>
-                  {t("marketing.about.whereLiveLabel")}
-                </dt>
+                <Eyebrow as="dt">{t("marketing.about.whereLiveLabel")}</Eyebrow>
                 <dd className="mt-2 leading-7">{t("marketing.about.whereLiveValue")}</dd>
               </div>
               <div className="p-6">
-                <dt className={groupLabelClass("primary")}>
-                  {t("marketing.about.committingLabel")}
-                </dt>
+                <Eyebrow as="dt">{t("marketing.about.committingLabel")}</Eyebrow>
                 <dd className="mt-2 leading-7">{t("marketing.about.committingValue")}</dd>
               </div>
               <div className="p-6">
-                <dt className={groupLabelClass("primary")}>
-                  {t("marketing.about.whoAnswersLabel")}
-                </dt>
+                <Eyebrow as="dt">{t("marketing.about.whoAnswersLabel")}</Eyebrow>
                 <dd className="mt-2 leading-7">
                   {t("marketing.about.whoAnswersValue", { email: SUPPORT_EMAIL })}
                 </dd>
@@ -352,17 +341,11 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
         </div>
       </section>
 
-      <section className="border-t border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
-          <h2 className={`mx-auto max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-            {t("marketing.about.closingTitle")}
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-            {t("marketing.about.closingDescription")}
-          </p>
-          <FunnelCtas locale={locale} source="about-closing" className="mt-8 justify-center" />
-        </div>
-      </section>
+      <ClosingCta
+        locale={locale}
+        source="about-closing"
+        title={t("marketing.about.closingTitle")}
+      />
     </main>
   );
 }

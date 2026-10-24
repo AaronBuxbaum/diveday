@@ -1,5 +1,3 @@
-import { SettledCheck } from "@/components/ui/SettledCheck";
-
 /**
  * **The waiver's step rail** — ADR 20260827-the-divers-thread, decision 5
  * (slice 7e): "the three steps stand under a quiet step rail (Release ·
@@ -9,7 +7,7 @@ import { SettledCheck } from "@/components/ui/SettledCheck";
  * eleven medical questions, then a signature — a thousand pixels of scroll
  * before the diver reaches anything they can finish, with nothing anywhere
  * saying how much of it is behind them. The rail is that one sentence, and it
- * is deliberately *only* that sentence: three marks, three words, and a count.
+ * is deliberately *only* that sentence: the step names, the current one bold, and a count.
  *
  * Three rules it keeps, each of which a reviewer should be able to check in
  * one read:
@@ -27,11 +25,12 @@ import { SettledCheck } from "@/components/ui/SettledCheck";
  *   Declining to settle a step is not a judgment about it: the rail is told a
  *   step is still open and draws an open ring, and the page above it is what
  *   says why.
- * - **Shape and words, never colour alone.** `SettledCheck` is Clearwater's
- *   settle mark (drawn, never an emoji) and it differs by *shape* — a filled
- *   check against an open ring — before it differs by ink; the rail's own
- *   "N of 3 done" states the aggregate in words beside it. The rail is
- *   therefore readable with no colour perception at all.
+ * - **Weight and words, never colour alone.** Since the visual review of
+ *   2026-10-24 (B56) the rail is one progress line, "Release · Medical ·
+ *   Questions · Sign", with no marks: the step the diver is on is bold and
+ *   `aria-current="step"`, and the rail's own "N of 3 done" states the
+ *   aggregate in words beside it. The radio-style rings read as controls on
+ *   a page full of real radios.
  *
  * Presentational and framework-free apart from the mark: {@link WaiverPacing}
  * computes the live state from the questionnaire's own radios and hands it
@@ -88,6 +87,11 @@ export const WAIVER_RAIL_ORDER = ["release", "medical", "questions", "sign"] as 
 /** The rail's names: the three every release has, and Questions when the shop asks any. */
 export type WaiverRailLabels = Record<Exclude<WaiverRailSegmentId, "questions">, string> & {
   questions?: string;
+  /**
+   * Each step's state in words, read after its name ("Release, done"), so a
+   * step's state never rests on ink alone (dive-domain review, B56).
+   */
+  states?: { done: string; open: string };
 };
 
 export type WaiverRailProgress = {
@@ -203,6 +207,11 @@ export function WaiverStepRail({
   anchors?: Partial<Record<WaiverRailSegmentId, string>>;
   className?: string;
 }) {
+  // Questions is a step only on a release that asks the shop's own.
+  const steps = WAIVER_RAIL_ORDER.filter((id) => progress[id] !== null && labels[id] !== undefined);
+  // The step the diver is on: the first one still open, and none once the
+  // waiver is signed (a held Medical on a signed record is open, not current).
+  const current = progress.sign ? undefined : steps.find((id) => !progress[id]);
   return (
     // Hairlines on the page background, no card and no fill: this is a line of
     // orientation, not a panel (ADR 20260827-clearwater-surface-language —
@@ -223,35 +232,63 @@ export function WaiverStepRail({
       data-testid={WAIVER_RAIL_TEST_ID}
       className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-y border-border py-3 ${className}`.trim()}
     >
-      <ol className="flex flex-wrap items-center gap-x-5 gap-y-1">
-        {WAIVER_RAIL_ORDER.map((id) => {
-          const settled = progress[id];
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        {steps.map((id, index) => {
+          const settled = progress[id] === true;
           const label = labels[id];
-          // Questions is a step only on a release that asks the shop's own.
-          if (settled === null || label === undefined) return null;
           const anchor = anchors?.[id];
-          const mark = (
-            <SettledCheck settled={settled} label={label} className="text-sm font-medium" />
-          );
-          // A flex box, not a block: a block `<li>` set the mark on its own
-          // 24px body-text strut, 26px tall with the 20px mark at its top, and
-          // the count centred beside it sat 4px under the labels (K-225).
+          const isCurrent = id === current;
+          const tone = isCurrent
+            ? "font-semibold text-foreground"
+            : settled
+              ? "text-foreground"
+              : "text-muted";
+          // A flex box, not a block, so the label and its middot sit on one
+          // line box (K-225).
           return (
             <li
               key={id}
               data-rail-step={id}
-              className={`flex items-center ${settled ? "" : "text-muted"}`.trim()}
+              aria-current={isCurrent ? "step" : undefined}
+              className={`flex items-center gap-x-2 ${tone}`}
             >
+              {index > 0 ? (
+                <span aria-hidden="true" className="font-normal text-muted">
+                  ·
+                </span>
+              ) : null}
+              {settled ? (
+                // A drawn check on a settled step, never a ring on an open one:
+                // the step's state by shape as well as ink (B56 review).
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-3.5 shrink-0"
+                  data-rail-done=""
+                >
+                  <path d="M3 8.5l3 3 7-7" />
+                </svg>
+              ) : null}
               {anchor ? (
                 <a
                   href={`#${anchor}`}
                   className="inline-flex min-h-11 items-center text-primary underline underline-offset-4 hover:no-underline"
                 >
-                  {mark}
+                  {label}
                 </a>
               ) : (
-                mark
+                <span>{label}</span>
               )}
+              {labels.states ? (
+                <span className="sr-only">
+                  {`, ${settled ? labels.states.done : labels.states.open}`}
+                </span>
+              ) : null}
             </li>
           );
         })}

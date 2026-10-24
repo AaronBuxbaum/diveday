@@ -3,13 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonConfigureTrips, canPersonManageWaiverTemplates } from "@/db/authz";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import {
-  listCourseFormAgeBounds,
-  listCourseFormRequirements,
-  setCourseFormRequirements,
-} from "@/db/course-forms";
 import {
   getCourseBySlug,
   pullCourseTemplateUpdates,
@@ -37,6 +32,11 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeCourseImage } from "@/lib/storage";
 import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
+import { planSpanishBoxes, writeSpanishBoxes } from "../../../dive-sites/spanish-boxes";
+import {
+  planCourseFormRequirements,
+  writeCourseFormRequirements,
+} from "./course-form-requirements";
 
 /**
  * A typed price, empty meaning "not priced". The ceiling is currency-relative
@@ -95,9 +95,6 @@ const courseExtrasForm = z.object({
   nitroxCompatible: checkbox("true"),
   gearIncluded: checkbox("true"),
 });
-
-/** Each form's place in the order is posted as `order-<formId>`. */
-const formOrderFields = z.object({}).catchall(text());
 
 /** Upload one picked file; an empty file input is "no change", not a failure. */
 async function uploadImage(file: FormDataEntryValue | null) {
@@ -249,6 +246,27 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const broken = depthChecked.find(([, text]) => courseDepthPlaceholderIssues(text).length > 0);
   if (broken) redirect(`${base}?error=depth-placeholder&field=${broken[0]}`);
 
+  // **The course page's one Save writes its forms and its Spanish too**
+  // (visual review 2026-10-24, A11). Both are asked here, before a single
+  // byte is written, so a refusal of either refuses the whole save while the
+  // course is still as it was. The forms list is read only when the page
+  // drew it (`formsSection`): a reader who was not shown the list has not
+  // asked for "no forms".
+  const formsPlan = formData.has("formsSection")
+    ? await planCourseFormRequirements(db, staff.user, course.id, formData)
+    : null;
+  if (formsPlan && !formsPlan.ok) redirect(noticeUrl(`${base}#forms`, formsPlan.notice));
+  const spanish = await planSpanishBoxes(
+    db,
+    staff.user.shopId,
+    { kind: "course", id: course.id },
+    { summary: { text: value.summary, maxLength: 200 } },
+    formData,
+  );
+  if (!spanish.ok) {
+    redirect(`${base}?error=${spanish.reason === "stale" ? "spanish-stale" : "spanish-refused"}`);
+  }
+
   // The row's edit generation as this page last saw it. Absent means the page
   // was rendered by a release that did not send one — see `updateCourseContent`.
   // A non-numeric value is treated as absent rather than thrown: this page is
@@ -301,6 +319,14 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     nitroxCompatible: extras.nitroxCompatible,
     gearIncluded: extras.gearIncluded,
   });
+
+  if (formsPlan?.ok) {
+    const refused = await writeCourseFormRequirements(db, formsPlan.write);
+    if (refused) redirect(noticeUrl(`${base}#forms`, refused));
+    // Every roster and prep page reading this course's readiness changes with it.
+    revalidatePath(shopPath(staff.user.shopSlug), "layout");
+  }
+  await writeSpanishBoxes(db, staff.user.shopId, { kind: "course", id: course.id }, spanish.boxes);
 
   // Once the content row is durably saved, any photo it no longer references
   // (replaced hero, removed gallery photo) is queued for provider deletion —
@@ -356,108 +382,6 @@ export async function pullCourseTemplateUpdatesAction(
       parsedMode.data === "preserve-shop-edits" ? "template-updated" : "template-replaced",
     ),
   );
-}
-
-/**
- * **The forms this course asks each student to sign** (ADR
- * 20261008-course-forms). A list of this shop's live course forms, in the
- * order the student meets them: each ticked box posts `formId`, and its
- * `order-<id>` box says where it goes (blank or nonsense sorts last, ties keep
- * the page's order).
- *
- * Who a course asks for a signature is the same call as who a departure asks
- * for a cert, so the same gate: `canPersonConfigureTrips`, checked here where
- * a POST that skipped the page still lands. A list naming a form that is not
- * this shop's, or no longer live, is refused whole by
- * `setCourseFormRequirements` rather than half-saved.
- *
- * **Adding is the trip gate; taking a form off is the release's.** A form a
- * course stops asking for is a signature the shop stops collecting, which is
- * the owner's or manager's call (`canPersonManageWaiverTemplates`, the gate on
- * writing the forms themselves). An instructor may add a form, never drop one.
- */
-export async function saveCourseFormRequirementsAction(slug: string, formData: FormData) {
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  const base = shopPath(staff.user.shopSlug, "courses", slug, "edit");
-  const anchor = `${base}#forms`;
-  if (!(await canPersonConfigureTrips(db, staff.user.shopId, staff.user.personId))) {
-    redirect(noticeUrl(anchor, "forms-not-authorized"));
-  }
-  const course = await getCourseBySlug(db, staff.user.shopId, slug);
-  if (!course) redirect(noticeUrl(shopPath(staff.user.shopSlug, "courses"), "invalid"));
-
-  const ids = formData.getAll("formId").map(String);
-  if (!ids.every((id) => z.uuid().safeParse(id).success)) {
-    redirect(noticeUrl(anchor, "forms-invalid"));
-  }
-  const orderFields = readForm(formOrderFields, formData);
-  const orderOf = (id: string) => {
-    const value = Number.parseInt(orderFields[`order-${id}`] ?? "", 10);
-    return Number.isFinite(value) && value > 0 ? value : Number.POSITIVE_INFINITY;
-  };
-  const ordered = ids
-    .map((id, index) => ({ id, index, order: orderOf(id) }))
-    .sort((a, b) => a.order - b.order || a.index - b.index)
-    .map((entry) => entry.id);
-  // The optional age under each ticked form (issue #2265): blank asks every
-  // student; anything else that is not a whole age in range refuses the save.
-  const maxAgeYears = new Map<string, number>();
-  const maxAges = readForm(
-    z.object(Object.fromEntries(ordered.map((id) => [`maxAge-${id}`, trimmedText()]))),
-    formData,
-  );
-  for (const id of ordered) {
-    const raw = maxAges[`maxAge-${id}`] ?? "";
-    if (raw === "") continue;
-    const age = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
-    if (!Number.isInteger(age)) redirect(noticeUrl(anchor, "forms-invalid-age"));
-    maxAgeYears.set(id, age);
-  }
-
-  // **Asking fewer students is taking a form off** (G1): a dropped form, a
-  // bound on a form everyone was asked, or a lowered bound is the owner's or
-  // manager's call, the same gate as writing the forms themselves.
-  const mayNarrow = await canPersonManageWaiverTemplates(
-    db,
-    staff.user.shopId,
-    staff.user.personId,
-  );
-  if (!mayNarrow) {
-    const posted = new Set(ordered);
-    const [current, currentBounds] = await Promise.all([
-      listCourseFormRequirements(db, staff.user.shopId, course.id),
-      listCourseFormAgeBounds(db, staff.user.shopId, course.id),
-    ]);
-    const narrows = current.some((formId) => {
-      if (!posted.has(formId)) return true;
-      const next = maxAgeYears.get(formId);
-      const was = currentBounds.get(formId);
-      return next !== undefined && (was === undefined || next < was);
-    });
-    if (narrows) redirect(noticeUrl(anchor, "forms-remove-not-authorized"));
-  }
-
-  const result = await setCourseFormRequirements(db, {
-    shopId: staff.user.shopId,
-    courseId: course.id,
-    formIds: ordered,
-    maxAgeYears,
-    mayNarrow,
-  });
-  if (!result.ok) {
-    const notice = {
-      invalid_age: "forms-invalid-age",
-      medical_bound: "forms-medical-age",
-      not_authorized: "forms-remove-not-authorized",
-      not_found: "forms-invalid",
-      unknown_form: "forms-invalid",
-    }[result.reason];
-    redirect(noticeUrl(anchor, notice));
-  }
-  // Every roster and prep page reading this course's readiness changes with it.
-  revalidatePath(shopPath(staff.user.shopSlug), "layout");
-  revalidateAndRedirect(base, noticeUrl(anchor, "forms-saved"));
 }
 
 /**

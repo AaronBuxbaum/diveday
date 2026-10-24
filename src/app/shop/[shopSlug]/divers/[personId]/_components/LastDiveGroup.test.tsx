@@ -101,7 +101,7 @@ describe("the Last dive row", () => {
 
   it("says Not known, and offers no Clear for a date nobody recorded", () => {
     renderGroup(diver(), known());
-    expect(screen.getByText("Not known")).toBeInTheDocument();
+    expect(screen.getByText("None on file")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
   });
 

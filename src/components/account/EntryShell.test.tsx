@@ -211,14 +211,23 @@ describe("the dead-link law has two tiers", () => {
 
   it.each(ACCOUNT_TIER)("%s renders the bare door, never the shop's hand", (page) => {
     const source = read(page);
-    expect(source).toContain("<EntryDone");
+    // `DeadLink` (visual review 2026-10-24, B29) with no `shop`: the card
+    // names nobody.
+    expect(source).toContain("<DeadLink");
     expect(source).not.toContain("ExpiredLinkCard");
+    expect(source).not.toMatch(/<DeadLink[^>]*shop=/);
   });
 
-  it.each(ACCOUNT_TIER)("%s says it in one unavailableTitle/Text pair", (page, keys) => {
-    const source = read(page);
-    expect(source).toContain(`${keys}.unavailableTitle`);
-    expect(source).toContain(`${keys}.unavailableText`);
+  // `/confirm-contact` is account-tier too for its dead link: a shore or
+  // bookkeeper token names nobody (security review, B29).
+  it("keeps /confirm-contact's dead link from naming a shop", () => {
+    const source = read("app/confirm-contact/[token]/page.tsx");
+    expect(source).toContain("<DeadLink");
+    expect(source).not.toMatch(/<DeadLink[^>]*shop=/);
+  });
+
+  it.each(ACCOUNT_TIER)("%s says its next step in one unavailableText", (page, keys) => {
+    expect(read(page)).toContain(`${keys}.unavailableText`);
   });
 
   /**
@@ -235,7 +244,7 @@ describe("the dead-link law has two tiers", () => {
         Record<string, Record<string, string>>
       >;
       const messages = bundle[namespace]?.[group] ?? {};
-      for (const key of ["unavailableTitle", "unavailableText"] as const) {
+      for (const key of ["unavailableText"] as const) {
         expect(messages[key]).toBeTruthy();
         expect(messages[key]).not.toMatch(/\{\s*shop/i);
       }
@@ -250,7 +259,7 @@ describe("the dead-link law has two tiers", () => {
    */
   it.each(BOOKING_TIER)("%s offers the shop's hand", (page) => {
     const source = withSiblingDoors(page);
-    expect(source).toContain("<ExpiredLinkCard");
+    expect(source).toMatch(/<DeadLink|<ExpiredLinkCard/);
     expect(source).toMatch(/shop=\{/);
   });
 });

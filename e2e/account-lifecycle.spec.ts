@@ -53,9 +53,7 @@ test("a valid email-verification link confirms the account through the real page
   // The link is one-time: revisiting it (without the flash param) now reads
   // as invalid rather than re-showing the confirm form.
   await page.goto(`/verify/${token}`);
-  await expect(
-    page.getByRole("heading", { name: "This confirmation link isn’t available" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
 });
 
 test("a valid password-reset link sets a new password and signs the owner in", async ({
@@ -81,9 +79,7 @@ test("a valid password-reset link sets a new password and signs the owner in", a
 
   // The link is one-time: revisiting it now reads as invalid.
   await page.goto(`/reset-password/${token}`);
-  await expect(
-    page.getByRole("heading", { name: "This reset link isn’t available" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
 });
 
 /**
@@ -117,18 +113,14 @@ test("forgot-password gives the same generic response whether or not the email i
 
 test("a tampered email-verification token reveals nothing", async ({ page }) => {
   await page.goto("/verify/not-a-real-token");
-  await expect(
-    page.getByRole("heading", { name: "This confirmation link isn’t available" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
 });
 
 test("a tampered password-reset token reveals nothing and points back to sign-in", async ({
   page,
 }) => {
   await page.goto("/reset-password/not-a-real-token");
-  await expect(
-    page.getByRole("heading", { name: "This reset link isn’t available" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
   await page.getByRole("link", { name: "Back to sign in" }).click();
   await expect(page).toHaveURL(/\/sign-in/);
 });
@@ -145,9 +137,7 @@ test("a tampered password-reset token reveals nothing and points back to sign-in
  */
 test("a dead account-token door draws its mark and names no shop", async ({ page }) => {
   await page.goto("/verify/not-a-real-token");
-  await expect(
-    page.getByRole("heading", { name: "This confirmation link isn’t available" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
   await expect(page.locator("main svg")).toHaveCount(1);
   const door = await page.locator("main").innerText();
   expect(door).not.toMatch(/\p{Extended_Pictographic}/u);

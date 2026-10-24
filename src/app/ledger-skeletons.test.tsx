@@ -57,7 +57,7 @@ const SKELETONS: [name: string, loadedBy: string, Skeleton: ComponentType][] = [
   ["promos", "PromoLedger", PromosLoading],
   ["requests", "RequestLedgerRow", RequestsLoading],
   ["waivers", "SignatureLog", WaiversLoading],
-  ["staffing", "StaffCredentials", StaffingLoading],
+  ["staffing", "StaffingWeek", StaffingLoading],
   ["staff reviews", "ReviewLedgerRow", StaffReviewsLoading],
   ["Today", "DaySpine's station rows", TodayLoading],
   ["public dive site", "the site's departures", PublicSiteLoading],

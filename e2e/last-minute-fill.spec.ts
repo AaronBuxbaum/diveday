@@ -121,7 +121,7 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
 
 test("an unknown unsubscribe link reads as unavailable, not a crash", async ({ page }) => {
   await page.goto("/unsubscribe/not-a-real-token");
-  await expect(page.getByRole("heading", { name: "This link isn’t available" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
 });
 
 test.describe("staff and the list", () => {
