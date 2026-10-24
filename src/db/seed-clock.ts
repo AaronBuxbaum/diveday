@@ -76,6 +76,16 @@ export function nextCreatedAt(): Date {
 }
 
 /**
+ * An instant no earlier than every stamp {@link nextCreatedAt} has handed out,
+ * which run a few milliseconds ahead of the clock. A seed that asks readiness
+ * mid-run reads at this, so a release it just signed exists by then: readiness
+ * leaves out a signature dated after the instant it is asked about (#3002).
+ */
+export function afterSeedStamps(): Date {
+  return new Date(nowMs() + seedClockTick);
+}
+
+/**
  * Anchored to the clock rather than the calendar so one seeded trip always
  * sails *today*, whatever time the demo is opened. Today's departure board is
  * the first thing staff see, and a demo that never has a boat out cannot show

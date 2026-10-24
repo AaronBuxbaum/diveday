@@ -1738,7 +1738,9 @@ export async function listTripsReadiness(
             ),
           ),
       () => listTripsWaiverStatuses(db, shopId, tripIds),
-      () => getCurrentWaiverGeneration(db, shopId),
+      // The terms in force at `now`: the live ones for a live reader, the ones
+      // a sailed boat left under for the departure log (issue #3002).
+      () => getCurrentWaiverGeneration(db, shopId, now),
       () =>
         db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
       () =>
