@@ -11,7 +11,7 @@ const PANEL_TONE: Record<BoatSafetyLine["tone"], string> = {
 };
 
 const LINE_TONE: Record<BoatSafetyLine["tone"], string> = {
-  danger: "font-semibold text-danger-strong",
+  danger: "font-semibold text-danger",
   warning: "font-medium text-warning-strong",
   neutral: "text-muted",
 };

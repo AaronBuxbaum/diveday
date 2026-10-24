@@ -401,7 +401,7 @@ describe("the waiver group", () => {
     // A disclosure, not the plain row a clean release gets: the state row
     // inside carries the danger ink the closed summary cannot.
     expect(group.tagName).toBe("DETAILS");
-    expect(group.querySelector(".text-danger, .text-danger-strong")).not.toBeNull();
+    expect(group.querySelector(".text-danger")).not.toBeNull();
     // Danger and open on its own, with no departure to name: a physician's
     // "no" keeps the diver off every boat, whatever the caller passed.
     expect(group.querySelector("summary span.text-sm")?.className).toContain("text-danger");

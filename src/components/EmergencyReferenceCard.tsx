@@ -68,7 +68,7 @@ export function EmergencyReferenceCard({
       aria-labelledby={headingId}
       className={`${inOverlay ? TONE_PANEL_IN_OVERLAY_CLASS : TONE_PANEL_CLASS} border-danger/40 bg-danger/5 ${className}`}
     >
-      <h2 id={headingId} className="text-base font-semibold text-danger-strong">
+      <h2 id={headingId} className="text-base font-semibold text-danger">
         {copy.heading}
       </h2>
       {filled || reference.boat ? (

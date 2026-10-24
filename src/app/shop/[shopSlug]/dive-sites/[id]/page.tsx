@@ -222,7 +222,7 @@ export default async function EditDiveSitePage({
           role={notice === "template-update-unavailable" ? "alert" : "status"}
           className={`mt-6 rounded-lg px-3 py-2 text-sm font-medium ${
             notice === "template-update-unavailable"
-              ? "bg-danger-tint text-danger-strong"
+              ? "bg-danger-tint text-danger"
               : "bg-success-tint text-success-strong"
           }`}
         >

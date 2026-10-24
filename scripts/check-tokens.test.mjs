@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { findTokenViolations, scanTree } from "./check-tokens.mjs";
+import {
+  definedColorTokens,
+  findTokenViolations,
+  findUndefinedColorClasses,
+  scanTree,
+} from "./check-tokens.mjs";
 
 const texts = (source) => findTokenViolations(source).map((hit) => hit.text);
 
@@ -120,5 +125,22 @@ describe("the tree walk", () => {
     ]);
     expect(details.get("src/app/page.tsx")).toHaveLength(2);
     expect(details.get("src/components/opengraph-image.tsx")).toHaveLength(1);
+  });
+});
+
+describe("undefined color utilities", () => {
+  const tokens = definedColorTokens("--color-danger: var(--danger);\n--color-warning-strong: x;");
+  const texts = (source) => findUndefinedColorClasses(source, tokens).map((hit) => hit.text);
+
+  it("flags a semantic utility with no token behind it", () => {
+    expect(texts('<p className="font-semibold text-danger-strong">x</p>')).toEqual([
+      "undefined color token danger-strong",
+    ]);
+  });
+
+  it("passes defined tokens, with variants and opacity", () => {
+    expect(texts('<p className="text-danger hover:bg-warning-strong/60 text-sm">x</p>')).toEqual(
+      [],
+    );
   });
 });

@@ -134,7 +134,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
     });
     const region = screen.getByRole("region", { name: "Mantis I: papers and safety kit" });
     expect(within(region).getByText("No emergency oxygen aboard").className).toContain(
-      "text-danger-strong",
+      "text-danger",
     );
     expect(within(region).getByText("AED: pads expire in 12 days")).toBeInTheDocument();
     cleanup();

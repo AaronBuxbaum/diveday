@@ -51,7 +51,7 @@ export function ArrivalTap({
       sendFailedLabel={sendFailedLabel}
       onSubmitting={() => setOptimisticPending(true)}
       className="flex flex-col items-end"
-      sendFailedClassName="mt-1 text-sm font-medium text-danger-strong"
+      sendFailedClassName="mt-1 text-sm font-medium text-danger"
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <TapButton
