@@ -33,7 +33,8 @@ describe("the dive-site briefing's sections", () => {
   /**
    * The ids are prefixed because the form already spends the obvious names on
    * its controls — `site-photos` is the multi-file input, and a duplicate id is
-   * an accessibility failure `e2e/a11y.spec.ts` fails the build on.
+   * an accessibility failure. Since the suite's axe scan was removed on
+   * 2026-10-24, this test is the only net for these ids.
    */
   it("keeps its anchors clear of the control ids on the same page", () => {
     for (const id of Object.values(SITE_FORM_SECTION_IDS)) {

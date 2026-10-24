@@ -8,8 +8,9 @@ import { e2eNow, rosterRow } from "./helpers";
  *
  * ## Why this exists
  *
- * An axe scan proves every control has a name, a role and a reachable label
- * (the suite ran one until 2026-10-24). None of that is the same as the page being
+ * An axe scan proves every control has a name, a role and a reachable label;
+ * the suite ran one until 2026-10-24 and runs none now, so this walk is the
+ * only automated keyboard check. A scan was never the same as the page being
  * *traversable*. A page can pass every rule axe has and still be unusable
  * without a mouse, because the three things that decide that are all invisible
  * to a static tree walk:

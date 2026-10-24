@@ -354,7 +354,8 @@ export function RowKind({
  *
  * A stretched overlay link with no children takes its accessible name from
  * nothing at all — an axe `link-name` violation on a control the row's own text
- * sits *behind*, which `e2e/a11y.spec.ts` scans for with no exclusion list, and
+ * sits *behind* (the suite's axe scan caught it until it was removed on
+ * 2026-10-24; the type below is the only net now), and
  * which principles.md §4 puts outside the set of things that may ever be
  * traded. Two independent optional props let a call site produce that by
  * omission; one union means the type system asks for the destination's name in

@@ -72,8 +72,8 @@
 //
 // **That paragraph was false for a year, in the two directions it promises
 // hardest** (issue #1362). `planLedgerWrite` rebuilt each entry as
-// `{ e2e, visual }`, so every list of axe scans (a column the ledger had until
-// the scans were removed on 2026-10-24) was silently deleted by any `--write`;
+// `{ e2e, visual }`, so every list of axe-scanned routes (an `a11y` column the
+// ledger carried until 2026-10-24) was silently deleted by any `--write`;
 // and it banked an exemption whenever *either* a spec or a
 // capture survived, where the audit banks only when *both* do, so the one route
 // legitimately exempt from half the bar lost its written reason and then failed

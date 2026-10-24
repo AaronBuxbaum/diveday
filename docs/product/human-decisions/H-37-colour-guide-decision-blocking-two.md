@@ -13,6 +13,6 @@ A chosen palette direction for `--success`/`--warning`/placeholder tokens that d
 
 ## Unblocks / follow-up
 
-Until chosen, `e2e/a11y.spec.ts` keeps `color-contrast` disabled and no claim of WCAG AA conformance in this repo is true.
+Until chosen, no claim of WCAG AA conformance in this repo is true. (The suite's axe scan, which kept `color-contrast` off for these tokens, was removed on 2026-10-24; nothing automated checks contrast now.)
 
 Part of the [human decision log](README.md#decision-register).

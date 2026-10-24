@@ -1312,8 +1312,8 @@ async function screenshotOrGiveUp(page: Page, path: string) {
 }
 
 /**
- * Waits out every running (finite) CSS animation — the same
- * `document.getAnimations()` pattern `e2e/a11y.spec.ts` uses to settle a
+ * Waits out every running (finite) CSS animation — the
+ * `document.getAnimations()` pattern the removed `e2e/a11y.spec.ts` used to settle a
  * *paint* rather than a *duration*. The command palette gained a real
  * `animate-scale-in`/`animate-fade-in` entrance in issue #832 where it
  * previously had none, and `capture()` shoots the instant its input is
