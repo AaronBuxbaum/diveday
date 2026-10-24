@@ -2761,6 +2761,16 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
    * dives, never a prerequisite for them. Solo Diver is the one that asks
    * for Advanced Adventure Diver, and gates there. Unlike PADI's Adventure
    * Diver, no SDI floor falls between two rungs, so nothing here is rounded.
+   *
+   * Every specialty's `minimumAge` is the youngest age SDI Standards & Procedures (version
+   * 0626) allows, read from the course's own "Student Prerequisites": Part 2
+   * (Diver Standards) and Part 3 (Specialty Standards), at
+   * tdisdi.com/wp-content/uploads/files/sandp/currentYear/SDI/complete_sections/
+   * (issue #2682). Most specialties are 18, or 10 with parental consent; the
+   * note names the consent condition and any junior depth cap. Wreck takes
+   * SDI's limited-penetration floor of 15 because its light-zone dives are
+   * penetration. The refresher is the one SDI gives no age: it asks for an
+   * Open Water card, so it takes that card's floor of 10.
    * ------------------------------------------------------------------ */
   {
     slug: "sdi-scuba-discovery",
@@ -2901,7 +2911,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-advanced-adventure-diver",
-    version: 1,
+    version: 2,
     title: "Advanced Adventure Diver",
     agency: "sdi",
     description: "Five dives that open up depth, navigation, and whatever you pick next.",
@@ -2922,8 +2932,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Two days · five dives",
       groupSizeText: "Small groups, matched to the electives you choose",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency — we verify the certification record before the first dive. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency — we verify the certification record before the first dive. At least 10 years old, and divers under 18 need a parent's or guardian's consent. Divers aged 10–11 stay within {depth12} on every dive and 12–14 keep the deep dive to {depth21}; all of them dive under the direct supervision of a parent, guardian or dive professional, and choose electives SDI opens to their age. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Five instructor-led dives",
@@ -2954,7 +2965,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep is the deep dive?",
           answer:
-            "No deeper than {depth30}, and shallower if that is where the dive is better. It is a supervised introduction to depth, not a depth record.",
+            "No deeper than {depth30} for adults; {depth21} at 12–14 and {depth12} at 10–11. Shallower if that is where the dive is better. It is a supervised introduction to depth, not a depth record.",
         },
         {
           question: "Is this the same as Advanced Open Water?",
@@ -3149,7 +3160,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-computer-nitrox-diver",
-    version: 1,
+    version: 2,
     title: "Computer Nitrox Diver",
     agency: "sdi",
     description: "Longer bottom times on enriched air, planned on your own computer.",
@@ -3169,8 +3180,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "One day · academics plus two optional dives",
       groupSizeText: "Small groups around the analyzer",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 10 years old, and divers under 18 need a parent's or guardian's consent. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital materials and certification card",
         "Analyzer use and cylinder logging practice",
@@ -3201,7 +3213,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-deep-diver",
-    version: 2,
+    version: 3,
     title: "Deep Diver",
     agency: "sdi",
     description: "Plan, manage and enjoy the deeper end of recreational diving.",
@@ -3219,8 +3231,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Two days · four dives",
       groupSizeText: "Small groups, because depth shortens everyone's dive",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or equivalent. Enriched-air training is strongly recommended for the deeper dives. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent. At least 10 years old, and divers under 18 need a parent's or guardian's consent; divers aged 10–11 stay within {depth12} and 12–14 within {depth21}, so their plan stops short of the deepest dives. Enriched-air training is strongly recommended for the deeper dives. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Four progressively deeper training dives",
@@ -3252,14 +3265,14 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep does this take me?",
           answer:
-            "To {depth40}, the recreational limit. Past that is technical diving, which is a different training path with different gear.",
+            "To {depth40}, the recreational limit, for adults; {depth21} at 12–14 and {depth12} at 10–11. Past that is technical diving, which is a different training path with different gear.",
         },
       ],
     },
   },
   {
     slug: "sdi-underwater-navigation",
-    version: 1,
+    version: 2,
     title: "Underwater Navigation",
     agency: "sdi",
     description: "Know where you are, and get back to the boat without surfacing to check.",
@@ -3277,8 +3290,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "One day · two dives",
       groupSizeText: "Small groups, each diver running their own patterns",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 10 years old, and divers under 18 need a parent's or guardian's consent. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: ["SDI digital certification card", "Two navigation dives", "Compass and slate"],
       excludes: ["Personal gear rental"],
       scheduleDays: [
@@ -3305,7 +3319,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-night-limited-visibility-diver",
-    version: 1,
+    version: 2,
     title: "Night & Limited Visibility Diver",
     agency: "sdi",
     description: "The same reef after dark, and the skills for water that has gone green.",
@@ -3323,8 +3337,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Two evenings · two to three dives",
       groupSizeText: "Small groups — nobody dives out of torchlight",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 10 years old, and divers under 18 need a parent's or guardian's consent. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Primary and backup torches",
@@ -3354,7 +3369,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-wreck-diver",
-    version: 2,
+    version: 3,
     title: "Wreck Diver",
     agency: "sdi",
     description: "Survey a wreck properly, and understand exactly where the outside ends.",
@@ -3372,8 +3387,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Two days · four dives",
       groupSizeText: "Small groups, because a wreck is easy to lose people on",
+      minimumAge: 15,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or equivalent. Our wrecks sit deep enough that deep training is worth having first. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent. At least 15 years old, and divers under 18 need a parent's or guardian's consent: the light-zone dives are limited penetration, which SDI opens at 15. SDI's non-penetration version starts at 10 and keeps younger divers within {depth18}; ask us if that suits a younger diver. Our wrecks sit deep enough that deep training is worth having first. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Four wreck dives",
@@ -3411,7 +3427,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-drift-diver",
-    version: 1,
+    version: 2,
     title: "Drift Diver",
     agency: "sdi",
     description: "Let the current do the work, and stay findable while it does.",
@@ -3431,8 +3447,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "One day · two dives",
       groupSizeText: "Small groups the boat can keep in one piece of water",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 10 years old, and divers under 18 need a parent's or guardian's consent. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Two drift dives",
@@ -3462,7 +3479,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-boat-diver",
-    version: 1,
+    version: 2,
     title: "Boat Diver",
     agency: "sdi",
     description: "Be the diver a captain is glad to have aboard.",
@@ -3482,8 +3499,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "One day · two dives",
       groupSizeText: "Small groups aboard a working charter",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 10 years old, and divers under 18 need a parent's or guardian's consent. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: ["SDI digital certification card", "Two boat dives", "Tanks and weights"],
       excludes: ["Personal gear rental", "Seasickness remedies"],
       scheduleDays: [
@@ -3509,7 +3527,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-search-and-recovery-diver",
-    version: 1,
+    version: 2,
     title: "Search & Recovery Diver",
     agency: "sdi",
     description: "Find what went over the side, and bring it up without hurting anyone.",
@@ -3527,8 +3545,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Two days · four dives",
       groupSizeText: "Small groups, each diver running a full pattern",
+      minimumAge: 15,
       prerequisiteNote:
-        "SDI Advanced Adventure Diver or an equivalent advanced certification, and navigation training is genuinely useful beforehand — a search pattern is navigation with a purpose. That is where we set this course; if you hold a rung between Open Water and Advanced, talk to us before you book. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Advanced Adventure Diver or an equivalent advanced certification, and navigation training is genuinely useful beforehand — a search pattern is navigation with a purpose. That is where we set this course; if you hold a rung between Open Water and Advanced, talk to us before you book. At least 15 years old, and divers under 18 need a parent's or guardian's consent. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Four dives",
@@ -3567,7 +3586,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-underwater-photography",
-    version: 1,
+    version: 2,
     title: "Underwater Photography",
     agency: "sdi",
     description: "Bring back images that look like the dive actually looked.",
@@ -3585,8 +3604,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "One to two days · two to three dives with review sessions",
       groupSizeText: "Small groups, so every diver's frames get looked at",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency, and your own camera and housing. Steady buoyancy matters more here than the camera does. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency, and your own camera and housing. At least 10 years old, and divers under 18 need a parent's or guardian's consent. Steady buoyancy matters more here than the camera does. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Two to three photo dives",
@@ -3616,7 +3636,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-dry-suit-diver",
-    version: 1,
+    version: 2,
     title: "Dry Suit Diver",
     agency: "sdi",
     description: "Dive warm, and control a suit that is now part of your buoyancy.",
@@ -3636,8 +3656,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "One day · confined water plus two dives",
       groupSizeText: "Small groups, with suits fitted before the water",
+      minimumAge: 12,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 12 years old, and divers under 18 need a parent's or guardian's consent. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Dry suit and undersuit for the course",
@@ -3667,7 +3688,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-equipment-specialist",
-    version: 1,
+    version: 2,
     title: "Equipment Specialist",
     agency: "sdi",
     description: "Understand your kit well enough to fix the small things yourself.",
@@ -3685,8 +3706,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "One day · workshop, with an optional dive",
       groupSizeText: "Small groups around the bench",
+      minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. Bring your own gear if you have it — the course is far more useful on the kit you actually dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 10 years old, and divers under 18 need a parent's or guardian's consent. Bring your own gear if you have it — the course is far more useful on the kit you actually dive.",
       includes: [
         "SDI digital certification card",
         "Workshop session with tools and spares",
@@ -3716,7 +3738,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-sidemount-diver",
-    version: 1,
+    version: 2,
     title: "Sidemount Diver",
     agency: "sdi",
     description: "Cylinders on your hips — easier on your back, and every valve in reach.",
@@ -3734,8 +3756,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Two days · confined water plus three dives",
       groupSizeText: "Very small groups — rig setup is one-to-one work",
+      minimumAge: 15,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency. This is the recreational sidemount course: it is not a technical or overhead qualification, and it does not extend the depth limit your certification already carries. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. At least 15 years old, and divers under 18 need a parent's or guardian's consent. This is the recreational sidemount course: it is not a technical or overhead qualification, and it does not extend the depth limit your certification already carries. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Sidemount harness and cylinders for the course",
@@ -3773,7 +3796,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-marine-ecosystems-awareness",
-    version: 1,
+    version: 2,
     title: "Marine Ecosystems Awareness",
     agency: "sdi",
     description: "Understand the reef you are diving, and dive it without damaging it.",
@@ -3791,8 +3814,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Half a day of academics, plus an optional dive",
       groupSizeText: "Any size for the classroom; small groups in the water",
+      minimumAge: 10,
       prerequisiteNote:
-        "No certification needed for the knowledge session. If you want to add the dive, an Open Water certification from any recognized agency and a medical questionnaire are required; some answers need a physician's sign-off before you can dive.",
+        "No certification needed for the knowledge session. At least 10 years old, and divers under 18 need a parent's or guardian's consent. If you want to add the dive, an Open Water certification from any recognized agency and a medical questionnaire are required; some answers need a physician's sign-off before you can dive.",
       includes: ["SDI digital certification card", "Reef identification session and slate"],
       excludes: ["The optional dive", "Personal gear rental"],
       scheduleDays: [
@@ -3819,7 +3843,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-inactive-diver-scuba-refresher",
-    version: 1,
+    version: 2,
     title: "Inactive Diver Scuba Refresher",
     agency: "sdi",
     description: "Back in the water after a gap, without pretending the gap did not happen.",
@@ -3837,8 +3861,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ),
       durationText: "Half a day · confined water, with an optional reef dive",
       groupSizeText: "Small groups, or one-to-one if you would rather",
+      minimumAge: 10,
       prerequisiteNote:
-        "An Open Water certification from any recognized agency, however long ago. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive, and a gap in diving is a good moment to check.",
+        "An Open Water certification from any recognized agency, however long ago. At least 10 years old. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive, and a gap in diving is a good moment to check.",
       includes: [
         "All scuba equipment for the session",
         "Confined-water skills review",
