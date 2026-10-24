@@ -538,7 +538,7 @@
         }
       }
     ],
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 415,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 409,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 316,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": 305,
@@ -612,7 +612,7 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 491,
     "src/app/ready/[token]/page.tsx": 649,
-    "src/app/s/[shopSlug]/page.tsx": 847,
+    "src/app/s/[shopSlug]/page.tsx": 841,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 504,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
