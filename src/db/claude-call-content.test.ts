@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { replyDraftCall } from "@/lib/assists/inbox";
 import type { StructuredCall } from "@/lib/claude/structured";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -164,6 +165,30 @@ describe("runAssist keeps what the call said", () => {
       .from(claudeUsage)
       .where(eq(claudeUsage.shopId, ctx.shop.id));
     expect(usage).toMatchObject({ outcome: "ok", requestId: "req_011CContent" });
+  });
+
+  it("keeps no word of a health question an inbox draft recognised", async () => {
+    const value = await runAssist(ctx.db, {
+      shopId: ctx.shop.id,
+      feature: "inbox_draft",
+      call: replyDraftCall({
+        window: "Today is 2026-10-23.",
+        facts: ["Saturday reef: 4 seats open"],
+        thread: [{ from: "diver", text: "I’m 14 weeks pregnant, can I still do Saturday’s boat?" }],
+      }),
+      provider: fakeClaude({
+        reply: () =>
+          fakeClaudeMessage({
+            text: JSON.stringify({ reply: "", medical: true, eligibility: false, confidence: 1 }),
+          }),
+      }),
+      env: keyed,
+      now,
+    });
+    expect(value).toMatchObject({ medical: true });
+    const [row] = await contentRows(ctx.shop.id);
+    expect(row?.contentText).toBe("[message not kept: health question]");
+    expect(JSON.stringify(row)).not.toContain("pregnant");
   });
 
   it("keeps the request when the call fails, with no answer", async () => {

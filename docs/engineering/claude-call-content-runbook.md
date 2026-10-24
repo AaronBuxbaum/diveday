@@ -30,10 +30,10 @@ Every call `runAssist` (`src/db/assists.ts`) sends writes two rows:
 
 DiveDay only: no staff screen, no shop export (`src/db/export-shop-files.ts`) and no per-shop
 backup bundle reads it. In practice that is whoever holds production database access, today the
-founder, by SQL in the Neon console. The weekly full-cluster dump keeps a copy for up to 35 days
-after it was taken, and Neon's point-in-time recovery for its own window
-([backup runbook](backup-and-restore-runbook.md)); the privacy policy says "up to 35 more days in
-backups".
+founder, by SQL in the Neon console. Backups hold a copy until they expire: the weekly full-cluster
+dump after 35 days, Neon's point-in-time recovery after its own window, which the
+[backup runbook](backup-and-restore-runbook.md) has yet to record. The privacy policy says "until
+they expire" and names no number for that reason.
 
 **Preview databases.** A Neon branch forked from production carries the table like every other.
 Git preview deployments are off (`vercel.json`, `git.deploymentEnabled`), and the build never
@@ -48,6 +48,23 @@ keeps nothing, however late it finishes.
 
 The text quotes divers: inbox messages, a duplicate check's names and dates of birth, gear notes,
 reviews. Read it to fix an assist, and copy none of it anywhere else.
+
+## A health question
+
+When `inbox_draft` answers `medical: true`, its row keeps `[message not kept: health question]` in
+`content_text`, and keeps `answer_text` only when the drafted reply is empty
+(`keepUnlessHealth`, `src/lib/assists/inbox.ts`). The inbox's sort and translate calls on the same
+message keep it as written.
+
+## A request to see or delete it
+
+A diver, or anyone a shop's messages may have quoted, can ask DiveDay what is kept. Answer from the
+shop's rows: search `content_text` and `answer_text` for their name, address or phone with
+`ilike`, and send them what matches.
+
+A person with no diver record (a stranger who emailed, a walk-up who scanned a card and left) has
+no erasure button. Their words go at 30 days. When they ask sooner, delete the shop's rows by hand
+(`delete from claude_call_content where shop_id = …;`), which is what an erasure does.
 
 ## The last calls for a shop
 

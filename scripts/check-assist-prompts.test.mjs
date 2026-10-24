@@ -20,7 +20,7 @@ describe("check-assist-prompts", () => {
     });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("src/app/shop/x/actions.ts:2: imports @/db/waivers-medical");
-    expect(result.stderr).toContain("src/app/shop/x/actions.ts:3: names medical answers");
+    expect(result.stderr).toContain("src/app/shop/x/actions.ts:3: names medical data");
   });
 
   it("refuses a db module that calls the seam through a relative import", () => {
@@ -47,7 +47,33 @@ describe("check-assist-prompts", () => {
     expect(result.stderr).toContain("src/db/recap-assist.ts:1: imports ./waivers");
     expect(result.stderr).toContain("src/app/shop/x/outcome.ts:2: imports @/lib/medical");
     expect(result.stderr).toContain("src/db/x-reads.ts:2: imports ./waiver-records");
-    expect(result.stderr).toContain("src/app/shop/x/alias.ts:2: names medical answers");
+    expect(result.stderr).toContain("src/app/shop/x/alias.ts:2: names medical data");
+  });
+
+  it("refuses the crew's medical alert, by any spelling, and the waiver table from the schema barrel", () => {
+    const result = runGuard(GUARD, {
+      "src/db/inbox-assists.ts":
+        'import { bookings, waiverRecords } from "./schema";\nconst a = await db.select({ alert: waiverRecords.medicalAlert });\n',
+      "src/lib/assists/x.ts":
+        'import {\n  waiverRecords,\n} from "@/db/schema";\nconst d = row.draftMedicalAlert;\nconst c = sql`medical_alert`;\n',
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "src/db/inbox-assists.ts:1: imports waiverRecords from ./schema",
+    );
+    expect(result.stderr).toContain("src/db/inbox-assists.ts:2: names medical data");
+    expect(result.stderr).toContain(
+      "src/lib/assists/x.ts:1: imports waiverRecords from @/db/schema",
+    );
+    expect(result.stderr).toContain("src/lib/assists/x.ts:4: names medical data");
+    expect(result.stderr).toContain("src/lib/assists/x.ts:5: names medical data");
+  });
+
+  it("leaves a prompt module's other tables from the schema barrel alone", () => {
+    const result = runGuard(GUARD, {
+      "src/db/inbox-assists.ts": 'import { bookings, inboundMessages } from "./schema";\n',
+    });
+    expect(result.status).toBe(0);
   });
 
   it("leaves modules that build no prompt, tests and the seam itself alone", () => {

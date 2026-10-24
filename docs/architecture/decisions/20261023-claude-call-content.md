@@ -25,10 +25,13 @@ readable by him alone, never images, wiped by erasure, said in the privacy polic
 - **30 days** on `created_at`, deleted daily by the privacy cron. `claude_usage` keeps 400 days
   and gains `latency_ms` and `request_id`. What the model read off a photo or PDF is kept as its
   answer; the file never is.
+- **A health question is not kept.** A call's `keepTranscript` may replace parts: when
+  `inbox_draft` answers `medical: true`, the thread becomes `[message not kept: health question]`
+  and the answer goes too unless its reply is empty. Other assists reading that message keep it.
 - **DiveDay only, by SQL** ([runbook](../../engineering/claude-call-content-runbook.md)): no
-  screen, no shop export, no backup bundle. The full-cluster dump holds it up to 35 days more, and
-  the privacy policy says so. A preview fork is not emptied automatically: builds never write to
-  a preview database.
+  screen, no shop export, no backup bundle; a diver may ask DiveDay to see it. Backups hold it
+  until they expire. A preview fork is not emptied automatically: builds never write to a preview
+  database.
 - **Every erasure forgets.** `forgetClaudeCallContent` deletes the shop's rows and stamps the
   shop's erasure time, under a lock the write shares; a call whose words were read (`readAt`)
   before the stamp, less 15 minutes, keeps nothing. The text is keyed to nobody, so no match finds
@@ -45,4 +48,5 @@ readable by him alone, never images, wiped by erasure, said in the privacy polic
 
 The privacy policy's Anthropic entry and retention list say what is kept and who reads it. A new
 assist inherits the copy with no extra work; a prompt that would put something in it that should
-never be stored (a medical answer) is already refused by `check:assist-prompts`.
+never be stored (a medical answer, the crew's medical alert, the waiver records table) is refused
+by `check:assist-prompts`.
