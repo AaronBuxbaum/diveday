@@ -414,6 +414,7 @@
       "buddyReadOnlyHere": "Las parejas de buceo se muestran tal como se guardaron. Si alguien de la pareja está a bordo se registra en el pase de lista en vivo, y esta copia no lo sigue.",
       "copyCaveatUnanswered": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con el listado en vivo cuando DiveDay responda.",
       "copyCaveatOffline": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con esta lista.",
+      "copyCaveatOnline": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con el listado en vivo.",
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}}",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",

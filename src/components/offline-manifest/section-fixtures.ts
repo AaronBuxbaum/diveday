@@ -81,7 +81,7 @@ export function controls(): OfflineTripControls {
     message: "",
     setCheckpoint: vi.fn(),
     servedWithoutAnswer: false,
-    copyCaveat: null,
+    copyCaveat: "online",
     liveOffer: null,
     busyBooking: null,
     busyChecklistItem: null,

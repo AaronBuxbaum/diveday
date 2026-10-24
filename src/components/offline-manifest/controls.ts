@@ -10,9 +10,9 @@ import type { OfflineStatement } from "./shared";
 /**
  * Why the roll call warns that this copy may differ from the live list: it
  * was reached without a live answer (`"unanswered"`), or the device has no
- * signal (`"offline"`); null on a copy opened with signal.
+ * signal (`"offline"`), or it is a copy opened with signal (`"online"`).
  */
-export type CopyCaveat = "unanswered" | "offline" | null;
+export type CopyCaveat = "online" | "unanswered" | "offline";
 
 /**
  * **What the offline manifest's sections can do**, and the device state they
@@ -33,7 +33,7 @@ export type OfflineTripControls = {
   servedWithoutAnswer: boolean;
   /**
    * The roll call's line naming the save time and asking for a head count
-   * (issue #2980): which instruction it gives, or null for none.
+   * (issue #2980): which instruction it gives. Every saved copy carries one.
    */
   copyCaveat: CopyCaveat;
   /**

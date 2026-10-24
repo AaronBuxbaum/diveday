@@ -67,15 +67,18 @@ for (const locale of ["en-US", "es-ES"] as const) {
       ).toBeInTheDocument();
     });
 
-    it("stays off a copy the captain opened with signal", () => {
-      render(<OfflineRollCallSection view={saved} controls={{ ...controls(), t, locale }} />);
-      expect(screen.getByRole("heading", { level: 2 })).toBeInTheDocument();
+    it("asks for a count against the live list on a copy the captain opened with signal", () => {
+      render(
+        <OfflineRollCallSection
+          view={saved}
+          controls={{ ...controls(), t, locale, copyCaveat: "online" }}
+        />,
+      );
       expect(
-        screen.queryByText(t("shared.offlineManifest.single.copyCaveatOffline", { when })),
-      ).toBeNull();
-      expect(
-        screen.queryByText(t("shared.offlineManifest.single.copyCaveatUnanswered", { when })),
-      ).toBeNull();
+        screen.getByText(t("shared.offlineManifest.single.copyCaveatOnline", { when }), AS_WRITTEN),
+      ).toBeInTheDocument();
+      // Every saved copy may be short, so none carries the all-clear mark.
+      expect(screen.getByRole("heading", { level: 2 }).querySelector("svg")).toBeNull();
     });
 
     /** A green check and "everyone's aboard" over a list that may be short reads as all clear. */

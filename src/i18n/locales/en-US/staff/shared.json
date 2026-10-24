@@ -414,6 +414,7 @@
       "buddyReadOnlyHere": "Buddy teams are shown as saved. Whether anyone on a team is back aboard lives on the live roll call, and this copy doesn’t track it.",
       "copyCaveatUnanswered": "Saved {when}. Changes since then aren’t shown, so a diver added later has no row and one removed still has one. Count heads against the live list once DiveDay answers.",
       "copyCaveatOffline": "Saved {when}. Changes since then aren’t shown, so a diver added later has no row and one removed still has one. Count heads on the boat against this list.",
+      "copyCaveatOnline": "Saved {when}. Changes since then aren’t shown, so a diver added later has no row and one removed still has one. Count heads against the live list.",
       "crewAwaiting": "{count, plural, one {# crew member still to call} other {# crew members still to call}}",
       "readyBadge": "Ready when saved",
       "blockedBadge": "Blocked when saved",

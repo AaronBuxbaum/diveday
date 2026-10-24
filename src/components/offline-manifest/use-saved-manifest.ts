@@ -99,12 +99,14 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // **What the roll call says this copy may be missing** (issue #2980, domain
   // reviews 2026-10-24). Kept apart from the header's wording above: offline,
   // the header says "No signal", but the copy is just as stale, so the caveat
-  // stays, and only its instruction changes to the count on the boat.
+  // stays, and only its instruction changes to the count on the boat. Every
+  // saved copy carries one (re-review 2026-10-24): one opened with signal can
+  // be as short as any, and only this page is ever a saved copy.
   const copyCaveat: CopyCaveat = !deviceOnline
     ? "offline"
     : servedWithoutAnswer
       ? "unanswered"
-      : null;
+      : "online";
   // Freshness (current/aging/stale) is computed inline at render time from
   // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
   // this component as the wall clock crosses the 15-minute or 4-hour

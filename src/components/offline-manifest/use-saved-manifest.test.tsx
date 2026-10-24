@@ -336,12 +336,13 @@ describe("useSavedManifest and the copy's roll-call caveat", () => {
     expect(result.current.copyCaveat).toBe("offline");
   });
 
-  it("says nothing on a copy the captain opened with signal", async () => {
+  /** Re-review 2026-10-24: any saved copy may be short, a copy opened with signal too. */
+  it("names a copy the captain opened with signal as well", async () => {
     setOnline(true);
     load.mockResolvedValue(withEvents("trip-1", {}));
     const { result } = at("trip=trip-1");
     await waitFor(() => expect(result.current.storeRead).toBe(true));
-    expect(result.current.copyCaveat).toBeNull();
+    expect(result.current.copyCaveat).toBe("online");
   });
 });
 
