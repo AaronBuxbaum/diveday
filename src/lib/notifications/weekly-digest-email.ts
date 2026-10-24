@@ -215,23 +215,40 @@ function blockFor(
         linkLabel: t("notifications.weeklyDigest.safety.link"),
       };
     }
-    // Every emergency read of a medical alert last week (issue #2990): who,
-    // whose, when, and the departure, in the shop's zone. Never the words.
-    case "emergency_reads":
+    // Every emergency read of a medical alert last week (issue #2990): how
+    // many, who opened how many, then who, whose, when and the departure, in
+    // the shop's zone, for the first of them, and how many more. A blank name
+    // is said as "a diver", "a staffer" or "a departure". Never the words.
+    case "emergency_reads": {
+      const key = "notifications.weeklyDigest.emergencyReads";
+      const reader = (name: string | null) => name ?? t(`${key}.unnamedReader`);
+      const more = section.total - section.reads.length;
       return {
-        heading: t("notifications.weeklyDigest.emergencyReads.heading"),
-        lines: section.reads.map((read) =>
-          t("notifications.weeklyDigest.emergencyReads.line", {
-            reader: read.reader,
-            diver: read.diver,
-            when: formatWeekdayTime(read.at, input.locale, input.timezone),
-            departure: read.departureTitle,
-            departureWhen: formatWeekdayTime(read.departureStartsAt, input.locale, input.timezone),
-          }),
-        ),
+        heading: t(`${key}.heading`),
+        lines: [
+          t(`${key}.total`, { count: section.total }),
+          ...section.byReader.map((entry) =>
+            t(`${key}.byReader`, { count: entry.count, reader: reader(entry.reader) }),
+          ),
+          ...section.reads.map((read) =>
+            t(`${key}.line`, {
+              reader: reader(read.reader),
+              diver: read.diver ?? t(`${key}.unnamedDiver`),
+              when: formatWeekdayTime(read.at, input.locale, input.timezone),
+              departure: read.departureTitle ?? t(`${key}.unnamedDeparture`),
+              departureWhen: formatWeekdayTime(
+                read.departureStartsAt,
+                input.locale,
+                input.timezone,
+              ),
+            }),
+          ),
+          ...(more > 0 ? [t(`${key}.more`, { count: more })] : []),
+        ],
         url: section.url,
-        linkLabel: t("notifications.weeklyDigest.emergencyReads.link"),
+        linkLabel: t(`${key}.link`),
       };
+    }
     case "gear_service":
       return {
         heading: t("notifications.weeklyDigest.gearService.heading"),

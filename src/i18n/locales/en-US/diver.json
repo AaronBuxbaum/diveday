@@ -5583,6 +5583,12 @@
       "emergencyReads": {
         "heading": "Medical alerts opened in an emergency",
         "line": "{when}: {reader} opened {diver}’s medical alert on {departure}, leaving {departureWhen}.",
+        "total": "{count, plural, one {Opened once last week.} other {Opened # times last week.}}",
+        "byReader": "{count, plural, one {Once by {reader}.} other {# times by {reader}.}}",
+        "more": "{count, plural, one {And # more, on the diver’s record.} other {And # more, each on the diver’s record.}}",
+        "unnamedDiver": "a diver",
+        "unnamedReader": "a staffer",
+        "unnamedDeparture": "a departure",
         "link": "Open Divers"
       },
       "gearService": {

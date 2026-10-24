@@ -171,20 +171,54 @@ export type WeeklyDigestFacts = {
    */
   safety: WeeklyDigestSafety;
   /**
-   * Last week's emergency reads of a diver's medical alert (issue #2990), in
-   * the order they happened: who opened whose alert, on which departure and
-   * when. Reports grade only (the owner and managers, who read the diver's
-   * trail anyway); empty for staff, so the section is never built for crew.
+   * Last week's emergency reads of a diver's medical alert (issue #2990):
+   * how many, how many each reader opened, and the first of them in the order
+   * they happened. Reports grade only (the owner and managers, who read the
+   * diver's trail anyway); none for staff, so the section is never built for
+   * crew.
    */
-  emergencyReads: readonly WeeklyDigestEmergencyRead[];
+  emergencyReads: WeeklyDigestEmergencyReads;
 };
 
-/** One `medical_alert_emergency_read` line, as the Monday email names it (issue #2990). */
+/**
+ * **Every emergency read last week, however many** (domain review 1, S1;
+ * security L2). The email is the deterrent that keeps the emergency read from
+ * becoming the normal way to read alerts, so a busy week never hides volume:
+ * `total` counts them all, `byReader` says who opened how many (the habit
+ * shows even when the rows are cut), and `listed` holds the first
+ * {@link EMERGENCY_READS_LISTED}, oldest first; the email says how many more.
+ */
+export type WeeklyDigestEmergencyReads = {
+  total: number;
+  /** Most reads first. */
+  byReader: readonly { reader: string | null; count: number }[];
+  listed: readonly WeeklyDigestEmergencyRead[];
+};
+
+/** At most this many emergency reads are listed line by line; the rest are counted. */
+export const EMERGENCY_READS_LISTED = 50;
+
+/** At most this many readers get their own count: far more staff than a shop has. */
+export const EMERGENCY_READERS_LISTED = 100;
+
+/** No emergency read last week: the staff grade's, and a quiet week's. */
+export const NO_EMERGENCY_READS: WeeklyDigestEmergencyReads = {
+  total: 0,
+  byReader: [],
+  listed: [],
+};
+
+/**
+ * One `medical_alert_emergency_read` line, as the Monday email names it
+ * (issue #2990). A name the trail holds blank is `null`, and the email says
+ * "a diver", "a staffer" or "a departure" instead: one malformed line never
+ * stops the owner's email (domain review 1, N4; security L3).
+ */
 export type WeeklyDigestEmergencyRead = {
-  diver: string;
-  departureTitle: string;
+  diver: string | null;
+  departureTitle: string | null;
   departureStartsAt: Date;
-  reader: string;
+  reader: string | null;
   at: Date;
 };
 
@@ -314,7 +348,12 @@ export type WeeklyDigestSection =
   | { kind: "date_requests"; waiting: number }
   | { kind: "overdue"; count: number }
   | ({ kind: "safety" } & WeeklyDigestSafety)
-  | { kind: "emergency_reads"; reads: WeeklyDigestEmergencyRead[] }
+  | {
+      kind: "emergency_reads";
+      total: number;
+      byReader: { reader: string | null; count: number }[];
+      reads: WeeklyDigestEmergencyRead[];
+    }
   | { kind: "gear_service"; due: number };
 
 export type WeeklyDigestSectionKind = WeeklyDigestSection["kind"];
@@ -341,8 +380,14 @@ export function weeklyDigestSections(facts: WeeklyDigestFacts): WeeklyDigestSect
     sections.push({ kind: "safety", ...safety });
   }
   // Every emergency read of a medical alert last week, beside the safety line.
-  if (facts.emergencyReads.length > 0) {
-    sections.push({ kind: "emergency_reads", reads: [...facts.emergencyReads] });
+  const emergency = facts.emergencyReads;
+  if (emergency.total > 0) {
+    sections.push({
+      kind: "emergency_reads",
+      total: emergency.total,
+      byReader: [...emergency.byReader],
+      reads: [...emergency.listed],
+    });
   }
   if (reviews.received > 0 || reviews.awaitingModeration > 0) {
     sections.push({ kind: "reviews", ...reviews });

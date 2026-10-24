@@ -2,7 +2,9 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
+import { notificationSchema } from "@/lib/notifications/kinds";
 import { messageFor } from "@/lib/notifications/render";
+import { NO_EMERGENCY_READS } from "@/lib/weekly-digest";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { readOwed } from "./owed";
 import {
@@ -688,11 +690,15 @@ describe("the emergency reads in the Monday email", () => {
       departureStartsAt: departure.startsAt,
       reader: "Sal Captain",
     };
-    expect(facts.grades.reports.emergencyReads).toEqual([
-      { ...expected, at: lastWeek },
-      { ...expected, at: minuteLater },
-    ]);
-    expect(facts.grades.staff.emergencyReads).toEqual([]);
+    expect(facts.grades.reports.emergencyReads).toEqual({
+      total: 2,
+      byReader: [{ reader: "Sal Captain", count: 2 }],
+      listed: [
+        { ...expected, at: lastWeek },
+        { ...expected, at: minuteLater },
+      ],
+    });
+    expect(facts.grades.staff.emergencyReads).toEqual(NO_EMERGENCY_READS);
 
     const sectionsFor = async (personId: string) => {
       const preview = await previewWeeklyDigest(db, {
@@ -716,10 +722,96 @@ describe("the emergency reads in the Monday email", () => {
     );
   });
 
+  it("counts every read past the 50 it lists, and says who opened how many", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const [departure] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    const [diver] = await db
+      .select({ id: people.id, name: people.fullName })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), ne(people.id, owner.personId)))
+      .limit(1);
+    if (!departure || !diver) throw new Error("expected a seeded departure and diver");
+    const start = new Date(monday.getTime() - 5 * DAY_MS);
+    // One staffer opens 60 alerts on a busy Saturday; another opens one.
+    for (let read = 0; read < 60; read++) {
+      await emergencyRead(db, {
+        shopId: shop.id,
+        actor: { id: captain.personId, name: "Sal Captain" },
+        diver,
+        departureId: departure.id,
+        at: new Date(start.getTime() + read * 60_000),
+      });
+    }
+    await emergencyRead(db, {
+      shopId: shop.id,
+      actor: { id: owner.personId, name: "Dana Owner" },
+      diver,
+      departureId: departure.id,
+      at: new Date(start.getTime() + 3 * DAY_MS),
+    });
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    const reads = facts.grades.reports.emergencyReads;
+    expect(reads.total).toBe(61);
+    expect(reads.listed).toHaveLength(50);
+    expect(reads.byReader).toEqual([
+      { reader: "Sal Captain", count: 60 },
+      { reader: "Dana Owner", count: 1 },
+    ]);
+    const preview = await previewWeeklyDigest(db, {
+      shop,
+      personId: owner.personId,
+      origin: ORIGIN,
+      now: monday,
+    });
+    if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+    expect(preview.sections.find((section) => section.kind === "emergency_reads")).toMatchObject({
+      total: 61,
+    });
+  });
+
+  it("keeps a line whose names are blank, and the email still validates", async () => {
+    const { db, shop, owner, monday } = await context();
+    const [departure] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    if (!departure) throw new Error("expected a seeded departure");
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      actorPersonId: owner.personId,
+      code: "medical_alert_emergency_read",
+      // No diver, a blank reader: a writer that forgot them.
+      params: { actor: "  ", departure: departure.id },
+      occurredAt: new Date(monday.getTime() - 2 * DAY_MS),
+    });
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    expect(facts.grades.reports.emergencyReads).toMatchObject({
+      total: 1,
+      byReader: [{ reader: null, count: 1 }],
+      listed: [{ diver: null, reader: null }],
+    });
+    const preview = await previewWeeklyDigest(db, {
+      shop,
+      personId: owner.personId,
+      origin: ORIGIN,
+      now: monday,
+    });
+    if (preview?.kind !== "weekly_digest") throw new Error("the email failed to build");
+    expect(preview.sections.map((section) => section.kind)).toContain("emergency_reads");
+    // The schema every send validates against takes it, and the text names a stand-in.
+    const { text } = messageFor(notificationSchema.parse(preview));
+    expect(text).toContain("a staffer opened a diver’s medical alert");
+  });
+
   it("names nothing in a week with no emergency read", async () => {
     const { db, shop, owner, monday } = await context();
     const facts = await readWeeklyDigestFacts(db, shop, monday);
-    expect(facts.grades.reports.emergencyReads).toEqual([]);
+    expect(facts.grades.reports.emergencyReads).toEqual(NO_EMERGENCY_READS);
     const preview = await previewWeeklyDigest(db, {
       shop,
       personId: owner.personId,

@@ -3,6 +3,7 @@ import {
   digestWeeks,
   isWeeklyDigestDue,
   mondayOnOrBefore,
+  NO_EMERGENCY_READS,
   NO_SAFETY,
   noMoney,
   overdueTodayActions,
@@ -40,7 +41,13 @@ const QUIET: WeeklyDigestFacts = {
   },
   gearServiceDue: 0,
   safety: NO_SAFETY,
-  emergencyReads: [],
+  emergencyReads: NO_EMERGENCY_READS,
+};
+
+const ONE_READ = {
+  total: 1,
+  byReader: [{ reader: "Sal Captain", count: 1 }],
+  listed: [EMERGENCY_READ],
 };
 
 describe("mondayOnOrBefore", () => {
@@ -284,7 +291,7 @@ describe("weeklyDigestSections", () => {
       },
       gearServiceDue: 2,
       safety: { openRollCalls: 1, uncrewed: 0, incidents: 0 },
-      emergencyReads: [EMERGENCY_READ],
+      emergencyReads: ONE_READ,
     });
     expect(sections.map((section) => section.kind)).toEqual([
       "last_week",
@@ -423,14 +430,27 @@ describe("weakestDeparture", () => {
  * owner's email lists each one, and a week with none says nothing.
  */
 describe("the emergency reads section", () => {
-  it("lists each read, in the order they happened", () => {
+  it("carries the total, the count per reader, and the reads listed, in the order they happened", () => {
     const later = { ...EMERGENCY_READ, diver: "Ben Ito", at: new Date("2026-07-16T09:00:00Z") };
-    expect(weeklyDigestSections({ ...QUIET, emergencyReads: [EMERGENCY_READ, later] })).toEqual([
-      { kind: "emergency_reads", reads: [EMERGENCY_READ, later] },
+    const reads = {
+      total: 61,
+      byReader: [
+        { reader: "Sal Captain", count: 60 },
+        { reader: "Kai Divemaster", count: 1 },
+      ],
+      listed: [EMERGENCY_READ, later],
+    };
+    expect(weeklyDigestSections({ ...QUIET, emergencyReads: reads })).toEqual([
+      {
+        kind: "emergency_reads",
+        total: 61,
+        byReader: reads.byReader,
+        reads: [EMERGENCY_READ, later],
+      },
     ]);
   });
 
   it("names nothing when there were none", () => {
-    expect(weeklyDigestSections({ ...QUIET, emergencyReads: [] })).toEqual([]);
+    expect(weeklyDigestSections({ ...QUIET, emergencyReads: NO_EMERGENCY_READS })).toEqual([]);
   });
 });

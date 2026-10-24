@@ -157,6 +157,11 @@ describe("the weekly_digest notification", () => {
   it("lists last week's emergency reads of a medical alert: who, whose, which departure, when (issue #2990)", () => {
     const section = {
       kind: "emergency_reads",
+      total: 2,
+      byReader: [
+        { reader: "Kai Divemaster", count: 1 },
+        { reader: "Sal Captain", count: 1 },
+      ],
       reads: [
         {
           diver: "Ana <Ruiz>",
@@ -180,12 +185,72 @@ describe("the weekly_digest notification", () => {
     // Times keep their parts together with no-break spaces (`keepUnitsWhole`).
     const text = sent.replace(/[\u00a0\u202f]/g, " ");
     expect(text).toContain(
-      "Medical alerts opened in an emergency\nWednesday 8:40 AM: Sal Captain opened Ana <Ruiz>’s medical alert on Dawn Two-Tank, leaving Wednesday 7:00 AM.\nFriday 7:05 PM: Kai Divemaster opened Ben Ito’s medical alert on Night Dive, leaving Friday 7:00 PM.",
+      "Medical alerts opened in an emergency\nOpened 2 times last week.\nOnce by Kai Divemaster.\nOnce by Sal Captain.\nWednesday 8:40 AM: Sal Captain opened Ana <Ruiz>’s medical alert on Dawn Two-Tank, leaving Wednesday 7:00 AM.\nFriday 7:05 PM: Kai Divemaster opened Ben Ito’s medical alert on Night Dive, leaving Friday 7:00 PM.",
     );
     expect(text).toContain("Open Divers: https://diveday.example/shop/blue-mantis/divers");
     // The diver's name is the shop's data: escaped in the html body.
     expect(html).toContain("Ana &lt;Ruiz&gt;");
     expect(html).not.toContain("Ana <Ruiz>");
+  });
+
+  it("says how many more reads there were than it lists, with a count per reader (issue #2990)", () => {
+    const read = {
+      diver: "Ana Ruiz",
+      departureTitle: "Dawn Two-Tank",
+      departureStartsAt: new Date("2026-09-30T11:00:00.000Z"),
+      reader: "Sal Captain",
+      at: new Date("2026-09-30T12:40:00.000Z"),
+    };
+    const parsed = notificationSchema.parse({
+      ...BASE,
+      sections: [
+        {
+          kind: "emergency_reads",
+          total: 61,
+          byReader: [
+            { reader: "Sal Captain", count: 60 },
+            { reader: "Dana Reyes", count: 1 },
+          ],
+          reads: Array.from({ length: 50 }, () => read),
+          url: "https://diveday.example/shop/blue-mantis/divers",
+        },
+      ],
+    });
+    const text = messageFor(parsed).text.replace(/[\u00a0\u202f]/g, " ");
+    expect(text).toContain(
+      "Opened 61 times last week.\n60 times by Sal Captain.\nOnce by Dana Reyes.",
+    );
+    expect(text.match(/opened Ana Ruiz’s medical alert/g)).toHaveLength(50);
+    expect(text).toContain("And 11 more, each on the diver’s record.");
+  });
+
+  it("names a stand-in for a blank diver, reader or departure, and still sends (issue #2990)", () => {
+    const parsed = notificationSchema.parse({
+      ...BASE,
+      sections: [
+        {
+          kind: "emergency_reads",
+          total: 1,
+          byReader: [{ reader: null, count: 1 }],
+          reads: [
+            {
+              diver: null,
+              departureTitle: null,
+              departureStartsAt: new Date("2026-09-30T11:00:00.000Z"),
+              reader: null,
+              at: new Date("2026-09-30T12:40:00.000Z"),
+            },
+          ],
+          url: "https://diveday.example/shop/blue-mantis/divers",
+        },
+      ],
+    });
+    const text = messageFor(parsed).text.replace(/[\u00a0\u202f]/g, " ");
+    expect(text).toContain("Once by a staffer.");
+    expect(text).toContain(
+      "Wednesday 8:40 AM: a staffer opened a diver’s medical alert on a departure, leaving Wednesday 7:00 AM.",
+    );
+    expect(text).not.toContain("more, each");
   });
 
   it("names no emergency read in a week that had none", () => {
@@ -194,7 +259,15 @@ describe("the weekly_digest notification", () => {
     expect(() =>
       notificationSchema.parse({
         ...BASE,
-        sections: [{ kind: "emergency_reads", reads: [], url: "https://diveday.example/x" }],
+        sections: [
+          {
+            kind: "emergency_reads",
+            total: 0,
+            byReader: [],
+            reads: [],
+            url: "https://diveday.example/x",
+          },
+        ],
       }),
     ).toThrow();
   });

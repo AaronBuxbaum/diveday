@@ -5583,6 +5583,12 @@
       "emergencyReads": {
         "heading": "Alertas médicas abiertas en una emergencia",
         "line": "{when}: {reader} abrió la alerta médica de {diver} en {departure} (salida: {departureWhen}).",
+        "total": "{count, plural, one {Se abrió una vez la semana pasada.} other {Se abrieron # veces la semana pasada.}}",
+        "byReader": "{count, plural, one {Una vez por {reader}.} other {# veces por {reader}.}}",
+        "more": "{count, plural, one {Y # más, en la ficha del buceador.} other {Y # más, cada una en la ficha del buceador.}}",
+        "unnamedDiver": "un buceador",
+        "unnamedReader": "un miembro del personal",
+        "unnamedDeparture": "una salida",
         "link": "Abrir Buceadores"
       },
       "gearService": {

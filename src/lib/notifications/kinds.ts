@@ -27,6 +27,7 @@ import {
   SETUP_TEXT_MAX,
 } from "@/lib/setup-requests";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { EMERGENCY_READERS_LISTED, EMERGENCY_READS_LISTED } from "@/lib/weekly-digest";
 
 /**
  * Every kind of notification DiveDay sends, as a discriminated union of zod
@@ -1188,6 +1189,9 @@ const staffReplySchema = z.object({
  * `List-Unsubscribe` pair, because a mail client's own "stop these" button is
  * the cheapest way out of any recurring message.
  */
+/** A person's or departure's name as the Monday email lists it. */
+const digestName = z.string().trim().min(1).max(200);
+
 const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("last_week"),
@@ -1274,18 +1278,35 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
      * Names, never the alert's words.
      */
     kind: z.literal("emergency_reads"),
+    /** Every read last week, however many are listed (domain review 1, S1). */
+    total: z.number().int().min(1),
+    /** Who opened how many, most first; a blank name is `null`, said as "a staffer". */
+    byReader: z
+      .array(
+        z.object({
+          reader: digestName.nullable(),
+          count: z.number().int().min(1),
+        }),
+      )
+      .min(1)
+      .max(EMERGENCY_READERS_LISTED),
+    /**
+     * The first of them, oldest first; the email says how many more. A blank
+     * name is `null` and said as "a diver", "a staffer" or "a departure", so
+     * one malformed trail line never fails the owner's email (security L3).
+     */
     reads: z
       .array(
         z.object({
-          diver: z.string().trim().min(1).max(200),
-          departureTitle: z.string().trim().min(1).max(200),
+          diver: digestName.nullable(),
+          departureTitle: digestName.nullable(),
           departureStartsAt: z.date(),
-          reader: z.string().trim().min(1).max(200),
+          reader: digestName.nullable(),
           at: z.date(),
         }),
       )
       .min(1)
-      .max(50),
+      .max(EMERGENCY_READS_LISTED),
     url: z.url().max(2_000),
   }),
 ]);
