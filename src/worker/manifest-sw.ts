@@ -83,6 +83,14 @@ const COUNTER_PATTERN = /^\/shop\/[^/]+\/trips\/([0-9a-f]{8}-[0-9a-f-]{27})\/?$/
 const NAVIGATION_TIMEOUT_MS = 4_000;
 
 /**
+ * How long a push waits on the roll-call flush and the board refresh before
+ * it shows the captain's notification anyway (issue #2981). The same four
+ * seconds as a navigation: a push event a browser lets run for well under a
+ * minute, and an alert that comes late is worth more than one that never does.
+ */
+const PUSH_REFRESH_TIMEOUT_MS = 4_000;
+
+/**
  * Network-first with a deadline: the live page whenever the network answers,
  * the device's saved copy when it fails, and the saved copy too once
  * `NAVIGATION_TIMEOUT_MS` passes without an answer. `saved` is told which of
@@ -476,36 +484,59 @@ self.addEventListener("push", (event) => {
       // the snapshot is replaced — the events are the record of who came back
       // aboard, and getting them off one phone matters more than the roster
       // being current on it.
-      await flushPendingRollCall().catch(() => undefined);
-
+      //
       // Then the inbound half: write the device copy. This is what makes a
       // pocketed phone actually carry the change rather than merely learn about
       // it — before this, a locked phone got a notification and a snapshot that
       // stayed exactly as stale as it was.
-      await refreshSavedManifests();
+      //
+      // **Both halves race a deadline, the notification never waits past it**
+      // (issue #2981). On a dead link a fetch neither answers nor fails, and a
+      // notification queued behind it never showed: the captain got no alert
+      // at all. The work is not dropped at the deadline; it runs on behind
+      // the notification, and this event waits for it below.
+      const work = flushPendingRollCall()
+        .catch(() => undefined)
+        .then(refreshSavedManifests);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        work,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, PUSH_REFRESH_TIMEOUT_MS);
+        }),
+      ]);
+      clearTimeout(timer);
 
-      if (!payload.title) return;
-      await self.registration.showNotification(payload.title, {
-        body: payload.body,
-        // Collapses on the device as well as on the server: a second push for
-        // the same trip replaces the first rather than stacking.
-        tag: payload.tripId ? `manifest-${payload.tripId}` : "manifest",
-        // Replacing the sitting notification must still alert. With
-        // `renotify: false` a stable tag silently swaps identical text, so only
-        // the day's *first* change would ever buzz and every later one would be
-        // mute — the server's 60-second coalescing window is already the noise
-        // bound, and this would have been a second, undeclared throttle that
-        // swallowed everything after it.
-        renotify: true,
-        data: { url: payload.url },
-        // `renotify` ships in Chrome and is what makes a replaced notification
-        // still alert, but lib.dom does not declare it — so the object is cast
-        // rather than the property dropped, which would silence every change
-        // after the day's first.
-      } as NotificationOptions & { renotify: boolean });
+      if (payload.title) await showManifestNotification(payload.title, payload);
+      await work;
     })(),
   );
 });
+
+/** The captain's alert for a changed manifest; one per trip on the device. */
+function showManifestNotification(
+  title: string,
+  payload: { tripId?: string; body?: string; url?: string },
+): Promise<void> {
+  return self.registration.showNotification(title, {
+    body: payload.body,
+    // Collapses on the device as well as on the server: a second push for
+    // the same trip replaces the first rather than stacking.
+    tag: payload.tripId ? `manifest-${payload.tripId}` : "manifest",
+    // Replacing the sitting notification must still alert. With
+    // `renotify: false` a stable tag silently swaps identical text, so only
+    // the day's *first* change would ever buzz and every later one would be
+    // mute — the server's 60-second coalescing window is already the noise
+    // bound, and this would have been a second, undeclared throttle that
+    // swallowed everything after it.
+    renotify: true,
+    data: { url: payload.url },
+    // `renotify` ships in Chrome and is what makes a replaced notification
+    // still alert, but lib.dom does not declare it — so the object is cast
+    // rather than the property dropped, which would silence every change
+    // after the day's first.
+  } as NotificationOptions & { renotify: boolean });
+}
 
 /**
  * Send the roll call that was recorded at sea, once signal comes back — with

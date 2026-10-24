@@ -339,6 +339,40 @@ describe("refreshSavedManifests (the push event)", () => {
     expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
 
+  /**
+   * Issue #2981: on a dead link the board fetch neither answers nor fails,
+   * and a notification waiting on it never shows: the captain gets no alert.
+   * The refresh gets a deadline, and still runs on behind the notification.
+   */
+  it("shows the notification on time when the board fetch never answers", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const done = fire("push", {
+        data: {
+          json: () => ({ kind: "manifest-changed", tripId: "trip-1", title: "Manifest changed" }),
+        },
+      });
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(showNotification).toHaveBeenCalledWith(
+        "Manifest changed",
+        expect.objectContaining({ tag: "manifest-trip-1" }),
+      );
+      // The refresh is kept, not dropped: a late answer is still written.
+      answer?.(upcomingResponse("blue-mantis", [tripPayload("trip-1", "blue-mantis")]));
+      await done;
+      expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("writes nothing when the purge itself fails", async () => {
     // Fail closed, the same order the page-side auto-save keeps: writing the
     // board anyway would leave both shops' rosters readable side by side.
