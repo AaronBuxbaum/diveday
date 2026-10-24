@@ -594,11 +594,10 @@ test.describe("staff", () => {
     page,
   }) => {
     // Two full booking rounds (6 divers, then 2 more) plus the session setup
-    // and a third ratio-refused attempt — same aggregate-cost reasoning as
-    // the visual specs' test.setTimeout: many real, sequential steps under
-    // 2-worker load add up past the default 15s budget even though no
-    // individual step is stuck.
-    test.setTimeout(30_000);
+    // and a third ratio-refused attempt: many real, sequential steps, none
+    // stuck. Measured 2026-10-24: 24.0s locally at one worker (4.2s of it the
+    // per-test reset, every booking round about 3s), 30.6s of 30 on CI.
+    test.setTimeout(45_000);
     const sessionTitle = `Ratio test session ${e2eNow().getTime()}`;
     await createTrip(page, {
       course: "Open Water Diver",
