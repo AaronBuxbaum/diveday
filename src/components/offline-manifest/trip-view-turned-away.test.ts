@@ -28,7 +28,7 @@ function copySavedMinutesAgo(minutes: number) {
   return copy;
 }
 
-describe("a turned-away row on the offline copy (#2907)", () => {
+describe("a turned-away row on the offline copy (issue 2907)", () => {
   it("is off the boat on a current copy", () => {
     const trip = offlineTripView(copySavedMinutesAgo(5), "departure");
     expect(trip?.freshness).toBe("current");
