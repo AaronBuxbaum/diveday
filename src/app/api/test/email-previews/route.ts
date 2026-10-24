@@ -16,6 +16,13 @@ const SAMPLE_MEETING_POINT = {
   mapQuery: `${pier}, 1 Dock St, Key Largo, FL 33037`,
 };
 
+/**
+ * The shop's published phone and confirmed address, as a shop would have them
+ * on file: what every shop email's sign-off reads (visual review 2026-10-24,
+ * B31). Sample data, not copy.
+ */
+const SAMPLE_SENDER = { contactPhone: "+1 305 555 0142", contactEmail: "hello@bluemantis.example" };
+
 const SAMPLES: Notification[] = [
   {
     kind: "booking_confirmation",
@@ -25,6 +32,7 @@ const SAMPLES: Notification[] = [
     locale: DEFAULT_DIVER_LOCALE,
     diverName: "Sam Diver",
     shopName: "Blue Mantis Scuba",
+    sender: SAMPLE_SENDER,
     tripTitle: "Two-Tank Coral Reef Departure",
     startsAt: new Date("2026-09-01T13:00:00Z"),
     endsAt: new Date("2026-09-01T17:00:00Z"),
@@ -43,6 +51,7 @@ const SAMPLES: Notification[] = [
     to: "diver@example.com",
     locale: DEFAULT_DIVER_LOCALE,
     shopName: "Blue Mantis Scuba",
+    sender: SAMPLE_SENDER,
     tripTitle: "Two-Tank Coral Reef Departure",
     startsAt: new Date("2026-09-01T13:00:00Z"),
     timezone: "America/New_York",
@@ -60,6 +69,7 @@ const SAMPLES: Notification[] = [
     locale: DEFAULT_DIVER_LOCALE,
     diverName: "Sam Diver",
     shopName: "Blue Mantis Scuba",
+    sender: SAMPLE_SENDER,
     tripTitle: "Two-Tank Coral Reef Departure",
     previousStartsAt: new Date("2026-08-31T13:00:00Z"),
     startsAt: new Date("2026-09-01T13:00:00Z"),
@@ -77,6 +87,7 @@ const SAMPLES: Notification[] = [
     to: "diver@example.com",
     locale: DEFAULT_DIVER_LOCALE,
     shopName: "Blue Mantis Scuba",
+    sender: SAMPLE_SENDER,
     tripTitle: "Two-Tank Coral Reef Departure",
     startsAt: new Date("2026-09-01T13:00:00Z"),
     timezone: "America/New_York",
@@ -99,6 +110,7 @@ const SAMPLES: Notification[] = [
     locale: DEFAULT_DIVER_LOCALE,
     diverName: "Sam Diver",
     shopName: "Blue Mantis Scuba",
+    sender: SAMPLE_SENDER,
     tripTitle: "Two-Tank Coral Reef Departure",
     startsAt: new Date("2026-09-01T13:00:00Z"),
     timezone: "America/New_York",
@@ -114,6 +126,7 @@ const SAMPLES: Notification[] = [
     locale: DEFAULT_DIVER_LOCALE,
     diverName: "Sam Diver",
     shopName: "Blue Mantis Scuba",
+    sender: SAMPLE_SENDER,
     tripTitle: "Two-Tank Coral Reef Departure",
     completionUrl: "https://diveday.example/waivers/sign/sample-token",
     expiresAt: new Date("2026-09-01T12:00:00Z"),
