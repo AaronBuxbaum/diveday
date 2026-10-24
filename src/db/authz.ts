@@ -36,8 +36,8 @@ import {
   canViewShopActivity,
   type Role,
 } from "@/lib/authz";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { type EmergencyReadWindow, emergencyReadWindow } from "@/lib/medical-alert";
 import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today";
 import type { DbExecutor } from "./client";
 import { people, personRoles, shops, tripAssignments, trips, userAccounts } from "./schema";
@@ -337,14 +337,40 @@ export const canPersonPrintMedicalAlerts = (db: DbExecutor, shopId: string, pers
   canPerson(db, shopId, personId, canPrintMedicalAlerts);
 
 /**
- * The live check behind **"Emergency: show the alert"** on one departure
- * (`canEmergencyReadMedicalAlert`, issue #2990): an active staffer of this
- * shop, live roles, on a live departure of this shop whose start falls on
- * today's date in the shop's zone (`nowDate()`, never the device's clock).
- * The day before and the day after, the button is gone and the action
- * refuses. The caller still confirms the diver is booked on `tripId`, and
- * offers it only where `canPersonReadMedicalAlertOnTrip` refused.
+ * **Where one staffer stands for "Emergency: show the alert" on one
+ * departure** (`canEmergencyReadMedicalAlert`, issue #2990): `refused` unless
+ * they are an active staffer of this shop (live roles) and the departure is
+ * a live one of this shop; otherwise the departure's `emergencyReadWindow`
+ * in the shop's zone, from the clock (`nowDate()`, never the device's).
+ *
+ * `open` is the only answer that reads the words. The manifest offers the
+ * button while it is `not_yet` too, so a tab opened the night before still
+ * has it at sea, and the server answers again on the confirm. The caller
+ * still confirms the diver is booked on `tripId`, and offers it only where
+ * `canPersonReadMedicalAlertOnTrip` refused.
  */
+export async function emergencyMedicalAlertStanding(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  tripId: string,
+  now: Date = nowDate(),
+): Promise<EmergencyReadWindow | "refused"> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  if (roles === null) return "refused";
+  const [departure] = await db
+    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt, timezone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!departure) return "refused";
+  // Someone the rule would never admit, even on the day, hears nothing about the window.
+  if (!canEmergencyReadMedicalAlert(roles, { window: "open" })) return "refused";
+  return emergencyReadWindow(departure, departure.timezone, now);
+}
+
+/** Whether the emergency read is open to this staffer on this departure now. */
 export async function canPersonEmergencyReadMedicalAlertOnTrip(
   db: DbExecutor,
   shopId: string,
@@ -352,19 +378,7 @@ export async function canPersonEmergencyReadMedicalAlertOnTrip(
   tripId: string,
   now: Date = nowDate(),
 ): Promise<boolean> {
-  const roles = await loadActiveStaffRoles(db, shopId, personId);
-  if (roles === null) return false;
-  const [departure] = await db
-    .select({ startsAt: trips.startsAt, timezone: shops.timezone })
-    .from(trips)
-    .innerJoin(shops, eq(shops.id, trips.shopId))
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-    .limit(1);
-  if (!departure) return false;
-  const departureIsToday =
-    calendarDateInTimezone(departure.startsAt, departure.timezone) ===
-    calendarDateInTimezone(now, departure.timezone);
-  return canEmergencyReadMedicalAlert(roles, { departureIsToday });
+  return (await emergencyMedicalAlertStanding(db, shopId, personId, tripId, now)) === "open";
 }
 
 /** The live check behind "Send a new waiver" on a refused seat (`retireMedicalRefusal`). */

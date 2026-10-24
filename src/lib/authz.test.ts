@@ -175,19 +175,19 @@ describe("canPrintMedicalAlerts (owner and manager, issue #2990)", () => {
   });
 });
 
-describe("canEmergencyReadMedicalAlert (any staffer, on the day, issue #2990)", () => {
-  const today = { departureIsToday: true };
-  const notToday = { departureIsToday: false };
+describe("canEmergencyReadMedicalAlert (any staffer, on the days of the trip, issue #2990)", () => {
+  const today = { window: "open" } as const;
 
-  it("admits every staff role on the day of the departure", () => {
+  it("admits every staff role while the trip's days are open", () => {
     for (const role of STAFF_ROLES) {
       expect(canEmergencyReadMedicalAlert([role], today)).toBe(true);
     }
   });
 
-  it("refuses every staff role on any other day", () => {
+  it("refuses every staff role before the trip's first day and after it is over", () => {
     for (const role of STAFF_ROLES) {
-      expect(canEmergencyReadMedicalAlert([role], notToday)).toBe(false);
+      expect(canEmergencyReadMedicalAlert([role], { window: "not_yet" })).toBe(false);
+      expect(canEmergencyReadMedicalAlert([role], { window: "closed" })).toBe(false);
     }
   });
 
