@@ -24,6 +24,9 @@ import { emailButton, type NotificationEmail } from "./email";
  * - `week_out`: the 7-day nudge, `trip_reminder_7d`.
  * - `tonight`: the night-before message, `trip_reminder_24h`.
  * - `home`: the after-dive recap, `trip_recap`.
+ * - `fly_safe_correction`: the one line correcting a fly-safe wait the
+ *   night-before email told a diver, once the departure is marked as
+ *   decompression diving (issue #2927), `fly_safe_correction`.
  *
  * One `notification_kind` value per state is what keeps the once-per-booking
  * dedup rows (`src/lib/reminders.ts`, `src/db/recap.ts`) exact, so a state is
@@ -59,6 +62,9 @@ export type DiverStateEmailInput = {
       flySafeHours?: number;
     }
   | {
+      state: "fly_safe_correction";
+    }
+  | {
       state: "home";
       /** The diver's recap page (the thread's after-state), the one link. */
       recapUrl: string;
@@ -72,6 +78,18 @@ export type DiverStateEmailInput = {
 export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const shop = escapeHtml(input.shopName);
+
+  if (input.state === "fly_safe_correction") {
+    // One sentence, no link: the figure in the diver's inbox no longer
+    // applies, and only the crew can give the right one (DAN gives no
+    // preflight figure for a dive that took stops, H-84).
+    const sentence = t("notifications.flySafeCorrection.body", { tripTitle: input.tripTitle });
+    return {
+      subject: t("notifications.flySafeCorrection.subject", { tripTitle: input.tripTitle }),
+      text: `${sentence}\n\n${input.shopName}\n`,
+      html: `<p>${escapeHtml(sentence)}</p><p>${shop}</p>`,
+    };
+  }
 
   if (input.state === "home") {
     const date = formatShortDate(input.startsAt, input.locale, input.timezone);

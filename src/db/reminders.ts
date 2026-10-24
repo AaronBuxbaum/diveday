@@ -42,6 +42,7 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
+import { recordFlySafeTold } from "./fly-safe-correction";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import {
   notificationProviderForDb,
@@ -777,6 +778,19 @@ export async function sendDueReminders(
         kind: work.kind,
         delivery,
       });
+      // The seat now holds a fly-safe figure: remembered, so marking the
+      // departure as decompression diving later can correct it (#2927).
+      if (
+        delivery.status === "sent" &&
+        work.notification.kind === "trip_reminder_24h" &&
+        work.notification.flySafeHours !== undefined
+      ) {
+        await recordFlySafeTold(db, {
+          shopId: work.shopId,
+          bookingId: work.bookingId,
+          hours: work.notification.flySafeHours,
+        });
+      }
       links.settle(summary, work.bookingId, delivery);
     }
 

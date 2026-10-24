@@ -114,7 +114,12 @@
   late boat would make a time wrong (H-150): "Plan to fly no earlier than 24 hours after your last
   dive, and longer if you make decompression stops", only when this is the diver's last seat with
   the shop (any later seat, however far ahead, silences it) and silent wherever the planned form
-  is (`readReminderFlySafeHours`, `src/db/fly-safe-plan.ts`). Both before-the-dive sentences end
+  is (`readReminderFlySafeHours`, `src/db/fly-safe-plan.ts`). A seat that email told records the
+  hours (`bookings.fly_safe_hours_told`); when staff then tick **Decompression diving** on the
+  departure, the Details form says how many divers hold a figure, and the save sends each one
+  **fly-safe correction**, once and up to 48 hours after the boat is due back: the figure no
+  longer applies, ask the crew (`fly_safe_correction`, `src/db/fly-safe-correction.ts`, issue
+  #2927). Both before-the-dive sentences end
   on the decompression clause, because they are read before anyone knows whether the dive will
   need stops, and DAN gives no figure for one that does. The
   sentence states its reason on the two routes a diver cannot check for themselves — the earlier

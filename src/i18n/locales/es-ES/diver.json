@@ -5490,6 +5490,10 @@
       "pickUp": "Continúa justo donde lo dejaste",
       "finishPaying": "Terminar de pagar"
     },
+    "flySafeCorrection": {
+      "subject": "Cambio en cuándo puedes volar: {tripTitle}",
+      "body": "La salida {tripTitle} ahora incluye inmersiones con descompresión, así que el tiempo para volar de nuestro recordatorio ya no aplica. Pregúntale a la tripulación cuánto esperar antes de volar."
+    },
     "tripReminder": {
       "weekSubject": "Sales esta semana: {tripTitle}",
       "weekBody": "{tripTitle} sale el {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",

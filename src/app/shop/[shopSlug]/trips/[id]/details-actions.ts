@@ -14,6 +14,7 @@ import { cancelDeparture } from "@/db/aboard-at-sea";
 import { getBoatById } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { flushUrgentCrewNotices } from "@/db/crew-notices";
+import { sendFlySafeCorrections } from "@/db/fly-safe-correction";
 import { publishManifestEvent } from "@/db/manifest-events";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getTripRequirements } from "@/db/readiness";
@@ -313,6 +314,14 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const timeMoved = tripNow
     ? tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
     : false;
+  // **Marked as decompression diving: correct the fly-safe figure** (#2927).
+  // A diver the night-before email told "fly no earlier than 24 hours" holds a
+  // figure that no longer applies; each hears one correction, once. Asked on
+  // every save with the box ticked, so a correction a refused send put back
+  // goes on the next.
+  if (exceedsNoDecoLimits) {
+    await sendFlySafeCorrections(dbi, { shopId: s.user.shopId, tripId });
+  }
   const notice =
     tripNow && (timeMoved || placeMoved)
       ? await holdRescheduleNotice(dbi, {

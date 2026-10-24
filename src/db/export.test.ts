@@ -472,6 +472,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "identity_booked_as", // H-13 review state: the name the held booking was made under
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
+    "fly_safe_hours_told", // what one night-before email said (#2927), kept only to correct it
+    "fly_safe_corrected_at", // the same correction's once-only claim
     "identity_matched_by", // H-13 review state: why the booking was matched
     // A held seat's desk-recorded emergency contact (#2145): read only while
     // the seat is held, and moved onto the new record at a split.

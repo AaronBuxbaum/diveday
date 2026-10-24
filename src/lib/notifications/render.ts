@@ -184,6 +184,9 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_reminder_24h") {
     return diverStateEmail({ ...notification, state: "tonight" });
   }
+  if (notification.kind === "fly_safe_correction") {
+    return diverStateEmail({ ...notification, state: "fly_safe_correction" });
+  }
   if (notification.kind === "trip_rescheduled") return tripRescheduledEmail(notification);
   if (notification.kind === "trip_recap")
     return diverStateEmail({ ...notification, state: "home" });

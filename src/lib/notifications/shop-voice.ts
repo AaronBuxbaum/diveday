@@ -37,6 +37,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "trip_reminder_7d":
     case "trip_reminder_24h":
     case "trip_rescheduled":
+    case "fly_safe_correction":
     case "trip_recap":
     case "trip_conditions_hold":
     case "trip_minimum_not_met":

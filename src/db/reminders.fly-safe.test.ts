@@ -4,7 +4,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { sendDueReminders } from "./reminders";
-import { people } from "./schema";
+import { bookings, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -66,6 +66,23 @@ describe("sendDueReminders and the fly-safe hours", () => {
     expect(reminder.kind).toBe("trip_reminder_24h");
     if (reminder.kind !== "trip_reminder_24h") return;
     expect([18, 24]).toContain(reminder.flySafeHours);
+    // The seat remembers the figure it was told, for a later correction (#2927).
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(seat?.flySafeHoursTold).toBe(reminder.flySafeHours);
+  });
+
+  it("remembers no figure when the night-before email did not go (#2927)", async () => {
+    const { db, reef, bookingId } = await reminderContext();
+    const refused = fakeEmail({ status: "failed", retryable: false, errorCode: "rejected" });
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
+      emailProvider: refused.provider,
+      appOrigin: null,
+    });
+    const [reminder] = emailsFor(refused, bookingId);
+    expect(reminder?.kind).toBe("trip_reminder_24h");
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(seat?.flySafeHoursTold).toBeNull();
   });
 
   it("leaves the fly-safe hours off when the diver has another boat after this one", async () => {
@@ -93,5 +110,7 @@ describe("sendDueReminders and the fly-safe hours", () => {
     const [reminder] = emailsFor(day, bookingId);
     expect(reminder.kind).toBe("trip_reminder_24h");
     expect("flySafeHours" in reminder).toBe(false);
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(seat?.flySafeHoursTold).toBeNull();
   });
 });

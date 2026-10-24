@@ -258,6 +258,7 @@
     "priceLabel": "Price per diver",
     "exceedsNoDecoLabel": "Decompression diving",
     "exceedsNoDecoHint": "These dives go past no-decompression limits, so the recap says nothing about when divers may fly. The roster and roll call remind crew to check each diver’s decompression card.",
+    "exceedsNoDecoTold": "{count, plural, one {# diver was} other {# divers were}} emailed a time they could fly. Saving with this ticked sends each one a correction.",
     "lunchAboardLabel": "Lunch aboard",
     "lunchAboardHint": "The Day-of form asks each diver for a lunch preference, and Prep and the manifest list it. Not an allergy record.",
     "payAtBookingLegend": "Pay at booking",

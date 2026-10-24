@@ -5490,6 +5490,10 @@
       "pickUp": "Pick up right where you left off",
       "finishPaying": "Finish paying"
     },
+    "flySafeCorrection": {
+      "subject": "A change to when you can fly: {tripTitle}",
+      "body": "{tripTitle} now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly."
+    },
     "tripReminder": {
       "weekSubject": "You sail this week: {tripTitle}",
       "weekBody": "{tripTitle} sails {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",

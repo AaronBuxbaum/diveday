@@ -258,6 +258,7 @@
     "priceLabel": "Precio por buceador",
     "exceedsNoDecoLabel": "Buceo con descompresión",
     "exceedsNoDecoHint": "Estas inmersiones superan los límites sin descompresión, así que el resumen no dice nada sobre cuándo pueden volar los buceadores. La lista y el pase de lista recuerdan al equipo verificar la tarjeta de descompresión de cada buceador.",
+    "exceedsNoDecoTold": "{count, plural, one {# buceador recibió} other {# buceadores recibieron}} por correo un plazo para volar. Si guardas con esto marcado, cada uno recibe una corrección.",
     "lunchAboardLabel": "Almuerzo a bordo",
     "lunchAboardHint": "El formulario del día pide a cada buceador su preferencia para el almuerzo, y la preparación y el manifiesto la muestran. No es un registro de alergias.",
     "payAtBookingLegend": "Pago al reservar",
