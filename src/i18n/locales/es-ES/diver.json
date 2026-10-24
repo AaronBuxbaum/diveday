@@ -5431,7 +5431,7 @@
     },
     "partyNotBooked": {
       "subject": "No se reservó tu grupo para {tripTitle}",
-      "body": "No se reservó tu grupo para {tripTitle} el {date} con {shopName}, porque alguien del grupo ya tiene una plaza en ese viaje. Para reservar a los demás, envía el formulario otra vez sin esa persona."
+      "body": "No pudimos reservar juntos a tu grupo para {tripTitle} el {date} con {shopName}, así que no se reservó nada. Para intentarlo otra vez, reserva a cada persona por separado, y cada una recibe su propio enlace."
     },
     "tripBlowout": {
       "subject": "Salida cancelada: {tripTitle}",

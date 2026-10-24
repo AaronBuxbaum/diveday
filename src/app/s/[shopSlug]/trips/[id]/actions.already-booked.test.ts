@@ -16,9 +16,10 @@ import { fakeEmail } from "@/test/fakes";
  */
 const ctx = fileScopedShopContext();
 
-const { mail, pending } = vi.hoisted(() => ({
+const { mail, pending, heldSeatFails } = vi.hoisted(() => ({
   mail: { current: null as null | ReturnType<typeof import("@/test/fakes").fakeEmail> },
   pending: [] as Array<() => unknown>,
+  heldSeatFails: { current: false },
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -46,6 +47,10 @@ vi.mock("@/i18n/request", () => ({
   requestLocale: vi.fn(async () => "en-US" as const),
   requestFirstHandLocale: vi.fn(async () => "en-US" as const),
 }));
+vi.mock("@/lib/log", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/log")>()),
+  log: vi.fn(),
+}));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
@@ -58,6 +63,10 @@ vi.mock("@/db/seat-already-held", async (importOriginal) => {
     ...actual,
     tellSeatAlreadyHeld: (db: never, input: Parameters<typeof actual.tellSeatAlreadyHeld>[1]) =>
       actual.tellSeatAlreadyHeld(db, input, { provider: mail.current?.provider }),
+    heldSeatOnTrip: async (db: never, input: Parameters<typeof actual.heldSeatOnTrip>[1]) => {
+      if (heldSeatFails.current) throw new Error("connection reset");
+      return actual.heldSeatOnTrip(db, input);
+    },
     tellPartyNotBooked: (db: never, input: Parameters<typeof actual.tellPartyNotBooked>[1]) =>
       actual.tellPartyNotBooked(db, input, { provider: mail.current?.provider }),
   };
@@ -67,6 +76,8 @@ const { eq } = await import("drizzle-orm");
 const { bookings, people } = await import("@/db/schema");
 const { createTrip } = await import("@/db/trips-create");
 const { HOUR_MS, nowDate } = await import("@/lib/clock");
+const { log } = await import("@/lib/log");
+const { messageFor } = await import("@/lib/notifications/render");
 const { bookSpot } = await import("./actions");
 
 async function freeDeparture() {
@@ -165,6 +176,55 @@ describe("the public booking form, for an address that already holds a seat", ()
     ]);
     const toLead = party.sent.find((m) => m.kind === "party_not_booked");
     expect(JSON.stringify(toLead)).not.toMatch(/nora|diaz/i);
+  });
+
+  it("mails the lead the same words whatever rolled the party back", async () => {
+    // Security review of #2691: lead = the prober's own address, member = the
+    // address probed. A booked member and a party that clashes with itself
+    // (the same address twice) must read identically in the lead's inbox.
+    const tripId = await freeDeparture();
+    await post(tripId, [{ name: "Nora Diaz", email: "nora@example.com" }]);
+    const rendered = (sent: Awaited<ReturnType<typeof post>>["sent"]) =>
+      sent.filter((m) => m.kind === "party_not_booked").map((m) => messageFor(m));
+
+    const booked = await post(tripId, [
+      { name: "Lena Lead", email: "lena@example.com" },
+      { name: "Nora Diaz", email: "nora@example.com" },
+    ]);
+    const clashing = await post(tripId, [
+      { name: "Lena Lead", email: "lena@example.com" },
+      { name: "Kim Twice", email: "kim@example.com" },
+      { name: "Kim Twice", email: "kim@example.com" },
+    ]);
+    expect(clashing.landed).toBe(booked.landed);
+    expect(rendered(booked.sent)).toHaveLength(1);
+    expect(rendered(clashing.sent)).toEqual(rendered(booked.sent));
+    // And the address nobody holds a seat under hears nothing.
+    expect(clashing.sent.map((m) => m.to)).toEqual(["lena@example.com"]);
+  });
+
+  it("still mails the lead when finding the held seat fails", async () => {
+    const tripId = await freeDeparture();
+    await post(tripId, [{ name: "Nora Diaz", email: "nora@example.com" }]);
+    heldSeatFails.current = true;
+    try {
+      const party = await post(tripId, [
+        { name: "Lena Lead", email: "lena@example.com" },
+        { name: "Nora Diaz", email: "nora@example.com" },
+      ]);
+      expect(party.landed).toBe(NEUTRAL(tripId));
+      expect(party.sent.map((m) => [m.kind, m.to])).toEqual([
+        ["party_not_booked", "lena@example.com"],
+      ]);
+      expect(vi.mocked(log)).toHaveBeenCalledWith(
+        "already_held.failed",
+        "error",
+        expect.not.objectContaining({ email: expect.anything() }),
+      );
+      expect(JSON.stringify(vi.mocked(log).mock.calls)).not.toMatch(/@example\.com/);
+    } finally {
+      heldSeatFails.current = false;
+    }
   });
 
   it("answers a repeat and a rolled-back party with the same page as each other", async () => {

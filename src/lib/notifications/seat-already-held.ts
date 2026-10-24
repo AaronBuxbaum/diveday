@@ -62,10 +62,11 @@ export type PartyNotBookedInput = {
 };
 
 /**
- * "Your party for Two-Tank Reef on Sat, Oct 24 wasn’t booked: someone in it
- * already has a seat on that trip with Blue Mantis. Book again without them."
- * To the lead of a party the data layer rolled back (#2691). Says that a member
- * holds a seat, which is the whole reason nothing booked, and never which one.
+ * "Your party for Two-Tank Reef couldn’t be booked together, so nothing was
+ * booked. To try again, book each person on their own." To the lead of a party
+ * the data layer rolled back (#2691). Never says why: the lead's address is
+ * whatever was typed, so a reason would tell a prober that a member holds a
+ * seat (security review).
  */
 export function partyNotBookedEmail(input: PartyNotBookedInput): NotificationEmail {
   const t = diverTranslator(input.locale);

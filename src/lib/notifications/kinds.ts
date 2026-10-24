@@ -1592,9 +1592,10 @@ const seatAlreadyHeldSchema = z.object({
  * **A public booking party did not book, because one member already holds a
  * seat on the departure** (#2691, Aaron's 2026-10-24 decision). The data layer
  * rolls back the whole party, and the form lands on a neutral page that names
- * nobody, so the lead hears the outcome here, by email, in words that do not
- * name which member holds the seat. Not queued; the sender throttles it per
- * lead and departure.
+ * nobody, so the lead hears the outcome here, by email. The words say neither
+ * which member nor that anyone holds a seat (security review): the lead's
+ * address is whatever was typed, so the note must not answer "is this address
+ * booked" either. Not queued; the sender throttles it per lead and departure.
  */
 const partyNotBookedSchema = z.object({
   kind: z.literal("party_not_booked"),

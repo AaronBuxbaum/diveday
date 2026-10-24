@@ -38,9 +38,17 @@ describe("partyNotBookedEmail", () => {
     const en = partyNotBookedEmail({ ...trip, locale: "en-US", leadName: "Lena Lead" });
     expect(en.subject).toBe("Your party for Two-Tank Reef wasn’t booked");
     expect(en.text).toContain("Hi Lena");
-    expect(en.text).toContain("someone in it already holds a seat");
+    expect(en.text).toContain("couldn’t be booked together");
     const es = partyNotBookedEmail({ ...trip, locale: "es-ES", leadName: "Lena Lead" });
     expect(es.subject).toBe("No se reservó tu grupo para Two-Tank Reef");
+  });
+
+  it("does not say why, so a lead cannot learn that a member holds a seat", () => {
+    // The lead's address is whatever the submitter typed: their own, in a probe.
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const email = partyNotBookedEmail({ ...trip, locale, leadName: "Lena Lead" });
+      expect(`${email.subject} ${email.text}`).not.toMatch(/already|seat|plaza|ya tiene/i);
+    }
   });
 
   it("escapes what it quotes into the html", () => {

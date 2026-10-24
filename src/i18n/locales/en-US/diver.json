@@ -5431,7 +5431,7 @@
     },
     "partyNotBooked": {
       "subject": "Your party for {tripTitle} wasn’t booked",
-      "body": "Your party for {tripTitle} on {date} with {shopName} wasn’t booked, because someone in it already holds a seat on that trip. To book everyone else, send the form again without them."
+      "body": "Your party for {tripTitle} on {date} with {shopName} couldn’t be booked together, so nothing was booked. To try again, book each person on their own, and each one gets their own link."
     },
     "tripBlowout": {
       "subject": "Trip canceled: {tripTitle}",

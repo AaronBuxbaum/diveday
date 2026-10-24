@@ -142,8 +142,9 @@ A submission whose address already holds a seat on the departure, or a party the
 back because one member does, books nothing, so it has no `/ready` to land on. It lands on the trip
 page's `?sent=1` instead, a static "We’ve emailed you" rendered before the departure is read, with
 the same words for both cases and no name in it (issue #2691, Aaron's decision of 2026-10-24). The
-holder is emailed about the seat they already hold, and a party's lead that the party did not book,
-without being told which member holds a seat; both after the response. A fresh booking still lands
+holder is emailed about the seat they already hold, and a party's lead that the party could not be
+booked together, without why or who (the lead's address is whatever was typed); both after the
+response. A fresh booking still lands
 where this ADR says. The neutral page differs from a fresh booking's landing, so the "is this
 address booked" signal narrows on this form rather than closing; the seat-claim page stays fully
 closed (ADR 20260804-seat-claim-links, #2381).

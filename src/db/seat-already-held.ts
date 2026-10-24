@@ -115,7 +115,7 @@ export async function heldSeatOnTrip(
  * 2026-10-24 decision). `createBookingParty` rolls back every seat when one
  * member already holds one, and the form answers with a neutral page that
  * names nobody, so the outcome goes to the lead's typed address instead, in
- * words that do not say which member holds the seat.
+ * words that say neither which member nor that anyone holds a seat.
  *
  * Bounded per lead address and departure (five an hour, the held-seat note's
  * own allowance) so a loop of submissions cannot become a mail bomb to
