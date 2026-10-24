@@ -103,8 +103,8 @@ Renaming a journey's test renames its row in the same change.
 | --- | --- |
 | Before a commit | the guard you touched, `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`; a changed flow's specs; a changed surface's captures in light (the **verify** skill) |
 | Before a push | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
-| Every pull request | repo checks, lint, typecheck, all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the captures `visual-affected` selects (up to 8 shards); real Postgres when `src/db/**` or `drizzle/**` changed |
-| Push to `main` | all of the above with every capture: the next baseline |
+| Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**` or `drizzle/**` changed |
+| Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL, the follow-up scan |
 | Weekly | the persona walk, the shard-duration refresh; mutation testing once its runner works (manual until then) |
 
@@ -156,11 +156,19 @@ What a diff runs is decided by reading it, at two places:
   and re-exports, not whole files) to the routes that render it, a changed message key to the
   modules that name it, a `public/` asset to the code that names its path, and picks the captures
   that visit those routes plus a fixed smoke set; an edit inside an `e2e/visual-*.spec.ts` or a capture
-  helper picks the captures it touched. It captures everything for the capture harness, the seed
-  and schema, a stylesheet, a root config or renderer dependency, a module every page runs (the
-  proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts). The `visual-all` label forces
-  everything; every surface not captured is copied from the baseline before the compare.
-  Locally, `--grep <file>` writes the light-mode Playwright grep for the same selection.
+  helper picks the captures it touched. A schema edit is followed from the tables it changes to the
+  modules that read them, and a seed scenario's (`src/db/seed-<scenario>.ts`) from the tables it
+  writes, never through a seed module (the demo action that runs the seed is on every public page).
+  It captures everything for the capture harness, the seed's orchestrator (`src/db/seed.ts`), the
+  catalog seed, a stylesheet, a root config or renderer dependency, a module every page runs (the
+  proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts).
+  **A pull request captures light mode only** (`--light-only`, 2026-10-24: dark was 339 of 836
+  captures and a third of the capture time) unless the diff touches a colour token or theme module
+  (`THEME`: `globals.css`, `brand.ts`, `BrandStyle.tsx`, `_brand/colors.ts`, `postcss.config.mjs`);
+  a push to `main` captures both. The accepted risk is a dark-only regression first seen on main's
+  run. The `visual-all` label forces everything, dark included; every surface not captured is
+  copied from the baseline before the compare. Locally, `--grep <file>` writes the light-mode
+  Playwright grep for the same selection.
 - **Specs before a push**: `scripts/e2e-affected.mjs`, run by `verify:push`. *Strong*: a spec or
   helper the diff edits, a spec quoting text the diff removed (a seeded name included), a spec
   reading an en-US key whose value changed by its full dotted key, a spec naming a seeded record
