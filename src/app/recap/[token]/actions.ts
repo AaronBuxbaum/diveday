@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
-import { isRecapOpen } from "@/db/recap";
+import { isRecapOpen, unshareRecapPhoto } from "@/db/recap";
 import { parseRecapPulseCategories, submitRecapPulse } from "@/db/recap-pulses";
 import { submitTripReview } from "@/db/reviews";
 import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db/tips";
@@ -25,6 +25,9 @@ const reviewForm = z.object({ rating: z.string().optional(), comment: z.string()
 /** A pulse's note; its categories are read with `getAll` below. */
 const pulseNoteForm = z.object({ note: z.string().default("") });
 
+/** "Stop sharing": the one photo id; the booking is the token's, never the form's. */
+const unshareForm = z.object({ photoId: z.uuid() });
+
 /** The tip form: a preset radio, and an "Other" box that wins when filled. */
 const tipForm = z.object({
   customAmount: z.string().default(""),
@@ -41,6 +44,53 @@ const tipForm = z.object({
  */
 export async function uploadRecapPhotoAction(token: string, formData: FormData) {
   await uploadRecapPhotos(token, formData, { shareWithBoat: false });
+}
+
+/**
+ * **A diver takes a photo they shared back from the boat** (issue #2806; ADR
+ * 20261016-shared-boat-photos, Consequences). The photo stays on their own
+ * recap and leaves every other seat's.
+ *
+ * The signed recap token is the only credential and names the booking; the
+ * form names only the photo, and `unshareRecapPhoto` clears it only when that
+ * booking uploaded it, so a crafted post naming another diver's photo changes
+ * nothing. The `/ready` after-state binds this same action to a recap token
+ * minted for its booking. Withdrawing is the safe direction, so unlike sharing
+ * it is allowed through the forwardable recap link, and it is not refused for
+ * a recap that is no longer open.
+ *
+ * Rate-limited by IP before the token is verified (CR-013), then per booking.
+ */
+export async function unshareRecapPhotoAction(token: string, formData: FormData) {
+  const back = `/recap/${token}`;
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("recap-unshare-ip", ip), RATE_LIMITS.recapUnshareByIp))
+      .allowed
+  ) {
+    redirect(`${back}?photo=error`);
+  }
+  const bookingId = verifyRecapToken(token);
+  if (!bookingId) redirect(`${back}?photo=error`);
+  if (
+    !(
+      await checkRateLimit(
+        rateLimitKey("recap-unshare-booking", bookingId),
+        RATE_LIMITS.recapUnshareByToken,
+      )
+    ).allowed
+  ) {
+    redirect(`${back}?photo=error`);
+  }
+  const parsed = parseForm(unshareForm, formData);
+  if (!parsed.ok) redirect(`${back}?photo=error`);
+
+  const outcome = await unshareRecapPhoto(await getDb(), {
+    bookingId,
+    photoId: parsed.data.photoId,
+  }).catch(() => null);
+  if (!outcome?.ok) redirect(`${back}?photo=error`);
+  revalidateAndRedirect(back, `${back}?photo=unshared`);
 }
 
 /**

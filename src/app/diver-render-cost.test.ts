@@ -116,6 +116,7 @@ async function readyAfterTheDiveReads(db: AppDb, token: string) {
     actions: {
       submitReview: noop,
       uploadPhoto: noop,
+      unsharePhoto: noop,
       startTip: noop,
       submitPulse: noop,
     } as unknown as Parameters<typeof buildAfterStateProps>[0]["actions"],
@@ -145,6 +146,7 @@ async function recapPageReads(db: AppDb, bookingId: string) {
     actions: {
       submitReview: noop,
       uploadPhoto: noop,
+      unsharePhoto: noop,
       startTip: noop,
       submitPulse: noop,
     } as unknown as Parameters<typeof buildAfterStateProps>[0]["actions"],

@@ -161,6 +161,7 @@ export function PhotoDoor({
   canShareWithBoat,
   notice,
   action,
+  unshareAction,
 }: {
   t: DiverTranslator;
   shopName: string;
@@ -171,6 +172,8 @@ export function PhotoDoor({
   canShareWithBoat: boolean;
   notice: { tone: "success" | "danger"; key: DiverMessageKey } | undefined;
   action: (formData: FormData) => void | Promise<void>;
+  /** "Stop sharing" on the diver's own shared photo (#2806). */
+  unshareAction: (formData: FormData) => void | Promise<void>;
 }) {
   // Another diver's shared photos sit under their own words (H-129): the
   // diver's own and the crew's stay the grid they always were, and nothing a
@@ -185,7 +188,9 @@ export function PhotoDoor({
           {notice.key === "recap.photoLimit" ? t(notice.key, { max: maxPhotos }) : t(notice.key)}
         </FormStatus>
       ) : null}
-      {own.length ? <PhotoGrid photos={own} tripTitle={tripTitle} t={t} /> : null}
+      {own.length ? (
+        <PhotoGrid photos={own} tripTitle={tripTitle} t={t} unshareAction={unshareAction} />
+      ) : null}
       {fromBoat.length ? (
         <>
           <h3 className="mt-6 text-sm font-semibold text-muted">{t("recap.fromTheBoat")}</h3>
@@ -266,15 +271,21 @@ function ownCount(photos: AfterStateProps["photos"]): number {
   return photos.filter((photo) => !photo.sharedBy).length;
 }
 
-/** One grid of recap photos, with a caption line and, on a shared one, who shared it. */
+/**
+ * One grid of recap photos, with a caption line and, on a shared one, who
+ * shared it. The diver's own shared photo carries "Stop sharing" when the grid
+ * is given the action (#2806); a photo another diver shared never does.
+ */
 function PhotoGrid({
   photos,
   tripTitle,
   t,
+  unshareAction,
 }: {
   photos: AfterStateProps["photos"];
   tripTitle: string;
   t: DiverTranslator;
+  unshareAction?: (formData: FormData) => void | Promise<void>;
 }) {
   return (
     <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -304,6 +315,17 @@ function PhotoGrid({
                     : t("recap.sharedWithBoat")
                   : image.caption}
             </p>
+          ) : null}
+          {image.sharedWithBoat && !image.sharedBy && unshareAction ? (
+            <form action={unshareAction} className="px-2 pb-1.5">
+              <input type="hidden" name="photoId" value={image.id} />
+              <SubmitButton
+                pendingLabel={t("recap.stoppingSharing")}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {t("recap.stopSharing")}
+              </SubmitButton>
+            </form>
           ) : null}
         </li>
       ))}

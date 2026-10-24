@@ -324,6 +324,15 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "seed-shared-recap-photo",
+    // No body at all, so reaching the database is the signal. Past that it
+    // publishes a diver's photo to every other recap on their boat under their
+    // first name, which only the diver's own tick may do (H-129).
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
     slug: "seed-private-shop",
     method: "DELETE",
     // The teardown half (ADR 20260815-per-test-private-shops). It takes a

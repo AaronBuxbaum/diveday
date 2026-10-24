@@ -16,7 +16,7 @@ default, with staff able to delete (H-129).
 
 1. **One nullable column, `recap_photos.shared_with_boat_at`.** It is set at upload from the
    sharer's own tick, "Share with everyone on this boat", which starts unticked on every pick.
-   Nothing else writes it, and no staff surface can share a diver's photo. **The tick is offered
+   Nothing else sets it, and no staff surface can share a diver's photo. **The tick is offered
    and honored only through the diver's readiness link** (`uploadRecapPhotoFromReadyAction`,
    security review r5-4 F3); an upload through a forwardable `/recap` link never shares.
 2. **A shared photo shows on the recap of every other seat on the same departure**, under "From the
@@ -41,7 +41,10 @@ default, with staff able to delete (H-129).
 - A recap link, which is forwardable, now carries photos of other divers that their sharer chose to
   publish to the boat, with the sharer's first name. The page was already noindex and carries no
   other diver's data.
-- A diver cannot yet withdraw a photo they shared; staff can delete it. A self-serve withdraw is a
-  follow-up, and needs no schema change: clearing the column is the act.
+- The sharer can withdraw a photo they shared: "Stop sharing" on their own shared photo, on
+  `/recap/<token>` and the `/ready` after-state, clears the column (`unshareRecapPhoto`, issue
+  #2806). Only the uploading booking can clear it; the photo stays on the sharer's recap.
+  Withdrawing is the safe direction, so the forwardable recap link may do it. Staff can still
+  delete.
 - Revisiting this (for example, per-diver consent from people in the photo) would add a consent
   record per subject; the column stays the sharer's half of it.

@@ -26,6 +26,7 @@ function PhotoDoorOf({
         canShareWithBoat={canShareWithBoat}
         notice={undefined}
         action={noop}
+        unshareAction={noop}
       />
     </ul>
   );
@@ -134,6 +135,7 @@ describe("the photo door's limit", () => {
           canShareWithBoat
           notice={undefined}
           action={noop}
+          unshareAction={noop}
         />
       </ul>,
     );

@@ -314,6 +314,12 @@ self.addEventListener("message", (event) => {
     // requested — an already-active worker can still fail this (storage
     // quota, a dropped fetch) and the caller needs to know.
     const port = event.ports[0];
+    // The diver's `/ready/` registration keeps their page and nothing else, as
+    // its install already does (issue #2693): no staff shell from there.
+    if (inReadyScope()) {
+      port?.postMessage({ ok: false });
+      return;
+    }
     event.waitUntil(
       cacheOfflineShell().then(
         () => port?.postMessage({ ok: true }),
