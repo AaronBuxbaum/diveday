@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { eq } from "drizzle-orm";
 import { isValidElement, type ReactElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { listCheckInQueue } from "@/db/check-in";
 import { createCertification } from "@/db/readiness";
 import {
@@ -21,6 +21,9 @@ import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
+// Unmount each test's rows: a row's links schedule React work that would
+// otherwise run after the file's jsdom is gone ("window is not defined").
+afterEach(cleanup);
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // A blocked row carries the "Turned away" door, whose form refreshes the
