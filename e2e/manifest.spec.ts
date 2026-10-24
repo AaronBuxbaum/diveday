@@ -4,6 +4,8 @@ import {
   DEMO_MEDICAL_ALERT_DIVER,
   DEMO_MEDICAL_ALERT_TRIP,
 } from "../src/db/seed-medical-alert";
+import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
@@ -12,10 +14,13 @@ import {
   offlineCopySaved,
   openBoatCheck,
   openDiverFileGroup,
+  openFirstRosterRowWith,
   openManifestPerson,
   openOnThisPhone,
+  openTripAbout,
   openTripFromBoard,
   openTripTab,
+  waiverLinkFromResult,
 } from "./helpers";
 
 const staff = staffTranslator("en-US");
@@ -1405,4 +1410,130 @@ test("a departure's crew opens a diver's medical alert, and the read is on their
   ).toBeVisible();
   const trail = await openDiverFileGroup(page, staff("divers.activity.heading"));
   await expect(trail.getByText(`read ${DEMO_MEDICAL_ALERT_DIVER}’s medical alert`)).toBeVisible();
+});
+
+/** The owner finds `line` on `diverName`'s trail. */
+async function onDiverTrail(page: Page, diverName: string, line: string) {
+  await page.goto(`/shop/blue-mantis/divers?q=${encodeURIComponent(diverName)}`);
+  await page.getByRole("link", { name: diverName, exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
+  const trail = await openDiverFileGroup(page, staff("divers.activity.heading"));
+  await expect(trail.getByText(line).first()).toBeVisible();
+}
+
+/**
+ * Issue #2990, part 1: the owner prints the packet with the medical alerts'
+ * words under each row, for a crew whose phone is dead at sea; the default
+ * packet keeps the flag only; the print is on the diver's trail.
+ */
+test("an owner prints the packet with the medical alerts, and the print is on the diver's trail", async ({
+  page,
+}) => {
+  // Two packet renders and a diver record.
+  test.slow();
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, DEMO_MEDICAL_ALERT_TRIP);
+  await openTripAbout(page);
+  const tripPath = new URL(page.url()).pathname;
+
+  // The default packet: the flag, never the words.
+  await page.goto(`${tripPath}/print`);
+  await page.emulateMedia({ media: "print" });
+  await expect(page.getByText(staff("manifest.medicalAlertPrinted")).first()).toBeVisible();
+  await expect(page.getByText(DEMO_MEDICAL_ALERT)).toHaveCount(0);
+  await page.emulateMedia({ media: "screen" });
+
+  await page.goto(tripPath);
+  await openTripAbout(page);
+  const choice = page.getByRole("button", { name: staff("trips.about.printWithMedicalAlerts") });
+  await expect(choice).toBeVisible();
+  const popupPromise = page.waitForEvent("popup");
+  await choice.click();
+  const popup = await popupPromise;
+  await popup.waitForLoadState("domcontentloaded");
+  await expect(popup).toHaveURL(new RegExp(`${tripPath}/print/medical-alerts$`));
+  await popup.emulateMedia({ media: "print" });
+  await expect(popup.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
+  await expect(popup.getByText(staff("manifest.medicalAlertsPrintedKeep"))).toBeVisible();
+  await expect(popup.getByText(staff("manifest.medicalAlertNotReviewed"))).toBeVisible();
+  await popup.close();
+
+  await onDiverTrail(
+    page,
+    DEMO_MEDICAL_ALERT_DIVER,
+    `printed ${DEMO_MEDICAL_ALERT_DIVER}’s medical alert`,
+  );
+});
+
+/**
+ * Issue #2990, part 2: on the day of the departure, an instructor the crew
+ * rule refuses opens a diver's alert in an emergency, behind a confirm step,
+ * and the owner finds the read on the diver's trail.
+ */
+test("an instructor off the crew opens a medical alert in an emergency today, and the read is on the diver's trail", async ({
+  page,
+  browser,
+  workerBaseURL,
+  staffStorageState,
+}) => {
+  // A held send, a signing, and two staffers' manifests.
+  test.slow();
+  const diver = diverTranslator("en-US");
+  const ALERT = "Asthma. Inhaler in the dry box.";
+
+  // A diver on today's departure writes an alert and signs.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
+  await openTripTab(page, "Trip");
+  const row = await openFirstRosterRowWith(page, "Send waiver");
+  const diverName = (await row.locator('a[href*="/divers/"]').first().innerText()).trim();
+  await row.getByRole("button", { name: "Send waiver", exact: true }).click();
+  const waiverHref = await waiverLinkFromResult(
+    page,
+    page.locator("#roster").filter({ visible: true }).getByRole("status"),
+  );
+  await page.goto(waiverHref);
+  const medicalNo = page.locator("#medical-questionnaire").getByRole("radio", { name: "No" });
+  await medicalNo.first().waitFor();
+  const count = await medicalNo.count();
+  for (let i = 0; i < count; i++) await medicalNo.nth(i).check();
+  await page.getByLabel(diver("waiver.medicalAlertLabel")).fill(ALERT);
+  await page.getByLabel("Type your full name").fill(diverName);
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  const instructorContext = await browser.newContext({
+    baseURL: workerBaseURL,
+    storageState: await staffStorageState("instructor"),
+  });
+  try {
+    const instructor = makeActivitySafe(await instructorContext.newPage());
+    await instructor.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(instructor, DEMO_TODAY_TRIP_TITLE);
+    await openTripTab(instructor, "Manifest");
+    const entry = manifestRow(instructor, diverName);
+    await expect(
+      entry.getByText(staff("manifest.medicalAlertChip"), { exact: true }),
+    ).toBeVisible();
+    await openManifestPerson(entry);
+    const sheet = instructor.getByRole("dialog");
+    // Refused by the crew rule: who can read it, and the emergency door.
+    await expect(sheet.getByText(staff("manifest.medicalAlertReaders"))).toBeVisible();
+    await expect(
+      sheet.getByRole("button", { name: staff("manifest.medicalAlertShow") }),
+    ).toHaveCount(0);
+    await sheet.getByRole("button", { name: staff("manifest.medicalAlertEmergencyOffer") }).click();
+    await expect(sheet.getByText(staff("manifest.medicalAlertEmergencyConfirmBody"))).toBeVisible();
+    await expect(sheet.getByText(ALERT)).toHaveCount(0);
+    await sheet
+      .getByRole("button", { name: staff("manifest.medicalAlertEmergencyConfirm") })
+      .click();
+    await expect(sheet.getByText(ALERT)).toBeVisible();
+    await expect(sheet.getByText(staff("manifest.medicalAlertNotReviewed"))).toBeVisible();
+  } finally {
+    await instructorContext.close();
+  }
+
+  await onDiverTrail(page, diverName, `opened ${diverName}’s medical alert in an emergency`);
 });
