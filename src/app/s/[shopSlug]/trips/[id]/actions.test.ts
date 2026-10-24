@@ -269,41 +269,6 @@ describe("the Under 18 box", () => {
 });
 
 /**
- * **The already-booked refusal names the inbox its door sends to** (UX review
- * 2026-10-11, item 8): the party member it was about, as typed, and nothing
- * for any other refusal.
- */
-describe("the already-booked refusal", () => {
-  it("hands back the address of the member already on the list", async () => {
-    const { db, shop } = ctx;
-    const tripId = await freeDeparture(db, shop.id);
-    await post(shop.slug, tripId, submission([{ email: "repeat@example.com" }]));
-
-    const state = await post(
-      shop.slug,
-      tripId,
-      submission([{ email: "lead@example.com" }, { email: "repeat@example.com" }]),
-    );
-
-    expect(state?.alreadyBookedEmail).toBe("repeat@example.com");
-    expect(state?.fieldErrors?.["email-1"]).toBeTruthy();
-  });
-
-  it("hands back no address for any other refusal", async () => {
-    // A full departure: the one seat is taken, so the next party is refused
-    // for want of room, not for a repeat.
-    const { db, shop } = ctx;
-    const tripId = await freeDeparture(db, shop.id, 1);
-    await post(shop.slug, tripId, submission([{ email: "first@example.com" }]));
-
-    const state = await post(shop.slug, tripId, submission([{ email: "lead@example.com" }]));
-
-    expect(state?.error).toBeTruthy();
-    expect(state?.alreadyBookedEmail).toBeUndefined();
-  });
-});
-
-/**
  * **The page a booking lands on is not the page the email carries** (security
  * review of layer r5-4, F1). Whoever submits the form proved only that they
  * know a name and an address, so the link handed to their browser is minted

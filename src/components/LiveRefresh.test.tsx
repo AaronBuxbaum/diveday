@@ -3,6 +3,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isTyping,
+  LIVE_REFRESH_IDLE_LIMIT_MS,
   LIVE_REFRESH_INTERVAL_MS,
   LIVE_REFRESH_MIN_GAP_MS,
   LiveRefresh,
@@ -66,6 +67,44 @@ describe("LiveRefresh", () => {
     expect(refresh).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS));
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops after twelve hours with no tap or key, so the session can lapse", () => {
+    expect(LIVE_REFRESH_IDLE_LIMIT_MS).toBe(12 * 60 * 60 * 1000);
+    render(<LiveRefresh />);
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_IDLE_LIMIT_MS));
+    const before = refresh.mock.calls.length;
+    // The refresh landing on the twelfth hour is the first one skipped.
+    expect(before).toBe(LIVE_REFRESH_IDLE_LIMIT_MS / LIVE_REFRESH_INTERVAL_MS - 1);
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS * 60));
+    expect(refresh).toHaveBeenCalledTimes(before);
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(refresh).toHaveBeenCalledTimes(before);
+  });
+
+  it("starts again on a tap after the idle stop", () => {
+    render(<LiveRefresh />);
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_IDLE_LIMIT_MS + LIVE_REFRESH_INTERVAL_MS * 5));
+    const before = refresh.mock.calls.length;
+    act(() => {
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    });
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS));
+    expect(refresh).toHaveBeenCalledTimes(before + 1);
+  });
+
+  it("counts a key press as use, and keeps refreshing past twelve hours of typing", () => {
+    render(<LiveRefresh />);
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_IDLE_LIMIT_MS - LIVE_REFRESH_INTERVAL_MS));
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "a" }));
+    });
+    const before = refresh.mock.calls.length;
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS * 10));
+    expect(refresh).toHaveBeenCalledTimes(before + 10);
   });
 
   it("costs nothing in a hidden tab", () => {

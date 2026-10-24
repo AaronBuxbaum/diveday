@@ -45,6 +45,13 @@ if (process.env.VERCEL_ENV === "production") {
   // blocked on a lock held by the previous release is the one wedge here that
   // would otherwise spend the platform's whole build budget before saying so.
   run("pnpm", ["db:migrate"], SUBPROCESS_TIMEOUTS.migrate);
+  // check-env refused a malformed sealing key; a well-formed wrong one shows
+  // only against the stored data. A rotated SECRET_ENCRYPTION_KEY without its
+  // _PREVIOUS, or a wrong _PREVIOUS, would lock out every two-factor staffer,
+  // so the deploy trial-opens their secrets and stops before serving, naming
+  // the variables and never their values (issue #2999). After the migration,
+  // so it reads the schema this release serves.
+  run("pnpm", ["exec", "tsx", "scripts/check-sealing-keys.ts"], SUBPROCESS_TIMEOUTS.nodeScript);
 }
 
 run("pnpm", ["build"], SUBPROCESS_TIMEOUTS.build);

@@ -1,8 +1,9 @@
-import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
   openingKeys,
   openSecretWithKeyring,
+  type StoredSealing,
   sealingKey,
   sealSecret,
   secretKeyFingerprint,
@@ -161,6 +162,27 @@ async function spendRecoveryCode(
     )
     .returning({ userAccountId: accountSecurity.userAccountId });
   return Boolean(row);
+}
+
+/**
+ * What every account with two-factor on holds under the sealing key, for the
+ * deploy's check that the keyring still opens it (`keyringOpensStored`,
+ * `scripts/check-sealing-keys.ts`; issue #2999). An enrolment never confirmed
+ * locks nobody out and is left out; so are recovery codes all spent.
+ */
+export async function storedSealings(db: DbExecutor): Promise<StoredSealing[]> {
+  const rows = await db
+    .select({
+      sealed: accountSecurity.totpSecretSealed,
+      codesKeyId: accountSecurity.recoveryCodesKeyId,
+      codes: sql<number>`jsonb_array_length(${accountSecurity.recoveryCodeHashes})`,
+    })
+    .from(accountSecurity)
+    .where(isNotNull(accountSecurity.totpEnabledAt));
+  return rows.map((row) => ({
+    sealed: row.sealed,
+    codesKeyId: Number(row.codes) > 0 ? row.codesKeyId : null,
+  }));
 }
 
 /**
