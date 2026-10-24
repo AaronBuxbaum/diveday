@@ -65,6 +65,7 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
       rentalFit: null,
       canCancelBooking: true,
       cancelPreview: "none",
+      meetingDayCount: 1,
     } as unknown as ReadyPageData,
     locale: "en-US",
     t,
@@ -93,7 +94,6 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
     partySeatClaims: [],
     partyAllSet: false,
     flySafePlan: null,
-    meetingDayCount: 1,
     ...over,
   };
 }

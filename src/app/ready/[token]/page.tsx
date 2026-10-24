@@ -48,7 +48,7 @@ import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripWithBookedOnce, listTripDives, listTripScheduleDays } from "@/db/trips";
+import { getTripWithBookedOnce, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
@@ -335,10 +335,6 @@ async function DiverReadinessPage({
       // `liveStageOf` below decides whether it still speaks, so a stage nobody
       // cleared cannot follow a diver into next week.
       latestTripStage(db, shop.id, data.trip.id),
-      // How many days this departure meets on, for a course session's own day
-      // plan (`SessionDayPlan`, issue #2795). A course session only: a charter
-      // says no plan day, so its read is skipped.
-      data.trip.course ? listTripScheduleDays(db, shop.id, data.trip.id) : Promise.resolve([]),
     ]);
     // The organizer's claim panel, when this booking leads a party (docs ADR
     // 20260804-seat-claim-links): the readiness link is the durable one from
@@ -375,8 +371,7 @@ async function DiverReadinessPage({
         // When to fly home, as a plan, before the boat sails (fifth-loop ideas, item 18).
         readPlannedFlySafe(db, data),
       ]);
-    const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage, meetingDays] =
-      tripReads;
+    const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
 
     const stageLine = boatStageLine(boatStage, detail.trip, detail.shop.timezone, locale, t);
@@ -572,7 +567,6 @@ async function DiverReadinessPage({
             partySeatClaims,
             partyAllSet,
             flySafePlan,
-            meetingDayCount: meetingDays.length,
           }}
         />
         {yourDays}

@@ -41,7 +41,7 @@ import {
 } from "./rental-fit";
 import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBookedOnce } from "./trips";
+import { getTripWithBookedOnce, listTripScheduleDays } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { diveDayCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -323,6 +323,12 @@ export type ReadyPageData = {
    * list suggests a logbook (`packsLogbook`) — never a gate.
    */
   holdsCertification: boolean;
+  /**
+   * How many days this departure meets on (`trip_schedule_days`), read on a
+   * course session only (0 elsewhere): its one-day plan is said on a
+   * one-meeting session alone (`SessionDayPlan`).
+   */
+  meetingDayCount: number;
   /** Projected: staff-only fit columns never reach the diver's browser. */
   rentalFit: DiverRentalFit | null;
   /** The one active, non-medical day-of request this booking has made. */
@@ -559,6 +565,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     fitConfirmation,
     pendingMoveAsk,
     holdsCertification,
+    meetingDays,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -604,6 +611,9 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.identityUnconfirmedAt === null
       ? holdsAnyCertification(db, row.shopId, row.personId)
       : false,
+    // How many days a course session meets on, for its own day plan
+    // (`SessionDayPlan`, issue #2795); a charter says no plan day.
+    row.tripCourseId !== null ? listTripScheduleDays(db, row.shopId, row.tripId) : [],
   ]);
   if (!trip) return null;
   return {
@@ -623,6 +633,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     materialsDoneElsewhere,
     pendingMoveAsk,
     holdsCertification,
+    meetingDayCount: meetingDays.length,
   };
 }
 
@@ -679,6 +690,7 @@ export async function getReadyPageData(
     materialsDoneElsewhere,
     pendingMoveAsk,
     holdsCertification,
+    meetingDayCount,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -820,6 +832,7 @@ export async function getReadyPageData(
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     holdsCertification,
+    meetingDayCount,
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
     // Said even after the shop stops offering hotel pickups (the Features

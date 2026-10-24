@@ -41,7 +41,7 @@ export function SessionDayPlan({
       </h2>
       {time ? <p className="mt-1 text-sm text-muted tabular-nums">{time}</p> : null}
       {day.items.length > 0 ? (
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
+        <ul className="mt-3 list-disc space-y-1 ps-5 text-sm text-muted">
           {day.items.map((item) => (
             <li key={item}>{item}</li>
           ))}

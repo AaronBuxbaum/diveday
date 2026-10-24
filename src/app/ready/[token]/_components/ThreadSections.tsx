@@ -47,8 +47,6 @@ export type ReadyThreadSectionsContext = {
   partyAllSet: boolean;
   /** When to fly home, as a plan (fifth-loop ideas, item 18); null when nothing honest can be said. */
   flySafePlan: PlannedFlySafe | null;
-  /** How many days this departure meets on (`trip_schedule_days`): a course session's day plan reads it. */
-  meetingDayCount: number;
 };
 
 /**
@@ -71,7 +69,6 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     partySeatClaims,
     partyAllSet,
     flySafePlan,
-    meetingDayCount,
   } = context;
   const { detail } = data;
   const partySeats = partyClaimSeats(partySeatClaims);
@@ -175,7 +172,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         {fullShop && fullTrip ? (
           <SessionDayPlan
             course={fullTrip.course}
-            meetingDays={meetingDayCount}
+            meetingDays={data.meetingDayCount}
             depthUnit={fullShop.depthUnit}
             t={t}
             locale={locale}
