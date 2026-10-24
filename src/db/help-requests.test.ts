@@ -864,4 +864,36 @@ describe("handled help requests on a departure", () => {
       ),
     ).toEqual([]);
   });
+
+  it("refuses a reopen from someone who is not staff, and leaves the request handled", async () => {
+    const { db, shop } = ctx;
+    const setup = await handledRequest(db, shop.id);
+    expect(
+      await undoHelpRequestCompletion(db, {
+        shopId: shop.id,
+        requestId: setup.handled.id,
+        expectedRevision: setup.handled.revision,
+        actorPersonId: setup.seat.booking.personId,
+        expectedHelperPersonId: setup.helper.id,
+        now: setup.now,
+      }),
+    ).toEqual({ ok: false, reason: "unavailable" });
+    expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
+  });
+
+  it("refuses a reopen that names another shop, and leaves the request handled", async () => {
+    const { db, shop } = ctx;
+    const setup = await handledRequest(db, shop.id);
+    expect(
+      await undoHelpRequestCompletion(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        requestId: setup.handled.id,
+        expectedRevision: setup.handled.revision,
+        actorPersonId: setup.actor.id,
+        expectedHelperPersonId: setup.helper.id,
+        now: setup.now,
+      }),
+    ).toEqual({ ok: false, reason: "invalid_transition" });
+    expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
+  });
 });
