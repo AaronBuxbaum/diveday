@@ -76,6 +76,10 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       await capture(page, "staffing-add-shift-editor", "light");
       await form.getByRole("button", { name: "Add shift" }).click();
       await expect(page.getByText("Shift saved")).toBeVisible();
+      // The toast leaves on a real 4-second timer: whether the first width
+      // caught it depended on how long the capture took (two one-worker runs
+      // of one tree disagreed at vw-390). The shift is the subject.
+      await expect(page.getByText("Shift saved")).toBeHidden();
       const week = page.getByRole("region", { name: "Who’s working" });
       await week.getByText("Boat 2", { exact: true }).first().waitFor();
       await capture(page, "staffing-shift-remove-disclosure", "light", {
