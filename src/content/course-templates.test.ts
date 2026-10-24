@@ -147,4 +147,53 @@ describe("SDI templates", () => {
       COURSE_TEMPLATES.find((entry) => entry.slug === "sdi-rescue-diver")?.content.prerequisiteNote,
     ).toContain("SDI Open Water Scuba Diver or equivalent, plus current CPR and first aid");
   });
+
+  it("name a minimum age, and say the parental consent under 18 that SDI asks for", () => {
+    // The course age gate passes a null, so an SDI page with no age sold Deep
+    // Diver to anyone (issue #2682). Every SDI template puts a diver in the
+    // water, and SDI publishes an age for each. The entry courses word their
+    // junior rules their own way, and SDI's refresher standard names no consent.
+    const ownWording = new Set([
+      "sdi-scuba-discovery",
+      "sdi-open-water-scuba-diver",
+      "sdi-inactive-diver-scuba-refresher",
+    ]);
+    for (const template of COURSE_TEMPLATES.filter((entry) => entry.agency === "sdi")) {
+      const age = template.content.minimumAge;
+      expect(age, template.slug).toEqual(expect.any(Number));
+      const note = template.content.prerequisiteNote ?? "";
+      if (age !== null && age < 18 && !ownWording.has(template.slug)) {
+        expect(note, template.slug).toContain(
+          "divers under 18 need a parent's or guardian's consent",
+        );
+      }
+    }
+  });
+
+  it("take SDI's own ages for the continuing-education courses", () => {
+    const ages = Object.fromEntries(
+      COURSE_TEMPLATES.filter((entry) => entry.agency === "sdi").map((entry) => [
+        entry.slug,
+        entry.content.minimumAge,
+      ]),
+    );
+    expect(ages).toMatchObject({
+      "sdi-advanced-adventure-diver": 10,
+      "sdi-computer-nitrox-diver": 10,
+      "sdi-deep-diver": 10,
+      "sdi-underwater-navigation": 10,
+      "sdi-night-limited-visibility-diver": 10,
+      "sdi-wreck-diver": 15,
+    });
+    // DiveDay's junior bands (src/lib/depth-ceiling.ts) are stricter than SDI's
+    // 21 m for 10–14: 12 m at 10–11, 18 m at 12–14 unless the card is advanced.
+    // The note and the depth FAQ both have to say so; a parent reads the FAQ.
+    for (const slug of ["sdi-advanced-adventure-diver", "sdi-deep-diver"]) {
+      const content = COURSE_TEMPLATES.find((entry) => entry.slug === slug)?.content;
+      const depthFaq = content?.faqs.find((faq) => faq.question.startsWith("How deep"))?.answer;
+      for (const text of [content?.prerequisiteNote, depthFaq]) {
+        expect(text, slug).toContain("{depth12} at 10–11, and {depth18} at 12–14");
+      }
+    }
+  });
 });
