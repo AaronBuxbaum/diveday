@@ -232,6 +232,7 @@
     "dateOfBirthLabel": "Fecha de nacimiento",
     "adultAttestedHint": "18 años o más, según {name}",
     "adultAttestedHintNoName": "18 años o más, según el personal",
+    "minorDeclaredHint": "Reservado como menor de 18 años",
     "optionalHint": "(opcional)",
     "diveInsuranceFieldLabel": "Seguro de buceo",
     "diveInsurancePlaceholder": "DAN n.º 12345",
@@ -642,7 +643,8 @@
     "summaryEmergency": "Contacto de emergencia: {name}",
     "summaryEmergencyNoPhone": "Contacto de emergencia: {name}, sin teléfono",
     "summaryEmergencyNoName": "Contacto de emergencia: {phone}, sin nombre",
-    "summaryNoEmergency": "Sin contacto de emergencia"
+    "summaryNoEmergency": "Sin contacto de emergencia",
+    "minorDeclaredNoDateOfBirth": "Reservado como menor de 18 años, sin fecha de nacimiento registrada. Agrega una."
   },
   "lastDive": {
     "heading": "Última inmersión",

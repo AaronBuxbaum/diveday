@@ -262,5 +262,11 @@ parent booked online signed alone. The public party form now asks "Under 18" per
 the **seat** (`bookings.minor_declared_at`), never on the person: the form is anonymous and may only
 mark the seat it creates. `guardianSignatureRequired(dateOfBirth, signedOn, minorDeclared)` lets a
 date on file decide and, with none, reads the stamp. `GuardianSigner.minorDeclared` is required, so
-every writer and reader answers it; the ones with no seat in hand (the diver record's standing, a
-counter rental, a canceled day's carried preparation) answer `false`. It gates nothing at the sale.
+every writer and reader answers it. It gates nothing at the sale.
+
+Since 2026-10-24 (issue #2553, Option A) the readers with no seat in hand (the diver record's
+standing and its paper release, a counter rental) read the stamp off any of the person's seats that
+still stands: not cancelled, on a live, scheduled departure not yet over
+(`minorDeclaredOnLiveUpcomingSeat`, `src/db/minor-declared.ts`). The record then asks the staffer
+for a date of birth. Nothing writes a date of birth from the stamp. A canceled day's carried
+preparation still answers `false`.

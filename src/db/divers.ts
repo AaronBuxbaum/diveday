@@ -18,6 +18,7 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { minorDeclaredOnLiveUpcomingSeat } from "@/lib/guardian";
 import { shopWaiverStatus, waiverClockInstant } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
@@ -1036,14 +1037,20 @@ export async function getDiverProfile(
     listAfterDiveRollCallByTrip(db, shopId, diverTripIds),
   ]);
 
+  // **A booker's "Under 18" on a seat still ahead speaks for the record**
+  // (issue #2553, Option A): the roster for that seat already asks for the
+  // guardian, so the record must not say "Signed" over the same release. A
+  // date of birth on file still decides; none is ever written from the stamp.
+  const minorDeclared = minorDeclaredOnLiveUpcomingSeat(
+    bookingRows.map((row) => ({ ...row.booking, trip: row.trip })),
+    waiverNow,
+  );
   const waiver = shopWaiverStatus({
     personSignedWaivers: signedWaivers.get(personId) ?? [],
     currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-    // Person-scoped: no seat in hand, so no booker's "Under 18" (a seat's
-    // own readiness reads it).
     signer: {
       dateOfBirth: personRow.person.dateOfBirth,
-      minorDeclared: false,
+      minorDeclared,
       timezone: shopTimezone,
     },
     // The furthest instant any upcoming seat's roster measures this release
@@ -1103,6 +1110,12 @@ export async function getDiverProfile(
      * review them.
      */
     waiver,
+    /**
+     * A live seat still ahead was booked as "Under 18" (issue #2553). With no
+     * date of birth on file, the record reads the release as a minor's and
+     * asks the staffer for the date.
+     */
+    minorDeclared,
     /**
      * The earlier referral a physician's letter dated before the open one could
      * cover (issue #2616), for the recording form; null when nothing is held or

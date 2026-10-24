@@ -108,6 +108,45 @@ describe("DiverDetailsGroup", () => {
     expect(document.body).not.toHaveTextContent("18 or older, per");
   });
 
+  /** Issue #2553, Option A: a seat booked "Under 18" and no date on file. */
+  it("asks for a date of birth while a seat ahead is booked as under 18", () => {
+    const declared = diver("Ana Castellanos", "+13055550199");
+    const props = {
+      shopSlug: "blue-mantis",
+      personId: "person-1",
+      t,
+      locale: "en-US",
+      timezone: "America/New_York",
+      country: "US",
+    };
+    const { container, getByText, rerender } = render(
+      <DiverDetailsGroup {...props} diver={{ ...declared, minorDeclared: true }} />,
+    );
+    expect(
+      getByText("Booked as under 18, with no date of birth on file. Add one."),
+    ).toBeInTheDocument();
+    expect(getByText("Booked as under 18")).toBeInTheDocument();
+    expect(getByText("Emergency contact: Ana Castellanos")).toHaveClass("text-warning-strong");
+    expect(container.querySelector("details")).toHaveAttribute("open");
+
+    // A date on file is the answer: the prompt goes, whatever the seat says.
+    rerender(
+      <DiverDetailsGroup
+        {...props}
+        diver={{
+          ...declared,
+          minorDeclared: true,
+          person: { ...declared.person, dateOfBirth: "2014-03-02" },
+        }}
+      />,
+    );
+    expect(document.body).not.toHaveTextContent("Booked as under 18");
+
+    // No declared seat ahead: nothing to ask.
+    rerender(<DiverDetailsGroup {...props} diver={{ ...declared, minorDeclared: false }} />);
+    expect(document.body).not.toHaveTextContent("Booked as under 18");
+  });
+
   it("is a closed door that names a missing contact in warning ink", () => {
     const { container, getByText } = renderGroup();
     const details = container.querySelector("details");
