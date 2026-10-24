@@ -2831,7 +2831,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-open-water-scuba-diver",
-    version: 1,
+    version: 2,
     title: "Open Water Scuba Diver",
     agency: "sdi",
     description: "SDI's entry-level certification — computer-based from the first dive.",
@@ -2857,7 +2857,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Small groups, so nobody waits on the line for a turn",
       minimumAge: 10,
       prerequisiteNote:
-        "No certification needed. Divers aged 10 to 14 certify as Junior Open Water Scuba Divers and dive with an adult certified diver, within shallower limits. You will need to be comfortable in the water and complete a medical questionnaire; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+        "No certification needed. Divers aged 10 to 14 certify as Junior Open Water Scuba Divers and dive within shallower limits: 10–11 with a dive professional or a certified parent or guardian, 12–14 with any certified adult. You will need to be comfortable in the water and complete a medical questionnaire; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
       includes: [
         "SDI eLearning and digital certification card",
         "All scuba equipment for the course",
@@ -2934,7 +2934,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Small groups, matched to the electives you choose",
       minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or an equivalent certification from another agency — we verify the certification record before the first dive. At least 10 years old, and divers under 18 need a parent's or guardian's consent. Divers aged 10–11 stay within {depth12} on every dive and 12–14 keep the deep dive to {depth21}; all of them dive under the direct supervision of a parent, guardian or dive professional, and choose electives SDI opens to their age. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency — we verify the certification record before the first dive. At least 10 years old, and divers under 18 need a parent's or guardian's consent. Junior depth limits apply on every dive: {depth12} at 10–11, and {depth18} at 12–14 ({depth21} on an advanced card). Divers under 15 dive under the direct supervision of a parent, guardian or dive professional, and choose electives SDI opens to their age. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Five instructor-led dives",
@@ -2965,7 +2965,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep is the deep dive?",
           answer:
-            "No deeper than {depth30} for adults; {depth21} at 12–14 and {depth12} at 10–11. Shallower if that is where the dive is better. It is a supervised introduction to depth, not a depth record.",
+            "No deeper than {depth30} for adults; {depth12} at 10–11, and {depth18} at 12–14 ({depth21} on an advanced card). Shallower if that is where the dive is better. It is a supervised introduction to depth, not a depth record.",
         },
         {
           question: "Is this the same as Advanced Open Water?",
@@ -3233,7 +3233,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Small groups, because depth shortens everyone's dive",
       minimumAge: 10,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or equivalent. At least 10 years old, and divers under 18 need a parent's or guardian's consent; divers aged 10–11 stay within {depth12} and 12–14 within {depth21}, so their plan stops short of the deepest dives. Enriched-air training is strongly recommended for the deeper dives. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent. At least 10 years old, and divers under 18 need a parent's or guardian's consent; junior depth limits apply: {depth12} at 10–11, and {depth18} at 12–14 ({depth21} on an advanced card), so their plan stops short of the deepest dives. Enriched-air training is strongly recommended for the deeper dives. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Four progressively deeper training dives",
@@ -3265,7 +3265,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How deep does this take me?",
           answer:
-            "To {depth40}, the recreational limit, for adults; {depth21} at 12–14 and {depth12} at 10–11. Past that is technical diving, which is a different training path with different gear.",
+            "To {depth40}, the recreational limit, for adults; {depth12} at 10–11, and {depth18} at 12–14 ({depth21} on an advanced card). Past that is technical diving, which is a different training path with different gear.",
         },
       ],
     },
@@ -3389,7 +3389,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Small groups, because a wreck is easy to lose people on",
       minimumAge: 15,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or equivalent. At least 15 years old, and divers under 18 need a parent's or guardian's consent: the light-zone dives are limited penetration, which SDI opens at 15. SDI's non-penetration version starts at 10 and keeps younger divers within {depth18}; ask us if that suits a younger diver. Our wrecks sit deep enough that deep training is worth having first. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent. At least 15 years old, and divers under 18 need a parent's or guardian's consent: the light-zone dives are limited penetration, which SDI opens at 15. SDI's non-penetration version starts at 10 and keeps younger divers within {depth12} at 10–11 and {depth18} at 12–14; ask us if that suits a younger diver. Our wrecks sit deep enough that deep training is worth having first. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital certification card",
         "Four wreck dives",

@@ -185,15 +185,14 @@ describe("SDI templates", () => {
       "sdi-night-limited-visibility-diver": 10,
       "sdi-wreck-diver": 15,
     });
-    // SDI caps 12–14-year-olds at 21 m on the deep dive and DiveDay's junior
-    // band holds 10–11 to 12 m; the note and the depth FAQ both have to say so,
-    // because a parent reads the FAQ, not the note.
+    // DiveDay's junior bands (src/lib/depth-ceiling.ts) are stricter than SDI's
+    // 21 m for 10–14: 12 m at 10–11, 18 m at 12–14 unless the card is advanced.
+    // The note and the depth FAQ both have to say so; a parent reads the FAQ.
     for (const slug of ["sdi-advanced-adventure-diver", "sdi-deep-diver"]) {
       const content = COURSE_TEMPLATES.find((entry) => entry.slug === slug)?.content;
       const depthFaq = content?.faqs.find((faq) => faq.question.startsWith("How deep"))?.answer;
       for (const text of [content?.prerequisiteNote, depthFaq]) {
-        expect(text, slug).toMatch(/12–14[^.;]*\{depth21\}|\{depth21\} at 12–14/);
-        expect(text, slug).toMatch(/\{depth12\} at 10–11|10–11 stay within \{depth12\}/);
+        expect(text, slug).toContain("{depth12} at 10–11, and {depth18} at 12–14");
       }
     }
   });
