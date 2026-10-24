@@ -76,11 +76,11 @@ export function PackagePurchaseForm({
               aside={<span className="font-semibold tabular-nums">{offer.priceText}</span>}
             >
               <span className="block font-semibold">{offer.name}</span>
-              {/* Phrasing content only inside the pill's `<label>`, so the list
-                  is spans that say they are one. */}
-              <span role="list" className="mt-1 block text-sm text-muted">
+              {/* Phrasing content only inside the pill's `<label>`, so the
+                  short list is one span per fact, a line each. */}
+              <span className="mt-1 block text-sm text-muted">
                 {offer.facts.map((fact) => (
-                  <span key={fact} role="listitem" className="block">
+                  <span key={fact} className="block">
                     {fact}
                   </span>
                 ))}

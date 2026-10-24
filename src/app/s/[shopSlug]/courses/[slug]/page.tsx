@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { submitInquiryAction } from "@/app/actions/inquiry";
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { DateRequestForm } from "@/components/DateRequestForm";
 import { JsonLd } from "@/components/JsonLd";
 import { JumpNav } from "@/components/JumpNav";
@@ -38,7 +39,6 @@ import {
   CourseSessions,
   courseFootBar,
 } from "./_components/CourseSections";
-import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame

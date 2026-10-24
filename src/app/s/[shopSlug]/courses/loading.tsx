@@ -1,6 +1,6 @@
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { segmentedTrackClass } from "@/components/ui/segmented";
-import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 
 /**
  * Catalog-shaped skeleton for the diver-facing course list (design principle

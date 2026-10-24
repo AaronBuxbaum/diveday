@@ -301,10 +301,12 @@ describe("threadSpineSteps' state word", () => {
     ({ category, state, code: `${category}_code` }) as never;
 
   function words(spine: ReturnType<typeof buildThreadSteps>) {
-    return threadSpineSteps(spine, t, () => null, () => null).map((step) => [
-      step.id,
-      step.stateWord,
-    ]);
+    return threadSpineSteps(
+      spine,
+      t,
+      () => null,
+      () => null,
+    ).map((step) => [step.id, step.stateWord]);
   }
 
   it("names only the first open step, in readiness order", () => {

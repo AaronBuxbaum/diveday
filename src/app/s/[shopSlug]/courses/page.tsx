@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { AgencyTabs } from "@/components/AgencyTabs";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -22,7 +23,6 @@ import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
 import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { courseRowDate } from "./course-row-date";
-import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame

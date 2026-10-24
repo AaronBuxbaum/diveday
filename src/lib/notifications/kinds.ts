@@ -1990,7 +1990,7 @@ export const notificationSenderSchema = z.object({
     .trim()
     .min(1)
     .max(40)
-    .regex(/^[^\u0000-\u001f\u007f]+$/)
+    .refine((value) => !/\p{Cc}/u.test(value))
     .optional(),
   contactEmail: emailAddressSchema.optional(),
   /** The shop's brand colour, `#rrggbb` (`shops.brand_color`), for the wrapper's accents. */

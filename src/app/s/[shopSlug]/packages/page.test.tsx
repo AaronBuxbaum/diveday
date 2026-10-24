@@ -113,11 +113,14 @@ describe("the public packages page with a package on sale", () => {
   it("lists each card's facts and lifts the shared scope into the intro", async () => {
     await renderOnSale([card, { ...card, id: "pkg-2", name: "Ten-dive card", diveCount: 10 }]);
 
-    const lists = screen.getAllByRole("list");
-    expect(lists).toHaveLength(2);
-    expect(
-      [...(lists[0]?.querySelectorAll('[role="listitem"]') ?? [])].map((i) => i.textContent),
-    ).toEqual(["5 dives", "$80 a dive", "No expiry date"]);
+    // One line per fact, inside the pill's label (phrasing content only).
+    const facts = screen.getByText("5 dives").parentElement;
+    expect([...(facts?.children ?? [])].map((i) => i.textContent)).toEqual([
+      "5 dives",
+      "$80 a dive",
+      "No expiry date",
+    ]);
+    expect(screen.getByText("10 dives")).toBeInTheDocument();
     expect(document.body.textContent?.match(/Courses not included/g)).toHaveLength(1);
     expect(document.body.textContent?.match(/One dive is one tank/g)).toHaveLength(2);
   });

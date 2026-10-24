@@ -243,9 +243,7 @@ test.describe("staff-prepared trip", () => {
     const readyUrl = new URL(page.url());
     readyUrl.search = "";
     await page.goto(readyUrl.toString());
-    await expect(
-      page.getByRole("heading", { name: /This link no longer works/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /This link no longer works/ })).toBeVisible();
     await expect(page.getByText(/Blue Mantis Divers/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
       "href",

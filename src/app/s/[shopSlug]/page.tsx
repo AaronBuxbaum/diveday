@@ -38,7 +38,6 @@ import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { EmbedFooter } from "./_components/EmbedFooter";
 import { identityBand, monthRailSides } from "./_components/identity-band";
 import { MonthRail } from "./_components/MonthRail";
-import { SHOP_MAIN_CLASS } from "./_components/shop-main";
 import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { MoreWaysRows } from "./_components/MoreWaysRows";
 import { NextBoatCard } from "./_components/NextBoatCard";
@@ -64,6 +63,7 @@ import {
   scheduleSeatState,
   scheduleViewLinks,
 } from "./_components/schedule-view";
+import { SHOP_MAIN_CLASS } from "./_components/shop-main";
 import { WeekLedger } from "./_components/WeekLedger";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -360,13 +360,7 @@ export default async function SchedulePage({
   });
 
   return (
-    <main
-      className={
-        isEmbed
-          ? "w-full flex-1 px-3 py-4"
-          : SHOP_MAIN_CLASS
-      }
-    >
+    <main className={isEmbed ? "w-full flex-1 px-3 py-4" : SHOP_MAIN_CLASS}>
       {/* **The shop leads, not the word "Schedule"** (ADR
           20260827-clearwater-surface-language, decision 8). This was an h1
           reading "Schedule" over a DiveDay sentence about finding your next day

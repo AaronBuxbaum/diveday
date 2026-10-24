@@ -1,6 +1,6 @@
+import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 
 /**
  * Body-shaped skeleton for a public course page (design principle 1): the

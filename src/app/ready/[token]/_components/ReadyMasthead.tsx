@@ -116,7 +116,6 @@ export function ReadyMastheadMeta({
   now: Date;
   t: DiverTranslator;
 }) {
-
   return (
     <>
       <MastheadWhen facts={facts} locale={locale} now={now} />

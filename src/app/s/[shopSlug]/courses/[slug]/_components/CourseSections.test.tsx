@@ -437,10 +437,7 @@ describe("courseFootBar", () => {
 describe("CourseFaqs", () => {
   it("opens each question on the turning chevron, never a +", () => {
     render(
-      <CourseFaqs
-        faqs={[{ question: "How deep can I dive?", answer: "To 60 feet." }]}
-        t={t}
-      />,
+      <CourseFaqs faqs={[{ question: "How deep can I dive?", answer: "To 60 feet." }]} t={t} />,
     );
     const summary = document.querySelector("summary");
     expect(summary?.textContent).toBe("How deep can I dive?");

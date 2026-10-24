@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/group-label";
 import {
   FIGURE_CLASS,

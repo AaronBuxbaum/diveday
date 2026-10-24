@@ -69,9 +69,7 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
       await page.getByRole("button", { name: "Set new password" }).click();
       await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}`));
       await page.goto(`/reset-password/${token}`);
-      await page
-        .getByRole("heading", { name: copy("common.deadLinkHeading") })
-        .waitFor();
+      await page.getByRole("heading", { name: copy("common.deadLinkHeading") }).waitFor();
       await capture(page, "account-reset-consumed", "light");
     });
 

@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import {
   aboveStatedLevelIds,
+  nextBoatCardShows,
   type RequirementsByTrip,
   type ScheduleView,
   scheduleDayWords,
   scheduleFilterCopy,
   scheduleMonthBounds,
   scheduleMonthRail,
-  nextBoatCardShows,
   scheduleNextBoat,
   scheduleOffSeason,
   schedulePagerHrefs,

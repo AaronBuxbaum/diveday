@@ -122,7 +122,9 @@ test.describe("staff", () => {
     // Both named spots are held atomically.
     await page.goto("/s/blue-mantis");
     const card = page.locator("li").filter({ hasText: title });
-    await expect(card.getByText("4 seats", { exact: true }).filter({ visible: true })).toBeVisible();
+    await expect(
+      card.getByText("4 seats", { exact: true }).filter({ visible: true }),
+    ).toBeVisible();
 
     // Staff sees the diver on the roster. Today is a work queue, so open the trip
     // from the schedule (staff cards link straight to the management view). This

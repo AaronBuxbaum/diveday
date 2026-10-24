@@ -562,7 +562,9 @@ test.describe("light mode — course date requests without a shop email", () => 
     // PADI Rescue has a seeded session; this catalog-only course proves the empty state.
     await page.goto(`/s/${privateShop.slug}/courses/sdi-rescue-diver`);
     await expect(page.getByText(diverCopy("course.noDatesLead"), { exact: false })).toBeVisible();
-    await expect(page.getByRole("region", { name: diverCopy("inquiry.askAboutCourse") })).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: diverCopy("inquiry.askAboutCourse") }),
+    ).toBeVisible();
     await capture(page, "course-request-no-email", "light");
   });
 });
