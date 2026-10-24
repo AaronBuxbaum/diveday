@@ -650,6 +650,12 @@ type ScrubSectionContext = ScrubContext & {
   ) => Promise<void>;
   /** What a sweep found that the caller acts on after the commit. */
   found: { bookkeeperCleared: boolean };
+  /**
+   * The distinct lower-cased guardian addresses on this diver's releases here,
+   * read before `scrubWaiverRecords` nulls them, so the address sweeps in
+   * `scrubPiiBlob` can take them too (issue #2949). Empty for an adult.
+   */
+  guardianEmails: string[];
 };
 
 /** The erasure's "people" sweep. */
@@ -2332,6 +2338,25 @@ async function scrubPiiBlob(
       .returning({ id: notificationSendQueue.id });
     logFuzzyMatch(ctx, "send_queue_address", dropped.length);
   }
+  // **A minor's guardians** (issue #2949): the waiver sweep nulled their
+  // addresses on the releases, so the same addresses go from this shop's
+  // queue by the same two handles. This shop only; another shop's mail to the
+  // same parent is not this erasure's to touch.
+  if (ctx.guardianEmails.length > 0) {
+    const dropped = await tx
+      .delete(notificationSendQueue)
+      .where(
+        and(
+          eq(notificationSendQueue.shopId, shopId),
+          or(
+            inArray(sql`lower(${notificationSendQueue.recipientEmail})`, ctx.guardianEmails),
+            inArray(sql`lower(${notificationSendQueue.subjectEmail})`, ctx.guardianEmails),
+          ),
+        ),
+      )
+      .returning({ id: notificationSendQueue.id });
+    logFuzzyMatch(ctx, "send_queue_guardian_address", dropped.length);
+  }
   // **Bounce records** (`email_bounces`): an address in clear with the reason
   // its mail bounced. By address on this shop's rows, case-insensitively like
   // every address sweep here. DiveDay's own mail that named no shop is not
@@ -2346,6 +2371,18 @@ async function scrubPiiBlob(
       )
       .returning({ id: emailBounces.id });
     logFuzzyMatch(ctx, "email_bounce_address", bounces.length);
+  }
+  if (ctx.guardianEmails.length > 0) {
+    const bounces = await tx
+      .delete(emailBounces)
+      .where(
+        and(
+          eq(emailBounces.shopId, shopId),
+          inArray(sql`lower(${emailBounces.recipient})`, ctx.guardianEmails),
+        ),
+      )
+      .returning({ id: emailBounces.id });
+    logFuzzyMatch(ctx, "email_bounce_guardian_address", bounces.length);
   }
   await tx
     .update(emailBounces)
@@ -2954,6 +2991,20 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)));
   const bookingIds = bookingRows.map((row) => row.id);
 
+  // Read before the waiver sweep nulls `guardian_email`: the queue and bounce
+  // sweeps further down need the addresses it is about to destroy.
+  const guardianRows = await tx
+    .selectDistinct({ address: sql<string>`lower(${waiverRecords.guardianEmail})` })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        isNotNull(waiverRecords.guardianEmail),
+      ),
+    );
+  const guardianEmails = guardianRows.map((row) => row.address);
+
   let queued = 0;
   const retire: ScrubSectionContext["retire"] = async (kind, url) => {
     if (!url) return;
@@ -2966,6 +3017,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     owned: bookingIds.length > 0,
     retire,
     found,
+    guardianEmails,
   };
 
   // Every Stripe object this scrub finds standing for the erased diver, raised
