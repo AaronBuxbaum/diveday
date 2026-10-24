@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useActionState, useCallback, useState } from "react";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
-import { DiveDeclarationFields } from "@/components/DiveDeclarationFields";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -166,7 +165,6 @@ export function TripFullSection({
   errorMessage,
   alternatives = [],
   terms,
-  offerLastMinuteList = true,
   offerWaitlist = true,
   requirement = null,
 }: {
@@ -183,7 +181,6 @@ export function TripFullSection({
    */
   terms?: React.ReactNode;
   /** Whether the shop keeps a last-minute list to point a diver at. */
-  offerLastMinuteList?: boolean;
   /** Whether the shop keeps a wait list (the Features page); off, no form to join one. */
   offerWaitlist?: boolean;
   /**
@@ -225,16 +222,21 @@ export function TripFullSection({
     // replace it were briefly a size louder — "This trip is full" shouting
     // over "Grab a spot".
     <section id="book" className="scroll-mt-4 rounded-panel bg-surface-sunken p-5 sm:p-6">
+      {/* The panel leads with the fact, then the alternatives, then the
+          wait list (visual review 2026-10-24, B57). */}
       <h2 className={SECTION_TITLE_CLASS}>{t("fullHeading")}</h2>
-      <p className="mt-1 text-muted">
-        <Link
-          href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}`}
-          className="font-medium text-primary hover:underline"
-        >
-          {t("findAnotherTrip")}
-        </Link>{" "}
-        {t("reefNotGoingAnywhere")}
-      </p>
+      {/* With no other boat to name and no list to join, the panel still
+          leaves a way on rather than ending on its heading. */}
+      {alternatives.length === 0 && !offerWaitlist ? (
+        <p className="mt-2">
+          <Link
+            href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}`}
+            className="font-medium text-primary hover:underline"
+          >
+            {t("findAnotherTrip")}
+          </Link>
+        </p>
+      ) : null}
       {/* **The shop's own better answer**, above the wait list rather than
           under it: a diver who would happily take Thursday should meet
           Thursday before they queue for a seat that may never open (issue
@@ -286,28 +288,16 @@ export function TripFullSection({
             under the count says to ask the shop. Nobody else's name is asked
             for a seat that may never open, nor the lead's "Under 18": nothing
             is signed until a seat is booked. */}
-          <BookingPartyFields
-            maxPartySize={trip.capacity}
-            leadOnly
-            leadPhone
-          />
+          {/* Name and email, and the party's count: no phone (and so no
+              texting consent) and no certification question for a seat
+              that may never open (visual review 2026-10-24, B57). Booking
+              asks both when a seat does. */}
+          <BookingPartyFields maxPartySize={trip.capacity} leadOnly />
           {/* Two joiners from one couple would each count the couple, so the
             shop reads demand that is not there (dive-domain review r4-4, N8). */}
           {trip.capacity > 1 ? (
             <p className="text-sm text-muted">{t("waitlistPartyHint")}</p>
           ) : null}
-          {/* The same optional question the shop-wide deal list asks, in the same
-            words, so a staffer working either list is reading one claim rather
-            than two (FU-20260813). It describes the person joining — the lead
-            of the party — and never gates the join.
-
-            This list also asks for the agency and number (`DiveDeclarationFields`
-            carries both); the shop-wide deal list asks the level alone. That is
-            deliberate rather than drift: a wait list is for a *departure*, so
-            there is something for a staffer to pre-check the number against
-            before that date. A broad interest signal has no date to check it
-            for. */}
-          <DiveDeclarationFields showNitrox={false} />
           <div>
             <SubmitButton
               pendingLabel={t("waitlistJoining")}
@@ -321,19 +311,6 @@ export function TripFullSection({
             <ErrorNotice message={errorMessage} />
           </div>
         </form>
-      ) : null}
-      {/* Only while the shop keeps the list (`shops.last_minute_list_enabled`):
-          off, the anchor would land on nothing. */}
-      {offerLastMinuteList ? (
-        <p className="mt-4 text-sm text-muted">
-          {t("wantAnyTripAlertsInstead")}{" "}
-          <Link
-            href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}#last-minute-list`}
-            className="font-medium text-primary hover:underline"
-          >
-            {t("joinLastMinuteDealAlerts")}
-          </Link>
-        </p>
       ) : null}
     </section>
   );

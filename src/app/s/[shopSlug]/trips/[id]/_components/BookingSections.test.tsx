@@ -675,4 +675,25 @@ describe("TripFullSection with the wait list off", () => {
     );
     expect(screen.getByRole("button", { name: "Join the wait list" })).toBeInTheDocument();
   });
+
+  /**
+   * Visual review 2026-10-24, B57: the panel opens on its heading, then the
+   * alternatives, then a wait list of name and email. No "the reef isn't
+   * going anywhere", no phone and texting consent, no certification
+   * question, and no last-minute list link.
+   */
+  it("asks a name and an email and nothing else a seat would ask", () => {
+    renderDiver(
+      <TripFullSection shopSlug="reef-shop" trip={trip({ booked: 8 })} tripRef={tripRef} />,
+    );
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("This boat’s full");
+    expect(screen.queryByText(/isn’t going anywhere/)).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Email" })).toBeInTheDocument();
+    expect(document.querySelector('input[name="phone"]')).toBeNull();
+    expect(screen.queryByText(/you agree to texts/i)).toBeNull();
+    expect(document.querySelector('select[name="certificationLevel"]')).toBeNull();
+    expect(screen.queryByRole("link", { name: /last-minute list/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Find another trip" })).toBeNull();
+  });
 });

@@ -444,7 +444,6 @@ export default async function TripDetailPage({
                   tripRef={tripRef}
                   errorMessage={errorMessage}
                   alternatives={alternatives}
-                  offerLastMinuteList={shop.lastMinuteListEnabled}
                   offerWaitlist={shop.waitlistEnabled}
                   requirement={requirementSentence}
                   terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}

@@ -398,16 +398,12 @@
     "headingToPayment": "Heading to payment…",
     "booking": "Booking…",
     "fullHeading": "This boat’s full",
-    "findAnotherTrip": "Find another trip",
     "alternativeSameCourse": "Same course, {date}",
     "alternativeSameSite": "Same site, {date}",
-    "reefNotGoingAnywhere": "— the reef isn’t going anywhere.",
     "waitlistHeading": "Join the wait list",
     "waitlistBody": "If a seat opens, the shop will have your details ready.",
     "waitlistJoining": "Joining…",
     "waitlistPartyHint": "One of you is enough: join once for the whole group.",
-    "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
-    "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}",
     "waitlistConfirmedBody": "A seat is not held yet. The shop has your details and will get in touch if one opens up.",
     "sailedHeading": "This one’s already sailed",
@@ -483,7 +479,8 @@
       "refresherCourse": "Tell me about the refresher course.",
       "noGate": "None of these changes whether you can book."
     },
-    "alternativeSameRun": "Next date with room, {date}"
+    "alternativeSameRun": "Next date with room, {date}",
+    "findAnotherTrip": "Find another trip"
   },
   "bookingGear": {
     "heading": "Rental gear",
