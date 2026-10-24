@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import {
+  bookings,
   emailBounces,
+  notificationDeliveries,
   notificationSendQueue,
   people,
   personRoles,
@@ -177,39 +179,26 @@ describe("anonymizeDiver — a minor's guardian address", () => {
     return other.id;
   }
 
-  it("deletes this shop's queued mail to or about the guardian, by either address handle", async () => {
+  it("leaves a sibling's queued mail and bounces to the same parent alone", async () => {
     const { db, shop } = ctx;
-    const { owner, minor } = await fixture(["Jordan.Fischer@Example.org"]);
-    const elsewhere = await otherShop();
-    const at = new Date("2026-10-20T14:00:00.000Z");
-    const row = { payloadSealed: "v1.sealed", nextAttemptAt: at };
-    await db.insert(notificationSendQueue).values([
-      {
-        ...row,
-        shopId: shop.id,
-        idempotencyKey: `guardian-to-${minor}`,
-        recipientEmail: "JORDAN.fischer@example.org",
-      },
-      {
-        ...row,
-        shopId: shop.id,
-        idempotencyKey: `guardian-about-${minor}`,
-        recipientEmail: "desk@example.org",
-        subjectEmail: "jordan.fischer@example.org",
-      },
-      {
-        ...row,
-        shopId: elsewhere,
-        idempotencyKey: `guardian-elsewhere-${minor}`,
-        recipientEmail: "jordan.fischer@example.org",
-      },
-      {
-        ...row,
-        shopId: shop.id,
-        idempotencyKey: `guardian-control-${minor}`,
-        recipientEmail: "someone-else@example.org",
-      },
-    ]);
+    const { owner, minor } = await fixture(["jordan.fischer@example.org"]);
+    // A brother on the same parent's release: the address is still his contact.
+    const { minor: sibling } = await fixture(["Jordan.Fischer@example.org"]);
+    const at = new Date("2026-10-23T09:00:00.000Z");
+    await db.insert(notificationSendQueue).values({
+      shopId: shop.id,
+      idempotencyKey: `sibling-mail-${sibling}`,
+      recipientEmail: "jordan.fischer@example.org",
+      payloadSealed: "v1.sealed",
+      nextAttemptAt: at,
+    });
+    await db.insert(emailBounces).values({
+      shopId: shop.id,
+      providerMessageId: `sibling-bounce-${sibling}`,
+      event: "bounce",
+      recipient: "jordan.fischer@example.org",
+      occurredAt: at,
+    });
 
     const erased = await anonymizeDiver(db, {
       shopId: shop.id,
@@ -218,15 +207,70 @@ describe("anonymizeDiver — a minor's guardian address", () => {
     });
     expect(erased.ok).toBe(true);
 
-    const left = await db
+    const queued = await db
       .select({ key: notificationSendQueue.idempotencyKey })
       .from(notificationSendQueue)
       .where(eq(notificationSendQueue.nextAttemptAt, at));
-    expect(left.map((r) => r.key).filter((key) => key.endsWith(minor))).toEqual(
-      expect.arrayContaining([`guardian-elsewhere-${minor}`, `guardian-control-${minor}`]),
-    );
-    expect(left.map((r) => r.key)).not.toContain(`guardian-to-${minor}`);
-    expect(left.map((r) => r.key)).not.toContain(`guardian-about-${minor}`);
+    expect(queued).toEqual([{ key: `sibling-mail-${sibling}` }]);
+    const bounced = await db
+      .select({ id: emailBounces.providerMessageId })
+      .from(emailBounces)
+      .where(eq(emailBounces.occurredAt, at));
+    expect(bounced).toEqual([{ id: `sibling-bounce-${sibling}` }]);
+  });
+
+  it("clears the delivery log's quotes of the guardian address, and nothing else", async () => {
+    const { db, shop } = ctx;
+    const { owner, minor } = await fixture(["Jordan.Fischer@example.org"]);
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .limit(1);
+    if (!booking) throw new Error("expected a seeded booking");
+    await db.delete(notificationDeliveries).where(eq(notificationDeliveries.bookingId, booking.id));
+    const at = new Date("2026-10-23T10:00:00.000Z");
+    const row = {
+      shopId: shop.id,
+      bookingId: booking.id,
+      status: "failed" as const,
+      attemptedAt: at,
+    };
+    const [quoted, other] = await db
+      .insert(notificationDeliveries)
+      .values([
+        {
+          ...row,
+          kind: "waiver_request" as const,
+          providerDetail: "550 5.1.1 <JORDAN.fischer@example.org>: recipient rejected",
+          sendError: "bounce for jordan.fischer@example.org",
+        },
+        {
+          ...row,
+          kind: "trip_recap" as const,
+          providerDetail: "550 5.1.1 <someone@example.org>: recipient rejected",
+        },
+      ])
+      .returning({ id: notificationDeliveries.id });
+    if (!quoted || !other) throw new Error("fixture insert failed");
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: minor,
+      actorPersonId: owner,
+    });
+    expect(erased.ok).toBe(true);
+
+    const rows = await db
+      .select({
+        id: notificationDeliveries.id,
+        detail: notificationDeliveries.providerDetail,
+        error: notificationDeliveries.sendError,
+      })
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.attemptedAt, at));
+    expect(rows.find((r) => r.id === quoted.id)).toMatchObject({ detail: null, error: null });
+    expect(rows.find((r) => r.id === other.id)?.detail).toContain("someone@example.org");
   });
 
   it("deletes this shop's bounces for every guardian on the diver's releases", async () => {

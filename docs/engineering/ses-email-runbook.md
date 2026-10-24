@@ -532,7 +532,7 @@ own shop, carried into a queued retry, and absent on mail nobody pressed a butto
 same facts and the recipient's domain, never the address. The founder's Monday digest lists last
 week's rows, newest first, with each address masked (`no***@example.com`): a mailbox outlives the
 retention window and any erasure, so the full address is read from the table. Rows are kept 90 days (`RETENTION_DAYS.email_bounces`) and an erasure
-deletes a diver's rows for that shop by their address, their login address and the guardian addresses on their releases. A report that arrives after the erasure is kept
+deletes a diver's rows for that shop by their address, their login address and any guardian address that only their releases held. A report that arrives after the erasure is kept
 until the 90 days run out.
 
 This is the place to look when the console shows a bounce rate but the suppression list is empty:
