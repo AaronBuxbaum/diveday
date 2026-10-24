@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
@@ -6,6 +7,7 @@ import { medicalAlertsForPrint } from "@/db/medical-alerts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
+import { isCrossSiteHeaders } from "@/lib/same-origin";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { AutoPrint } from "../../_components/AutoPrint";
@@ -35,7 +37,8 @@ export const instant = true;
  * dispute sheet never take them.
  *
  * Opened only by "Print with medical alerts" (a `window.open` from a form
- * submit, never a prefetching link).
+ * submit, never a prefetching link). A navigation from another site is a 404
+ * before anything is read (`isCrossSiteHeaders`).
  */
 export default async function TripPrintWithMedicalAlertsPage({
   params,
@@ -45,6 +48,10 @@ export default async function TripPrintWithMedicalAlertsPage({
   const resolvedParams = await params;
   const { id } = resolvedParams;
   if (!uuidParam(id)) notFound();
+  // A GET that writes the trail: another site's `window.open` carries the
+  // session cookie (SameSite=Lax), so it is refused with the same 404 before
+  // anything is read or recorded (security review of #2990, M1).
+  if (isCrossSiteHeaders(await headers())) notFound();
   const tripId = id;
 
   const { shop, session, db } = await requireShopSurface(resolvedParams.shopSlug);

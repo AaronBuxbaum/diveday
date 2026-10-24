@@ -23,6 +23,13 @@ function sourceFiles(directory: string): string[] {
 }
 
 describe("the print with medical alerts", () => {
+  it("refuses another site's navigation before it reads the session or the words", () => {
+    const guard = SOURCE.indexOf("if (isCrossSiteHeaders(await headers())) notFound();");
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(SOURCE.indexOf("await requireShopSurface("));
+    expect(guard).toBeLessThan(SOURCE.indexOf("await medicalAlertsForPrint(db, {"));
+  });
+
   it("asks the server for the words, refuses with a 404, and only then composes the packet", () => {
     const asks = SOURCE.indexOf("await medicalAlertsForPrint(db, {");
     const refuses = SOURCE.indexOf("if (!printed.ok) notFound();");
