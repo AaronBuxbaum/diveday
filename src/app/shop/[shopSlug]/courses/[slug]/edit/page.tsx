@@ -39,7 +39,7 @@ import { CoursePitchPricingSections } from "./_components/CoursePitchPricingSect
 import { CourseDayByDaySection, CourseFaqSection } from "./_components/CourseScheduleFaqSections";
 import { CourseSection } from "./_components/CourseSection";
 import { CourseTemplateUpdatesPanel } from "./_components/CourseTemplateUpdatesPanel";
-import { courseEditNotices } from "./_components/edit-notices";
+import { courseEditNotices, refusedSectionId } from "./_components/edit-notices";
 import { LearningMaterialsSection } from "./_components/LearningMaterialsSection";
 import { courseTemplateFieldLabels } from "./_components/template-field-labels";
 import { UnsavedChangesGuard, UnsavedChangesNote } from "./_components/UnsavedChangesGuard";
@@ -151,15 +151,8 @@ export default async function EditCoursePage({
     { id: "faq", label: t("courses.edit.faqLegend") },
   ];
   const unsavedTag = t("shared.formDraft.unsavedSection");
-  // A closed section a refusal names opens, so the box to fix is in view. The
-  // save names a field, not always its section's id: the FAQ is posted as
-  // `faqsJson`, and Included / Not included sit in what the fee covers.
-  const FIELD_SECTION: Readonly<Record<string, string>> = {
-    faqsJson: "faq",
-    includes: "fee-covers",
-    excludes: "fee-covers",
-  };
-  const refusedSection = error && field ? (FIELD_SECTION[field] ?? field) : undefined;
+  // A closed section a refusal names opens, so the box to fix is in view.
+  const refusedSection = refusedSectionId(error, field);
   const closedRef = (section: EditorSectionRef) => ({
     ...section,
     unsavedTag,
@@ -176,9 +169,7 @@ export default async function EditCoursePage({
     closed: true,
     open: Boolean(notice?.startsWith("forms-")),
   };
-  // The unsaved sentence names the forms section too, when it is drawn: a
-  // change to which forms a course asks for is the change least safe to leave
-  // unnamed behind a closed row.
+  // The unsaved sentence names the forms section too, when it is drawn.
   const noteSections: readonly EditorSectionRef[] = formsPanel
     ? [...sections, { id: formsSection.id, label: formsSection.label }]
     : sections;

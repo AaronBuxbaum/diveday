@@ -595,7 +595,7 @@ export default async function TeamSettingsPage({
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
         {/* The team first; inviting is a button under its heading (item 58). */}
-        <section>
+        <section id="credentials" className="scroll-mt-24">
           {/* Not a card — a heading over a list of them, so a bare `h2` at
               `SECTION_TITLE_CLASS`, the rung `SectionCard` draws its own title
               at and `card.tsx` prescribes for a heading over a plural body. */}
@@ -617,26 +617,21 @@ export default async function TeamSettingsPage({
               className="mt-4"
             />
           ) : (
-            // `#credentials` lands here, on the cards (Today's and the
-            // staffing week's credential lines link to it): an expired or
-            // unreviewed credential stands on its person's card at rest.
-            <div id="credentials" className="mt-4 scroll-mt-24">
-              <InsetGroup bodyAs="ul">
-                {staff.map((member) => (
-                  <StaffRow
-                    key={member.personId}
-                    member={member}
-                    credentials={credentialRows.filter((row) => row.personId === member.personId)}
-                    notice={pageNotice}
-                    priorRoles={rolesFor === member.personId ? undoRolesFor : []}
-                    locale={locale}
-                    timezone={shop.timezone}
-                    t={t}
-                    year={years.get(member.personId)}
-                  />
-                ))}
-              </InsetGroup>
-            </div>
+            <InsetGroup className="mt-4" bodyAs="ul">
+              {staff.map((member) => (
+                <StaffRow
+                  key={member.personId}
+                  member={member}
+                  credentials={credentialRows.filter((row) => row.personId === member.personId)}
+                  notice={pageNotice}
+                  priorRoles={rolesFor === member.personId ? undoRolesFor : []}
+                  locale={locale}
+                  timezone={shop.timezone}
+                  t={t}
+                  year={years.get(member.personId)}
+                />
+              ))}
+            </InsetGroup>
           )}
           {/* Every credential is read, reviewed and removed on its person's
               card above (A09); adding one is the door under the team. */}
