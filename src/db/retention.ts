@@ -19,6 +19,7 @@ import {
   bookingCapabilities,
   bookingPaymentEvents,
   bookings,
+  claudeCallContent,
   claudeUsage,
   crewNotices,
   demoEntries,
@@ -160,6 +161,47 @@ export async function drainExpiredDietaryNotes(
     }
   }
   return { cleared, capped: true, failed: false };
+}
+
+export type ClaudeCallContentRetentionSummary = {
+  deleted: number;
+  capped: boolean;
+  failed: boolean;
+};
+
+/** The daily Claude sweep's admission budget, beside the dietary sweep's in one cron. */
+export const CLAUDE_CALL_CONTENT_RETENTION_TIME_BUDGET_MS = 5_000;
+
+/**
+ * **Deletes Claude call content past its 30 days, daily** (ADR
+ * 20261023-claude-call-content). The weekly prune reaches the table too, but a
+ * row it found on day 29 would live to day 36; this drain, run by the daily
+ * privacy cron, keeps "30 days" to the day. Same batches and the same
+ * monotonic admission budget as the dietary sweep; a statement error is a
+ * failed outcome, never its text.
+ */
+export async function drainExpiredClaudeCallContent(
+  db: AppDb,
+  opts: { now?: Date; budgetMs?: number; batchLimit?: number } = {},
+): Promise<ClaudeCallContentRetentionSummary> {
+  const now = opts.now ?? nowDate();
+  const budgetMs = opts.budgetMs ?? CLAUDE_CALL_CONTENT_RETENTION_TIME_BUDGET_MS;
+  const batchLimit = opts.batchLimit ?? PRUNE_BATCH_LIMIT;
+  const started = performance.now();
+  let deleted = 0;
+  while (performance.now() - started < budgetMs) {
+    const batch = await pruneBatch(
+      db,
+      "claude_call_content",
+      PRUNE_ARMS.claude_call_content,
+      now,
+      batchLimit,
+    );
+    deleted += batch.deleted;
+    if (batch.failed) return { deleted, capped: false, failed: true };
+    if (!batch.capped) return { deleted, capped: false, failed: false };
+  }
+  return { deleted, capped: true, failed: false };
 }
 
 /**
@@ -351,6 +393,12 @@ export const PRUNE_ARMS = {
     from: claudeUsage,
     id: claudeUsage.id,
     clock: claudeUsage.createdAt,
+  },
+  // What a Claude call said, on its own age: 30 days of debugging text.
+  claude_call_content: {
+    from: claudeCallContent,
+    id: claudeCallContent.id,
+    clock: claudeCallContent.createdAt,
   },
   // What an assist answered, on the age of its last answer: a row nobody asked
   // again for a season and a year is about reviews and weeks long gone.

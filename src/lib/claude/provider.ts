@@ -66,3 +66,8 @@ export function claudeErrorCode(error: unknown): string {
   }
   return "unknown";
 }
+
+/** The Anthropic request id on a failed call, when the API answered with one. */
+export function claudeErrorRequestId(error: unknown): unknown {
+  return error instanceof Anthropic.APIError ? error.requestID : null;
+}

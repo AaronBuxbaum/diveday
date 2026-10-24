@@ -7,6 +7,7 @@ import {
   jsonb,
   pgTable,
   text,
+  timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -21,8 +22,11 @@ import { shops } from "./core";
  *
  * Codes and numbers only: `feature` is the assist's machine key (`inbox_draft`),
  * `outcome` is `StructuredOutcome` (`ok`, `refused`, …) and `error_code` a
- * transport code (`http_429`). Never the prompt, the answer, or a person: what
- * was sent lives nowhere but Anthropic's own retention.
+ * transport code (`http_429`). `latency_ms` is the call's wall time, resumed
+ * turns included, and `request_id` Anthropic's id for its last request, so a
+ * slow or odd call can be found on Anthropic's side. Never the prompt, the
+ * answer, or a person: the words live in `claude_call_content` below, for 30
+ * days only.
  *
  * `cost_micro_usd` is computed at write time from the list price
  * (`costMicroUsd` in `src/lib/claude/models.ts`), so a later price change does
@@ -45,6 +49,8 @@ export const claudeUsage = pgTable(
     cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     costMicroUsd: integer("cost_micro_usd").notNull().default(0),
+    latencyMs: integer("latency_ms"),
+    requestId: text("request_id"),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
@@ -54,6 +60,67 @@ export const claudeUsage = pgTable(
     index("claude_usage_created_at_idx").on(table.createdAt),
   ],
 );
+
+/**
+ * **What one Claude call said, kept 30 days to debug it** (Aaron, 2026-10-23;
+ * ADR 20261023-claude-call-content): one row per
+ * `claude_usage` row, written by `runAssist` (`src/db/assists.ts`) beside the
+ * usage row's settle. The fixed instructions, the cached shop context, the
+ * per-request content and the model's answer text, as text.
+ *
+ * **Never an image or a document**: each is a placeholder such as
+ * `[image: image/jpeg, 812 KB, not kept]` (`src/lib/claude/transcript.ts`).
+ * **Never a fetched page's body**: `fetched_urls` lists what `web_fetch` read,
+ * one URL per line.
+ *
+ * The text holds divers' words (inbox messages, a duplicate check's names and
+ * dates of birth, gear notes, reviews) but no key to a person, so every
+ * erasure deletes every row for that shop (`forgetClaudeCallContent`). Nothing
+ * on screen, no shop export and no backup bundle reads it: DiveDay reads it by
+ * SQL (`docs/engineering/claude-call-content-runbook.md`). Rows cascade with
+ * their usage row and their shop, and the daily privacy cron deletes them at
+ * 30 days.
+ */
+export const claudeCallContent = pgTable(
+  "claude_call_content",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    usageId: uuid("usage_id")
+      .notNull()
+      .references(() => claudeUsage.id, { onDelete: "cascade" }),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    systemText: text("system_text").notNull(),
+    contextText: text("context_text"),
+    contentText: text("content_text").notNull(),
+    answerText: text("answer_text"),
+    fetchedUrls: text("fetched_urls"),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("claude_call_content_usage_unique").on(table.usageId),
+    // The runbook's "last calls for a shop" and the erasure's delete.
+    index("claude_call_content_shop_created_at_idx").on(table.shopId, table.createdAt),
+    // The retention prune.
+    index("claude_call_content_created_at_idx").on(table.createdAt),
+  ],
+);
+
+/**
+ * **When a shop last erased anyone, as `claude_call_content` needs to know**
+ * (security review, 2026-10-23): one row per shop, moved forward by every
+ * erasure path (`forgetClaudeCallContent`, `src/db/claude-call-content.ts`),
+ * whether or not the person erased has a record. A call whose words were read
+ * before an erasure committed keeps nothing when it finishes after it. A shop
+ * and an instant, no person.
+ */
+export const claudeCallContentErasures = pgTable("claude_call_content_erasures", {
+  shopId: uuid("shop_id")
+    .primaryKey()
+    .references(() => shops.id, { onDelete: "cascade" }),
+  erasedAt: timestamp("erased_at", { withTimezone: true }).notNull(),
+});
 
 /**
  * **What every demo shop together spent on Claude, one row per UTC month**

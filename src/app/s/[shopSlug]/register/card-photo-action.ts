@@ -18,9 +18,11 @@ import { SELF_DECLARED_AGENCIES, SELF_DECLARED_LEVELS } from "@/lib/self-registr
 
 /**
  * **The walk-up form's card photo** (`certscan`). The photo answers the three
- * boxes the diver would type (agency, level, number) and nothing else: no row
- * is written, the image is not kept, and what the diver then submits is still
- * filed as their own word, never as evidence. A card it cannot read fills
+ * boxes the diver would type (agency, level, number) and nothing else: no
+ * record of the diver is written, the image is not kept (the call's 30-day
+ * `claude_call_content` row holds a placeholder for it and the answer), and
+ * what the diver then submits is still filed as their own word, never as
+ * evidence. A card it cannot read fills
  * nothing, and the diver types it as before.
  *
  * Anonymous, so it is bucketed like the registration itself: the address

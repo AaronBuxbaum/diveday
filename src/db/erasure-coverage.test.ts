@@ -408,6 +408,10 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   boats: "the shop’s vessels",
   claude_usage:
     "one row per Claude call: a feature code, a model, token counts and a cost, with no person and no words",
+  claude_call_content:
+    "what one Claude call said, kept 30 days: the shop's instructions and context and the request's text, which can quote a diver's message, a duplicate check's names and dates of birth, a gear note or a review, with no key to anyone. Every erasure deletes every row for the shop, since no match finds one diver's words reliably",
+  claude_call_content_erasures:
+    "when the shop last erased anyone: a shop and an instant, no person",
   assist_results:
     "an assist's answer about the shop: review flag codes and theme titles holding review ids (each quote is read from its review row, so erasing the review erases the quote), and the Monday read's sentences built from shop-wide counts. No person",
   shop_text_translations:
@@ -461,6 +465,10 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
  * indirection is visible rather than looking like a write nobody declared.
  */
 const WRITTEN_VIA_HELPER: Record<string, string> = {
+  claude_call_content:
+    "`forgetClaudeCallContent` (./claude-call-content) — every erasure path deletes the shop's Claude call text through it, under the lock a call in flight writes under (ADR 20261023-claude-call-content)",
+  claude_call_content_erasures:
+    "`forgetClaudeCallContent` (./claude-call-content) — the shop's erasure stamp, which keeps a call that read before the erasure from writing after it",
   media_deletion_attempts:
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
   processor_erasure_obligations:

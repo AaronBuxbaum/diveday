@@ -24,6 +24,7 @@ import {
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { periodBounds } from "@/lib/cost-guardrails";
 import { log } from "@/lib/log";
+import { keepClaudeCallContent } from "./claude-call-content";
 import type { AppDb } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { claudeDemoSpend, claudeUsage, shops } from "./schema";
@@ -36,8 +37,11 @@ import { claudeDemoSpend, claudeUsage, shops } from "./schema";
  * treats a shop with Claude switched off, and the feature carries on.
  *
  * Tenant scope is the caller's `shopId`, taken from the staff session. What is
- * sent is the caller's prompt; what is kept here is codes and token counts
- * only (`claude_usage`, `src/db/schema/assists.ts`).
+ * sent is the caller's prompt. What is kept is codes, token counts and timing
+ * in `claude_usage`, and for 30 days the words themselves in
+ * `claude_call_content`, with every image and document a placeholder
+ * (`src/db/schema/assists.ts`). That second write is best effort: when it
+ * fails the assist answers exactly as it would have.
  *
  * **The cap holds under concurrency** (security review N3). Before a call is
  * sent, a short transaction takes a per-shop advisory lock, sums the month's
@@ -65,6 +69,12 @@ export type AssistOptions = {
   readonly provider?: ClaudeProvider;
   readonly env?: AssistEnvironment;
   readonly now?: Date;
+  /**
+   * When the caller read the words it sends, for a caller that reads first and
+   * asks later (a batch). Absent, the call's own start. An erasure after this
+   * instant means the call's words are not kept (`./claude-call-content`).
+   */
+  readonly readAt?: Date;
 };
 
 /** A feature key is a short code (`inbox_draft`), never a sentence or a name. */
@@ -412,6 +422,8 @@ async function settleClaudeUsage(
       cacheReadTokens: result.usage.cacheReadTokens,
       outputTokens: result.usage.outputTokens,
       costMicroUsd: cost,
+      latencyMs: result.latencyMs,
+      requestId: result.requestId,
     })
     .where(eq(claudeUsage.id, usageId));
 }
@@ -481,7 +493,13 @@ export async function runAssistOutcome<S extends z.ZodType>(
     }
     const result = await callStructured(provider, input.call);
     await settleClaudeUsage(db, usageId, reserve, result, isDemo ? demoMonth(now) : null);
+    await keepClaudeCallContent(
+      db,
+      { usageId, shopId, feature, now, readAt: input.readAt ?? now },
+      result.transcript,
+    );
     log("claude_assist.call", result.outcome === "error" ? "warn" : "info", {
+      shopId,
       feature,
       model: result.model,
       outcome: result.outcome,
@@ -490,6 +508,7 @@ export async function runAssistOutcome<S extends z.ZodType>(
       cacheReadTokens: result.usage.cacheReadTokens,
       outputTokens: result.usage.outputTokens,
       costMicroUsd: result.costMicroUsd,
+      latencyMs: result.latencyMs,
     });
     return result.outcome === "error" ? skipped : { status: "answered", value: result.value };
   } catch {

@@ -789,6 +789,25 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.claudeUsage.id }),
     ),
+  claude_call_content: async ({ db, shop }, at) => {
+    const usageId = idOf(
+      await db
+        .insert(schema.claudeUsage)
+        .values({
+          shopId: shop.id,
+          feature: "inbox_sort",
+          model: "claude-haiku-5-5",
+          outcome: "ok",
+        })
+        .returning({ id: schema.claudeUsage.id }),
+    );
+    return idOf(
+      await db
+        .insert(schema.claudeCallContent)
+        .values({ usageId, shopId: shop.id, systemText: "Sort.", contentText: "Hi", createdAt: at })
+        .returning({ id: schema.claudeCallContent.id }),
+    );
+  },
   assist_results: async ({ db, shop }, at, n) =>
     idOf(
       await db
@@ -994,6 +1013,7 @@ describe("every retention window deletes", () => {
  */
 const OUTSIDE_RETENTION: readonly string[] = [
   "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
+  "claude_call_content_erasures", // one per-shop erasure stamp, overwritten, never a trail
   // The shop's own catalogue and configuration: what a shop sets up, edits,
   // and deletes when it stops being true. Nothing here ages.
   "shops",

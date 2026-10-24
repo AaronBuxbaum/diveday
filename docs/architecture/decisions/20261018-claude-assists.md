@@ -51,7 +51,7 @@ Review #2923 found two exceptions to the Context; both stay.
 
 - **A diver can start one assist.** The public register page's card photo
   (`src/app/s/[shopSlug]/register/card-photo-action.ts`) runs `cert_scan` for an anonymous
-  visitor. It fills the boxes the diver would type, keeps no image and writes no row. It spends the
+  visitor. It fills the boxes the diver would type, keeps no image and records no diver. It spends the
   shop's cap, so two limits apply, both failing closed: 10 an hour per address (`cardScanByIp`),
   40 a day per shop (`cardScanByShop`). A photo Haiku says is not a card never reaches Sonnet.
 - **The recap line can reach divers without a tap.** With "Recap highlights" on

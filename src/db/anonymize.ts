@@ -70,6 +70,7 @@ import {
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
+import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
 import {
@@ -2896,6 +2897,21 @@ async function scrubIncidentReports(
 }
 
 /**
+ * What Claude calls said for this shop (`claude_call_content`): 30 days of
+ * debugging text that quotes divers (an inbox message, a duplicate check's
+ * names and dates of birth, a gear note, a review) without a key to any of
+ * them. No reliable match finds one diver's words in it, so every row for the
+ * shop goes: losing a month of debugging text costs nothing a diver is owed.
+ */
+async function scrubClaudeCallContent(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  await forgetClaudeCallContent(tx, { shopId: ctx.shopId, now: ctx.now });
+  return [];
+}
+
+/**
  * Every sweep of the erasure, in the order it runs. Each takes the transaction
  * and the diver's context and hands back the Stripe objects it found standing
  * for them, which `scrub` raises as one ledger write at the end.
@@ -2926,6 +2942,7 @@ const SCRUB_SECTIONS = [
   scrubInterests,
   scrubInbox,
   scrubIncidentReports,
+  scrubClaudeCallContent,
 ] as const;
 
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {

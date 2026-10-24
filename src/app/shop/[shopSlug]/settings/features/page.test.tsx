@@ -33,6 +33,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 const FeaturesPage = (await import("./page")).default;
 const { darkWhileOnKey } = await import("./feature-rows");
 const { ReplyNotesForm } = await import("./ReplyNotesForm");
+const { ReplyNotesBox } = await import("./ReplyNotesBox");
 const { REPLY_NOTES_DRAWN_FIELD, REPLY_NOTES_FIELD } = await import("./save-plan");
 
 const SHOP_SLUG = "blue-mantis";
@@ -215,7 +216,7 @@ describe("the notes for AI", () => {
       const fields = box ? ReplyNotesForm(box.props) : null;
       expect(inputNamesIn(fields)).toContain(REPLY_NOTES_DRAWN_FIELD);
       expect(
-        findElements<{ name: string }>(fields, "textarea").map((area) => area.props.name),
+        findElements<{ name: string }>(fields, ReplyNotesBox).map((area) => area.props.name),
       ).toEqual([REPLY_NOTES_FIELD]);
       expect(findElements(fields, "form")).toHaveLength(0);
       expect(findElements(fields, SubmitButton)).toHaveLength(0);

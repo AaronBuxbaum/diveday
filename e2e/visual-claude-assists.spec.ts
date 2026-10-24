@@ -25,6 +25,13 @@ import {
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
+/**
+ * The diver on the waiting review `/api/test/claude-fixtures?review=1` seeds:
+ * the first name, A to Z, among the seats on the latest sailed departure.
+ */
+// i18n-exempt: seed data, a diver's name
+const WAITING_REVIEW_DIVER = "Carmen Ruiz";
+
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
@@ -117,15 +124,18 @@ test.describe("light mode — Claude's assists, lit", () => {
     await lit(request, privateShop.slug, async () => {
       await page.goto(`/shop/${privateShop.slug}/settings/features`);
       const notes = page.locator("li#replyNotes");
+      const box = notes.getByLabel("What should AI know about your shop?");
       // i18n-exempt: the shop's own words, typed as a staffer would
-      await notes
-        .getByLabel("What should AI know about your shop?")
-        .fill("Park behind the shop by the tank racks. The gate opens at 7:15.");
+      const typed = "Park behind the shop by the tank racks. The gate opens at 7:15.";
+      // The staff chrome hydrating says nothing about this box: a fill that lands
+      // before React owns it is cut beside the old notes (#2973). The exact value,
+      // after the fill and after the save, so a doubled note fails here.
+      await expect(box).toHaveAttribute("data-hydrated", "true");
+      await box.fill(typed);
+      await expect(box).toHaveValue(typed);
       await page.getByRole("button", { name: "Save", exact: true }).click();
       await page.waitForURL(/notice=feature-saved/);
-      await expect(notes.getByLabel("What should AI know about your shop?")).toHaveValue(
-        /The gate opens at 7:15\./,
-      );
+      await expect(box).toHaveValue(typed);
       await page.locator("li#replyNotes").scrollIntoViewIfNeeded();
       await page.mouse.move(0, 0);
       await capture(page, "assist-reply-notes", "light");
@@ -195,6 +205,7 @@ test.describe("light mode — Claude's assists, lit", () => {
 
       await page.goto(`/shop/${privateShop.slug}/reviews`);
       await reloadUntil(page, page.getByText("Phone or email", { exact: true }).first());
+      await expect(page.getByText(WAITING_REVIEW_DIVER, { exact: true })).toBeVisible();
       await page.mouse.move(0, 0);
       await capture(page, "assist-review-flags", "light");
     });

@@ -16,7 +16,16 @@ import {
   type ClaudeProvider,
   type ClaudeRequest,
   claudeErrorCode,
+  claudeErrorRequestId,
 } from "./provider";
+import {
+  type CallTranscript,
+  fetchedUrls,
+  finalText,
+  plausibleRequestId,
+  renderContent,
+  requestIdOf,
+} from "./transcript";
 
 /**
  * **One structured-JSON call** (ADR 20261018-claude-assists): the stable
@@ -27,6 +36,10 @@ import {
  * Every way the call can fail returns `value: null`, never a throw: a refusal,
  * a cut-off answer, JSON that does not match, a confidence under the floor, a
  * provider error. `outcome` says which, as a code, for the usage row.
+ *
+ * Beside the value it hands back what was said ({@link CallTranscript}: the
+ * request's text with every image and document a placeholder, and the answer's
+ * text) for `runAssist` to keep for 30 days, and how long the call took.
  */
 export type StructuredCall<S extends z.ZodType> = {
   readonly model: ClaudeModelRole;
@@ -50,6 +63,14 @@ export type StructuredCall<S extends z.ZodType> = {
    * what the cap reserves before the call is sent. Never sent to the API.
    */
   readonly inputTokens?: number;
+  /**
+   * What of this call DiveDay may keep for 30 days, given what it sent and
+   * what came back (`claude_call_content`): a feature whose answer can say the
+   * request was about something never to be stored (a health question)
+   * replaces those parts with a placeholder. Absent, the whole transcript is
+   * kept. If it throws, nothing of the request or the answer is kept.
+   */
+  readonly keepTranscript?: (transcript: CallTranscript) => CallTranscript;
 };
 
 export const STRUCTURED_OUTCOMES = [
@@ -70,6 +91,12 @@ export type StructuredResult<T> = {
   readonly costMicroUsd: number;
   /** For `error` only: `http_429`, `timeout`, … never a message. */
   readonly errorCode?: string;
+  /** Wall time of the whole call, every resumed turn included. */
+  readonly latencyMs: number;
+  /** Anthropic's id for the last request, when it gave one. */
+  readonly requestId: string | null;
+  /** What was sent and what came back, as text with no image or document in it. */
+  readonly transcript: CallTranscript;
 };
 
 const DEFAULT_MAX_TOKENS = 8_000;
@@ -117,14 +144,6 @@ export function usageOf(message: ClaudeMessage): TokenUsage {
   };
 }
 
-function finalText(message: ClaudeMessage): string | null {
-  for (let index = message.content.length - 1; index >= 0; index -= 1) {
-    const block = message.content[index];
-    if (block?.type === "text") return block.text;
-  }
-  return null;
-}
-
 function readValue<S extends z.ZodType>(
   message: ClaudeMessage,
   call: StructuredCall<S>,
@@ -151,6 +170,35 @@ function readValue<S extends z.ZodType>(
   return { value: parsed.data, outcome: "ok" };
 }
 
+/** What was said, as text; a part that cannot be rendered is left empty rather than thrown. */
+function transcriptOf<S extends z.ZodType>(
+  call: StructuredCall<S>,
+  last: ClaudeMessage | null,
+  responses: readonly ClaudeMessage[],
+): CallTranscript {
+  const attempt = <T>(render: () => T, fallback: T): T => {
+    try {
+      return render();
+    } catch {
+      return fallback;
+    }
+  };
+  const transcript: CallTranscript = {
+    system: call.system,
+    context: call.context ?? null,
+    content: attempt(() => renderContent(call.content), "[content not rendered]"),
+    answer: last ? attempt(() => finalText(last), null) : null,
+    fetchedUrls: attempt(() => fetchedUrls(responses), null),
+  };
+  const keep = call.keepTranscript;
+  if (!keep) return transcript;
+  return attempt(() => keep(transcript), {
+    ...transcript,
+    content: "[content not kept]",
+    answer: null,
+  });
+}
+
 /** Sends one structured call, resuming paused server-tool turns. Never throws. */
 export async function callStructured<S extends z.ZodType>(
   provider: ClaudeProvider,
@@ -158,24 +206,41 @@ export async function callStructured<S extends z.ZodType>(
 ): Promise<StructuredResult<z.infer<S>>> {
   const model = CLAUDE_MODELS[call.model];
   const request = buildStructuredRequest(call);
+  // A duration, not an instant: `performance.now()` keeps counting under a
+  // pinned app clock (the `query-timing.ts` reasoning).
+  const startedAt = performance.now();
+  const responses: ClaudeMessage[] = [];
   let usage = ZERO_USAGE;
+  let requestId: string | null = null;
   const done = (
     value: z.infer<S> | null,
     outcome: StructuredOutcome,
     errorCode?: string,
-  ): StructuredResult<z.infer<S>> => ({
-    value,
-    outcome,
-    model,
-    usage,
-    costMicroUsd: costMicroUsd(model, usage),
-    ...(errorCode ? { errorCode } : {}),
-  });
+  ): StructuredResult<z.infer<S>> => {
+    const last = responses.at(-1);
+    return {
+      value,
+      outcome,
+      model,
+      usage,
+      costMicroUsd: costMicroUsd(model, usage),
+      ...(errorCode ? { errorCode } : {}),
+      latencyMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      requestId,
+      transcript: transcriptOf(
+        call,
+        last && last.stop_reason !== "pause_turn" ? last : null,
+        responses,
+      ),
+    };
+  };
 
   try {
     let messages = request.messages;
     for (let attempt = 0; attempt <= MAX_CONTINUATIONS; attempt += 1) {
       const message = await provider.createMessage({ ...request, messages });
+      responses.push(message);
+      requestId = requestIdOf(message) ?? requestId;
       usage = addUsage(usage, usageOf(message));
       if (message.stop_reason !== "pause_turn") {
         const { value, outcome } = readValue(message, call);
@@ -189,6 +254,7 @@ export async function callStructured<S extends z.ZodType>(
     }
     return done(null, "truncated");
   } catch (error) {
+    requestId = plausibleRequestId(claudeErrorRequestId(error)) ?? requestId;
     return done(null, "error", claudeErrorCode(error));
   }
 }
