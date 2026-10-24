@@ -127,9 +127,10 @@ test.describe("light mode — Claude's assists, lit", () => {
       const box = notes.getByLabel("What should AI know about your shop?");
       // i18n-exempt: the shop's own words, typed as a staffer would
       const typed = "Park behind the shop by the tank racks. The gate opens at 7:15.";
-      // `goto` returned once React owned the staff chrome (`settleStaffHydration`).
-      // The exact value, after the fill and after the save, so a doubled note fails
-      // here and not as a changed baseline (#2973).
+      // The staff chrome hydrating says nothing about this box: a fill that lands
+      // before React owns it is cut beside the old notes (#2973). The exact value,
+      // after the fill and after the save, so a doubled note fails here.
+      await expect(box).toHaveAttribute("data-hydrated", "true");
       await box.fill(typed);
       await expect(box).toHaveValue(typed);
       await page.getByRole("button", { name: "Save", exact: true }).click();

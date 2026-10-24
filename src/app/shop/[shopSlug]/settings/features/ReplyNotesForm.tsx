@@ -1,6 +1,6 @@
-import { Field, textareaClassFor } from "@/components/ui/form";
+import { Field } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { REPLY_NOTES_MAX_LENGTH } from "@/lib/assists/inbox";
+import { ReplyNotesBox } from "./ReplyNotesBox";
 import { REPLY_NOTES_DRAWN_FIELD, REPLY_NOTES_FIELD } from "./save-plan";
 
 /**
@@ -21,13 +21,10 @@ export function ReplyNotesForm({ notes, t }: { notes: string | null; t: StaffTra
       <input type="hidden" name={REPLY_NOTES_DRAWN_FIELD} value="on" />
       <h3 className="text-sm font-semibold">{t("settings.main.features.replyNotes.heading")}</h3>
       <Field label={t("settings.main.features.replyNotes.label")}>
-        <textarea
+        <ReplyNotesBox
           name={REPLY_NOTES_FIELD}
-          rows={4}
-          maxLength={REPLY_NOTES_MAX_LENGTH}
           defaultValue={notes ?? ""}
           placeholder={t("settings.main.features.replyNotes.placeholder")}
-          className={textareaClassFor(4)}
         />
       </Field>
     </>
