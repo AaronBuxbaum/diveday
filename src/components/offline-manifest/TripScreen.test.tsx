@@ -219,8 +219,12 @@ describe("OfflineManifestView — one column, one text edge", () => {
         crewNotBackAboard: true,
       }),
     );
-    const row = screen.getByText(/Sal Ortiz · Not back aboard/).closest("li");
-    expect(row).toHaveClass("border-danger", "font-bold", "text-danger");
+    const name = within(crewList()).getByRole("heading", { level: 3, name: "Sal Ortiz" });
+    const row = name.closest("li");
+    expect(row).toHaveClass("border-danger");
+    // The words go danger on the status line, the passenger row's shape (B01).
+    expect(name.nextElementSibling).toHaveTextContent("Not back aboard");
+    expect(name.nextElementSibling).toHaveClass("text-danger");
     // The ring is the missing person's, as on every roll-call row. The box
     // keeps its danger border and fill but no inset ring of its own: the
     // flush roster painted over it, so it ringed the heading and stopped

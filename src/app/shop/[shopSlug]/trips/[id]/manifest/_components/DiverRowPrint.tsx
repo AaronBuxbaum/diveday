@@ -45,6 +45,12 @@ export function DiverRowPrint({
   t: StaffTranslator;
 }) {
   const { rc, ready, diverStatus, impliedNotBoarded, capsuleKind, medicalDays } = state;
+  const quietFacts = [
+    !diver.minor && diver.age !== null && diver.age !== undefined
+      ? t("manifest.age", { age: diver.age })
+      : null,
+    diver.birthday && capsuleKind !== "birthday" ? birthdayCalloutText(t, diver.birthday) : null,
+  ].filter((fact) => fact !== null);
   return (
     <div data-print-only className="hidden px-4 pb-4 print:block">
       <p className="flex flex-wrap items-center gap-2">
@@ -78,11 +84,11 @@ export function DiverRowPrint({
             {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
           </Badge>
         ) : null}
-        {diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
-          <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
-            {diver.minor
-              ? t("manifest.minorAge", { age: diver.age })
-              : t("manifest.age", { age: diver.age })}
+        {/* A minor's age stays a warning chip; an adult's is a quiet fact
+          on the line below (visual review polish, B03). */}
+        {diver.minor && diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
+          <Badge tone="warning" tabularNums>
+            {t("manifest.minorAge", { age: diver.age })}
           </Badge>
         ) : null}
         {medicalWarningChips(t, medicalDays)
@@ -92,9 +98,6 @@ export function DiverRowPrint({
               {chip}
             </Badge>
           ))}
-        {diver.birthday && capsuleKind !== "birthday" ? (
-          <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
-        ) : null}
         {teamLabel ? (
           <Badge tone="neutral">
             {teamLabel}
@@ -104,6 +107,12 @@ export function DiverRowPrint({
           </Badge>
         ) : null}
       </p>
+      {/* **The quiet facts, as words** (visual review polish, B03): an
+        adult's age and a birthday the row's capsule is not already saying,
+        one muted line, so the chip row holds only states and exceptions. */}
+      {quietFacts.length > 0 ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">{quietFacts.join(" · ")}</p>
+      ) : null}
       {printedAlert && !diver.identityWithheld ? (
         <div className="mt-2 rounded border border-border px-3 py-2">
           <p className="text-sm font-semibold">{t("manifest.medicalAlertHeading")}</p>

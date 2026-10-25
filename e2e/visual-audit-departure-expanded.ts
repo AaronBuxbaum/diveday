@@ -87,14 +87,23 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
       await reefManifest(page);
       await openBoatCheck(page);
       // The checklist button names its item and its screen-reader state instruction.
-      const radio = page.getByRole("listitem").filter({
-        has: page.getByRole("button", {
+      await expect(
+        page.getByRole("button", {
           name: `VHF radio checked ${staff("trips.preDepartureCheck.uncheckedLabel")}`,
           exact: true,
         }),
+      ).toBeVisible();
+      // One "Note a problem" for the whole list (B07): its picker starts on
+      // no line (review fix, dde-a F3), so the note names its item first.
+      const editor = page.locator("details").filter({
+        has: page.locator("> summary", {
+          hasText: staff("trips.preDepartureCheck.noteProblem"),
+        }),
       });
-      const editor = radio.locator("details");
       await openIfClosed(editor);
+      await editor
+        .getByLabel(staff("trips.preDepartureCheck.noteItemLabel"), { exact: true })
+        .selectOption({ label: "VHF radio checked" });
       await editor
         .getByLabel(staff("trips.preDepartureCheck.noteLabel"))
         .fill("VHF crackles on 16");

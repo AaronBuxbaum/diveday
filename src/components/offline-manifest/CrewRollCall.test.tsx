@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   appendOfflineRollCall,
@@ -57,6 +57,18 @@ beforeEach(() => {
     vi.fn().mockImplementation(async () => identityResponse("blue-mantis")),
   );
 });
+
+/**
+ * The crew rows a name heads, each with its one status line: the passenger
+ * row's shape (visual review polish, B01).
+ */
+function crewRowStates(name: string): string[] {
+  const list = document.getElementById("offline-crew-roll-call");
+  if (!list) throw new Error("crew list missing");
+  return within(list)
+    .getAllByRole("heading", { level: 3, name })
+    .map((heading) => heading.nextElementSibling?.textContent ?? "");
+}
 
 afterEach(() => {
   cleanup();
@@ -191,8 +203,8 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
     expect(screen.getByText(/1 crew member still to call/)).toBeInTheDocument();
     // Named, not just counted: the captain nobody has tapped is on screen.
-    expect(screen.getByText(/Sal Ortiz · Awaiting/)).toBeInTheDocument();
-    expect(screen.getByText(/Dana Divemaster · Boarded/)).toBeInTheDocument();
+    expect(crewRowStates("Sal Ortiz")[0]).toMatch(/^Awaiting/);
+    expect(crewRowStates("Dana Divemaster")[0]).toMatch(/^Boarded/);
   });
 });
 
@@ -277,7 +289,7 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     expect(alarm.closest("section")?.className).toContain("danger");
     // This one is emphatically *not* "we can't record it here".
     expect(screen.queryByText(/can’t be tapped from this saved copy/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Sal Ortiz · Not back aboard/)).toBeInTheDocument();
+    expect(crewRowStates("Sal Ortiz")).toEqual(["Not back aboard"]);
   });
 
   it("renders two crew who share a name and a role as two separate people", async () => {
@@ -291,8 +303,10 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
 
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
-    expect(screen.getByText(/Sal Ortiz · Boarded/)).toBeInTheDocument();
-    expect(screen.getByText(/Sal Ortiz · Awaiting/)).toBeInTheDocument();
+    const states = crewRowStates("Sal Ortiz");
+    expect(states).toHaveLength(2);
+    expect(states.some((state) => state.startsWith("Boarded"))).toBe(true);
+    expect(states.some((state) => state.startsWith("Awaiting"))).toBe(true);
   });
 });
 
@@ -303,5 +317,22 @@ describe("OfflineCrewRollCall, drawn alone", () => {
     );
     expect(container.querySelector("#offline-crew-heading")).not.toBeNull();
     expect(container.textContent).toContain("Dana Divemaster");
+  });
+
+  /**
+   * **One row shape for every saved person** (visual review polish, B01): a
+   * crew row is a bold name over one status line, as a diver row is, never
+   * one small run-on line of name, state and team.
+   */
+  it("gives a crew member the passenger row's shape: a bold name, then one status line", () => {
+    const { container } = render(
+      <OfflineCrewRollCall view={sectionView()} controls={sectionControls()} />,
+    );
+    const name = within(container).getByRole("heading", { level: 3, name: "Dana Divemaster" });
+    const status = name.nextElementSibling;
+    expect(status?.tagName).toBe("P");
+    expect(status).toHaveClass("font-semibold", "text-ink");
+    expect(status?.textContent).not.toContain("Dana Divemaster");
+    expect(status?.textContent).not.toContain("·");
   });
 });

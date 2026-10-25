@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { TripPrep } from "@/db/trips";
 import type { GearServiceState } from "@/lib/gear";
@@ -14,6 +14,11 @@ import { WantedPiece } from "./WantedPiece";
  */
 
 afterEach(cleanup);
+
+/** Opens a row with no proposal: its picker sits behind one Pick text button. */
+function openPicker() {
+  fireEvent.click(screen.getByRole("button", { name: t("gear.prep.proposal.pick") }));
+}
 
 const unit = (id: string, label: string, size: string | null) => ({
   id,
@@ -46,6 +51,10 @@ function renderPiece(prep: TripPrep, size: string | null = "L") {
 describe("WantedPiece", () => {
   it("bands the picker by the diver's own size, and opens it on the placeholder", () => {
     renderPiece(prepWith([unit("u1", "BCD #1", "L"), unit("u2", "BCD #2", "S")]));
+    // At rest the row is a line and a text button, never a bare select.
+    expect(screen.getByText(t("gear.prep.proposal.none"))).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    openPicker();
     const picker = screen.getByRole("combobox") as HTMLSelectElement;
     expect(picker.value).toBe("");
     expect(
@@ -58,6 +67,8 @@ describe("WantedPiece", () => {
     const proposed = unit("u1", "BCD #1", "L");
     renderPiece(prepWith([proposed], proposed));
     expect(screen.getByText("Proposed: BCD #1 · L")).toBeTruthy();
+    expect(screen.queryByText(t("gear.prep.proposal.none"))).toBeNull();
+    expect(screen.queryByRole("button", { name: t("gear.prep.proposal.pick") })).toBeNull();
   });
 
   /**
@@ -91,6 +102,7 @@ describe("WantedPiece", () => {
 
     it("is labelled on a nitrox diver's row, beside every other free regulator", () => {
       renderReg(true);
+      openPicker();
       expect(
         screen.getByRole("option", { name: `Reg #9 · ${t("gear.prep.optionNitroxDesignated")}` }),
       ).toBeTruthy();
@@ -102,6 +114,7 @@ describe("WantedPiece", () => {
       // cannot go out on air unnoticed; on an air row it is a caution, and the
       // air sets come first. It still never refuses.
       renderReg(false);
+      openPicker();
       const options = screen.getAllByRole("option").map((option) => option.textContent);
       expect(options.at(-1)).toBe(`Reg #9 · ${t("gear.prep.optionNitroxDesignatedOnAir")}`);
       expect(options).toContain("Reg #1");

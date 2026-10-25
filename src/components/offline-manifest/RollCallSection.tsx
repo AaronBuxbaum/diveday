@@ -108,8 +108,11 @@ export function OfflineRollCallSection({
             seat cancelled since still has one. The line names the save time,
             in its zone, and asks for a head count ahead of the first row:
             against the live list (once DiveDay answers, if it did not), or on
-            the boat with no signal. On every saved copy, never a live page. No count field and no live rows merged in. */}
-        <p className="mt-1 text-sm font-semibold text-pretty text-warning-strong">
+            the boat with no signal. On every saved copy, never a live page. No count field and no live rows merged in.
+            Muted, not bold warning ink (visual review polish): the banner
+            already says this is a saved copy, so this line is the reminder,
+            and the page's warning colours stay with the rows' states. */}
+        <p className="mt-1 text-sm text-pretty text-muted">
           {t(
             controls.copyCaveat === "offline"
               ? "shared.offlineManifest.single.copyCaveatOffline"
