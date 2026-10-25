@@ -135,7 +135,6 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Payout
 - Pricing arm
 - Room charge
-- Sailed / Still to sail
 - Stale package invoice
 - Subscription (DiveDay billing)
 

@@ -113,7 +113,8 @@ type PulseChip = {
 
 /**
  * **The opened "Needs you · 9" is a count strip** (visual review 2026-10-24,
- * A46): one chip per kind, drawn as Today draws that kind's row (its glyph,
+ * A46): one chip per kind (the Today kind, keyed apart from its translated
+ * word, with a readiness blocker its own chip), drawn as Today draws that kind's row (its glyph,
  * its word, its count), in the order the kinds first appear. A kind of one
  * fact keeps that fact's own words; several become "Contact · 3". Nothing a
  * fact linked to is lost: a chip whose facts share a door opens it, and one
@@ -124,23 +125,23 @@ export function pulseChips(work: readonly TripPulseFact[], rosterHref: string): 
   const chips: PulseChip[] = [];
   const byKind = new Map<string, PulseChip>();
   for (const fact of work) {
-    const kind = fact.chip?.kind;
-    const existing = kind === undefined ? undefined : byKind.get(kind);
+    const group = fact.chip?.group;
+    const existing = group === undefined ? undefined : byKind.get(group);
     if (existing) {
       existing.facts.push(fact);
       if (existing.href !== fact.href) existing.href = rosterHref;
       continue;
     }
     const chip: PulseChip = {
-      key: kind ?? fact.key ?? fact.href,
+      key: group ?? fact.key ?? fact.href,
       href: fact.href,
-      kind,
+      kind: fact.chip?.kind,
       icon: fact.chip?.icon,
       tone: fact.chip?.tone,
       facts: [fact],
     };
     chips.push(chip);
-    if (kind !== undefined) byKind.set(kind, chip);
+    if (group !== undefined) byKind.set(group, chip);
   }
   return chips;
 }

@@ -100,13 +100,26 @@ export function OfferDiscountDisclosure({ copy }: { copy: OfferDiscountCopy }) {
 }
 
 /**
+ * True while the disclosure is open with a blank amount: a discount the
+ * staffer asked for and has not given. Each row's Offer is disabled until the
+ * box holds an amount or the disclosure closes, so an offer never goes out
+ * undiscounted by accident (layer 3 security review, note 1). Outside a
+ * provider (Today's row) there is no disclosure, so never.
+ */
+export function useOfferDiscountBlank(): boolean {
+  const state = useContext(DiscountState);
+  return state?.discount.on === true && state.discount.amount.trim() === "";
+}
+
+/**
  * The discount's fields inside one row's Offer form, posted only while the
- * disclosure is open. A blank amount is no discount, as `holdSendAction`
- * reads a blank box: an ordinary offer.
+ * disclosure is open with an amount in it. `holdSendAction` refuses a
+ * discount's kind without an amount, so a blank box is never read as an
+ * ordinary offer.
  */
 export function OfferDiscountRider() {
   const state = useContext(DiscountState);
-  if (!state?.discount.on) return null;
+  if (!state?.discount.on || state.discount.amount.trim() === "") return null;
   return (
     <>
       <input type="hidden" name="discount" value={state.discount.amount} />

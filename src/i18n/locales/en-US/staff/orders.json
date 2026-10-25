@@ -88,6 +88,7 @@
     "refreshing": "Refreshing…",
     "voidOrder": "Void order",
     "voiding": "Voiding…",
+    "voidConfirm": "Void this order? Stripe cancels the invoice and the customer can’t pay it.",
     "refundPayment": "Refund payment",
     "tax": "Tax",
     "refundedSoFar": "Refunded",

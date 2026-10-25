@@ -116,6 +116,36 @@ describe("OfferSeat", () => {
     expect(new FormData(formOf("Nora Quinn")).has("discount")).toBe(false);
   });
 
+  it("disables every row's Offer while the opened discount is blank (layer 3 security note 1)", () => {
+    const { container } = renderRows({ discount: true });
+    const disclosure = container.querySelector("details[data-offer-discount]");
+    if (!(disclosure instanceof HTMLDetailsElement)) throw new Error("no discount disclosure");
+    act(() => {
+      disclosure.open = true;
+      fireEvent(disclosure, new Event("toggle"));
+    });
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Discount"), { target: { value: "" } });
+    });
+    for (const name of ["Nora Quinn", "Rafa Ortiz"]) {
+      expect(screen.getByRole("button", { name: `Offer ${name} a seat` })).toBeDisabled();
+      expect(new FormData(formOf(name)).has("discountKind")).toBe(false);
+    }
+    // An amount, or the disclosure closed, gives the act back.
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Discount"), { target: { value: "10" } });
+    });
+    expect(screen.getByRole("button", { name: "Offer Nora Quinn a seat" })).toBeEnabled();
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Discount"), { target: { value: " " } });
+    });
+    act(() => {
+      disclosure.open = false;
+      fireEvent(disclosure, new Event("toggle"));
+    });
+    expect(screen.getByRole("button", { name: "Offer Nora Quinn a seat" })).toBeEnabled();
+  });
+
   it("keeps the Today row's own words for a single named offer", () => {
     render(
       <OfferSeat

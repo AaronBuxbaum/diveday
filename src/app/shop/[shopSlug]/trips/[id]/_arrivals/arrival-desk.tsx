@@ -548,10 +548,12 @@ function placeTurnAway(
   slots.controls.set(
     bookingId,
     held ? (
-      <>
+      // One line beside what the row already held ("Checked in", Undo): the
+      // action side stays one row at every width (visual triage, layer 3).
+      <span className="inline-flex items-center gap-3 whitespace-nowrap">
         {turnAway.door}
         {held}
-      </>
+      </span>
     ) : (
       turnAway.door
     ),

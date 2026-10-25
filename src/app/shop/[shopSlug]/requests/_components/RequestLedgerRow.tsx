@@ -154,6 +154,8 @@ export function RequestLedgerRow({
       align="first-line"
       // The "⋯" stays on the name's line at every width (visual review A23):
       // the request wraps beneath the name, the menu never drops a line.
+      // `first-line` aligns on the baseline from `sm`; a phone takes the same.
+      className="max-sm:items-baseline"
       trailing={
         <RowMenu label={t("requests.moreFor", { name })} panelClassName="w-60">
           <Link

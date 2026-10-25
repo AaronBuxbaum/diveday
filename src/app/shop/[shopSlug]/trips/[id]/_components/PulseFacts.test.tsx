@@ -120,7 +120,12 @@ describe("the opened Needs you strip (visual review A46)", () => {
   const contact = (name: string) => ({
     text: `${name} · No emergency contact`,
     href: `/divers/${name}`,
-    chip: { kind: "Contact", icon: "divers" as const, tone: "neutral" as const },
+    chip: {
+      group: "emergency_contact",
+      kind: "Contact",
+      icon: "divers" as const,
+      tone: "neutral" as const,
+    },
   });
 
   it("draws one chip per kind, counted, and keeps every door one tap away", () => {
@@ -132,17 +137,17 @@ describe("the opened Needs you strip (visual review A46)", () => {
           {
             text: "1 order awaiting payment",
             href: "/orders",
-            chip: { kind: "Payment", tone: "neutral" },
+            chip: { group: "payment", kind: "Payment", tone: "neutral" },
           },
           {
             text: "Diego · Missing a rental size",
             href: "/prep",
-            chip: { kind: "Prep", tone: "neutral" },
+            chip: { group: "dive_prep", kind: "Prep", tone: "neutral" },
           },
           {
             text: "Not asked about kit: Lena",
             href: "/prep",
-            chip: { kind: "Prep", tone: "neutral" },
+            chip: { group: "dive_prep", kind: "Prep", tone: "neutral" },
           },
         ]}
         foldLabel={label}
@@ -162,6 +167,33 @@ describe("the opened Needs you strip (visual review A46)", () => {
       "/orders",
       "/prep",
     ]);
+  });
+
+  it("keeps a diver's payment blocker its own chip, apart from the orders row (layer 3 review F2)", () => {
+    const { container } = render(
+      <PulseFacts
+        facts={[
+          {
+            text: "1 order awaiting payment",
+            href: "/orders",
+            chip: { group: "payment", kind: "Payment", tone: "neutral" },
+          },
+          {
+            text: "Nadia Ortiz · Payment due",
+            href: "/divers/nadia",
+            chip: { group: "payment:readiness", kind: "Payment", tone: "warning" },
+          },
+        ]}
+        foldLabel={label}
+        rosterHref="/trip#roster"
+      />,
+    );
+    const chips = [...container.querySelectorAll("details li a")];
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "1 order awaiting payment",
+      "Nadia Ortiz · Payment due",
+    ]);
+    expect(chips.map((chip) => chip.getAttribute("href"))).toEqual(["/orders", "/divers/nadia"]);
   });
 
   it("leaves a fact with no kind as its own chip in its own words", () => {

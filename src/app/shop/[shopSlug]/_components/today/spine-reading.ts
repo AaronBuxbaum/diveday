@@ -91,7 +91,10 @@ export function spineClearUnlessWindy(
  *
  * 1. readiness and medical, and every danger row (a roll call, a diver not
  *    back aboard, a blocker): anything not named below lands here, so a kind
- *    added later is never ranked under money by omission;
+ *    added later is never ranked under money by omission. A diver's readiness
+ *    blocker ranks here whatever its kind: an unpaid seat the shop requires
+ *    settled before boarding is kind `payment` too, and it keeps a person off
+ *    the boat, so it never sinks to the money tier with the orders row;
  * 2. emergency contact;
  * 3. prep (sizes, kit, a rental fit);
  * 4. money;
@@ -130,6 +133,7 @@ const BOAT_TIER: Partial<Record<TodayActionKind, number>> = {
 
 export function boatTier(action: TodayAction): number {
   if (rowTone(action) === "danger") return 0;
+  if (action.diver?.readiness === true) return 0;
   return BOAT_TIER[action.kind] ?? 0;
 }
 
