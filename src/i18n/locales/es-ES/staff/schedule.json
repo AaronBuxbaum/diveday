@@ -121,7 +121,7 @@
     "descriptionLabel": "Descripción",
     "descriptionPlaceholder": "Sitios de buceo, condiciones, para quién es, certificaciones requeridas.",
     "isPrivateLabel": "Chárter privado",
-    "isPrivateHint": "Fuera del calendario público; quien tenga el enlace aún puede reservar una plaza.",
+    "isPrivateHint": "Fuera del calendario público; cualquiera que tenga el enlace puede ver la salida y reservar una plaza.",
     "isRehearsalLabel": "Ensayo para un día de formación",
     "isRehearsalHint": "Nadie paga, recibe avisos ni cuenta en los informes: quien agregues aquí es un buceador de prueba.",
     "selfGuidedLabel": "Inmersión autoguiada",

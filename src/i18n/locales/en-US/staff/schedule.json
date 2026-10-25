@@ -121,7 +121,7 @@
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Sites, conditions, who it’s for, required certs.",
     "isPrivateLabel": "Private charter",
-    "isPrivateHint": "Off the public schedule; anyone with the link can still book a seat.",
+    "isPrivateHint": "Off the public schedule; anyone with the link can see the departure and book a seat.",
     "isRehearsalLabel": "Rehearsal for training day",
     "isRehearsalHint": "Nobody is charged, told, or counted: everyone you seat here is a test diver.",
     "selfGuidedLabel": "Self-guided dive",
