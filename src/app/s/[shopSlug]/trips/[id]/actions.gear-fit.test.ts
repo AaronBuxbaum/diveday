@@ -1,7 +1,14 @@
-import { and, eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { and, eq, inArray } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { bookings, people, rentalFitProfiles, shops } from "@/db/schema";
+import {
+  bookingCheckoutBookings,
+  bookings,
+  people,
+  rentalFitProfiles,
+  shops,
+  trips,
+} from "@/db/schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import { createTrip } from "@/db/trips-create";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -69,7 +76,11 @@ async function gearShop(db: AppDb, shopId: string) {
     .update(shops)
     .set({
       rentalItems: ["bcd", "wetsuit", "drysuit"],
-      rentalPricing: { setCents: null, perItemCents: { wetsuit: 1200 }, nitroxCents: null },
+      rentalPricing: {
+        setCents: null,
+        perItemCents: { bcd: 1500, wetsuit: 1200 },
+        nitroxCents: null,
+      },
       passThroughFee: null,
     })
     .where(eq(shops.id, shopId));
@@ -100,13 +111,23 @@ async function gearShop(db: AppDb, shopId: string) {
   return { tripId: trip.id, danaId: dana.id };
 }
 
-/** Book one seat as `fullName` on Dana's email, ticking a rented wetsuit. */
-async function book(shopSlug: string, tripId: string, fullName: string) {
+/**
+ * Book one seat as `fullName` on `email` (Dana's by default), ticking a rented
+ * wetsuit unless told not to, and a rented BCD or nitrox when asked.
+ */
+async function book(
+  shopSlug: string,
+  tripId: string,
+  fullName: string,
+  options: { email?: string; bcd?: boolean; wetsuit?: boolean; nitrox?: boolean } = {},
+) {
   const form = new FormData();
   form.set("partySize", "1");
   form.set("fullName-0", fullName);
-  form.set("email-0", EMAIL);
-  form.set("gear-0-wetsuit", "on");
+  form.set("email-0", options.email ?? EMAIL);
+  if (options.wetsuit ?? true) form.set("gear-0-wetsuit", "on");
+  if (options.bcd) form.set("gear-0-bcd", "on");
+  if (options.nitrox) form.set("nitrox-0", "on");
   // The action ends in a redirect, which the mock throws.
   await bookSpot({ shopSlug, tripId, embed: false }, {}, form)
     .then(() => undefined)
@@ -169,5 +190,147 @@ describe("gear ticked at checkout", () => {
       rentsWetsuit: true,
       rentsDrysuit: false,
     });
+  });
+});
+
+/**
+ * **What the card is charged for gear, read off the checkout itself** (issue
+ * #2795). Stripe is faked at its HTTP edge: a test key, and a `fetch` that
+ * records each Checkout Session request and answers it as Stripe would. The
+ * per-seat `gear_cents` snapshot is the checkout total's gear half.
+ */
+function fakeStripe() {
+  vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_gear_fit");
+  const sessions: URLSearchParams[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string | URL, init?: RequestInit) => {
+      if (!String(url).startsWith("https://api.stripe.com/v1/checkout/sessions")) {
+        return new Response("{}", { status: 404 });
+      }
+      const body = new URLSearchParams(String(init?.body ?? ""));
+      sessions.push(body);
+      let total = 0;
+      for (let index = 0; body.has(`line_items[${index}][quantity]`); index++) {
+        total +=
+          Number(body.get(`line_items[${index}][price_data][unit_amount]`)) *
+          Number(body.get(`line_items[${index}][quantity]`));
+      }
+      const id = `cs_gear_${sessions.length}`;
+      return Response.json({
+        id,
+        status: "open",
+        payment_status: "unpaid",
+        url: `https://checkout.stripe.com/c/pay/${id}`,
+        amount_total: total,
+        expires_at: Math.floor(nowDate().getTime() / 1000) + 3600,
+      });
+    }),
+  );
+  return {
+    sessions,
+    lineNames: () =>
+      sessions.flatMap((body) =>
+        [...body.entries()]
+          .filter(([key]) => key.endsWith("[price_data][product_data][name]"))
+          .map(([, name]) => name),
+      ),
+  };
+}
+
+async function gearCentsOn(db: AppDb, tripId: string) {
+  const seats = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(eq(bookings.tripId, tripId));
+  return db
+    .select({ gearCents: bookingCheckoutBookings.gearCents })
+    .from(bookingCheckoutBookings)
+    .where(
+      inArray(
+        bookingCheckoutBookings.bookingId,
+        seats.map((seat) => seat.id),
+      ),
+    );
+}
+
+describe("gear on a course whose fee includes it", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("charges the card for the gear ticked on an ordinary departure", async () => {
+    // The control: the harness below sees a rental charge when there is one.
+    const { db, shop } = ctx;
+    const { tripId } = await gearShop(db, shop.id);
+    const stripe = fakeStripe();
+
+    await book(shop.slug, tripId, "Wren Charter", { email: "wren@example.com", bcd: true });
+
+    expect(stripe.sessions).toHaveLength(1);
+    expect(stripe.lineNames()).toContain("Rental gear");
+    expect(await gearCentsOn(db, tripId)).toEqual([{ gearCents: 1_500 + 1_200 }]);
+  });
+
+  it("names a nitrox-only charge as nitrox, not as rental gear", async () => {
+    // Domain review of #2795: a student on a gear-included course who only
+    // ticks nitrox must not read "Rental gear" on a card statement.
+    const { db, shop } = ctx;
+    const { tripId } = await gearShop(db, shop.id);
+    await db
+      .update(shops)
+      .set({
+        rentalItems: ["bcd", "wetsuit", "drysuit", "nitrox"],
+        rentalPricing: {
+          setCents: null,
+          perItemCents: { bcd: 1500, wetsuit: 1200 },
+          nitroxCents: 900,
+        },
+      })
+      .where(eq(shops.id, shop.id));
+    const stripe = fakeStripe();
+
+    await book(shop.slug, tripId, "Nia Nitrox", {
+      email: "nia@example.com",
+      wetsuit: false,
+      nitrox: true,
+    });
+
+    expect(stripe.lineNames()).toContain("Nitrox fills");
+    expect(stripe.lineNames()).not.toContain("Rental gear");
+  });
+
+  it("charges no rental on a gear-included course session, whatever the post ticks", async () => {
+    const { db, shop } = ctx;
+    await gearShop(db, shop.id);
+    // The seed's Discover Scuba session: its course includes the gear, and its
+    // instructor is already on the crew.
+    const [session] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, "Discover Scuba — Pool & Reef")));
+    expect(session, "the seeded Discover Scuba session").toBeDefined();
+    const stripe = fakeStripe();
+    const email = "nora.student@example.com";
+
+    // A hand-built post: the form offers neither box on this session.
+    await book(shop.slug, session.id, "Nora Student", { email, bcd: true });
+
+    expect(stripe.sessions, "the course fee still goes to checkout").toHaveLength(1);
+    expect(stripe.lineNames()).not.toContain("Rental gear");
+    expect(await gearCentsOn(db, session.id)).toEqual([{ gearCents: 0 }]);
+    // Nothing written as the student's fit either: `/ready` asks for the
+    // scuba unit's sizes from a blank form, not from "rents nothing".
+    const [student] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.email, email)));
+    expect(await fitOf(db, shop.id, student.id)).toBeUndefined();
+    const [seat] = await db
+      .select({ paidRentalKinds: bookings.paidRentalKinds })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, session.id), eq(bookings.personId, student.id)));
+    expect(seat?.paidRentalKinds).toEqual([]);
   });
 });

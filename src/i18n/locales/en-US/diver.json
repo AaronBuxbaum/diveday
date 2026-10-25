@@ -205,6 +205,7 @@
     "calendarDockCall": "Dock call {dockCall}. We leave at {departure}.",
     "calendarMeetingPoint": "Meet at {place}.",
     "packBring": "Bring",
+    "packLogbook": "Logbook",
     "packRenting": "Renting",
     "packProvided": "We provide",
     "packNothingRequested": "Nothing requested yet",
@@ -347,7 +348,8 @@
     "logEntryWaiting": "After you dive, your log entry is waiting for you.",
     "runLine": "Runs {cadence} · next {date}",
     "crewToBeConfirmed": "{role} · to be confirmed",
-    "changedAt": "Changed {when}"
+    "changedByShop": "Changed by the shop on {when}",
+    "changedByCrew": "Changed by the crew on {when}"
   },
   "factSource": {
     "forecast": "Forecast",
@@ -1234,7 +1236,7 @@
     "medicalAlertHeading": "For the crew, in an emergency",
     "medicalAlertIntro": "Anything the crew should know if something goes wrong on the boat: an allergy and where your medicine is, diabetes, an inhaler. Leave it blank if there’s nothing.",
     "medicalAlertIntroMinor": "Anything the crew should know about {name} if something goes wrong on the boat: an allergy and where the medicine is, diabetes, an inhaler. Leave it blank if there’s nothing.",
-    "medicalAlertNotQuestionnaire": "It doesn’t replace the medical questions above, and the shop’s owner, its managers and the boat crew can read it.",
+    "medicalAlertNotQuestionnaire": "It doesn’t replace the medical questions above, and nobody reviews it to decide who can dive. The shop’s owner, its managers and the boat crew can read it; tell the crew at the briefing too.",
     "medicalAlertEarlier": "Your last waiver here had a medical alert for the crew. If it still applies, write it again.",
     "medicalAlertCounterOne": "1 character left",
     "medicalAlertCounterOther": "{count} characters left",
@@ -1246,6 +1248,8 @@
     "full": "{tripTitle}",
     "gear": "Rental gear",
     "gearForDiver": "Rental gear — {name}",
+    "nitrox": "Nitrox fills",
+    "nitroxForDiver": "Nitrox fills — {name}",
     "tip": "Tip for the crew",
     "seatFull": "{tripTitle} ({type})",
     "seatDeposit": "Deposit — {tripTitle} ({type})"
@@ -3690,6 +3694,7 @@
     "sendWaiver": "Send waiver",
     "tripLine": "Two-Tank Reef · 7:30 AM",
     "rollCallHeading": "Before departure roll call",
+    "afterDiveRollCallHeading": "After dive 1 roll call",
     "bookingCard": {
       "label": "Spiegel Grove Wreck",
       "requirement": "This charter is for divers with Advanced Open Water or higher and a Deep certification.",
@@ -3910,7 +3915,10 @@
         },
         "aboard": {
           "when": "At the dock, and after every dive",
-          "title": "The crew calls the roll by name, signal or not"
+          "title": "The crew calls the roll by name, signal or not",
+          "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
+          "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns.",
+          "mockupLabel": "The crew’s roll call after dive 1: 8 of 9 divers aboard, one name tapped aboard and the last still to call."
         },
         "recap": {
           "when": "After the boat is back",
@@ -4605,7 +4613,7 @@
     "pricing": {
       "heroTitle": "What a shop pays, line by line",
       "lockNote": "Today’s price, locked for two years for founding shops.",
-      "trialNote": "The trial is a shop of your own, free for 3 weeks with no card, and nothing switches off when it ends.",
+      "trialNote": "The trial is a shop of your own, free for 3 weeks with no card, and nothing switches off when it ends. To move to paid, email {email}.",
       "earlyAccessBadge": "Early access",
       "invoice": {
         "title": "The invoice",

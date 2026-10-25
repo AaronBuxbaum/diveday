@@ -389,7 +389,15 @@ export const shops = pgTable(
     packingList: jsonb("packing_list")
       .$type<string[]>()
       .notNull()
-      .default(["Swimsuit and towel", "Reef-safe sun protection", "Logbook"]),
+      .default(["Swimsuit and towel", "Reef-safe sun protection"]),
+    /**
+     * The packing list also suggests a logbook (issue #2795). A flag rather
+     * than a line of `packing_list`, so the list can leave it off for a
+     * try-dive student with no certification, who has no dives to log
+     * (`packsLogbook`), without matching a shop's English, and so it reads in
+     * the diver's language. Set beside the list in Settings.
+     */
+    packingLogbook: boolean("packing_logbook").notNull().default(true),
     /**
      * The gear and services this shop offers (ShopCatalogKind values,
      * src/lib/rentals.ts). Gates which items a diver can pick in the rental-fit

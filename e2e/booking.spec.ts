@@ -612,14 +612,16 @@ test.describe("the shopfront on a phone", () => {
       page.getByText("Small-boat reef and wreck diving out of Key Largo."),
     ).toBeVisible();
 
-    const card = page.getByRole("region", { name: "Next boat with space" });
-    await expect(card).toBeVisible();
-    // The page's one primary — every week row below it is a link.
-    const primaries = page.getByRole("link", { name: "Book this boat" });
-    await expect(primaries).toHaveCount(1);
-    await primaries.click();
+    // The next boat is the week's first row on the seeded board, so no card
+    // repeats it above the list (visual review 2026-10-24, B17): the row is the
+    // bookable object, one tap from the booking form. The card's own branch,
+    // a full boat first, is next-departure.spec.ts.
+    await expect(page.getByRole("region", { name: /Next boat with space/ })).toHaveCount(0);
+    const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
+    await expect(first).toContainText(/seats?/);
+    await first.getByRole("link").first().click();
 
-    await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}#book$/);
+    await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   });
 });

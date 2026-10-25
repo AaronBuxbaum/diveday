@@ -68,6 +68,8 @@ test.describe("the dive arrival arc", () => {
     await page.goto(publicPath);
     await expect(page.getByRole("heading", { name: "Where to go" })).not.toBeVisible();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    // The source word stays on the ledger's muted line (ADR 20260904, Budget rule 5).
+    await expect(page.getByText(/^Changed by the shop on /).first()).toBeVisible();
     await expect(
       page.getByText("Blue Mantis sign by the fuel dock", { exact: true }),
     ).not.toBeVisible();

@@ -2,7 +2,7 @@
 name: security-reviewer
 description: Adversarial review for tenant isolation, authorization, and data exposure. Launch before merging changes to auth/authz, server actions, public-route allowlists, token flows (waivers, invites), schema rows holding personal or medical data, or export/import surfaces.
 tools: Read, Glob, Grep
-model: fable
+model: opus
 effort: high
 omitClaudeMd: true
 ---

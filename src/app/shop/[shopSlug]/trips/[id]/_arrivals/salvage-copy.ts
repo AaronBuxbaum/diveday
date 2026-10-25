@@ -1,6 +1,7 @@
 import type { SailedRebooking } from "@/db/sailed-rebooking";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { SalvageOffer } from "@/lib/no-show";
+import { shopPath } from "@/lib/staff-notices";
 import type { NoShowSalvageCopy } from "./NoShowScript";
 
 /**
@@ -29,8 +30,11 @@ export function noShowSalvageCopy(input: {
   offer: SalvageOffer;
   shopSlug: string;
   tripId: string;
-  /** The diver the seat was taken from — the subject of the rebooking offer. */
-  diver: { id: string; name: string };
+  /**
+   * The diver the seat was taken from — the subject of the rebooking offer —
+   * and the released seat, whose row a turned-away diver's money line links to.
+   */
+  diver: { id: string; name: string; bookingId: string };
   /** The page holds the locale and the shop's zone; this holds neither. */
   formatWhen: (startsAt: Date) => string;
   /**
@@ -50,9 +54,20 @@ export function noShowSalvageCopy(input: {
 }): NoShowSalvageCopy {
   const { t, offer, shopSlug, tripId, diver } = input;
   if (input.turnedAway) {
-    const money = {
-      line: input.moveClosed ? t("checkIn.turnAway.moneyRemove") : t("checkIn.turnAway.money"),
-    };
+    // A link to the door itself (#2907): the row's Move panel opens on its own
+    // hash, and a seat that can no longer move opens the row, where Remove is.
+    const row = shopPath(shopSlug, "trips", tripId);
+    const money = input.moveClosed
+      ? {
+          line: t("checkIn.turnAway.money"),
+          href: `${row}#booking-${diver.bookingId}`,
+          label: t("checkIn.turnAway.moneyRemoveDoor"),
+        }
+      : {
+          line: t("checkIn.turnAway.money"),
+          href: `${row}#move-booking-${diver.bookingId}`,
+          label: t("checkIn.turnAway.moneyMoveDoor"),
+        };
     if (offer.kind === "waitlist") {
       return {
         line: t("checkIn.noShow.waiting", { count: offer.count }),

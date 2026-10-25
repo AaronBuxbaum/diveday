@@ -107,7 +107,7 @@ export function registerAdditionalAuditCaptures(capture: AuditCapture) {
       await page.goto("/shop/blue-mantis/dive-sites");
       await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
       await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
-      await page.getByLabel("What the route is called").waitFor({ state: "attached" });
+      await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
       await page
         .locator("summary")
         .filter({ hasText: staff("diveSites.edit.deleteSite") })

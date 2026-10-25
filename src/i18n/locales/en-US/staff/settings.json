@@ -1,7 +1,6 @@
 {
   "main": {
     "eyebrow": "Settings",
-    "boatMode": "Boat mode",
     "notice": {
       "packingSaved": "Packing checklist saved for every trip",
       "packingInvalid": "Add between one and twelve packing items.",
@@ -224,6 +223,7 @@
       "heading": "Trip packing checklist",
       "description": "One item per line. Divers see this same concise list on every trip.",
       "label": "Checklist items",
+      "logbook": "Suggest a logbook",
       "submit": "Save packing checklist",
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
@@ -1101,6 +1101,7 @@
     "sessions": {
       "group": "{count, plural, one {# session} other {# sessions}} · last seen {when}",
       "thisDevice": "This device",
+      "includesThisDevice": "Includes this device",
       "showSessions": "Show sessions",
       "showAll": "Show all"
     },

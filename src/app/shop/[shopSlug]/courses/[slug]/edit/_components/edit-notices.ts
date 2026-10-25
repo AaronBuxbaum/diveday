@@ -47,3 +47,19 @@ export function courseEditNotices(t: StaffTranslator) {
   };
   return { messages, errors };
 }
+
+/**
+ * The section a refused save sends the writer back to, from its `?field=`. The
+ * save names a field, not always its section's id: the FAQ is posted as
+ * `faqsJson`, and Included / Not included sit in what the fee covers. A closed
+ * section it names opens, so the box to fix is in view.
+ */
+const FIELD_SECTION: Readonly<Record<string, string>> = {
+  faqsJson: "faq",
+  includes: "fee-covers",
+  excludes: "fee-covers",
+};
+
+export function refusedSectionId(error?: string, field?: string): string | undefined {
+  return error && field ? (FIELD_SECTION[field] ?? field) : undefined;
+}

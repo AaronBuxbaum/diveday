@@ -773,9 +773,11 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   await expect(released.getByText("Seen at the desk, turned away: waiver")).toBeVisible();
   // The one money door that works is the move on their own row (layer 3
   // review, dde-2 #3): no new booking, no orders link that holds no refund.
+  // It is a link to that row's Move panel (#2907), not a sentence pointing at it.
+  await expect(released.getByText(/^Nothing was charged or refunded\./)).toBeVisible();
   await expect(
-    released.getByText(/^Nothing was charged or refunded\. Open their row/),
-  ).toBeVisible();
+    released.getByRole("link", { name: "Move the booking to another day" }),
+  ).toHaveAttribute("href", new RegExp(`/trips/${tripId}#move-booking-`));
   await expect(released.getByRole("link", { name: "Open their orders" })).toHaveCount(0);
   await expect(released.getByRole("button", { name: /refund|charge/i })).toHaveCount(0);
   await expect(

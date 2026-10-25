@@ -50,8 +50,9 @@
     "confirmAriaLabel": "Registrar que {name} no embarca",
     "line": "Atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}",
     "badge": "No embarcó",
-    "money": "No se cobró ni se reembolsó nada. Abre su fila para mover la reserva a otra salida.",
-    "moneyRemove": "No se cobró ni se reembolsó nada. Abre su fila para quitar la reserva y reembolsarla a mano.",
+    "money": "No se cobró ni se reembolsó nada.",
+    "moneyMoveDoor": "Mover la reserva a otra salida",
+    "moneyRemoveDoor": "Quitar la reserva y reembolsarla a mano",
     "noWaitlist": "No hay nadie esperando esta plaza."
   },
   "sailedRebook": {

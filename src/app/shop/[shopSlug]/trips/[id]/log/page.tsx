@@ -36,7 +36,7 @@ import {
   rollCallCheckpointPrintClass,
   rollCallTableMinWidth,
 } from "./_components/roll-call-columns";
-import { NoRollCallNote, TimelineEntryText } from "./_components/TimelineEntryText";
+import { NoRollCallNote, RosterIntro, TimelineEntryText } from "./_components/TimelineEntryText";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — the claim
 // every trips/[id] sibling makes (ADR 20260804-instant-navigation): arriving from the home, the
@@ -184,9 +184,7 @@ export default async function IncidentExportPage({
         <h2 id="incident-roster-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.rosterHeading")}
         </h2>
-        <p className="mt-1 max-w-prose text-sm text-muted">
-          {t("incidentExport.rosterDescription")}
-        </p>
+        <RosterIntro turnedAway={doc.turnedAway} t={t} />
         <Table minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)} shellClassName="mt-3">
           <THead>
             <Th>{t("incidentExport.colDiver")}</Th>

@@ -15,6 +15,25 @@ type Typed = { name: string; index: number; value: string; checked: boolean };
  */
 const NEVER_RESTORED = new Set(["expectedVersion"]);
 
+/**
+ * **The forms a course asks for are never put back from a draft** (dive-domain
+ * review, visual review 2026-10-24). They save with the page's one Save now,
+ * from a section that is closed at rest, so a restored draft could untick a
+ * required medical statement out of sight, and the next Save (of a price, say)
+ * would drop it and clear students readiness should hold. A draft is a
+ * courtesy for words; which forms a diver must sign is chosen on screen, every
+ * time, from what is stored.
+ */
+function neverRestored(name: string): boolean {
+  return (
+    NEVER_RESTORED.has(name) ||
+    name === "formId" ||
+    name === "formsSection" ||
+    name.startsWith("order-") ||
+    name.startsWith("maxAge-")
+  );
+}
+
 /** The row version this page was rendered against, as the form carries it. */
 function versionOnPage(): string | null {
   const field = document.querySelector('input[name="expectedVersion"]');
@@ -96,7 +115,7 @@ function restore(form: HTMLFormElement, saved: Typed[]): number {
   let changed = 0;
   for (const element of Array.from(form.elements)) {
     const field = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-    if (!field.name || NEVER_RESTORED.has(field.name)) continue;
+    if (!field.name || neverRestored(field.name)) continue;
     if (field instanceof HTMLInputElement && field.type === "file") continue;
     const index = seen.get(field.name) ?? 0;
     seen.set(field.name, index + 1);

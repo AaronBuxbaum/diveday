@@ -2,6 +2,7 @@ import { z } from "zod";
 import { canPersonConfigureTrips, canPersonManageWaiverTemplates } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import {
+  courseFormListRefusal,
   listCourseFormAgeBounds,
   listCourseFormRequirements,
   setCourseFormRequirements,
@@ -30,8 +31,11 @@ export type CourseFormsWrite = Parameters<typeof setCourseFormRequirements>[1];
  *
  * Planned before anything is written, so a refused list refuses the editor's
  * whole save (visual review 2026-10-24, A11, which folded the section's own
- * form and Save into the editor's one). `setCourseFormRequirements` still has
- * the last word, atomic with the write.
+ * form and Save into the editor's one): the gates, the ages, and what the
+ * list names (`courseFormListRefusal`) are all asked here.
+ * `setCourseFormRequirements` still has the last word, atomic with the write;
+ * only a race (a form deleted, or a role changed, between the two) can refuse
+ * there, after the page's own fields have saved.
  *
  * Who a course asks for a signature is the same call as who a departure asks
  * for a cert, so the same gate: `canPersonConfigureTrips`, checked here where
@@ -77,6 +81,23 @@ export async function planCourseFormRequirements(
     const age = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
     if (!Number.isInteger(age)) return { ok: false, notice: "forms-invalid-age" };
     maxAgeYears.set(id, age);
+  }
+
+  // What the list names is checked now, not only inside the write: the editor
+  // writes the page and its prices before the forms, so a refusal found only
+  // there would land after them (dive-domain review, visual review 2026-10-24).
+  const named = await courseFormListRefusal(db, staff.shopId, ordered, maxAgeYears);
+  if (named) {
+    return {
+      ok: false,
+      notice: (
+        {
+          invalid_age: "forms-invalid-age",
+          medical_bound: "forms-medical-age",
+          unknown_form: "forms-invalid",
+        } as const
+      )[named],
+    };
   }
 
   // **Asking fewer students is taking a form off** (G1): a dropped form, a

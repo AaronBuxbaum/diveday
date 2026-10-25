@@ -12,7 +12,7 @@ signedInAsOwner();
 test("the identity menu writes to support, naming the shop and the page", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers?q=Priya");
   await page.locator("header [data-identity-menu]").click();
-  const tellUs = page.locator("header").getByRole("link", { name: "Tell us" });
+  const tellUs = page.locator("header").getByRole("link", { name: "Send feedback" });
   await expect(tellUs).toBeVisible();
 
   const href = (await tellUs.getAttribute("href")) ?? "";

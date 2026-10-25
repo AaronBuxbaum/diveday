@@ -11,6 +11,7 @@ import type { DepthUnit } from "./depth-units";
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { IncidentKind, IncidentSeverity } from "./incident-reports";
 import {
+  isTurnedAwayOffBoat,
   type RollCallCheckpoint,
   type RollCallLabel,
   rollCallLabel,
@@ -243,6 +244,14 @@ export type IncidentRosterEntry = {
   certifications: IncidentCertificationEvidence[];
   /** Null only on a held seat (`identityWithheld`): withheld, never a stated absence. */
   waiver: IncidentWaiverStatus | null;
+};
+
+/** One seat the desk turned away (`IncidentExportDocument.turnedAway`). */
+export type IncidentTurnedAwayEntry = {
+  bookingId: string;
+  /** A held seat by the name it was booked as, as on the roster. */
+  fullName: string;
+  reason: TurnAwayReason | null;
 };
 
 export type IncidentCrewEntry = {
@@ -478,6 +487,18 @@ export type IncidentExportDocument = {
     crewAssigned: number;
   };
   roster: IncidentRosterEntry[];
+  /**
+   * **Seats the desk turned away, off the boat** (issue #2907): a seat turned
+   * away that nobody at the boat recorded a result for at any checkpoint. It
+   * is not in `roster` or in any `departureSummary` count, and the page
+   * states it on a line of its own, so a turn-away before the first dock
+   * count still leaves a sentence in the record. The reason is the category
+   * only (H-135), never the answers behind it; null after erasure.
+   *
+   * Empty on a departure with none, and then outside the hash, so every log
+   * printed without one keeps its code.
+   */
+  turnedAway: IncidentTurnedAwayEntry[];
   crew: IncidentCrewEntry[];
   /** Post-dive execution evidence, including fields staff explicitly left unknown. */
   executedDives: IncidentExecutedDive[];
@@ -934,8 +955,25 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   // release are facts about somebody else (issue #2128, the manifest's rule
   // from #1690). `identityWithheld` says so, so the page states it rather
   // than printing "no cards on file" or "not sent", which would be wrong facts.
-  const roster: IncidentRosterEntry[] = departure.divers
-    .map(withholdHeldSeatParticulars)
+  // A seat the desk turned away is off the boat at a checkpoint where nobody
+  // recorded a result for it (`isTurnedAwayOffBoat`, issue #2907). Only one
+  // that is off the boat at **every** checkpoint leaves the table: a result
+  // anybody at the boat recorded, at any count, is a fact this document keeps.
+  const offBoatEverywhere = (bookingId: string) =>
+    input.manifests.every((manifest) => {
+      const row = manifest.divers.find((entry) => entry.bookingId === bookingId);
+      return row !== undefined && isTurnedAwayOffBoat(row);
+    });
+  const seats = departure.divers.map(withholdHeldSeatParticulars);
+  const turnedAway: IncidentTurnedAwayEntry[] = seats
+    .filter((diver) => offBoatEverywhere(diver.bookingId))
+    .map((diver) => ({
+      bookingId: diver.bookingId,
+      fullName: diver.fullName,
+      reason: diver.turnedAwayReason ?? null,
+    }));
+  const roster: IncidentRosterEntry[] = seats
+    .filter((diver) => !offBoatEverywhere(diver.bookingId))
     .map((diver) => {
       if (diver.identityWithheld) {
         return {
@@ -1106,6 +1144,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       crewAssigned: departure.crew.length,
     },
     roster,
+    turnedAway,
     crew,
     executedDives,
     preDepartureCheck: (input.preDepartureCheck ?? []).map((item) => ({
@@ -1157,16 +1196,18 @@ function unsealedMeta<T extends { generatedAt: string; generatedByName: string }
 /**
  * Whether a log holds anything no version-1 code could seal (ADR
  * 20261016-departure-log-code-v2): a seat or crew line from when the boat was
- * due out, an incident report, or a timeline line later than the log says it
- * was made, which only a backdated `generatedAt` produces.
+ * due out, an incident report, a seat turned away at the desk (#2907), or a
+ * timeline line later than the log says it was made, which only a backdated
+ * `generatedAt` produces.
  */
 function holdsVersion2Facts(
-  body: Pick<IncidentExportDocument, "meta" | "timeline"> &
+  body: Pick<IncidentExportDocument, "meta" | "timeline" | "turnedAway"> &
     Partial<Pick<IncidentExportDocument, "incidentReports">>,
 ): boolean {
   const madeAt = Date.parse(body.meta.generatedAt);
   return (
     (body.incidentReports ?? []).length > 0 ||
+    body.turnedAway.length > 0 ||
     body.timeline.some(
       (entry) => entry.kind === "roster_change" || Date.parse(entry.occurredAt) > madeAt,
     )
@@ -1212,6 +1253,10 @@ export function incidentExportContentHash(
     meta: version === 1 ? meta : unsealedMeta(meta),
     departureSummary: body.departureSummary,
     roster: body.roster.map(({ bookingId: _bookingId, ...entry }) => entry),
+    // Only when there is one, like the snags below.
+    ...(body.turnedAway.length > 0
+      ? { turnedAway: body.turnedAway.map(({ bookingId: _bookingId, ...entry }) => entry) }
+      : {}),
     crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
     executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,

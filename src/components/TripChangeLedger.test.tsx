@@ -6,9 +6,10 @@ import { TripChangeLedger } from "./TripChangeLedger";
 
 /**
  * **What changed** (visual review 2026-10-24, B21): only the facts that moved,
- * each "{fact}: {new value}" once, with one muted "Changed {date, zone}" line.
- * No sentence about the card, no source chip, and nothing at all when nothing
- * changed.
+ * each "{fact}: {new value}" once, with one muted "Changed by the shop|crew on
+ * {date, zone}" line: no source chip, but the source word stays (ADR
+ * 20260904-reef-all-the-way-down, Budget rule 5). No sentence about the card,
+ * and nothing at all when nothing changed.
  */
 afterEach(cleanup);
 
@@ -42,7 +43,7 @@ describe("TripChangeLedger", () => {
   it("states each changed fact with its new value, and when, in the shop's zone", () => {
     render(<TripChangeLedger events={[event()]} locale="en-US" timeZone={timeZone} />);
     expect(screen.getByText("Conditions: Light chop, 2 ft")).toBeInTheDocument();
-    const when = screen.getByText(/^Changed /);
+    const when = screen.getByText(/^Changed by the shop on /);
     expect(when).toHaveClass("text-muted");
     // The shop's zone, never the host's, and named.
     expect(when.textContent).toContain("7:40");
@@ -50,13 +51,57 @@ describe("TripChangeLedger", () => {
     expect(when.textContent).toMatch(/EDT/);
   });
 
-  it("drops the self-description and the source chip", () => {
+  it("drops the self-description and the source chip, never the source word", () => {
     render(
       <TripChangeLedger events={[event({ source: "crew" })]} locale="en-US" timeZone={timeZone} />,
     );
     expect(screen.queryByText(/Material updates/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Crew · /)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Plan · /)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Changed by the crew on /)).toBeInTheDocument();
+  });
+
+  it("tells a crew report from a later shop edit of the same fact", () => {
+    render(
+      <TripChangeLedger
+        events={[
+          event({ id: "crew", source: "crew" }),
+          event({
+            id: "shop",
+            source: "shop",
+            beforeValue: { conditionsSummary: "Light chop, 2 ft" },
+            afterValue: { conditionsSummary: "Flat" },
+            occurredAt: new Date("2026-09-04T17:00:00Z"),
+          }),
+        ]}
+        locale="es-ES"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.getByText(/^Cambiado por el centro el /)).toBeInTheDocument();
+    expect(screen.queryByText(/^Cambiado por la tripulación/)).not.toBeInTheDocument();
+  });
+
+  it("never claims a change was observed", () => {
+    // Budget rule 5's floor: only Observed may print as what happened, and an
+    // edit is not that, whichever source made it.
+    render(
+      <TripChangeLedger
+        events={[
+          event({ source: "crew" }),
+          event({
+            id: "event-2",
+            kind: "meeting_point",
+            source: "shop",
+            afterValue: { meetingPointLabel: "Slip 4" },
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.queryByText(/Observed/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Forecast/)).not.toBeInTheDocument();
   });
 
   it("names the meeting point's new value on the diver's own thread", () => {
