@@ -369,16 +369,16 @@ existing assembly — **no second detector** (the ADR that built close-out alrea
 
 **Delight.** When every station of the shop day is settled **and** `diversOut === diversBack`
 (the existing closeout counts — no new detector), the evening summary sentence renders as
-`EarnedMomentLine` (`role=status`) instead of plain muted text: key `spine.allHome` in
+a `role=status` line in the success wash (`bg-success-tint`; it was `EarnedMomentLine` until
+the 2026-10-24 visual review, A07) instead of plain muted text: key `spine.allHome` in
 `staff/shopHome.json`, both locales ("All boats are home — {out} out, {back} back."), figures
 `tabular-nums`. The h1 stays the standing time-aware greeting at every hour, and `spine.allHome`
 is the **only** rendering of "all boats are home" — the moment renders once. On the day no
 departure of the shop's has ever sailed before, the same line words as `spine.firstBoatHome`
 ("Your first boat is home — {out} out, {back} back.") — condition-derived, self-expiring the
-moment an earlier day holds a sailed departure; the coral-budget row (ADR decision 11's
-home-evening entry) already sanctions the once-ever wording. After `closeDay` the existing
-closed-state coral panel takes over and the line reverts to plain ink — never two coral elements
-on one page. Motion is `EarnedMomentLine`'s existing rise-in; reduced motion is the kill-switch
+moment an earlier day holds a sailed departure (ADR decision 11's amendment of 2026-10-25 took
+the line out of the coral budget). After `closeDay` the existing closed-state coral panel takes
+over and the line reverts to plain ink. Motion is the `rise-in` entrance; reduced motion is the kill-switch
 (static line). Tests in `DaySpine.test.tsx`: renders only when the counts are equal and every
 station is settled; the sentence renders once — the h1 never carries it; the once-ever wording
 renders only when no earlier day has a sailed departure; never renders alongside the closed
