@@ -92,6 +92,17 @@ describe("the merge preview", () => {
     expect(screen.queryByRole("radio", { name: /maya@example\.com/ })).toBeNull();
   });
 
+  // Layer 5 visual triage: the kept email split "…example.co / m". It may
+  // break after its "@" and before a dot, and never inside a word.
+  it("breaks an email only after its @ and before its dots", () => {
+    renderPreview(preview());
+    const email = screen.getByText("maya@example.com");
+    expect(email).toHaveClass("break-words");
+    expect(email).not.toHaveClass("break-all");
+    expect(email.querySelectorAll("wbr")).toHaveLength(2);
+    expect(email.innerHTML).toBe("maya@<wbr>example<wbr>.com");
+  });
+
   it("counts what moves, medical answers included, and leaves empty groups out", () => {
     renderPreview(preview());
     const bookings = screen.getByRole("rowheader", { name: "Bookings" }).closest("tr");
