@@ -191,6 +191,7 @@ describe("the boat check on the packet's paper", () => {
     snagSaving: "Saving…",
     noteProblem: "Note a problem",
     noteItemLabel: "Which item?",
+    noteItemPlaceholder: "Pick an item",
     noteLabel: "What’s wrong?",
     noteSave: "Save note",
     noteRefused: "Write what’s wrong, up to 280 characters.",
