@@ -19,7 +19,7 @@ How to build anything here. Written for AI agents; humans may follow along.
 3. **UI second** — token-styled (ADR-0004), copy per the voice rules
    ([design/principles.md](../design/principles.md)).
 4. **Verify** — the `verify` skill: the local gate (`pnpm check:repo`, `pnpm lint`,
-   `pnpm typecheck`, the specs `pnpm e2e:affected` names), `pnpm verify:push --quick` before a push, and
+   `pnpm typecheck`, the specs `pnpm e2e:affected` names), then push (CI is the gate; fix a red run forward), and
    for UI work look at the running app (screenshot in light; both schemes only for colour work) —
    never ship UI you haven't seen.
    The whole `pnpm check` runs on CI ([agents/verifying.md](../agents/verifying.md)).

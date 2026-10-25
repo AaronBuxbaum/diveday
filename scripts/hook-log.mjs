@@ -1,7 +1,6 @@
 // One line per hook refusal, in a gitignored `.claude/.hook-log`, so the papercuts rule
 // (docs/agents/papercuts.md) fires on evidence rather than on a session remembering it was
-// fought. Every `PreToolUse` guard and `Stop` hook that refuses calls `recordRefusal`, and a push
-// let through by `DIVEDAY_PUSH_UNVERIFIED="<reason>"` calls `recordOverride` (kind "override"); the
+// fought. Every `PreToolUse` guard and `Stop` hook that refuses calls `recordRefusal`; the
 // per-prompt line in `session-context.mjs` reads the tally back once per session and says
 // "N refusals last session" when the previous session was refused at all.
 //
@@ -52,27 +51,6 @@ export function recordRefusal(hook, reason, { session, root, now } = {}) {
   );
 }
 
-/**
- * Records that a session used a hook's escape hatch, `DIVEDAY_PUSH_UNVERIFIED="<reason>"` on a
- * push today: allowed, but never silent, so a hatch used every day shows up as a number rather
- * than as a habit. `detail` is what it let through (the sha).
- */
-export function recordOverride(hook, reason, { session, root, now, detail } = {}) {
-  const short = String(reason ?? "")
-    .split("\n")[0]
-    .slice(0, 160);
-  appendEntry(
-    {
-      session: session ?? "unknown",
-      hook,
-      kind: "override",
-      reason: short,
-      ...(detail ? { detail: String(detail).slice(0, 80) } : {}),
-    },
-    { root, now },
-  );
-}
-
 /** Parses the log's text into entries, skipping any line that is not JSON. */
 export function parseLog(text) {
   const entries = [];
@@ -103,30 +81,19 @@ export function readLog({ root } = {}) {
  */
 export function lastSessionRefusals(entries, currentSession) {
   if (entries.some((e) => e.kind === "noted" && e.session === currentSession)) return null;
-  const said = entries.filter((e) => e.kind === "refusal" || e.kind === "override");
+  const said = entries.filter((e) => e.kind === "refusal");
   const previous = [...said].reverse().find((e) => e.session !== currentSession)?.session;
   if (!previous) return null;
-  const mine = said.filter((e) => e.session === previous && e.kind === "refusal");
+  const mine = said.filter((e) => e.session === previous);
   const byHook = {};
   for (const entry of mine) byHook[entry.hook] = (byHook[entry.hook] ?? 0) + 1;
-  const overrides = said.filter((e) => e.session === previous && e.kind === "override").length;
-  return { session: previous, count: mine.length, byHook, overrides };
+  return { session: previous, count: mine.length, byHook };
 }
 
 /** The sentence the per-prompt line carries, or "" when there is nothing to report. */
 export function refusalLine(summary) {
-  if (!summary) return "";
-  const overrides = summary.overrides ?? 0;
-  const pushes = `${overrides} push${overrides === 1 ? "" : "es"} past verify:push`;
-  if (summary.count === 0) {
-    return overrides > 0
-      ? `${pushes} last session (DIVEDAY_PUSH_UNVERIFIED): say why in the PR`
-      : "";
-  }
-  const refused = refusedLine(summary);
-  return overrides > 0
-    ? `${refused}; ${pushes} (DIVEDAY_PUSH_UNVERIFIED): say why in the PR`
-    : refused;
+  if (!summary || summary.count === 0) return "";
+  return refusedLine(summary);
 }
 
 function refusedLine(summary) {

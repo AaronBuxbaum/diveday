@@ -115,9 +115,7 @@ describe("stack:sync on the current layer", () => {
     expect(calls.filter(isMerge)).toEqual([["/wt/s-2", "merge", "--no-edit", "origin/claude/s-1"]]);
     expect(calls.some(isPush)).toBe(false);
     expect(text).toContain("merged 3 commit(s) from origin/claude/s-1");
-    expect(text).toContain(
-      "cd /wt/s-2 && pnpm regen (commit what it changed) && pnpm verify:push --quick && git push",
-    );
+    expect(text).toContain("cd /wt/s-2 && pnpm regen (commit what it changed) && git push");
     expect(text).toMatch(/claude\/s-3: in its worktree: pnpm stack:sync/);
   });
 

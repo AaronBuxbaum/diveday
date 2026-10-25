@@ -33,7 +33,6 @@ what is currently wired.
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses eight command shapes, each naming the correct form; writes the quiet reporter into a focused test or e2e run |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
-| `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front; warns, loudly and without refusing, when the layer below is red on tests the stamp did not replay |
 | `PreToolUse` on the GitHub MCP's pull request create/update | `scripts/guard-pr-body.mjs` | runs CI's `check-pr-body.mjs` over the body first and refuses one CI would refuse |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
@@ -179,28 +178,10 @@ refusal would cost a wasted call and a retry for a fix that is purely mechanical
 `permissionDecision`, so the rewritten command still goes through the normal permission flow, and
 it leaves chains, pipes, background jobs and any run that already names a reporter as typed.
 
-## `guard-push.mjs` — a push is of a verified commit, or says why not
-
-Between 2026-10-09 and 2026-10-12, 90 CI jobs failed on the open stack, and nearly every one was a
-break a local run would have shown ([verifying.md](verifying.md#the-pre-push-gate)). The verify
-skill already said to check before pushing; what it could not do was make the check happen on the
-commit actually pushed, after the merge from the layer below that came in once the checks were
-done. So `pnpm verify:push` writes a stamp naming the commit it passed, and this hook refuses a
-`git push` of any other commit. The stamp is keyed by sha in the clone's common git dir
-(`<git common dir>/diveday-verified/<sha>`, beside the older per-worktree
-`diveday-verified.json`), and the hook reads the push in the directory the command names (a
-leading `cd <dir> &&`, or `git -C <dir>`): a thread's session cwd is the shared checkout while it
-builds in a worktree, and until 2026-10-14 the hook read the shared checkout's own stamp and
-refused every push verified in a worktree. A `pnpm verify:push --quick` stamp counts (static
-checks and related unit tests; the default since 2026-10-16, [verifying.md](verifying.md#the-quick-run-and-fixing-forward)). Left alone: a
-commit the remote already has, a branch deletion, a tag push. The way past it is
-`DIVEDAY_PUSH_UNVERIFIED="<reason>"` in front of the command, a reason of at least ten characters
-that the PR repeats; the two right uses are in the verify skill.
-
-It also reads the layer below's latest CI at push time (`scripts/red-below.mjs`, at most 15
-seconds, failing open) and prints a `THE LAYER BELOW IS RED` warning naming that layer's branch
-when it is red on test files this branch does not edit and the stamp did not replay. A warning,
-not a refusal: [verifying.md](verifying.md#a-red-base) says why.
+There is no push guard. From 2026-10-12 to 2026-10-25 a `PreToolUse` hook refused a `git push`
+of a commit `pnpm verify:push` had not stamped; Aaron removed it on 2026-10-25 ("remove the push
+guard and the verify:push requirement"). A plain `git push` works, CI is the gate, and a red run
+is fixed forward.
 
 ## `guard-pr-body.mjs` — the body CI reads, checked before it is sent
 
@@ -310,7 +291,7 @@ not pushed goes with it. A commit *looks* safe — the work is "saved" — and i
 it is saved on is about to be recycled. This is the third `Stop` hook beside the two above:
 something finished and then lost. It blocks, once, a plain ending in a cloud container
 (`CLAUDE_CODE_REMOTE=true`) while `git rev-list HEAD --not --remotes` is non-empty, naming the
-count and the one command to run, `pnpm verify:push && git push -u origin <branch>`, so the extra
+count and the one command to run, `git push -u origin <branch>`, so the extra
 full-context turn a block costs is a single tool call. A detached HEAD counts too, against every
 remote ref (the fast-forward above leaves the shared checkout detached, after a fetch), and its
 reason says to `git switch -c` a branch first. It stays quiet on a laptop, on the re-entry after it already blocked,

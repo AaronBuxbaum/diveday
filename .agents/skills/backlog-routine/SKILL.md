@@ -47,7 +47,7 @@ Each step in full, with its commands and incidents: [loop.md](loop.md).
 7. **Cut the branch from the previous ticket's, commit once, open the draft PR** ([stack.md](stack.md)),
    then build it.
 8. **Verify**: `pnpm check:repo`, `pnpm lint`, `pnpm typecheck`, the specs `pnpm e2e:affected`
-   names, `pnpm verify:push --quick` before the push; look at every surface you changed; read each visual
+   names, then push (CI is the gate); look at every surface you changed; read each visual
    diff against its image (`pnpm visual:report --commit <sha>`).
 9. **Finish the PR** (body, position line, diff explanation, `Closes #n` under "## Follow-ups
    filed"), `gh pr ready` it, and **go back to step 1** without summarising or asking.

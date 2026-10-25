@@ -58,6 +58,10 @@ any schema module at all — 16j-B added only columns and tripped two guards.
 
 ## The pre-push gate
 
+**Removed 2026-10-25** (Aaron: "remove the push guard and the verify:push requirement"). Nothing
+refuses a `git push` now; CI is the gate and a red run is fixed forward. `pnpm verify:push` stays as
+an optional local run. What follows is why it was built and what it measured.
+
 Measured on the open stack between 2026-10-09 and 2026-10-12: 169 CI runs, 18 failed and 128
 cancelled, and 90 failed jobs inside them. Classified from their annotations and logs:
 
@@ -121,12 +125,7 @@ which reaches every route and so ranks staffing behind thirty other specs. A loc
 about 1.4 times the recorded CI time (four specs: 291 s against 204 s recorded), plus three
 minutes for a cold build.
 
-`git push` is refused for a commit with no stamp (`scripts/guard-push.mjs`); a merge from the
-layer below is a new commit and needs a new run, which is the typecheck row. The way past it is a
-reason written in front of the command, `DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`, for the
-two cases the verify skill allows. Each one is logged with its reason and the sha to
-`.claude/.hook-log` (`recordOverride` in `scripts/hook-log.mjs`), and the next session's opening
-line counts them, so an escape hatch used every day shows up as a number.
+Until 2026-10-25 a `git push` of a commit with no stamp was refused by a hook; that hook is gone.
 
 ### The quick run, and fixing forward
 
@@ -277,20 +276,11 @@ push is not held behind a failure it did not cause.
 
 The stamp records what it found (`baseCi`). The fix for a red base goes where the break is when
 that layer is still open (its owner, through the coordinator), or rides in this layer when it
-cannot wait; either way, nothing is pushed red on purpose. `scripts/guard-push.mjs` refuses an
-override whose reason says the red came from elsewhere ("red on main", "not mine", "inherited",
-"flake", "pre-existing"), and names the base check instead. The override is left for its two
-cases: work saved before the container is reclaimed, and a question only CI can answer.
+cannot wait; either way, nothing is pushed red on purpose.
 
 **Loud, with the layer's name.** When the base is red on test files this branch does not edit,
 `verify:push` prints a `THE LAYER BELOW IS RED` banner naming that layer's branch and pull request
-before it runs them (`scripts/red-below.mjs`). The base can also finish red after the stamp (a
-running base is only a note), so `scripts/guard-push.mjs` reads it again at push time and prints
-the same banner when the stamp did not replay those files. That one is a warning, not a refusal:
-the guard cannot run tests, so it cannot tell a push that carries the fix from one that does not,
-and a push that fixes the layer below must never be blocked. Proving the fix stays the gate's job
-(the full `pnpm verify:push` replays them and stamps only if they pass). It fails open, and there is
-no override for it: an inherited-red reason stays refused. Fix the bottom first, then
+before it runs them (`scripts/red-below.mjs`). Fix the bottom first, then
 `pnpm stack:sync` merges it up one layer at a time (the **stacked-prs** skill).
 
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
@@ -410,8 +400,7 @@ Each push to a branch cancels the CI run of the push before it (per-ref concurre
 Measured on 2026-10-10: 9 of the last 25 runs were cancelled that way — runs 4548 to 4551 were four
 pushes to one branch in thirty minutes — at about 70 runner-minutes per cancelled full run, against
 a 20-job concurrency cap that every other open branch shares. Three speculative pushes buy one CI
-answer and cost two runs nobody reads. So push when the round's checklist is green, once; the
-exceptions are in the verify skill.
+answer and cost two runs nobody reads. So push once per round, when the round's work is in.
 
 ## The one thing CI cannot answer
 

@@ -65,12 +65,12 @@ export function reasonFor({ unpushed, branch }) {
   if (branch === "HEAD") {
     return [
       `${unpushed} commit${unpushed === 1 ? "" : "s"} on a detached HEAD ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral.`,
-      "Run `git switch -c claude/<slug>`, then `pnpm verify:push && git push -u origin claude/<slug>`, or say in one sentence why not; this check does not repeat this turn.",
+      "Run `git switch -c claude/<slug>`, then `git push -u origin claude/<slug>`, or say in one sentence why not; this check does not repeat this turn.",
     ].join("\n");
   }
   return [
     `${unpushed} commit${unpushed === 1 ? "" : "s"} on \`${branch}\` ${unpushed === 1 ? "is" : "are"} on no remote branch, and this container is ephemeral.`,
-    `Run \`pnpm verify:push && git push -u origin ${branch}\`, or say in one sentence why not; this check does not repeat this turn.`,
+    `Run \`git push -u origin ${branch}\`, or say in one sentence why not; this check does not repeat this turn.`,
   ].join("\n");
 }
 

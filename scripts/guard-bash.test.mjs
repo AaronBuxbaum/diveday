@@ -102,7 +102,7 @@ describe("piping a long run through tail", () => {
 describe("the whole suite, locally", () => {
   it("refuses a bare run of the scripts that belong to CI, naming the focused form", () => {
     expect(violationFor("pnpm test", scripts)).toMatch(/pnpm test <file>/);
-    expect(violationFor("pnpm test --reporter=dot", scripts)).toMatch(/verify:push/);
+    expect(violationFor("pnpm test --reporter=dot", scripts)).toMatch(/CI runs the whole suite/);
     expect(violationFor("pnpm run test", scripts)).toMatch(/whole suite/);
     expect(violationFor("pnpm e2e", scripts)).toMatch(/pnpm e2e <spec>/);
     expect(violationFor("pnpm e2e:run --reporter=line", new Set([...scripts, "e2e:run"]))).toMatch(

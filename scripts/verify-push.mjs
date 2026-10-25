@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 // `pnpm verify:push`: everything a push must survive that this container can answer, run once,
-// and a stamp saying HEAD passed it. `scripts/guard-push.mjs` refuses a `git push` without one.
+// and a stamp saying HEAD passed it. Optional: nothing refuses a push without it, and CI is the
+// gate (Aaron, 2026-10-25: "remove the push guard and the verify:push requirement").
 //
 // Of the 90 CI jobs that failed on the open stack between 2026-10-09 and 2026-10-12, almost
 // none were flakes or infrastructure. They were (docs/agents/verifying.md#the-pre-push-gate):
@@ -37,8 +38,7 @@
 // when CI fails"). The full run took most of an hour on a four-core cloud container and held the
 // stack queue. The quick run keeps the cheap steps that caught most of the 2026-10-12 red jobs
 // (typecheck after a merge, the guards, check:repo) and leaves the browser to CI, which a layer
-// then fixes forward. Its stamp says `"mode": "quick"` and names what it left to CI; the guard
-// accepts either stamp and still refuses a commit with none.
+// then fixes forward. Its stamp says `"mode": "quick"` and names what it left to CI.
 //
 // "Base CI" reads the layer below's latest CI (`scripts/base-ci.mjs`): a push on a red base is a
 // red run for this layer and every layer above, so the base's failing specs run here too (its
@@ -75,7 +75,6 @@ import {
   withinBudget,
 } from "./e2e-affected.mjs";
 import { requireFreshBuild } from "./e2e-build-evidence.mjs";
-import { verifiedFile } from "./guard-push.mjs";
 import { ownDecision, readOwnVerdict } from "./own-ci.mjs";
 import { branchOf, redBelowMessage, unansweredRed } from "./red-below.mjs";
 import { gitReader } from "./stack-map.mjs";
@@ -387,10 +386,18 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = []
   return lines;
 }
 
+/** The sha-keyed stamps' directory in the common git dir, shared by every worktree. */
+export const STAMP_DIR = "diveday-verified";
+
+/** Where the sha-keyed stamp for `sha` lives under `commonDir`, or null for a non-sha. */
+export function verifiedFile(commonDir, sha) {
+  if (!commonDir || !/^[0-9a-f]{7,64}$/.test(sha ?? "")) return null;
+  return path.join(commonDir, STAMP_DIR, sha);
+}
+
 /**
- * Writes the stamp twice: the per-worktree file older guards read, and `<git common dir>/
- * diveday-verified/<sha>`, which every worktree of the clone shares, so a push from any worktree
- * (or from the shared checkout naming one) finds it (`scripts/guard-push.mjs`).
+ * Writes the stamp twice: the per-worktree file, and `<git common dir>/diveday-verified/<sha>`,
+ * which every worktree of the clone shares.
  */
 export function writeStamps(
   stamp,

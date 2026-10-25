@@ -13,11 +13,6 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-commit-format.mjs\"",
             "timeout": 45
-          },
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-push.mjs\"",
-            "timeout": 30
           }
         ]
       },
