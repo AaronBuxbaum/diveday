@@ -138,6 +138,29 @@ describe("where a request's lines may break", () => {
     expect(item).not.toHaveClass("max-sm:flex-wrap");
   });
 
+  it("carries the day's one act, opening a departure for that date", () => {
+    render(
+      <ul>
+        <RequestLedgerRow
+          request={BASE}
+          locale="en-US"
+          timezone="America/Cancun"
+          shopSlug="blue-mantis"
+          shopName="Blue Mantis Divers"
+          markDoneAction={() => {}}
+          openDeparture={{
+            href: "/shop/blue-mantis/schedule/board?add=full&date=2027-03-06",
+            label: t("requests.openDeparture"),
+          }}
+          t={t}
+        />
+      </ul>,
+    );
+    expect(
+      screen.getByRole("link", { name: "Open a departure for this date" }).getAttribute("href"),
+    ).toContain("date=2027-03-06");
+  });
+
   /**
    * **As much room under the link as over the request** (pixel-craft class 5).
    * On its own line at the row's foot, the link's 44px box keeps 12px it draws

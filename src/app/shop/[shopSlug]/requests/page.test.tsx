@@ -125,8 +125,8 @@ describe("a day's Add a departure", () => {
 /**
  * **A day reached only by second choices keeps its act** (layer 3 review,
  * dive-domain run B, item 1). A date that is only someone's alternate is a
- * real group with real people, rendered as reference rows; the act lives in
- * the day's header, so it is there with no full record beneath it.
+ * real group with real people, drawn as reference rows; each carries the
+ * day's act like a full row does (visual review A23), and no header does.
  */
 describe("a day named only as someone's alternate", () => {
   it("still offers to open a departure on that date, carrying the request", async () => {
@@ -146,6 +146,8 @@ describe("a day named only as someone's alternate", () => {
     const add = within(group).getByRole("link", { name: "Open a departure for this date" });
     expect(add.getAttribute("href")).toContain("date=2027-03-14");
     expect(add.getAttribute("href")).toContain(`requests=${REQUEST.id}`);
+    // The act rides on the row, never beside the day's heading.
+    expect(add.closest("li")).not.toBeNull();
   });
 });
 
