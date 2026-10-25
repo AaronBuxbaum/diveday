@@ -80,7 +80,10 @@ export function RecordPaymentForm({
   return (
     // One group, named once (visual review A16): the label and its two
     // machines read as a single row of work.
-    <div role="group" aria-labelledby={labelId} className="flex flex-wrap items-center gap-2">
+    <fieldset
+      aria-labelledby={labelId}
+      className="m-0 flex min-w-0 flex-wrap items-center gap-2 border-0 p-0"
+    >
       <span id={labelId} className="w-full text-sm font-medium sm:w-auto">
         {t("orders.detail.recordPayment.label")}
       </span>
@@ -140,6 +143,6 @@ export function RecordPaymentForm({
           </FieldGrid>
         </details>
       ) : null}
-    </div>
+    </fieldset>
   );
 }
