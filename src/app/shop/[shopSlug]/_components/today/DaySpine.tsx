@@ -871,7 +871,13 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           16px under its edge with 40px to the first station. Unpulled, they
           sit the header's 32px under the band like every first block. */}
       {allHomeLine && evening ? (
-        <EarnedMomentLine tone="ink" className="-mt-4 tabular-nums">
+        // **The all-clear in the success wash**, the gear register's "All
+        // home" band and the boats-clear line: never coral ink, which reads
+        // as amber on a phone in the sun (visual review A07).
+        <p
+          role="status"
+          className="rise-in -mt-4 rounded-lg border border-success/30 bg-success-tint px-3 py-2 text-sm font-semibold tabular-nums text-success-strong"
+        >
           {/* **Souls, not seats** (issue #1346). The one sentence in the
               product about who came home used to leave the crew out of both
               numbers — and they are the people most reliably still in the
@@ -881,7 +887,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             crew: evening.close.crew,
             back: evening.close.back,
           })}
-        </EarnedMomentLine>
+        </p>
       ) : clearUnlessWindy ? (
         <UnlessWindy wind={highWind} show={(wind) => jobs + wind.length > 0 && !windOnToday(wind)}>
           <BoatsClearLine>{t("today.todayQueue.boatsClear")}</BoatsClearLine>

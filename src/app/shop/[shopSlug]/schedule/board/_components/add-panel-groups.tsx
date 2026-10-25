@@ -62,12 +62,13 @@ export function PayAtBookingGroup({
         suffix left, four widths in one stack (K-332). */}
       {/* A legend names this payment control group; it must remain a
         fieldset rather than becoming a generic SectionCard. */}
-      {/* The paid-booking fields sit in one row from `md` (visual review A44):
-          the deposit and its window, then the minimum and its deadline. */}
+      {/* The paid-booking fields sit two by two from `sm` and in one row only
+          from `lg` (visual review A44): four in a row at `md` wrapped every
+          label. The deposit and its window, then the minimum and its deadline. */}
       <fieldset hidden={!expanded} disabled={!expanded} className={GROUP_FRAME}>
         <legend className={`${legendClass} text-sm font-medium`}>{copy.payAtBookingLegend}</legend>
         <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
-        <FieldGrid columns={2} className="mt-4 md:grid-cols-4">
+        <FieldGrid columns={4} className="mt-4">
           <Field
             label={copy.depositLabel}
             hint={copy.optional}
@@ -81,7 +82,7 @@ export function PayAtBookingGroup({
               max={price.max}
               placeholder={price.placeholder}
               title={copy.depositTitle}
-              className={`${controlClass} tabular-nums max-w-40`}
+              className={`${controlClass} tabular-nums max-w-28`}
             />
           </Field>
           <Field
