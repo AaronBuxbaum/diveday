@@ -514,8 +514,8 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
  * before anything else it locks. The diver half reaches the same row through
  * `lockSeatDeparture`, which bounds its wait (`boundLockWaits`); the crew half
  * did not, so a captain's tap queued behind a held trip waited until its own
- * function was killed, and the crew screen showed a spinner instead of "busy,
- * tap again".
+ * function was killed, and the crew screen showed a spinner instead of
+ * refusing the tap so the crew member could tap again.
  *
  * The holder here takes the trip row `FOR UPDATE` and never lets go in time.
  * The assertion is the error and the clock, not the outcome alone: an
