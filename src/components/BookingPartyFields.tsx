@@ -2,11 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { SmsConsentNote } from "@/components/SmsConsentNote";
+import { SMS_CONSENT_ONCE_FILLED, SmsConsentNote } from "@/components/SmsConsentNote";
 import { buttonClass } from "@/components/ui/button";
 import { ChoicePill, ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
-import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import type { ParticipantType } from "@/lib/participant-types";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
@@ -63,8 +62,6 @@ export function BookingPartyFields({
   fieldErrors,
   remember = false,
   onSizeChange,
-  contactEmail,
-  contactPhone,
   lead,
   onLeadEmailSettled,
   participantChoices,
@@ -83,11 +80,6 @@ export function BookingPartyFields({
    * 18's running total). Pass a stable reference (`useState`'s setter, not
    * an inline arrow) — this fires from an effect keyed on it. */
   onSizeChange?: (size: number) => void;
-  /** The shop's own contact, for the "bigger group?" escape hatch (task 24)
-   * below the party-size field. Either or both may be null when the shop
-   * hasn't set one. */
-  contactEmail?: string | null;
-  contactPhone?: string | null;
   /**
    * The lead diver as the shop already knows them, when the page was reached
    * through their own handoff (ADR 20260906-before-you-ask, decision 3).
@@ -239,34 +231,11 @@ export function BookingPartyFields({
           here, so it needs an explicit way out rather than a dead end at the
           last option (task 24). */}
       {limit < MAX_PUBLIC_PARTY_SIZE ? (
+        // The shop's address and number stand once in the page body, in
+        // the "Questions?" line under this card, and once in the footer
+        // (visual review 2026-10-24, B23); this line points there.
         <p className="-mt-2 text-sm text-muted">
-          {contactEmail
-            ? t.rich("party.bigGroupContactEmail", {
-                count: limit,
-                contact: contactEmail,
-                a: (chunks) => (
-                  <a
-                    href={mailtoHref(contactEmail)}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {chunks}
-                  </a>
-                ),
-              })
-            : contactPhone
-              ? t.rich("party.bigGroupContactPhone", {
-                  count: limit,
-                  contact: contactPhone,
-                  a: (chunks) => (
-                    <a
-                      href={telHref(contactPhone)}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {chunks}
-                    </a>
-                  ),
-                })
-              : t("party.bigGroupContactGeneric", { count: limit })}
+          {t("party.bigGroupContactGeneric", { count: limit })}
         </p>
       ) : null}
       {diverSlots.slice(0, leadOnly ? 1 : size).map((slot, index) => {
@@ -432,8 +401,14 @@ export function BookingPartyFields({
                     <Field
                       label={t("party.phoneLabel")}
                       hint={t("party.phoneHint")}
+                      // The consent's words show once the field holds a
+                      // number, the moment they start to apply (visual review
+                      // 2026-10-24, B22). They are always in the server HTML and
+                      // hidden by CSS while the box is empty, so a form posted
+                      // before hydration, or autofilled without an event, still
+                      // carried them (H-09).
                       description={<SmsConsentNote t={t} />}
-                      className="text-base"
+                      className={`text-base ${SMS_CONSENT_ONCE_FILLED}`}
                       error={fieldErrors?.phone}
                     >
                       <input
@@ -442,6 +417,7 @@ export function BookingPartyFields({
                         maxLength={30}
                         autoComplete="tel"
                         inputMode="tel"
+                        placeholder=" "
                         value={phone}
                         onChange={(event) => setPhone(event.target.value)}
                         className={controlClass}

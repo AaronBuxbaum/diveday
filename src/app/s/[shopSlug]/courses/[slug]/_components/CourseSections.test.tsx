@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Course } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import {
+  CourseFaqs,
   CourseGallery,
   CourseHero,
   CourseSchedule,
@@ -67,12 +68,13 @@ describe("the public h1 joins the display scale", () => {
 });
 
 /**
- * Issue issue 2419: the hero is never drawn wider than the file, so a 640px photo
- * in the 896px column is not scaled up and softened. It takes no box of its
- * own width: the file's size, capped by the column and a height.
+ * Visual review 2026-10-24, B34: the hero fills a landscape frame
+ * (`object-cover`, 16:9) rather than standing at its own pixels on a gray
+ * letterbox. This supersedes issue #2419's natural-size hero; the gray band
+ * either side of a narrow photo read as a broken page.
  */
-describe("CourseHero photo (issue 2419)", () => {
-  it("sizes the photo from its own pixels, never to fill the column", () => {
+describe("CourseHero photo", () => {
+  it("fills a 16:9 frame, cropped to cover, with no letterbox", () => {
     render(
       <CourseHero
         course={course({ heroImageUrl: "/marine-life/reef.jpg", heroImageAlt: "A reef" })}
@@ -83,11 +85,41 @@ describe("CourseHero photo (issue 2419)", () => {
       />,
     );
     const photo = screen.getByRole("img", { name: "A reef" });
-    expect(photo.className).toContain("w-auto");
-    expect(photo.className).toContain("max-w-full");
-    expect(photo.className).not.toMatch(/(?:^|\s)w-full(?:\s|$)/);
-    // Not `fill`: that is the mode that stretches a small file to its box.
-    expect(photo.getAttribute("width")).toBe("0");
+    expect(photo).toHaveClass("object-cover");
+    const frame = photo.parentElement;
+    expect(frame).toHaveClass("aspect-video", "w-full");
+    expect(document.querySelector(".bg-surface-sunken img")).toBeNull();
+  });
+});
+
+/** Visual review 2026-10-24, B34: a caption shows only when the photo's record has one. */
+describe("CourseGallery", () => {
+  it("captions a photo from its record and leaves a blank one uncaptioned", () => {
+    render(
+      <CourseGallery
+        photos={[
+          { url: "/marine-life/a.jpg", alt: "Grunts schooling under the ledge" },
+          { url: "/marine-life/b.jpg", alt: "" },
+        ]}
+        title="Open Water Diver"
+        t={t}
+      />,
+    );
+    const captions = [...document.querySelectorAll("figcaption")].map((c) => c.textContent);
+    expect(captions).toEqual(["Grunts schooling under the ledge"]);
+  });
+
+  it("is one scroll-snap row whose padding brings the last tile fully into view", () => {
+    render(
+      <CourseGallery
+        photos={[1, 2, 3].map((n) => ({ url: `/marine-life/${n}.jpg`, alt: "" }))}
+        title="Open Water Diver"
+        t={t}
+      />,
+    );
+    const row = document.querySelector("ul");
+    expect(row).toHaveClass("flex", "overflow-x-auto", "snap-x", "px-4", "scroll-px-4");
+    for (const tile of row?.querySelectorAll("li") ?? []) expect(tile).toHaveClass("snap-start");
   });
 });
 
@@ -398,5 +430,17 @@ describe("courseFootBar", () => {
       label: "Request a date",
     });
     expect(courseFootBar([], null, t)).toBeNull();
+  });
+});
+
+/** Visual review 2026-10-24, B35: the FAQ wears the diver pages' one disclosure face. */
+describe("CourseFaqs", () => {
+  it("opens each question on the turning chevron, never a +", () => {
+    render(
+      <CourseFaqs faqs={[{ question: "How deep can I dive?", answer: "To 60 feet." }]} t={t} />,
+    );
+    const summary = document.querySelector("summary");
+    expect(summary?.textContent).toBe("How deep can I dive?");
+    expect(summary?.querySelector("svg")).toHaveClass("group-open:rotate-180");
   });
 });

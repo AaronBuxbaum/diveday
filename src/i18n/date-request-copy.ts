@@ -13,8 +13,11 @@ import type { DiverTranslator } from "./messages";
  */
 export function dateRequestCopy(t: DiverTranslator, subject: "course" | "dive"): DateRequestCopy {
   return {
-    heading: subject === "course" ? t("inquiry.getInTouch") : t("inquiry.requestDateHeading"),
-    intro: subject === "course" ? t("inquiry.noDateBody") : t("inquiry.requestDateBody"),
+    // A course's form has one heading and one lead line, the question the
+    // dates panel used to end on (visual review 2026-10-24, B37).
+    heading: subject === "course" ? t("inquiry.askAboutCourse") : t("inquiry.requestDateHeading"),
+    intro:
+      subject === "course" ? t("course.requestDifferentDateLead") : t("inquiry.requestDateBody"),
     whatToDive: t("inquiry.whatToDive"),
     whatToDivePlaceholder: t("inquiry.whatToDivePlaceholder"),
     yourName: t("inquiry.yourName"),

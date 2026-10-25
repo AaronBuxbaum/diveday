@@ -43,6 +43,7 @@ const RENDERED = new Set([
   "GuideBody",
   "GuideHero",
   "MarginNotes",
+  "FunnelCtas",
 ]);
 
 /** Every string in a tree: children and string props, the named components rendered. */
@@ -116,7 +117,9 @@ describe("with the test off", () => {
     const text = await pageText("payments");
     expect(text).toContain(line);
     expect(text).toContain("Every line here is in the one plan, at $99 per location / month.");
-    expect(text).toContain("$99 per location / month, with every feature in it.");
+    // The feature page's close is the two doors alone (B09/B15): the price
+    // stands once, under its hero.
+    expect(text).not.toContain("with every feature in it");
     expect(text).toContain(
       "No row carries a DiveDay fee, because DiveDay takes no percentage of an order.",
     );

@@ -1,4 +1,4 @@
-import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
+import { DeadLink } from "@/components/DeadLink";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -59,12 +59,7 @@ export function ExpiredLink({
   // and a bare lookup walks the prototype (src/lib/staff-notices.ts).
   const notice = noticeFromParam(sent, RESCUE_NOTICES);
   return (
-    <ExpiredLinkCard
-      title={t("ready.unavailableHeading")}
-      text={t("ready.expiredBody")}
-      shop={shop}
-      t={t}
-    >
+    <DeadLink t={t} next={t("ready.expiredBody")} shop={shop}>
       <FlashParams params={["sent"]} />
       {notice ? (
         <p
@@ -86,7 +81,7 @@ export function ExpiredLink({
           </SubmitButton>
         </form>
       )}
-    </ExpiredLinkCard>
+    </DeadLink>
   );
 }
 
@@ -95,18 +90,9 @@ export function ExpiredLink({
  * named without weakening the guarantee that a bearer token reveals only its
  * own record, so it offers DiveDay's own door (UX review 2026-10-10, item 11).
  *
- * It reads `ready.unavailableBody`, not the waiver subtree's identical
- * sentence, which the page read until issue #1334. The two say the same words
- * today, but `/waivers` and `/ready` are different surfaces with different
- * rescues, and a reword of one should not be able to reach the other by
- * accident.
+ * Every dead link now says the same next step, "Ask the shop for a fresh
+ * link." (`DeadLink`, visual review 2026-10-24, B29).
  */
 export function UnavailableReadyLink({ t }: { t: DiverTranslator }) {
-  return (
-    <ExpiredLinkCard
-      title={t("ready.unavailableHeading")}
-      text={t("ready.unavailableBody")}
-      t={t}
-    />
-  );
+  return <DeadLink t={t} />;
 }

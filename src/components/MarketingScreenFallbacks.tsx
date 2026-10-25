@@ -614,7 +614,11 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
                 // it is a drawn mark in a fallback screenshot.
                 aria-hidden="true"
                 viewBox="0 0 18 18"
-                className="size-5 fill-warning"
+                // Empty, as the real form is before the diver rates the day
+                // (visual review 2026-10-24, B48).
+                className="size-5 fill-none stroke-border-strong"
+                strokeWidth={1.25}
+                strokeLinejoin="round"
                 focusable="false"
               >
                 <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />

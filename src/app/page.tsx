@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { type ReactNode, Suspense } from "react";
-import { FunnelCtas } from "@/app/_components/FunnelCtas";
-import { closingPriceLine, HeroFootnotes } from "@/app/_components/HeroFootnotes";
+import { DiverDoor } from "@/app/_components/DiverDoor";
+import { Eyebrow } from "@/app/_components/Eyebrow";
+import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
@@ -15,7 +16,6 @@ import {
   CaptainRollCallFallback,
   DiverBookingFallback,
   FrontDeskReadinessFallback,
-  ImportPreviewFallback,
   RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
 import {
@@ -26,13 +26,7 @@ import {
 } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { groupLabelClass } from "@/components/ui/group-label";
-import {
-  BANNER_TITLE_CLASS,
-  LEAD_TITLE_CLASS,
-  MARKETING_EYEBROW_CLASS,
-  SUB_TITLE_CLASS,
-} from "@/components/ui/typography";
+import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -42,7 +36,6 @@ import { switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { fullShopExport, midSeasonCutover, sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { requestPricingOffer } from "@/lib/pricing-arm-request";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
@@ -146,7 +139,7 @@ async function LocalizedHomeBody() {
 function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: "p" | "h3" }) {
   return (
     <div className="flex items-center gap-4">
-      <Tag className="text-sm font-semibold text-primary">{children}</Tag>
+      <Eyebrow as={Tag}>{children}</Eyebrow>
       <span aria-hidden="true" className="h-px flex-1 bg-border" />
     </div>
   );
@@ -209,10 +202,9 @@ const STEPS: readonly {
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} />,
   },
   {
-    // The same roll call as the hero's phone, at the checkpoint the hero
-    // does not show: after the first dive, as a flat still, because a second
-    // bezel on one page reads as two phones. The hero is the boat leaving;
-    // this is who came back.
+    // The step is the roll call, so it draws the roll call (B14 review: claim
+    // and mockup are one screen), at the checkpoint the hero does not show:
+    // after the first dive, as a flat still, so it does not repeat the phone.
     id: "aboard",
     feature: "boat-manifest",
     notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],
@@ -271,25 +263,22 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
           <div className="max-w-2xl">
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.home.eyebrow")}</p>
+            <Eyebrow>{t("marketing.home.eyebrow")}</Eyebrow>
             <h1 className="mt-5 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
               {t("marketing.home.heroTitle")}
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
-            <FunnelCtas locale={locale} source="home-hero" className="mt-8" />
-            {/* The demo's cost, stated once on the whole page — at the first
-                door, where the decision is actually made. The closing band
-                repeats the door, not the note. */}
-            <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
-            <HeroFootnotes t={t} offer={offer} locale={locale} />
+            {/* The terms stand under this pair and no later one (B09). */}
+            <FunnelCtas locale={locale} source="home-hero" footnotes={{ offer }} className="mt-8" />
+            <DiverDoor t={t} />
           </div>
           <MarketingHeroMotion>
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
               <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
               <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3">
-                <p className={groupLabelClass("primary")}>{t("marketing.home.dockEyebrow")}</p>
+                <Eyebrow>{t("marketing.home.dockEyebrow")}</Eyebrow>
                 <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
               </div>
             </div>
@@ -428,34 +417,13 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
                 guides' own shared key rather than a homepage wording of the
                 same promise — see `midSeasonCutover`. */}
               <p className="leading-7 text-muted">{t(midSeasonCutover.claimKey)}</p>
-              <MarketingMockup label={t("marketing.home.importMockupLabel")}>
-                <ImportPreviewFallback locale={locale} />
-              </MarketingMockup>
-              {/* The spreadsheet door, and it belongs to this column rather than
-                to the section: the mockup above it is the importer reading a
-                sheet, so the reader who recognizes their own sheet in it is
-                already looking here. Deliberately *not* a second link stacked
-                under the section copy beside the hub link — that shape came out
-                on 2026-08-13 and is not what this restores
-                (docs/product/marketing.md). Its copy is a label on the mockup
-                ("Your spreadsheet, column by column"), not a fourth sentence of
-                body copy: the paragraph above has already asked this reader for
-                their sheet, so re-asking "Running the day on a spreadsheet?"
-                here would qualify an audience the copy just addressed — and
-                would rhyme, question-then-arrow, with the band's closing link.
-
-                `self-start`, which the closing link needs no equivalent of:
-                this one is a flex *item* in the column, so without it the item
-                stretches to the full column width and `buttonClass`'s
-                `justify-center` centers the label under a left-aligned
-                paragraph.
-
-                `#columns` lands the reader on the column table this link's own
-                words name, rather than on the guide's hero three blocks above
-                it — the wedge there is a good argument about what a spreadsheet
-                cannot do, but it is not what was promised, and the gap reads as
-                bait. The fragment goes through `switchingHref` so it can only
-                land after the `?from=` tag. */}
+              {/* The import preview is drawn once on the site, on the switching
+                  hub this band's closing link opens (B14). */}
+              {/* The spreadsheet door belongs to this column, under the
+                paragraph that asks for the sheet. `self-start` keeps the flex
+                item its own width; `#columns` lands on the column table the
+                link's words name, through `switchingHref` so the fragment
+                follows the `?from=` tag. */}
               <Link
                 href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
                 className={buttonClass({
@@ -513,45 +481,10 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
         </section>
       </MarketingReveal>
 
-      {/* The one close. Until 2026-08-13 the page ended on three consecutive
-          banded CTAs (a mid-page demo card, a "Try it" band, a contact band);
-          they merged into this single band — ask, price, and the human path,
-          in that order. */}
+      {/* The one close (B15): what the shop gets, who reads a request, and
+          the pair. The price is the hero's footnote, said once. */}
       <MarketingReveal>
-        <section className="border-t border-border bg-surface">
-          <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-            <div className="mx-auto max-w-3xl text-center">
-              <h2 className={`${BANNER_TITLE_CLASS} sm:text-5xl`}>
-                {t("marketing.home.tryTitle")}
-              </h2>
-              <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-                {t("marketing.home.tryDescription")}
-              </p>
-              <FunnelCtas locale={locale} source="home-closing" className="mt-8 justify-center" />
-              <p className="mt-6 font-medium">{closingPriceLine(t, offer, locale)}</p>
-              <Link href="/pricing" className={buttonClass({ variant: "link" })}>
-                {t("marketing.home.seeIncluded")}
-              </Link>
-            </div>
-
-            <div className="mx-auto mt-16 flex max-w-3xl flex-col items-center gap-5 border-t border-border pt-10 text-center sm:flex-row sm:justify-between sm:gap-8 sm:text-left">
-              <div>
-                {/* An `h2` at `text-xl`: the human path is a top-level way out of
-                  this page, not a footnote under the demo — a buyer who will
-                  not self-serve either button needs it in the outline. Level
-                  and size are separate decisions; it sits quietly on purpose. */}
-                <h2 className={SUB_TITLE_CLASS}>{t("marketing.home.contactTitle")}</h2>
-                <p className="mt-2 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
-              </div>
-              <a
-                href={`mailto:${SUPPORT_EMAIL}`}
-                className={buttonClass({ variant: "outline", className: "shrink-0" })}
-              >
-                {t("marketing.home.contactCta", { email: SUPPORT_EMAIL })}
-              </a>
-            </div>
-          </div>
-        </section>
+        <ClosingCta locale={locale} source="home-closing" title={t("marketing.home.tryTitle")} />
       </MarketingReveal>
     </main>
   );

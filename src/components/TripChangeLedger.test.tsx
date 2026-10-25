@@ -5,13 +5,11 @@ import type { TripChangeEvent } from "@/db/trip-change-events";
 import { TripChangeLedger } from "./TripChangeLedger";
 
 /**
- * **What changed, and who said so** — the ledger's provenance line, now the
- * app's one chip (ADR 20260904-reef-all-the-way-down, decision 2, Budget rule
- * 5) rather than two hand-written sentences.
- *
- * `trip_change_event_source` has always carried the distinction. What the chip
- * adds is that a diver reading it on their thread and a visitor reading it on
- * the public trip page see the same grammar as every other mutable fact.
+ * **What changed** (visual review 2026-10-24, B21): only the facts that moved,
+ * each "{fact}: {new value}" once, with one muted "Changed by the shop|crew on
+ * {date, zone}" line: no source chip, but the source word stays (ADR
+ * 20260904-reef-all-the-way-down, Budget rule 5). No sentence about the card,
+ * and nothing at all when nothing changed.
  */
 afterEach(cleanup);
 
@@ -32,32 +30,72 @@ function event(overrides: Partial<TripChangeEvent> = {}): TripChangeEvent {
   };
 }
 
+const moved = (overrides: Partial<TripChangeEvent> = {}) =>
+  event({
+    id: "move",
+    kind: "meeting_point",
+    beforeValue: { meetingPointLabel: "Slip 2" },
+    afterValue: { meetingPointLabel: "Slip 4, the east dock" },
+    ...overrides,
+  });
+
 describe("TripChangeLedger", () => {
-  it("marks a crew change as Crew, with the time in the shop's own zone", () => {
+  it("states each changed fact with its new value, and when, in the shop's zone", () => {
+    render(<TripChangeLedger events={[event()]} locale="en-US" timeZone={timeZone} />);
+    expect(screen.getByText("Conditions: Light chop, 2 ft")).toBeInTheDocument();
+    const when = screen.getByText(/^Changed by the shop on /);
+    expect(when).toHaveClass("text-muted");
+    // The shop's zone, never the host's, and named.
+    expect(when.textContent).toContain("7:40");
+    expect(when.textContent).not.toContain("11:40");
+    expect(when.textContent).toMatch(/EDT/);
+  });
+
+  it("drops the self-description and the source chip, never the source word", () => {
     render(
       <TripChangeLedger events={[event({ source: "crew" })]} locale="en-US" timeZone={timeZone} />,
     );
-    const chip = screen.getByText(/^Crew · /);
-    expect(chip).toBeInTheDocument();
-    // The shop's zone, never the host's — a UTC server would read 11:40.
-    expect(chip.textContent).toContain("7:40");
-    expect(chip.textContent).not.toContain("11:40");
+    expect(screen.queryByText(/Material updates/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Crew · /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Plan · /)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Changed by the crew on /)).toBeInTheDocument();
   });
 
-  it("marks a shop edit as the Plan", () => {
+  it("tells a crew report from a later shop edit of the same fact", () => {
     render(
-      <TripChangeLedger events={[event({ source: "shop" })]} locale="en-US" timeZone={timeZone} />,
+      <TripChangeLedger
+        events={[
+          event({ id: "crew", source: "crew" }),
+          event({
+            id: "shop",
+            source: "shop",
+            beforeValue: { conditionsSummary: "Light chop, 2 ft" },
+            afterValue: { conditionsSummary: "Flat" },
+            occurredAt: new Date("2026-09-04T17:00:00Z"),
+          }),
+        ]}
+        locale="es-ES"
+        timeZone={timeZone}
+      />,
     );
-    expect(screen.getByText(/^Plan · /)).toBeInTheDocument();
-    expect(screen.queryByText(/^Crew · /)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Cambiado por el centro el /)).toBeInTheDocument();
+    expect(screen.queryByText(/^Cambiado por la tripulación/)).not.toBeInTheDocument();
   });
 
   it("never claims a change was observed", () => {
     // Budget rule 5's floor: only Observed may print as what happened, and an
-    // *edit* is not that. Neither source may reach it.
+    // edit is not that, whichever source made it.
     render(
       <TripChangeLedger
-        events={[event({ source: "crew" }), event({ id: "event-2", source: "shop" })]}
+        events={[
+          event({ source: "crew" }),
+          event({
+            id: "event-2",
+            kind: "meeting_point",
+            source: "shop",
+            afterValue: { meetingPointLabel: "Slip 4" },
+          }),
+        ]}
         locale="en-US"
         timeZone={timeZone}
       />,
@@ -66,9 +104,119 @@ describe("TripChangeLedger", () => {
     expect(screen.queryByText(/Forecast/)).not.toBeInTheDocument();
   });
 
+  it("names the meeting point's new value on the diver's own thread", () => {
+    render(<TripChangeLedger events={[moved()]} locale="en-US" timeZone={timeZone} />);
+    expect(screen.getByText("Meeting point: Slip 4, the east dock")).toBeInTheDocument();
+  });
+
+  it("keeps the exact place off a public page", () => {
+    render(
+      <TripChangeLedger
+        events={[moved()]}
+        locale="en-US"
+        timeZone={timeZone}
+        revealArrivalDetails={false}
+      />,
+    );
+    expect(screen.getByText("Meeting point updated")).toBeInTheDocument();
+    expect(screen.queryByText(/Slip 4/)).not.toBeInTheDocument();
+  });
+
+  it("does not restate a part that did not move", () => {
+    render(
+      <TripChangeLedger
+        events={[
+          moved({
+            beforeValue: { meetingPointLabel: "Slip 4, the east dock", arrivalLookFor: "a flag" },
+            afterValue: { meetingPointLabel: "Slip 4, the east dock", arrivalLookFor: "a sign" },
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.getByText("Arrival guidance updated")).toBeInTheDocument();
+    expect(screen.queryByText(/Meeting point/)).not.toBeInTheDocument();
+  });
+
+  it("shows each fact once, at its newest value", () => {
+    render(
+      <TripChangeLedger
+        events={[
+          event({ id: "a", afterValue: { conditionsSummary: "Flat" } }),
+          event({
+            id: "b",
+            beforeValue: { conditionsSummary: "Flat" },
+            afterValue: { conditionsSummary: "Light chop, 2 ft" },
+            occurredAt: new Date("2026-09-04T13:00:00Z"),
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.getAllByText(/^Conditions: /)).toHaveLength(1);
+    expect(screen.getByText("Conditions: Light chop, 2 ft")).toBeInTheDocument();
+  });
+
+  it("keeps an earlier move of the meeting point when a later event changed only the photo", () => {
+    render(
+      <TripChangeLedger
+        events={[
+          moved(),
+          moved({
+            id: "photo",
+            beforeValue: { meetingPointLabel: "Slip 4, the east dock" },
+            afterValue: {
+              meetingPointLabel: "Slip 4, the east dock",
+              arrivalPhotoUrl: "https://media.dive.day/east-dock.jpg",
+            },
+            occurredAt: new Date("2026-09-04T13:00:00Z"),
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.getByText(/Slip 4, the east dock/)).toBeInTheDocument();
+    expect(screen.getByText("Arrival photo updated")).toBeInTheDocument();
+  });
+
+  it("says a cleared conditions note is gone", () => {
+    render(
+      <TripChangeLedger
+        events={[
+          event({
+            beforeValue: { conditionsSummary: "Strong current" },
+            afterValue: { conditionsSummary: "" },
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
+    );
+    expect(screen.getByText("Conditions: no note from the crew")).toBeInTheDocument();
+  });
+
   it("renders nothing when nothing has changed", () => {
     const { container } = render(
       <TripChangeLedger events={[]} locale="en-US" timeZone={timeZone} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders nothing when every event left its facts where they were", () => {
+    const { container } = render(
+      <TripChangeLedger
+        events={[
+          event({
+            beforeValue: { conditionsSummary: "Flat" },
+            afterValue: { conditionsSummary: "Flat" },
+          }),
+        ]}
+        locale="en-US"
+        timeZone={timeZone}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });

@@ -139,6 +139,6 @@ describe("against the real bundles", () => {
     expect(all).toContain("shared.readiness.status.ready");
     expect(all).toContain("divers.certifications.agency");
     // The diver bundle is flat from its own root, with no bundle prefix.
-    expect(all).toContain("account.verify.unavailableTitle");
+    expect(all).toContain("account.verify.unavailableText");
   });
 });

@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { AssistPhotoButton } from "@/components/assists/AssistPhotoButton";
-import { SmsConsentNote } from "@/components/SmsConsentNote";
+import { SMS_CONSENT_ONCE_FILLED, SmsConsentNote } from "@/components/SmsConsentNote";
 
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -101,7 +101,12 @@ export function RegisterForm({
         <Field
           label={t("register.phoneLabel")}
           htmlFor="phone"
+          // Shown once the field holds a number, the moment the words start
+          // to apply (visual review 2026-10-24, B22). Always in the server
+          // HTML, hidden by CSS while the box is empty, so a no-JS submit
+          // still carried them (H-09). The words never change.
           description={<SmsConsentNote t={t} />}
+          className={SMS_CONSENT_ONCE_FILLED}
         >
           <input
             id="phone"
@@ -109,6 +114,7 @@ export function RegisterForm({
             type="tel"
             maxLength={30}
             autoComplete="tel"
+            placeholder=" "
             className={controlClass}
           />
         </Field>

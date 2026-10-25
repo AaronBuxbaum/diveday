@@ -293,7 +293,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Without `?cancelled=1` — the bookmarked URL, or the link out of an
         // old reminder email, which is how a diver actually arrives here.
         await page.goto(new URL(page.url()).pathname);
-        await page.getByRole("heading", { name: /readiness link isn.t available/ }).waitFor();
+        await page.getByRole("heading", { name: /This link no longer works/ }).waitFor();
         await capture(page, "expired-link-readiness", scheme);
       });
 
@@ -429,7 +429,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
         if (scheme === "light") await capture(page, "seat-claim-sent", scheme);
         await page.goto(claimPath ?? "/");
-        await page.getByRole("heading", { name: /link isn.t available/ }).waitFor();
+        await page.getByRole("heading", { name: /This link no longer works/ }).waitFor();
         await capture(page, "expired-link-claim", scheme);
       });
 

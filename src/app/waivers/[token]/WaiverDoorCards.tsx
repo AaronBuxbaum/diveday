@@ -1,3 +1,4 @@
+import { DeadLink } from "@/components/DeadLink";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -56,12 +57,7 @@ export function ExpiredLink({
   // and a bare lookup walks the prototype (src/lib/staff-notices.ts).
   const notice = noticeFromParam(sent, RESCUE_NOTICES);
   return (
-    <ExpiredLinkCard
-      title={t("waiver.expiredHeading")}
-      text={t("waiver.expiredBody")}
-      shop={shop}
-      t={t}
-    >
+    <DeadLink t={t} next={t("waiver.expiredBody")} shop={shop}>
       <FlashParams params={["sent"]} />
       {/* The fourth of the four banner treatments this page had grown, and the
           last one to converge (ADR 20260827-the-divers-thread, decision 5): the
@@ -82,7 +78,7 @@ export function ExpiredLink({
           </SubmitButton>
         </form>
       )}
-    </ExpiredLinkCard>
+    </DeadLink>
   );
 }
 
@@ -116,11 +112,5 @@ export function HeldWaiverCard({
  * than ending on a sentence with nothing to tap (UX review 2026-10-10, item 11).
  */
 export function UnavailableWaiverLink({ t }: { t: DiverTranslator }) {
-  return (
-    <ExpiredLinkCard
-      title={t("waiver.unavailableHeading")}
-      text={t("waiver.unavailableBody")}
-      t={t}
-    />
-  );
+  return <DeadLink t={t} />;
 }

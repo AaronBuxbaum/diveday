@@ -161,7 +161,7 @@ describe("readyDeadLink", () => {
     db.resolveRevokedBookingCapability.mockResolvedValue(null);
     db.staleBookingCapabilityForToken.mockResolvedValue(null);
     await show();
-    expect(screen.getByText(t("ready.unavailableHeading"))).toBeTruthy();
+    expect(screen.getByText(t("common.deadLinkHeading"))).toBeTruthy();
     expect(db.getReadyPageData).not.toHaveBeenCalled();
   });
 });

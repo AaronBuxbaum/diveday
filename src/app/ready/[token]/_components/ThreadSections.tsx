@@ -196,6 +196,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
                 boat is home, and nothing on the page said so. One line and a
                 miniature of the card, drawn from what is already true. */}
         <LogEntryPreview
+          fill
           line={t("ready.logEntryWaiting")}
           date={formatShortDate(detail.trip.startsAt, locale, detail.shop.timezone)}
           siteNames={tripDives

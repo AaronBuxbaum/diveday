@@ -840,7 +840,7 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
   // Signed out: this is the composer a prospective diver meets, not staff.
   await page.goto("/s/blue-mantis/courses/open-water-diver");
 
-  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  const inquiry = page.getByRole("region", { name: "Ask about this course" });
   await inquiry.scrollIntoViewIfNeeded();
   await page.getByLabel("Your name").fill("Mira Delgado");
   await page.getByLabel("Your email").fill("mira.delgado.e2e@example.com");
@@ -878,7 +878,7 @@ test("a blank inquiry is rejected, not defaulted — a way to reply is required"
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
-  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  const inquiry = page.getByRole("region", { name: "Ask about this course" });
   await inquiry.scrollIntoViewIfNeeded();
 
   // Nothing filled in: both refusals land at once rather than one after the
@@ -909,7 +909,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
-  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  const inquiry = page.getByRole("region", { name: "Ask about this course" });
   await inquiry.scrollIntoViewIfNeeded();
   await page.getByLabel("Your name").fill("Sena Okafor");
   await page.getByLabel("Your email").fill("sena.okafor.e2e@example.com");

@@ -85,6 +85,9 @@ describe("the shop's sender profile", () => {
     expect(seen[0]?.sender).toEqual({
       replyTo: `reply+${shop.inboundEmailToken}@inbound.ses.dive.day`,
       postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
+      // The sign-off's phone and confirmed address (B31).
+      contactPhone: "+1 305 555 0142",
+      contactEmail: "desk@bluemantis.dive",
       // The seeded shop is the demo shop, so its sends may reach the simulator.
       demoShop: true,
     });
@@ -113,6 +116,8 @@ describe("the shop's sender profile", () => {
     expect(seen[0]?.sender).toEqual({
       replyTo: "desk@bluemantis.dive",
       postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
+      contactPhone: "+1 305 555 0142",
+      contactEmail: "desk@bluemantis.dive",
       demoShop: true,
     });
   });
@@ -130,6 +135,7 @@ describe("the shop's sender profile", () => {
         logoUrl: null,
         brandColor: null,
         contactEmail: null,
+        contactPhone: null,
         addressStreet: null,
         addressLocality: null,
         addressRegion: null,
@@ -172,6 +178,10 @@ describe("the shop's sender profile", () => {
 
     // The queued payload carried no sender, so the drain resolved one fresh.
     expect(seen).toHaveLength(1);
-    expect(seen[0]?.sender).toEqual({ replyTo: "desk@bluemantis.dive", demoShop: true });
+    expect(seen[0]?.sender).toEqual({
+      replyTo: "desk@bluemantis.dive",
+      contactEmail: "desk@bluemantis.dive",
+      demoShop: true,
+    });
   });
 });

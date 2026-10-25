@@ -17,7 +17,7 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
 export default function OnboardLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNavFallback hideCta compactMobile />
+      <MarketingNavFallback compactMobile />
       <EntryShellSkeleton
         eyebrow
         titleLines={{ base: 2, sm: 1 }}

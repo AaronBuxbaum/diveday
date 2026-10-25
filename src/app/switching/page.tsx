@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import { Suspense } from "react";
-import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { Eyebrow } from "@/app/_components/Eyebrow";
+import { ClosingCta } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
@@ -11,7 +12,6 @@ import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
-  MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -142,7 +142,7 @@ async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: Pricin
   return (
     <main className="flex-1">
       <section className={HUB_HERO_CLASS}>
-        <p className={MARKETING_EYEBROW_CLASS}>{t("switching.hub.eyebrow")}</p>
+        <Eyebrow>{t("switching.hub.eyebrow")}</Eyebrow>
         <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{t("switching.hub.title")}</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
           {t("switching.hub.description")}
@@ -164,16 +164,13 @@ async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: Pricin
         </ul>
 
         {/* The last row of the same list, for the reader who found nothing in
-            it — the closing CTA band, moved to where the question is asked. */}
+            it. The pair is the page's close (B15). */}
         <div className={HUB_CLOSING_ROW_CLASS}>
           <div>
             <h2 className={SUB_TITLE_CLASS}>{t("switching.hub.dontSeeSystem")}</h2>
             <p className="mt-1.5 max-w-xl leading-7 text-muted">
               {t("switching.hub.dontSeeSystemBody")}
             </p>
-          </div>
-          <div className="lg:shrink-0">
-            <FunnelCtas locale={locale} source="switching-hub" />
           </div>
         </div>
       </section>
@@ -193,9 +190,11 @@ async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: Pricin
           door into the demo as the role that uses this screen. The door is
           link-weight, so the band's primary count stays at zero and the
           page's one primary is still the pair above. */}
-      <section className={HUB_PREVIEW_BAND_CLASS}>
+      {/* `#preview`: every guide's import step links here, so the screen is
+          drawn once on the site (visual review 2026-10-24, B14). */}
+      <section id="preview" className={`scroll-mt-10 ${HUB_PREVIEW_BAND_CLASS}`}>
         <div className={HUB_PREVIEW_BOX_CLASS}>
-          <p className={MARKETING_EYEBROW_CLASS}>{t("switching.hub.previewEyebrow")}</p>
+          <Eyebrow>{t("switching.hub.previewEyebrow")}</Eyebrow>
           <h2 className={`mt-4 max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("switching.hub.previewTitle")}
           </h2>
@@ -222,6 +221,7 @@ async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: Pricin
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
       <SwitchingConcierge locale={locale} source="switching-hub-concierge" />
+      <ClosingCta locale={locale} source="switching-hub" title={t("switching.hub.closingTitle")} />
     </main>
   );
 }

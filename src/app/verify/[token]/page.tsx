@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
+import { DeadLink } from "@/components/DeadLink";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -75,16 +76,11 @@ export default async function VerifyAccountPage({
     // always a way back to sign in, the same recovery `/invite` and
     // `/reset-password` already offer their own dead links.
     return (
-      <EntryDone
-        glyph="expired"
-        title={t("account.verify.unavailableTitle")}
-        text={t("account.verify.unavailableText")}
-        action={
-          <Link href="/sign-in" className="font-medium text-primary hover:underline">
-            {t("account.common.backToSignIn")}
-          </Link>
-        }
-      />
+      <DeadLink t={t} next={t("account.verify.unavailableText")} diveDayDoor={false}>
+        <Link href="/sign-in" className="font-medium text-primary hover:underline">
+          {t("account.common.backToSignIn")}
+        </Link>
+      </DeadLink>
     );
   }
 

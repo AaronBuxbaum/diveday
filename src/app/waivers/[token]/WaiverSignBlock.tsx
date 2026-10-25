@@ -23,6 +23,10 @@ const labelTextBase = "text-(length:--text-base) leading-6";
  * Rendered once, in the **last** card: the diver's signature card for an
  * adult, the guardian's card for a minor (ADR 20260907-guardian-co-signature).
  * `expiresAt` arrives formatted in the reader's locale and the shop's zone.
+ *
+ * "Your typed name, agreement, and completion time are saved with this exact
+ * version" is not here: the page says it once, at its foot (visual review
+ * 2026-10-24, B56).
  */
 export function WaiverSignBlock({
   token,
@@ -43,7 +47,6 @@ export function WaiverSignBlock({
       >
         {t("waiver.signButton")}
       </SubmitButton>
-      <p className="mt-4 text-sm text-muted">{t("waiver.signatureNote")}</p>
       {/* Two facts on one line from `sm`, split by the dot; stacked below it,
           with no dot. The row used to wrap, and the wrap fell after the dot:
           "Save and finish later ·" on one line at 390, the expiry alone on

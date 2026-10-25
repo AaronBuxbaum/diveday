@@ -182,7 +182,7 @@ describe("the reviews widget", () => {
     const { container } = await renderReviews();
 
     expect(container.textContent).toBe("");
-    expect(screen.queryByRole("link", { name: "Powered by DiveDay" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Bookings by DiveDay" })).toBeNull();
   });
 
   it("reads nothing from a shop that switched reviews off", async () => {
@@ -281,5 +281,63 @@ describe("the courses widget's catalog", () => {
 
     expect(vi.mocked(listActiveCourses).mock.calls[0]?.[2]).toEqual({});
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+});
+
+/**
+ * **A full boat has no Book button** (visual review 2026-10-24, B32). The card
+ * says "Full" in muted text and, when the shop keeps a wait list, one link
+ * offers to tell the diver; the date reads as the trip page's, zone named
+ * (B33).
+ */
+describe("the departure card", () => {
+  const trip = (booked: number) => ({
+    id: "trip-1",
+    title: "Wreck Trip",
+    isPrivate: false,
+    startsAt: new Date("2026-10-29T16:00:00Z"),
+    endsAt: new Date("2026-10-29T20:00:00Z"),
+    diveSite: null,
+    boatId: null,
+    priceCents: 14_500,
+    course: null,
+    capacity: 10,
+    sellableCapacity: 10,
+    booked,
+  });
+
+  async function renderDeparture(booked: number, waitlistEnabled: boolean) {
+    const { getTripWithBooked } = await import("@/db/trips");
+    vi.mocked(getTripWithBooked).mockResolvedValueOnce(trip(booked) as never);
+    vi.mocked(shopBySlugCached).mockResolvedValueOnce({ ...shopRow, waitlistEnabled } as never);
+    render(
+      await EmbedWidgetPage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", widget: "departure" }),
+        searchParams: Promise.resolve({ show: "trip-1" }),
+      }),
+    );
+  }
+
+  it("offers Book while seats are open, with the trip page's date and zone", async () => {
+    await renderDeparture(4, true);
+    expect(screen.getByRole("link", { name: "Book" })).toBeInTheDocument();
+    expect(screen.getByText("6 seats")).toBeInTheDocument();
+    expect(screen.getByText("Thu, Oct 29 · 12:00 PM – 4:00 PM EDT")).toBeInTheDocument();
+  });
+
+  it("drops Book on a full boat and offers the wait list", async () => {
+    await renderDeparture(10, true);
+    expect(screen.queryByRole("link", { name: "Book" })).toBeNull();
+    expect(screen.getByText("Full")).toHaveClass("text-muted");
+    expect(screen.getByRole("link", { name: "Ask to be told" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/trips/trip-1#book",
+    );
+  });
+
+  it("offers nothing to click on a full boat when the shop keeps no wait list", async () => {
+    await renderDeparture(10, false);
+    expect(screen.queryByRole("link", { name: "Book" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ask to be told" })).toBeNull();
   });
 });

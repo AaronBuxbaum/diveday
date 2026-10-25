@@ -99,7 +99,7 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   await page.getByRole("link", { name: "See it the way your divers will" }).click();
   await page.waitForURL(new RegExp(`/s/${unique}$`));
   await expect(page.getByText("Two-Tank Morning Reef").first()).toBeVisible();
-  await expect(page.getByText("12 seats left").first()).toBeVisible();
+  await expect(page.getByText("12 seats", { exact: true }).first()).toBeVisible();
 
   // All the way to the seat: the trip page offers a real booking form.
   await page.locator(`a[href*="/s/${unique}/trips/"]`).first().click();

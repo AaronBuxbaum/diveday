@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
+import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { PublicShopMainContent } from "@/app/s/[shopSlug]/_components/PublicShopMainContent";
@@ -10,7 +11,7 @@ import {
   PublicShopChromePlaceholder,
   PublicShopFooterSection,
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ShopSearchField } from "@/components/ShopSearchField";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
@@ -22,7 +23,11 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { staffDestinationGates } from "@/lib/authz";
 import { REFUSED_SHOP_SLUG_HEADER, REQUEST_PATH_HEADER } from "@/lib/embed-routes";
-import { publicSchedulePath, shopSlugFromPublicPath } from "@/lib/public-routes";
+import {
+  FIND_YOUR_BOOKING_PATH,
+  publicSchedulePath,
+  shopSlugFromPublicPath,
+} from "@/lib/public-routes";
 import { shopSwitchesOn } from "@/lib/shop-features";
 import { staffHomeSlug } from "@/lib/staff-home";
 import { shopPath } from "@/lib/staff-notices";
@@ -135,18 +140,26 @@ type Locale = Parameters<typeof diverTranslator>[0];
  */
 function DiveDayNotFound({ locale, isShell }: { locale: Locale; isShell?: boolean }) {
   const t = diverTranslator(locale);
+  // Inside the marketing shell, nav and footer, like every DiveDay page (visual
+  // review 2026-10-24, B47). The shell render takes the static fallbacks; the
+  // streamed one reads the session for the nav's door, as every page does.
   return (
-    <main
-      className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center"
-      data-suspense-placeholder={isShell ? "" : undefined}
-    >
-      <p className={EYEBROW_CLASS}>DiveDay</p>
-      <h1 className={`mt-2 ${SHELL_TITLE_CLASS} text-balance`}>{t("notFound.heading")}</h1>
-      <p className="mt-3 text-muted">{t("notFound.body")}</p>
-      <Link href="/" className={buttonClass({ className: "mt-6" })}>
-        {t("notFound.backHome")}
-      </Link>
-    </main>
+    <div className="flex flex-1 flex-col" data-suspense-placeholder={isShell ? "" : undefined}>
+      {isShell ? <MarketingNavFallback /> : <MarketingNav />}
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+        <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("notFound.heading")}</h1>
+        <p className="mt-3 text-muted">{t("notFound.body")}</p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <Link href="/" className={buttonClass()}>
+            {t("notFound.backHome")}
+          </Link>
+          <Link href={FIND_YOUR_BOOKING_PATH} className={buttonClass({ variant: "outline" })}>
+            {t("notFound.findBooking")}
+          </Link>
+        </div>
+      </main>
+      {isShell ? <MarketingFooterFallback /> : <MarketingFooter />}
+    </div>
   );
 }
 

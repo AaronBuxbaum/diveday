@@ -49,7 +49,7 @@ describe("the loader", () => {
     expect(url.searchParams.get("credit")).toBe("host");
     const credits = document.querySelectorAll('a[href*="utm_source=embed"]');
     expect(credits).toHaveLength(1);
-    expect(credits[0]?.textContent).toBe("Powered by DiveDay");
+    expect(credits[0]?.textContent).toBe("Bookings by DiveDay");
   });
 
   it("frames the calendar as the schedule's compact mode and pins a departure by id", () => {
@@ -183,7 +183,7 @@ describe("the loader", () => {
   /**
    * **A widget with nothing to show folds away, credit and all** (#2317). The
    * reviews widget of a shop with none published says so with a height of
-   * exactly 0; the 120px floor left a blank box and a "Powered by" line under
+   * exactly 0; the 120px floor left a blank box and a "Bookings by DiveDay" line under
    * nothing on the shop's own page. Any other report keeps the floor, so a
    * garbled or missing number never hides a widget that has content.
    */

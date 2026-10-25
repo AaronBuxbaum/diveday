@@ -78,7 +78,8 @@ describe("the dead claim link's sentence", () => {
     // per cause, because the state reader deliberately does not carry the cause.
     // If that ever changes it changes here first, and the assertions above stop
     // being the constraint they are.
-    expect(countOf("<ExpiredLinkCard")).toBe(1);
+    // One `DeadLink` hands over the shop (B29 moved the card onto it).
+    expect(countOf("shop={shop}")).toBe(1);
     expect(countOf('t("seatClaim.expiredBody")')).toBe(1);
   });
 });

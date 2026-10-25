@@ -83,6 +83,11 @@ export default async function PublicPackagesPage({
   }
   const currency = toShopCurrency(shop.currency);
   const money = (cents: number) => formatMoneyScanned(cents, currency, locale);
+  const scopeText = (scope: (typeof packages)[number]["scope"]) =>
+    scope === "all" ? t("packages.scopeAll") : t("packages.scopeFunDives");
+  const sharedScope = packages.every((pkg) => pkg.scope === packages[0]?.scope)
+    ? (packages[0]?.scope ?? null)
+    : null;
   const offers: PackageOffer[] = packages.map((pkg) => ({
     id: pkg.id,
     name: pkg.name,
@@ -90,15 +95,17 @@ export default async function PublicPackagesPage({
     facts: [
       t("packages.dives", { count: pkg.diveCount }),
       t("packages.perDive", { amount: money(Math.round(pkg.priceCents / pkg.diveCount)) }),
-      // A dive is one tank (H-123): said on the card, where the $200 is decided.
-      t("packages.diveIsATank"),
-      pkg.scope === "all" ? t("packages.scopeAll") : t("packages.scopeFunDives"),
       // Whether the card runs out is part of a few-hundred-dollar decision, so it is said
       // either way (third UX review, item 28).
       pkg.validUntil
         ? t("packages.useBy", { date: formatCalendarDate(pkg.validUntil, locale) })
         : t("packages.noExpiry"),
-    ].join(" · "),
+      // What it covers, on the card only when the cards differ; said once in
+      // the intro when every card says the same (visual review 2026-10-24, B39).
+      ...(sharedScope ? [] : [scopeText(pkg.scope)]),
+    ],
+    // A dive is one tank (H-123): said on the card, where the $200 is decided.
+    tankNote: t("packages.diveIsATank"),
   }));
 
   return (
@@ -107,7 +114,17 @@ export default async function PublicPackagesPage({
           does Courses. */}
       {/* What a package is, said once above the first card: the sentence
           lived only in the meta description (third UX review, item 28). */}
-      <ShopPageHeader title={t("packages.title")} description={t("packages.intro")} />
+      <ShopPageHeader
+        title={t("packages.title")}
+        description={
+          sharedScope
+            ? t("packages.introWithScope", {
+                intro: t("packages.intro"),
+                scope: scopeText(sharedScope),
+              })
+            : t("packages.intro")
+        }
+      />
       <DiverIntlProvider
         locale={locale}
         timeZone={shop.timezone ?? "UTC"}

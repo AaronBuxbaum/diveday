@@ -95,7 +95,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * The counted sentence that used to sit in the filter row beside it was
        * deleted on 2026-09-17; a URL carrying `canDive` still paints the
-       * "Filter" disclosure open, so the row itself is in this shot.
+       * "More filters" disclosure open, so the row itself is in this shot.
        */
       test(`the public schedule marks what a diver cannot dive (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis?canDive=open_water");
@@ -195,17 +195,20 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the embed grid renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/embed/grid");
-        await page.getByRole("link", { name: "Book" }).first().waitFor();
+        await page.getByRole("link", { name: "Book", exact: true }).first().waitFor();
         await capture(page, "embed-grid", scheme);
       });
 
       test(`the embed departure card renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/embed/grid");
-        const href = await page.getByRole("link", { name: "Book" }).first().getAttribute("href");
+        const href = await page
+          .getByRole("link", { name: "Book", exact: true })
+          .first()
+          .getAttribute("href");
         const tripId = /\/trips\/([^/#?]+)/.exec(href ?? "")?.[1];
         expect(tripId).toBeTruthy();
         await page.goto(`/s/blue-mantis/embed/departure?show=${tripId}`);
-        await page.getByRole("link", { name: "Book" }).waitFor();
+        await page.getByRole("link", { name: "Book", exact: true }).waitFor();
         await capture(page, "embed-departure", scheme);
       });
 

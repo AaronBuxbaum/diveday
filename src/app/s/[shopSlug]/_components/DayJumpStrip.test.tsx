@@ -59,4 +59,25 @@ describe("DayJumpStrip", () => {
     const { container } = render(<DayJumpStrip rows={rows.slice(0, 2)} label="Jump to a day" />);
     expect(container.innerHTML).toBe("");
   });
+
+  /**
+   * Visual review 2026-10-24, B18: at 390 the strip ran past the edge and the
+   * list's last day (Sat 31) was off screen, so the strip and the list named
+   * different ranges. On a phone the days share the row equally, each at
+   * least a 44px target, and the strip's last day is the list's last day.
+   */
+  it("ends on the list's last day, the days sharing a phone's row equally", () => {
+    const week = ["24", "25", "26", "27", "28", "29", "30", "31"].map((day, i) =>
+      row(`t${i}`, `2026-10-${day}`, day, "Day"),
+    );
+    render(<DayJumpStrip rows={week} label="Jump to a day" />);
+    const strip = screen.getByRole("region", { name: "Jump to a day" });
+    const list = strip.querySelector("ol");
+    const items = strip.querySelectorAll("li");
+
+    expect(items).toHaveLength(8);
+    expect(items[7]?.querySelector("a")?.getAttribute("href")).toBe("#day-2026-10-31");
+    expect(list).toHaveClass("grid", "grid-flow-col", "auto-cols-fr");
+    for (const item of items) expect(item).toHaveClass("min-w-11");
+  });
 });

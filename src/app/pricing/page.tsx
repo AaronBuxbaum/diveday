@@ -1,26 +1,22 @@
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { Eyebrow } from "@/app/_components/Eyebrow";
+import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import {
-  BANNER_TITLE_CLASS,
-  DISPLAY_TITLE_CLASS,
-  MARKETING_EYEBROW_CLASS,
-} from "@/components/ui/typography";
+import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice } from "@/lib/marketing";
+import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { requestPricingOffer } from "@/lib/pricing-arm-request";
 import { PricingExportBand } from "./_components/PricingExportBand";
 import { offerFigure, pricingFaq } from "./faq";
@@ -33,6 +29,9 @@ import { offerFigure, pricingFaq } from "./faq";
 export const instant = true;
 
 export { generateMetadata } from "./metadata";
+
+/** The marketing shell's container, the nav's and the footer's: one left edge (B12). */
+const CONTAINER = "mx-auto w-full max-w-7xl px-6";
 
 /**
  * The body renders **once**, in the reader's own language — see `ProductPage`
@@ -130,79 +129,44 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
       />
       <main className="flex-1">
         <MarketingSectionMotion />
-        {/* The price is the hero. A pricing page's arriving question is "what
-            does it cost and what's the catch", so the first composition
-            carries the whole answer in one piece: the plan, the headline, the
-            number at display scale, the catches removed, both doors and what
-            clicking one costs, then — behind a hairline, in the same
-            container — what the number buys. No card border, no shadow; the
-            figure itself is the weight. The old page answered in screenful
-            two, inside a bordered card below a generic headline band.
-
-            `max-w-5xl`, the page's wide measure: the invoice beside its notes
-            is a two-column band like the data exit and the FAQ below, and on
-            `max-w-4xl` it, the covers list and "The full list" stood at x 216,
-            between the fee anchor's 280 and those bands' 152 — a third left
-            edge (K-404). The centred stack keeps its own `max-w-3xl`. */}
+        {/* The price is the hero, then the invoice beside its one list of
+            notes, then the pair with the terms under it (visual review
+            2026-10-24, B11). Every band sits in the marketing shell's
+            container (`max-w-7xl px-6`, the nav's and the footer's), so the
+            page has one left edge (B12); a prose band keeps its measure inside
+            it rather than centring its own. */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-5xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
-            <div className="mx-auto max-w-3xl text-center">
-              {/* The spaces around the separator are load-bearing, not
-                  formatting: the middot is `aria-hidden`, and JSX drops the
-                  newlines between these three children, so without them the
-                  accessible name is the single word "Founding shopEarly
-                  access". */}
-              <p className={MARKETING_EYEBROW_CLASS}>
-                {t(earlyAccessPrice.nameKey)}{" "}
-                <span aria-hidden="true" className="mx-1 text-border-strong">
-                  ·
-                </span>{" "}
-                {t("marketing.pricing.earlyAccessBadge")}
-              </p>
-              <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>
-                {t("marketing.pricing.heroTitle")}
-              </h1>
-              {/* Cadence below the figure, not baseline-set beside it: paired
-                  on one line, centring the pair pushed `$99` itself off centre
-                  by half the cadence's width. And `pe-[0.06em]`, the tracking
-                  handed back: letter-spacing follows the last glyph too, so
-                  the line box ended 0.06em inside the final "9", and centring
-                  that box set the ink 3px right of the stack (K-405). */}
-              <p className="mt-10 pe-[0.06em] text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
-                {figure}
-              </p>
-              <p className="mt-4 text-base text-muted">{cadence}</p>
-              {/* The two-year lock, under the figure it is about. It used to
-                  be reachable only by reading the included list (`item5`) and
-                  the founding-shop FAQ row — two places, neither of them where
-                  a reader is looking at the number and asking "for how long".
-                  `item5` was retired rather than trimmed, so the claim is not
-                  inventoried twice (docs/product/marketing-review-20260827.md).
-                  A restatement of a binding commercial commitment (H-12),
-                  never an extension of it.
+          <div className={`${CONTAINER} pt-20 pb-16 lg:pt-28 lg:pb-20`}>
+            {/* The spaces around the separator are load-bearing: the middot
+                is `aria-hidden`, and without them the accessible name runs
+                the two words together. */}
+            <Eyebrow>
+              {t(earlyAccessPrice.nameKey)}{" "}
+              <span aria-hidden="true" className="mx-1 text-border-strong">
+                ·
+              </span>{" "}
+              {t("marketing.pricing.earlyAccessBadge")}
+            </Eyebrow>
+            <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>
+              {t("marketing.pricing.heroTitle")}
+            </h1>
+            <p className="mt-10 text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
+              {figure}
+            </p>
+            <p className="mt-4 text-base text-muted">{cadence}</p>
+            {/* The two-year lock, under the figure it is about (H-12). It
+                names its subject so a burned reader cannot read "I am" into
+                it. */}
+            <p className="mt-2 text-sm leading-6 text-pretty text-muted">
+              {t("marketing.pricing.lockNote")}
+            </p>
 
-                  It names its subject — "Today's price, locked for…" — because
-                  this is fine print under a figure, the slot a reader who has
-                  been burned scans for the catch, and a subjectless "Locked
-                  for two years" lets them supply "I am" as the subject on a
-                  page whose next band argues they can leave any day. Naming it
-                  costs a second line on a phone, and `text-pretty` is what
-                  stops that line being the word "shops." alone. */}
-              <p className="mt-2 text-sm leading-6 text-pretty text-muted">
-                {t("marketing.pricing.lockNote")}
-              </p>
-            </div>
-
-            {/* **The annotated invoice** (the 2026-09-24 voice decision,
-                docs/design/brand.md: `/pricing` is the one page whose screen
-                is a bill). The catches the old hero listed as a sentence
-                ("no setup fee, no per-seat charge…") are lines on an invoice
-                now, each with its amount, and the builder's notes stand in
-                the margin beside it saying why a line reads the way it does.
-                No figure appears in the ledger: the price is the display
-                figure above, the H-12 single source, and every row is a word
-                rather than a number so the bundle never carries a currency
-                amount (src/lib/marketing.test.ts). */}
+            {/* **The annotated invoice** (docs/design/brand.md: `/pricing` is
+                the one page whose screen is a bill). Every row is a word, never
+                a figure: the price is the display figure above, H-12's single
+                source. The leaving row carries the export promise, the one
+                place it is written in full (B10); `#export` is where every
+                other page's "Taking your records with you" lands. */}
             <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
               <dl
                 aria-label={t("marketing.pricing.invoice.title")}
@@ -212,7 +176,8 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                   (row) => (
                     <div
                       key={row}
-                      className="flex items-baseline justify-between gap-6 py-3 text-sm leading-6"
+                      id={row === "leaving" ? "export" : undefined}
+                      className="flex scroll-mt-10 flex-wrap items-baseline justify-between gap-x-6 py-3 text-sm leading-6"
                     >
                       <dt className="text-muted">
                         {percentArm && row === "cut"
@@ -224,141 +189,90 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                           ? t("marketing.pricing.percentArm.invoiceFeeValue", params)
                           : t(`marketing.pricing.invoice.${row}.value`)}
                       </dd>
+                      {row === "leaving" ? (
+                        <dd className="mt-1 basis-full text-muted">{t(fullShopExport.termsKey)}</dd>
+                      ) : null}
                     </div>
                   ),
                 )}
               </dl>
+              {/* One "Notes" list, at most five one-line facts: what the
+                  invoice cannot say on a row. "Notes on the invoice" and "What
+                  the price covers" were two lists restating the table and
+                  `/product` (B11). */}
               <div>
-                <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
-                  {t("marketing.pricing.notes.title")}
-                </h2>
+                <Eyebrow as="h2">{t("marketing.pricing.notes.title")}</Eyebrow>
                 <MarginNotes
                   className="mt-4"
-                  notes={[t("marketing.pricing.notes.note1"), t("marketing.pricing.notes.note2")]}
+                  notes={[
+                    t("marketing.pricing.notes.note1"),
+                    t("marketing.pricing.notes.note2"),
+                    ...earlyAccessPrice.includedKeys.map((key) => t(key)),
+                    // The upgrade address, not the support one: marketing.md
+                    // routes "how do I move a trial shop to paid" through its
+                    // own inbox, and this is its one public line.
+                    t("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
+                  ]}
                 />
+                <Link
+                  href="/product"
+                  className={buttonClass({ variant: "link", flush: true, className: "mt-4" })}
+                >
+                  {t("marketing.pricing.seeFullList")}
+                </Link>
               </div>
             </div>
 
-            <div className="mx-auto max-w-3xl text-center">
-              <FunnelCtas locale={locale} source="pricing" className="mt-12 justify-center" />
-              {/* What the click costs, at the point of decision — the same
-                  shared line `/` and `/product` carry under their own demo
-                  doors. On this page the answer used to sit in a FAQ row two
-                  thousand pixels down. */}
-              <p className="mx-auto mt-6 max-w-lg text-sm leading-6 font-medium text-balance text-muted">
-                {t("marketing.common.demoNote")}
-              </p>
-              {/* And what the *other* door costs. The demo note has always
-                  answered for the demo alone — it must not promise "no
-                  sign-up" on the trial's behalf — so the trial button stood
-                  here with no terms at all, at the one point on the site where
-                  the decision is made. Soft expiry is a fact, not a
-                  softener: src/lib/trial.ts blocks no route and no mutation
-                  when the window elapses. A `<p>`, deliberately: the hero's
-                  door budget is two, and the DOM order of those two is pinned
-                  in e2e/marketing.spec.ts.
-
-                  `text-pretty`, not the `text-balance` its neighbour uses:
-                  balancing two lines of this sentence puts the break inside
-                  "no / card", which is the one clause a reader is scanning
-                  for. Pretty leaves the fill alone and only guards the
-                  orphan.
-
-                  `font-medium`, matching the demo note above it rather than
-                  sitting a weight under it: these are two notes of one kind —
-                  terms at a door — and the trial is the door with the higher
-                  friction, so setting only the demo's terms in medium put the
-                  more weight on the easier ask. On `/` the medium note sits
-                  beside a regular *price line*, which is context rather than
-                  terms; that page keeps its pairing. */}
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 font-medium text-pretty text-muted">
-                {t("marketing.pricing.trialNote")}
-              </p>
-            </div>
-
-            {/* What the number buys, right under the number — the one plan's
-                own list from `earlyAccessPrice`, not a third render of the
-                feature grid. The grid's summary cards used to reappear here a
-                thousand pixels down at a third density; the inventory lives one
-                click away on /product, and this list plus that link is the
-                whole answer (docs/product/marketing.md, "never inventory the
-                same thing twice").
-
-                Same container as the pitch above it, so the list's left edge
-                lands on the headline's own margin instead of 48px inside it,
-                and a hairline marks the turn from argument to spec sheet. */}
-            <div className="mt-14 border-t border-border pt-10">
-              <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
-                {t("marketing.pricing.includedLead")}
-              </h2>
-              <ul className="mt-5 grid gap-x-10 gap-y-3 leading-6 sm:grid-cols-2">
-                {earlyAccessPrice.includedKeys.map((item) => (
-                  <li key={item} className="flex gap-3">
-                    <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
-                    <span className="text-muted">{t(item)}</span>
-                  </li>
-                ))}
-              </ul>
-              {/* `flush`, not `className: "px-0"`: the size's own `px-4` wins
-                  a `className` override (stylesheet order, not source order —
-                  see src/components/ui/button.ts), which is why this link used
-                  to render 12 measured pixels inside the checkmarks above it. */}
-              <Link
-                href="/product"
-                className={buttonClass({ variant: "link", flush: true, className: "mt-4" })}
-              >
-                {t("marketing.pricing.seeFullList")}
-              </Link>
-            </div>
+            <FunnelCtas locale={locale} source="pricing" footnotes={{ offer }} className="mt-12" />
           </div>
         </section>
 
         {/* The flat price is only meaningful next to the model it replaces.
-            Quiet rows, not equal-weight cards: the incumbents' terms are
-            evidence, and our answer is the one line that gets full ink. */}
+            Quiet rows: the incumbents' terms are evidence, and our answer is
+            the one line that gets full ink. The "both rows are the channels'
+            own terms" disclaimer is said once, under the rows (B11). */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-3xl px-6 py-16 lg:py-24">
-            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.pricing.feeAnchor.title")}
-            </h2>
-            <p className="mt-5 leading-7 text-muted">{t("marketing.pricing.feeAnchor.body")}</p>
-            <ul className="mt-10 space-y-8">
-              {channelFees.map(({ guide, claim }) => (
-                <li key={guide.slug}>
-                  <h3 className="font-semibold leading-6">{guide.competitor}</h3>
-                  <p className="mt-1 leading-7 text-muted">{claim}</p>
-                  <Link
-                    href={`/switching/${guide.slug}`}
-                    className={buttonClass({
-                      variant: "link",
-                      flush: true,
-                      className: "mt-1 text-left",
-                    })}
-                  >
-                    {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-10 border-l-2 border-primary pl-5 text-lg leading-8">
-              {percentArm
-                ? t("marketing.pricing.percentArm.ours", params)
-                : t("marketing.pricing.feeAnchor.ours")}
-            </p>
-            <p className="mt-5 text-sm leading-6 text-muted">
-              {t("marketing.pricing.feeAnchor.sourcesNote")}
-            </p>
+          <div className={`${CONTAINER} py-16 lg:py-24`}>
+            <div className="max-w-3xl">
+              <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
+                {t("marketing.pricing.feeAnchor.title")}
+              </h2>
+              <ul className="mt-10 space-y-8">
+                {channelFees.map(({ guide, claim }) => (
+                  <li key={guide.slug}>
+                    <h3 className="font-semibold leading-6">{guide.competitor}</h3>
+                    <p className="mt-1 leading-7 text-muted">{claim}</p>
+                    <Link
+                      href={`/switching/${guide.slug}`}
+                      className={buttonClass({
+                        variant: "link",
+                        flush: true,
+                        className: "mt-1 text-start",
+                      })}
+                    >
+                      {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-5 text-sm leading-6 text-muted">
+                {t("marketing.pricing.feeAnchor.sourcesNote")}
+              </p>
+              <p className="mt-10 border-l-2 border-primary pl-5 text-lg leading-8">
+                {percentArm
+                  ? t("marketing.pricing.percentArm.ours", params)
+                  : t("marketing.pricing.feeAnchor.ours")}
+              </p>
+            </div>
           </div>
         </section>
 
         <PricingExportBand locale={locale} />
 
-        {/* The objection layer, designed quiet: two columns of plain Q&A,
-            hierarchy by weight and space rather than a stack of bordered
-            cards. Answers stay in the document (not behind a disclosure) —
-            they are also the FAQPage structured data above, and a buyer
-            scanning for one word shouldn't have to open ten boxes. */}
-        <section className="mx-auto max-w-5xl px-6 py-16 lg:py-24">
+        {/* The objection layer: two columns of plain Q&A, only the questions
+            the table and the notes do not answer (B11). Answers stay in the
+            document; they are also the FAQPage structured data above. */}
+        <section className={`${CONTAINER} py-16 lg:py-24`}>
           <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>{t("marketing.pricing.faqTitle")}</h2>
           <div className="mt-10 grid gap-x-14 gap-y-10 md:grid-cols-2">
             {faq.map((item) => (
@@ -371,7 +285,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                     className={buttonClass({
                       variant: "link",
                       flush: true,
-                      className: "mt-1 text-left",
+                      className: "mt-1 text-start",
                     })}
                   >
                     {item.link.label}
@@ -382,44 +296,11 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
           </div>
         </section>
 
-        {/* The page opens with the number and closes with it. Between the two
-            is roughly five thousand pixels of phone scroll in which the only
-            door was the header's — the marketing nav does not stick, so a
-            reader who scrolled the objections had nothing to act on but the
-            back button. The funnel's pair here and one quiet mail door beneath
-            it: the closing restates the price rather than making a new argument,
-            and it is tagged `pricing-close` so it can be shown to have earned
-            its place instead of folding into the page's own bucket
-            (src/lib/funnel.ts). */}
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-2xl px-6 py-16 text-center lg:py-20">
-            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.pricing.closingTitle")}
-            </h2>
-            <p className="mt-4 text-lg leading-8 text-balance text-muted">
-              {percentArm
-                ? t("marketing.pricing.percentArm.closingBody", params)
-                : t("marketing.pricing.closingBody", {
-                    price: params.price,
-                    cadence: t(earlyAccessPrice.cadenceKey),
-                  })}
-            </p>
-            {/* Both doors, not just the trial. The demo used to be dropped here
-                — at the one moment a reader who has just read the whole price
-                page is warmest, the only door left asked for an account
-                (issue #785). */}
-            <FunnelCtas locale={locale} source="pricing-close" className="mt-8 justify-center" />
-            <p className="mt-10 text-sm leading-6 text-muted">
-              {t("marketing.pricing.stillQuestion")}
-            </p>
-            <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className={buttonClass({ variant: "link", size: "sm" })}
-            >
-              {t("marketing.pricing.emailCta", { email: SUPPORT_EMAIL })}
-            </a>
-          </div>
-        </section>
+        <ClosingCta
+          locale={locale}
+          source="pricing-close"
+          title={t("marketing.pricing.closingTitle")}
+        />
       </main>
     </>
   );

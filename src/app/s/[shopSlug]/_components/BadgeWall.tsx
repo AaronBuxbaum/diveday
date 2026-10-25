@@ -26,6 +26,9 @@ export function BadgeWall({
     <ul className={`flex flex-wrap gap-2 ${className}`.trim()}>
       {establishedYear !== null ? (
         <li className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm tabular-nums">
+          {/* The shield every pill wears (visual review 2026-10-24, B41): the
+              year was the one pill without it. */}
+          <BadgeShield />
           {t("brand.since", { year: establishedYear })}
         </li>
       ) : null}
@@ -34,18 +37,26 @@ export function BadgeWall({
           key={code}
           className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm"
         >
-          {/* Drawn on its ink (`trim`), so the pill's `px-3` reads the same on
-              the shield's side as on the words'. In its square the shield sat
-              2px inside the box. */}
-          <DiveDayIcon
-            name="badge"
-            trim
-            strokeWidth={2.4}
-            className="h-3.5 w-auto shrink-0 text-primary"
-          />
+          <BadgeShield />
           {brandBadgeLabel(code, t)}
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Drawn on its ink (`trim`), so the pill's `px-3` reads the same on the
+ * shield's side as on the words'. In its square the shield sat 2px inside the
+ * box.
+ */
+function BadgeShield() {
+  return (
+    <DiveDayIcon
+      name="badge"
+      trim
+      strokeWidth={2.4}
+      className="h-3.5 w-auto shrink-0 text-primary"
+    />
   );
 }

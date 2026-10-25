@@ -29,16 +29,16 @@ const nextBoat = (page: Page) => page.getByRole("region", { name: "Next boat wit
 const list = (page: Page) => page.locator("form + ul");
 
 /**
- * **The filters live behind one quiet "Filter" disclosure** (2026-09-17). The
- * rail at rest is the shop's own lens chips; the trip-type select, the
- * "what can you dive?" select and the two checkboxes are the advanced ask and
- * sit inside the form's own `<details>`. A URL that already carries one of
+ * **The filters live behind one quiet "More filters" disclosure** (2026-09-17;
+ * one row with the chips and the month link since 2026-10-24). The rail at
+ * rest is the shop's own lens chips; the trip-type select, the "what can you
+ * dive?" select and the two checkboxes are the advanced ask and sit in the
+ * form's own panel. A URL that already carries one of
  * those four parameters paints it open, so this opens it only when it is shut.
  *
  * Addressed by `page.locator`, not `getByLabel`/`getByRole`: `e2e/fixtures.ts`
  * filters those three to visible elements, and the point here is the control
- * that is not visible yet. `<summary>` has no implicit role for `getByRole` to
- * find either.
+ * that is not visible yet.
  */
 async function openFilters(page: Page) {
   const tripType = page.locator('select[name="tripType"]');
@@ -47,7 +47,7 @@ async function openFilters(page: Page) {
   // need the control on screen.
   await expect(tripType).toHaveAttribute("data-hydrated", "true");
   if (!(await tripType.isVisible())) {
-    await page.locator('form:has(select[name="tripType"]) summary').click();
+    await page.locator('form:has(select[name="tripType"]) button[aria-expanded]').click();
   }
   await expect(page.getByLabel("Trip type")).toBeVisible();
 }
@@ -66,8 +66,10 @@ test("a lens narrows the board, and every row left wears its word", {
   await expect(
     list(page).getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
   ).not.toHaveCount(0);
-  // Nothing is narrowed yet, so the card claims the shop's own next boat.
-  await expect(nextBoat(page)).toHaveAccessibleName("Next boat with space");
+  // Nothing is narrowed yet, and the board's first row is the shop's next boat
+  // with space, so no card repeats it above the list (visual review
+  // 2026-10-24, B17).
+  await expect(nextBoat(page)).toHaveCount(0);
 
   await rail(page).getByRole("link", { name: "After dark", exact: true }).click();
 
@@ -91,10 +93,10 @@ test("a lens narrows the board, and every row left wears its word", {
   await expect(
     list(page).getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
   ).toHaveCount(0);
-  // And the card says which question it answered (issue #1391): the lens can
-  // hide an earlier bookable boat, so "Next boat with space" on its own would
-  // be a claim about a board the reader is not looking at.
-  await expect(nextBoat(page)).toHaveAccessibleName("Next boat with space in this view");
+  // The narrowed board's first row has space too, so no card repeats it
+  // (B17). The card's narrowed name, "in this view" (issue #1391), is pinned
+  // where a full boat leads a filtered board: next-departure.spec.ts.
+  await expect(nextBoat(page)).toHaveCount(0);
 });
 
 test("'Every departure' puts the whole board back", { tag: READ_ONLY }, async ({ page }) => {

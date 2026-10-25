@@ -75,15 +75,15 @@ describe("bookingConfirmationEmail", () => {
       ...booking,
       readinessUrl: "https://diveday.example/ready/abc.def",
     });
-    expect(email.text).toContain("Track what’s left before you sail");
+    expect(email.text).toContain("See what’s left before you sail");
     expect(email.text).toContain("https://diveday.example/ready/abc.def");
     expect(email.html).toContain('href="https://diveday.example/ready/abc.def"');
   });
 
   it("omits the readiness line entirely when there is no link (no dead 'coming soon')", () => {
     const email = bookingConfirmationEmail(booking);
-    expect(email.text).not.toContain("Track what’s left");
-    expect(email.html).not.toContain("Track what’s left");
+    expect(email.text).not.toContain("See what’s left");
+    expect(email.html).not.toContain("See what’s left");
   });
 });
 

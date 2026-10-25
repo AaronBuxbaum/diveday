@@ -25,7 +25,19 @@ describe("MedicalAlertSection", () => {
     expect(box).not.toBeRequired();
     expect(box).toHaveValue("");
     expect(screen.getByText(t("waiver.medicalAlertIntro"))).toBeInTheDocument();
+    // The one helper paragraph (visual review 2026-10-24, B56) carries every
+    // safety fact the glossary's "Medical alert for the crew" asks the diver
+    // page to say: not the questionnaire, nobody reviews it, who reads it, and
+    // say it at the briefing too (the dock-side backstop when no reader is aboard).
     expect(screen.getByText(t("waiver.medicalAlertNotQuestionnaire"))).toBeInTheDocument();
+    for (const locale of ["en-US", "es-ES"] as const) {
+      expect(diverTranslator(locale)("waiver.medicalAlertNotQuestionnaire")).toMatch(
+        locale === "en-US"
+          ? /medical questions.*nobody reviews it.*crew can read it.*at the briefing/
+          : /preguntas médicas.*nadie la revisa.*tripulación del barco.*en el briefing/,
+      );
+    }
+    expect(document.querySelectorAll("section > p")).toHaveLength(2);
   });
 
   it("fills in what Save and finish later kept", () => {
@@ -57,10 +69,7 @@ describe("MedicalAlertSection", () => {
     expect(t("waiver.medicalAlertEarlier")).toMatch(/write it again/);
   });
 
-  it("says who reads it and to tell the crew at the briefing", () => {
-    render(<MedicalAlertSection prefill={NONE} minorName={null} error={undefined} t={t} />);
-    expect(screen.getByText(t("waiver.medicalAlertReaders"))).toBeInTheDocument();
-    expect(t("waiver.medicalAlertReaders")).toMatch(/briefing/);
+  it("says to leave it blank if there is nothing", () => {
     expect(t("waiver.medicalAlertIntro")).toMatch(/Leave it blank/);
   });
 

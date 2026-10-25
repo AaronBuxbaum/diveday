@@ -71,15 +71,12 @@ describe("the switching hub's skeleton", () => {
     expect(spreadsheet.slice(1).every((line) => line.classList.contains("sm:hidden"))).toBe(true);
   });
 
-  it("closes the list with the not-listed row and its two 48px doors", () => {
+  it("closes the list with the not-listed row, whose doors moved to the page's close", () => {
     const [, list] = sections().sections;
     const closing = list.lastElementChild;
     expect(closing?.className).toBe(HUB_CLOSING_ROW_CLASS);
-    const [words, doors] = Array.from(closing?.children ?? []);
-    expect(words.firstElementChild).toHaveClass("h-7");
-    const doorBars = Array.from(doors.firstElementChild?.children ?? []);
-    expect(doorBars).toHaveLength(2);
-    for (const bar of doorBars) expect(bar).toHaveClass("h-12");
+    expect(closing?.children).toHaveLength(1);
+    expect(closing?.firstElementChild?.firstElementChild).toHaveClass("h-7");
   });
 
   it("stands in for the import preview band at the mock's own height", () => {

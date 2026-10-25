@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
+import { SMS_CONSENT_ONCE_FILLED } from "@/components/SmsConsentNote";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
+import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { saveReturningDiver } from "@/lib/returning-diver";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
@@ -81,14 +85,11 @@ describe("BookingPartyFields", () => {
   });
 
   it("shows the big-group escape hatch once the party cap is below the maximum (task 24)", () => {
-    renderDiver(
-      <BookingPartyFields maxPartySize={3} contactEmail="dive@example.com" contactPhone={null} />,
-    );
-    expect(screen.getByText(/bringing more than 3/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /contact the shop/i })).toHaveAttribute(
-      "href",
-      "mailto:dive@example.com",
-    );
+    renderDiver(<BookingPartyFields maxPartySize={3} />);
+    expect(screen.getByText("Bringing more than 3? Contact the shop.")).toBeInTheDocument();
+    // The address and number stand once in the page's "Questions?" line and
+    // once in the footer, not a third time here (visual review 2026-10-24, B23).
+    expect(screen.queryByRole("link", { name: /contact the shop/i })).toBeNull();
   });
 
   it("hides the big-group escape hatch when the full party size is still selectable", () => {
@@ -265,5 +266,43 @@ describe("BookingPartyFields — the party-count control", () => {
       expect(segment).toHaveClass("has-[:focus-visible]:focus-ring");
       expect(segment?.className).not.toMatch(/outline-/);
     }
+  });
+});
+
+/**
+ * **The SMS consent arrives with the number** (visual review 2026-10-24, B22).
+ * The paragraph's words never change (H-09) and are always in the server
+ * HTML, so a form posted before hydration, or with scripts off, carried them;
+ * CSS hides them while the box is empty (`:placeholder-shown`), so they show
+ * the moment a number is in the box, however it got there.
+ */
+describe("BookingPartyFields — SMS consent", () => {
+  const consent = /you agree to texts from DiveDay/i;
+  const markup = (ui: ReactElement) =>
+    renderToStaticMarkup(
+      <DiverIntlProvider
+        locale="en-US"
+        timeZone="America/New_York"
+        namespaces={["party", "common"]}
+      >
+        {ui}
+      </DiverIntlProvider>,
+    );
+
+  it("puts the consent's words in the server HTML with no number typed", () => {
+    expect(markup(<BookingPartyFields maxPartySize={2} leadPhone />)).toMatch(consent);
+  });
+
+  it("hides them by CSS while the phone box is empty, never by leaving them out", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} leadPhone />);
+    const phone = screen.getByRole("textbox", { name: /phone/i });
+    expect(phone).toHaveAttribute("placeholder", " ");
+    const note = screen.getByText(consent).closest("[id$='-description']");
+    // A sibling of the input inside the Field that carries the CSS reveal.
+    expect(note?.previousElementSibling).toBe(phone);
+    expect(note?.parentElement?.parentElement).toHaveClass(SMS_CONSENT_ONCE_FILLED);
+    expect(phone.getAttribute("aria-describedby")).toContain(note?.id);
+    fireEvent.change(phone, { target: { value: "+1 305 555 0142" } });
+    expect(screen.getByText(consent)).toBeInTheDocument();
   });
 });

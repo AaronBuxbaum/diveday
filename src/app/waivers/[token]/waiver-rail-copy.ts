@@ -14,6 +14,7 @@ export function railLabels(t: DiverTranslator, withShopQuestions = false): Waive
     medical: t("waiver.railMedical"),
     ...(withShopQuestions ? { questions: t("waiver.railQuestions") } : {}),
     sign: t("waiver.railSign"),
+    states: { done: t("waiver.railStepDone"), open: t("waiver.railStepOpen") },
   };
 }
 

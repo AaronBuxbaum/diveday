@@ -36,7 +36,7 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   // the trip list itself: the "Next departure" card above it repeats whichever
   // trip's capacity it names, so a page-wide match legitimately finds two.
   const tripList = page.getByRole("list", { name: "Upcoming trips" });
-  await expect(tripList.getByText("3 seats left")).toHaveCount(1); // 11 of 14 booked, two of them not diving
+  await expect(tripList.getByText("3 seats", { exact: true })).toHaveCount(1); // 11 of 14 booked, two of them not diving
   // The sold-out wreck trip, and the weekly Saturday run sold out on its next
   // date (src/db/seed-booth.ts).
   await expect(tripList.getByText("Full")).toHaveCount(2);

@@ -166,7 +166,6 @@ function bookingRefusalCode(reason: string): ErrorCode {
 const waitlistForm = z.object({
   "fullName-0": formValue(),
   "email-0": formValue(),
-  phone: formValue().transform((value) => value || undefined),
   partySize: formValue(),
 });
 
@@ -883,7 +882,6 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
       ? {
           fullName: joiner.data["fullName-0"],
           email: joiner.data["email-0"],
-          phone: joiner.data.phone,
         }
       : {},
   );
@@ -916,7 +914,8 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     tripId,
     fullName: parsed.data.fullName,
     email: parsed.data.email,
-    phone: parsed.data.phone || undefined,
+    // No phone: the wait list asks a name and an email only (B57), so a
+    // posted number was never given under the SMS consent's words (H-09).
     partySize: partySize.data,
     // Bounded per *subject* address rather than per IP — the only key a
     // rotating set of submitters cannot clear (RATE_LIMITS.declarationByPerson).

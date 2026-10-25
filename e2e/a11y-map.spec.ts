@@ -275,7 +275,14 @@ for (const width of [390, 1280]) {
     await page.clock.install({ time: E2E_FROZEN_CLOCK });
     await page.locator(".leaflet-site-marker button").first().press("Enter");
     await expect(page.locator(".leaflet-site-popup")).toHaveCount(1);
-    if (width !== 1280) await page.setViewportSize({ width, height: 844 });
+    if (width !== 1280) {
+      await page.setViewportSize({ width, height: 844 });
+      // Leaflet answers a window resize on the next animation frame, which the
+      // installed clock holds until it is advanced; a real browser runs it at
+      // once. Without this the badge is measured where the 1280 map put it,
+      // inside a container now a third as wide.
+      await page.clock.runFor(1000);
+    }
     await page.locator(".leaflet-container").scrollIntoViewIfNeeded();
 
     const map = await page.locator(".leaflet-container").boundingBox();

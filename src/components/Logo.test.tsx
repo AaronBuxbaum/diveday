@@ -9,8 +9,7 @@ afterEach(cleanup);
  * The header's way home was a 95×24px link with a square focus ring beside
  * 44px nav links and a 48px CTA (K-32). The linked lockup is a target, so it
  * takes the CTA's 48px floor and the control radius; that floor is also what
- * holds the marketing header's first row at one height when `hideCta` drops
- * the CTA (K-178).
+ * holds the marketing header's first row at one height (K-178).
  */
 describe("Wordmark", () => {
   it("is a 48px target with the control radius when it links home", () => {

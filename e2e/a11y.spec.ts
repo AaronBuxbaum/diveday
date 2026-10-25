@@ -41,7 +41,7 @@ signedInAsOwner();
  *   because a site cannot be scanned — the reef briefing has its own test
  *   below — but because this scan *books a seat*, and the seeded reef
  *   charter's price and free-seat count are load-bearing for other specs'
- *   "N seats left" text. The one priced charter with no site is the night
+ *   "N seats" text. The one priced charter with no site is the night
  *   dive, and that is the one gated on a specialty.
  *
  * Its single day also keeps the page to one meeting window rather than the
@@ -103,7 +103,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")
-      // Not `exact`: the row's link is labelled "<title> · N seats left".
+      // Not `exact`: the row's link is labelled "<title> · N seats".
       .filter({ hasText: BOOKING_TRIP })
       .getByRole("link", { name: BOOKING_TRIP })
       .click();
@@ -886,7 +886,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       // no seeded row, no sign-in. One door, not five — the five are one
       // composition wearing different words, so the marginal scan buys copy
       // rather than structure and costs twenty seconds a run.
-      { path: "/verify/not-a-real-token", heading: /isn’t available/ },
+      { path: "/verify/not-a-real-token", heading: /no longer works/ },
     ]);
 
     // The diver-facing shop. Its `<h1>` is served in the static shell while
@@ -992,7 +992,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
    * Its own test rather than a leg of the booking scan: the cost is one
    * navigation, not shared setup, and the booking scan books a seat — which
    * this page's departure cannot spare, since its free-seat count is what other
-   * specs read as "N seats left".
+   * specs read as "N seats".
    */
   test("the reef briefing has no automated a11y violations", async ({ page }) => {
     // Two page loads and one scan; the scan itself measured ~1.5s against a
@@ -1001,7 +1001,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
     // Reached the way a diver reaches it. The row's accessible name carries the
-    // seat count — "<title> · N seats left" — so this matches a fragment of the
+    // seat count — "<title> · N seats" — so this matches a fragment of the
     // title rather than the whole name, which would go stale the moment a seat
     // sells.
     await page

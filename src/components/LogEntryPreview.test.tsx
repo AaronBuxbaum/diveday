@@ -29,4 +29,16 @@ describe("LogEntryPreview", () => {
       "Molasses Reef, Molasses Reef",
     );
   });
+
+  it("fills the thread's column on /ready and stays a miniature elsewhere (B30)", () => {
+    const t = diverTranslator("en-US");
+    const { unmount } = render(
+      <LogEntryPreview fill line="Waiting." date="Oct 13" siteNames={[]} t={t} />,
+    );
+    expect(screen.getByTestId("log-entry-preview").className).toContain("w-full");
+    expect(screen.getByTestId("log-entry-preview").className).not.toContain("max-w-xs");
+    unmount();
+    render(<LogEntryPreview line="Waiting." date="Oct 13" siteNames={[]} t={t} />);
+    expect(screen.getByTestId("log-entry-preview").className).toContain("max-w-xs");
+  });
 });

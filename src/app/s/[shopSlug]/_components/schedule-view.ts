@@ -196,19 +196,14 @@ export function scheduleDayWords(now: Date, locale: string, tz: string) {
 }
 
 /**
- * Seat state as a word plus the tone that decides whether it earns a badge.
- * Low inventory keeps the urgent wording the booking form itself switches to
- * ("Book the last seat") — never colour alone (WCAG 1.4.1).
+ * Seat state as one neutral count, or "Full" (visual review 2026-10-24, B19).
+ * Two seats read as plainly as twelve: the amber "Only 2 seats left" chip sold
+ * scarcity on a page whose job is to say what is on. The tone only says whether
+ * the row is full, which quiets the row's ink.
  */
 export function scheduleSeatState(t: DiverTranslator, trip: { capacity: number; booked: number }) {
   const label = capacityLabel(trip);
   if (label.kind === "full") return { text: t("fallback.full"), tone: "full" as const };
-  if (label.remaining <= 2) {
-    return {
-      text: t("schedule.spotsLeftUrgent", { count: label.remaining }),
-      tone: "low" as const,
-    };
-  }
   return { text: t("fallback.spotsLeft", { count: label.remaining }), tone: "quiet" as const };
 }
 
@@ -394,5 +389,28 @@ export function scheduleNextBoat({
    */
   const skippedBoats = nextBoat ? visibleUpcoming.indexOf(nextBoat) : 0;
   const firstSkippedBoat = skippedBoats > 0 ? visibleUpcoming[0] : null;
-  return { nextBoat, filteredView, skippedBoats, firstSkippedBoat };
+  return {
+    nextBoat: nextBoatCardShows(nextBoat, visibleUpcoming) ? nextBoat : null,
+    filteredView,
+    skippedBoats,
+    firstSkippedBoat,
+  };
+}
+
+/**
+ * **Whether the "Next boat with space" card earns its place** (visual review
+ * 2026-10-24, B17): only when the boat it pins is not the list's first row.
+ * When it is, the card repeated the row directly beneath it, same trip, time,
+ * price, seats and Book button. It shows when the first row is full (the card
+ * steps over it) or the next boat with space sails on a later day than the
+ * list's first; both mean the boat is not `visibleUpcoming[0]`, the row the
+ * day strip and the list start on.
+ */
+export function nextBoatCardShows(
+  nextBoat: { id: string } | null,
+  visibleUpcoming: readonly { id: string }[],
+): boolean {
+  if (!nextBoat) return false;
+  const first = visibleUpcoming[0];
+  return first !== undefined && first.id !== nextBoat.id;
 }

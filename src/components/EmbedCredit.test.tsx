@@ -12,7 +12,7 @@ afterEach(cleanup);
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * **"Powered by DiveDay" at the foot of a frame is a 44px target** (pixel-craft
+ * **"Bookings by DiveDay" at the foot of a frame is a 44px target** (pixel-craft
  * class 7, K-217 and K-220). It was a `text-xs` link on a 15px line, 115.7×15,
  * under the storefront's `?embed=1` board and under all three catalogue
  * widgets, each drawn by hand.
@@ -21,11 +21,11 @@ describe("EmbedCredit", () => {
   it("makes the credit a 44px target on the 16px line it has always taken", () => {
     const { container } = render(
       <EmbedCredit href="/s/blue-mantis" target="_top">
-        Powered by DiveDay
+        Bookings by DiveDay
       </EmbedCredit>,
     );
 
-    const link = screen.getByRole("link", { name: "Powered by DiveDay" });
+    const link = screen.getByRole("link", { name: "Bookings by DiveDay" });
     expect(link).toHaveAttribute("href", "/s/blue-mantis");
     expect(link).toHaveAttribute("target", "_top");
     expect(link).toHaveClass("inline-flex", "min-h-11", "items-center");
@@ -44,25 +44,34 @@ describe("EmbedCredit", () => {
    * document's end is cut off by the host's iframe.
    */
   it("owns the room its target and ring reach into", () => {
-    const { container } = render(<EmbedCredit href="/">Powered by DiveDay</EmbedCredit>);
+    const { container } = render(<EmbedCredit href="/">Bookings by DiveDay</EmbedCredit>);
     expect(container.firstElementChild).toHaveClass("mt-4", "mb-2");
   });
 
   it("carries rel through for a credit that opens a new tab", () => {
     render(
       <EmbedCredit href="/" target="_blank" rel="noopener">
-        Powered by DiveDay
+        Bookings by DiveDay
       </EmbedCredit>,
     );
-    expect(screen.getByRole("link", { name: "Powered by DiveDay" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Bookings by DiveDay" })).toHaveAttribute(
       "rel",
       "noopener",
     );
   });
 
+  /**
+   * One credit line, "Bookings by DiveDay" (visual review 2026-10-24, B33):
+   * the frames say what the shopfront footer says. The footer draws its own
+   * line in the page's chrome; every frame (an `embed` path, or the embed
+   * footer) draws it through this component.
+   */
   it("is how every frame draws the credit", () => {
-    const readers = sourceFiles(SRC_DIR).filter((file) =>
-      readFileSync(file, "utf8").includes('"schedule.poweredByDiveDay"'),
+    const readers = sourceFiles(SRC_DIR).filter(
+      (file) =>
+        /[\\/]embed[\\/]|Embed[A-Z]\w*\.tsx$/.test(file) &&
+        !file.endsWith(".test.tsx") &&
+        readFileSync(file, "utf8").includes('"shopChrome.credit"'),
     );
     expect(readers.length).toBeGreaterThan(0);
     const handDrawn = readers.filter((file) => !/<EmbedCredit\b/.test(readFileSync(file, "utf8")));

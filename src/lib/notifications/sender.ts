@@ -21,6 +21,8 @@ export type ShopSenderSource = {
    */
   inboundEmailToken?: string | null;
   contactEmail: string | null;
+  /** `shops.contact_phone`, the number the shop publishes; ends every shop email (B31). */
+  contactPhone?: string | null;
   /** Null until the shop opened the confirmation link sent to `contactEmail` (issue #1288). */
   contactEmailConfirmedAt: Date | null;
   addressStreet: string | null;
@@ -140,6 +142,10 @@ export function shopSenderOf(
     emailLogoUrl(shop.logoUrl, env) ?? undefined,
   );
   const brandColor = parseBrandColor(shop.brandColor).value;
+  const contactPhone = notificationSenderSchema.shape.contactPhone.safeParse(
+    shop.contactPhone?.trim() || undefined,
+  );
+  const contactEmail = deliverableShopContactEmail(shop);
   const sender: NotificationSender = {
     ...(replyTo && { replyTo }),
     ...(postalAddress.success && postalAddress.data && { postalAddress: postalAddress.data }),
@@ -150,6 +156,8 @@ export function shopSenderOf(
     }) && { nameUnderReview: true as const }),
     ...(logoUrl.success && logoUrl.data && { logoUrl: logoUrl.data }),
     ...(brandColor && { brandColor }),
+    ...(contactPhone.success && contactPhone.data && { contactPhone: contactPhone.data }),
+    ...(contactEmail && { contactEmail }),
   };
   return Object.keys(sender).length > 0 ? sender : undefined;
 }

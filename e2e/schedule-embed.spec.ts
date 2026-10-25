@@ -118,7 +118,7 @@ test("the embed widget carries a discreet Powered-by-DiveDay attribution link wi
   // canonicalizes to the standalone page, see reviews.spec.ts's parallel
   // assertion on the base case).
   await page.goto("/s/blue-mantis?embed=1");
-  const attribution = page.getByRole("link", { name: "Powered by DiveDay" });
+  const attribution = page.getByRole("link", { name: "Bookings by DiveDay" });
   await expect(attribution).toBeVisible();
   const href = await attribution.getAttribute("href");
   expect(href).toContain("utm_source=embed");
@@ -135,11 +135,17 @@ test("the embed widget carries a discreet Powered-by-DiveDay attribution link wi
 test("the non-embed schedule page carries no Powered-by-DiveDay attribution link", async ({
   page,
 }) => {
-  // The footer is embed-only — the standalone page already carries DiveDay
-  // branding via its own chrome, and this link exists purely for a diver who
-  // discovers the widget on a shop's own site.
+  // The attribution link is embed-only: it exists purely for a diver who
+  // discovers the widget on a shop's own site. The standalone page carries
+  // DiveDay's credit in its own footer, in the same words since visual review
+  // 2026-10-24 (B33), so the embed's link is told apart by its campaign
+  // parameters, not its name.
   await page.goto("/s/blue-mantis");
-  await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toHaveCount(0);
+  await expect(page.locator('a[href*="utm_source=embed"]')).toHaveCount(0);
+  const footerCredit = page
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Bookings by DiveDay" });
+  await expect(footerCredit).toHaveAttribute("href", "/");
 });
 
 // The fleet now runs against a configured non-loopback `APP_HOST`
