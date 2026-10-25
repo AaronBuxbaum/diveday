@@ -50,6 +50,10 @@ for (const locale of ["en-US", "es-ES"] as const) {
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
       expect(screen.queryByRole("textbox")).toBeNull();
+      // A muted reminder, not bold warning ink: the banner already says this
+      // is a saved copy, and warning colours stay with states (polish, B01).
+      expect(note).toHaveClass("text-muted");
+      expect(note.className).not.toMatch(/warning|font-semibold|font-bold/);
     });
 
     it("asks for a count on the boat when there is no signal to reach the live list", () => {

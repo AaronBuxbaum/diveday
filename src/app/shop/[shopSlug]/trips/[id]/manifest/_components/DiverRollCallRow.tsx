@@ -15,6 +15,7 @@ import { personStatusTone } from "./person-status-tone";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
   PAPER_ROW_CLASS,
+  paperRowTone,
   ROLL_CALL_ROW_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
   RollCallMarkButton,
@@ -140,7 +141,10 @@ export function DiverRollCallRow({
   // same two parts the printed sheet has always carried, and no sheet or mark.
   if (context.paper) {
     return (
-      <li id={diverRowId(diver.bookingId)} className={rowClass}>
+      <li
+        id={diverRowId(diver.bookingId)}
+        className={`${ROLL_CALL_ROW_CLASS} ${paperRowTone(recordedTone, blockedAtDock)}`}
+      >
         <div className={ruleClass}>
           <div data-print-content className={PAPER_ROW_CLASS}>
             {rowTrigger}

@@ -5,9 +5,12 @@ import { buttonClass } from "@/components/ui/button";
 import type { ConfirmProposalsResult } from "../proposal-actions";
 
 export interface ProposedUnitCopy {
-  /** "Proposed: BCD #4 · L", said as a proposal so it never reads as held. */
+  /**
+   * "Proposed: BCD #4 · L", said as a proposal so it never reads as held; or,
+   * on a piece with no proposal, "No unit yet".
+   */
   line: string;
-  /** "Change". */
+  /** "Change", or "Pick" where nothing is proposed. */
   reveal: string;
 }
 
@@ -22,7 +25,20 @@ export interface ProposedUnitCopy {
  * only thing that can say a unit is free. The per-row Assign is gone; a
  * proposal confirmed alone is a Change and a pick of that unit.
  */
-export function ProposedUnit({ copy, children }: { copy: ProposedUnitCopy; children: ReactNode }) {
+export function ProposedUnit({
+  copy,
+  proposed = true,
+  children,
+}: {
+  copy: ProposedUnitCopy;
+  /**
+   * False on a piece DiveDay has no unit to propose for: the same line and
+   * text button (one idiom per row, visual review polish), the line muted
+   * because it names no unit.
+   */
+  proposed?: boolean;
+  children: ReactNode;
+}) {
   const [changing, setChanging] = useState(false);
   // A client-only act painted by the static shell; a tap before React owns it
   // is swallowed, so the suite waits on this flag (the instant-navigation
@@ -35,7 +51,9 @@ export function ProposedUnit({ copy, children }: { copy: ProposedUnitCopy; child
   return (
     <div data-hydrated={hydrated ? "true" : undefined}>
       <div className="flex items-center gap-x-2">
-        <span className="min-w-0 flex-1 font-medium">{copy.line}</span>
+        <span className={`min-w-0 flex-1 ${proposed ? "font-medium" : "text-muted"}`}>
+          {copy.line}
+        </span>
         <button
           type="button"
           onClick={() => setChanging(true)}

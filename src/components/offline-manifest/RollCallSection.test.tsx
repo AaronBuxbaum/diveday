@@ -141,11 +141,16 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
       const row = document.getElementById("offline-roll-call-diver-priya") as HTMLElement;
       expect(row.querySelector("[data-mark-state]")?.getAttribute("data-mark-state")).toBe(drawn);
-      // Aboard over a block wears the blocked tone, never the calm green
-      // (review of #1840); left ashore keeps its own recorded tone.
+      // Aboard over a block is never the calm green (review of #1840): it
+      // takes the awaiting slate, and the block is the status line's danger
+      // ink (visual review polish, B01); left ashore keeps its own recorded
+      // tone.
       if (status === "boarded") {
-        expect(row.className).toContain("border-danger");
+        expect(row.className).toContain("border-border-strong");
         expect(row.className).not.toContain("bg-success-tint");
+        expect(row.querySelector("h3")?.parentElement?.nextElementSibling).toHaveClass(
+          "text-danger",
+        );
       } else {
         expect(row.className).toContain("border-warning");
       }
