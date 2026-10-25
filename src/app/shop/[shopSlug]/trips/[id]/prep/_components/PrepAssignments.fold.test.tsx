@@ -55,7 +55,7 @@ function renderRows(...rows: Row[]) {
       view={viewOf({
         ...base,
         gearFleetTotal: 4,
-        loadOut: { units: 2, divers: rows.length, stillToPick: 0, serviceFlagged: 0 },
+        loadOut: { units: 2, divers: rows.length, serviceFlagged: 0 },
         assignmentRows: rows,
       })}
     />,

@@ -61,6 +61,15 @@ describe("/pricing with the test off", () => {
     expect(text).not.toContain("card money");
   });
 
+  // B10 review: the export promise is written once, in the export band
+  // (`#export`); the invoice's leaving row points down to it.
+  it("points the leaving row at the export band instead of repeating its sentence", async () => {
+    const t = diverTranslator("en-US");
+    const { text } = await pricingBody(null);
+    expect(text).toContain("Your records go with you. See below.");
+    expect(text).not.toContain(t("marketing.export.terms"));
+  });
+
   it("keeps today's metadata", async () => {
     expect((await generateMetadata()).title).toBe("Pricing — one flat price per shop | DiveDay");
   });

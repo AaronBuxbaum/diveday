@@ -14,7 +14,7 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
+import { earlyAccessPrice } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { requestPricingOffer } from "@/lib/pricing-arm-request";
@@ -164,9 +164,11 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
             {/* **The annotated invoice** (docs/design/brand.md: `/pricing` is
                 the one page whose screen is a bill). Every row is a word, never
                 a figure: the price is the display figure above, H-12's single
-                source. The leaving row carries the export promise, the one
-                place it is written in full (B10); `#export` is where every
-                other page's "Taking your records with you" lands. */}
+                source. The leaving row points down to the export band
+                (`#export`), the one place on the page the promise is written
+                in full, beside the screen it describes (B10, and its review:
+                the sentence was here too, 900 px above itself). `#export` is
+                where every other page's "Taking your records with you" lands. */}
             <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
               <dl
                 aria-label={t("marketing.pricing.invoice.title")}
@@ -176,8 +178,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                   (row) => (
                     <div
                       key={row}
-                      id={row === "leaving" ? "export" : undefined}
-                      className="flex scroll-mt-10 flex-wrap items-baseline justify-between gap-x-6 py-3 text-sm leading-6"
+                      className="flex flex-wrap items-baseline justify-between gap-x-6 py-3 text-sm leading-6"
                     >
                       <dt className="text-muted">
                         {percentArm && row === "cut"
@@ -190,7 +191,14 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                           : t(`marketing.pricing.invoice.${row}.value`)}
                       </dd>
                       {row === "leaving" ? (
-                        <dd className="mt-1 basis-full text-muted">{t(fullShopExport.termsKey)}</dd>
+                        <dd className="mt-1 basis-full">
+                          <a
+                            href="#export"
+                            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                          >
+                            {t("marketing.pricing.invoice.leaving.pointer")}
+                          </a>
+                        </dd>
                       ) : null}
                     </div>
                   ),

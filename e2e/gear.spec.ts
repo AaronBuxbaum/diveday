@@ -269,7 +269,7 @@ test.describe("staff", () => {
     await expect(assignments.getByRole("heading", { name: "Rental assignments" })).toBeVisible();
 
     // The cart line leads with the one count that matters (B54, A10).
-    await expect(assignments.getByText(/^\d+ divers? still needs? a unit$/)).toBeVisible();
+    await expect(assignments.getByText(/^\d+ divers? still needs? gear$/)).toBeVisible();
 
     // Assign one unit so there is a set to hand across: a proposed row's one
     // text button reveals its picker, and the pick is the assignment (A10).

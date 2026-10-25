@@ -118,7 +118,7 @@ export function SwitchHubBodySkeleton() {
         </div>
       </section>
 
-      <ClosingCtaSkeleton />
+      <ClosingCtaSkeleton measure="column" />
     </main>
   );
 }

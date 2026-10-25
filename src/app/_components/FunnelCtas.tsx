@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { type ClosingCtaMeasure, closingCtaBoxClass } from "@/app/_components/ClosingCtaSkeleton";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -147,7 +148,9 @@ export function heroPriceLine(t: DiverTranslator, offer: PlanTerms, locale: stri
  * used to close on, so that page closes once.
  *
  * The container is the marketing shell's (`max-w-7xl px-6`, the nav's and the
- * footer's), so the close starts on the same left edge as every band above it.
+ * footer's) by default, so the close starts on the same left edge as every band
+ * above it; a page that keeps a narrower column (`/switching`) passes
+ * `measure="column"` for the same reason.
  */
 export function ClosingCta({
   locale,
@@ -155,6 +158,7 @@ export function ClosingCta({
   title,
   demo,
   supportKey = "marketing.common.closingSupport",
+  measure = "shell",
 }: {
   locale: DiverLocale;
   source: FunnelSource;
@@ -162,6 +166,8 @@ export function ClosingCta({
   demo?: { role: DemoRoleId; landing: DemoLanding | null };
   /** The support line's bundle key; its sentence names `{email}`. */
   supportKey?: DiverMessageKey;
+  /** The page's own column, so the close lines up with the bands above it. */
+  measure?: ClosingCtaMeasure;
 }) {
   const t = diverTranslator(locale);
   // The address is a link inside the bundle's sentence, so the sentence is
@@ -171,7 +177,7 @@ export function ClosingCta({
   const at = line.indexOf(SUPPORT_EMAIL);
   return (
     <section className="border-t border-border bg-surface">
-      <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+      <div className={closingCtaBoxClass(measure)}>
         <h2 className={`max-w-3xl ${BANNER_TITLE_CLASS} text-balance sm:text-4xl`}>{title}</h2>
         <p className="mt-4 max-w-2xl leading-7 text-muted">
           {at < 0 ? (

@@ -98,8 +98,11 @@ describe("the switching hub's skeleton", () => {
   it("ends with the closing band's own skeleton", () => {
     const all = sections().sections;
     expect(all).toHaveLength(4);
-    const real = render(<ClosingCtaSkeleton />).container.firstElementChild;
+    const real = render(<ClosingCtaSkeleton measure="column" />).container.firstElementChild;
     expect(all[3].className).toBe(real?.className);
+    // On the hub's own column, the left edge of every section above it (B15 review).
+    expect(all[3].firstElementChild?.className).toBe(real?.firstElementChild?.className);
+    expect(all[3].firstElementChild).toHaveClass("max-w-4xl");
   });
 
   it("knows the summary lines of every row the hub lists", () => {

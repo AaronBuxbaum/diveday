@@ -75,8 +75,9 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                           (issue #1185). */}
           {loadOut ? (
             <p className="mt-1 text-sm text-muted print:hidden">
-              {/* One count that matters, "3 divers still need a unit", and
-                  the rest a muted tail (visual review 2026-10-24, A10 /
+              {/* One count that matters, "3 divers still need gear" (true
+                  at any piece count, where "a unit" was not), and the rest
+                  a muted tail (visual review 2026-10-24, A10 /
                   B54): "· 13 proposed", the button's own number, so "Assign
                   all 13 proposed units" beside it is the same count. The
                   lead is dropped on a cancellation, where it is an

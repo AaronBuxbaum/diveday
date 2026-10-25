@@ -51,7 +51,7 @@ describe("proposed units on the Gear tab", () => {
     return {
       ...base,
       gearFleetTotal: 4,
-      loadOut: { units: 0, divers: 2, stillToPick: 2, serviceFlagged: 0 },
+      loadOut: { units: 0, divers: 2, serviceFlagged: 0 },
       freeByKind: new Map([["bcd", [proposed, other]]]),
       assignmentRows: [
         {
@@ -117,17 +117,17 @@ describe("proposed units on the Gear tab", () => {
 
   /**
    * **One count that matters** (visual review 2026-10-24, A10 and B54): the
-   * summary leads with how many divers still need a unit, and its muted tail
+   * summary leads with how many divers still need gear, and its muted tail
    * is the button's own number, "· 1 proposed", so the summary and "Assign
    * all" never read as two counts.
    */
-  it("leads with the divers still needing a unit and ends on the button's number", () => {
+  it("leads with the divers still needing gear and ends on the button's number", () => {
     renderAssignments(withProposal());
-    const lead = screen.getByText(/still needs? a unit$/);
+    const lead = screen.getByText(/still needs? gear$/);
     expect(lead).toHaveClass("font-medium");
     const summary = lead.parentElement?.textContent ?? "";
     const [, divers, summaryProposed] =
-      summary.match(/^(\d+) divers? still needs? a unit · (\d+) proposed$/) ?? [];
+      summary.match(/^(\d+) divers? still needs? gear · (\d+) proposed$/) ?? [];
     expect(Number(divers)).toBeGreaterThan(0);
     const proposed = screen.getAllByText(/^Proposed: /).length;
     expect(Number(summaryProposed)).toBe(proposed);
@@ -138,17 +138,17 @@ describe("proposed units on the Gear tab", () => {
 
   it("says no proposed count when nothing is proposed", () => {
     renderAssignments({ ...withProposal(), proposals: new Map() });
-    const lead = screen.getByText(/still needs? a unit$/);
+    const lead = screen.getByText(/still needs? gear$/);
     expect(lead.parentElement?.textContent).not.toMatch(/proposed/);
   });
 
   /**
    * **A boat at sea picks nothing more** (fourth review, item 16): "1 diver
-   * still needs a unit" and "Assign all" are the dock's instructions.
+   * still needs gear" and "Assign all" are the dock's instructions.
    */
   it("asks for no picking once the boat has left the dock", () => {
     renderAssignments(withProposal(), { sailed: true });
-    expect(screen.queryByText(/still needs? a unit/)).toBeNull();
+    expect(screen.queryByText(/still needs? gear/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Assign the proposed unit" })).toBeNull();
   });
 
@@ -181,7 +181,7 @@ describe("a diver flagged for a staff fit on the Gear tab", () => {
     return {
       ...base,
       gearFleetTotal: 1,
-      loadOut: { units: 0, divers: 1, stillToPick: 1, serviceFlagged: 0 },
+      loadOut: { units: 0, divers: 1, serviceFlagged: 0 },
       freeByKind: new Map([["regulator", [unit]]]),
       assignmentRows: [
         {
@@ -242,7 +242,7 @@ describe("an assigned unit that needs care", () => {
     return {
       ...base,
       gearFleetTotal: 4,
-      loadOut: { units: 1, divers: 1, stillToPick: 0, serviceFlagged: 1 },
+      loadOut: { units: 1, divers: 1, serviceFlagged: 1 },
       assignmentRows: [
         {
           diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,

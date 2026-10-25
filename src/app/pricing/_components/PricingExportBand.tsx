@@ -16,23 +16,24 @@ export function PricingExportBand({ locale }: { locale: DiverLocale }) {
           day. It sits here rather than in the FAQ because this is where the
           objection actually lands — the fee anchor above has just made
           switching look attractive, and the next thought a shop owner has is
-          about being stuck again. The promise is the invoice's leaving row
-          (`#export`); this band shows the screen beside the same sentence.
+          about being stuck again. This band is `#export`, where the
+          invoice's leaving row and every other page's records link land,
+          and the one place on the page the promise is written in full.
 
           The mockup is a claim, so it mirrors the real Settings → Data export
           element for element — including the "Not included, on purpose:" line
           that says credentials never leave (docs/product/marketing.md). */}
       {/* The marketing shell's container, like every band on the page
           (visual review 2026-10-24, B12). */}
-      <section className="border-b border-border">
+      <section id="export" className="scroll-mt-10 border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
           <div>
             <Eyebrow>{t("marketing.pricing.dataExit.eyebrow")}</Eyebrow>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.pricing.dataExit.title")}
             </h2>
-            {/* The invoice's leaving row, said once more beside the screen
-                it describes; the drawing carries the detail, so the band
+            {/* The export promise, said here only, beside the screen it
+                describes; the drawing carries the detail, so the band
                 lists none of it (visual review 2026-10-24, B10). The door is
                 link-weight, so this band holds no primary and the page's two
                 pairs stay its only ones; it opens the demo as the owner, the

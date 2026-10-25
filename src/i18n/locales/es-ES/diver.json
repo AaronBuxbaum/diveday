@@ -4647,7 +4647,8 @@
         },
         "leaving": {
           "label": "Irse",
-          "value": "Un ZIP desde Ajustes, cualquier día"
+          "value": "Un ZIP desde Ajustes, cualquier día",
+          "pointer": "Tus registros se van contigo. Míralo más abajo."
         }
       },
       "notes": {

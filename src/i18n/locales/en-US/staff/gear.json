@@ -244,7 +244,7 @@
   },
   "prep": {
     "heading": "Rental assignments",
-    "cartDiversWaiting": "{divers, plural, one {# diver still needs a unit} other {# divers still need a unit}}",
+    "cartDiversWaiting": "{divers, plural, one {# diver still needs gear} other {# divers still need gear}}",
     "cartProposed": "{proposed} proposed",
     "cartLineAssigned": "{assigned} of {needed, plural, one {# unit} other {# units}} assigned",
     "cartServiceFlagged": "{count, plural, one {# unit needs service} other {# units need service}}",

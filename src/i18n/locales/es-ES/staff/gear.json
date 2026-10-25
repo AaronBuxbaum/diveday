@@ -244,7 +244,7 @@
   },
   "prep": {
     "heading": "Asignaciones de alquiler",
-    "cartDiversWaiting": "{divers, plural, one {# buceador aún necesita una unidad} other {# buceadores aún necesitan una unidad}}",
+    "cartDiversWaiting": "{divers, plural, one {# buceador aún necesita equipo} other {# buceadores aún necesitan equipo}}",
     "cartProposed": "{proposed, plural, one {# propuesta} other {# propuestas}}",
     "cartLineAssigned": "{assigned} de {needed, plural, one {# unidad asignada} other {# unidades asignadas}}",
     "cartServiceFlagged": "{count, plural, one {# unidad necesita mantenimiento} other {# unidades necesitan mantenimiento}}",

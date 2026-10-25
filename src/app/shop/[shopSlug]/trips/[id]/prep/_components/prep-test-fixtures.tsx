@@ -193,7 +193,7 @@ export function everyPanelPrep(): TripPrep {
     ],
     gearFleetTotal: 4,
     freeByKind: new Map(),
-    loadOut: { units: 1, divers: 1, stillToPick: 0, serviceFlagged: 0 },
+    loadOut: { units: 1, divers: 1, serviceFlagged: 0 },
     assignmentRows: [
       {
         diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,

@@ -4647,7 +4647,8 @@
         },
         "leaving": {
           "label": "Leaving",
-          "value": "A ZIP from Settings, any day"
+          "value": "A ZIP from Settings, any day",
+          "pointer": "Your records go with you. See below."
         }
       },
       "notes": {
