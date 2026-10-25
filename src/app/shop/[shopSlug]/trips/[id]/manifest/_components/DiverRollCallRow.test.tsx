@@ -283,7 +283,7 @@ describe("the person sheet's head and foot", () => {
     expect(within(screen.getByRole("dialog")).getByText(/12/, { selector: "span" })).toBeVisible();
   });
 
-  it("holds only the contact in its card, with the one step outside it in the action color", () => {
+  it("holds only the contact in its card, with the exception step outside it and never filled", () => {
     renderList({ checkpoint: "departure", divers: [diver({ age: 27, minor: false })] });
     open();
     const dialog = screen.getByRole("dialog");
@@ -293,6 +293,15 @@ describe("the person sheet's head and foot", () => {
     expect(contact).toHaveClass("rounded-inset");
     const step = within(dialog).getByRole("button", { name: "Mark not boarded" });
     expect(contact).not.toContainElement(step);
-    expect(step).toHaveClass("bg-primary", "text-primary-foreground");
+    // dde-a F1: the exception is the deliberate second step. It must never
+    // wear the action color a crew taps for the act itself.
+    expect(step).not.toHaveClass("bg-primary");
+    expect(step).not.toHaveClass("text-primary-foreground");
+    expect(step).toHaveClass("bg-surface", "border-border-strong");
+    for (const button of within(dialog).getAllByRole("button")) {
+      if (/not boarded|not back aboard/i.test(button.textContent ?? "")) {
+        expect(button).not.toHaveClass("bg-primary");
+      }
+    }
   });
 });

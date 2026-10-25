@@ -492,16 +492,17 @@ export function RollCallExceptionControl({
             : undefined
         }
         pendingLabel={t("manifest.saving")}
-        // **The sheet's one primary** (visual review 2026-10-24, B08): the
-        // step still to take wears Boat mode's action color at the sheet's
-        // foot; a recorded state keeps its settled or alarmed look, so the
-        // fill never suggests a mark that is not there.
+        // **The exception is never the filled action** (layer 4 review,
+        // dde-a F1): it is the deliberate second step, and a mis-tap on it
+        // takes a soul who is aboard out of every later count. Boat mode's
+        // action color belongs to the affirmative mark on the row; this
+        // control keeps the secondary look, settled or alarmed once recorded.
         className={`${BOAT_TARGET_CLASS} ${
           notBackAboard
             ? "border border-danger bg-danger-tint text-danger"
             : recordedNotBoarded
               ? "border border-border-strong bg-surface-sunken"
-              : "border border-primary bg-primary text-primary-foreground hover:bg-primary-hover"
+              : "border border-border-strong bg-surface hover:bg-surface-sunken"
         }`}
         copy={copy}
         observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
