@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Certification, NitroxCertification, SpecialtyCertification } from "@/db/schema";
 import { type ActivityCode, activityParams } from "./activity";
 import {
+  type BoatChecklistAnswer,
   type BoatPaperRecord,
   type BoatRadioRecord,
   type BoatSafetyNotice,
@@ -336,6 +337,13 @@ export type IncidentBoatSafety = {
    */
   radio?: BoatRadioRecord;
   notices: BoatSafetyNotice[];
+  /**
+   * The pre-departure checklist at the same instant as `notices` (issue
+   * 2725), printed beside them and read from the taps as of the snapshot's
+   * `capturedAt`. Present only when the input carries it, so a document
+   * built without one keeps its code; absent reads as not kept.
+   */
+  checklist?: BoatChecklistAnswer;
 };
 
 export type IncidentTimelineEntry =
@@ -712,6 +720,7 @@ export type IncidentExportInput = {
     papers: BoatPaperRecord;
     radio?: BoatRadioRecord;
     notices: readonly BoatSafetyNotice[];
+    checklist?: BoatChecklistAnswer | null;
   } | null;
   /** The boat the departure names now, for the swap and absence wording. */
   departureBoatId?: string | null;
@@ -1199,6 +1208,14 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
             ? { radio: input.boatSafety.radio }
             : {}),
           notices: [...input.boatSafety.notices],
+          ...(input.boatSafety.checklist
+            ? {
+                checklist: {
+                  itemCount: input.boatSafety.checklist.itemCount,
+                  unchecked: [...input.boatSafety.checklist.unchecked],
+                },
+              }
+            : {}),
         }
       : null,
     boatSafetyAbsence: (input.boatSafety

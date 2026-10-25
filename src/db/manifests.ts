@@ -44,6 +44,7 @@ import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { listTripGearAssignments } from "./gear";
+import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import { bookingsWithMedicalAlert, standingReleaseByBooking } from "./medical-alerts";
 import { verifiedNitroxPersonIds } from "./nitrox";
@@ -2248,6 +2249,10 @@ export async function recordCrewRollCall(
         // (`pauseRecapOnMissingAfterDive`); booking-then-trip deadlocked against
         // the counter on a staffer's seat (`seat-lock-order.postgres.test.ts`).
         // `no key update`, so the event's own foreign-key `KEY SHARE` passes.
+        // Bounded like the diver half's `lockSeatDeparture`: behind a stuck
+        // holder the tap fails in five seconds with `55P03` rather than with
+        // its function (#2983, `roll-call.postgres.test.ts`).
+        await boundLockWaits(tx);
         const [trip] = await tx
           .select({ id: trips.id, plannedDives: trips.plannedDives })
           .from(trips)

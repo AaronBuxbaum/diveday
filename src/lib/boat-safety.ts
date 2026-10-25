@@ -154,6 +154,20 @@ export type BoatPaperRecord = BoatPaperDates & {
 };
 
 /**
+ * **The pre-departure checklist as it stood at the boat snapshot** (issue
+ * 2725): how many lines the shop's checklist had at the snapshot's instant
+ * (the last departure roll-call tap) and the wording of each line not checked
+ * then. The log derives it from the append-only taps with that same instant,
+ * so it describes the moment the notices do, and a tap synced late still
+ * counts as of when it was made. `itemCount` 0 means the shop had no
+ * checklist then.
+ */
+export type BoatChecklistAnswer = {
+  itemCount: number;
+  unchecked: string[];
+};
+
+/**
  * **The boat's radio identity as the emergency card printed it** (records
  * review S1 of #2672): call sign, MMSI and working channel, kept beside the
  * papers at the departure checkpoint so what the card said can be read back.

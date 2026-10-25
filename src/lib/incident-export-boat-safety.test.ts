@@ -104,6 +104,27 @@ describe("the boat at the departure checkpoint on the departure log", () => {
     ).toBe(doc.contentHash);
   });
 
+  it("carries the checklist answer kept with the snapshot, hashed; a record without one keeps its code (#2725)", () => {
+    const before = buildIncidentExport({
+      ...baseInput(),
+      boatSafety: { ...snapshot, checklist: null },
+      departureBoatId: "boat-1",
+    });
+    expect(before.boatSafety).not.toHaveProperty("checklist");
+    expect(before.contentHash).toBe(
+      buildIncidentExport({ ...baseInput(), boatSafety: snapshot, departureBoatId: "boat-1" })
+        .contentHash,
+    );
+    const answer = { itemCount: 3, unchecked: ["Flares in date"] };
+    const kept = buildIncidentExport({
+      ...baseInput(),
+      boatSafety: { ...snapshot, checklist: answer },
+      departureBoatId: "boat-1",
+    });
+    expect(kept.boatSafety?.checklist).toEqual(answer);
+    expect(kept.contentHash).not.toBe(before.contentHash);
+  });
+
   // Review D1: absence is worded by what is known, never "no roll call".
   it("says why nothing was kept: no boat on the departure, or simply not kept", () => {
     const noBoat = buildIncidentExport({ ...baseInput(), departureBoatId: null });

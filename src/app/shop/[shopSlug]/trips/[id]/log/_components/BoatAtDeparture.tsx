@@ -7,7 +7,7 @@ import {
   EMPTY_BOAT_RADIO_RECORD,
 } from "@/lib/boat-safety";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
-import type { IncidentExportDocument } from "@/lib/incident-export";
+import type { IncidentBoatSafety, IncidentExportDocument } from "@/lib/incident-export";
 
 /** Each kept paper fact, in the order Settings asks for them, under the fleet row's own label. */
 const PAPER_ROWS: readonly {
@@ -32,7 +32,8 @@ const RADIO_ROWS: readonly { key: keyof BoatRadioRecord; label: StaffMessageKey 
 
 /**
  * **The boat as it stood at the departure checkpoint** (#2300): the papers and
- * the kit notices the snapshot kept, never the boat as it is today. Absence is
+ * the kit notices the snapshot kept, with the crew's checklist answer at
+ * the same instant beside them (issue 2725), never the boat as it is today. Absence is
  * stated: no snapshot reads as one sentence, never a missing section, and a
  * paper the shop never recorded says so.
  */
@@ -98,20 +99,29 @@ export function BoatAtDeparture({
               );
             })}
           </dl>
-          {boatSafety.notices.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">{t("incidentExport.boatNoNotices")}</p>
-          ) : (
-            <>
-              <p className="mt-3 text-sm text-muted">{t("incidentExport.boatNoticesLabel")}</p>
-              <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
-                {boatSafety.notices.map((notice, index) => (
-                  // Codes kept in the snapshot's order; two can word alike.
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed, never-reordered record
-                  <li key={index}>{boatSafetyNoticeText(t, locale, notice)}</li>
-                ))}
-              </ul>
-            </>
-          )}
+          {/* The register's notices and the crew's checklist answer, side by
+              side and from the one snapshot, so the two describe one moment
+              (issue 2725). */}
+          <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-muted">{t("incidentExport.boatNoticesLabel")}</p>
+              {boatSafety.notices.length === 0 ? (
+                <p className="mt-1">{t("incidentExport.boatNoNotices")}</p>
+              ) : (
+                <ul className="mt-1 list-disc space-y-1 ps-5">
+                  {boatSafety.notices.map((notice, index) => (
+                    // Codes kept in the snapshot's order; two can word alike.
+                    // biome-ignore lint/suspicious/noArrayIndexKey: a fixed, never-reordered record
+                    <li key={index}>{boatSafetyNoticeText(t, locale, notice)}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className="text-muted">{t("incidentExport.boatChecklistLabel")}</p>
+              <ChecklistAnswer answer={boatSafety.checklist} t={t} />
+            </div>
+          </div>
         </>
       ) : (
         <p className="mt-1 max-w-prose text-sm text-muted">
@@ -119,5 +129,43 @@ export function BoatAtDeparture({
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * The crew's pre-departure answer kept with the snapshot (issue 2725): how many
+ * lines were checked, and each one that was not. Absence is stated.
+ */
+function ChecklistAnswer({
+  answer,
+  t,
+}: {
+  answer: IncidentBoatSafety["checklist"];
+  t: StaffTranslator;
+}) {
+  if (!answer) return <p className="mt-1">{t("incidentExport.boatChecklistNotKept")}</p>;
+  if (answer.itemCount === 0)
+    return <p className="mt-1">{t("incidentExport.boatChecklistNone")}</p>;
+  return (
+    <>
+      <p className="mt-1">
+        {t("incidentExport.boatChecklistCount", {
+          checked: answer.itemCount - answer.unchecked.length,
+          total: answer.itemCount,
+        })}
+      </p>
+      {answer.unchecked.length > 0 ? (
+        <>
+          <p id="incident-boat-unchecked" className="mt-2 text-muted">
+            {t("incidentExport.boatChecklistUnchecked")}
+          </p>
+          <ul aria-labelledby="incident-boat-unchecked" className="mt-1 list-disc space-y-1 ps-5">
+            {answer.unchecked.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </>
   );
 }

@@ -2122,7 +2122,19 @@ export const notificationSchema = z
     bookkeeperConfirmationSchema,
     bookkeeperNoticeSchema,
   ])
-  .and(z.object({ sender: notificationSenderSchema.optional() }));
+  .and(z.object({ sender: notificationSenderSchema.optional() }))
+  // The set-up request alert carries a single-use setup link, and its contact
+  // address was typed into a public form nobody verified: no Reply-To, from
+  // any caller (issue 2834, security review 2).
+  .refine(
+    (notification) =>
+      !(
+        notification.kind === "operator_alert" &&
+        notification.event === "setup_request" &&
+        notification.sender?.replyTo
+      ),
+    { path: ["sender", "replyTo"] },
+  );
 
 export type Notification = z.infer<typeof notificationSchema>;
 

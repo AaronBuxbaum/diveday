@@ -13,7 +13,7 @@ vi.mock("@/app/actions/seat-diver", () => ({ seatExistingDiverAction: vi.fn() })
 afterEach(cleanup);
 
 const t = staffTranslator("en-US");
-const NO_STANDING = { visits: 0, since: null, lastOut: null, spent: null, friends: 0 };
+const NO_STANDING = { diveDays: 0, since: null, lastOut: null, spent: null, friends: 0 };
 type HeaderStatus = ComponentProps<typeof DiverHeader>["status"];
 
 function diver(): DiverProfile {
@@ -159,7 +159,7 @@ describe("the package line", () => {
  * Each fact stands alone and says nothing when there is nothing to say.
  */
 describe("the standing line", () => {
-  it("says visits since when, last out, money kept and friends brought", () => {
+  it("says dive days since when, last out, money kept and friends brought", () => {
     const { container } = render(
       <DiverHeader
         diver={diver()}
@@ -167,7 +167,7 @@ describe("the standing line", () => {
         t={t}
         locale="en-US"
         standing={{
-          visits: 23,
+          diveDays: 23,
           since: "2024-03-02",
           lastOut: "2026-09-30",
           spent: { cents: 214_000, currency: "usd" },
@@ -176,7 +176,7 @@ describe("the standing line", () => {
       />,
     );
     const text = container.textContent ?? "";
-    expect(text).toContain("23 visits since Mar 2024");
+    expect(text).toContain("23 dive days since Mar 2024");
     expect(text).toMatch(/Last out Sep\s30, 2026/);
     expect(text).toContain("$2,140.00 spent");
     expect(text).toContain("Brought 2 friends");

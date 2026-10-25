@@ -60,7 +60,7 @@ export function DiverHeader({
    */
   moment?: ReactNode;
   /**
-   * Who this person is to the shop (fifth-loop ideas, item 36): visits since
+   * Who this person is to the shop (fifth-loop ideas, item 36): dive days since
    * when, last out, money kept (null unless the reader may see money) and the
    * friends they brought. `src/lib/diver-standing.ts`.
    */
@@ -91,7 +91,7 @@ export function DiverHeader({
 
                 **A fact that wraps sits 4px under the links, and that is
                 settled** (docs/design/settled-questions.md). A wrapped flex
-                line is as tall as what it holds, so "3 visits" on a phone is a
+                line is as tall as what it holds, so "3 dive days" on a phone is a
                 20px line of its own; the blank above its words is the links'
                 44px boxes, which must be their own (axe measures the element,
                 see `EYEBROW_TAP_WRAPPER`), and handing their unseen half back
@@ -127,14 +127,14 @@ export function DiverHeader({
             {diver.person.diveInsurance ? (
               <span>{t("divers.header.diveInsuranceOnFile")}</span>
             ) : null}
-            {standing.visits > 0 ? (
+            {standing.diveDays > 0 ? (
               <span className="tabular-nums">
                 {standing.since
-                  ? t("divers.header.visitsSince", {
-                      count: standing.visits,
+                  ? t("divers.header.diveDaysSince", {
+                      count: standing.diveDays,
                       since: formatCalendarMonth(standing.since, locale),
                     })
-                  : t("divers.header.visits", { count: standing.visits })}
+                  : t("divers.header.diveDays", { count: standing.diveDays })}
               </span>
             ) : null}
             {standing.lastOut ? (
