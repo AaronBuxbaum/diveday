@@ -28,7 +28,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-boat-at-sea";
+import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE, bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
@@ -521,6 +521,45 @@ describe("refreshCanonicalDemoSchedule", () => {
       expect(await marks(db, boat.id)).toEqual(before);
       const afterDiveTwo = await getTripManifest(db, shop.id, boat.id, "after_dive_2");
       expect(afterDiveTwo?.summary.awaiting).toBe(2);
+    });
+
+    // Issue 2917: the hourly trip-reminder pass runs this alone, so an hour
+    // past her return is enough, with no daily restore behind it.
+    it("closes her count on the hourly pass an hour past her return, and a second pass writes nothing", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      const anHourLater = new Date(boat.endsAt.getTime() + 60 * 60_000);
+
+      expect(await bringDemoBoatsAtSeaHome(db, anHourLater)).toBeGreaterThanOrEqual(1);
+
+      const afterDiveTwo = await getTripManifest(db, shop.id, boat.id, "after_dive_2");
+      expect(afterDiveTwo?.summary.awaiting).toBe(0);
+      expect(afterDiveTwo?.summary.boarded).toBe(afterDiveTwo?.summary.totalDivers);
+      const crewBack = await db
+        .select({ personId: rollCallCrewEvents.personId })
+        .from(rollCallCrewEvents)
+        .where(
+          and(
+            eq(rollCallCrewEvents.tripId, boat.id),
+            eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+          ),
+        );
+      const crew = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, boat.id));
+      expect(new Set(crewBack.map((row) => row.personId))).toEqual(
+        new Set(crew.map((row) => row.personId)),
+      );
+      const logged = await db
+        .select({ id: executedDives.id })
+        .from(executedDives)
+        .where(and(eq(executedDives.tripId, boat.id), eq(executedDives.diveNumber, 2)));
+      expect(logged).toHaveLength(1);
+
+      const settled = await marks(db, boat.id);
+      expect(await bringDemoBoatsAtSeaHome(db, anHourLater)).toBe(0);
+      expect(await marks(db, boat.id)).toEqual(settled);
     });
 
     it("counts every diver and both guides back after dive 2, and logs it, once she is past her return", async () => {
