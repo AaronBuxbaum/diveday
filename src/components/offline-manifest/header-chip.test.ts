@@ -18,12 +18,10 @@ describe("offlineHeaderChip", () => {
     }
   });
 
-  it("keeps the copy's own freshness chip with no signal, never 'online'", () => {
+  it("says No signal with no signal, never a freshness chip alone (review dde-b 1)", () => {
     for (const freshness of ["current", "aging", "stale"] as const) {
       expect(offlineHeaderChip({ online: false, servedWithoutAnswer: false, freshness })).toEqual({
-        kind: "freshness",
-        freshness,
-        online: false,
+        kind: "connectivity",
       });
     }
   });

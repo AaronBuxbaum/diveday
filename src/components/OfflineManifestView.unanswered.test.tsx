@@ -158,6 +158,23 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(LIVE);
   });
 
+  it("says No signal on a copy opened with no signal, never a green Fresh copy alone (review dde-b 1)", async () => {
+    searchParams = new URLSearchParams("trip=trip-1");
+    setOnline(false);
+
+    render(<OfflineManifestView />);
+
+    expect(await screen.findByText(t("shared.connectivity.offlineWithCopy"))).toBeInTheDocument();
+    // The age is still said, in the banner, once.
+    expect(screen.getByText(/This copy is current/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(t("shared.offlineManifest.freshnessPill.current")),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(t("shared.offlineManifest.freshnessPill.currentOnline")),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps the reason on the way from the saved list to a trip (re-review R2)", async () => {
     searchParams = new URLSearchParams("fallback=slow");
     vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-1", "Two-Tank Reef")]);

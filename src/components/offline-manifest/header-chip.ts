@@ -8,9 +8,10 @@ import type { OfflineManifestFreshness } from "@/lib/offline-manifests";
  * - **DiveDay did not answer**: the connectivity chip, which is the warning
  *   that matters there. A copy the worker opened because DiveDay was silent
  *   never says "Fresh", however young it is: it is not the live list.
- * - **No signal**: the copy's own freshness chip ("Fresh copy", "Stale
- *   copy"), with no "online": at sea the age of the copy is the question,
- *   and the missing "· online" is the answer to the other one.
+ * - **No signal**: the connectivity chip, "No signal · device copy" (layer
+ *   4 review, dde-b 1). A green "Fresh copy" alone read as the live list to
+ *   a deckhand who did not save it; staff must know they are on a copy
+ *   (H-05). The copy's age is said in the banner beneath, every time.
  * - **Online and current**: "Fresh copy · online".
  * - **Online and aging or stale**: that freshness chip alone; the age is
  *   the question, and "online" would read as reassurance it is not.
@@ -27,10 +28,10 @@ export function offlineHeaderChip(input: {
   servedWithoutAnswer: boolean;
   freshness: OfflineManifestFreshness;
 }): OfflineHeaderChip {
-  if (input.servedWithoutAnswer) return { kind: "connectivity" };
+  if (input.servedWithoutAnswer || !input.online) return { kind: "connectivity" };
   return {
     kind: "freshness",
     freshness: input.freshness,
-    online: input.online && input.freshness === "current",
+    online: input.freshness === "current",
   };
 }

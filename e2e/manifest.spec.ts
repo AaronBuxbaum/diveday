@@ -256,9 +256,9 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
-  // Offline reload serves the device copy; its freshness badge reads
-  // "Fresh copy".
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  // Offline reload serves the device copy; its header says so (B51, review
+  // dde-b 1), and the banner says how old it is.
+  await expect(page.getByText("No signal · device copy")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
   // Two lists on this page carry roll-call controls now (H-46), and the crew
   // panel renders *above* the diver list — so every click below names which
@@ -1084,7 +1084,7 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(page.getByText("No signal · device copy")).toBeVisible();
 
   // The offline viewer, not the live manifest — its own surface, with the
   // checklist still standing open (slice 5a collapses the live manifest's).
