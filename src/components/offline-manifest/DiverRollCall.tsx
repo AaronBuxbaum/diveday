@@ -226,6 +226,16 @@ function OfflineDiverRow({
                 : null,
             })}
           </p>
+          {/* **What is already on the record, in the open** (ADR
+            20260828-a-missing-diver-gets-a-sentence, decision 4; layer 4
+            review, dde-b 2): the observation a crew wrote on an alarmed
+            row sits under the status line, never behind "Contact & gear",
+            so a crew member offshore reads it before writing it twice. */}
+          {state?.note ? (
+            <p className="mt-1 max-w-xl text-base break-words">
+              {state.note}
+            </p>
+          ) : null}
           <details className="group/offlinefacts mt-2 max-w-xl">
             <summary className={OFFLINE_DISCLOSURE_SUMMARY_CLASS}>
               <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
@@ -239,9 +249,7 @@ function OfflineDiverRow({
             </summary>
             <div className="mb-1 grid gap-2 rounded-inset border border-border/70 bg-surface-sunken/50 p-3 text-base">
               {/* The saved team, always quiet here: this copy shows who you
-                are with and never judges whether the team is split. And
-                what is already on the record about this person, so a crew
-                member offshore does not write the same observation twice. */}
+                are with and never judges whether the team is split. */}
               {diver.buddyTeamNames && diver.buddyTeamNames.length > 0 ? (
                 <p className={BUDDY_NAMES_WRAP}>
                   {t("shared.buddyTeam.with", {
@@ -249,7 +257,6 @@ function OfflineDiverRow({
                   })}
                 </p>
               ) : null}
-              {state?.note ? <p className="break-words">{state.note}</p> : null}
               {/* A held seat was saved with the matched person's
                 particulars already cleared (`serializeManifests`),
                 so it says why rather than "Not on file" (issue

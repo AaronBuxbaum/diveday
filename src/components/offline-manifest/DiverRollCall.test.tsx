@@ -41,6 +41,38 @@ describe("OfflineDiverRollCall", () => {
     expect(rowAt("after_dive_2")).toContain("Not medically cleared");
     expect(rowAt("departure")).not.toContain("Not medically cleared");
   });
+  it("shows the observation on a diver not back aboard under the status line, outside any disclosure (review dde-b 2)", () => {
+    const copy = savedCopy();
+    const NOTE = "Surfaced 200 m north, picked up by Reef Runner 11:31";
+    const event = (
+      checkpoint: "departure" | "after_dive_1",
+      status: "boarded" | "not_boarded",
+    ) => ({
+      clientEventId: `event-${checkpoint}`,
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+      tripId: "trip-1",
+      bookingId: "b-priya",
+      checkpoint,
+      status,
+      occurredAt: "2026-08-01T12:58:00.000Z",
+      syncStatus: "pending" as const,
+    });
+    copy.events = [
+      event("departure", "boarded"),
+      { ...event("after_dive_1", "not_boarded"), note: NOTE },
+    ];
+    const trip = offlineTripView(copy, "after_dive_1");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector("#offline-roll-call-b-priya");
+    if (!row) throw new Error("Priya's row missing");
+    const notes = [...row.querySelectorAll("p")].filter((p) => p.textContent === NOTE);
+    // Said once, and in the open: no tap on "Contact & gear" stands before it.
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.closest("details")).toBeNull();
+  });
+
   it("draws one roll-call row per diver, each its own jump target", () => {
     const { container } = render(<OfflineDiverRollCall view={view()} controls={controls()} />);
     expect(container.querySelector("#offline-roll-call-b-priya")).not.toBeNull();
