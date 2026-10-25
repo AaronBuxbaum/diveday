@@ -8,6 +8,7 @@ const { helpRequestAction } = vi.hoisted(() => ({ helpRequestAction: vi.fn() }))
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({ helpRequestAction }));
 
 import {
+  HandledHelpRequests,
   HelpRequestControl,
   type HelpRequestCopy,
   HelpRequestProvider,
@@ -171,5 +172,72 @@ describe("HelpRequestProvider", () => {
       revision: 9,
     });
     expect((await screen.findByRole("status")).textContent).toBe(copy.reopened);
+  });
+});
+
+describe("HandledHelpRequests", () => {
+  const rows = [
+    {
+      requestId: "request-4",
+      revision: 12,
+      helperPersonId: "person-1",
+      line: "Ana Lopez: first-timer orientation (Reef · 8:00 AM), with Sam Rivera",
+      reopenLabel: "Reopen",
+      reopenAriaLabel: "Reopen help for Ana Lopez",
+    },
+  ];
+
+  it("renders nothing when no request is handled", () => {
+    const { container } = render(
+      <HelpRequestProvider copy={copy}>
+        <HandledHelpRequests summary="0 handled help requests" rows={[]} />
+      </HelpRequestProvider>,
+    );
+    expect(container.querySelector("details")).toBeNull();
+  });
+
+  it("collapses the handled requests and reopens one through the undo transition", async () => {
+    render(
+      <HelpRequestProvider copy={copy}>
+        <HandledHelpRequests summary="1 handled help request" rows={rows} />
+      </HelpRequestProvider>,
+    );
+    expect(document.querySelector("details")).not.toHaveAttribute("open");
+    expect(screen.getByText("1 handled help request")).toBeTruthy();
+    helpRequestAction.mockResolvedValueOnce({
+      ok: true,
+      requestId: "request-4",
+      effect: "undone",
+      helperPersonId: "person-1",
+      revision: 13,
+    } satisfies HelpRequestActionResult);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Reopen help for Ana Lopez" }));
+    });
+    const form = helpRequestAction.mock.calls.at(-1)?.[1] as FormData;
+    expect(Object.fromEntries(form)).toEqual({
+      requestId: "request-4",
+      expectedRevision: "12",
+      helperPersonId: "person-1",
+      intent: "undo",
+    });
+  });
+
+  it("says why a reopen was refused when the request changed", async () => {
+    render(
+      <HelpRequestProvider copy={copy}>
+        <HandledHelpRequests summary="1 handled help request" rows={rows} />
+      </HelpRequestProvider>,
+    );
+    helpRequestAction.mockResolvedValueOnce({
+      ok: false,
+      requestId: "request-4",
+      intent: "undo",
+      reason: "stale",
+    } satisfies HelpRequestActionResult);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Reopen help for Ana Lopez" }));
+    });
+    expect((await screen.findByRole("alert")).textContent).toBe(copy.undoRefused);
   });
 });

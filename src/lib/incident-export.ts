@@ -382,6 +382,12 @@ export type IncidentTimelineEntry =
       teamNumber: number;
       memberNames: string[];
       recordedByName: string;
+      /**
+       * The recorder said everyone on the team is 18 or over, where nothing on
+       * file did (issue 2808). Present only when true, so a line without it
+       * hashes as it did before the field existed.
+       */
+      adultsConfirmed?: true;
     }
   /**
    * A seat or crew place added, removed or moved **once the boat was due out**
@@ -728,6 +734,7 @@ export type IncidentBuddyTeamEventInput = {
   action: "formed" | "dissolved" | "member_added" | "member_removed";
   memberNames: readonly string[];
   recordedByName: string;
+  adultsConfirmed?: boolean;
   occurredAt: Date;
   createdAt: Date;
 };
@@ -878,6 +885,27 @@ function timelineOrder(
  */
 export function hasRollCallEntries(timeline: readonly IncidentTimelineEntry[]): boolean {
   return timeline.some((entry) => entry.kind === "diver" || entry.kind === "crew");
+}
+
+/**
+ * **When each diver boarded, for reading their release** (domain reviews of
+ * issue #3002): the seat's latest departure roll-call mark. A boat that sailed
+ * late had divers sign at the dock after the scheduled start, and the release
+ * that stood when the boat left is the one she boarded on. A seat with no
+ * departure mark is read at the log's cutoff instead.
+ */
+export function seatBoardingInstants(
+  events: readonly { bookingId: string; checkpoint: string; occurredAt: Date }[],
+): Map<string, Date> {
+  const boarded = new Map<string, Date>();
+  for (const event of events) {
+    if (event.checkpoint !== "departure") continue;
+    const seen = boarded.get(event.bookingId);
+    if (!seen || event.occurredAt.getTime() > seen.getTime()) {
+      boarded.set(event.bookingId, event.occurredAt);
+    }
+  }
+  return boarded;
 }
 
 /**
@@ -1060,6 +1088,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         teamNumber: teamNumberById.get(event.teamId) ?? 0,
         memberNames: [...event.memberNames],
         recordedByName: event.recordedByName,
+        ...(event.adultsConfirmed ? { adultsConfirmed: true as const } : {}),
       } satisfies IncidentTimelineEntry,
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,

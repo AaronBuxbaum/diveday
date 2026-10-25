@@ -37,6 +37,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "trip_reminder_7d":
     case "trip_reminder_24h":
     case "trip_rescheduled":
+    case "fly_safe_correction":
     case "trip_recap":
     case "trip_conditions_hold":
     case "trip_minimum_not_met":
@@ -44,6 +45,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "booking_cancelled":
     case "party_payment_receipt":
     case "seat_already_held":
+    case "party_not_booked":
     case "checkout_recovery":
     case "staff_reply":
     case "work_order_ready":

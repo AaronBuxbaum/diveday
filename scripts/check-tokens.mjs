@@ -220,6 +220,40 @@ export function findTokenViolations(source) {
   return found.sort((a, b) => a.line - b.line);
 }
 
+/**
+ * **A color utility whose token does not exist renders as nothing.**
+ *
+ * `text-danger-strong` sat in five components while the theme defined only
+ * `--color-danger`: Tailwind emits no rule for an unknown name, so the lapsed-insurance
+ * line on the boat manifest rendered in plain ink and the tests that asserted the class
+ * name passed anyway (issue #2908). A utility built on a semantic color family
+ * (`danger`, `success`, `warning`, `info`, `primary`, `accent`) must name a
+ * `--color-*` token that `src/app/globals.css` binds. No baseline: a miss is always a bug.
+ */
+const semanticFamilies = ["danger", "success", "warning", "info", "primary", "accent"];
+
+export const semanticClassPattern = new RegExp(
+  `(?:^|[^\\w-])(?:${colorPrefixes.join("|")})-((?:${semanticFamilies.join("|")})(?:-[a-z]+)*)(?![\\w-])`,
+  "g",
+);
+
+/** The `--color-<name>` names a stylesheet binds. */
+export function definedColorTokens(css) {
+  return new Set([...css.matchAll(/--color-([a-z0-9-]+)\s*:/g)].map((match) => match[1]));
+}
+
+/** Every semantic color utility in `source` whose token is not in `tokens`, as `{ line, text }`. */
+export function findUndefinedColorClasses(source, tokens) {
+  const stripped = stripComments(source);
+  const found = [];
+  for (const match of stripped.matchAll(semanticClassPattern)) {
+    if (tokens.has(match[1])) continue;
+    const line = stripped.slice(0, match.index + 1).split("\n").length;
+    found.push({ line, text: `undefined color token ${match[1]}` });
+  }
+  return found;
+}
+
 async function walk(root, relativeDirectory) {
   let entries;
   try {
@@ -273,6 +307,25 @@ async function main() {
     }
     console.log(`\n${shown} non-token color values under "${prefix || "src"}"`);
     process.exit(0);
+  }
+
+  const tokens = definedColorTokens(await readFile(path.join(ROOT, "src/app/globals.css"), "utf8"));
+  const undefinedTokens = [];
+  for (const guardedRoot of guardedRoots) {
+    for (const file of await walk(ROOT, guardedRoot)) {
+      const found = findUndefinedColorClasses(
+        await readFile(path.join(ROOT, file), "utf8"),
+        tokens,
+      );
+      for (const hit of found)
+        undefinedTokens.push(`${file.replaceAll(path.sep, "/")}:${hit.line}  ${hit.text}`);
+    }
+  }
+  if (undefinedTokens.length > 0) {
+    console.error(
+      `Undefined color utilities (no --color-* token in src/app/globals.css, so they render as nothing):\n${undefinedTokens.map((v) => `- ${v}`).join("\n")}`,
+    );
+    process.exit(1);
   }
 
   const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "tokens");

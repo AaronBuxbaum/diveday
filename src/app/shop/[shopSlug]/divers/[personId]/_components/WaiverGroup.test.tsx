@@ -12,6 +12,7 @@ import { WaiverGroup } from "./WaiverGroup";
 vi.mock("../waiver-actions", () => ({
   markWaiverInPersonAction: vi.fn(),
   recordMedicalClearanceAction: vi.fn(),
+  rejectDiverMedicalFormAction: vi.fn(),
 }));
 vi.mock("@/app/actions/held-sends", () => ({
   holdSendAction: vi.fn(),
@@ -221,6 +222,43 @@ describe("the waiver group", () => {
   });
 
   /**
+   * **The signed form the diver sent, where the answer is recorded** (issue
+   * #2797): a link to its own staff route, never the stored address, for any
+   * reader who sees the recording control.
+   */
+  it("offers the doctor's form a held diver sent, by its route", () => {
+    const profile = diver({
+      waiver: {
+        state: "medical_review",
+        at: new Date("2026-09-02T15:00:00.000Z"),
+      } as DiverProfile["waiver"],
+    });
+    renderCard({
+      ...profile,
+      diverMedicalForm: { recordId: "rec-9", sentAt: new Date("2026-09-03T15:00:00.000Z") },
+    } as DiverProfile);
+    const link = screen.getByRole("link", {
+      // The date is one unit, joined by U+00A0 (`keepUnitsWhole`).
+      name: /^Open the signed form the diver sent on Sep\s3,\s2026$/,
+    });
+    expect(link).toHaveAttribute("href", "/api/medical-clearances/rec-9/diver-form");
+    // And a way to turn it away, so a wrong photo is not stuck in the slot.
+    expect(screen.getByRole("button", { name: "Can’t use this form" })).toBeTruthy();
+  });
+
+  it("offers no doctor's form when the diver sent none", () => {
+    renderCard(
+      diver({
+        waiver: {
+          state: "medical_review",
+          at: new Date("2026-09-02T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+    );
+    expect(screen.queryByRole("link", { name: /signed form the diver sent/ })).toBeNull();
+  });
+
+  /**
    * **Every row in the group keeps the state row's inset** (pixel-craft
    * class 5). The physician's form, the send options and the outcome line
    * padded themselves `py-3` where the state row above them pads `py-4`, so
@@ -401,7 +439,7 @@ describe("the waiver group", () => {
     // A disclosure, not the plain row a clean release gets: the state row
     // inside carries the danger ink the closed summary cannot.
     expect(group.tagName).toBe("DETAILS");
-    expect(group.querySelector(".text-danger, .text-danger-strong")).not.toBeNull();
+    expect(group.querySelector(".text-danger")).not.toBeNull();
     // Danger and open on its own, with no departure to name: a physician's
     // "no" keeps the diver off every boat, whatever the caller passed.
     expect(group.querySelector("summary span.text-sm")?.className).toContain("text-danger");
@@ -504,7 +542,7 @@ describe("the waiver group", () => {
    * behind it answers 404 for exactly that caller, deliberately, so the two
    * would agree on the status and disagree on what it meant.
    */
-  function clearedDiver(documentOnFile: boolean) {
+  function clearedDiver(documentOnFile: boolean, fromDiver = false) {
     return diver({
       waiver: {
         state: "current",
@@ -513,11 +551,19 @@ describe("the waiver group", () => {
           at: new Date("2026-05-01T00:00:00Z"),
           source: "cleared",
           overriddenReferralAt: null,
-          clearance: { recordId: "record-1", documentOnFile },
+          clearance: { recordId: "record-1", documentOnFile, fromDiver },
         },
       } as DiverProfile["waiver"],
     });
   }
+
+  it("says when the evaluation is the form the diver sent", () => {
+    renderCard(clearedDiver(true, true), undefined, true);
+    expect(screen.getByText(/Sent by the diver/)).toBeTruthy();
+    cleanup();
+    renderCard(clearedDiver(true, false), undefined, true);
+    expect(screen.queryByText(/Sent by the diver/)).toBeNull();
+  });
 
   it("offers the evaluation to a reader who may open it", () => {
     renderCard(clearedDiver(true), undefined, true);

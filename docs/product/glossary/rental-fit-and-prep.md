@@ -389,6 +389,14 @@
   is the highest-consequence failure in the product and a spreadsheet cell is not a card sighting
   (ADR 20260724-import-verified-cards). That reasoning used to lean on a level card having an expiry
   to backstop a bad import; no card carries one now, and the confirm stands on its own consequence.
+- **Nitrox fill method** — how a shop fills enriched air, one setting on Settings › Rentals
+  (`shops.nitrox_fill_method`, issue 3004): *partial-pressure blending* (the default, also for every
+  new and seeded shop) or *membrane or premix only*. It places Rent out's O2-clean warning for a
+  tank with no current O2-clean record (`o2CleanWarnsForFill`): blending puts pure oxygen into the
+  tank at any mix, so it warns on every EANx fill; membrane or premix draws the line at 40%, and
+  the fill menu stops at 40%, so it never warns today (a test ties the two). A shop that ever adds
+  pure oxygen to a tank chooses blending. Advisory only: the fill is accepted either way. A value setting, not
+  a Features switch, because it turns no feature off.
 - **Nitrox request** — a per-booking ask for enriched air, billed per dive, offered only when the
   shop's **rental catalog** includes nitrox (most shops don't fill it, so this is off by default).
   A diver may request it **without** a verified card on file: the request is recorded and flagged

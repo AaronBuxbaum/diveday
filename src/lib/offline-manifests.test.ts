@@ -1164,7 +1164,7 @@ describe("offline manifest policy", () => {
       overriddenReferralAt: null,
       overriddenReferral: null,
       overriddenRefusal: null,
-      clearance: { recordId: "clearance-record-secret", documentOnFile: true },
+      clearance: { recordId: "clearance-record-secret", documentOnFile: true, fromDiver: false },
       guardian: null,
       ...overrides,
     });

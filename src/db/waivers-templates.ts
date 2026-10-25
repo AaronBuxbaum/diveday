@@ -94,7 +94,32 @@ export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
 export async function getCurrentWaiverGeneration(
   db: DbExecutor,
   shopId: string,
+  /**
+   * Read the generation in force at this instant instead (issue #3002): the
+   * newest version saved at or before it. A reading as of a departure that
+   * has since sailed then measures the release she sailed on against the
+   * terms that stood, not ones the shop wrote later. Falls back to the
+   * current version when none was saved by then.
+   */
+  asOf?: Date,
 ): Promise<{ materialGeneration: number } | null> {
+  if (asOf) {
+    const [then] = await db
+      .select({ materialGeneration: waiverTemplates.materialGeneration })
+      .from(waiverTemplates)
+      .where(
+        and(
+          eq(waiverTemplates.shopId, shopId),
+          isNull(waiverTemplates.deletedAt),
+          lte(waiverTemplates.createdAt, asOf),
+        ),
+      )
+      // `version` orders, as below; `createdAt` only says which versions
+      // existed by then, which a save race of milliseconds cannot move.
+      .orderBy(desc(waiverTemplates.version))
+      .limit(1);
+    if (then) return then;
+  }
   const [template] = await db
     .select({ materialGeneration: waiverTemplates.materialGeneration })
     .from(waiverTemplates)

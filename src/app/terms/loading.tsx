@@ -55,6 +55,20 @@ const TERMS_SECTIONS: ReadonlyArray<ReadonlyArray<LegalSkeletonBlock>> = [
   ],
   // Money
   [{ base: 7, sm: 4 }],
+  // Plans priced as a share of card money: the intro, then six terms.
+  [
+    { base: 5, sm: 3 },
+    {
+      terms: [
+        { base: 3, sm: 2 },
+        { base: 6, sm: 3 },
+        { base: 4, sm: 2 },
+        { base: 4, sm: 2 },
+        { base: 2, sm: 1 },
+        { base: 3, sm: 2 },
+      ],
+    },
+  ],
   // Whose data it is
   [{ base: 8, sm: 4 }],
   // What we do not promise

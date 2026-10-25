@@ -1,9 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
+  keyringOpensStored,
   openSecret,
   openSecretWithKeyring,
+  type SecretKeyring,
   sealSecret,
+  secretKeyFingerprint,
   secretKeyFromEnvironment,
 } from "./secret-box";
 
@@ -156,5 +159,89 @@ describe("key rotation", () => {
       secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY_PREVIOUS: previous.toString("base64") })
         .status,
     ).toBe("unset");
+  });
+});
+
+/**
+ * The deploy's check that the keyring opens what is already stored (issue
+ * #2999). A malformed key is refused by `scripts/check-env.mjs`; these are the
+ * two well-formed mistakes that would still lock out every two-factor staffer.
+ */
+describe("keyringOpensStored", () => {
+  const old = randomBytes(32);
+  const next = randomBytes(32);
+  /** One account enrolled under `old`: its secret sealed, its codes hashed. */
+  const enrolled = {
+    sealed: sealSecret("JBSWY3DPEHPK3PXP", old),
+    codesKeyId: secretKeyFingerprint(old),
+  };
+
+  it("passes the correct pair after a rotation", () => {
+    const keyring: SecretKeyring = { current: next, previous: old };
+    expect(keyringOpensStored(keyring, [enrolled])).toEqual({ status: "ok", checked: 1 });
+  });
+
+  it("passes an unrotated key, and an account already under the new key", () => {
+    expect(keyringOpensStored({ current: old, previous: null }, [enrolled])).toEqual({
+      status: "ok",
+      checked: 1,
+    });
+    const moved = {
+      sealed: sealSecret("JBSWY3DPEHPK3PXP", next),
+      codesKeyId: secretKeyFingerprint(next),
+    };
+    expect(keyringOpensStored({ current: next, previous: null }, [moved])).toEqual({
+      status: "ok",
+      checked: 1,
+    });
+  });
+
+  it("refuses a rotated key deployed without its previous", () => {
+    expect(keyringOpensStored({ current: next, previous: null }, [enrolled])).toEqual({
+      status: "cannot_open",
+      reason: "previous_missing",
+      checked: 1,
+      lockedOut: 1,
+    });
+  });
+
+  it("refuses a well-formed but wrong previous key", () => {
+    const keyring: SecretKeyring = { current: next, previous: randomBytes(32) };
+    expect(keyringOpensStored(keyring, [enrolled])).toEqual({
+      status: "cannot_open",
+      reason: "keys_do_not_open",
+      checked: 1,
+      lockedOut: 1,
+    });
+  });
+
+  it("refuses recovery codes hashed under a key the pair does not hold, though the secret opens", () => {
+    // The secret moved at a sign-in; the paper codes stayed under the old key.
+    const half = {
+      sealed: sealSecret("JBSWY3DPEHPK3PXP", next),
+      codesKeyId: secretKeyFingerprint(old),
+    };
+    expect(keyringOpensStored({ current: next, previous: null }, [half])).toMatchObject({
+      status: "cannot_open",
+      lockedOut: 1,
+    });
+  });
+
+  it("does not guess about codes whose key was never recorded, or an empty store", () => {
+    const unrecorded = { sealed: sealSecret("JBSWY3DPEHPK3PXP", next), codesKeyId: null };
+    expect(keyringOpensStored({ current: next, previous: null }, [unrecorded]).status).toBe("ok");
+    expect(keyringOpensStored({ current: next, previous: null }, [])).toEqual({
+      status: "ok",
+      checked: 0,
+    });
+  });
+
+  it("counts only the accounts it cannot open", () => {
+    const keyring: SecretKeyring = { current: next, previous: null };
+    const moved = { sealed: sealSecret("x", next), codesKeyId: secretKeyFingerprint(next) };
+    expect(keyringOpensStored(keyring, [moved, enrolled, enrolled])).toMatchObject({
+      checked: 3,
+      lockedOut: 2,
+    });
   });
 });

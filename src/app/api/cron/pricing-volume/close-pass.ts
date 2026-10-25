@@ -110,8 +110,8 @@ export async function closePercentMonths(
     const endedAt = live ? null : subscriptionEndedAt(subscription);
     if (!live && !(endedAt && endedAt.getTime() > bounds.from.getTime())) continue;
     const terms = live
-      ? shopPricing(shop.id, subscription, options.config)
-      : soldPricing(shop.id, subscription, options.config);
+      ? shopPricing(subscription, options.config)
+      : soldPricing(subscription, options.config);
     if (terms.plan !== "percent_of_volume") continue;
     const statement = await closePricingMonth(db, {
       shopId: shop.id,

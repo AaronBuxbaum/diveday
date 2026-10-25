@@ -138,6 +138,63 @@ export function secretKeyFingerprint(key: Buffer): string {
   return createHash("sha256").update(key).digest("hex").slice(0, 16);
 }
 
+/**
+ * What one account holds under the sealing key: a sealed value to trial-open
+ * (its two-factor secret) and the fingerprint of the key that hashed what
+ * cannot be opened (its recovery codes), null when there are none or the key
+ * was never recorded.
+ */
+export interface StoredSealing {
+  readonly sealed: string | null;
+  readonly codesKeyId: string | null;
+}
+
+/** A code, never a sentence: the deploy script picks the words. */
+export type KeyringCheck =
+  | { status: "ok"; checked: number }
+  | {
+      status: "cannot_open";
+      /**
+       * `previous_missing`: no previous key is set, so the current one was
+       * rotated without moving the old value across (or the old one was retired
+       * while accounts still needed it). `keys_do_not_open`: a previous key is
+       * set and neither opens, so that one is wrong.
+       */
+      reason: "previous_missing" | "keys_do_not_open";
+      checked: number;
+      lockedOut: number;
+    };
+
+/**
+ * **Whether this keyring opens what is already stored under it** (issue
+ * #2999). A malformed key is refused by the build's env check; a well-formed
+ * wrong one cannot be seen without the sealed data, and locks out every
+ * staffer with two-factor sign-in. So the deploy hands this the stored values
+ * and refuses to serve when any account would be locked out.
+ *
+ * Says how many accounts, never which key or what fingerprint: the result is
+ * printed into a build log.
+ */
+export function keyringOpensStored(
+  key: SecretKeyring,
+  stored: readonly StoredSealing[],
+): KeyringCheck {
+  const known = new Set(openingKeys(key).map(secretKeyFingerprint));
+  let lockedOut = 0;
+  for (const account of stored) {
+    const secretOpens = account.sealed === null || openSecret(account.sealed, key) !== null;
+    const codesMatch = account.codesKeyId === null || known.has(account.codesKeyId);
+    if (!secretOpens || !codesMatch) lockedOut += 1;
+  }
+  if (lockedOut === 0) return { status: "ok", checked: stored.length };
+  return {
+    status: "cannot_open",
+    reason: key.previous ? "keys_do_not_open" : "previous_missing",
+    checked: stored.length,
+    lockedOut,
+  };
+}
+
 /** The one key that seals. */
 export function sealingKey(key: SecretKey): Buffer {
   return Buffer.isBuffer(key) ? key : key.current;

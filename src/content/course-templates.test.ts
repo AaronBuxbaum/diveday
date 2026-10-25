@@ -170,6 +170,16 @@ describe("SDI templates", () => {
     }
   });
 
+  it("keep Rescue Diver at 18 and say SDI allows 10 with parental consent (issue #3011)", () => {
+    // A shop line, not SDI's floor: rescue skills tow and lift an adult-sized diver. The note says
+    // so, so a parent who knows SDI's number is not misled. A shop that wants juniors edits its copy.
+    const template = COURSE_TEMPLATES.find((entry) => entry.slug === "sdi-rescue-diver");
+    expect(template?.content.minimumAge).toBe(18);
+    expect(template?.content.prerequisiteNote).toContain(
+      "We teach Rescue Diver from 18. SDI allows divers from 10 with a parent's or guardian's consent, but this course is built for adult-sized rescues.",
+    );
+  });
+
   it("take SDI's own ages for the continuing-education courses", () => {
     const ages = Object.fromEntries(
       COURSE_TEMPLATES.filter((entry) => entry.agency === "sdi").map((entry) => [

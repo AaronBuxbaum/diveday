@@ -2981,7 +2981,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "sdi-rescue-diver",
-    version: 2,
+    version: 3,
     title: "Rescue Diver",
     agency: "sdi",
     description: "Spot a problem early, and know exactly what to do when you cannot.",
@@ -3002,7 +3002,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Small groups — every scenario is run by every diver",
       minimumAge: 18,
       prerequisiteNote:
-        "SDI Open Water Scuba Diver or equivalent, plus current CPR and first aid. We can run CPR and first aid alongside if you do not hold them. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+        "SDI Open Water Scuba Diver or equivalent, plus current CPR and first aid. We can run CPR and first aid alongside if you do not hold them. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive. We teach Rescue Diver from 18. SDI allows divers from 10 with a parent's or guardian's consent, but this course is built for adult-sized rescues.",
       includes: [
         "SDI digital certification card",
         "Confined-water rescue skills sessions",

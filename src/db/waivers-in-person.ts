@@ -27,6 +27,7 @@ import {
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
+import { peopleMinorDeclared } from "./minor-declared";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
@@ -137,7 +138,10 @@ type WaiverSigner = {
   fullName: string;
   /** For the guardian rule (`src/lib/guardian.ts`); null when the shop never asked. */
   dateOfBirth: string | null;
-  /** The seat's booker said "Under 18"; always false with no seat. */
+  /**
+   * The seat's booker said "Under 18". With no seat, any of the person's
+   * seats still ahead that says so (issue #2553), as the diver record reads.
+   */
   minorDeclared: boolean;
   /** The seat's trip and kind, so a lapse is read where the roster reads it (#2611); null with no seat. */
   seat?: { startsAt: Date; endsAt: Date; heldToMedical: boolean };
@@ -207,6 +211,7 @@ async function personSigner(
   tx: DbExecutor,
   shopId: string,
   personId: string,
+  now: Date,
 ): Promise<WaiverSigner | Extract<InPersonWaiverOutcome, { ok: false }>> {
   const [person] = await tx
     .select({ id: people.id, fullName: people.fullName, dateOfBirth: people.dateOfBirth })
@@ -221,13 +226,14 @@ async function personSigner(
     )
     .limit(1);
   if (!person) return { ok: false, reason: "person_not_found" };
+  const declared = await peopleMinorDeclared(tx, { shopId, personIds: [person.id], now });
   return {
     ok: true,
     bookingId: null,
     personId: person.id,
     fullName: person.fullName,
     dateOfBirth: person.dateOfBirth,
-    minorDeclared: false,
+    minorDeclared: declared.has(person.id),
     seat: undefined,
   };
 }
@@ -387,7 +393,7 @@ export async function recordInPersonWaiver(
 
     const signer = bookingSubject
       ? await bookingSigner(tx, input.shopId, bookingSubject)
-      : await personSigner(tx, input.shopId, (input.subject as { personId: string }).personId);
+      : await personSigner(tx, input.shopId, (input.subject as { personId: string }).personId, now);
     if (!signer.ok) return signer;
 
     const timezone = await shopTimezone(tx, input.shopId);

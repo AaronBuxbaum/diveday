@@ -764,6 +764,16 @@ export const RATE_LIMITS = {
    */
   doctorAnswersByPerson: per15Min(5),
   /**
+   * Sending the signed doctor's form from the doctor's page
+   * (`/waivers/[token]/doctor`, issue #2797), per **diver**, for the same
+   * reason as `doctorAnswersByPerson`: neither rotating addresses nor a
+   * reissued link buys a fresh budget. A release takes one form and the write
+   * refuses a second, so this paces the tries that fail (a file too big, not
+   * a photo or a PDF), each of which costs an image decode. Checked with
+   * `checkRateLimitFailClosed`: the bucket stands in front of a medical upload.
+   */
+  doctorFormByPerson: perHour(10),
+  /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *
    * Public and unauthenticated by necessity — the report comes from a diver's

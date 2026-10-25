@@ -225,3 +225,54 @@ export function HelpRequestControl({
     </div>
   );
 }
+
+export type HandledHelpRow = {
+  requestId: string;
+  revision: number;
+  helperPersonId: string;
+  /** The whole sentence about the request, already in words. */
+  line: string;
+  reopenLabel: string;
+  reopenAriaLabel: string;
+};
+
+/**
+ * Handled requests stay reachable after the undo toast is gone. Each Reopen runs the same
+ * `undo` transition the toast does, with the same guards: a stale revision or a changed helper
+ * comes back as the provider's own refusal line.
+ */
+export function HandledHelpRequests({
+  summary,
+  rows,
+}: {
+  summary: string;
+  rows: readonly HandledHelpRow[];
+}) {
+  const { run, copy } = useHelpRequest();
+  if (rows.length === 0) return null;
+  return (
+    <details className="rounded-control border border-border-subtle bg-surface-sunken px-3 py-2">
+      <summary className="cursor-pointer text-sm font-medium">{summary}</summary>
+      <ul className="mt-2 space-y-2">
+        {rows.map((row) => (
+          <li key={row.requestId} className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm text-muted">{row.line}</span>
+            <form action={run}>
+              <input type="hidden" name="requestId" value={row.requestId} />
+              <input type="hidden" name="expectedRevision" value={row.revision} />
+              <input type="hidden" name="helperPersonId" value={row.helperPersonId} />
+              <input type="hidden" name="intent" value="undo" />
+              <SubmitButton
+                pendingLabel={copy.saving}
+                ariaLabel={row.reopenAriaLabel}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+              >
+                {row.reopenLabel}
+              </SubmitButton>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}

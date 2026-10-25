@@ -140,6 +140,21 @@ export const pricingVolumeStatements = pgTable(
       .notNull()
       .references(() => shops.id),
     month: date("month", { mode: "string" }).notNull(),
+    /** The month's own card money as read at the close, before any late refund. */
+    monthCardCents: integer("month_card_cents").notNull().default(0),
+    /**
+     * Refunds recorded after an earlier statement closed, plus what that
+     * statement carried in, taken off this month's card money (issue 3024).
+     */
+    lateRefundCents: integer("late_refund_cents").notNull().default(0),
+    /** What this month could not absorb of `lateRefundCents`: the next statement takes it. */
+    refundCarryCents: integer("refund_carry_cents").notNull().default(0),
+    /**
+     * How much of this month's card money later statements have credited as
+     * late refunds, so a refund is credited once however often it is re-read.
+     */
+    refundedSinceCloseCents: integer("refunded_since_close_cents").notNull().default(0),
+    /** Billed card money: `monthCardCents` less `lateRefundCents`, never below zero. */
     volumeCents: integer("volume_cents").notNull(),
     /** The rate the fee was computed at: the shop's snapshot when the month closed. */
     basisPoints: integer("basis_points").notNull(),

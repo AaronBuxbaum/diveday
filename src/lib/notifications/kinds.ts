@@ -1375,6 +1375,27 @@ export type CustomerGearPiece = z.infer<typeof customerGearPieceSchema>;
  * notes never reach this payload.
  */
 /**
+ * **The one correction to a fly-safe wait a diver was told** (issue #2927).
+ * The night-before email said the rule in hours (H-150); a departure marked
+ * as decompression diving after it went out leaves that figure wrong. One
+ * line per seat, once, and no link: the diver's next step is to ask the
+ * crew. `seatId`, not `bookingId`, for the reason `departureNoteSchema`
+ * gives: the seat's own row (`bookings.fly_safe_corrected_at`) is what keeps
+ * it to one, not `notification_deliveries`.
+ */
+const flySafeCorrectionSchema = z.object({
+  kind: z.literal("fly_safe_correction"),
+  seatId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+/**
  * **A note to everyone on a departure** (batch 4, J4): the staffer's own short
  * line, checked before it was held (`departureNoteProblem`), and the diver's
  * own `/ready` link — the one link it may carry. One send per note per seat.
@@ -1580,6 +1601,35 @@ const seatAlreadyHeldSchema = z.object({
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /** When the claim was tried; keys the send. */
+  requestedAt: z.date(),
+  /**
+   * Which door the address was tried at: a seat-claim link (#2381) or the
+   * public booking form (#2691). Only the sentence differs.
+   */
+  attempt: z.enum(["claim", "booking"]),
+});
+
+/**
+ * **A public booking party did not book, because one member already holds a
+ * seat on the departure** (#2691, Aaron's 2026-10-24 decision). The data layer
+ * rolls back the whole party, and the form lands on a neutral page that names
+ * nobody, so the lead hears the outcome here, by email. The words say neither
+ * which member nor that anyone holds a seat (security review): the lead's
+ * address is whatever was typed, so the note must not answer "is this address
+ * booked" either. Not queued; the sender throttles it per lead and departure.
+ */
+const partyNotBookedSchema = z.object({
+  kind: z.literal("party_not_booked"),
+  shopId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  leadName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** When the booking was tried; keys the send. */
   requestedAt: z.date(),
 });
 
@@ -2033,6 +2083,7 @@ export const notificationSchema = z
     tripReminder7dSchema,
     tripReminder24hSchema,
     tripRescheduledSchema,
+    flySafeCorrectionSchema,
     tripRecapSchema,
     tripConditionsHoldSchema,
     tripMinimumNotMetSchema,
@@ -2040,6 +2091,7 @@ export const notificationSchema = z
     bookingCancelledSchema,
     partyPaymentReceiptSchema,
     seatAlreadyHeldSchema,
+    partyNotBookedSchema,
     welcomeSchema,
     addressConfirmationSchema,
     passwordResetRequestSchema,
@@ -2202,6 +2254,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "bookkeeper_confirmation":
     case "bookkeeper_notice":
     case "seat_already_held":
+    case "party_not_booked":
     case "setup_request_receipt":
       return false;
     default:
@@ -2344,6 +2397,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per note per seat; the note row exists before the send does.
     case "departure_note":
       return `departure-note/${notification.noteId}/${notification.seatId}`;
+    // One correction per seat, ever (issue #2927).
+    case "fly_safe_correction":
+      return `fly-safe-correction/${notification.seatId}`;
     // One send per tap on Tell.
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;
@@ -2361,6 +2417,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // turn a loop of claims into a loop of mail (issue #2381).
     case "seat_already_held":
       return `seat-already-held/${notification.heldBookingId}/${Math.floor(notification.requestedAt.getTime() / 3_600_000)}`;
+    // Never queued, so this key is never written; exact for the attempt anyway.
+    case "party_not_booked":
+      return `party-not-booked/${notification.tripId}/${notification.requestedAt.toISOString()}`;
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;

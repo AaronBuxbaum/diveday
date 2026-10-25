@@ -314,7 +314,21 @@ export type CloseoutRollCallGap = {
    * when none. Absent reads as unknown, and an unknown never softens.
    */
   latestMarkedDive?: number;
+  /**
+   * When the newest standing result at `latestMarkedDive` was taken, diver or
+   * crew (issue #2925). Absent or null reads as unknown, and an unknown never
+   * softens.
+   */
+  latestMarkAt?: Date | null;
 };
+
+/**
+ * **How long an open count may sit with no new mark and still read as being
+ * taken** (issue #2925, Aaron's decision of 2026-10-22). Past this, nobody is
+ * counting, and an open count on a boat at sea is an unreconciled count. A
+ * false alarm costs the desk a glance; a false calm costs a missing diver.
+ */
+export const OPEN_COUNT_QUIET_MS = 20 * 60 * 1000;
 
 export type CloseoutDeparture = {
   tripId: string;
@@ -492,6 +506,9 @@ const NOT_BACK_ABOARD_REASONS: ReadonlySet<RollCallGapReason> = new Set([
  *    logged: an earlier dive's count left open while the boat moved on is how
  *    a diver or a guide is left at the first site, whichever half it is and
  *    whichever gap headlines (re-review B1).
+ * 7. Somebody marked somebody at that checkpoint within the last
+ *    `OPEN_COUNT_QUIET_MS`: a count left half done is not in progress
+ *    (issue #2925). A missing mark time, or one later than `now`, reads loud.
  */
 function countStillBeingTaken(
   trip: CloseoutTripInput,
@@ -508,6 +525,7 @@ function countStillBeingTaken(
     if (other.latestMarkedDive === undefined) return false;
     if (other.diveNumber !== other.latestMarkedDive) return false;
     if (other.diveNumber !== gap.diveNumber) return false;
+    if (!markedWithinQuietWindow(other.latestMarkAt, now)) return false;
   }
   if (historical) return false;
   if (!hasSailed(trip.startsAt, now)) return false;
@@ -519,6 +537,14 @@ function countStillBeingTaken(
   if (gap.latestMarkedDive === undefined || gap.latestMarkedDive !== gap.diveNumber) return false;
   if (trip.loggedDives === undefined || trip.loggedDives > gap.diveNumber) return false;
   return true;
+}
+
+/** Whether `markAt` is a real time no later than `now` and inside `OPEN_COUNT_QUIET_MS` of it. */
+function markedWithinQuietWindow(markAt: Date | null | undefined, now: Date): boolean {
+  if (!markAt) return false;
+  const quietFor = now.getTime() - markAt.getTime();
+  if (!Number.isFinite(quietFor)) return false;
+  return quietFor >= 0 && quietFor < OPEN_COUNT_QUIET_MS;
 }
 
 /** The open count of one half (`reason`) on a trip's gaps; `0` when that half has none. */

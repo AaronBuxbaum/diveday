@@ -626,6 +626,7 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
  */
 test("a copy opened because DiveDay was slow says so from the list on, and offers the live manifest once it answers", async ({
   page,
+  context,
 }) => {
   // The board walk, then one live-manifest ask (five seconds) and the open.
   test.setTimeout(35_000);
@@ -641,6 +642,12 @@ test("a copy opened because DiveDay was slow says so from the list on, and offer
   await expect(page).toHaveURL(`/offline-manifest?trip=${tripId}&fallback=slow`);
   await expect(page.getByText(staff("shared.connectivity.unansweredWithCopy"))).toBeVisible();
   await expect(page.getByText(/DiveDay didn’t answer, so this is the list/)).toBeVisible();
+  // Under the roll call: who may be missing from this copy (issue #2980).
+  await expect(page.getByText(/one removed still has one/)).toBeVisible();
+  // Signal drops mid-count: the caveat stays, now asking for the count on the boat.
+  await context.setOffline(true);
+  await expect(page.getByText(/Count heads on the boat/)).toBeVisible();
+  await context.setOffline(false);
   await expect(page.getByText("Fresh copy")).toHaveCount(0);
   await expect(page.getByText(staff("shared.connectivity.online"), { exact: true })).toHaveCount(0);
   // DiveDay answers this time: the copy says so and offers the live list,

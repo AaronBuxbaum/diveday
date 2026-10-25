@@ -145,7 +145,7 @@ describe("a card the diver does not hold", () => {
     expect(screen.getByTestId("diver-file-group-certifications")).not.toHaveAttribute("open");
     const needs = screen.getByText("What this trip needs").closest("li");
     expect(needs).toHaveTextContent("Deep specialty. None on file.");
-    expect(screen.getByText("Nitrox. None on file.")).toHaveClass("text-danger-strong");
+    expect(screen.getByText("Nitrox. None on file.")).toHaveClass("text-danger");
   });
 
   it("names a missing Deep card beside a level card waiting for a look, and keeps the door open", () => {
@@ -165,9 +165,9 @@ describe("a card the diver does not hold", () => {
     expect(screen.getByTestId("diver-file-group-certifications")).toHaveAttribute("open");
     // The look is a verify task, not a missing card, so it is not in danger ink.
     expect(screen.getByText("Certification is waiting for staff verification.")).not.toHaveClass(
-      "text-danger-strong",
+      "text-danger",
     );
-    expect(screen.getByText("Deep specialty. None on file.")).toHaveClass("text-danger-strong");
+    expect(screen.getByText("Deep specialty. None on file.")).toHaveClass("text-danger");
   });
 
   it("lets an empty file's None on file speak for itself", () => {

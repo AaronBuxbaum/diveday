@@ -168,6 +168,20 @@ async function settledReply(tabId, spec, text, query) {
   };
 }
 
+/**
+ * **Where the last lookups spent their time**, for a check that stalls (#2878): each phase's
+ * fixed name and when it began, nothing else. No address, no query, no page text, and only in
+ * this worker's memory, gone when Chrome stops it; the real-extension browser test reads it
+ * back when a check there fails (`e2e/agency-check-extension.spec.ts`).
+ */
+const CHECK_PHASES_KEPT = 200;
+globalThis.DiveDayCheckPhases = [];
+function phase(name) {
+  const kept = globalThis.DiveDayCheckPhases;
+  kept.push([Date.now(), name]);
+  if (kept.length > CHECK_PHASES_KEPT) kept.splice(0, kept.length - CHECK_PHASES_KEPT);
+}
+
 /** How long a lookup may take, end to end. The page gives up at 45 seconds. */
 const CHECK_DEADLINE_MS = 40_000;
 /** How often the answer is read while it settles. */
@@ -182,17 +196,22 @@ function sleep(ms) {
 function tabLoaded(tabId, deadline) {
   return new Promise((resolve) => {
     const timer = setTimeout(() => finish(false), Math.max(0, deadline - Date.now()));
+    let finished = false;
     function finish(loaded) {
+      if (!finished) phase(loaded ? "tab:loaded" : "tab:not-loaded");
+      finished = true;
       clearTimeout(timer);
       chrome.tabs.onUpdated.removeListener(onUpdated);
       resolve(loaded);
     }
     function onUpdated(updatedId, change) {
+      if (updatedId === tabId && change.status) phase(`tab:updated:${change.status}`);
       if (updatedId === tabId && change.status === "complete") finish(true);
     }
     chrome.tabs.onUpdated.addListener(onUpdated);
     chrome.tabs.get(tabId).then(
       (tab) => {
+        phase(`tab:get:${tab.status}`);
         if (tab.status === "complete") finish(true);
       },
       () => finish(false),
@@ -201,8 +220,15 @@ function tabLoaded(tabId, deadline) {
 }
 
 async function run(tabId, func, args = []) {
-  const [injection] = await chrome.scripting.executeScript({ target: { tabId }, func, args });
-  return injection ? injection.result : undefined;
+  phase(`run:${func.name}`);
+  try {
+    const [injection] = await chrome.scripting.executeScript({ target: { tabId }, func, args });
+    phase(`ran:${func.name}`);
+    return injection ? injection.result : undefined;
+  } catch (error) {
+    phase(`threw:${func.name}`);
+    throw error;
+  }
 }
 
 /** The text a check found, or why there is none. */
@@ -210,12 +236,15 @@ async function check(query, pages) {
   const spec = Object.hasOwn(pages, query.agency) ? pages[query.agency] : null;
   if (!spec) return { ok: false, reason: "unsupported" };
   const deadline = Date.now() + CHECK_DEADLINE_MS;
+  phase("check:start");
   let tab;
   try {
     tab = await chrome.tabs.create({ url: spec.url, active: false });
   } catch {
+    phase("tab:create-failed");
     return { ok: false, reason: "tab_failed" };
   }
+  phase(`tab:created:${tab.status}`);
   try {
     if (!(await tabLoaded(tab.id, deadline))) return { ok: false, reason: "timeout" };
     if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
@@ -230,6 +259,7 @@ async function check(query, pages) {
     for (;;) {
       before = (await run(tab.id, readAgencyPage)) || "";
       filled = await run(tab.id, fillAgencyForm, [query, spec, SIGN_IN_PATH_SOURCE]);
+      phase(filled?.ok ? "fill:ok" : "fill:short");
       if (filled?.ok) break;
       // A sign-in form: nothing was typed, and retrying would not change that.
       if (filled?.missing?.includes("signedIn")) return { ok: false, reason: "signed_out" };
@@ -513,8 +543,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     cardNumber: message.query.cardNumber,
   };
   const spec = Object.hasOwn(AGENCIES, query.agency) ? AGENCIES[query.agency] : null;
+  phase("message:check");
   check(query, AGENCIES)
     .then((reply) => {
+      phase(reply.ok ? "reply:ok" : `reply:${reply.reason}`);
       if (!reply.ok) return reply;
       // A page behind a shop's sign-in, whichever lookup reached it, hands
       // back only this diver's lines (fill.js).

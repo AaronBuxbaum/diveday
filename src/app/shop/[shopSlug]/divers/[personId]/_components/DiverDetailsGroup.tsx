@@ -85,6 +85,11 @@ export function DiverDetailsGroup({
     timezone,
     factSaysIt: !(gap && "blocker" in gap.sentence),
   });
+  // **A booked "Under 18" with no date on file asks for the date** (issue
+  // #2553, Option A). The release already reads as a minor's off that seat;
+  // the date is what the staffer can correct a wrong tick with. Nothing
+  // writes one from the stamp.
+  const askForDateOfBirth = diver.minorDeclared && !diver.person.dateOfBirth;
   return (
     <DiverFileGroupDisclosure
       id="edit-details"
@@ -100,10 +105,16 @@ export function DiverDetailsGroup({
             ? t("divers.details.summaryEmergency", { name: emergencyName })
             : t("divers.details.summaryEmergencyNoPhone", { name: emergencyName })
       }
-      summaryTone={missing?.tone ?? (emergencyName && emergencyPhone ? "muted" : "warning")}
-      detail={missing?.detail}
+      summaryTone={
+        missing?.tone ??
+        (emergencyName && emergencyPhone && !askForDateOfBirth ? "muted" : "warning")
+      }
+      detail={
+        missing?.detail ??
+        (askForDateOfBirth ? t("divers.details.minorDeclaredNoDateOfBirth") : undefined)
+      }
       stacked
-      open={open || Boolean(missing?.open)}
+      open={open || Boolean(missing?.open) || askForDateOfBirth}
     >
       <FieldGrid
         as="form"
@@ -261,6 +272,7 @@ function clearDateAnswerLabel(t: StaffTranslator, dateOfBirth: string, timezone:
 }
 
 function dateOfBirthHint(t: StaffTranslator, diver: DiverProfile): string {
+  if (!diver.person.dateOfBirth && diver.minorDeclared) return t("divers.header.minorDeclaredHint");
   if (diver.person.dateOfBirth || !diver.person.adultAttestedAt) {
     return t("divers.header.optionalHint");
   }
