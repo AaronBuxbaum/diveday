@@ -277,7 +277,8 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(page.getByText(/^That date doesn’t match the one/)).toBeVisible();
   await expect(page.getByText("Question 3")).toHaveCount(0);
   await expect(
-    page.getByText(/^Send a photo of the signed form to front\.desk@mail\.example before/),
+    // Since #2797 the upload leads and the shop's address is the fallback.
+    page.getByText(/^Can’t send it here\? Email a photo to front\.desk@mail\.example before/),
   ).toBeVisible();
 
   // Back on the roster, the single button now reports the completed-but-flagged
