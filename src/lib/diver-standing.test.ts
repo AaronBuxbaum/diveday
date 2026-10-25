@@ -19,6 +19,7 @@ function seat(id: string, startsAt: string, status = "booked") {
     booking: { id, status },
     trip: { id: `trip-${id}`, status: "scheduled", startsAt: new Date(startsAt) },
     numberedDiveDay: status === "booked" || status === "checked_in",
+    outWithShop: status === "booked" || status === "checked_in",
   };
 }
 
@@ -73,6 +74,26 @@ describe("diverStanding", () => {
       base,
     );
     expect(standing).toMatchObject({ diveDays: 1, since: "2026-09-28", lastOut: "2026-09-28" });
+  });
+
+  // Review 2 of issue 2809: a partner who rides along every Saturday has no
+  // dive days, and still reads when they were last out.
+  it("keeps last out for a rider or snorkeler regular with no dive days", () => {
+    const rode = (id: string, startsAt: string) => ({
+      ...seat(id, startsAt),
+      numberedDiveDay: false,
+    });
+    const standing = diverStanding(
+      diver({
+        bookings: [
+          rode("sat1", "2026-10-03T12:00:00Z"),
+          rode("sat2", "2026-10-10T12:00:00Z"),
+          seat("gone", "2026-10-14T12:00:00Z", "no_show"),
+        ],
+      }),
+      base,
+    );
+    expect(standing).toMatchObject({ diveDays: 0, since: null, lastOut: "2026-10-10" });
   });
 
   it("does not count an imported visit twice on a day with a seat, nor one that did not happen", () => {

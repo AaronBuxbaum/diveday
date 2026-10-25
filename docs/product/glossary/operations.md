@@ -1908,8 +1908,10 @@
   seats that are numbered dive days (`numberedDiveDay`, asked of each seat by `getDiverProfile`)
   and no longer ahead, and the imported visits not standing `did_not_happen`
   (`mergeShopHistory`). A morning and an afternoon boat on one date are one day, a no-show is
-  none, and an imported visit on a day with a seat is not counted twice. Since and last out are
-  the first and last of those days on the shop's calendar. Spent is drawn only for a reader who may manage
+  none, and an imported visit on a day with a seat is not counted twice. Since is the first of
+  those days on the shop's calendar. Last out is the last day the person was out with the shop in
+  any seat known to be theirs, a ride-along or a snorkel included, so a rider regular with no dive
+  days still reads it. Spent is drawn only for a reader who may manage
   orders, in the shop's currency, net of refunds; friends brought counts the distinct other people
   whose live seats name one of this diver's seats as the one that brought them
   (`booking_referrals`), at this shop only (`friendsBroughtBy`, `src/db/buddy-referrals.ts`).
