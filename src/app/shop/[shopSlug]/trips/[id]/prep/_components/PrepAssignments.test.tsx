@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { TripPrep } from "@/db/trips";
 import type { GearServiceState } from "@/lib/gear";
@@ -24,8 +24,8 @@ function renderAssignments(
 /**
  * **A proposal for every piece the register can answer** (UX audit
  * 2026-10-07, item 9): a proposed row says which unit in words and offers
- * Assign and Change, never a select; a row with no proposal keeps its picker
- * open; and the section offers every proposal in one tap.
+ * Change, never a select; a row with no proposal says so and offers Pick, the
+ * same idiom; and the section offers every proposal in one tap.
  */
 describe("proposed units on the Gear tab", () => {
   function withProposal(
@@ -75,13 +75,17 @@ describe("proposed units on the Gear tab", () => {
     };
   }
 
-  it("says the proposed unit in words, and keeps the picker open only where there is none", () => {
+  it("gives every open row one line and one text button, with no select at rest", () => {
     renderAssignments(withProposal());
     expect(screen.getByText("Proposed: BCD #3 · L")).toBeInTheDocument();
     // One text button per proposed row, no per-row Assign (A10).
     expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
     expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
-    // Theo's XL has no exact unit, so his row is the one select on the tab.
+    // Theo's XL has no proposal: the same idiom, "No unit yet" and Pick,
+    // so no row on the tab is a bare select (visual review polish).
+    expect(screen.getByText(t("gear.prep.proposal.none"))).toBeInTheDocument();
+    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: t("gear.prep.proposal.pick") }));
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
   });
 
@@ -98,6 +102,7 @@ describe("proposed units on the Gear tab", () => {
 
   it("labels a unit with an unanswered service concern in the picker, as it labels a lapsed clock", () => {
     renderAssignments(withProposal({ otherConcern: true }));
+    fireEvent.click(screen.getByRole("button", { name: t("gear.prep.proposal.pick") }));
     expect(
       screen.getByRole("option", {
         name: `BCD #4 · S · ${t("gear.prep.optionServiceConcern")}`,
@@ -114,20 +119,29 @@ describe("proposed units on the Gear tab", () => {
    * **One number set** (visual review 2026-10-24, A10 and B54): the summary and
    * "Assign all" read one count, so what the button assigns is exactly the
    * proposals on screen, and what the summary says is still to pick is exactly
-   * the open rows (each proposal and each picker).
+   * the open rows (each proposal and each "No unit yet"). The summary ends on
+   * the button's own number, "· 1 proposed", so the two never read as two
+   * counts (visual review polish).
    */
   it("counts the button and the summary from the rows on screen", () => {
     renderAssignments(withProposal());
     const proposed = screen.getAllByText(/^Proposed: /).length;
-    const pickers = screen.getAllByRole("combobox").length;
+    const unproposed = screen.getAllByText(t("gear.prep.proposal.none")).length;
     const summary = screen.getByText(/units? assigned/).textContent ?? "";
-    const [, assigned, needed, missing] =
-      summary.match(/^(\d+) of (\d+) units? assigned · (\d+) still to pick/) ?? [];
-    expect(Number(missing)).toBe(proposed + pickers);
+    const [, assigned, needed, missing, summaryProposed] =
+      summary.match(/^(\d+) of (\d+) units? assigned · (\d+) still to pick · (\d+) proposed$/) ??
+      [];
+    expect(Number(missing)).toBe(proposed + unproposed);
     expect(Number(needed)).toBe(Number(assigned) + Number(missing));
+    expect(Number(summaryProposed)).toBe(proposed);
     const button = screen.getByRole("button", { name: /^Assign (the proposed unit|all \d+)/ });
     const n = button.textContent?.match(/\d+/)?.[0] ?? "1";
-    expect(Number(n)).toBe(proposed);
+    expect(Number(n)).toBe(Number(summaryProposed));
+  });
+
+  it("says no proposed count when nothing is proposed", () => {
+    renderAssignments({ ...withProposal(), proposals: new Map() });
+    expect(screen.getByText("0 of 2 units assigned · 2 still to pick")).toBeInTheDocument();
   });
 
   /**
@@ -192,6 +206,7 @@ describe("a diver flagged for a staff fit on the Gear tab", () => {
         t("shared.rentalFit.needsStaffFitWithNote", { note: "No XL BCD left" }),
       ),
     ).toBeTruthy();
+    fireEvent.click(within(container).getByRole("button", { name: t("gear.prep.proposal.pick") }));
     const [picker, ...others] = within(container).getAllByRole("combobox");
     expect(others).toHaveLength(0);
     expect((picker as HTMLSelectElement).value).toBe("");

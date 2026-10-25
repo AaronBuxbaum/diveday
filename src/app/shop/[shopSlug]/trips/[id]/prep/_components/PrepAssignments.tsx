@@ -80,11 +80,15 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                 // (B54). The tail is dropped on a cancellation, where "still
                 // to pick" is an instruction to pick on a day nothing is
                 // picked for, and at sea, where nothing more is picked.
+                // With proposals on screen the line ends on the button's
+                // own number, "· 13 proposed", so "Assign all 13 proposed
+                // units" beside it is the same count, not a third one.
                 counts.missing > 0 && !cancelled && !sailed
-                  ? t("gear.prep.cartLine", {
+                  ? t(counts.proposed > 0 ? "gear.prep.cartLineProposed" : "gear.prep.cartLine", {
                       assigned: counts.assigned,
                       needed: counts.needed,
                       missing: counts.missing,
+                      proposed: counts.proposed,
                     })
                   : t("gear.prep.cartLineAssigned", {
                       assigned: counts.assigned,
