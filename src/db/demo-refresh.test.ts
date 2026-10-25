@@ -562,6 +562,63 @@ describe("refreshCanonicalDemoSchedule", () => {
       expect(await marks(db, boat.id)).toEqual(settled);
     });
 
+    // Review 2 of issue 2917: a visitor drilling a lost diver takes a mark
+    // back or sets one to not boarded. Only a standing "boarded" is back.
+    it("brings home a diver whose return mark was taken back or set to not boarded", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      const anHourLater = new Date(boat.endsAt.getTime() + 60 * 60_000);
+      const back = await db
+        .select()
+        .from(rollCallEvents)
+        .where(
+          and(
+            eq(rollCallEvents.tripId, boat.id),
+            eq(rollCallEvents.checkpoint, "after_dive_2"),
+            eq(rollCallEvents.status, "boarded"),
+          ),
+        )
+        .orderBy(asc(rollCallEvents.occurredAt));
+      const [first, second] = back;
+      const last = back.at(-1);
+      if (!first || !second || !last) throw new Error("expected divers counted back");
+      const drill = (row: typeof first, status: "cleared" | "not_boarded") => ({
+        shopId: row.shopId,
+        tripId: row.tripId,
+        bookingId: row.bookingId,
+        recordedByPersonId: row.recordedByPersonId,
+        checkpoint: "after_dive_2",
+        status,
+        source: "live" as const,
+        occurredAt: new Date(last.occurredAt.getTime() + 1_000),
+      });
+      await db
+        .insert(rollCallEvents)
+        .values([drill(first, "cleared"), drill(second, "not_boarded")]);
+
+      expect(await bringDemoBoatsAtSeaHome(db, anHourLater)).toBeGreaterThanOrEqual(1);
+
+      const afterDiveTwo = await getTripManifest(db, shop.id, boat.id, "after_dive_2");
+      expect(afterDiveTwo?.summary.awaiting).toBe(0);
+      expect(afterDiveTwo?.summary.boarded).toBe(afterDiveTwo?.summary.totalDivers);
+    });
+
+    it("leaves a cancelled boat at sea alone", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, boat.id));
+      const before = await marks(db, boat.id);
+
+      await bringDemoBoatsAtSeaHome(db, new Date(boat.endsAt.getTime() + 60 * 60_000));
+
+      expect(await marks(db, boat.id)).toEqual(before);
+      const logged = await db
+        .select({ id: executedDives.id })
+        .from(executedDives)
+        .where(and(eq(executedDives.tripId, boat.id), eq(executedDives.diveNumber, 2)));
+      expect(logged).toHaveLength(0);
+    });
+
     it("counts every diver and both guides back after dive 2, and logs it, once she is past her return", async () => {
       const { db, shop } = historyCtx;
       const boat = await boatAtSea(db, shop.id);
