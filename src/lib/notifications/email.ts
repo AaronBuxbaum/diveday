@@ -1329,9 +1329,9 @@ export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): Noti
     ["From", input.source],
   ];
   // The link opens the sign-up form for one shop, once (ADR
-  // 20261009-single-use-setup-links). Said in the mail because Reply-To is the
-  // requester: a quoted reply hands the link to whoever typed that address,
-  // which nothing has verified.
+  // 20261009-single-use-setup-links). Said in the mail because whoever typed
+  // the address is unverified: the mail sets no Reply-To (issue 2834), and a
+  // reply or forward that quotes the link hands it to whoever receives it.
   const link = input.setupUrl
     ? {
         text: `Setup link: ${input.setupUrl}`,

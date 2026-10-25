@@ -278,7 +278,8 @@ export function AddPanel({
           set" badge (task 150, UX persona lens 17). Still optional: the badge
           stays for the departure someone puts up before the season's rate is
           settled. The box is narrow, its helper line is not, so only the input
-          is capped. */}
+          is capped, by `max-w-28`: a `w-28` beside `controlClass`'s `w-full`
+          races by stylesheet order and lost (visual review A33). */}
       <FieldGrid columns={1}>
         <Field label={copy.price} hint={copy.optional} description={copy.priceDescription}>
           <input
@@ -288,7 +289,7 @@ export function AddPanel({
             min={0}
             max={price.max}
             placeholder={price.placeholder}
-            className={`${controlClass} tabular-nums max-w-40`}
+            className={`${controlClass} max-w-28 tabular-nums`}
           />
         </Field>
       </FieldGrid>
@@ -359,23 +360,18 @@ export function AddPanel({
             value={diveSiteId}
             disabled={expanded}
             onChange={(event) => setDiveSiteId(event.target.value)}
-            className={controlClass}
+            aria-busy={options === null ? true : undefined}
+            className={`${controlClass}${options === null ? " animate-pulse" : ""}`}
           >
             <option value="">{copy.decideLater}</option>
             {initialSite && options === null ? (
               <option value={initialSite.id}>{initialSite.name}</option>
             ) : null}
-            {options === null ? (
-              <option value="" disabled>
-                {copy.optionsLoading}
+            {(options?.diveSites ?? []).map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.title}
               </option>
-            ) : (
-              options.diveSites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.title}
-                </option>
-              ))
-            )}
+            ))}
           </select>
         </Field>
       </FieldGrid>

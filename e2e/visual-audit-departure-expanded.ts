@@ -238,7 +238,9 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
         .first();
       await openIfClosed(facts);
       await expect(
-        facts.getByRole("link", { name: /missing a (rental )?size|not asked about kit/i }).first(),
+        facts
+          .getByRole("link", { name: /^Prep · \d+$|missing a (rental )?size|not asked about kit/i })
+          .first(),
       ).toBeVisible();
       await expect(facts.getByRole("link", { name: /awaiting payment/ })).toBeVisible();
       await capture(page, "departure-needs-you-expanded", "light");

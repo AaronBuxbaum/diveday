@@ -74,7 +74,6 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     diveSite: st("schedule.builder.diveSite"),
     ordinaryTrip: st("schedule.builder.ordinaryTrip"),
     decideLater: st("schedule.builder.decideLater"),
-    optionsLoading: st("schedule.builder.optionsLoading"),
     adding: st("schedule.builder.adding"),
     putOnBoard: st("schedule.builder.putOnBoard"),
     newDate: st("schedule.builder.newDate"),

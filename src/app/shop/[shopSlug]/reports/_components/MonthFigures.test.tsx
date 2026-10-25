@@ -209,27 +209,3 @@ describe("the coral budget", () => {
     expect(screen.getByText("Everyone’s paperwork is in").className).not.toContain("rise-in");
   });
 });
-
-/** "Sailed … · Still to sail …" under the month under way (fourth UX review, item 22). */
-describe("the sailed split", () => {
-  it("sits under the detail and above the comparison", () => {
-    const { container } = renderFigures([
-      {
-        key: "seats",
-        label: "Seats",
-        value: "129",
-        detail: "across 20 departures",
-        split: "Sailed 104 · Still to sail 25",
-        comparison: "up 4% vs 124",
-      },
-    ]);
-    const lines = [...container.querySelectorAll("dd span.block.text-sm")].map(
-      (line) => line.textContent,
-    );
-    expect(lines).toEqual([
-      "across 20 departures",
-      "Sailed 104 · Still to sail 25",
-      "up 4% vs 124",
-    ]);
-  });
-});

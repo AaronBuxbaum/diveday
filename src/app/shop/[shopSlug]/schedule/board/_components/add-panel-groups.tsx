@@ -62,10 +62,13 @@ export function PayAtBookingGroup({
         suffix left, four widths in one stack (K-332). */}
       {/* A legend names this payment control group; it must remain a
         fieldset rather than becoming a generic SectionCard. */}
+      {/* The paid-booking fields sit two by two from `sm` and in one row only
+          from `lg` (visual review A44): four in a row at `md` wrapped every
+          label. The deposit and its window, then the minimum and its deadline. */}
       <fieldset hidden={!expanded} disabled={!expanded} className={GROUP_FRAME}>
         <legend className={`${legendClass} text-sm font-medium`}>{copy.payAtBookingLegend}</legend>
         <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
-        <FieldGrid columns={2} className="mt-4">
+        <FieldGrid columns={4} className="mt-4">
           <Field
             label={copy.depositLabel}
             hint={copy.optional}
@@ -79,7 +82,7 @@ export function PayAtBookingGroup({
               max={price.max}
               placeholder={price.placeholder}
               title={copy.depositTitle}
-              className={`${controlClass} tabular-nums max-w-40`}
+              className={`${controlClass} tabular-nums max-w-28`}
             />
           </Field>
           <Field
@@ -174,11 +177,15 @@ export function CourseSelect({
           : undefined
       }
     >
+      {/* While the catalogue is in flight the box pulses where its options
+          will be and says no word (visual review A33): "Loading…" read as an
+          option. The board usually hands the catalogue in with the page. */}
       <select
         name="courseId"
         value={courseId}
         onChange={(event) => setCourseId(event.target.value)}
-        className={controlClass}
+        aria-busy={options === null ? true : undefined}
+        className={`${controlClass}${options === null ? " animate-pulse" : ""}`}
       >
         <option value="">{copy.ordinaryTrip}</option>
         {options === null ? (
@@ -186,9 +193,6 @@ export function CourseSelect({
             {/* The catalogue is still in flight; the course this panel was
                 opened for is the one option that must already be here. */}
             {initialCourse ? <option value={initialCourse.id}>{initialCourse.title}</option> : null}
-            <option value="" disabled>
-              {copy.optionsLoading}
-            </option>
           </>
         ) : (
           Object.entries(

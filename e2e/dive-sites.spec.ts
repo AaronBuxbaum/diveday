@@ -1,7 +1,14 @@
 import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openIfClosed, openTripAbout, openTripMore } from "./helpers";
+import {
+  daysFromNow,
+  e2eNow,
+  openIfClosed,
+  openTripAbout,
+  openTripAboutRow,
+  openTripMore,
+} from "./helpers";
 
 const staffCopy = staffTranslator("en-US");
 
@@ -78,7 +85,7 @@ test.describe("staff", () => {
 
     // The conditions form waits behind its disclosure (summary-first Overview).
     await openTripAbout(page);
-    await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
+    await openTripAboutRow(page, "Conditions");
     await page
       .getByLabel("Conditions overview")
       .fill("Warm water and an easy morning are expected.");
@@ -157,7 +164,7 @@ test.describe("staff", () => {
     await page.goto(`${manageTripUrl}?view=details`);
     // Published, so the disclosure reads "Edit"; the clear control sits inside.
     await openTripAbout(page);
-    await page.getByText("Edit crew prediction", { exact: true }).click();
+    await openTripAboutRow(page, "Conditions");
     await page.getByRole("button", { name: "Return to automated outlook" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
     // The clear's own notice forces the disclosure open on the redirected

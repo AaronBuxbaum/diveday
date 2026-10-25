@@ -202,6 +202,47 @@ CI's normal Playwright shards exclude `e2e/mobile*.spec.ts`; `e2e/pixel-probe.sp
 the probe, its spec, `e2e/fixtures.ts`, `globals.css`, a dependency or `ci.yml` changed
 (`changes.pixel_probe`).
 
+### Where a visual shard's time goes
+
+Measured 2026-10-24 on shard 1/8 of the full list (104 tests, one worker, a shared 4-core box)
+with `e2e/visual-timing-reporter.ts`:
+
+| Item | Seconds | Share of wall |
+| --- | --- | --- |
+| Wall | 1,336 | 100% |
+| Sum of test durations | 1,285 | 96% |
+| Outside any test (server boot, global setup's migrate and seed, browser warm-up) | 52 | 4% |
+| `demoReset` before every test | 479 | 36% |
+| `privateShop` (9 tests: mint, sign-in, drop) | 42 | 3% |
+| `context` and `page` | 33 | 2% |
+| Worker starts | 1 for 104 tests | |
+
+Two suspects are cleared. Every `test.use` in the visual specs sets test-scoped options
+(`colorScheme`, `viewport`, `locale`, the step bounds, `privateShopSlug`), and Playwright keys a
+worker only on worker-scoped fixtures, so the whole shard runs in one worker and one browser.
+`privateShop` costs 3%. The largest cost outside the captures is the per-test reset.
+
+On CI, the "7.1 minutes recorded" per shard counted only the 622 of 836 captures that
+`scripts/e2e-durations.json` had durations for. The deal weighs each unrecorded capture at the
+recorded mean, which puts the shard at about 9.5 minutes. The rest of the 12.3-minute job is
+about 50 s of job steps and the run's own setup.
+
+To measure again, run `pnpm e2e:build`, deal a shard with `node scripts/e2e-shard.mjs`, then
+run `E2E_WORKERS=1 VISUAL_TIMING_OUT=.agent-out/timing.json pnpm exec playwright test e2e/visual --test-list <list> --reporter=line,./e2e/visual-timing-reporter.ts`.
+
+**Two workers per visual shard is a trial, not a setting.** `.github/workflows/visual-workers-trial.yml`
+runs on manual dispatch only. Each of its eight shards captures its list three times from one
+build: twice at `E2E_WORKERS=2` and once at 1. `scripts/compare-capture-sets.mjs` then fails the
+shard if any PNG differs by one byte or is missing from a set, and lists each one in the step
+summary. CI's `visual` job stays at one worker until a trial is green.
+
+Byte equality is stricter than reg-suit, which ignores anti-aliasing (`enableAntialias` in
+`regconfig.json`). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
+were a timed toast caught at one width and gone at the next, now waited out before the capture
+(`blowout-cascade`, `staffing-shift-remove-disclosure`). The third was anti-aliasing on one map
+pin (`dive-sites-library-pin-selected`, a channel difference of at most 3). So a difference in a
+trial is a worker-count effect only when one-worker runs agree on that capture.
+
 ## Commands
 
 ```bash

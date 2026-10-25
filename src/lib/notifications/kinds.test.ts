@@ -283,6 +283,15 @@ describe("operator_alert setup_request", () => {
     }
   });
 
+  // Issue 2834, security review 2: the mail carries a setup link and the
+  // address was typed into a public form, so no caller can put a Reply-To back.
+  it("refuses a Reply-To, whoever the caller", () => {
+    expect(
+      notificationSchema.safeParse({ ...alert, sender: { replyTo: "ana@shop.invalid" } }).success,
+    ).toBe(false);
+    expect(notificationSchema.safeParse({ ...alert, sender: {} }).success).toBe(true);
+  });
+
   it("names a system only by a switching guide's slug", () => {
     const named = { ...alert, currentSystem: "booking_system" };
     expect(

@@ -104,7 +104,6 @@ export const COPY: BuilderCopy = {
   diveSite: "Dive site",
   ordinaryTrip: "Fun dive",
   decideLater: "Decide later",
-  optionsLoading: "Loading…",
   adding: "Adding…",
   putOnBoard: "Put it on the board",
   newDate: "New date",
@@ -284,7 +283,6 @@ export function weekFrom(days: FixtureDay[], overrides: Partial<BuilderWeek> = {
       next: "Next week",
       thisWeek: "This week",
       today: "Today",
-      print: "Print",
     },
     days: days.map((day) => ({
       dateIso: day.dateIso,

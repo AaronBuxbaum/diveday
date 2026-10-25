@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { EyebrowBackLink, SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull, seatsOnSale, type TripCapacity } from "@/lib/trips";
@@ -92,7 +90,6 @@ export function TripPageHeader({
   trip,
   boardHref,
   backLabel,
-  today,
   locale,
   timeZone,
   badge,
@@ -111,10 +108,10 @@ export function TripPageHeader({
   /** The nav's own word for it, so the two cannot drift (issue #824). */
   backLabel: string;
   /**
-   * A second way up, to the day, for the one tab that hides the shell: the
-   * Boat tab is boat mode, with no tab bar, so "‹ Schedule" was its only door
-   * and Today was two hops away (UX audit 2026-10-07, item 39). The other tabs
-   * keep the shell's own Today and leave this out.
+   * **Not drawn** (visual review 2026-10-24, B53): a departure has one way
+   * up, "‹ Schedule". The manifest still passes the day it once drew beside
+   * it; layer 4, which owns `manifest/**`, drops the argument, and this field
+   * goes with it.
    */
   today?: { href: string; label: string };
   locale: string;
@@ -175,22 +172,9 @@ export function TripPageHeader({
           are readings of rather than the board two levels above it.
           `print:hidden` because `print/page.tsx` wears this header too and a
           paper sheet has no navigation. */}
-      {today ? (
-        <div className="flex flex-wrap gap-x-6 print:hidden">
-          <EyebrowBackLink href={boardHref}>{backLabel}</EyebrowBackLink>
-          {/* Below `lg` only, which is exactly where boat mode hides the
-              shell (`globals.css`); from `lg` the sidebar's own Today stands
-              beside the page and a second one here would be the same door
-              twice. */}
-          <EyebrowBackLink href={today.href} className="lg:hidden">
-            {today.label}
-          </EyebrowBackLink>
-        </div>
-      ) : (
-        <EyebrowBackLink href={boardHref} className="print:hidden">
-          {backLabel}
-        </EyebrowBackLink>
-      )}
+      <EyebrowBackLink href={boardHref} className="print:hidden">
+        {backLabel}
+      </EyebrowBackLink>
       {/* **The title and its actions are one row, centred on each other.**
           The 48px ••• used to sit in a grid cell beside the 16px eyebrow on a
           phone — 16px under the eyebrow's centre, and holding the title 49px
@@ -279,45 +263,5 @@ export function TripPageHeaderSkeleton({
         <div className="h-lh w-56 max-w-full rounded bg-surface-sunken" />
       </div>
     </div>
-  );
-}
-
-/**
- * A masthead door that points at the "Add a diver" band further down the page.
- *
- * **Link weight, not primary.** One act, two primaries: this jump and the
- * band's own "Add diver" submit were both solid, 1,200px apart on desktop and
- * one scroll apart on a phone, so the page offered a staffer a choice between
- * two spellings of the same thing (docs/design/principles.md §8, and
- * forms-and-controls.md's "Action rows"). The band is where the act actually
- * happens — it holds the search, the candidates and the hand-entry path — so
- * the band keeps the primary and this becomes what it is: a way down the page.
- */
-export function TripAddDiverLink({
-  href,
-  label,
-  compactLabel = label,
-  ariaLabel,
-}: {
-  href: string;
-  label: string;
-  compactLabel?: string;
-  /** Distinguishes the masthead jump from the inline add form for assistive tech. */
-  ariaLabel?: string;
-}) {
-  return (
-    <a
-      href={href}
-      aria-label={ariaLabel}
-      // `buttonClass`, not a hand-rolled twin of it: this used to type its own
-      // class string and had drifted to `font-semibold` and a `sm:`
-      // re-statement of its own radius. The glyph and the width-forked label
-      // are the children.
-      className={buttonClass({ variant: "link", className: "gap-1.5 print:hidden" })}
-    >
-      <DiveDayIcon name="addBooking" className="size-4" />
-      <span className="sm:hidden">{compactLabel}</span>
-      <span className="hidden sm:inline">{label}</span>
-    </a>
   );
 }

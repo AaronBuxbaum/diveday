@@ -184,6 +184,7 @@ test("a package is added on Promos, and the save lands back on its section", asy
   await expect(packageRow).toContainText("10 dives");
   await expect(packageRow).toContainText("$450");
   await expect(packageRow).toContainText("Fun dives only");
+  await packageRow.getByRole("button", { name: "More for Ten-dive card" }).click();
   await packageRow.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByText(staff("settings.main.notice.packageDeleted"))).toBeVisible();
   await expect(page.getByText("Ten-dive card")).not.toBeVisible();

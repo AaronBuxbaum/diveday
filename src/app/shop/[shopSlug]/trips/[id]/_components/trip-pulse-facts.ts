@@ -1,11 +1,14 @@
+import { quietIcon } from "@/app/shop/[shopSlug]/_components/today/row-glyph";
+import { rowLine } from "@/app/shop/[shopSlug]/_components/today/spine-reading";
 import type { getTripOverview } from "@/db/trips";
 import { boatWorkText } from "@/i18n/boat-work-labels";
 import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
-import { countsAsJob, type TodayAction } from "@/lib/today";
+import { countsAsJob, rowTone, type TodayAction, type TodayActionKind } from "@/lib/today";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -151,20 +154,46 @@ export function tripPulseFacts({
               key: action.id,
               text: todayRowText(action),
               href: awayFromThisPage(action.href, shopPath(shopSlug, "trips", tripId)),
+              chip: {
+                group: action.diver?.readiness ? `${action.kind}:readiness` : action.kind,
+                kind: t(ACTION_KIND_KEYS[action.kind]),
+                icon: quietIcon(action.kind),
+                tone: rowTone(action),
+              },
             }))
           : boatWorkItems(pulse.work, { startsAt, now }).map((item) => ({
               text: boatWorkText(t, item),
               href: boatWorkHref(item, { shopSlug, tripId }),
-              ...(item.tone === "warning" ? { tone: "warning" as const } : {}),
+              ...(item.tone === "warning"
+                ? { tone: "warning" as const }
+                : { chip: boatWorkChip(item.code, t) }),
             }))),
       ]
     : [];
 }
 
+/** The Today kind a boat-work item is, so the strip draws it as Today draws that row. */
+const BOAT_WORK_KIND = {
+  missing_sizes: "dive_prep",
+  ungated_nitrox: "nitrox_gate",
+  missing_contact: "emergency_contact",
+  open_orders: "payment",
+} as const satisfies Record<BoatWorkItem["code"], TodayActionKind>;
+
+function boatWorkChip(code: BoatWorkItem["code"], t: StaffTranslator) {
+  const kind = BOAT_WORK_KIND[code];
+  return {
+    group: kind,
+    kind: t(ACTION_KIND_KEYS[kind]),
+    icon: quietIcon(kind),
+    tone: "neutral" as const,
+  };
+}
+
 /** A Today row as one line: the person, then the sentence, as the row reads on Today. */
 function todayRowText(action: TodayAction): string {
-  if (action.aboutDeparture || !action.subject) return action.detail;
-  return action.detail ? `${action.subject} · ${action.detail}` : action.subject;
+  if (action.aboutDeparture || !action.subject) return rowLine(action.detail);
+  return action.detail ? `${action.subject} · ${rowLine(action.detail)}` : rowLine(action.subject);
 }
 
 /** A Today row that opens this very page lands on its roster instead, never a dead tap. */

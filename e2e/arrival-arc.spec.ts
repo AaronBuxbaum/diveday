@@ -9,6 +9,7 @@ import {
   findTripOnBoard,
   openThreadStep,
   openTripAbout,
+  openTripAboutRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -49,7 +50,7 @@ test.describe("the dive arrival arc", () => {
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: helperName });
     await expect(page.getByRole("button", { name: `Unassign ${helperName}` })).toBeVisible();
-    await page.getByText("Edit details", { exact: true }).click();
+    await openTripAboutRow(page, "The plan");
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
     // By form name: "Landmark" is a substring of the photo control's own label
@@ -124,14 +125,14 @@ test.describe("the dive arrival arc", () => {
       .filter({ hasText: "Arrival Diver" })
       .filter({ has: page.getByText(staff("today.actionKind.helpRequest"), { exact: true }) });
     await expect(helpRow).toHaveCount(1);
-    await expect(helpRow.getByText("Asked for help: carry gear.")).toBeVisible();
+    await expect(helpRow.getByText("Asked for help: carry gear")).toBeVisible();
     await helpRow.getByRole("button", { name: "Arrange help" }).click();
     const crew = helpRow.getByLabel("Crew member");
     await expect(crew.locator("option").filter({ hasText: helperName })).toHaveText(helperName);
     await crew.selectOption({ label: helperName });
     await helpRow.getByRole("button", { name: "Confirm helper" }).click();
     await expect(
-      helpRow.getByText(`${helperName} will help with carry gear.`, { exact: true }),
+      helpRow.getByText(`${helperName} will help with carry gear`, { exact: true }),
     ).toBeVisible();
     await helpRow.getByRole("button", { name: "Help completed" }).click();
     // The row leaves the active queue after completion; the page-level outcome
@@ -149,7 +150,7 @@ test.describe("the dive arrival arc", () => {
 
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(helpRow).toHaveCount(1);
-    await expect(helpRow.getByText(`${helperName} will help with carry gear.`)).toBeVisible();
+    await expect(helpRow.getByText(`${helperName} will help with carry gear`)).toBeVisible();
 
     await page.goto(readyPath);
     // The response lives in the day-of step's body, and at most one step is

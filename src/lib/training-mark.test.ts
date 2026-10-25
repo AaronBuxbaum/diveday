@@ -453,6 +453,43 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
     expect(reversed.seated.size).toBe(7);
   });
 
+  it("does not let an assistant lift the DSD cap off the same instructor's Open Water seats (#2830)", () => {
+    const dsd = {
+      baseStudentsPerInstructor: 2,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 2,
+    };
+    const dsdSeat = { id: "A", sessionTripId: "s1", rule: dsd };
+    const ow = seats("s2", 6);
+    // A divemaster aboard raises the Open Water cap to 10, but not the DSD seat's.
+    const withDm = trainingRoom({
+      marked: [dsdSeat, ...ow],
+      sessionCrew: crews,
+      departureCrew: [teacher, dm],
+    });
+    expect(withDm.seated.has("A")).toBe(true);
+    expect(withDm.seated.size).toBe(2);
+    expect([...withDm.overRatio].sort()).toEqual(["s2-1", "s2-2", "s2-3", "s2-4", "s2-5"]);
+    // And no candidate Open Water seat is offered as spare once the DSD seat is on.
+    const offer = trainingRoom({
+      marked: [dsdSeat, ...seats("s2", 1)],
+      candidate: { id: "new", sessionTripId: "s2", rule: entry },
+      sessionCrew: crews,
+      departureCrew: [teacher, dm],
+    });
+    expect(offer.spare).toBe(false);
+    // A second instructor teaching only the Open Water session takes those seats at their own ratio.
+    const split = trainingRoom({
+      marked: [dsdSeat, ...ow],
+      sessionCrew: new Map([
+        ["s1", [teacher]],
+        ["s2", [teacher2]],
+      ]),
+      departureCrew: [teacher, teacher2],
+    });
+    expect(split.seated.size).toBe(7);
+  });
+
   it("tells a seat over the ratio from one with no instructor aboard", () => {
     const room = trainingRoom({
       marked: seats("s1", 9),

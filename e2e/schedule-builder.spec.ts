@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripAbout } from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, openTripAboutRow } from "./helpers";
 
 signedInAsOwner();
 
@@ -338,7 +338,7 @@ test.describe("schedule builder", () => {
     await row.getByRole("link", { name: title }).click();
     await expect(page.getByText("$129 per diver")).toBeVisible();
     await openTripAbout(page);
-    await page.getByText("Edit details", { exact: true }).click();
+    await openTripAboutRow(page, "The plan");
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
 
@@ -662,7 +662,7 @@ test.describe("schedule builder", () => {
     await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
     await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=details#details$/);
     await openTripAbout(page);
-    await page.getByText("Edit details", { exact: true }).click();
+    await openTripAboutRow(page, "The plan");
     await page.getByLabel(/Price per diver/).fill("110");
     await page.getByRole("button", { name: "Save changes" }).click();
     // The save redirects through `noticeUrl`, so its own notice is the signal

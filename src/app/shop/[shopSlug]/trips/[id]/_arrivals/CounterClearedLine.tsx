@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { EarnedMomentLine } from "@/components/EarnedMoment";
 
 /**
- * **Everyone expected is here** — the counter's one sanctioned coral moment
- * (ADR 20260827-clearwater-surface-language, decision 11's table, row "The
- * counter"). It reuses the shipped `checkIn.clearedTitle` words and adds no
- * second accent: the count figure beside it deliberately does *not* also
- * celebrate, because a surface renders at most one coral element at a time.
+ * **Everyone expected is here**, in the success wash (visual review A07: the
+ * coral fill read as a warning). It reuses the shipped `checkIn.clearedTitle`
+ * words; the count figure beside it deliberately does *not* also celebrate.
  *
  * **The first-paint guard is the whole reason this is a client component.**
  * `EarnedMomentLine` carries `rise-in`, which is right for a line that appears
@@ -47,8 +44,13 @@ export function CounterClearedLine({
 
   if (!cleared) return null;
   return (
-    <EarnedMomentLine animate={entering} className="mt-4">
+    // An all-clear in the success wash, never coral or amber, which read as a
+    // warning on a phone in the sun (visual review A07).
+    <p
+      role="status"
+      className={`${entering ? "rise-in " : ""}mt-4 rounded-lg border border-success/30 bg-success-tint px-3 py-2 text-sm font-semibold text-success-strong`}
+    >
       {children}
-    </EarnedMomentLine>
+    </p>
   );
 }

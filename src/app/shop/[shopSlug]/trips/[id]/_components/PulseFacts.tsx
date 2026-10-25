@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RowGlyph } from "@/app/shop/[shopSlug]/_components/today/row-glyph";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { TripPulseFact } from "./TripPulse";
 
@@ -42,10 +43,16 @@ function FactLink({ fact }: { fact: TripPulseFact }) {
 export function PulseFacts({
   facts,
   foldLabel,
+  kindCount = (kind, count) => `${kind} · ${count}`,
+  rosterHref = "#roster",
 }: {
   facts: readonly TripPulseFact[];
   /** "Needs you · 2", already counted for the folded facts. */
   foldLabel: (count: number) => string;
+  /** A chip that stands for several facts of one kind: "Contact · 3". */
+  kindCount?: (kind: string, count: number) => string;
+  /** Where a chip whose facts open different doors lands: the roster, every diver's row. */
+  rosterHref?: string;
 }) {
   if (facts.length === 0) return null;
   const hazards = facts.filter((fact) => fact.tone === "danger");
@@ -68,17 +75,75 @@ export function PulseFacts({
             <DisclosureCaret className="group-open/facts:rotate-90" />
             {foldLabel(work.length)}
           </summary>
-          <div className="mt-5 flex flex-col gap-y-7 ps-5">
-            {work.map((fact) => (
-              <FactLink key={fact.key ?? fact.href} fact={fact} />
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {pulseChips(work, rosterHref).map((chip) => (
+              <li key={chip.key}>
+                <Link
+                  href={chip.href}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text transition-colors hover:bg-surface-sunken hover:no-underline"
+                >
+                  {chip.tone ? <RowGlyph tone={chip.tone} icon={chip.icon} /> : null}
+                  {chip.facts.length > 1 && chip.kind !== undefined ? (
+                    <span className="font-medium tabular-nums">
+                      {kindCount(chip.kind, chip.facts.length)}
+                    </span>
+                  ) : (
+                    <span>{chip.facts[0]?.text}</span>
+                  )}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </details>
       ) : (
         work.map((fact) => <FactLink key={fact.key ?? fact.href} fact={fact} />)
       )}
     </div>
   );
+}
+
+type PulseChip = {
+  key: string;
+  href: string;
+  kind?: string;
+  icon?: NonNullable<TripPulseFact["chip"]>["icon"];
+  tone?: NonNullable<TripPulseFact["chip"]>["tone"];
+  facts: TripPulseFact[];
+};
+
+/**
+ * **The opened "Needs you · 9" is a count strip** (visual review 2026-10-24,
+ * A46): one chip per kind (the Today kind, keyed apart from its translated
+ * word, with a readiness blocker its own chip), drawn as Today draws that kind's row (its glyph,
+ * its word, its count), in the order the kinds first appear. A kind of one
+ * fact keeps that fact's own words; several become "Contact · 3". Nothing a
+ * fact linked to is lost: a chip whose facts share a door opens it, and one
+ * whose facts open different doors (three divers' records) opens the roster,
+ * where every one of those divers has their row and its flag.
+ */
+export function pulseChips(work: readonly TripPulseFact[], rosterHref: string): PulseChip[] {
+  const chips: PulseChip[] = [];
+  const byKind = new Map<string, PulseChip>();
+  for (const fact of work) {
+    const group = fact.chip?.group;
+    const existing = group === undefined ? undefined : byKind.get(group);
+    if (existing) {
+      existing.facts.push(fact);
+      if (existing.href !== fact.href) existing.href = rosterHref;
+      continue;
+    }
+    const chip: PulseChip = {
+      key: group ?? fact.key ?? fact.href,
+      href: fact.href,
+      kind: fact.chip?.kind,
+      icon: fact.chip?.icon,
+      tone: fact.chip?.tone,
+      facts: [fact],
+    };
+    chips.push(chip);
+    if (group !== undefined) byKind.set(group, chip);
+  }
+  return chips;
 }
 
 /**

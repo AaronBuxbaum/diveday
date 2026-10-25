@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   holdSendAction,
   releaseHeldSendAction,
@@ -12,17 +12,13 @@ import { SendHold, type SendHoldCopy } from "@/components/SendHold";
 import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import type { HeldSendOutcome } from "@/db/held-sends";
 import { fill } from "@/i18n/fill";
+import { useOfferDiscountBlank } from "./OfferDiscount";
 
 /** Every word this client component renders, resolved on the server (`offerSeatCopy`). */
 export type OfferSeatCopy = {
   /** The held send's undo row (ADR 20260906-before-you-ask, decision 2). */
   hold: SendHoldCopy;
   offerSeat: string;
-  /** "Offer a seat to {count}" */
-  offerSeatTo: string;
-  /** "{count} ticked is below this trip’s bar" */
-  belowBarOne: string;
-  belowBarMany: string;
   sent: string;
   couldntSend: string;
   /** "Write to {name}" */
@@ -40,22 +36,13 @@ export type OfferSeatInterest = { interestId: string; name: string; email: strin
 
 type Fallback = { interest: OfferSeatInterest; mailto: string | null; message: string };
 
-/** The ticks this form owns: boxes that name it in their `form` attribute. */
-function tickedBoxes(formId: string): HTMLInputElement[] {
-  return Array.from(
-    document.querySelectorAll<HTMLInputElement>(`input[type="checkbox"][form="${formId}"]:checked`),
-  );
-}
-
 /**
  * **Offer a seat** (ADR 20261017-one-interest-with-a-scope): the one act on who
  * wants in, always a held send (`seat_offer`, eight seconds, Undo where the
- * button stood). Two ways to choose who:
- *
- * - `chooseByTick`: the panel's tick boxes sit outside this form and join it by
- *   their `form` attribute, so the list stays on screen while the hold drains.
- *   The label counts what is ticked, and a below-the-bar tick is said under it.
- * - otherwise (Today's row) the offer goes to `interests` as given.
+ * button stood), to the `interests` it is given: one row's person, on Who
+ * wants in and on Today's row alike. The tick boxes and the bulk "Offer a
+ * seat to N" went (visual review 2026-10-24, A14): two ways to offer on one
+ * list, and a disabled button that waited for a tick.
  *
  * Only an interest the server could not email (no provider, no address, an opt-out
  * or a send inside the 24-hour window) falls back to a composer with the same
@@ -67,8 +54,8 @@ export function OfferSeat({
   formId,
   tripId,
   interests,
-  chooseByTick,
   label,
+  ariaLabel,
   offeredLabel,
   bookingPath,
   shopName,
@@ -81,9 +68,10 @@ export function OfferSeat({
   formId: string;
   tripId: string;
   interests: OfferSeatInterest[];
-  chooseByTick: boolean;
-  /** The button's words when nothing is ticked for; the Today row's "Offer a seat to Ana". */
+  /** The button's words: "Offer a seat", or the Today row's "Offer a seat to Ana". */
   label?: string;
+  /** The button's name for a reader when its words repeat down a list: "Offer Ana a seat". */
+  ariaLabel?: string;
   /** "offered 2h ago", when the interest was already offered this seat. */
   offeredLabel?: string;
   bookingPath: string;
@@ -91,29 +79,15 @@ export function OfferSeat({
   tripTitle: string;
   tripWhen: string;
   copy: OfferSeatCopy;
-  /** "With a discount" (`OfferDiscountFields`), for a role that may discount. */
+  /** The discount's rider (`OfferDiscountRider`), for a role that may discount. */
   discountFields?: ReactNode;
 }) {
   const router = useRouter();
-  const [ticked, setTicked] = useState({ count: 0, below: 0 });
   const [emailed, setEmailed] = useState(false);
   const [fallbacks, setFallbacks] = useState<Fallback[]>([]);
   const [copied, setCopied] = useState<Record<string, "copied" | "failed">>({});
 
-  // The ticks live outside this component, in the server-rendered rows; one
-  // listener on the document reads them whenever any box changes.
-  useEffect(() => {
-    if (!chooseByTick) return;
-    const read = () => {
-      const boxes = tickedBoxes(formId);
-      setTicked({ count: boxes.length, below: boxes.filter((box) => box.dataset.belowBar).length });
-    };
-    read();
-    document.addEventListener("change", read);
-    return () => document.removeEventListener("change", read);
-  }, [chooseByTick, formId]);
-
-  const count = chooseByTick ? ticked.count : interests.length;
+  const count = interests.length;
 
   function composerFor(interest: OfferSeatInterest): Fallback {
     const bookingUrl = new URL(bookingPath, window.location.origin).toString();
@@ -149,12 +123,6 @@ export function OfferSeat({
       .flatMap((result) =>
         interests.filter((interest) => interest.interestId === result.interestId),
       );
-    // An interest that went is done being ticked; one that did not stays ticked.
-    for (const box of tickedBoxes(formId)) {
-      if (!failed.some((interest) => interest.interestId === box.value)) box.checked = false;
-    }
-    const boxes = tickedBoxes(formId);
-    setTicked({ count: boxes.length, below: boxes.filter((box) => box.dataset.belowBar).length });
     const next = failed.map(composerFor);
     setFallbacks(next);
     if (failed.length < results.length) {
@@ -169,13 +137,8 @@ export function OfferSeat({
     else if (only) void copyMessage(only);
   }
 
-  const buttonText = emailed
-    ? copy.sent
-    : chooseByTick
-      ? count > 0
-        ? fill(copy.offerSeatTo, { count })
-        : copy.offerSeat
-      : (label ?? copy.offerSeat);
+  const discountBlank = useOfferDiscountBlank();
+  const buttonText = emailed ? copy.sent : (label ?? copy.offerSeat);
 
   return (
     <div className="flex flex-col items-start gap-1">
@@ -190,30 +153,24 @@ export function OfferSeat({
       >
         <input type="hidden" name="holdKind" value="seat_offer" />
         <input type="hidden" name="tripId" value={tripId} />
-        {chooseByTick
-          ? null
-          : interests.map((interest) => (
-              <input
-                key={interest.interestId}
-                type="hidden"
-                name="interestId"
-                value={interest.interestId}
-              />
-            ))}
+        {interests.map((interest) => (
+          <input
+            key={interest.interestId}
+            type="hidden"
+            name="interestId"
+            value={interest.interestId}
+          />
+        ))}
         {discountFields}
         <button
           type="submit"
-          disabled={count === 0}
+          disabled={count === 0 || discountBlank}
+          aria-label={emailed ? undefined : ariaLabel}
           className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
         >
           <span aria-live="polite">{buttonText}</span>
         </button>
       </SendHold>
-      {chooseByTick && ticked.below > 0 ? (
-        <p className="text-xs text-warning-strong">
-          {fill(ticked.below === 1 ? copy.belowBarOne : copy.belowBarMany, { count: ticked.below })}
-        </p>
-      ) : null}
       {offeredLabel ? <span className="text-xs text-muted">{offeredLabel}</span> : null}
       {fallbacks.length > 0 ? (
         <div className="text-xs text-muted">

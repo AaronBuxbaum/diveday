@@ -24,7 +24,6 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "belowBooked": "{count, plural, one {Ya hay # buceador reservado} other {Ya hay # buceadores reservados}}, así que las plazas de buceo no pueden ser menos.",
-    "edit": "Editar",
     "divesOnly": "Solo buceadores",
     "priceLine": "{type} {price}",
     "free": "gratis",
@@ -42,8 +41,5 @@
   "headCount": {
     "aboardOfTotalPeople": "{aboard} de {total, plural, one {# persona} other {# personas}} a bordo",
     "ofTotalAboardPeople": "de {total, plural, one {# persona} other {# personas}} a bordo"
-  },
-  "reports": {
-    "bookingsDetailSplit": "{detail}: {split}"
   }
 }

@@ -583,9 +583,11 @@ const DIVE_TWO_RAN_MIN = 55;
  * For every demo shop's boat at sea past her `endsAt` with dive 2 not yet in
  * the log, this writes what the crew would have: the last pair's and the
  * guide's `after_dive_2` marks, a few minutes after the last count, and dive
- * 2's log. Never a mark ahead of `now`, never on a shop that is not a demo,
- * and a boat whose dive 2 is logged is left alone, so a second pass writes
- * nothing. Returns how many boats it brought home.
+ * 2's log. Never a mark ahead of `now`, never on a shop that is not a demo or
+ * a boat a visitor cancelled, and a boat whose dive 2 is logged is left alone.
+ * Each boat is written in its own transaction under her row lock, so a second
+ * pass, even one running at the same time, writes nothing. Returns how many
+ * boats it brought home.
  */
 export async function bringDemoBoatsAtSeaHome(
   db: DbExecutor,
@@ -605,115 +607,155 @@ export async function bringDemoBoatsAtSeaHome(
       and(
         eq(shops.isDemo, true),
         inArray(trips.title, [AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE]),
+        // A visitor who cancelled her gets no dive 2 log: under H-84 that
+        // would turn a cancelled departure into a dive day for every seat.
+        eq(trips.status, "scheduled"),
         lte(trips.endsAt, now),
         liveTrip(),
       ),
     );
   let home = 0;
   for (const trip of due) {
-    const [logged] = await db
-      .select({ id: executedDives.id })
-      .from(executedDives)
-      .where(and(eq(executedDives.tripId, trip.id), eq(executedDives.diveNumber, 2)))
-      .limit(1);
-    if (logged) continue;
-
-    const [captain] = await db
-      .select({ personId: tripAssignments.personId })
-      .from(tripAssignments)
-      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.tripRole, "captain")))
-      .limit(1);
-    if (!captain) continue;
-
-    const divers = await db
-      .select({
-        bookingId: rollCallEvents.bookingId,
-        checkpoint: rollCallEvents.checkpoint,
-        occurredAt: rollCallEvents.occurredAt,
-      })
-      .from(rollCallEvents)
-      .where(eq(rollCallEvents.tripId, trip.id));
-    const crew = await db
-      .select({
-        personId: rollCallCrewEvents.personId,
-        checkpoint: rollCallCrewEvents.checkpoint,
-        occurredAt: rollCallCrewEvents.occurredAt,
-      })
-      .from(rollCallCrewEvents)
-      .where(eq(rollCallCrewEvents.tripId, trip.id));
-
-    const lastCount = [...divers, ...crew]
-      .filter((row) => row.checkpoint === "after_dive_2")
-      .reduce((latest, row) => Math.max(latest, row.occurredAt.getTime()), 0);
-    if (lastCount === 0) continue;
-    const upAt = new Date(
-      Math.min(lastCount + LAST_PAIR_UP_AFTER_LAST_COUNT_MIN * 60_000, now.getTime()),
-    );
-
-    const countedBack = (rows: { checkpoint: string }[]) =>
-      rows.some((row) => row.checkpoint === "after_dive_2");
-    const stillDown = [...new Set(divers.map((row) => row.bookingId))].filter(
-      (bookingId) =>
-        divers.some((row) => row.bookingId === bookingId && row.checkpoint === "after_dive_1") &&
-        !countedBack(divers.filter((row) => row.bookingId === bookingId)),
-    );
-    const crewDown = [...new Set(crew.map((row) => row.personId))].filter(
-      (personId) =>
-        crew.some((row) => row.personId === personId && row.checkpoint === "after_dive_1") &&
-        !countedBack(crew.filter((row) => row.personId === personId)),
-    );
-    if (stillDown.length > 0) {
-      await db.insert(rollCallEvents).values(
-        stillDown.map((bookingId, index) => ({
-          shopId: trip.shopId,
-          tripId: trip.id,
-          bookingId,
-          recordedByPersonId: captain.personId,
-          status: "boarded" as const,
-          checkpoint: "after_dive_2",
-          source: "live" as const,
-          occurredAt: new Date(upAt.getTime() - (stillDown.length - index) * 1_000),
-        })),
-      );
-    }
-    if (crewDown.length > 0) {
-      await db.insert(rollCallCrewEvents).values(
-        crewDown.map((personId) => ({
-          shopId: trip.shopId,
-          tripId: trip.id,
-          personId,
-          recordedByPersonId: captain.personId,
-          status: "boarded" as const,
-          checkpoint: "after_dive_2",
-          source: "live" as const,
-          occurredAt: upAt,
-        })),
-      );
-    }
-
-    const [planned] = await db
-      .select({ diveSiteId: tripDives.diveSiteId })
-      .from(tripDives)
-      .where(and(eq(tripDives.tripId, trip.id), eq(tripDives.diveNumber, 2)))
-      .limit(1);
-    const secondDive = atSeaDives(trip.title === AT_SEA_DUSK_TITLE)[1];
-    const unit = trip.depthUnit ?? "meters";
-    await db.insert(executedDives).values({
-      shopId: trip.shopId,
-      tripId: trip.id,
-      diveNumber: 2,
-      actualSiteId: planned?.diveSiteId ?? null,
-      enteredAt: new Date(upAt.getTime() - DIVE_TWO_RAN_MIN * 60_000),
-      exitedAt: upAt,
-      maxDepthMeters: secondDive
-        ? depthToMeters(
-            unit === "feet" ? secondDive.maxDepth.feet : secondDive.maxDepth.meters,
-            unit,
-          )
-        : null,
-      recordedByPersonId: captain.personId,
-    });
-    home++;
+    // One boat at a time, under her row lock, asked again inside it: a doubled
+    // cron delivery waits here, then finds dive 2 logged and writes nothing.
+    if (await db.transaction((tx) => bringBoatHome(tx, trip, now))) home++;
   }
   return home;
+}
+
+/** One boat at sea brought home, or left alone; true when this call wrote her return. */
+async function bringBoatHome(
+  db: DbExecutor,
+  trip: {
+    id: string;
+    shopId: string;
+    title: string;
+    depthUnit: (typeof shops.$inferSelect)["depthUnit"];
+  },
+  now: Date,
+): Promise<boolean> {
+  const [locked] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(eq(trips.id, trip.id), eq(trips.status, "scheduled"), liveTrip()))
+    .limit(1)
+    .for("update");
+  if (!locked) return false;
+  const [logged] = await db
+    .select({ id: executedDives.id })
+    .from(executedDives)
+    .where(and(eq(executedDives.tripId, trip.id), eq(executedDives.diveNumber, 2)))
+    .limit(1);
+  if (logged) return false;
+
+  const [captain] = await db
+    .select({ personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.tripRole, "captain")))
+    .limit(1);
+  if (!captain) return false;
+
+  const divers = await db
+    .select({
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      occurredAt: rollCallEvents.occurredAt,
+    })
+    .from(rollCallEvents)
+    .where(eq(rollCallEvents.tripId, trip.id))
+    // Oldest first, the roll call's own order, so the last row per person is
+    // the mark standing now.
+    .orderBy(
+      asc(rollCallEvents.occurredAt),
+      asc(rollCallEvents.createdAt),
+      asc(rollCallEvents.seq),
+    );
+  const crew = await db
+    .select({
+      personId: rollCallCrewEvents.personId,
+      checkpoint: rollCallCrewEvents.checkpoint,
+      status: rollCallCrewEvents.status,
+      occurredAt: rollCallCrewEvents.occurredAt,
+    })
+    .from(rollCallCrewEvents)
+    .where(eq(rollCallCrewEvents.tripId, trip.id))
+    .orderBy(
+      asc(rollCallCrewEvents.occurredAt),
+      asc(rollCallCrewEvents.createdAt),
+      asc(rollCallCrewEvents.seq),
+    );
+
+  const lastCount = [...divers, ...crew]
+    .filter((row) => row.checkpoint === "after_dive_2")
+    .reduce((latest, row) => Math.max(latest, row.occurredAt.getTime()), 0);
+  if (lastCount === 0) return false;
+  const upAt = new Date(
+    Math.min(lastCount + LAST_PAIR_UP_AFTER_LAST_COUNT_MIN * 60_000, now.getTime()),
+  );
+
+  // Back only while their newest dive 2 mark is "boarded" (review 2 of issue
+  // 2917): a mark taken back reads awaiting and "not boarded" reads missing,
+  // and leaving either beside a logged dive 2 keeps her count open for good.
+  const countedBack = (rows: { checkpoint: string; status: string }[]) =>
+    rows.filter((row) => row.checkpoint === "after_dive_2").at(-1)?.status === "boarded";
+  const stillDown = [...new Set(divers.map((row) => row.bookingId))].filter(
+    (bookingId) =>
+      divers.some((row) => row.bookingId === bookingId && row.checkpoint === "after_dive_1") &&
+      !countedBack(divers.filter((row) => row.bookingId === bookingId)),
+  );
+  const crewDown = [...new Set(crew.map((row) => row.personId))].filter(
+    (personId) =>
+      crew.some((row) => row.personId === personId && row.checkpoint === "after_dive_1") &&
+      !countedBack(crew.filter((row) => row.personId === personId)),
+  );
+  if (stillDown.length > 0) {
+    await db.insert(rollCallEvents).values(
+      stillDown.map((bookingId, index) => ({
+        shopId: trip.shopId,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: captain.personId,
+        status: "boarded" as const,
+        checkpoint: "after_dive_2",
+        source: "live" as const,
+        occurredAt: new Date(upAt.getTime() - (stillDown.length - index) * 1_000),
+      })),
+    );
+  }
+  if (crewDown.length > 0) {
+    await db.insert(rollCallCrewEvents).values(
+      crewDown.map((personId) => ({
+        shopId: trip.shopId,
+        tripId: trip.id,
+        personId,
+        recordedByPersonId: captain.personId,
+        status: "boarded" as const,
+        checkpoint: "after_dive_2",
+        source: "live" as const,
+        occurredAt: upAt,
+      })),
+    );
+  }
+
+  const [planned] = await db
+    .select({ diveSiteId: tripDives.diveSiteId })
+    .from(tripDives)
+    .where(and(eq(tripDives.tripId, trip.id), eq(tripDives.diveNumber, 2)))
+    .limit(1);
+  const secondDive = atSeaDives(trip.title === AT_SEA_DUSK_TITLE)[1];
+  const unit = trip.depthUnit ?? "meters";
+  await db.insert(executedDives).values({
+    shopId: trip.shopId,
+    tripId: trip.id,
+    diveNumber: 2,
+    actualSiteId: planned?.diveSiteId ?? null,
+    enteredAt: new Date(upAt.getTime() - DIVE_TWO_RAN_MIN * 60_000),
+    exitedAt: upAt,
+    maxDepthMeters: secondDive
+      ? depthToMeters(unit === "feet" ? secondDive.maxDepth.feet : secondDive.maxDepth.meters, unit)
+      : null,
+    recordedByPersonId: captain.personId,
+  });
+  return true;
 }

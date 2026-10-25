@@ -14,27 +14,39 @@ const SEVERITY_TONE = { minor: "neutral", moderate: "warning", serious: "danger"
 
 const ROW = "flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-2";
 
+/**
+ * One list behind a figure, only when it has rows (visual review A05): an
+ * empty card restated the tile's zero above it. The id is the tile's door.
+ */
 function ListCard({
+  id,
   title,
-  empty,
   count,
   children,
 }: {
+  id: string;
   title: string;
-  empty: string;
   count: number;
   children: React.ReactNode;
 }) {
+  if (count === 0) return null;
   return (
-    <SectionCard title={title}>
-      {count === 0 ? (
-        <p className="text-muted">{empty}</p>
-      ) : (
+    <div id={id} className="scroll-mt-24">
+      <SectionCard title={title}>
         <ul className="divide-y divide-border">{children}</ul>
-      )}
-    </SectionCard>
+      </SectionCard>
+    </div>
   );
 }
+
+/** Where each figure's door lands. */
+export const SAFETY_LIST_IDS = {
+  incidents: "incident-reports",
+  open: "roll-calls-open",
+  noCrew: "no-crew-on-record",
+  lapsed: "lapsed-crew",
+  unrecorded: "crew-nothing-on-file",
+} as const;
 
 /**
  * The month's lists: the reports, the counts left open, and, when there are
@@ -63,8 +75,8 @@ export function SafetyLists({
   return (
     <>
       <ListCard
+        id={SAFETY_LIST_IDS.incidents}
         title={t("incidents.safety.incidentsTitle")}
-        empty={t("incidents.safety.incidentsEmpty")}
         count={incidents.length}
       >
         {incidents.map((report) => (
@@ -97,8 +109,8 @@ export function SafetyLists({
       </ListCard>
 
       <ListCard
+        id={SAFETY_LIST_IDS.open}
         title={t("incidents.safety.openTitle")}
-        empty={t("incidents.safety.openEmpty")}
         count={month.openRollCalls.length}
       >
         {month.openRollCalls.map((departure) => (
@@ -122,13 +134,11 @@ export function SafetyLists({
         ))}
       </ListCard>
 
-      {/* Only when there are any, like the unrecorded crew below: a list
-          whose empty state restates the figure's zero earns nothing. Each
-          row opens the departure's crew (fourth review, item 13). */}
+      {/* Each row opens the departure's crew (fourth review, item 13). */}
       {month.noCrewDepartures.length > 0 ? (
         <ListCard
+          id={SAFETY_LIST_IDS.noCrew}
           title={t("incidents.safety.noCrewTitle")}
-          empty=""
           count={month.noCrewDepartures.length}
         >
           {month.noCrewDepartures.map((departure) => (
@@ -148,8 +158,8 @@ export function SafetyLists({
       ) : null}
 
       <ListCard
+        id={SAFETY_LIST_IDS.lapsed}
         title={t("incidents.safety.lapsedTitle")}
-        empty={t("incidents.safety.lapsedEmpty")}
         count={month.lapsedSailings.length}
       >
         {month.lapsedSailings.map((sailing) => (
@@ -173,8 +183,8 @@ export function SafetyLists({
 
       {month.unrecordedCrew.length > 0 ? (
         <ListCard
+          id={SAFETY_LIST_IDS.unrecorded}
           title={t("incidents.safety.unrecordedTitle")}
-          empty=""
           count={month.unrecordedCrew.length}
         >
           {month.unrecordedCrew.map((person) => (

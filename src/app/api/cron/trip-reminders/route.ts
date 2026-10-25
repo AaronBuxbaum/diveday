@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { drainHeldSends } from "@/db/held-sends";
 import { sendDueReminders } from "@/db/reminders";
+import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
 import { sendDueServiceReminders } from "@/db/work-order-follow-up";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
@@ -47,6 +48,13 @@ const CRON_MONITOR_CONFIG = {
  *
  * The same pass sends service-due reminders on customers' own gear, a month
  * before each date (`sendDueServiceReminders`), on the same send window.
+ *
+ * And it brings every demo shop's boat at sea home once she is past her
+ * return (`bringDemoBoatsAtSeaHome`, issue 2917): a count left open until the
+ * daily demo tick read as divers lost at sea for most of a day. Here rather
+ * than making `/api/cron/demo-refresh` hourly, which would move its today
+ * nudge and restore off their 09:08 UTC tick (issue #2440). Demo shops only,
+ * and a boat already home is left alone, so every hour is safe.
  */
 export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
@@ -58,6 +66,12 @@ export async function GET(request: Request) {
   );
   try {
     const db = await getDb();
+    // First and isolated: a broken demo pass never costs a diver a reminder.
+    const demoBoats = await bringDemoBoatsAtSeaHome(db).catch(async (error: unknown) => {
+      await sentry.captureException(error, { tags: { cron_scan: "demo_boats_at_sea" } });
+      log("cron_trip_reminders.demo_boats_failed", "error", { scan: "demo_boats_at_sea" });
+      return null;
+    });
     const summary = await sendDueReminders(db);
     // The held sends whose client never came back (ADR 20260906-before-you-ask,
     // decision 2): a closed tab does not stop the mail, this tick sends it.
@@ -81,11 +95,12 @@ export async function GET(request: Request) {
       serviceRemindersSent: serviceReminders?.sent,
       serviceRemindersHeld: serviceReminders?.held,
       serviceRemindersFailed: serviceReminders?.failed,
+      demoBoatsBroughtHome: demoBoats ?? undefined,
     });
     await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
-      status: serviceReminders ? "ok" : "error",
+      status: serviceReminders && demoBoats !== null ? "ok" : "error",
     });
     return NextResponse.json(summary);
   } catch (error) {

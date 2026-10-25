@@ -20,6 +20,7 @@ import {
   type StaffWeek,
   type WeekShift,
 } from "@/lib/staffing-week";
+import { ShiftRemoveMenu } from "./ShiftRemoveMenu";
 import { windowOnThisDay } from "./window-on-this-day";
 
 /**
@@ -360,7 +361,9 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
-      <span className="line-clamp-2 font-medium">{trip.title}</span>
+      <span className="block truncate font-medium" title={trip.title}>
+        {trip.title}
+      </span>
       {/* **One person, two hulls, these same hours** (issue #1695) — a state
           `setTripCrew` refuses to write and which three writes that move the
           boat manufacture anyway (a move, the departure's own Details form,
@@ -955,15 +958,12 @@ export function StaffingWeek({
                             isPast={day.isPast}
                           />
                           {canManage ? (
-                            <form action={deleteShiftAction}>
-                              <input type="hidden" name="shiftId" value={shift.id} />
-                              <SubmitButton
-                                pendingLabel={words.removing}
-                                className={buttonClass({ variant: "ghost", size: "sm" })}
-                              >
-                                {words.remove}
-                              </SubmitButton>
-                            </form>
+                            <ShiftRemoveMenu
+                              label={fill(words.shiftAria, { person: person.name, day: day.label })}
+                              shiftId={shift.id}
+                              words={words}
+                              action={deleteShiftAction}
+                            />
                           ) : null}
                         </div>
                       ))}
@@ -973,12 +973,12 @@ export function StaffingWeek({
                           href={tripHref(shopSlug, trip.tripId)}
                           className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
                         >
-                          <span>
+                          <span className="flex min-w-0 items-baseline gap-1.5">
                             <span className="sr-only">{words.crewing}: </span>
-                            <span className="tabular-nums">
-                              {windowOnThisDay(trip, words, locale, timeZone, "range")}
-                            </span>{" "}
-                            {trip.title}
+                            <span className="shrink-0 tabular-nums">
+                              {windowOnThisDay(trip, words, locale, timeZone, "range")}{" "}
+                            </span>
+                            <span className="min-w-0 truncate">{trip.title}</span>
                             {/* Whole: the space after the dot broke, and left
                                 "Away" alone on a line under it (K-489). */}
                             {trip.awayBlocks.length > 0 ? (

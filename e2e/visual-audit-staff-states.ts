@@ -79,16 +79,20 @@ export function registerStaffAuditCaptures(capture: AuditCapture, flowTimeout: n
     test("a duplicate gear tag renders its refusal beside the preserved fields", async ({
       page,
     }) => {
-      const addUnit = page.locator("details:has(> summary#add-unit)");
+      // Add a unit is a sheet over the register (visual review A48), opened
+      // by the header's door once React owns it; after a save the sheet may
+      // still be open with its notice, so the door is only used when it is not.
+      const addUnit = page.getByRole("dialog", { name: copy("gear.addUnit.title") });
       const tag = addUnit.getByRole("textbox", {
         name: `${copy("gear.form.label")} ${copy("gear.form.labelHint")}`,
         exact: true,
       });
       const open = async () => {
-        const door = page.getByRole("button", { name: "Add a unit", exact: true });
-        await expect(door).toHaveAttribute("data-hydrated", "true");
-        await expect(addUnit).toHaveAttribute("data-hydrated", "true");
-        await door.click();
+        if (!(await addUnit.isVisible())) {
+          const door = page.getByRole("button", { name: "Add a unit", exact: true });
+          await expect(door).toHaveAttribute("data-hydrated", "true");
+          await door.click();
+        }
         await tag.waitFor();
       };
       await page.goto("/shop/blue-mantis/gear");

@@ -7,6 +7,7 @@ import {
   e2eNow,
   openRosterDetails,
   openTripAbout,
+  openTripAboutRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -43,7 +44,7 @@ test.describe("ask to move", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     await openTripAbout(page);
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAboutRow(page, "Who can book");
     await page.getByLabel("Require payment to board").check();
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("requirements updated");

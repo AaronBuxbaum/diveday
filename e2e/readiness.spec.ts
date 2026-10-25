@@ -5,6 +5,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openIfClosed,
   openThreadStep,
   openTripAbout,
   threadStatus,
@@ -48,7 +49,7 @@ test.describe("staff-prepared trip", () => {
     // The About panel's "Who can book" row: its own control opens the gate's
     // editor beneath it, and there is no headed card restating the row.
     const requirements = page.locator("details#requirements");
-    await requirements.getByText("Edit requirements").click();
+    await openIfClosed(requirements);
     await requirements.getByLabel("Require payment to board").check();
     await requirements.getByRole("button", { name: "Save requirements" }).click();
     // Wait for the save's own redirect: dropping the session while it is in

@@ -16,6 +16,7 @@ import {
   formatTimeRange,
   formatTimeRangeTz,
   formatTimeTz,
+  formatTimeZoneGeneric,
   formatWeekdayTime,
   isValidTimeZone,
   joinFacts,
@@ -456,5 +457,13 @@ describe("formatOrdinal", () => {
   it("formats Spanish ordinals correctly", () => {
     expect(formatOrdinal(1, "es-ES")).toBe("1.º");
     expect(formatOrdinal(4, "es-ES")).toBe("4.º");
+  });
+});
+
+describe("formatTimeZoneGeneric", () => {
+  it("names the zone once for a whole list, the same in summer and winter", () => {
+    expect(formatTimeZoneGeneric("en-US", "America/New_York")).toBe("ET");
+    expect(formatTimeZoneGeneric("en-US", "America/Cancun")).toBe("EST");
+    expect(formatTimeZoneGeneric("es-ES", "America/New_York")).toBe("hora de Nueva York");
   });
 });

@@ -105,7 +105,6 @@ describe("ScheduleBuilder week board", () => {
         next: "Next week",
         thisWeek: "This week",
         today: "Today",
-        print: "Print",
       },
       days: DAY_ISOS.map((dateIso, index) => ({
         dateIso,

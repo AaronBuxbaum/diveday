@@ -39,8 +39,10 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   // A stranger's row has no record to open, so it shows the address instead.
   await expect(page.getByText("marta.keller@mail.example")).toBeVisible();
 
-  // The row is the door to the diver it belongs to, and it lands on the very
-  // message it was opened from rather than the top of the record.
+  // The row opens in place (visual review A15), and its first act is the door
+  // to the diver it belongs to, landing on the very message it was opened from
+  // rather than the top of the record.
+  await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
   await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/.*#message-/);
   const messageId = new URL(page.url()).hash.slice(1);
@@ -93,7 +95,7 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
   await page.goto("/shop/blue-mantis/inbox");
   await expect(page.getByText("marta.keller@mail.example")).toBeVisible();
 
-  // Delete lives behind the row's "⋯" with the row's other acts.
+  // Delete lives in the row's open view with the row's other acts.
   await page.getByRole("button", { name: "More for the message from Unknown sender" }).click();
   await page
     .getByRole("button", {

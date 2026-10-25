@@ -106,6 +106,6 @@ describe("CrewAwayWorkingControl", () => {
       ],
     });
     expect(screen.queryByRole("button", { name: "Marcus Webb is working it" })).toBeNull();
-    expect(screen.getByText("Marcus Webb is away Sat, Aug 29.")).toBeTruthy();
+    expect(screen.getByText("Marcus Webb is away Sat, Aug 29")).toBeTruthy();
   });
 });

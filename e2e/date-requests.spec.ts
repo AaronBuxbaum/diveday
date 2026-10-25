@@ -112,7 +112,9 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   await expect(secondDay.getByText("reef.fan.e2e@example.com")).toBeVisible();
 
   // The act the count exists for: the schedule builder, opened on that day.
-  await expect(firstDay.getByRole("link", { name: "Add a departure" })).toHaveAttribute(
+  await expect(
+    firstDay.getByRole("link", { name: "Open a departure for this date" }).first(),
+  ).toHaveAttribute(
     "href",
     new RegExp(`/shop/blue-mantis/schedule/board\\?add=full&date=${PREFERRED}(?:&|$)`),
   );
@@ -134,7 +136,7 @@ test("a request with no date at all sits in its own group at the foot", async ({
   const noDate = page.getByRole("region", { name: /^No date named/i });
   await expect(noDate.getByText("Wants to dive: Whatever runs in October")).toBeVisible();
   // A tail with a count and no act: there is no day here to put a boat on.
-  await expect(noDate.getByRole("link", { name: "Add a departure" })).toHaveCount(0);
+  await expect(noDate.getByRole("link", { name: "Open a departure for this date" })).toHaveCount(0);
   await expect(
     noDate.getByText("When suits: Some week in October, flights not booked"),
   ).toBeVisible();
@@ -180,7 +182,7 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
   const day = page.getByRole("region", { name: /^Mar 6, 2027 —/i });
-  await day.getByRole("link", { name: "Add a departure" }).click();
+  await day.getByRole("link", { name: "Open a departure for this date" }).first().click();
 
   const plan = page.getByRole("group", { name: "Starting from requests" });
   await expect(plan).toBeVisible();

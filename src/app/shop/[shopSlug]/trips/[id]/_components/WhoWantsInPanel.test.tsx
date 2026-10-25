@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { type WhoWantsInGroup, WhoWantsInPanel } from "./WhoWantsInPanel";
@@ -30,7 +30,8 @@ const departure = (rows: WhoWantsInRow[]): WhoWantsInGroup => ({
 });
 
 const discount = {
-  toggle: "With a discount",
+  toggle: "Add a discount to offers",
+  hint: "Each offer below goes out with this discount.",
   amountAriaLabel: "Discount",
   kindAriaLabel: "Discount type",
   currencySymbol: "$",
@@ -99,17 +100,20 @@ describe("WhoWantsInPanel", () => {
     expect(rankLike).toEqual([]);
   });
 
-  it("gives each row a tick that joins the offer form, below the bar included", () => {
+  it("ends every row in its own Offer a seat, below the bar included (A14)", () => {
     renderPanel([departure([row("a", "Nora Quinn", { belowBar: true }), row("b", "Rafa Ortiz")])]);
-    const boxes = screen.getAllByRole("checkbox");
-    expect(boxes).toHaveLength(2);
-    expect(boxes.map((box) => box.getAttribute("form"))).toEqual(["offer-seat", "offer-seat"]);
-    expect(boxes.map((box) => (box as HTMLInputElement).value)).toEqual(["a", "b"]);
-    // The mark informs; the tick stays available (ADR 20260814-self-declared-cards).
-    expect(boxes[0]).toBeEnabled();
-    expect(boxes[0]).toHaveAttribute("data-below-bar", "true");
-    expect(boxes[1]).not.toHaveAttribute("data-below-bar");
-    expect(screen.getByRole("button", { name: "Offer a seat" })).toBeDisabled();
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    const nora = screen.getByRole("button", { name: "Offer Nora Quinn a seat" });
+    const rafa = screen.getByRole("button", { name: "Offer Rafa Ortiz a seat" });
+    // The mark informs; the offer stays available (ADR 20260814-self-declared-cards).
+    expect(nora).toBeEnabled();
+    expect(rafa).toBeEnabled();
+    const ids = (button: HTMLElement) =>
+      new FormData(button.closest("form") as HTMLFormElement).getAll("interestId");
+    expect(ids(nora)).toEqual(["a"]);
+    expect(ids(rafa)).toEqual(["b"]);
+    // Each button sits in its own person's row.
+    expect(nora.closest("li")).toHaveTextContent("Nora Quinn");
   });
 
   it("prints what the diver can dive on its own line, warning-toned while unverified", () => {
@@ -138,7 +142,7 @@ describe("WhoWantsInPanel", () => {
     expect(screen.getByText(/offered 2h ago/)).toBeVisible();
   });
 
-  it("keeps the names and draws no tick or button when nobody can be offered (owner, 2026-10-06)", () => {
+  it("keeps the names and draws no button when nobody can be offered (owner, 2026-10-06)", () => {
     renderPanel([departure([row("a", "Nora Quinn")])], { canOffer: false });
     expect(screen.getByText("Nora Quinn")).toBeVisible();
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
@@ -174,12 +178,11 @@ describe("WhoWantsInPanel", () => {
     ]);
     expect(screen.getByRole("heading", { name: "Who wants in · 3" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Asked for this date" })).toBeVisible();
-    // One Offer for all three groups.
-    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
-    expect(screen.getAllByRole("button", { name: "Offer a seat" })).toHaveLength(1);
+    // One Offer per person, whichever group they are in.
+    expect(screen.getAllByRole("button", { name: /^Offer .+ a seat$/ })).toHaveLength(3);
   });
 
-  it("keeps rows past the preview cap behind Show N more, still counted and tickable", () => {
+  it("keeps rows past the preview cap behind Show N more, still counted and offerable", () => {
     renderPanel([
       {
         id: "anytime",
@@ -192,54 +195,25 @@ describe("WhoWantsInPanel", () => {
     const summary = screen.getByText("Show 2 more");
     const details = summary.closest("details") as HTMLDetailsElement;
     expect(details.open).toBe(false);
-    expect(within(details).getAllByRole("checkbox", { hidden: true })).toHaveLength(2);
-    // Every box, shown or not, joins the one offer form.
     expect(
-      screen.getAllByRole("checkbox", { hidden: true }).map((box) => box.getAttribute("form")),
-    ).toEqual(["offer-seat", "offer-seat", "offer-seat"]);
+      within(details).getAllByRole("button", { name: /^Offer .+ a seat$/, hidden: true }),
+    ).toHaveLength(2);
   });
 
   it("draws the discount only when it is handed the words, which is for mayDiscount roles", () => {
     renderPanel([departure([row("a", "Nora Quinn")])]);
-    expect(screen.queryByLabelText("With a discount")).toBeNull();
+    expect(screen.queryByText("Add a discount to offers")).toBeNull();
     cleanup();
 
-    renderPanel([departure([row("a", "Nora Quinn")])], { discount });
-    // Off by default: nothing is posted, so an ordinary offer carries no discount.
-    expect(screen.queryByRole("spinbutton")).toBeNull();
-    fireEvent.click(screen.getByLabelText("With a discount"));
-    expect(screen.getByRole("spinbutton", { name: "Discount" })).toHaveAttribute(
-      "name",
-      "discount",
-    );
-    expect(screen.getByRole("combobox", { name: "Discount type" })).toHaveAttribute(
-      "name",
-      "discountKind",
-    );
-    fireEvent.click(screen.getByLabelText("With a discount"));
-    expect(screen.queryByRole("spinbutton")).toBeNull();
-  });
-
-  it("never ticks a row under the bar from the bulk tick, and still lets a hand tick it", () => {
-    renderPanel([
-      departure([
-        row("a", "Nora Quinn", { belowBar: true }),
-        row("b", "Rafa Ortiz"),
-        row("c", "Cleo Park"),
-      ]),
-    ]);
-    const box = (name: string) =>
-      screen.getByRole("checkbox", { name: `Offer ${name} a seat` }) as HTMLInputElement;
-    fireEvent.click(screen.getByRole("button", { name: "Tick everyone who fits" }));
-    expect(box("Rafa Ortiz").checked).toBe(true);
-    expect(box("Cleo Park").checked).toBe(true);
-    expect(box("Nora Quinn").checked).toBe(false);
-    fireEvent.click(box("Nora Quinn"));
-    expect(box("Nora Quinn").checked).toBe(true);
-  });
-
-  it("draws no bulk tick for a single row that fits", () => {
-    renderPanel([departure([row("a", "Nora Quinn")])]);
-    expect(screen.queryByRole("button", { name: "Tick everyone who fits" })).toBeNull();
+    const { container } = renderPanel([departure([row("a", "Nora Quinn")])], { discount });
+    // Closed by default: nothing is posted, so an ordinary offer carries no discount.
+    const disclosure = container.querySelector("details[data-offer-discount]");
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(screen.getByText("Add a discount to offers")).toBeVisible();
+    expect(screen.getByText("Each offer below goes out with this discount.")).not.toBeVisible();
+    const form = screen
+      .getByRole("button", { name: "Offer Nora Quinn a seat" })
+      .closest("form") as HTMLFormElement;
+    expect(new FormData(form).has("discount")).toBe(false);
   });
 });

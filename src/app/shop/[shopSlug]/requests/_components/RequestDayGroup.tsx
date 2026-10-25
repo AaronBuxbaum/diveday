@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RequestAdvice } from "@/lib/request-advisor";
@@ -62,11 +62,11 @@ export function requestAdviceLines(
  *
  * The group header owns every fact its rows share — the date, how many groups
  * could make it, how many divers that is, and what the planner would put on the
- * water — and the one act that answers them all. No row repeats any of it; the
- * rows underneath say only who asked and what for.
+ * water. No row repeats any of it; the rows underneath say who asked, what for,
+ * and carry the one act, "Open a departure for this date" (visual review A23).
  *
  * The same component renders the "no date named" tail, which has a count and no
- * day, so no advice and no act: prose a date field could not hold is still a
+ * day, so no advice: prose a date field could not hold is still a
  * interest, but it is not a day anyone can put a boat on.
  *
  * `advice` is empty on a day whose planner sentence is word for word the one
@@ -77,7 +77,6 @@ export function RequestDayGroup({
   id,
   label,
   advice = [],
-  add,
   onBoard = [],
   children,
 }: {
@@ -85,37 +84,18 @@ export function RequestDayGroup({
   /** The date and the counts, as one line — the group owns them, not the rows. */
   label: string;
   advice?: readonly RequestAdviceLine[];
-  /** The same departure action on every dated group. */
-  add?: { href: string; label: string };
   /**
    * Departures already on the board for this day, each a link to its
-   * `#who-wants-in` (ADR 20261017-one-interest-with-a-scope). "Add a departure"
-   * stays for the days with none.
+   * `#who-wants-in` (ADR 20261017-one-interest-with-a-scope).
    */
   onBoard?: readonly { href: string; label: string }[];
   children: ReactNode;
 }) {
   return (
     <section aria-labelledby={id}>
-      {/* From `sm` up the header is the act's 44px with the label centred in
-          it, whether or not there is an act: the undated tail has none, and
-          its label sat 15px higher in its section and 13px nearer its rows
-          than every dated one (K-463). Below `sm` the act wraps onto its own
-          line, so the label keeps its baseline and its own line's height. */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 sm:min-h-11 sm:items-center">
-        <GroupLabel as="h2" id={id}>
-          {label}
-        </GroupLabel>
-        {add ? (
-          // The same words and the same glyph as the schedule board's own add
-          // control (`schedule.builder.addDeparture`): one act, one name,
-          // wherever a staffer meets it. The `+` is aria-hidden decoration —
-          // it never enters a translated string.
-          <Link href={add.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
-            {add.label}
-          </Link>
-        ) : null}
-      </div>
+      <GroupLabel as="h2" id={id}>
+        {label}
+      </GroupLabel>
       {/* Planning advice is a desk job: below `sm` it shows only when it
           carries a warning (no hull holds the group), and otherwise leaves
           the phone the people and what they asked for. */}

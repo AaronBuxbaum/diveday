@@ -5,6 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { demoEmail } from "../src/lib/simulator-email";
 import { expect, test } from "./fixtures";
 import {
@@ -12,6 +13,7 @@ import {
   openDiverFileGroup,
   openIfClosed,
   openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
@@ -31,6 +33,8 @@ import {
  */
 // i18n-exempt: seed data, a diver's name
 const WAITING_REVIEW_DIVER = "Carmen Ruiz";
+
+const staff = staffTranslator("en-US");
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
@@ -103,9 +107,10 @@ test.describe("light mode — Claude's assists, lit", () => {
       await expect(row.getByText(/^In Spanish: /)).toBeVisible();
       await capture(page, "assist-inbox-row", "light");
 
-      await row
-        .getByRole("link", { name: "Open the record for Diego Alvarez" })
-        .click({ position: { x: 4, y: 4 } });
+      // The row opens in place (visual review A15); its first act is the
+      // door to the diver's record.
+      await row.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
+      await row.getByRole("link", { name: "Open the record for Diego Alvarez" }).click();
       await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
       const conversation = page.getByRole("region", { name: "Conversation" });
       await conversation.getByRole("button", { name: "Draft a reply" }).click();
@@ -136,6 +141,14 @@ test.describe("light mode — Claude's assists, lit", () => {
       await page.getByRole("button", { name: "Save", exact: true }).click();
       await page.waitForURL(/notice=feature-saved/);
       await expect(box).toHaveValue(typed);
+      // The save's "Saved" toast leaves on its own timer; the capture is of
+      // the notes at rest, so it waits for the toast to show and then to go,
+      // never for whichever side of the timer the shot happened to land on.
+      const saved = page
+        .getByRole("status")
+        .filter({ hasText: staff("settings.main.features.saved") });
+      await expect(saved).toBeVisible();
+      await expect(saved).toBeHidden();
       await page.locator("li#replyNotes").scrollIntoViewIfNeeded();
       await page.mouse.move(0, 0);
       await capture(page, "assist-reply-notes", "light");
@@ -221,7 +234,7 @@ test.describe("light mode — Claude's assists, lit", () => {
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
       await openTripAbout(page);
-      await page.getByText("Edit details", { exact: true }).click();
+      await openTripAboutRow(page, "The plan");
       await page.getByRole("button", { name: "Draft it", exact: true }).click();
       await expect(page.locator('textarea[name="description"]')).toHaveValue(
         /a crew who know the reef well/,

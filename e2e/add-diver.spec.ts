@@ -175,12 +175,11 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
 
-  // One act on who wants in: tick the diver and offer a seat, which stamps the
+  // One act on who wants in: the diver's own Offer a seat, which stamps the
   // interest so a second staffer sees it is already handled. The send may fall back
   // to the mail composer (mailto:) which the test can't follow, so we only
   // assert the recorded state lands.
-  await page.getByLabel("Offer Waitlist Wally a seat").check();
-  const offer = page.getByRole("button", { name: "Offer a seat to 1" });
+  const offer = page.getByRole("button", { name: "Offer Waitlist Wally a seat" });
   // A tap before React owns the form submits it natively and holds nothing, so
   // no "offered" ever lands (the timeout CI recorded on this line).
   await expect(offer.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");

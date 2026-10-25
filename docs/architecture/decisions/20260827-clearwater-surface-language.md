@@ -196,15 +196,20 @@ is one table, here, and nowhere else:
 | --- | --- | --- |
 | Public pages, and the diver's own rating input | star fill (data ink — see rule 4) | decision 8; the thread's after-state |
 | The diver's thread | booked · paperwork done (the waiver's completed state) · welcome home (the after-state greeting, coral until the review is in — exactly three) | [20260827-the-divers-thread](20260827-the-divers-thread.md), decision 6 |
-| The counter | everyone expected is here (the existing cleared line) | decision 9 |
 | The home, morning | today's boats are all clear (the existing line) | [principles §3](../../design/principles.md); slice 6c |
-| The home, evening | all boats are home — worded once-ever as "your first boat is home" on the day no departure has ever sailed before; yields to the closed-day panel, which is the same moment recorded | decision 4 |
 | The home, once ever | the shop's first booking | [20260827-first-light](20260827-first-light.md), decision 6 |
 | The diver record | that was the last thing (post-action, transient) | [20260827-people-not-lists](20260827-people-not-lists.md) |
-| The gear register | everything is back on the wall | [20260827-the-shops-shelves](20260827-the-shops-shelves.md), slice 9d |
 | Reports | every waiver in (counted signatures > 0) | the shops-shelves SPEC, 9f |
 | The manifest | everyone's back aboard · dock complete | [20260827-the-departure-is-two-working-surfaces](20260827-the-departure-is-two-working-surfaces.md) |
 | The home spine and the recap | the drawn hand's single warm detail — on the *next* boat's site mark only (the week board's marks carry none), and on the postcard's mark; a detail beside a moment, never a moment | [20260901-diveday-reimagined](20260901-diveday-reimagined.md), decision 1 |
+
+Amended 2026-10-25 (visual review 2026-10-24, A07): the counter's cleared line ("Everyone's
+checked in") and the gear register's all-home line are all-clear states, not earned moments, and
+render in the success wash (`bg-success-tint`) with no accent; their rows left the table.
+The home's evening "All boats are home" line (and its once-ever "Your first boat is home"
+wording) joined them the same day (A07, second round): drawn as coral ink it read as amber on a
+phone, and a homecoming is an all-clear, so it renders in the same success wash and its row left
+the table too.
 
 Five rules ride the table. A surface renders **at most one** *earned* coral element at a time —
 Reef's budget (2026-09-01) adds the drawn hand's one detail and the mark's smallest bubble

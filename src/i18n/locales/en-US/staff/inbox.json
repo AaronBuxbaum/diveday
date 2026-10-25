@@ -39,6 +39,9 @@
     "markedFor": "On the manifest for {trip}: running late, said {time}"
   },
   "openRecord": "Open the record for {name}",
+  "openRecordShort": "Open the record",
+  "replyByEmail": "Reply by email",
+  "timesIn": "Times in {zone}",
   "delete": {
     "action": "Delete",
     "actionFor": "Delete the message from {address}",

@@ -45,12 +45,18 @@ export async function MonthDays({
   if (!summary.hasActivity) return null;
   return (
     <section aria-label={t("reports.monthStripLabel")} className="mb-8">
-      <YearStrip
-        cells={summary.strip}
-        row={{ days }}
-        copy={stripCopy(t, locale, summary.firstDay)}
-      />
-      <p className="mt-3 text-sm text-muted">{t("reports.year.stripLegend")}</p>
+      {/* The strip's two ends say what its depths mean (visual review A28);
+          the sentence that explained it under the strip is gone. */}
+      <div className="flex items-center gap-2 text-xs text-muted">
+        <span className="shrink-0">{t("reports.year.stripQuiet")}</span>
+        <YearStrip
+          cells={summary.strip}
+          row={{ days }}
+          copy={stripCopy(t, locale, summary.firstDay)}
+          className="min-w-0 flex-1"
+        />
+        <span className="shrink-0">{t("reports.year.stripFull")}</span>
+      </div>
     </section>
   );
 }

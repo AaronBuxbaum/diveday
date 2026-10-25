@@ -1,0 +1,121 @@
+name: Visual workers trial
+
+# **Do two browser workers per visual shard take the same pictures as one?**
+#
+# The `visual` job in ci.yml runs each capture shard at `E2E_WORKERS: "1"`,
+# and its comment says why: a second browser and a second `next start` beside
+# the first on one runner is oversubscription this suite of pixels should not
+# accept untested. This is the test. Every shard captures its whole list three
+# times from one build, twice at two workers and once at one, and
+# `scripts/compare-capture-sets.mjs` fails the shard if any PNG differs by one
+# byte or is missing from a set, naming each in the step summary.
+#
+# No baseline download and no reg-suit: the comparison is internal to the run,
+# so it says only whether the worker count changes the bytes, which is the one
+# question. Dispatched by hand, never on a pull request or a push; the
+# `visual` job's `E2E_WORKERS` changes only after a green trial, in a change
+# of its own.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: visual-workers-trial
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and list the captures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm e2e:build
+      # Every capture, the same list the `visual-plan` job deals on main.
+      - name: List the captures
+        run: |
+          set -euo pipefail
+          pnpm exec playwright test e2e/visual --list --reporter=json > visual-list.full.json
+          node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --all
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trial-next-build
+          path: .next/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trial-visual-list
+          path: visual-list.json
+          if-no-files-found: error
+          retention-days: 1
+
+  capture:
+    name: Shard ${{ matrix.shard }}/8 at two workers twice and one once
+    needs: build
+    runs-on: ubuntu-24.04
+    # Three captures of one shard's list: about 12 minutes at one worker and
+    # whatever two workers turn out to take, twice.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: trial-next-build
+          path: .next
+      # The service worker is not in `.next/` (the `visual` job's reason).
+      - run: pnpm build:sw
+      - uses: ./.github/actions/playwright-shell
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: trial-visual-list
+      - name: Deal this shard's captures
+        run: node scripts/e2e-shard.mjs --visual=visual-list.json --shard=${{ matrix.shard }}/8 > visual-tests.txt
+      # A failed capture is not a stop: its PNG is then missing from that set,
+      # and the comparison names it. The run's own status still fails the job
+      # below, so a red capture is never read as a clean trial.
+      - name: Capture three times
+        run: |
+          set -uo pipefail
+          failed=""
+          for run in w2-a:2 w2-b:2 w1:1; do
+            name="${run%%:*}"
+            workers="${run##*:}"
+            rm -rf e2e/screenshots
+            started=$(date +%s)
+            E2E_WORKERS="$workers" pnpm exec playwright test e2e/visual --test-list visual-tests.txt --reporter=line \
+              > "capture-${name}.log" 2>&1 || failed="${failed} ${name}"
+            echo "${name}: ${workers} worker(s), $(( $(date +%s) - started ))s" | tee -a "$GITHUB_STEP_SUMMARY"
+            mkdir -p "capture-sets/${name}"
+            if [ -d e2e/screenshots ]; then cp -R e2e/screenshots/. "capture-sets/${name}/"; fi
+          done
+          echo "failed=${failed}" >> "$GITHUB_ENV"
+      - name: Compare the three sets
+        run: |
+          node scripts/compare-capture-sets.mjs capture-sets/w2-a capture-sets/w2-b capture-sets/w1 --summary="$GITHUB_STEP_SUMMARY"
+          if [ -n "${failed// /}" ]; then
+            echo "::error::Capture runs with failures:${failed}. Their missing captures are listed above; read capture-<run>.log in the artifact."
+            exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: visual-workers-trial-${{ matrix.shard }}
+          path: |
+            capture-sets/
+            capture-*.log
+          if-no-files-found: ignore
+          retention-days: 7

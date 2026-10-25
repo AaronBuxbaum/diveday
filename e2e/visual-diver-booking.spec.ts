@@ -14,6 +14,7 @@ import {
   openRosterDetails,
   openThreadStep,
   openTripAbout,
+  openTripAboutRow,
   publicTripUrl,
   saveDiveIntent,
   seededTripId,
@@ -466,7 +467,7 @@ for (const scheme of ["light", "dark"] as const) {
           tripId = await seededTripId(staff, "blue-mantis", title);
           await staff.goto(`/shop/blue-mantis/trips/${tripId}`);
           await openTripAbout(staff);
-          await staff.getByText("Edit requirements", { exact: true }).click();
+          await openTripAboutRow(staff, "Who can book");
           await staff.getByLabel("Require payment to board").check();
           await staff.getByRole("button", { name: "Save requirements" }).click();
           await expect(staff.getByRole("status")).toContainText("requirements updated");

@@ -5,16 +5,13 @@ import type { OfferSeatCopy } from "./OfferSeat";
 /**
  * Every word `OfferSeat` (a Client Component) renders, resolved on the server —
  * see the note in src/i18n/staff-messages.ts. Templates rather than finished
- * strings where the value is only known in the browser: the ticked count, and
- * the booking link the composer fallback writes (`window.location.origin`).
+ * strings where the value is only known in the browser: the booking link the
+ * composer fallback writes (`window.location.origin`).
  */
 export function offerSeatCopy(t: StaffTranslator): OfferSeatCopy {
   return {
     hold: sendHoldCopy(t),
     offerSeat: t("trips.whoWantsIn.offerSeat"),
-    offerSeatTo: t.raw("trips.whoWantsIn.offerSeatTo"),
-    belowBarOne: t.raw("trips.whoWantsIn.belowBarOne"),
-    belowBarMany: t.raw("trips.whoWantsIn.belowBarMany"),
     sent: t("trips.whoWantsIn.sent"),
     couldntSend: t("trips.whoWantsIn.couldntSend"),
     writeTo: t.raw("trips.whoWantsIn.writeTo"),

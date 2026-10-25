@@ -14,6 +14,7 @@ import {
   e2eNow,
   openCounterFor,
   openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   publicTripUrl,
   seededTripId,
@@ -54,7 +55,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await page.getByText("Edit details", { exact: true }).click();
+        await openTripAboutRow(page, "The plan");
         await page.getByLabel("Departs").fill("13:45");
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
@@ -683,7 +684,7 @@ for (const scheme of ["light", "dark"] as const) {
         // And the cadence editor open — the weekday chips carrying the run's
         // real answer, which is the state the collapsed panel above can never
         // show. Same page, one click, so it costs a click rather than a build.
-        await page.getByText("Change the days it runs").click();
+        await openTripAboutRow(page, "Repeats");
         await page.getByRole("group", { name: "Repeats on" }).waitFor();
         await capture(page, "trip-repeating-cadence", scheme);
 
@@ -746,6 +747,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Call the blow-out" }).click();
         await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
         await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        // The call's toast leaves on a real 4-second timer, so whether the
+        // first width caught it depended on how long the capture took: two
+        // one-worker runs of one tree disagreed at vw-390. The record is the
+        // subject; photograph it once the toast has gone.
+        const called = page
+          .getByRole("status")
+          .filter({ hasText: staffCopy("blowout.notices.called") });
+        await expect(called).toBeVisible();
+        await expect(called).toBeHidden();
         await capture(page, "blowout-cascade", scheme);
       });
     });

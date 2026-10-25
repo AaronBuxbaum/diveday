@@ -22,10 +22,8 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/offer-seat-copy";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
-import { StatusMark } from "@/components/ui/StatusMark";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
@@ -34,9 +32,7 @@ import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeo
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
-import type { StaffDestinationId } from "@/lib/staff-destinations";
 import {
-  type ACTION_KIND_META,
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
   type FactOfScale,
@@ -48,6 +44,7 @@ import {
   type TodayAction,
   weekCrewAway,
 } from "@/lib/today";
+import { AllClearLine } from "./AllClearLine";
 import { ClosingStation } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
@@ -59,8 +56,9 @@ import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
+import { quietIcon, RowGlyph, type RowIconName } from "./row-glyph";
 import { rowKey } from "./row-key";
-import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
+import { rowLine, spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
 import { WeekHorizon } from "./WeekHorizon";
@@ -184,90 +182,6 @@ function rowControls(
 const HORIZON_PANEL_CLASS =
   "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1 sm:inset-ring sm:inset-ring-transparent sm:[@media(hover:hover)]:has-[>summary:hover,>li:hover]:inset-ring-border-strong";
 
-/** The status family's shape for a row that is wrong, and the ink it takes. */
-const ROW_GLYPH = { danger: "danger", warning: "warning" } as const;
-const ROW_GLYPH_INK = {
-  danger: "text-danger",
-  warning: "text-warning-strong",
-  neutral: "text-muted",
-} as const;
-
-/** Every job kind whose tone is quiet: the rows that lead with their category. */
-type QuietKind = {
-  [K in keyof typeof ACTION_KIND_META]: (typeof ACTION_KIND_META)[K]["tone"] extends "neutral"
-    ? K
-    : never;
-}[keyof typeof ACTION_KIND_META];
-
-/** The small drawings a quiet row may lead with: a staff destination's, or the boat. */
-type RowIconName = StaffDestinationId | "boat";
-
-/**
- * **A quiet row leads with what it is about, not with an empty circle** (UX
- * review 2026-10-10, item 6). The hollow ring read as a checkbox: the desk
- * tapped it expecting to tick the job off, and nothing happened. A danger or
- * warning row keeps its status shape (the triangle the Waiver row wears); a
- * quiet one wears the drawing of the place its fix lives, from the same
- * family the sidebar draws, so nothing on the row looks pressable that is
- * not. A full record over the quiet kinds, so a new one is a type error until
- * it has a picture.
- */
-const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
-  dive_prep: "gear",
-  help_request: "inbox",
-  payment: "orders",
-  email_delivery: "inbox",
-  seat_wanted: "divers",
-  emergency_contact: "divers",
-  crew_below_target: "staffing",
-  reviews_pending: "reviews",
-  unanswered_messages: "inbox",
-  gear_due_back: "gear",
-  gear_service_due: "workOrders",
-  boat_papers_due: "boat",
-  work_order_uncollected: "workOrders",
-  units_unconfirmed: "settings",
-  lost_items_waiting: "lostFound",
-  rental_fit_confirm: "gear",
-};
-
-/**
- * **Good news wears the good-news tone** (UX review 2026-10-10, item 3). The
- * morning all-clear wore the coral wash, which read as the amber of a warning
- * on a phone in the sun; amber is rationed for things that need a hand, and a
- * crew taught that amber can mean "all clear" stops reading amber.
- */
-function BoatsClearLine({ children }: { children: React.ReactNode }) {
-  return (
-    <p
-      role="status"
-      className="flex items-center gap-2 rounded-lg border border-success/30 bg-success-tint px-3 py-2 text-sm font-semibold text-success-strong"
-    >
-      <StatusMark variant="success" size="sm" />
-      {children}
-    </p>
-  );
-}
-
-/** The quiet icon for a kind, or none for a kind that is not quiet. */
-function quietIcon(kind: TodayAction["kind"]): RowIconName | undefined {
-  return (QUIET_ROW_ICON as Partial<Record<TodayAction["kind"], RowIconName>>)[kind];
-}
-
-/** A row's leading mark: the status shape when something is wrong, the category drawing when not. */
-function RowGlyph({ tone, icon }: { tone: LedgerRowKindTone; icon?: RowIconName }) {
-  if (tone === "neutral") {
-    return (
-      <DiveDayIcon
-        name={icon ?? "today"}
-        className={`size-5 shrink-0 ${ROW_GLYPH_INK.neutral}`}
-        strokeWidth={1.6}
-      />
-    );
-  }
-  return <StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />;
-}
-
 /**
  * **A spine row's anatomy, owned once**: the glyph, one word of kind, the one
  * sentence at reading size, the one fix. `StationRow` draws a job this way, and
@@ -379,7 +293,9 @@ function StationRow({
     <>
       {action.aboutDeparture ? null : (
         <>
-          <span className="font-medium">{action.subject}</span>
+          <span className="font-medium">
+            {action.detail ? action.subject : rowLine(action.subject)}
+          </span>
           {action.detail ? (
             <span aria-hidden="true" className="text-muted">
               {" · "}
@@ -388,7 +304,9 @@ function StationRow({
         </>
       )}
       {action.detail ? (
-        <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
+        <span className={tone === "neutral" ? "text-muted" : undefined}>
+          {rowLine(action.detail)}
+        </span>
       ) : null}
       {action.departure && !grouped ? (
         <span className="block text-sm text-muted">{action.departure.label}</span>
@@ -420,7 +338,6 @@ function StationRow({
           email: action.offer.personEmail,
         },
       ]}
-      chooseByTick={false}
       label={t("trips.whoWantsIn.offerSeatToName", { name: action.offer.personName })}
       offeredLabel={
         action.offer.offeredAt
@@ -936,7 +853,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           16px under its edge with 40px to the first station. Unpulled, they
           sit the header's 32px under the band like every first block. */}
       {allHomeLine && evening ? (
-        <EarnedMomentLine tone="ink" className="-mt-4 tabular-nums">
+        <AllClearLine className="rise-in -mt-4 tabular-nums">
           {/* **Souls, not seats** (issue #1346). The one sentence in the
               product about who came home used to leave the crew out of both
               numbers — and they are the people most reliably still in the
@@ -946,10 +863,10 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             crew: evening.close.crew,
             back: evening.close.back,
           })}
-        </EarnedMomentLine>
+        </AllClearLine>
       ) : clearUnlessWindy ? (
         <UnlessWindy wind={highWind} show={(wind) => jobs + wind.length > 0 && !windOnToday(wind)}>
-          <BoatsClearLine>{t("today.todayQueue.boatsClear")}</BoatsClearLine>
+          <AllClearLine mark>{t("today.todayQueue.boatsClear")}</AllClearLine>
         </UnlessWindy>
       ) : null}
 

@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 import {
+  type BoatChecklistAnswer,
   type BoatPaperRecord,
   type BoatRadioRecord,
   type BoatSafetyNotice,
@@ -22,6 +23,8 @@ import { log } from "@/lib/log";
 import { hasSailed } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { latestServiceClocks } from "./gear";
+import { latestPreDepartureChecksForTrip, listChecklistItemsAsOf } from "./pre-departure-check";
+import { queryAll } from "./query-helpers";
 import { boats, departureBoatSafetySnapshots, gearItems, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -469,6 +472,30 @@ async function captureInTransaction(
     })
     .returning({ id: departureBoatSafetySnapshots.id });
   return written.length > 0 ? "captured" : "kept_newer";
+}
+
+/**
+ * The crew's pre-departure answer at the boat snapshot's instant (issue 2725):
+ * the checklist lines as they stood at `asOf` and the wording of each whose
+ * newest tap at or before `asOf` was not a check. Derived when the log is
+ * read, never stored: taps are append-only and keep the time they were made,
+ * so a tap synced from an offline tablet after the count (or a live tap that
+ * committed after the count's read) still counts as of when it happened.
+ */
+export async function departureChecklistAnswer(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  asOf: Date,
+): Promise<BoatChecklistAnswer> {
+  const [items, checks] = await queryAll(db, [
+    () => listChecklistItemsAsOf(db, shopId, asOf),
+    () => latestPreDepartureChecksForTrip(db, shopId, tripId, asOf),
+  ]);
+  return {
+    itemCount: items.length,
+    unchecked: items.filter((item) => !checks.has(item.id)).map((item) => item.label),
+  };
 }
 
 /**

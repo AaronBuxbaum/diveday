@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { LIST_ROW_SUMMARY_RING } from "@/components/ui/disclosure";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { AboutRowDetails } from "./AboutRowDetails";
 
@@ -34,7 +35,7 @@ const ROWS_CLASS = "-mx-2 divide-y divide-border border-y border-border";
  * place. A row with no editor is the same grid without the third column, so a
  * staffer who cannot configure the trip reads the same table.
  */
-function AboutRow({ row }: { row: TripAboutRow }) {
+function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) {
   const beat = (
     <>
       <span className={groupLabelClass()}>{row.label}</span>
@@ -68,7 +69,7 @@ function AboutRow({ row }: { row: TripAboutRow }) {
         <span className={ROW_GRID}>
           {beat}
           <span className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-primary sm:justify-self-end">
-            {row.editLabel}
+            {editLabel}
             <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
           </span>
         </span>
@@ -89,8 +90,6 @@ export type TripAboutRow = {
   id: string;
   label: string;
   value: ReactNode;
-  /** The word on this row's own control — "Edit details", "Change the days it runs". */
-  editLabel?: string;
   /** The editor this row opens beneath itself. Without one the row is a fact and nothing else. */
   editor?: ReactNode;
   /**
@@ -126,9 +125,17 @@ export type TripAboutRow = {
  */
 export function TripAboutSection({
   rows,
+  editLabel,
   actions,
 }: {
   rows: TripAboutRow[];
+  /**
+   * The one word on every row's control, "Edit" (visual review 2026-10-24,
+   * A13): five spellings ("Edit details", "Edit crew prediction", "Edit
+   * requirements", "Edit", "Edit crew") made five rows look like five kinds
+   * of act. The row's own label already says what opens.
+   */
+  editLabel: string;
   /**
    * Quiet doors in one wrapping row, each `flush` so every word — the first,
    * and the first of a wrapped line — sits on the column. The row's `gap-x-8`
@@ -145,13 +152,26 @@ export function TripAboutSection({
         {actions ? <div className="flex flex-wrap gap-x-8 gap-y-2 py-3">{actions}</div> : null}
         <div className={ROWS_CLASS}>
           {rows.map((row) => (
-            <AboutRow key={row.id} row={row} />
+            <AboutRow key={row.id} row={row} editLabel={editLabel} />
           ))}
         </div>
       </div>
     </section>
   );
 }
+
+/**
+ * **The Details tab's foot rows, one bordered group** (visual review
+ * 2026-10-24, A13): "Note to everyone", "More for this departure", "Activity"
+ * and, when a deal went out, "Last-minute deal" are rows of one
+ * `DisclosureRowList`, each with its words in the text's ink and the shared
+ * caret at its end. They were three bare labels on hairlines that read as
+ * orphaned captions rather than things that open.
+ */
+export const FOOT_ROW_SUMMARY = `flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-5 ${LIST_ROW_SUMMARY_RING}`;
+
+/** A foot row's body, on its summary's inset. */
+export const FOOT_ROW_BODY = "px-4 pb-5 sm:px-5";
 
 /**
  * **More for this departure** — the rare and destructive acts: apply to every
@@ -174,18 +194,13 @@ export function TripMoreDisclosure({
   children: ReactNode;
 }) {
   return (
-    <details
-      id="about-more"
-      aria-label={label}
-      open={open}
-      className="group/more border-t border-border"
-    >
-      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
+    <details id="about-more" aria-label={label} open={open} className="group/more">
+      <summary className={FOOT_ROW_SUMMARY}>
         <span>{label}</span>
         <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
       </summary>
       {/* One column, one item per line, no captions. */}
-      <div className="flex flex-col items-start pb-5">{children}</div>
+      <div className={`flex flex-col items-start ${FOOT_ROW_BODY}`}>{children}</div>
     </details>
   );
 }

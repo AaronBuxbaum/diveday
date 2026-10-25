@@ -7,10 +7,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
-import { SummaryCaret } from "@/components/ui/disclosure";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   countGearItemsByKind,
   gearRegisterGroups,
@@ -27,9 +24,9 @@ import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { AddUnitDetails } from "./_components/AddUnitDetails";
 import { AddUnitForm } from "./_components/AddUnitForm";
 import { AddUnitLink } from "./_components/AddUnitLink";
+import { AddUnitSheet } from "./_components/AddUnitSheet";
 import { DeletedList } from "./_components/DeletedGearList";
 import { GearRegisterLedger, GearServiceDueList } from "./_components/GearRegisterLedger";
 import { GearRentalsList } from "./_components/GearRentalsList";
@@ -373,30 +370,15 @@ export default async function GearRegisterPage({
           </section>
         )}
 
-        {/* `AddUnitDetails`: its React state lets `AddUnitLink` open it, and
-            `initialOpen` opens it on a refusal. The closed band hides wherever
-            a door opens it, header or empty state, so one door has one name
-            (2026-10-10 item 30; third review #36); only the deleted view of an
-            empty register has no door, so the band stays there. */}
-        <AddUnitDetails
-          className={sectionCardClass({
-            padding: "none",
-            className: `group/add-unit scroll-mt-24${fleetTotal > 0 || !showDeleted ? " hidden open:block" : ""}`,
-          })}
-          initialOpen={Boolean(addStatus)}
-        >
-          <summary
-            id="add-unit"
-            className={cardSummaryClass({
-              className: "min-h-11 scroll-mt-24 justify-between p-5 sm:p-6",
-            })}
-          >
-            <h2 className={`min-w-0 ${SECTION_TITLE_CLASS}`}>{t("gear.addUnit.title")}</h2>
-            <SummaryCaret
-              line={`h-lh ${SECTION_TITLE_CLASS}`}
-              className="size-4 text-muted group-open/add-unit:rotate-90"
-            />
-          </summary>
+        {/* The form opens as a sheet from the header's door or the empty
+            register's (visual review A48); a refusal reopens it. The deleted
+            view of an empty register has neither door, so it keeps one here. */}
+        {fleetTotal === 0 && showDeleted ? (
+          <AddUnitLink className={buttonClass({ variant: "secondary" })}>
+            {t("gear.addUnit.title")}
+          </AddUnitLink>
+        ) : null}
+        <AddUnitSheet initialOpen={Boolean(addStatus)} title={t("gear.addUnit.title")}>
           <AddUnitForm
             t={t}
             keptScope={keptTypedScope(shopSlug, session.user.personId)}
@@ -408,7 +390,7 @@ export default async function GearRegisterPage({
             }
             focusKey={notice}
           />
-        </AddUnitDetails>
+        </AddUnitSheet>
       </div>
     </main>
   );

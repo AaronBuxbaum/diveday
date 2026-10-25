@@ -321,12 +321,13 @@ export default async function NewBookingPage({
         t={t}
       />
 
-      {/* `padding="none"`: summary and body pad themselves. Opens on its own
-          refusal or a kept draft, never hiding an answer or a half-typed call. */}
+      {/* `padding="none"`: summary and body pad themselves. Closed by default
+          (A32); opens on `#call`, its own refusal or a kept draft, never hiding
+          an answer or a half-typed call. No notice is `undefined`, not null. */}
       <AutoOpenDetails
         openOnHash="call"
         id="call"
-        open={callNotice !== null || callDraft !== null}
+        open={callNotice !== undefined || callDraft !== null}
         className={sectionCardClass({
           padding: "none",
           className: "group/call mt-10 scroll-mt-24",

@@ -1,5 +1,5 @@
 import type { RecordPaymentOnOrderOutcome } from "@/db/orders";
-import type { OrderStatus } from "@/db/schema";
+import type { OrderLineItemKind, OrderStatus } from "@/db/schema";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import type { NoticeTone } from "@/lib/staff-notices";
 
@@ -24,15 +24,28 @@ export const STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
   refunded: "orders.detail.status.refunded",
 };
 
-export const KIND_KEYS: Record<string, StaffMessageKey> = {
+/** Keyed by the line-kind enum for the same reason: `e_learning_fee` once rendered raw. */
+export const KIND_KEYS: Record<OrderLineItemKind, StaffMessageKey> = {
   trip_fee: "orders.detail.kind.trip_fee",
   course_fee: "orders.detail.kind.course_fee",
+  e_learning_fee: "orders.detail.kind.e_learning_fee",
   rental: "orders.detail.kind.rental",
   nitrox: "orders.detail.kind.nitrox",
   deposit: "orders.detail.kind.deposit",
+  dive_package: "orders.detail.kind.dive_package",
+  pass_through_fee: "orders.detail.kind.pass_through_fee",
   merchandise: "orders.detail.kind.merchandise",
   other: "orders.detail.kind.other",
 };
+
+/**
+ * A line's kind where the reader types it as a plain string (the dispute
+ * sheet's read): its own word when the enum has it, "Other" when not, never
+ * the raw value (visual review 2026-10-24, A02).
+ */
+export function lineKindKey(kind: string): StaffMessageKey {
+  return Object.hasOwn(KIND_KEYS, kind) ? KIND_KEYS[kind as OrderLineItemKind] : KIND_KEYS.other;
+}
 
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).

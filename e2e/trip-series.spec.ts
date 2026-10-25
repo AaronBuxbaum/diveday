@@ -5,6 +5,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openIfClosed,
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
@@ -75,7 +76,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   // already on the board is disturbed.
   // The cadence editor is a closed <details>; its fields are not reachable
   // until the summary is clicked.
-  await series.getByText("Change the days it runs").click();
+  await openIfClosed(series);
   const thirdDay = ["Mon", "Tue", "Thu"].find(
     (day) => day !== startWeekday && day !== secondDay,
   ) as string;
@@ -89,7 +90,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   // longer fit are listed, with head counts, and left on the board until asked.
   await page.goto(tripUrl);
   await openTripAbout(page);
-  await series.getByText("Change the days it runs").click();
+  await openIfClosed(series);
   await series.getByText(thirdDay, { exact: true }).click();
   await series.getByRole("button", { name: "Save the days" }).click();
   await expect(series).toContainText("no longer part of this run");
