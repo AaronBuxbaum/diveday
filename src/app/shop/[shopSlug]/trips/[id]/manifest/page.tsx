@@ -205,6 +205,23 @@ export default async function TripManifestPage({
     atDeparture: isDeparture,
     ...checklist,
   };
+  const stage = stageStripProps(t, {
+    manifests: completeManifests,
+    shopSlug,
+    ...stageStrip,
+    now: nowDate(),
+    timeZone: shop.timezone,
+    locale,
+  });
+  const dockDesk = {
+    t,
+    shop,
+    tripId,
+    isDeparture,
+    trip: departureManifest.trip,
+    stage: stageStrip.stage,
+    seats: manifest.divers,
+  };
   // Only the trip packet composes this page as paper (`ManifestPaper`, B03).
   if (paper) {
     return (
@@ -216,6 +233,8 @@ export default async function TripManifestPage({
         checklist={checklistProps}
         rollCall={rollCall}
         boatPaper={printedBoatPaper}
+        stage={stage}
+        dockDesk={dockDesk}
         t={t}
       />
     );
@@ -304,21 +323,10 @@ export default async function TripManifestPage({
       />
 
       {/* **Where the boat is** — ADR 20260904-reef-all-the-way-down, decision
-          2, Budget rule 4. Directly under the panel that counts the people
-          aboard, because it is the same question asked of the boat rather than
-          of the roster, and because the crew taps it at the rail. A safety
-          surface: no drawing, no coral, no motion (`StageStrip`). */}
-      <StageStrip
-        action={actions.setTripStage}
-        {...stageStripProps(t, {
-          manifests: completeManifests,
-          shopSlug,
-          ...stageStrip,
-          now: nowDate(),
-          timeZone: shop.timezone,
-          locale,
-        })}
-      />
+          2, Budget rule 4. Under the head count: the same question asked of
+          the boat, tapped at the rail. A safety surface: no drawing, no coral,
+          no motion (`StageStrip`). */}
+      <StageStrip action={actions.setTripStage} {...stage} />
 
       <CheckpointSwitch
         manifests={completeManifests}
@@ -354,15 +362,7 @@ export default async function TripManifestPage({
             before them: the divers are the head count's heart, and a two-person
             crew list ahead of nine divers read as the page's subject. */}
         <CrewRollCall {...rollCall.crew} />
-        <DockDesk
-          t={t}
-          shop={shop}
-          tripId={tripId}
-          isDeparture={isDeparture}
-          trip={departureManifest.trip}
-          stage={stageStrip.stage}
-          seats={manifest.divers}
-        />
+        <DockDesk {...dockDesk} />
 
         {/* **The plan** (issue #1184, D24).
             At the dock only: after a dive the log below owns this ground, and a

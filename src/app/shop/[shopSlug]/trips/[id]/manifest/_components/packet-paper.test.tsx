@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, render, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LostItemRow } from "@/components/lost-found/LostItemRow";
+import { lostItemRowCopy } from "@/components/lost-found/lost-found-copy";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallRecord, TripManifest } from "@/lib/manifests";
 import { CrewRollCall } from "./CrewRollCall";
 import { DiverRollCall } from "./DiverRollCall";
 import { diver, diverContext } from "./diver-roll-call-test-fixtures";
 import { PreDepartureCheckList, type PreDepartureCheckListCopy } from "./PreDepartureCheckList";
+import { PrintedStage } from "./PrintedStage";
 
 /**
  * **The packet's paper** (visual review 2026-10-24, B03, B55): the trip
@@ -241,6 +244,58 @@ describe("the boat check on the packet's paper", () => {
     expect(container).toHaveTextContent("Radio check done — Not checked");
     expect(container).toHaveTextContent("Open: Mic cuts out");
     expect(container).toHaveTextContent("Open: Bilge alarm");
+    expect(controls(container)).toHaveLength(0);
+  });
+});
+
+describe("where the boat is, on the packet's paper (review dde-b 4)", () => {
+  const copy = {
+    legend: "Where the boat is",
+    errorRefusal: "That didn’t save.",
+    taps: [
+      { stage: "boarding", label: "Boarding", shortLabel: "Board" },
+      { stage: "underway", label: "Underway", shortLabel: "Out" },
+      { stage: "surface", label: "Surface interval", shortLabel: "Surface" },
+    ],
+    recordedLine: "Keiko Tanaka · 9:12 AM",
+  } as Parameters<typeof PrintedStage>[0]["copy"];
+
+  it("prints the crew's word and who said it when, with no control", () => {
+    const { container } = render(<PrintedStage copy={copy} current="underway" />);
+    expect(container).toHaveTextContent("Where the boat is");
+    expect(container).toHaveTextContent("Underway");
+    expect(container).toHaveTextContent("Keiko Tanaka · 9:12 AM");
+    // One word: the pressed tap's, never the list of taps.
+    expect(container).not.toHaveTextContent("Boarding");
+    expect(controls(container)).toHaveLength(0);
+  });
+
+  it("prints nothing while nobody has said a stage", () => {
+    const { container } = render(<PrintedStage copy={copy} current={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("what was found aboard, on the packet's paper (review dde-a N1)", () => {
+  it("keeps the item, whose seat and what was done, with no control", () => {
+    const { container } = render(
+      <ul>
+        <LostItemRow
+          item={{
+            id: "item-1",
+            description: "Blue mask, left on the dive deck",
+            status: "open",
+            ownerName: "Priya Sharma",
+            toldChannel: "sms",
+          }}
+          action={vi.fn()}
+          copy={lostItemRowCopy(t)}
+          paper
+        />
+      </ul>,
+    );
+    expect(container).toHaveTextContent("Blue mask, left on the dive deck");
+    expect(container).toHaveTextContent("Priya Sharma");
     expect(controls(container)).toHaveLength(0);
   });
 });

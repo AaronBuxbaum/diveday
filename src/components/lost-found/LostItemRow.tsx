@@ -45,12 +45,15 @@ export function LostItemRow({
   context,
   action,
   copy,
+  paper = false,
 }: {
   item: LostItemRowItem;
   /** A line under the description, e.g. which departure — the shop list's. */
   context?: string;
   action: (state: LostItemRowState | undefined, formData: FormData) => Promise<LostItemRowState>;
   copy: LostItemRowCopy;
+  /** The trip packet's paper: the item and its facts, with no control. */
+  paper?: boolean;
 }) {
   const [state, formAction] = useActionState(action, undefined);
   const open = item.status === "open";
@@ -71,50 +74,52 @@ export function LostItemRow({
         <p className="font-medium">{item.description}</p>
         <p className="text-sm text-muted">{facts.join(" · ")}</p>
       </div>
-      <form action={formAction} className="flex flex-wrap items-center gap-2">
-        <input type="hidden" name="itemId" value={item.id} />
-        {open && item.ownerName && !item.toldChannel ? (
-          <SubmitButton
-            name="intent"
-            value="tell"
-            pendingLabel={fill(copy.tell, { name: item.ownerName })}
-            className={button}
-          >
-            {fill(copy.tell, { name: item.ownerName })}
-          </SubmitButton>
-        ) : null}
-        {open ? (
-          <>
+      {paper ? null : (
+        <form action={formAction} className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="itemId" value={item.id} />
+          {open && item.ownerName && !item.toldChannel ? (
             <SubmitButton
               name="intent"
-              value="returned"
-              pendingLabel={copy.returned}
+              value="tell"
+              pendingLabel={fill(copy.tell, { name: item.ownerName })}
               className={button}
             >
-              {copy.returned}
+              {fill(copy.tell, { name: item.ownerName })}
             </SubmitButton>
-            <SubmitButton
-              name="intent"
-              value="discarded"
-              pendingLabel={copy.discarded}
-              className={button}
-            >
-              {copy.discarded}
+          ) : null}
+          {open ? (
+            <>
+              <SubmitButton
+                name="intent"
+                value="returned"
+                pendingLabel={copy.returned}
+                className={button}
+              >
+                {copy.returned}
+              </SubmitButton>
+              <SubmitButton
+                name="intent"
+                value="discarded"
+                pendingLabel={copy.discarded}
+                className={button}
+              >
+                {copy.discarded}
+              </SubmitButton>
+            </>
+          ) : (
+            <SubmitButton name="intent" value="open" pendingLabel={copy.reopen} className={button}>
+              {copy.reopen}
             </SubmitButton>
-          </>
-        ) : (
-          <SubmitButton name="intent" value="open" pendingLabel={copy.reopen} className={button}>
-            {copy.reopen}
-          </SubmitButton>
-        )}
-        {state?.status === "refused" ? (
-          <FormStatus>
-            {Object.hasOwn(copy.refusals, state.reason)
-              ? copy.refusals[state.reason]
-              : copy.refusals.other}
-          </FormStatus>
-        ) : null}
-      </form>
+          )}
+          {state?.status === "refused" ? (
+            <FormStatus>
+              {Object.hasOwn(copy.refusals, state.reason)
+                ? copy.refusals[state.reason]
+                : copy.refusals.other}
+            </FormStatus>
+          ) : null}
+        </form>
+      )}
     </li>
   );
 }

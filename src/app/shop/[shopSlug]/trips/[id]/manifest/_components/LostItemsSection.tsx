@@ -18,6 +18,7 @@ export async function LostItemsSection({
   tripId,
   open,
   seats,
+  paper = false,
 }: {
   t: StaffTranslator;
   shopId: string;
@@ -25,9 +26,11 @@ export async function LostItemsSection({
   /** The crew is heading in, or the departure is back (`leftAboardOpen`). */
   open: boolean;
   seats: { bookingId: string; name: string }[];
+  /** The packet's paper: the items found, read-only, and nothing when none were. */
+  paper?: boolean;
 }) {
   const items = await listTripLostItems(await getDb(), shopId, tripId);
-  if (!open && items.length === 0) return null;
+  if (paper ? items.length === 0 : !open && items.length === 0) return null;
   const rowAction = lostItemRowAction.bind(null, tripId);
   const rowCopy = lostItemRowCopy(t);
   return (
@@ -40,15 +43,23 @@ export async function LostItemsSection({
       {items.length > 0 ? (
         <ul className="mb-4 divide-y divide-border">
           {items.map((item) => (
-            <LostItemRow key={item.id} item={item} action={rowAction} copy={rowCopy} />
+            <LostItemRow
+              key={item.id}
+              item={item}
+              action={rowAction}
+              copy={rowCopy}
+              paper={paper}
+            />
           ))}
         </ul>
       ) : null}
-      <LostItemForm
-        action={recordLostItemAction.bind(null, tripId)}
-        seats={seats}
-        copy={lostItemFormCopy(t)}
-      />
+      {paper ? null : (
+        <LostItemForm
+          action={recordLostItemAction.bind(null, tripId)}
+          seats={seats}
+          copy={lostItemFormCopy(t)}
+        />
+      )}
     </SectionCard>
   );
 }
