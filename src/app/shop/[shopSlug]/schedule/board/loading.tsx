@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ScheduleViewsSkeleton } from "../_components/ScheduleViews";
 import {
@@ -28,7 +29,7 @@ const DEPARTURES_PER_DAY = [1, 2, 0, 1, 0, 2, 0];
  */
 export default function ScheduleBoardLoading() {
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         {/* Two rows of doors on a phone: "View public page", "Add a
             departure" and "Add a booking" wrap to two at 390px for anyone
@@ -111,6 +112,6 @@ export default function ScheduleBoardLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

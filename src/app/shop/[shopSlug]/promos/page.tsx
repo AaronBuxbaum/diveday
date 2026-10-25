@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -53,13 +54,11 @@ import {
   setPromoEnabledAction,
 } from "./actions";
 
-// `instant = true` asserts that navigating *into* this page paints
-// immediately — this segment's `loading.tsx`, with no request read above it.
-// Since the staff shell became synchronous (issue 1446) that holds for a cold,
-// direct visit too: the shell's session, shop row and nav stream in beside the
-// page from `ShopChrome` rather than above it, so the route gets a static
-// shell and its own reads are the only ones the reader waits on. See ADR
-// 20260804-instant-navigation.
+// `instant = true` asserts that navigating *into* this page paints immediately — this segment's
+// `loading.tsx`, with no request read above it. Since the staff shell became synchronous (issue
+// 1446) that holds for a cold, direct visit too: the shell's session, shop row and nav stream in
+// beside the page from `ShopChrome` rather than above it, so the route gets a static shell and its
+// own reads are the only ones the reader waits on. See ADR 20260804-instant-navigation.
 export const instant = true;
 
 export const metadata: Metadata = {
@@ -343,7 +342,7 @@ export default async function PromosPage({
     timezone,
   });
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <FlashParams
         params={[
           "notice",
@@ -560,6 +559,6 @@ export default async function PromosPage({
         />
       ) : null}
       {packagesOn ? <DivePackagesSection {...{ db, shop, t, notice, locale }} /> : null}
-    </main>
+    </StaffPage>
   );
 }

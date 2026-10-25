@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -172,10 +173,9 @@ export default async function ReviewsPage({
         ? listOpenRecapPulses(db, session.user.shopId)
         : Promise.resolve<OpenRecapPulse[]>([]),
     ]);
-  // Whether DiveDay has stopped publishing this shop's rating as a
-  // machine-readable claim. Not the same as "the rating is unrepresentative":
-  // a shop with no reviews at all is also not representative and has nothing
-  // to be told about (src/lib/reviews.ts).
+  // Whether DiveDay has stopped publishing this shop's rating as a machine-readable claim. Not
+  // the same as "the rating is unrepresentative": a shop with no reviews at all is also not
+  // representative and has nothing to be told about (src/lib/reviews.ts).
   const ratingWithheld = ratingIsWithheld(aggregate);
   const t = staffTranslator(locale);
   // `noticeFromParam`, never a bare lookup: the param is attacker-supplied.
@@ -227,7 +227,7 @@ export default async function ReviewsPage({
     ));
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <ShopPageHeader
         title={t("shared.shopSections.inbox")}
         actions={
@@ -425,6 +425,6 @@ export default async function ReviewsPage({
         total={t("reviews.pagination.total", { count: moderatedPage.total })}
         words={staffPagerWords(t)}
       />
-    </main>
+    </StaffPage>
   );
 }

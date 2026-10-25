@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { sectionCardClass } from "@/components/ui/card";
 
 /**
@@ -8,7 +9,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function DisputeSheetLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 space-y-10 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading" className="space-y-10">
       <div className="animate-pulse space-y-10">
         <div className="border-b border-border pb-6">
           <div className="h-4 w-32 rounded bg-surface-sunken" />
@@ -21,6 +22,6 @@ export default function DisputeSheetLoading() {
           </div>
         ))}
       </div>
-    </main>
+    </StaffPage>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -60,13 +61,11 @@ import { ReportExportMenu } from "./_components/ReportExportMenu";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearView } from "./_components/YearView";
 
-// `instant = true` asserts that navigating *into* this page paints
-// immediately — this segment's `loading.tsx`, with no request read above it.
-// Since the staff shell became synchronous (issue 1446) that holds for a cold,
-// direct visit too: the shell's session, shop row and nav stream in beside the
-// page from `ShopChrome` rather than above it, so the route gets a static
-// shell and its own reads are the only ones the reader waits on. See ADR
-// 20260804-instant-navigation.
+// `instant = true` asserts that navigating *into* this page paints immediately — this segment's
+// `loading.tsx`, with no request read above it. Since the staff shell became synchronous (issue
+// 1446) that holds for a cold, direct visit too: the shell's session, shop row and nav stream in
+// beside the page from `ShopChrome` rather than above it, so the route gets a static shell and its
+// own reads are the only ones the reader waits on. See ADR 20260804-instant-navigation.
 export const instant = true;
 
 export const metadata: Metadata = {
@@ -337,7 +336,7 @@ export default async function ReportsPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <ShopPageHeader
         title={t("shared.shopSections.money")}
         // The month's three files, one menu (visual review A06).
@@ -488,6 +487,6 @@ export default async function ReportsPage({
           <LeadTimes db={db} shopId={shop.id} timeZone={tz} now={now} locale={locale} t={t} />
         </>
       )}
-    </main>
+    </StaffPage>
   );
 }

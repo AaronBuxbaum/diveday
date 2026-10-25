@@ -3,6 +3,7 @@ import Link from "next/link";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
@@ -191,7 +192,7 @@ export default async function NewDiverPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <ShopPageHeader
         eyebrow={backLink.label}
         eyebrowHref={backLink.href}
@@ -386,6 +387,6 @@ export default async function NewDiverPage({
           </FieldActions>
         </PersonFieldTrio>
       </SectionCard>
-    </main>
+    </StaffPage>
   );
 }

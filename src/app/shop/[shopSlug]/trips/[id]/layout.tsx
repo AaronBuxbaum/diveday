@@ -39,10 +39,9 @@ export default async function TripLayout({
   // and turns a normal typo into the trip error boundary.
   if (!uuidParam(id)) notFound();
   return (
-    // `max-w-5xl`, the staff work-surface tier (docs/design/principles.md
-    // #10) — the trip family sat at the in-between `max-w-4xl` the principles
-    // call legacy, and a redesign is the sanctioned moment to move to a tier.
-    // The day's packet wears the same shell, for the same paper gutter.
+    // A staff page at `full` width (`_components/staff-page.ts`), every tab
+    // of a departure alike. The day's packet wears the same shell, for the
+    // same paper gutter.
     <main className={TRIP_SHELL_CLASS}>
       {/* A rehearsal says so above every trip surface (ADR
           20261012-rehearsal-departures); nothing for an ordinary departure.

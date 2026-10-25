@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -62,11 +63,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
 /**
  * **Which door a `?notice=` re-opens.**
  *
- * The three forms on this page open on request now, and a save redirects, so
- * the form that earned an outcome has to come back standing — otherwise a
- * refused date is a banner at the top of the page over a shut box the staffer
- * has to find again. The banner still carries the words in every case; this
- * only decides which form is on screen beneath it.
+ * The three forms on this page open on request now, and a save redirects, so the form that earned
+ * an outcome has to come back standing — otherwise a refused date is a banner at the top of the
+ * page over a shut box the staffer has to find again. The banner still carries the words in every
+ * case; this only decides which form is on screen beneath it.
  *
  * `service-logged` opens both the service door and the notes door because one
  * action (`recordGearServiceAction`) writes both, and the notice cannot say
@@ -168,7 +168,7 @@ export default async function GearUnitPage({
   const notesOnLine = !hasService && !deletedAt && notes.length === 0;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <FlashParams params={["notice"]} />
       <div>
         <ShopPageHeader
@@ -433,7 +433,7 @@ export default async function GearUnitPage({
 
         {deletedAt ? null : <DeleteUnitFoot item={item} held={held} t={t} />}
       </div>
-    </main>
+    </StaffPage>
   );
 }
 

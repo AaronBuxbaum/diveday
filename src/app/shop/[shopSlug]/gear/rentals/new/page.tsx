@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
 import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { keptTypedScope } from "@/components/kept-typed-scope";
@@ -265,7 +266,7 @@ export default async function RentOutPage({
       : minorToMajor(shop.rentalPricing.setCents * days, currency).toFixed(digits);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <FlashParams params={["notice", "unit"]} />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.gear)}
@@ -390,6 +391,6 @@ export default async function RentOutPage({
           </form>
         ) : null}
       </div>
-    </main>
+    </StaffPage>
   );
 }

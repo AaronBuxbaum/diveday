@@ -8,7 +8,7 @@ import { settingsPaneClass } from "../_components/settings-pane";
  */
 export default function TeamSettingsLoading() {
   return (
-    <main className={settingsPaneClass("5xl")}>
+    <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-40" description={false} />
         {/* The invite card, then the roster of person-cards — the order the

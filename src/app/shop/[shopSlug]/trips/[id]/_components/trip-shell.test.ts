@@ -24,10 +24,10 @@ const SHOP = path.join(import.meta.dirname, "..", "..", "..");
 const WEARERS = ["trips/[id]/layout.tsx", "print/page.tsx", "print/loading.tsx"] as const;
 
 describe("the trip shell", () => {
-  it("is the staff work surface on screen and the full sheet less a gutter on paper", () => {
+  it("is a full-width staff page on screen and the full sheet less a gutter on paper", () => {
     const classes = TRIP_SHELL_CLASS.split(/\s+/);
     for (const token of [
-      "max-w-5xl",
+      "max-w-6xl",
       "px-4",
       "sm:px-6",
       "print:max-w-none",

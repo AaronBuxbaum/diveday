@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { lostItemRowAction } from "@/app/actions/lost-items";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { LostItemRow } from "@/components/lost-found/LostItemRow";
 import { lostItemRowCopy } from "@/components/lost-found/lost-found-copy";
@@ -37,7 +38,7 @@ export default async function LostFoundPage({ params }: { params: Promise<{ shop
   const copy = lostItemRowCopy(t);
   const tripLine = t.raw("desk.lostFound.tripLine");
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <ShopPageHeader title={t("shared.shopNavLinks.lostFound")} />
       {items.length === 0 ? (
         <EmptyState title={t("desk.lostFound.empty")} />
@@ -57,6 +58,6 @@ export default async function LostFoundPage({ params }: { params: Promise<{ shop
           ))}
         </ul>
       )}
-    </main>
+    </StaffPage>
   );
 }

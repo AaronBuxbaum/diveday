@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 
@@ -6,12 +7,12 @@ import { sectionCardClass } from "@/components/ui/card";
  * 20260804-instant-navigation): the header with its date line, then the one
  * card at its own `max-w-2xl` — the lead and the money note, the departures
  * heading with its two presets, three ticked rows at the 44px row floor, and
- * the danger button. Mirrors the page's `<main>`, the trip family's
- * `max-w-5xl`, like the single-trip blow-out beside it.
+ * the danger button. Mirrors the page's `<main>`, a staff page at `full`
+ * width, like the single-trip blow-out beside it.
  */
 export default function DayBlowoutLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 animate-pulse px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full" className="animate-pulse">
       <ShopPageHeaderSkeleton
         titleWidth="w-72 max-w-full"
         description={false}
@@ -47,6 +48,6 @@ export default function DayBlowoutLoading() {
         </div>
         <div className="mt-6 h-11 w-44 rounded-lg bg-surface-sunken" />
       </div>
-    </main>
+    </StaffPage>
   );
 }

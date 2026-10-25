@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { after } from "next/server";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AssistAskForm } from "@/components/assists/AssistAskForm";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
@@ -242,7 +243,7 @@ export default async function DiversPage({
   const undoRemoval = notice === "deleted" && deleted ? deleted : null;
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       {/* `deleted` goes with `notice`: it carries the id the undo toast acts on,
           and a person id left sitting in the address bar after the toast has
           been read is nobody's business and nothing's input. */}
@@ -339,6 +340,6 @@ export default async function DiversPage({
           letterOther: t("divers.list.letterOther"),
         }}
       />
-    </main>
+    </StaffPage>
   );
 }

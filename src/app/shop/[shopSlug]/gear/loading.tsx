@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
@@ -35,7 +36,7 @@ const CHIP_STUBS = [
  */
 export default function GearLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} description={false} actions />
         <StaffSectionTabsSkeleton section="gear" />
@@ -82,6 +83,6 @@ export default function GearLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

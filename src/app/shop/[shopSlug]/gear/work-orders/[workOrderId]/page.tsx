@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -122,7 +123,7 @@ export default async function WorkOrderPage({
   const subject = detail.personName ?? detail.gearItemLabel ?? t("workOrders.title");
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <FlashParams params={["notice"]} />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
@@ -267,6 +268,6 @@ export default async function WorkOrderPage({
           </form>
         )}
       </div>
-    </main>
+    </StaffPage>
   );
 }

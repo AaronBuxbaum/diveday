@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -220,7 +221,7 @@ export default async function WaiversPage({
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <FlashParams params={["notice", "count", "form"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
@@ -367,7 +368,7 @@ export default async function WaiversPage({
         timezone={shop.timezone}
         t={t}
       />
-    </main>
+    </StaffPage>
   );
 }
 

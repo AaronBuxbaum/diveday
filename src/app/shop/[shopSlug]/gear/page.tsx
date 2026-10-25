@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { keptTypedScope } from "@/components/kept-typed-scope";
@@ -258,7 +259,7 @@ export default async function GearRegisterPage({
     });
   }
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
         title={t("gear.title")}
@@ -392,6 +393,6 @@ export default async function GearRegisterPage({
           />
         </AddUnitSheet>
       </div>
-    </main>
+    </StaffPage>
   );
 }

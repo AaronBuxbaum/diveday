@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { keptTypedScope } from "@/components/kept-typed-scope";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
@@ -105,7 +106,7 @@ export default async function NewWorkOrderPage({
   const subjectName = customer?.person.fullName ?? chosenUnit?.label;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <header>
         <EyebrowBackLink href={board}>{t("workOrders.title")}</EyebrowBackLink>
         <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{t("workOrders.new.title")}</h1>
@@ -303,7 +304,7 @@ export default async function NewWorkOrderPage({
           </SectionCard>
         ) : null}
       </div>
-    </main>
+    </StaffPage>
   );
 }
 

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
+import { STAFF_PAGE_WIDTHS } from "../_components/staff-page";
 import { settingsPaneClass } from "./_components/settings-pane";
 
 /**
@@ -49,32 +50,20 @@ describe("the settings pane", () => {
   });
 
   it.each(MAINS)("draws $file's <main> from settingsPaneClass", ({ tag }) => {
-    expect(tag).toMatch(/^<main className=\{settingsPaneClass\((?:"5xl")?\)\}>$/);
-    expect(tag).not.toMatch(/max-w-/);
+    expect(tag).toBe("<main className={settingsPaneClass()}>");
   });
 
-  it("keeps the wide pane for the two pages whose content needs it, and only them", () => {
-    const wide = [...new Set(MAINS.filter(({ tag }) => tag.includes('"5xl"')).map((m) => m.file))];
-    expect(wide.sort()).toEqual([
-      "embed/loading.tsx",
-      "embed/page.tsx",
-      "team/loading.tsx",
-      "team/page.tsx",
-    ]);
-  });
-
-  it("pads every pane alike and starts it on the rail's edge from lg", () => {
-    for (const width of ["3xl", "5xl"] as const) {
-      const tokens = settingsPaneClass(width).split(" ");
-      for (const token of ["mx-auto", "w-full", "flex-1", "px-4", "py-8", "sm:px-6", "sm:py-10"]) {
-        expect(tokens).toContain(token);
-      }
-      expect(tokens).toContain(`max-w-${width}`);
-      // Beside the rail (the pane is not the frame's first child), the column
-      // starts on the pane's own edge whatever its width; with no rail (a
-      // staffer's own calendar feed), it stays centred as it always was.
-      expect(tokens).toContain("lg:[:not(:first-child)>&]:mx-0");
+  it("pads every pane alike, at reading width, and starts it on the rail's edge from lg", () => {
+    const tokens = settingsPaneClass().split(" ");
+    for (const token of ["mx-auto", "w-full", "flex-1", "px-4", "py-8", "sm:px-6", "sm:py-10"]) {
+      expect(tokens).toContain(token);
     }
-    expect(settingsPaneClass()).toBe(settingsPaneClass("3xl"));
+    // Team and Website embed asked for `max-w-5xl` once; every settings page
+    // is a staff page at reading width now (A04, `staff-page.ts`).
+    expect(tokens).toContain(STAFF_PAGE_WIDTHS.reading);
+    // Beside the rail (the pane is not the frame's first child), the column
+    // starts on the pane's own edge; with no rail (a staffer's own calendar
+    // feed), it stays centred as it always was.
+    expect(tokens).toContain("lg:[:not(:first-child)>&]:mx-0");
   });
 });
