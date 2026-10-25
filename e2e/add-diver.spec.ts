@@ -174,12 +174,11 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
 
-  // One act on who wants in: tick the diver and offer a seat, which stamps the
+  // One act on who wants in: the diver's own Offer a seat, which stamps the
   // interest so a second staffer sees it is already handled. The send may fall back
   // to the mail composer (mailto:) which the test can't follow, so we only
   // assert the recorded state lands.
-  await page.getByLabel("Offer Waitlist Wally a seat").check();
-  await page.getByRole("button", { name: "Offer a seat to 1" }).click();
+  await page.getByRole("button", { name: "Offer Waitlist Wally a seat" }).click();
   // The offer holds eight seconds with Undo first (ADR 20260906-before-you-ask,
   // decision 2), so the recorded state is allowed the hold before it shows.
   await expect(page.getByText(/offered /).filter({ visible: true })).toBeVisible({

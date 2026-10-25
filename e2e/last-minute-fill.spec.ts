@@ -62,7 +62,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await openTodayBoatFolds(page);
   const nudge = page
     .locator("li")
-    .filter({ hasText: /3 seats open, \d+ want in\./ })
+    .filter({ hasText: /3 seats open, \d+ want in/ })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
@@ -77,10 +77,10 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await nudge.getByRole("link", { name: "Offer a seat" }).click();
   await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+#who-wants-in$/);
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
-  await page.getByLabel("Offer Nora Quinn a seat").check();
-  const sendButton = page.getByRole("button", { name: "Offer a seat to 1" });
+  const sendButton = page.getByRole("button", { name: "Offer Nora Quinn a seat" });
   await expect(sendButton).toBeVisible();
-  await page.getByLabel("With a discount").check();
+  // One discount above the list rides with the row's own offer (A14).
+  await page.getByText("Add a discount to offers", { exact: true }).click();
 
   // A tap before React owns the form submits it natively and holds nothing.
   await expect(sendButton.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
@@ -144,7 +144,7 @@ test("a failed send attempt does not silence the Today row — nothing actually 
   await openTodayBoatFolds(page);
   const nudge = page
     .locator("li")
-    .filter({ hasText: /3 seats open, \d+ want in\./ })
+    .filter({ hasText: /3 seats open, \d+ want in/ })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
@@ -156,12 +156,11 @@ test("a failed send attempt does not silence the Today row — nothing actually 
   // Stripe is seeded connected but has no real key, so this send fails at the
   // Stripe step: durable proof an *attempt* happened, but no code actually
   // went out, so the Today row (people still want in) keeps prompting staff.
-  await page.getByLabel("Offer Priya Shah a seat").check();
-  const send = page.getByRole("button", { name: "Offer a seat to 1" });
+  const send = page.getByRole("button", { name: "Offer Priya Shah a seat" });
   await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
   // A fixed amount rather than a percent (amendment 2026-10-09 to ADR
   // 20260729-shop-promo-codes): the attempt's line names it once per booking.
-  await page.getByLabel("With a discount").check();
+  await page.getByText("Add a discount to offers", { exact: true }).click();
   await page.getByRole("combobox", { name: "Discount type" }).selectOption("amount");
   await page.getByRole("spinbutton", { name: "Discount" }).fill("20");
   await send.click();
@@ -172,7 +171,7 @@ test("a failed send attempt does not silence the Today row — nothing actually 
   await page.goto("/shop/blue-mantis");
   // The want-in row is a chore: on a long boat it sits behind "and N more".
   await openTodayBoatFolds(page);
-  await expect(page.getByText(/3 seats open, \d+ want in\./)).toBeVisible();
+  await expect(page.getByText(/3 seats open, \d+ want in/)).toBeVisible();
 });
 
 // /api/test/seed-interest-unsubscribe-token mints a real
@@ -249,7 +248,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   await openTodayBoatFolds(page);
   const nudge = page
     .locator("li")
-    .filter({ hasText: /3 seats open, \d+ want in\./ })
+    .filter({ hasText: /3 seats open, \d+ want in/ })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
@@ -271,8 +270,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   // And the offer is still there: informing, never gating. A filter here would
   // quietly stop the offer reaching everyone the shop has never carded, which
   // is most of a deal list.
-  await page.getByLabel("Offer Tess Alvarez a seat").check();
-  await expect(page.getByRole("button", { name: "Offer a seat to 1" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Offer Tess Alvarez a seat" })).toBeEnabled();
 });
 
 /**
@@ -322,7 +320,7 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await openTodayBoatFolds(page);
   await page
     .locator("li")
-    .filter({ hasText: /3 seats open, \d+ want in\./ })
+    .filter({ hasText: /3 seats open, \d+ want in/ })
     .filter({ hasNot: page.locator("li") })
     .filter({ visible: true })
     .getByRole("link", { name: "Offer a seat" })
@@ -333,10 +331,14 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await expect(rosterRow(page, "Nell Byrne").filter({ visible: true })).toHaveCount(0);
   await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
-  // Other eligible recipients can still be offered a seat, and the bulk tick
-  // reaches only the rows that fit.
-  await page.getByRole("button", { name: "Tick everyone who fits" }).click();
-  await expect(page.getByRole("button", { name: /Offer a seat to \d+/ })).toBeEnabled();
+  // Other eligible recipients can still be offered a seat, each from their own row.
+  await expect(
+    page
+      .locator("#who-wants-in")
+      .getByRole("button", { name: /^Offer .+ a seat$/ })
+      .filter({ visible: true })
+      .first(),
+  ).toBeEnabled();
 });
 
 /**

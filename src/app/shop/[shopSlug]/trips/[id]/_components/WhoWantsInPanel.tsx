@@ -1,19 +1,21 @@
 import type { ReactNode } from "react";
-import { choiceClass } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { publicTripPath } from "@/lib/public-routes";
-import { type OfferDiscountCopy, OfferDiscountFields } from "./OfferDiscountFields";
+import {
+  type OfferDiscountCopy,
+  OfferDiscountDisclosure,
+  OfferDiscountProvider,
+  OfferDiscountRider,
+} from "./OfferDiscount";
 import { OfferSeat } from "./OfferSeat";
 import { offeredAgoText, offerSeatCopy } from "./offer-seat-copy";
 import { RosterGroup } from "./RosterGroupBand";
-import { TickAllThatFit } from "./TickAllThatFit";
 import type { WhoWantsInRow } from "./who-wants-in-rows";
 
 /** The element id the Today row, the held send and the Details tab link to. */
 export const WHO_WANTS_IN_ID = "who-wants-in";
-const OFFER_FORM_ID = "offer-seat";
 
 /** One labelled run of rows. The panel draws a group only when it has rows. */
 export type WhoWantsInGroup = {
@@ -33,9 +35,12 @@ export type WhoWantsInGroup = {
  * 20260813-wait-list-is-a-lead-list): each group keeps the order people asked
  * in, and a below-the-bar mark informs the staffer without disabling the tick.
  *
- * The act is `OfferSeat`, one held send over whatever is ticked. Without
- * `canOffer` (the departure takes nobody, or the role may not offer) the names
- * stay and the ticks and the button do not.
+ * **One mechanism** (visual review 2026-10-24, A14): every row ends in its own
+ * "Offer a seat", one held send to that person; above the list, for a role
+ * that may discount, one disclosure, "Add a discount to offers", whose
+ * discount rides with whichever row's offer goes next (`OfferDiscount`).
+ * Without `canOffer` (the departure takes nobody, or the role may not offer)
+ * the names stay and the buttons do not.
  */
 export function WhoWantsInPanel({
   groups,
@@ -61,7 +66,7 @@ export function WhoWantsInPanel({
   /** "Carry who’s waiting": a form the page binds to its action, when there is a departure to carry to. */
   carry?: ReactNode;
   /**
-   * "With a discount" on the Offer: given only to a role that may discount
+   * "Add a discount to offers": given only to a role that may discount
    * (`mayDiscount`), absent for everyone else, who then see no money control.
    */
   discount?: OfferDiscountCopy | null;
@@ -73,12 +78,12 @@ export function WhoWantsInPanel({
   const now = nowDate();
   const rows = shown.flatMap((group) => [...group.rows, ...(group.more ?? [])]);
   const offered = rows.filter((row) => row.offeredAt).length;
-  const fitCount = rows.filter((row) => !row.belowBar).length;
   const facts = [
     t("trips.whoWantsIn.seatsOpen", { count: seatsOpen }),
     offered > 0 ? t("trips.whoWantsIn.alreadyOffered", { count: offered }) : null,
   ].filter(Boolean);
 
+  const copy = offerSeatCopy(t);
   const renderRow = (row: WhoWantsInRow) => {
     const body = (
       <div className="min-w-0 text-sm">
@@ -107,23 +112,25 @@ export function WhoWantsInPanel({
       </div>
     );
     return (
-      <li key={row.interestId} className="py-2.5">
+      <li
+        key={row.interestId}
+        className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 py-2.5"
+      >
+        {body}
         {canOffer ? (
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              form={OFFER_FORM_ID}
-              name="interestId"
-              value={row.interestId}
-              data-below-bar={row.belowBar ? "true" : undefined}
-              aria-label={t("trips.whoWantsIn.tickLabel", { name: row.name })}
-              className={`${choiceClass} mt-1.5`}
-            />
-            {body}
-          </label>
-        ) : (
-          body
-        )}
+          <OfferSeat
+            formId={`offer-seat-${row.interestId}`}
+            tripId={tripId}
+            interests={[{ interestId: row.interestId, name: row.name, email: row.email }]}
+            ariaLabel={t("trips.whoWantsIn.offerSeatAria", { name: row.name })}
+            bookingPath={publicTripPath(shopSlug, tripId)}
+            shopName={shopName}
+            tripTitle={tripTitle}
+            tripWhen={tripWhen}
+            copy={copy}
+            discountFields={discount ? <OfferDiscountRider /> : null}
+          />
+        ) : null}
       </li>
     );
   };
@@ -134,47 +141,33 @@ export function WhoWantsInPanel({
       label={t("trips.whoWantsIn.heading", { count: rows.length })}
       className="print:hidden"
     >
-      <div className="space-y-4 px-4 py-3 sm:px-5">
-        <p className="text-xs text-muted">
-          {facts.join(" · ")}
-          {". "}
-          {t("trips.whoWantsIn.description")}
-        </p>
-        {shown.map((group) => (
-          <section key={group.id} aria-labelledby={`who-wants-in-${group.id}`}>
-            <GroupLabel as="h3" id={`who-wants-in-${group.id}`}>
-              {group.heading}
-            </GroupLabel>
-            <ul className="mt-1 divide-y divide-border">{group.rows.map(renderRow)}</ul>
-            {group.more && group.more.length > 0 ? (
-              <details className="group/more mt-1">
-                <summary className="min-h-11 cursor-pointer list-none py-2.5 text-sm text-muted underline [&::-webkit-details-marker]:hidden group-open/more:hidden">
-                  {t("trips.whoWantsIn.showMore", { count: group.more.length })}
-                </summary>
-                <ul className="divide-y divide-border">{group.more.map(renderRow)}</ul>
-              </details>
-            ) : null}
-          </section>
-        ))}
-        {canOffer && fitCount > 1 ? (
-          <TickAllThatFit formId={OFFER_FORM_ID} label={t("trips.whoWantsIn.tickAllFit")} />
-        ) : null}
-        {canOffer ? (
-          <OfferSeat
-            formId={OFFER_FORM_ID}
-            tripId={tripId}
-            interests={rows.map(({ interestId, name, email }) => ({ interestId, name, email }))}
-            chooseByTick
-            bookingPath={publicTripPath(shopSlug, tripId)}
-            shopName={shopName}
-            tripTitle={tripTitle}
-            tripWhen={tripWhen}
-            copy={offerSeatCopy(t)}
-            discountFields={discount ? <OfferDiscountFields copy={discount} /> : null}
-          />
-        ) : null}
-        {carry}
-      </div>
+      <OfferDiscountProvider>
+        <div className="space-y-4 px-4 py-3 sm:px-5">
+          <p className="text-xs text-muted">
+            {facts.join(" · ")}
+            {". "}
+            {t("trips.whoWantsIn.description")}
+          </p>
+          {canOffer && discount ? <OfferDiscountDisclosure copy={discount} /> : null}
+          {shown.map((group) => (
+            <section key={group.id} aria-labelledby={`who-wants-in-${group.id}`}>
+              <GroupLabel as="h3" id={`who-wants-in-${group.id}`}>
+                {group.heading}
+              </GroupLabel>
+              <ul className="mt-1 divide-y divide-border">{group.rows.map(renderRow)}</ul>
+              {group.more && group.more.length > 0 ? (
+                <details className="group/more mt-1">
+                  <summary className="min-h-11 cursor-pointer list-none py-2.5 text-sm text-muted underline [&::-webkit-details-marker]:hidden group-open/more:hidden">
+                    {t("trips.whoWantsIn.showMore", { count: group.more.length })}
+                  </summary>
+                  <ul className="divide-y divide-border">{group.more.map(renderRow)}</ul>
+                </details>
+              ) : null}
+            </section>
+          ))}
+          {carry}
+        </div>
+      </OfferDiscountProvider>
     </RosterGroup>
   );
 }

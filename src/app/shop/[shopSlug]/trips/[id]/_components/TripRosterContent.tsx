@@ -370,7 +370,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
               discount={
                 mayDiscount
                   ? {
-                      toggle: t("trips.whoWantsIn.withDiscount"),
+                      toggle: t("trips.whoWantsIn.addDiscount"),
+                      hint: t("trips.whoWantsIn.discountHint"),
                       amountAriaLabel: t("trips.lastMinute.discountPercentAriaLabel"),
                       kindAriaLabel: t("trips.lastMinute.discountKindAriaLabel"),
                       currencySymbol: currencySymbol(toShopCurrency(currency), locale),

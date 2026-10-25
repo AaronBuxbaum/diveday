@@ -358,7 +358,6 @@ function StationRow({
           email: action.offer.personEmail,
         },
       ]}
-      chooseByTick={false}
       label={t("trips.whoWantsIn.offerSeatToName", { name: action.offer.personName })}
       offeredLabel={
         action.offer.offeredAt
