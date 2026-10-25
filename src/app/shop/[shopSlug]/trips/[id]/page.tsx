@@ -24,6 +24,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
+import { ADD_A_BOOKING_ID } from "./_components/add-a-booking-id";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { detailsReadRows } from "./_components/details-rows";
@@ -32,10 +33,11 @@ import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
+import { TripAddBookingLink } from "./_components/TripAddBookingLink";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { TripMoreActions } from "./_components/TripMoreActions";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
+import { TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
@@ -318,12 +320,11 @@ export default async function ManageTripPage({
           // full boat's wait list stays in the roster's own Add band.
           actions={
             !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
-              <TripAddDiverLink
+              <TripAddBookingLink
                 // The roster's own band, on the Divers tab: from Details the
-                // anchor is not on the page.
-                href={`${shopPath(shopSlug, "trips", tripId)}#add-diver`}
+                // anchor is not on the page, so the link loads it there.
+                href={`${shopPath(shopSlug, "trips", tripId)}#${ADD_A_BOOKING_ID}`}
                 label={t("trips.addDiver.heading")}
-                compactLabel={t("trips.about.add")}
                 ariaLabel={t("trips.about.addDiverJump")}
               />
             )

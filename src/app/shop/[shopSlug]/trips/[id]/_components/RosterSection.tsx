@@ -13,6 +13,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
+import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { RosterAllClear } from "./RosterAllClear";
 import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
 import { RosterRow, type RosterRowContext } from "./RosterRow";
@@ -296,7 +297,11 @@ export function RosterSection({
               label={t("trips.addDiver.heading")}
               className="print:hidden"
             >
-              <div className="px-4 py-5 sm:px-5">{addDiverGroup}</div>
+              {/* The masthead's "Add a booking" lands here (A31); the group
+                  keeps `#add-diver` for the doors elsewhere that open it. */}
+              <div id={ADD_A_BOOKING_ID} className="scroll-mt-20 px-4 py-5 sm:px-5">
+                {addDiverGroup}
+              </div>
             </RosterGroup>
           ) : null}
         </div>
