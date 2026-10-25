@@ -1267,7 +1267,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(page.getByText("No signal · device copy")).toBeVisible();
 
   const counter = page.getByRole("region", { name: "At the counter" });
   await expect(counter).toBeVisible();
