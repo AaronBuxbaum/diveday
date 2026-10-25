@@ -25,12 +25,18 @@ describe("MedicalAlertSection", () => {
     expect(box).not.toBeRequired();
     expect(box).toHaveValue("");
     expect(screen.getByText(t("waiver.medicalAlertIntro"))).toBeInTheDocument();
-    // The first helper sentence, and the one safety line the dive-domain
-    // reviews kept (visual review 2026-10-24, B56): not the questionnaire, and
-    // who reads it.
+    // The one helper paragraph (visual review 2026-10-24, B56) carries every
+    // safety fact the glossary's "Medical alert for the crew" asks the diver
+    // page to say: not the questionnaire, nobody reviews it, who reads it, and
+    // say it at the briefing too (the dock-side backstop when no reader is aboard).
     expect(screen.getByText(t("waiver.medicalAlertNotQuestionnaire"))).toBeInTheDocument();
-    expect(t("waiver.medicalAlertNotQuestionnaire")).toMatch(/medical questions/);
-    expect(t("waiver.medicalAlertNotQuestionnaire")).toMatch(/crew can read it/);
+    for (const locale of ["en-US", "es-ES"] as const) {
+      expect(diverTranslator(locale)("waiver.medicalAlertNotQuestionnaire")).toMatch(
+        locale === "en-US"
+          ? /medical questions.*nobody reviews it.*crew can read it.*at the briefing/
+          : /preguntas médicas.*nadie la revisa.*tripulación del barco.*en el briefing/,
+      );
+    }
     expect(document.querySelectorAll("section > p")).toHaveLength(2);
   });
 

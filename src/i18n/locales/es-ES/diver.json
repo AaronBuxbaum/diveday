@@ -348,7 +348,8 @@
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera.",
     "runLine": "Sale {cadence} · la próxima, {date}",
     "crewToBeConfirmed": "{role} · por confirmar",
-    "changedAt": "Cambiado el {when}"
+    "changedByShop": "Cambiado por el centro el {when}",
+    "changedByCrew": "Cambiado por la tripulación el {when}"
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -1235,7 +1236,7 @@
     "medicalAlertHeading": "Para la tripulación, en una emergencia",
     "medicalAlertIntro": "Lo que la tripulación debe saber si algo sale mal en el barco: una alergia y dónde está tu medicamento, diabetes, un inhalador. Déjalo en blanco si no hay nada.",
     "medicalAlertIntroMinor": "Lo que la tripulación debe saber sobre {name} si algo sale mal en el barco: una alergia y dónde está su medicamento, diabetes, un inhalador. Déjalo en blanco si no hay nada.",
-    "medicalAlertNotQuestionnaire": "No reemplaza las preguntas médicas de arriba, y pueden leerla el propietario del centro, sus gerentes y la tripulación del barco.",
+    "medicalAlertNotQuestionnaire": "No reemplaza las preguntas médicas de arriba y nadie la revisa para decidir quién puede bucear. Pueden leerla el propietario del centro, sus gerentes y la tripulación del barco; díselo también a la tripulación en el briefing.",
     "medicalAlertEarlier": "Tu última exención aquí tenía una alerta médica para la tripulación. Si sigue siendo válida, vuelve a escribirla.",
     "medicalAlertCounterOne": "Queda 1 carácter",
     "medicalAlertCounterOther": "Quedan {count} caracteres",
@@ -3693,6 +3694,7 @@
     "sendWaiver": "Enviar exención",
     "tripLine": "Arrecife de dos tanques · 7:30",
     "rollCallHeading": "Pase de lista · Antes de zarpar",
+    "afterDiveRollCallHeading": "Pase de lista · Después de la inmersión 1",
     "bookingCard": {
       "label": "Pecio Spiegel Grove",
       "requirement": "Esta salida es para buceadores con Advanced Open Water o superior y certificación de Profundidad.",
@@ -3913,7 +3915,10 @@
         },
         "aboard": {
           "when": "En el muelle, y después de cada inmersión",
-          "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella"
+          "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella",
+          "note1": "El recuento de cada inmersión, buceadores y tripulación por su nombre, sigue abierto hasta contar a bordo a todos los que zarparon.",
+          "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal.",
+          "mockupLabel": "El pase de lista de la tripulación después de la inmersión 1: 8 de 9 buceadores a bordo, un nombre marcado a bordo y el último aún por llamar."
         },
         "recap": {
           "when": "Después de que vuelva el barco",
@@ -4608,7 +4613,7 @@
     "pricing": {
       "heroTitle": "Lo que paga un centro, línea por línea",
       "lockNote": "El precio de hoy, congelado dos años para los centros fundadores.",
-      "trialNote": "La prueba es un centro tuyo, gratis 3 semanas sin tarjeta, y nada se apaga cuando termina.",
+      "trialNote": "La prueba es un centro tuyo, gratis 3 semanas sin tarjeta, y nada se apaga cuando termina. Para pasar al plan de pago, escribe a {email}.",
       "earlyAccessBadge": "Acceso anticipado",
       "invoice": {
         "title": "La factura",
@@ -5886,7 +5891,7 @@
   "embed": {
     "book": "Reservar",
     "enrol": "Inscribirme",
-    "askToBeTold": "Avísenme si se libera un asiento"
+    "askToBeTold": "Avísame si se libera una plaza"
   },
   "shopYear": {
     "card": {

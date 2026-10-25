@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { SmsConsentNote } from "@/components/SmsConsentNote";
+import { SMS_CONSENT_ONCE_FILLED, SmsConsentNote } from "@/components/SmsConsentNote";
 import { buttonClass } from "@/components/ui/button";
 import { ChoicePill, ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
@@ -401,12 +401,14 @@ export function BookingPartyFields({
                     <Field
                       label={t("party.phoneLabel")}
                       hint={t("party.phoneHint")}
-                      // The consent's words stand under the field once it holds a
+                      // The consent's words show once the field holds a
                       // number, the moment they start to apply (visual review
-                      // 2026-10-24, B22); a prefilled number renders them on
-                      // the server, since `phone` starts from it.
-                      description={phone.trim() ? <SmsConsentNote t={t} /> : undefined}
-                      className="text-base"
+                      // 2026-10-24, B22). They are always in the server HTML and
+                      // hidden by CSS while the box is empty, so a form posted
+                      // before hydration, or autofilled without an event, still
+                      // carried them (H-09).
+                      description={<SmsConsentNote t={t} />}
+                      className={`text-base ${SMS_CONSENT_ONCE_FILLED}`}
                       error={fieldErrors?.phone}
                     >
                       <input
@@ -415,6 +417,7 @@ export function BookingPartyFields({
                         maxLength={30}
                         autoComplete="tel"
                         inputMode="tel"
+                        placeholder=" "
                         value={phone}
                         onChange={(event) => setPhone(event.target.value)}
                         className={controlClass}
