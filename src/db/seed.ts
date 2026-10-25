@@ -1347,12 +1347,41 @@ async function deleteStripeReversals(db: DbExecutor, shopId: string): Promise<vo
  *
  * Deletes run children-first so foreign keys never block a reset, however far
  * a visitor drove the tool (signed a waiver, saved a fit, ran roll call).
+ *
+ * Two halves: {@link clearDemoSchedule} takes the shop down to what a reset
+ * keeps, and {@link reseedClearedDemoSchedule} writes the seeded schedule back.
+ * The e2e reset replays the second half from a copy instead of re-running it
+ * (`src/db/demo-reset-snapshot.ts`); this function, which the in-app "reset demo
+ * shop" action calls against real Postgres, always runs both.
  */
 export async function resetDemoSchedule(
   db: DbExecutor,
   shopId: string,
   opts: { history?: boolean } = {},
 ): Promise<void> {
+  const cleared = await clearDemoSchedule(db, shopId);
+  await reseedClearedDemoSchedule(db, shopId, cleared, opts);
+}
+
+/** What {@link clearDemoSchedule} read before it deleted, for the re-seed to put back. */
+export type ClearedDemoSchedule = { waiverTitle: string };
+
+/**
+ * The delete half of {@link resetDemoSchedule}: every reset-owned row goes, and
+ * the shop's kept rows are put back to their seeded values where a reset
+ * restores them (boat paper dates, the shop's unit and alert columns).
+ *
+ * **It writes no reset-owned row.** Every insert lives in
+ * {@link reseedClearedDemoSchedule}, so "the rows a reset owns" is exactly "the
+ * rows this deletes", which is what lets the e2e snapshot capture them by
+ * difference. The one insert left here is `restoreMissingStableStaff`, which
+ * repairs the *kept* cast and writes nothing on a shop that has not drifted;
+ * the snapshot's capture refuses a clear that inserted anything.
+ */
+export async function clearDemoSchedule(
+  db: DbExecutor,
+  shopId: string,
+): Promise<ClearedDemoSchedule> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
 
@@ -1757,12 +1786,9 @@ export async function resetDemoSchedule(
     })
     .where(eq(shops.id, shopId));
   await db.delete(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shopId));
+  // Anything a spec connected goes here; the re-seed half puts back the one
+  // connection the canonical demo is configured with.
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
-  // ...and puts back the one connection the canonical demo is configured with:
-  // its Stripe test-mode account, when the deployment names one (ADR
-  // 20261009-demo-test-mode-payments). Anything a spec connected is gone
-  // either way; a minted demo is skipped.
-  await syncDemoStripeAccount(db, shopId);
 
   // The waiver is the same class of fixture. Editing the release text saves a
   // *new version* rather than mutating the signed one, so a spec that edits it
@@ -1779,13 +1805,6 @@ export async function resetDemoSchedule(
     .limit(1);
   await db.delete(waiverMaterialityDecisions).where(eq(waiverMaterialityDecisions.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
-  await db.insert(waiverTemplates).values({
-    shopId,
-    title: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE,
-    version: 1,
-    body: DEFAULT_WAIVER_BODY,
-    createdAt: nowDate(),
-  });
 
   // Shop-wide discount codes, for the same reason and by the same means.
   //
@@ -1802,6 +1821,33 @@ export async function resetDemoSchedule(
   // re-inserts REEF10 and OPENWATER25 in their seeded state below; a code some
   // test minted is not seeded state and correctly does not come back.
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
+
+  return { waiverTitle: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE };
+}
+
+/**
+ * The insert half of {@link resetDemoSchedule}: everything a cleared shop gets
+ * back. Only ever called on a shop {@link clearDemoSchedule} just cleared.
+ */
+async function reseedClearedDemoSchedule(
+  db: DbExecutor,
+  shopId: string,
+  cleared: ClearedDemoSchedule,
+  opts: { history?: boolean } = {},
+): Promise<void> {
+  // The one connection the canonical demo is configured with: its Stripe
+  // test-mode account, when the deployment names one (ADR
+  // 20261009-demo-test-mode-payments). A minted demo is skipped.
+  await syncDemoStripeAccount(db, shopId);
+  // The waiver templates were replaced outright (see the clear half), under the
+  // shop's own title.
+  await db.insert(waiverTemplates).values({
+    shopId,
+    title: cleared.waiverTitle,
+    version: 1,
+    body: DEFAULT_WAIVER_BODY,
+    createdAt: nowDate(),
+  });
 
   // The low-level reset stays lean by default so callers that are resetting a
   // fixture do not unexpectedly recreate hundreds of historical tips/reviews.

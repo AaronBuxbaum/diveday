@@ -274,7 +274,10 @@ export const test = base.extend<
       // Playwright's test order and produced cross-test failures in CI.
       const response = await request.post("/api/test/reset");
       // Fail *here*, naming the reset, rather than letting the test run on a
-      // half-wrecked shop. `resetDemoSchedule` is a hand-maintained topological
+      // half-wrecked shop. (A replay from the server's copy that cannot finish
+      // rolls back and runs the real reset instead, so the failure below is
+      // still the real reset's: src/db/demo-reset-snapshot.ts.)
+      // `resetDemoSchedule` is a hand-maintained topological
       // delete, so a new table with a shop-scoped FK that nobody added to the
       // ordering makes it throw 23503 partway: the deletes before the violation
       // have already landed, the re-seed never runs, and the shop is left
