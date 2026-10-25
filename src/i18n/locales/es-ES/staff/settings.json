@@ -223,6 +223,7 @@
       "heading": "Lista de equipo de la salida",
       "description": "Un artículo por línea. Los buceadores ven esta misma lista concisa en cada salida.",
       "label": "Elementos de la lista",
+      "logbook": "Sugerir una bitácora de buceo",
       "submit": "Guardar lista de equipo",
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"

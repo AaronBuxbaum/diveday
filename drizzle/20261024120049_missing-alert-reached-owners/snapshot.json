@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "c64cc37b-bac7-41e5-a10f-ae5555c7bd23",
+  "prevIds": [
+    "aa5aa2c4-74b9-493d-9bfb-e9d1ac1cfb6e"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "incident_reports",
+        "missing_alert_reached_person_ids"
+      ],
+      "writes": [
+        "s|col|public.incident_reports.missing_alert_reached_person_ids",
+        "n|col|public.incident_reports.missing_alert_reached_person_ids",
+        "e|col|public.incident_reports.missing_alert_reached_person_ids"
+      ],
+      "reads": [
+        "n|tbl|public.incident_reports",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "incident_reports",
+        "name": "missing_alert_reached_person_ids",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

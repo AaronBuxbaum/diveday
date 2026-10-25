@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { MINUTE_MS } from "@/lib/clock";
+import { isTurnedAwaySeat } from "@/lib/manifests";
 import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
 import { addCalendarDays, toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
@@ -68,6 +69,12 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
     inWindow.map((trip) => trip.id),
     now,
   )) {
+    // **A seat the desk turned away is nobody's work any more** (issue #2907):
+    // the diver was seen and sent home, and the seat is back on sale. Left in,
+    // it read as one more blocked diver on the card, a "Send waiver" row for a
+    // person who has gone, and one more name awaiting the dock count. Boarding
+    // them at the rail takes the seat back, and the next read counts them again.
+    if (isTurnedAwaySeat(row.booking)) continue;
     readinessByTrip.get(row.booking.tripId)?.push(row);
   }
   // `upcoming` keeps the pre-horizon fetch alongside the windowed list:

@@ -31,6 +31,11 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
 });
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {
+  // Minting the demo shop is the cost, not a wait: the trace on 2026-10-24 put
+  // the mint at 6s and the per-test reset at 4.2s before the first switch, and
+  // the two switches at 2.5s each; it timed out at 15.0s on the second. Split,
+  // each half would mint its own shop.
+  test.setTimeout(30_000);
   await page.goto("/");
   await page.getByRole("button", { name: "Try the live demo" }).first().click();
   await expect(page.getByText("Demo shop")).toBeVisible();

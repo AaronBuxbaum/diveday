@@ -18,6 +18,8 @@ import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import { emergencyCardHasNumbers } from "@/lib/emergency-reference";
 import {
   type CrewIncompleteReason,
+  isTurnedAwayOffBoat,
+  isTurnedAwaySeat,
   rollCallCheckpoints,
   rollCallCompleteness,
 } from "@/lib/manifests";
@@ -582,7 +584,12 @@ export async function listRollCallGaps(
 
   const [roster, events, crewEvents] = await Promise.all([
     db
-      .select({ tripId: bookings.tripId, bookingId: bookings.id })
+      .select({
+        tripId: bookings.tripId,
+        bookingId: bookings.id,
+        status: bookings.status,
+        turnedAwayAt: bookings.turnedAwayAt,
+      })
       .from(bookings)
       .where(
         and(
@@ -647,6 +654,11 @@ export async function listRollCallGaps(
       ),
   ]);
 
+  // Seats the desk turned away: off the boat at any checkpoint nobody at the
+  // boat has recorded them at (`isTurnedAwayOffBoat`, issue #2907).
+  const turnedAwayIds = new Set(
+    roster.filter((row) => isTurnedAwaySeat(row)).map((row) => row.bookingId),
+  );
   const rosterByTrip = new Map<string, string[]>();
   for (const row of roster) {
     const list = rosterByTrip.get(row.tripId) ?? [];
@@ -702,6 +714,8 @@ export async function listRollCallGaps(
     const crewUnaccounted = checkpoints.map(() => 0);
     const crewNotBackAboard = checkpoints.map(() => 0);
     let departureAwaiting = 0;
+    // Seats turned away at the desk with no dock result: not the dock count's.
+    let dockOffBoat = 0;
     let anyEvent = false;
 
     for (const bookingId of bookingIds) {
@@ -715,7 +729,9 @@ export async function listRollCallGaps(
         return event.status;
       });
       if (states.some((state) => state !== undefined)) anyEvent = true;
-      if (states[0] === undefined) departureAwaiting += 1;
+      if (isTurnedAwayOffBoat({ turnedAway: turnedAwayIds.has(bookingId), rollCall: states[0] })) {
+        dockOffBoat += 1;
+      } else if (states[0] === undefined) departureAwaiting += 1;
       if (!inAfterDivePopulation(states)) continue;
       for (let dive = 1; dive < checkpoints.length; dive++) {
         const state = states[dive];
@@ -843,15 +859,16 @@ export async function listRollCallGaps(
     // carrying a month of it would bury the rows above. Divers only: a
     // dock-side crew gap on a shop that has not adopted crew roll call is every
     // trip it has ever run.
-    if (home && !stale && bookingIds.length > 0) {
+    const dockRoster = bookingIds.length - dockOffBoat;
+    if (home && !stale && dockRoster > 0) {
       if (!anyEvent) {
         gaps.push({
           ...base,
           reason: "no_roll_call",
           diveNumber: 0,
-          uncounted: bookingIds.length,
-          awaiting: bookingIds.length,
-          total: bookingIds.length,
+          uncounted: dockRoster,
+          awaiting: dockRoster,
+          total: dockRoster,
         });
       } else if (departureAwaiting > 0) {
         gaps.push({
@@ -860,7 +877,7 @@ export async function listRollCallGaps(
           diveNumber: 0,
           uncounted: departureAwaiting,
           awaiting: departureAwaiting,
-          total: bookingIds.length,
+          total: dockRoster,
         });
       }
     }

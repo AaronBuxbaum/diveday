@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
@@ -41,7 +41,7 @@ import {
 } from "./rental-fit";
 import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBookedOnce } from "./trips";
+import { getTripWithBookedOnce, listTripScheduleDays } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { diveDayCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -317,6 +317,18 @@ export type ReadyPageData = {
    * (`nitroxCardOnFilePersonIds`).
    */
   nitroxCardOnFile: boolean;
+  /**
+   * At least one live certification card on file, verified or not; false
+   * while the seat is held. Decides only whether a course student's packing
+   * list suggests a logbook (`packsLogbook`) — never a gate.
+   */
+  holdsCertification: boolean;
+  /**
+   * How many days this departure meets on (`trip_schedule_days`), read on a
+   * course session only (0 elsewhere): its one-day plan is said on a
+   * one-meeting session alone (`SessionDayPlan`).
+   */
+  meetingDayCount: number;
   /** Projected: staff-only fit columns never reach the diver's browser. */
   rentalFit: DiverRentalFit | null;
   /** The one active, non-medical day-of request this booking has made. */
@@ -516,6 +528,10 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
       tripLunchAboard: trips.lunchAboard,
+      // Any live card, verified or not: whether a course student has dives to
+      // log (`packsLogbook`, issue #2795). In this row rather than a query of
+      // its own, so the page stays inside its round-trip budget.
+      holdsAnyCertification: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.deletedAt} is null)`,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -552,6 +568,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     pendingMoveAsk,
+    meetingDays,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -591,6 +608,9 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.identityUnconfirmedAt === null
       ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
       : null,
+    // How many days a course session meets on, for its own day plan
+    // (`SessionDayPlan`, issue #2795); a charter says no plan day.
+    row.tripCourseId !== null ? listTripScheduleDays(db, row.shopId, row.tripId) : [],
   ]);
   if (!trip) return null;
   return {
@@ -609,6 +629,9 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    // Nothing is read off a held seat's matched person, so a held seat holds none.
+    holdsCertification: row.identityUnconfirmedAt === null && row.holdsAnyCertification,
+    meetingDayCount: meetingDays.length,
   };
 }
 
@@ -644,6 +667,8 @@ export async function getReadyPageData(
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    holdsCertification,
+    meetingDayCount,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -784,6 +809,8 @@ export async function getReadyPageData(
         : null,
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
+    holdsCertification,
+    meetingDayCount,
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
     // Said even after the shop stops offering hotel pickups (the Features

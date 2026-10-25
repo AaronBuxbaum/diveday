@@ -22,7 +22,15 @@ const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
 const secret = "cron-test-secret";
-const missingDiver = { checked: 1, alerted: 1, emails: 1, pushes: 0, released: 0, overdue: 0 };
+const missingDiver = {
+  checked: 1,
+  alerted: 1,
+  emails: 1,
+  pushes: 0,
+  released: 0,
+  overdue: 0,
+  allClearsRetried: 0,
+};
 const rollCall = { checked: 1, alerted: 1, emails: 1, shoreEmails: 0, pushes: 2, released: 0 };
 
 function cronRequest(authorization?: string) {

@@ -10,6 +10,7 @@ import {
   type PersonalGearCode,
   type ProvidedItemCode,
   packingConfidence,
+  packsLogbook,
   type SiteBottomTimes,
 } from "@/lib/diver-planning";
 import { formatTime } from "@/lib/format";
@@ -241,6 +242,7 @@ export function PackingSection({
   siteBottomTimes,
   legTravelTimes,
   temperatureStatedAbove,
+  holdsCertification,
   locale,
 }: {
   shop: Shop;
@@ -288,6 +290,12 @@ export function PackingSection({
    * genuinely different layouts rather than one being a subset of the other.
    */
   temperatureStatedAbove: boolean;
+  /**
+   * This diver has a certification card on file. Read only on a try-dive
+   * session, where a student with none has no dives to log and is not told to
+   * bring a logbook (`packsLogbook`, issue #2795).
+   */
+  holdsCertification: boolean;
   locale: string;
 }) {
   const rhythmDays = days?.length ? days : [day ?? trip];
@@ -297,6 +305,11 @@ export function PackingSection({
     shop.briefingMinutes > 0,
     trip.course?.gearIncluded === true,
   );
+  const logbook = packsLogbook({
+    shopSuggests: shop.packingLogbook,
+    introCourseSession: trip.course?.isIntroCourse === true,
+    holdsCertification,
+  });
   const t = diverTranslator(locale);
   // Said here only when nothing above has said it. This used to be an
   // unconditional "water is expected around 24°C — use the shop's wetsuit
@@ -337,6 +350,7 @@ export function PackingSection({
             {packing.bring.map((item) => (
               <li key={item}>{item}</li>
             ))}
+            {logbook ? <li>{t("trip.packLogbook")}</li> : null}
           </ul>
         </div>
         <div>

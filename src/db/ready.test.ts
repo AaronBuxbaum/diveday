@@ -469,6 +469,25 @@ describe("getReadyPageData", () => {
     const { db, bookingId } = await unpaidBooking();
     expect((await getReadyPageData(db, bookingId))?.fitConfirmation).toBeNull();
   });
+
+  // Issue #2795: whether a course student's packing list suggests a logbook.
+  it("says whether the diver holds any certification card, verified or not", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.holdsCertification).toBe(false);
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: seat.personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "PADI-OW-LOGBOOK",
+    });
+    expect(card, "an unreviewed card").not.toBeNull();
+    expect((await getReadyPageData(db, bookingId))?.holdsCertification).toBe(true);
+  });
 });
 
 /**

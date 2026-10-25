@@ -206,6 +206,7 @@
     "calendarDockCall": "Dock call {dockCall}. We leave at {departure}.",
     "calendarMeetingPoint": "Meet at {place}.",
     "packBring": "Bring",
+    "packLogbook": "Logbook",
     "packRenting": "Renting",
     "packProvided": "We provide",
     "packNothingRequested": "Nothing requested yet",
@@ -1263,6 +1264,8 @@
     "full": "{tripTitle}",
     "gear": "Rental gear",
     "gearForDiver": "Rental gear — {name}",
+    "nitrox": "Nitrox fills",
+    "nitroxForDiver": "Nitrox fills — {name}",
     "tip": "Tip for the crew",
     "seatFull": "{tripTitle} ({type})",
     "seatDeposit": "Deposit — {tripTitle} ({type})"

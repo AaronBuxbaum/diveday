@@ -223,6 +223,7 @@
       "heading": "Trip packing checklist",
       "description": "One item per line. Divers see this same concise list on every trip.",
       "label": "Checklist items",
+      "logbook": "Suggest a logbook",
       "submit": "Save packing checklist",
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
