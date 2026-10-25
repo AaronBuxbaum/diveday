@@ -16,7 +16,7 @@ import {
   formatTimeRange,
   formatTimeRangeTz,
   formatTimeTz,
-  formatTimeZoneShort,
+  formatTimeZoneGeneric,
   formatWeekdayTime,
   isValidTimeZone,
   joinFacts,
@@ -460,13 +460,10 @@ describe("formatOrdinal", () => {
   });
 });
 
-describe("formatTimeZoneShort", () => {
-  it("names the zone the way a list header says it once, and follows DST", () => {
-    expect(formatTimeZoneShort("en-US", "America/New_York", new Date("2026-07-01T12:00:00Z"))).toBe(
-      "EDT",
-    );
-    expect(formatTimeZoneShort("en-US", "America/New_York", new Date("2026-01-15T12:00:00Z"))).toBe(
-      "EST",
-    );
+describe("formatTimeZoneGeneric", () => {
+  it("names the zone once for a whole list, the same in summer and winter", () => {
+    expect(formatTimeZoneGeneric("en-US", "America/New_York")).toBe("ET");
+    expect(formatTimeZoneGeneric("en-US", "America/Cancun")).toBe("EST");
+    expect(formatTimeZoneGeneric("es-ES", "America/New_York")).toBe("hora de Nueva York");
   });
 });
