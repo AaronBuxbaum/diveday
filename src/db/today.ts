@@ -67,8 +67,7 @@ import {
 } from "./gear";
 import {
   type HandledHelpRequest,
-  listHandledHelpRequests,
-  listTodayHelpRequests,
+  listTodayHelpWork,
 } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
@@ -1756,8 +1755,7 @@ async function readTodayWave(
     crewClashState,
     boardedAnywhere,
     sharedWelcomeSeats,
-    helpRequests,
-    handledHelp,
+    { open: helpRequests, handled: handledHelp },
     rawStaff,
     credentialRows,
     { diveIntents, boatNames, crewByTrip, meetingWindows },
@@ -1846,8 +1844,7 @@ async function readTodayWave(
     // Today's departures only: a cue is permission for one day, and a row about
     // Thursday's boat on Tuesday morning would be a badge with a date on it.
     sharedWelcomeSeatsByTrip(db, shopId, todayTripIds, now),
-    listTodayHelpRequests(db, shopId, todayTripIds, now),
-    listHandledHelpRequests(db, shopId, todayTripIds, now),
+    listTodayHelpWork(db, shopId, todayTripIds, now),
     listStaff(db, shopId),
     listStaffCredentials(db, shopId),
     // What each card shows beyond readiness and the roll call - intents, hull,

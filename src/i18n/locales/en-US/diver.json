@@ -1184,7 +1184,7 @@
       "formSubmit": "Send the form",
       "formSending": "Sending…",
       "formSent": "The shop has your signed form. You’re not cleared to dive until staff have read it and told you.",
-      "formInvalid": "Send a photo or PDF under {mb} MB.",
+      "formInvalid": "Send a photo or PDF under {mb} MB.",
       "formRate": "Too many tries. Wait a few minutes and try again.",
       "formUnavailable": "Sending isn’t working right now, so use one of the ways below.",
       "returnWithEmail": "Can’t send it here? Email a photo to <email>{emailAddress}</email> before your dive day, or bring it to the shop before you dive.",

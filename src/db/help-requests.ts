@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { isStaff, STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -120,86 +120,7 @@ export async function listTodayHelpRequests(
   tripIds: readonly string[],
   now: Date = nowDate(),
 ): Promise<TodayHelpRequest[]> {
-  if (tripIds.length === 0) return [];
-  const rows = await db
-    .select({
-      request: tripHelpRequests,
-      personName: people.fullName,
-      helperPersonName: helperPerson.fullName,
-      trip: trips,
-    })
-    .from(tripHelpRequests)
-    .innerJoin(bookings, eq(bookings.id, tripHelpRequests.bookingId))
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(trips, eq(trips.id, tripHelpRequests.tripId))
-    .leftJoin(helperPerson, and(eq(helperPerson.shopId, shopId), helperStillServes(db)))
-    .where(
-      and(
-        eq(tripHelpRequests.shopId, shopId),
-        inArray(tripHelpRequests.tripId, tripIds),
-        eq(bookings.shopId, shopId),
-        eq(bookings.tripId, tripHelpRequests.tripId),
-        eq(people.shopId, shopId),
-        eq(trips.shopId, shopId),
-        liveTrip(),
-        inArray(tripHelpRequests.status, [...activeStatuses]),
-        ne(bookings.status, "cancelled"),
-        eq(trips.status, "scheduled"),
-        gt(trips.endsAt, now),
-      ),
-    )
-    .orderBy(
-      asc(trips.startsAt),
-      asc(tripHelpRequests.createdAt),
-      asc(people.fullName),
-      asc(tripHelpRequests.id),
-    );
-  const crewRows = await db
-    .select({ tripId: tripAssignments.tripId, personId: people.id, fullName: people.fullName })
-    .from(tripAssignments)
-    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .innerJoin(people, eq(people.id, tripAssignments.personId))
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(
-        inArray(tripAssignments.tripId, [...tripIds]),
-        eq(trips.shopId, shopId),
-        liveTrip(),
-        eq(people.shopId, shopId),
-        livePerson(),
-        inArray(personRoles.role, [...STAFF_ROLES]),
-      ),
-    )
-    .orderBy(asc(people.fullName), asc(people.id));
-  const crewByTrip = new Map<string, Map<string, { personId: string; fullName: string }>>();
-  for (const crew of crewRows) {
-    const byPerson = crewByTrip.get(crew.tripId) ?? new Map();
-    byPerson.set(crew.personId, { personId: crew.personId, fullName: crew.fullName });
-    crewByTrip.set(crew.tripId, byPerson);
-  }
-
-  return rows.map(({ request, personName, helperPersonName, trip }) => ({
-    ...request,
-    // The query is explicitly restricted to `activeStatuses`; keep that
-    // invariant in the returned type so Today cannot expose a handled or
-    // withdrawn request as an actionable row.
-    status: request.status as TodayHelpRequest["status"],
-    personName,
-    helperPersonName,
-    crew: [...(crewByTrip.get(trip.id)?.values() ?? [])],
-    meetingInstructions:
-      [
-        trip.meetingPointLabel,
-        trip.meetingPointAddress,
-        trip.arrivalLandmark,
-        trip.arrivalParkingNote,
-      ]
-        .map((value) => value?.trim())
-        .filter(Boolean)
-        .join(" · ") || null,
-    tripTitle: trip.title,
-    startsAt: trip.startsAt,
-  }));
+  return (await listTodayHelpWork(db, shopId, tripIds, now)).open;
 }
 
 /** A handled request, kept on the departure so a mis-tap can be reopened after the undo toast. */
@@ -227,7 +148,20 @@ export async function listHandledHelpRequests(
   tripIds: readonly string[],
   now: Date = nowDate(),
 ): Promise<HandledHelpRequest[]> {
-  if (tripIds.length === 0) return [];
+  return (await listTodayHelpWork(db, shopId, tripIds, now)).handled;
+}
+
+/**
+ * Today's open and handled requests from one read of the requests (and one of the crew), so the
+ * Reopen offer (issue #2939) costs the shop home no query of its own.
+ */
+export async function listTodayHelpWork(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<{ open: TodayHelpRequest[]; handled: HandledHelpRequest[] }> {
+  if (tripIds.length === 0) return { open: [], handled: [] };
   const rows = await db
     .select({
       request: tripHelpRequests,
@@ -244,13 +178,12 @@ export async function listHandledHelpRequests(
       and(
         eq(tripHelpRequests.shopId, shopId),
         inArray(tripHelpRequests.tripId, tripIds),
-        eq(tripHelpRequests.status, "handled"),
-        isNotNull(tripHelpRequests.helperPersonId),
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripHelpRequests.tripId),
         eq(people.shopId, shopId),
         eq(trips.shopId, shopId),
         liveTrip(),
+        inArray(tripHelpRequests.status, [...activeStatuses, "handled"]),
         ne(bookings.status, "cancelled"),
         eq(trips.status, "scheduled"),
         gt(trips.endsAt, now),
@@ -258,28 +191,87 @@ export async function listHandledHelpRequests(
     )
     .orderBy(
       asc(trips.startsAt),
-      asc(tripHelpRequests.handledAt),
+      asc(tripHelpRequests.createdAt),
       asc(people.fullName),
       asc(tripHelpRequests.id),
     );
-  return rows.flatMap(({ request, personName, helperPersonName, trip }) =>
-    request.helperPersonId
-      ? [
-          {
-            id: request.id,
-            tripId: trip.id,
-            revision: request.revision,
-            kind: request.kind,
-            personName,
-            helperPersonId: request.helperPersonId,
-            helperPersonName,
-            tripTitle: trip.title,
-            startsAt: trip.startsAt,
-            handledAt: request.handledAt,
-          },
-        ]
-      : [],
-  );
+  const openRows = rows.filter(({ request }) => request.status !== "handled");
+  const crewRows = openRows.length
+    ? await db
+        .select({ tripId: tripAssignments.tripId, personId: people.id, fullName: people.fullName })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .innerJoin(people, eq(people.id, tripAssignments.personId))
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(
+          and(
+            inArray(tripAssignments.tripId, [...tripIds]),
+            eq(trips.shopId, shopId),
+            liveTrip(),
+            eq(people.shopId, shopId),
+            livePerson(),
+            inArray(personRoles.role, [...STAFF_ROLES]),
+          ),
+        )
+        .orderBy(asc(people.fullName), asc(people.id))
+    : [];
+  const crewByTrip = new Map<string, Map<string, { personId: string; fullName: string }>>();
+  for (const crew of crewRows) {
+    const byPerson = crewByTrip.get(crew.tripId) ?? new Map();
+    byPerson.set(crew.personId, { personId: crew.personId, fullName: crew.fullName });
+    crewByTrip.set(crew.tripId, byPerson);
+  }
+
+  const open = openRows.map(({ request, personName, helperPersonName, trip }) => ({
+    ...request,
+    // The filter above leaves only `activeStatuses`; keep that invariant in
+    // the returned type so Today cannot expose a handled or withdrawn request
+    // as an actionable row.
+    status: request.status as TodayHelpRequest["status"],
+    personName,
+    helperPersonName,
+    crew: [...(crewByTrip.get(trip.id)?.values() ?? [])],
+    meetingInstructions:
+      [
+        trip.meetingPointLabel,
+        trip.meetingPointAddress,
+        trip.arrivalLandmark,
+        trip.arrivalParkingNote,
+      ]
+        .map((value) => value?.trim())
+        .filter(Boolean)
+        .join(" · ") || null,
+    tripTitle: trip.title,
+    startsAt: trip.startsAt,
+  }));
+
+  const handled = rows
+    .flatMap(({ request, personName, helperPersonName, trip }) =>
+      request.status === "handled" && request.helperPersonId
+        ? [
+            {
+              id: request.id,
+              tripId: trip.id,
+              revision: request.revision,
+              kind: request.kind,
+              personName,
+              helperPersonId: request.helperPersonId,
+              helperPersonName,
+              tripTitle: trip.title,
+              startsAt: trip.startsAt,
+              handledAt: request.handledAt,
+            },
+          ]
+        : [],
+    )
+    // Departure, then the order they were handled in; the read is in departure
+    // order already, and the sort is stable.
+    .sort(
+      (a, b) =>
+        a.startsAt.getTime() - b.startsAt.getTime() ||
+        (a.handledAt?.getTime() ?? 0) - (b.handledAt?.getTime() ?? 0),
+    );
+  return { open, handled };
 }
 
 export type SaveHelpRequestResult =

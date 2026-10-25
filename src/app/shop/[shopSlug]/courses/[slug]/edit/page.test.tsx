@@ -49,7 +49,8 @@ vi.mock("@/db/courses", () => ({
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("@/lib/storage/limits", () => ({
+vi.mock("@/lib/storage/limits", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/storage/limits")>()),
   MAX_IMAGE_MB: 5,
   MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION: 8,
 }));

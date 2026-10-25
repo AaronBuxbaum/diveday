@@ -343,6 +343,8 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "medical_clearance_declined_by_name",
     "medical_clearance_evaluated_on",
     "medical_clearance_physician_name",
+    "medical_clearance_document_from_diver",
+    "diver_medical_form_sent_at",
     "guardian_name",
     "guardian_relationship",
     "guardian_email",
