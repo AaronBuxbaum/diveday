@@ -101,7 +101,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // appear twice each on one screen, identical down to the phone number.
   await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toHaveCount(0);
   // Named in words, a label rather than a link (visual review 2026-10-24, A23).
-  await expect(firstDay.getByText(/First choice Mar 13, 2027/)).toBeVisible();
+  // `\s`: the date keeps its month and day together with a no-break space.
+  await expect(firstDay.getByText(/First choice Mar\s13, 2027/)).toBeVisible();
   await expect(firstDay.getByRole("link", { name: /First choice/ })).toHaveCount(0);
 
   const secondDay = dayGroup("Mar 13, 2027");
