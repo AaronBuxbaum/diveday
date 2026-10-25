@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
@@ -43,7 +44,7 @@ const FILE_DOORS = [
  */
 export default function DiverProfileLoading() {
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton
           titleWidth="w-56"
@@ -88,6 +89,6 @@ export default function DiverProfileLoading() {
           </div>
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

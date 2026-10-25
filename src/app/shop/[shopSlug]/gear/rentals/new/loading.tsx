@@ -1,10 +1,11 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 
 /** Form-shaped skeleton for renting gear out: the who card, then the search row. */
 export default function RentOutLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-40" description={false} />
         <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
@@ -16,6 +17,6 @@ export default function RentOutLoading() {
           </div>
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

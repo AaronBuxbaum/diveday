@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
@@ -13,7 +14,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
  */
 export default function StaffCoursesLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} actions />
         <div className="mt-8 space-y-8">
@@ -51,6 +52,6 @@ export default function StaffCoursesLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

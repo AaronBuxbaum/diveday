@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { CREDENTIAL_KIND_KEYS } from "@/app/shop/[shopSlug]/settings/team/credential-kinds";
 import { EmptyState } from "@/components/EmptyState";
 import { PrintButton } from "@/components/PrintButton";
@@ -262,7 +263,7 @@ export default async function SafetyReportPage({
   const safetyPath = shopPath(shopSlug, "safety");
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <ShopPageHeader
         title={t("shared.shopSections.safety")}
         actions={
@@ -369,7 +370,7 @@ export default async function SafetyReportPage({
           />
         </div>
       )}
-    </main>
+    </StaffPage>
   );
 }
 

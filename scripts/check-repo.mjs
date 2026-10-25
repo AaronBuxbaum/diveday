@@ -55,6 +55,7 @@ const checks = [
   ["critical-journeys", "check-critical-journeys.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
   ["loading-skeletons", "check-loading-skeletons.mjs"],
+  ["staff-widths", "check-staff-widths.mjs"],
   ["uuid-segments", "check-uuid-segments.mjs"],
   ["notice-codes", "check-notice-codes.mjs"],
   ["scroll-preservation", "check-scroll-preservation.mjs"],

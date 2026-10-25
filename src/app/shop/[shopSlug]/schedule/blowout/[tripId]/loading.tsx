@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 
@@ -7,9 +8,9 @@ import { sectionCardClass } from "@/components/ui/card";
  * divers who will be messaged, and the one danger button. Mirrors the page's
  * own markup, including its `<main>`: the page had none, so at desktop widths
  * its eyebrow, `<h1>` and meta started at x=0 and the header's own control was
- * clipped at the right edge of the viewport. The container is the trip
- * family's — the staff work-surface tier, `max-w-5xl` — because this page is a
- * departure's own surface (docs/design/principles.md §10).
+ * clipped at the right edge of the viewport. The container is a staff page
+ * at `full` width, the trip family's, because this page is a departure's own
+ * surface (`_components/staff-page.ts`).
  *
  * **The confirm state, not the record state.** One URL renders two quite
  * different bodies (`if (!blowout)` in `page.tsx`): the confirm card at
@@ -31,7 +32,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function BlowoutLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 animate-pulse px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full" className="animate-pulse">
       <ShopPageHeaderSkeleton
         titleWidth="w-64 max-w-full"
         // The header carries `meta`, never a description: the trip's name and
@@ -70,6 +71,6 @@ export default function BlowoutLoading() {
         {/* The danger submit — `min-h-11`, like every button in the app. */}
         <div className="mt-6 h-11 w-44 rounded-lg bg-surface-sunken" />
       </div>
-    </main>
+    </StaffPage>
   );
 }

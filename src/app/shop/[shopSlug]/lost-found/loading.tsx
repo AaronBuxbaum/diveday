@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 
 /**
@@ -6,7 +7,7 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
  */
 export default function LostFoundLoading() {
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} />
         <div className="divide-y divide-border">
@@ -22,6 +23,6 @@ export default function LostFoundLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

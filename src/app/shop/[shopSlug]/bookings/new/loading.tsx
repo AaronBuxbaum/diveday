@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
@@ -14,7 +15,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
  */
 export default function NewBookingLoading() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
         {/* The day control (`DepartureDayNav`): its label over the date box,
@@ -68,6 +69,6 @@ export default function NewBookingLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

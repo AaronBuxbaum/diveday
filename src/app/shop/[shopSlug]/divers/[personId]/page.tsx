@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
@@ -231,7 +232,7 @@ export default async function DiverDetailPage({
   // Who this person is to the shop, in one line (item 36); money only for a reader who may see it.
   const standing = diverStanding(diver, { now, shop, showMoney: canManageOrders });
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <FlashParams params={DIVER_RECORD_FLASH_PARAMS} />
       <DiverHeader
         diver={diver}
@@ -378,6 +379,6 @@ export default async function DiverDetailPage({
         canErase={canErase}
         canDelete={canDelete}
       />
-    </main>
+    </StaffPage>
   );
 }

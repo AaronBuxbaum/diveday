@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
@@ -32,7 +33,7 @@ function MessageRows({ count }: { count: number }) {
 
 export default function InboxLoading() {
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="inbox" />
@@ -45,6 +46,6 @@ export default function InboxLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { EditorFormSkeleton } from "../../../dive-sites/_components/EditorFormSkeleton";
 
@@ -22,7 +23,7 @@ const COURSE_EDITOR_OPEN_SECTIONS = 4;
  */
 export default function EditCourseLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         {/* The header's meta is one `text-sm` line — "Live at /s/…", or
             "Hidden from divers · Preview" — 12px under the title. Without its
@@ -38,6 +39,6 @@ export default function EditCourseLoading() {
           />
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

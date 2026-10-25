@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
@@ -187,7 +188,7 @@ export default async function SignedWaiverPage({
           : { tone: "text-danger", text: t("waiversStaff.record.medicalReview") };
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       {/* **On paper, the shop's name is the eyebrow.** On screen the eyebrow is
           the way back to the diver's record, which `EyebrowBackLink` keeps off
           paper; a printed release has to say whose release it is. */}
@@ -311,6 +312,6 @@ export default async function SignedWaiverPage({
           <p className="text-sm whitespace-pre-wrap text-muted">{waiver.templateBody}</p>
         </SectionCard>
       </div>
-    </main>
+    </StaffPage>
   );
 }

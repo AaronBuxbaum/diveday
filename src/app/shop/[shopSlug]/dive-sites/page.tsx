@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import type { MapPin } from "@/components/map/SiteMap";
@@ -167,7 +168,7 @@ export default async function DiveSitesPage({
   const catalogHref = `/shop/${shopSlug}/dive-sites?view=catalog`;
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
@@ -305,6 +306,6 @@ export default async function DiveSitesPage({
           )}
         </SiteLibraryLayout>
       )}
-    </main>
+    </StaffPage>
   );
 }

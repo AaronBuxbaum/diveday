@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { after } from "next/server";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -135,7 +136,7 @@ export default async function InboxPage({
   const timesIn = t("inbox.timesIn", { zone: formatTimeZoneGeneric(locale, shop.timezone) });
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <ShopPageHeader title={t("shared.shopSections.inbox")} />
       <StaffSectionTabs
         section="inbox"
@@ -218,6 +219,6 @@ export default async function InboxPage({
         total={t("inbox.pagination.total", { count: messages.total })}
         words={staffPagerWords(t)}
       />
-    </main>
+    </StaffPage>
   );
 }

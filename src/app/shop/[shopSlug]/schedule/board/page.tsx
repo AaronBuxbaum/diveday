@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
@@ -252,7 +253,7 @@ export default async function ScheduleBoardPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <ShopPageHeader
         // The section's own name: the nav row, this heading and the Crew
         // view's heading all say "Schedule" (ADR 20261001-logbook).
@@ -369,6 +370,6 @@ export default async function ScheduleBoardPage({
           },
         }}
       />
-    </main>
+    </StaffPage>
   );
 }

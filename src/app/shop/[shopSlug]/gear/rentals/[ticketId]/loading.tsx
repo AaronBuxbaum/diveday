@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 
@@ -8,7 +9,7 @@ import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typograp
  */
 export default function CounterRentalTicketLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
           <div className="w-md max-w-full">
@@ -24,6 +25,6 @@ export default function CounterRentalTicketLoading() {
         <div className={sectionCardClass({ padding: "none", className: "mt-3 h-40 w-full" })} />
         <div className="mt-6 h-lh w-64 max-w-full rounded bg-surface-sunken text-lg" />
       </div>
-    </main>
+    </StaffPage>
   );
 }

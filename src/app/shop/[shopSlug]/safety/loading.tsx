@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { figureCellClass } from "../reports/_components/MonthFigures";
@@ -9,7 +10,7 @@ import { figureCellClass } from "../reports/_components/MonthFigures";
  */
 export default function SafetyReportLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
         <div className="mb-6">
@@ -42,6 +43,6 @@ export default function SafetyReportLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

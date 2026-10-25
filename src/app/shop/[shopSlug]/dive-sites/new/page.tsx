@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { UnsavedSections } from "@/components/editor/EditorRail";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -69,7 +70,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
   return (
     // The form's own measure: the jump rail that widened this page from `lg`
     // up is gone (visual review 2026-10-24, A11).
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
@@ -110,6 +111,6 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
           />
         </SiteFormShell>
       </div>
-    </main>
+    </StaffPage>
   );
 }

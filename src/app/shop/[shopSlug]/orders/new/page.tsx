@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -167,7 +168,7 @@ export default async function NewOrderPage({
   const isCourseOrder = lineDefaults.some((line) => line.kind === "e_learning_fee");
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
@@ -322,6 +323,6 @@ export default async function NewOrderPage({
           </div>
         </form>
       </SectionCard>
-    </main>
+    </StaffPage>
   );
 }

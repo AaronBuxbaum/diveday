@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
 import { DayHeader } from "@/app/shop/[shopSlug]/_components/day/DayHeader";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ArrivalLookup } from "@/app/shop/[shopSlug]/_components/today/ArrivalLookup";
 import {
   DaySpine,
@@ -59,13 +60,11 @@ import {
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 
-// `instant = true` asserts that navigating *into* this page paints
-// immediately — this segment's `loading.tsx`, with no request read above it.
-// Since the staff shell became synchronous (issue 1446) that holds for a cold,
-// direct visit too: the shell's session, shop row and nav stream in beside the
-// page from `ShopChrome` rather than above it, so the route gets a static
-// shell and its own reads are the only ones the reader waits on. See ADR
-// 20260804-instant-navigation.
+// `instant = true` asserts that navigating *into* this page paints immediately — this segment's
+// `loading.tsx`, with no request read above it. Since the staff shell became synchronous (issue
+// 1446) that holds for a cold, direct visit too: the shell's session, shop row and nav stream in
+// beside the page from `ShopChrome` rather than above it, so the route gets a static shell and its
+// own reads are the only ones the reader waits on. See ADR 20260804-instant-navigation.
 export const instant = true;
 
 // A notice param maps to a message key, never a sentence (ADR 20260730-staff-copy-localization).
@@ -158,7 +157,7 @@ export default async function ShopPage({
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <FlashParams params={["created", "series", "reset", "email", "notice", "noted"]} />
       {/* The queue join is the one real wait on this page; a content-shaped
           fallback keeps a cold nav from reading as a blank hang (principle 1). */}
@@ -175,7 +174,7 @@ export default async function ShopPage({
           arrivalQuery={q?.trim() ?? ""}
         />
       </Suspense>
-    </main>
+    </StaffPage>
   );
 }
 

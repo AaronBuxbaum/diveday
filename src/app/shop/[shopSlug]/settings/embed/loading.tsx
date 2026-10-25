@@ -5,7 +5,7 @@ import { settingsPaneClass } from "../_components/settings-pane";
 /** Panel-shaped skeleton for the embeddable-schedule settings. */
 export default function EmbedSettingsLoading() {
   return (
-    <main className={settingsPaneClass("5xl")}>
+    <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton
           description

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { UnsavedSections } from "@/components/editor/EditorRail";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -184,7 +185,7 @@ export default async function EditDiveSitePage({
   return (
     // The form's own measure: the jump rail that widened this page from `lg`
     // up is gone (visual review 2026-10-24, A11).
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       {/* Without this, `?notice=saved` stayed put and replayed "Saved" on every
           refresh and back-navigation — the same one-shot rule the rest of
           `/shop/**` follows. */}
@@ -387,6 +388,6 @@ export default async function EditDiveSitePage({
           </FormStatus>
         </form>
       </DangerDisclosure>
-    </main>
+    </StaffPage>
   );
 }

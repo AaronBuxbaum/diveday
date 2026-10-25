@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { ScheduleViewsSkeleton } from "../schedule/_components/ScheduleViews";
@@ -25,7 +26,7 @@ const DAYS = [0, 1, 2, 3, 4, 5, 6];
  */
 export default function StaffingLoading() {
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         {/* `description={false}`: the header is an eyebrow and a name now —
             the line under it explained where crew is assigned, and the gap
@@ -124,6 +125,6 @@ export default function StaffingLoading() {
           <div className="h-4 w-44 rounded bg-surface-sunken" />
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }
