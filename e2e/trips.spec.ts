@@ -328,8 +328,8 @@ test.describe("trip print packet", () => {
     await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(0);
     await expect(popup.getByRole("heading", { name: "Divers", exact: true })).toHaveCount(0);
 
-    // **And the roster's names reach the paper.** A roll-call person is the
-    // one button the packet prints on purpose (`data-print-content`): its
+    // **And the roster's names reach the paper.** A roll-call person's name
+    // line is what the packet prints on purpose (`data-print-content`): its
     // content is the index and the name, and while the print backstop hid it
     // with every other button this packet printed nine diver rows and two crew
     // rows with no name in any of them. Priya Sharma is on this departure's
@@ -337,7 +337,7 @@ test.describe("trip print packet", () => {
     // role locator cannot see what `display: none` removed.
     await popup.emulateMedia({ media: "print" });
     await expect(
-      popup.locator(".trip-print-bundle button[data-print-content]", { hasText: "Priya Sharma" }),
+      popup.locator(".trip-print-bundle [data-print-content]", { hasText: "Priya Sharma" }),
     ).toBeVisible();
     await popup.emulateMedia({ media: "screen" });
     await popup.close();

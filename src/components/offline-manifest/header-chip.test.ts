@@ -18,14 +18,23 @@ describe("offlineHeaderChip", () => {
     }
   });
 
-  it("says offline, and never 'Fresh', with no signal or no answer", () => {
+  it("keeps the copy's own freshness chip with no signal, never 'online'", () => {
     for (const freshness of ["current", "aging", "stale"] as const) {
       expect(offlineHeaderChip({ online: false, servedWithoutAnswer: false, freshness })).toEqual({
-        kind: "connectivity",
+        kind: "freshness",
+        freshness,
+        online: false,
       });
-      expect(offlineHeaderChip({ online: true, servedWithoutAnswer: true, freshness })).toEqual({
-        kind: "connectivity",
-      });
+    }
+  });
+
+  it("never says 'Fresh' on a copy opened because DiveDay did not answer", () => {
+    for (const online of [true, false]) {
+      for (const freshness of ["current", "aging", "stale"] as const) {
+        expect(offlineHeaderChip({ online, servedWithoutAnswer: true, freshness })).toEqual({
+          kind: "connectivity",
+        });
+      }
     }
   });
 });
