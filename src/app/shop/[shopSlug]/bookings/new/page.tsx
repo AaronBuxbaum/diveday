@@ -326,11 +326,13 @@ export default async function NewBookingPage({
           (visual review A32): a booking starts from a departure, and a call
           form open under the picker read as the page's own form. It opens on
           `#call` or its own answer; a kept draft keeps it closed and says
-          "Unsaved" beside the title, so a half-typed call is never hidden. */}
+          "Unsaved" beside the title, so a half-typed call is never hidden.
+          `noticeFromParam` answers `undefined` for no notice; the old
+          `!== null` test read every visit as an answer and held it open. */}
       <AutoOpenDetails
         openOnHash="call"
         id="call"
-        open={callNotice !== null}
+        open={callNotice !== undefined}
         className={sectionCardClass({
           padding: "none",
           className: "group/call mt-10 scroll-mt-24",
