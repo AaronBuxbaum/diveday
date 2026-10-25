@@ -164,7 +164,7 @@ export default async function BlowoutPage({
     const departed = trip.startsAt <= nowDate();
     const roster = await getTripRoster(db, shop.id, tripId);
     return (
-      <StaffPage width="full">
+      <StaffPage width="reading">
         <FlashParams params={["notice"]} />
         {header}
         <div className="mt-6">
@@ -172,7 +172,7 @@ export default async function BlowoutPage({
             <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
           ) : null}
         </div>
-        <SectionCard as="div" padding="lg" className="max-w-2xl">
+        <SectionCard as="div" padding="lg">
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
           <p className="mt-3 text-sm text-muted">
             {t(mayRefund ? "blowout.confirm.moneyNote" : "blowout.confirm.moneyNoteHeld")}
@@ -252,7 +252,7 @@ export default async function BlowoutPage({
   );
 
   return (
-    <StaffPage width="full">
+    <StaffPage width="reading">
       <FlashParams params={["notice"]} />
       {header}
       <div className="mt-6">

@@ -105,9 +105,9 @@ function CertificationDisclosure({
   /**
    * The step's own card: at rest its summary is the step's one action, a
    * filled primary like "Sign your waiver" and "Save rental fit" (visual
-   * review 2026-10-24, B26). Open, the summary steps out of sight and the
-   * form's save is the primary; it stays the focused control, so a keyboard
-   * can still close it.
+   * review 2026-10-24, B26). Open, the summary steps out of sight, its words
+   * head the form, and the form's save is the primary; the summary stays the
+   * focused control, so a keyboard can still close it.
    */
   lead?: boolean;
   children: React.ReactNode;
@@ -121,6 +121,13 @@ function CertificationDisclosure({
           {summary}
         </summary>
         <div className="rounded-inset border border-border bg-surface-sunken/50 p-4">
+          {/* Open, the summary is out of sight, so its words head the form
+              (visual review 2026-10-24, layer 7): the step keeps its heading
+              above the fields. Hidden from a screen reader, which still has
+              the summary itself. */}
+          <p aria-hidden="true" className="mb-3 text-base font-semibold">
+            {summary}
+          </p>
           {children}
         </div>
       </details>

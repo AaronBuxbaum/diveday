@@ -85,6 +85,20 @@ describe("buttonClass", () => {
     }
   });
 
+  it("starts a flush link's wrapped lines where its first line starts", () => {
+    // A flush link lines up with the prose beside it, so it reads as text: a
+    // wrapped "On the board …" line on Requests at 390 sat centred under
+    // nothing (visual review 2026-10-24, layer 7).
+    for (const flush of [true, "padded"] as const) {
+      const classes = buttonClass({ variant: "link", flush }).split(" ");
+      expect(classes).toEqual(expect.arrayContaining(["justify-start", "text-start"]));
+      expect(classes).not.toContain("justify-center");
+      expect(classes).not.toContain("text-center");
+    }
+    // A link that is not flush is still a centred control.
+    expect(buttonClass({ variant: "link" }).split(" ")).toContain("text-center");
+  });
+
   it("draws every filled or bordered box with the same 1px border, so a toggle keeps its label still", () => {
     // `primary` and `danger-solid` had no border and `secondary` had one, so a
     // filled button was 2px narrower than a bordered one with the same label

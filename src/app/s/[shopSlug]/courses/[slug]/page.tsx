@@ -149,10 +149,11 @@ export default async function CoursePage({
       })
     : t("course.noCertification");
   // Logistics only. The cert gate and the minimum age are admission facts and
-  // belong to CourseAdmission, which is the one place a diver reads them.
+  // belong to CourseAdmission, which is the one place a diver reads them. The
+  // group size reads with how the course runs, so the header carries one
+  // number (visual review 2026-10-24, layer 7).
   const facts = [
     course.durationText ? { label: t("course.duration"), value: course.durationText } : null,
-    course.groupSizeText ? { label: t("course.groupSize"), value: course.groupSizeText } : null,
   ].filter((fact) => fact !== null);
   // Requests are retained for staff even when the shop has no email for a nudge.
   const inquiryHref = "#get-in-touch";
@@ -162,7 +163,9 @@ export default async function CoursePage({
   // order, so a half-written page never promises an anchor with nothing at it.
   const jumpItems = [
     course.overview?.trim() ? { id: "about", label: t("course.jumpAbout") } : null,
-    course.scheduleDays.length > 0 ? { id: "how-it-runs", label: t("course.jumpSchedule") } : null,
+    course.scheduleDays.length > 0 || course.groupSizeText
+      ? { id: "how-it-runs", label: t("course.jumpSchedule") }
+      : null,
     course.includes.length > 0 || course.excludes.length > 0
       ? { id: "included", label: t("course.jumpIncluded") }
       : null,
@@ -231,7 +234,12 @@ export default async function CoursePage({
       ) : null}
       <CourseOverview overview={course.overview} t={t} />
       <CourseGallery photos={course.galleryPhotos} title={course.title} t={t} />
-      <CourseSchedule days={course.scheduleDays} locale={locale} t={t} />
+      <CourseSchedule
+        days={course.scheduleDays}
+        groupSize={course.groupSizeText}
+        locale={locale}
+        t={t}
+      />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions
         sessions={sessions}

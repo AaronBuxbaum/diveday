@@ -242,53 +242,69 @@ export function CourseOverview({ overview, t }: { overview: string | null; t: Di
  */
 export function CourseSchedule({
   days,
+  groupSize = null,
   locale,
   t,
 }: {
   days: CourseScheduleDay[];
+  /**
+   * The shop's group-size line ("Maximum 8 students per instructor"). It sits
+   * with how the course runs, not in the hero, so the header carries one
+   * number and the session row's seat count is the only capacity there
+   * (visual review 2026-10-24, layer 7).
+   */
+  groupSize?: string | null;
   /** The negotiated request locale — a clock time reads "14:00" or "2:00 PM" by it, never by the server's. */
   locale: string;
   t: DiverTranslator;
 }) {
-  if (days.length === 0) return null;
+  if (days.length === 0 && !groupSize) return null;
   return (
     <section id="how-it-runs" className="mt-14 scroll-mt-8">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.howItRunsHeading")}</h2>
+      {groupSize ? (
+        <dl className="mt-4">
+          <dt className={groupLabelClass()}>{t("course.groupSize")}</dt>
+          <dd className="mt-0.5 text-sm font-medium">{groupSize}</dd>
+        </dl>
+      ) : null}
       {/* The rail lives on a wrapper div, not inside the <ol> — an ol may
           contain only li children, and a decorative span in there is invalid
           HTML even when browsers tolerate it. Dots are hollow (surface-filled)
           so the line reads as passing behind them. Purely decorative — the
           ordered list already carries the sequence for a screen reader. */}
-      <div className="relative mt-8 max-w-3xl">
-        <span aria-hidden="true" className="absolute top-2 bottom-2 left-[5px] w-px bg-border" />
-        <ol>
-          {days.map((day) => {
-            const time = formatScheduleDayTime(day, locale);
-            return (
-              <li key={day.title} className="relative pb-10 pl-8 last:pb-0">
-                {/* `top-2`: the 11px ring's centre on the title's cap centre,
+      {days.length === 0 ? null : (
+        <div className="relative mt-8 max-w-3xl">
+          <span aria-hidden="true" className="absolute top-2 bottom-2 left-[5px] w-px bg-border" />
+          <ol>
+            {days.map((day) => {
+              const time = formatScheduleDayTime(day, locale);
+              return (
+                <li key={day.title} className="relative pb-10 pl-8 last:pb-0">
+                  {/* `top-2`: the 11px ring's centre on the title's cap centre,
                     8px down a 28px `text-lg` line, where the rail starts too.
                     At `top-1.5` it rode 2px high (K-562). */}
-                <span
-                  aria-hidden="true"
-                  className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
-                />
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>
-                  {time ? <p className="text-base tabular-nums text-muted">{time}</p> : null}
-                </div>
-                {day.items.length > 0 ? (
-                  <ul className="mt-2 grid gap-1.5 text-sm text-muted">
-                    {day.items.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
+                  />
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>
+                    {time ? <p className="text-base tabular-nums text-muted">{time}</p> : null}
+                  </div>
+                  {day.items.length > 0 ? (
+                    <ul className="mt-2 grid gap-1.5 text-sm text-muted">
+                      {day.items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
     </section>
   );
 }

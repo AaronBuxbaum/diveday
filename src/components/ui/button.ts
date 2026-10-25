@@ -74,6 +74,15 @@ const base =
   "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 text-center pressable";
 
 /**
+ * **A flush link reads as text, so its lines start where its first did.** A
+ * flush `link` lines up with the prose beside it; centred, a label that wrapped
+ * at 390 ("On the board …" on Requests) set its second line in the middle,
+ * indented under nothing (visual review 2026-10-24, layer 7).
+ */
+const flushLinkBase =
+  "inline-flex min-h-11 cursor-pointer items-center justify-start gap-1 text-start pressable";
+
+/**
  * **The corner is an option, not something a caller passes through
  * `className`**, for the reason the type scale and `flush` give: two radius
  * utilities resolve by stylesheet order, and Tailwind emits `.rounded-full`
@@ -669,7 +678,9 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   const edged = variant === "secondary" && edge ? edge : undefined;
   const paint = edged ? `border-2 ${EDGES[edged]} ${SECONDARY_FACE}` : variants[variant];
   const padding = edged ? EDGE_X[size] : horizontalPadding(variant, x, flush ?? false);
-  return `${base} ${DISABLED[busy ? "busy" : "default"]} ${paint} ${rest} ${corner} ${padding}${
+  // Only where flush took effect: a square target has no label edge to line up.
+  const start = variant === "link" && flush && padding !== x ? flushLinkBase : base;
+  return `${start} ${DISABLED[busy ? "busy" : "default"]} ${paint} ${rest} ${corner} ${padding}${
     end ? ` ${end}` : ""
   } ${className}`.trim();
 }

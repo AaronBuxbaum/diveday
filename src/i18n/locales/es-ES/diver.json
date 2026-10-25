@@ -3700,7 +3700,6 @@
     "sendWaiver": "Enviar exención",
     "tripLine": "Arrecife de dos tanques · 7:30",
     "rollCallHeading": "Pase de lista · Antes de zarpar",
-    "afterDiveRollCallHeading": "Pase de lista · Después de la inmersión 1",
     "bookingCard": {
       "label": "Pecio Spiegel Grove",
       "requirement": "Esta salida es para buceadores con Advanced Open Water o superior y certificación de Profundidad.",
@@ -3923,8 +3922,7 @@
           "when": "En el muelle, y después de cada inmersión",
           "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella",
           "note1": "El recuento de cada inmersión, buceadores y tripulación por su nombre, sigue abierto hasta contar a bordo a todos los que zarparon.",
-          "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal.",
-          "mockupLabel": "El pase de lista de la tripulación después de la inmersión 1: 8 de 9 buceadores a bordo, un nombre marcado a bordo y el último aún por llamar."
+          "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal."
         },
         "recap": {
           "when": "Después de que vuelva el barco",

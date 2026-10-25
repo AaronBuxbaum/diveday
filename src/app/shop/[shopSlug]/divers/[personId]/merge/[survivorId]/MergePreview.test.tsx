@@ -103,6 +103,17 @@ describe("the merge preview", () => {
     expect(email.innerHTML).toBe("maya@<wbr>example<wbr>.com");
   });
 
+  // Layer 7: the kept email still wrapped at 1280 inside a third of the card.
+  // Its row spans the card, the label on its own line under the name.
+  it("gives the email row the card's whole width, under its own label line", () => {
+    renderPreview(preview());
+    const cell = screen.getByText("maya@example.com").closest("td");
+    expect(cell).toHaveAttribute("colspan", "3");
+    const label = screen.getByText("Email").closest("th");
+    expect(label).toHaveAttribute("colspan", "3");
+    expect(label?.closest("tr")).not.toBe(cell?.closest("tr"));
+  });
+
   it("counts what moves, medical answers included, and leaves empty groups out", () => {
     renderPreview(preview());
     const bookings = screen.getByRole("rowheader", { name: "Bookings" }).closest("tr");
@@ -262,7 +273,7 @@ describe("the merge preview", () => {
 
   it("gives a row's label its own line on a phone, so each choice gets half the card", () => {
     renderPreview(preview());
-    const label = screen.getByRole("rowheader", { name: "Email" });
+    const label = screen.getByRole("rowheader", { name: "Phone" });
     const row = label.closest("tr");
     expect(row).toHaveClass("grid", "grid-cols-2", "sm:table-row");
     expect(label).toHaveClass("col-span-2");
