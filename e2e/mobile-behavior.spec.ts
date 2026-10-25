@@ -116,7 +116,7 @@ test.describe("touch manifest", () => {
       .toBe(true);
     await context.setOffline(true);
     await page.reload();
-    await expect(page.getByText("Fresh copy")).toBeVisible();
+    await expect(page.getByText("No signal · device copy")).toBeVisible();
     await page.getByRole("button", { name: "After dive 1" }).tap();
     const crew = page
       .locator("#offline-crew-roll-call")
