@@ -124,13 +124,16 @@
       "paymentRecordedDemo": "Pago registrado.",
       "paymentStripeRefused": "Stripe no quiso marcar esta factura como pagada. Es posible que el buceador acabe de pagarla en línea, así que actualiza antes de registrar nada.",
       "paymentRecordFailed": "No se pudo registrar este pago.",
-      "paymentInFlight": "Se está registrando un pago de este pedido. Revisa el pedido en un minuto antes de volver a intentarlo."
+      "paymentInFlight": "Se está registrando un pago de este pedido. Revisa el pedido en un minuto antes de volver a intentarlo.",
+      "undoTooLateCash": "Ya no se puede deshacer: el pago de {amount} en efectivo ya está registrado.",
+      "undoTooLateCardMachine": "Ya no se puede deshacer: el pago de {amount} con terminal de pago ya está registrado.",
+      "undoTooLate": "Ya no se puede deshacer. El pedido muestra arriba lo que se registró."
     },
     "recordPayment": {
       "label": "Registrar pago",
       "recording": "Registrando…",
-      "heldCash": "Registrado: {amount} en efectivo",
-      "heldCardMachine": "Registrado: {amount} con terminal de pago",
+      "heldCash": "Registrando: {amount} en efectivo",
+      "heldCardMachine": "Registrando: {amount} con terminal de pago",
       "roomCharge": "Cargar a la habitación",
       "roomNumber": "Habitación",
       "roomHotel": "Nombre del hotel",

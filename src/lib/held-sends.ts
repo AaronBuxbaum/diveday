@@ -120,6 +120,12 @@ const counterPaymentPayload = z.object({
   kind: z.literal("counter_payment"),
   orderId: z.uuid(),
   collection: z.enum(["cash", "card_machine"]),
+  /**
+   * The tap, which is when the money changed hands: the payment's `paid_at`
+   * on every path that records it, so a tap at 23:55 is that day's money
+   * even when the hourly sweep records it after midnight (review of #3061).
+   */
+  heldAt: z.iso.datetime({ offset: true }),
 });
 
 export const heldSendPayloadSchema = z.discriminatedUnion("kind", [

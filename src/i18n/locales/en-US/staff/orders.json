@@ -124,13 +124,16 @@
       "paymentRecordedDemo": "Payment recorded.",
       "paymentStripeRefused": "Stripe wouldn’t mark this invoice paid. The diver may have just paid it online, so refresh before recording anything.",
       "paymentRecordFailed": "Couldn’t record this payment.",
-      "paymentInFlight": "A payment for this order is being recorded. Check the order in a minute before trying again."
+      "paymentInFlight": "A payment for this order is being recorded. Check the order in a minute before trying again.",
+      "undoTooLateCash": "Too late to undo: {amount} cash is recorded.",
+      "undoTooLateCardMachine": "Too late to undo: {amount} on the card machine is recorded.",
+      "undoTooLate": "Too late to undo. The order above shows what was recorded."
     },
     "recordPayment": {
       "label": "Record payment",
       "recording": "Recording…",
-      "heldCash": "Recorded {amount} cash",
-      "heldCardMachine": "Recorded {amount} on the card machine",
+      "heldCash": "Recording {amount} cash",
+      "heldCardMachine": "Recording {amount} on the card machine",
       "roomCharge": "Charge to room",
       "roomNumber": "Room",
       "roomHotel": "Hotel",

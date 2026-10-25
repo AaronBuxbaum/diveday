@@ -716,6 +716,11 @@ export async function recordPaymentOnOpenOrder(
     collection: OpenOrderCollection;
     /** Required for, and only for, a room charge. */
     room?: RoomCharge | null;
+    /**
+     * When the money changed hands, if not now: a held counter tap's own
+     * time (issue #3030), so the payment lands on the day it was taken.
+     */
+    paidAt?: Date;
   },
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<RecordPaymentOnOrderOutcome> {
@@ -784,13 +789,16 @@ export async function recordPaymentOnOpenOrder(
   const settled = await db.transaction(async (tx) => {
     const [current] = await tx.select().from(orders).where(eq(orders.id, claimed.id)).for("update");
     if (!current || current.collection !== input.collection) return null;
-    // Stripe's echo got here first and finished the claim.
-    if (current.status === "paid") return current;
+    // Stripe's echo got here first and finished the claim, on its own clock;
+    // a held tap's time is still when the money was taken.
+    if (current.status === "paid") {
+      return input.paidAt ? restampCounterPaidAt(tx, current, input.paidAt) : current;
+    }
     if (current.status !== "open") return null;
     // Unanswered: the claim stands for the echo, or for its horizon.
     if (!answered) return "unanswered" as const;
     if (current.counterClaimedAt?.getTime() !== claimed.counterClaimedAt?.getTime()) return null;
-    return settleCounterClaim(tx, current, input.collection);
+    return settleCounterClaim(tx, current, input.collection, input.paidAt);
   });
   if (settled === "unanswered") {
     log("order.counter_mark_unanswered", "warn", { orderId: claimed.id, shopId: claimed.shopId });
@@ -839,6 +847,8 @@ export async function recordDemoPaymentOnOpenOrder(
     orderId: string;
     actorPersonId: string;
     collection: CounterCollection;
+    /** When the money changed hands, if not now (see `recordPaymentOnOpenOrder`). */
+    paidAt?: Date;
   },
 ): Promise<RecordDemoPaymentOutcome> {
   const invalid = { ok: false, reason: "invalid" } as const;
@@ -872,7 +882,9 @@ export async function recordDemoPaymentOnOpenOrder(
       .set({ collection: input.collection, counterClaimedAt: now, updatedAt: now })
       .where(eq(orders.id, current.id))
       .returning();
-    const settled = claimed ? await settleCounterClaim(tx, claimed, input.collection) : null;
+    const settled = claimed
+      ? await settleCounterClaim(tx, claimed, input.collection, input.paidAt)
+      : null;
     return settled ? { ok: true, order: settled } : invalid;
   });
 }
@@ -882,7 +894,10 @@ export async function recordDemoPaymentOnOpenOrder(
  * whose claim is older than the refund claim's horizon: the call that made it
  * died between the claim and Stripe's answer.
  */
-function isStaleCounterClaim(order: Order, now: Date): boolean {
+export function isStaleCounterClaim(
+  order: Pick<Order, "status" | "counterClaimedAt">,
+  now: Date,
+): boolean {
   return (
     order.status === "open" &&
     order.counterClaimedAt !== null &&
@@ -918,6 +933,24 @@ async function releaseCounterClaim(db: DbExecutor, claimed: Order): Promise<void
 }
 
 /**
+ * A counter claim Stripe's echo finished on its own clock, stamped with when
+ * the money was actually taken (a held tap's time). Only that row, only while
+ * it is the counter settlement the echo wrote.
+ */
+async function restampCounterPaidAt(
+  tx: AppTransaction,
+  current: Order,
+  paidAt: Date,
+): Promise<Order> {
+  const [updated] = await tx
+    .update(orders)
+    .set({ paidAt, updatedAt: nowDate() })
+    .where(and(eq(orders.id, current.id), eq(orders.status, "paid")))
+    .returning();
+  return updated ?? current;
+}
+
+/**
  * Finish a counter claim on a locked, `open` row: paid in full, now, by the
  * claimed method, with the seat and package entitlements following and
  * `order.paid` queued. One path for both finishers: `recordPaymentOnOpenOrder`
@@ -927,6 +960,7 @@ async function settleCounterClaim(
   tx: AppTransaction,
   current: Order,
   collection: OrderCollection,
+  paidAt?: Date,
 ): Promise<Order | null> {
   const now = nowDate();
   const [updated] = await tx
@@ -934,7 +968,7 @@ async function settleCounterClaim(
     .set({
       status: "paid",
       amountPaidCents: current.totalCents,
-      paidAt: now,
+      paidAt: paidAt ?? now,
       counterClaimedAt: null,
       updatedAt: now,
     })

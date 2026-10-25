@@ -66,6 +66,8 @@
     "order_paid_cash": "{actor} registró un pedido pagado en efectivo",
     "order_paid_card_machine": "{actor} registró un pedido pagado con terminal de pago",
     "order_paid_room_charge": "{actor} registró un pedido cargado a una habitación",
+    "counter_payment_not_recorded": "El pago en mostrador de {actor} no se registró: el pedido ya no estaba abierto",
+    "counter_payment_not_recorded_paid_online": "El pago en mostrador de {actor} no se registró: el pedido ya estaba pagado en línea",
     "paid_after_close_refunded": "{actor} reembolsó un pago hecho con el cobro ya cerrado",
     "seat_refunded": "{actor} quitó a {diver} y reembolsó la plaza con tarjeta",
     "payment_waived": "{actor} marcó la plaza de {diver} como exonerada",

@@ -13,16 +13,17 @@ import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { pendingCounterPayment } from "@/db/counter-payment-hold";
 import { getOrderBookingContext } from "@/db/order-booking";
-import { getOrder, isVoidableCounterOrder } from "@/db/orders";
+import { getOrder, isStaleCounterClaim, isVoidableCounterOrder } from "@/db/orders";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
+import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import {
   PaidAtCounterLine,
@@ -34,7 +35,7 @@ import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputes, OrderMeta } from "./_components/OrderMeta";
 import { OrderMoreMenu } from "./_components/OrderMoreMenu";
 import { refundAction } from "./actions";
-import { KIND_KEYS, NOTICES, STATUS_KEYS } from "./order-detail-keys";
+import { KIND_KEYS, NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
 import { loadOrderHeader } from "./order-header";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -109,9 +110,19 @@ export default async function OrderDetailPage({
   const t = staffTranslator(locale);
   // An open Stripe invoice: the one state with Record payment, Refresh and Void.
   const stripeOpen = order.order.status === "open" && counterCollection === null;
-  // A counter payment tapped and still inside its Undo hold (issue #3030).
-  const counterHold = stripeOpen ? await pendingCounterPayment(db, shop.id, order.order.id) : null;
+  // Record payment: an open invoice, or one whose counter claim died (stale).
+  const recordable =
+    stripeOpen || (order.order.status === "open" && isStaleCounterClaim(order.order, nowDate()));
+  // A counter payment tapped and still inside its Undo hold (issue #3030),
+  // handed only to a screen that may undo or release it (the money step-up).
+  const counterHold =
+    recordable && (await hasRequiredStepUp(db, session, "money"))
+      ? await pendingCounterPayment(db, shop.id, order.order.id)
+      : null;
+  const orderPath = shopPath(shop.slug, "orders", order.order.id);
   const banner = noticeFromParam(notice, NOTICES);
+  const noticeText =
+    notice === "payment-undo-too-late" ? undoTooLateText(t, order.order, locale) : undefined;
 
   return (
     <StaffPage width="reading">
@@ -276,7 +287,7 @@ export default async function OrderDetailPage({
             paid, and Record payment and Refund are the shop's taps. */}
         <div className="mt-6 flex flex-wrap items-center gap-3 print:hidden">
           {canVoidCounter ? <VoidCounterOrderForm orderId={order.order.id} t={t} /> : null}
-          {stripeOpen ? (
+          {recordable ? (
             // Cash and the card machine never touch Stripe, so a demo records
             // them (market sheet 2026-10-22, item 6); no room charge there.
             // A tap holds the whole balance eight seconds with Undo, then
@@ -287,6 +298,8 @@ export default async function OrderDetailPage({
               amount={formatMoneyCents(order.order.totalCents, order.order.currency, locale)}
               t={t}
               roomCharge={!demo}
+              leaveUrl={`${orderPath}/leave`}
+              tooLateHref={noticeUrl(orderPath, "payment-undo-too-late")}
               initialHold={
                 counterHold
                   ? {
@@ -368,7 +381,7 @@ export default async function OrderDetailPage({
         <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2 print:hidden">
           {notice && notice !== "not-authorized"
             ? banner
-              ? t(banner.key)
+              ? (noticeText ?? t(banner.key))
               : t("orders.detail.notice.fallback")
             : undefined}
         </FormStatus>
