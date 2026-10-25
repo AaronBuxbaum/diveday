@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   appendOfflineRollCall,
   loadOfflineManifest,
@@ -356,133 +356,69 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(await screen.findByText(/1 waiting to send/)).toBeInTheDocument();
   });
 
-  it("ports MissingDiversGrid: an awaiting diver appears as a tap target", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1" });
+  /**
+   * **One line, not a second list of people** (visual review 2026-10-24, B02).
+   * The face grid repeated the roster directly above it; one line now counts
+   * who nobody has called yet and jumps to the first of them. A plain anchor,
+   * so the jump works on the cached shell with no script, and its target is a
+   * row this page draws (#1675: the grid once looked up the live page's ids
+   * and every tap was a silent no-op).
+   */
+  it("says how many are still to board, and jumps to the first of them", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
-    // **Scoped to the grid this test is about**, the way the carried-result
-    // test above scopes to a row. Searching the whole document was unique by
-    // luck until the counter section landed (ADR
-    // 20260907-the-counter-survives-offline) and rendered a *second* button
-    // carrying this diver's name — `getByRole`'s `name` is a substring match,
-    // so a loose regex catches both. A `getAllBy…` would silence it without
-    // keeping the meaning: this asserts the tap target exists **in the grid**,
-    // and would still have to fail if the grid rendered nothing.
-    const grid = document.getElementById("missing-divers-grid");
-    if (!grid) throw new Error("the missing-divers grid is missing");
-    expect(within(grid).getByRole("button", { name: /Priya/ })).toBeInTheDocument();
+    const line = screen.getByRole("link", { name: /^Still to board: \d+$/ });
+    const target = line.getAttribute("href")?.slice(1) ?? "";
+    const row = document.getElementById(target);
+    expect(row).not.toBeNull();
+    expect(row?.closest("#offline-roll-call")).not.toBeNull();
+    expect(document.getElementById("missing-divers-grid")).toBeNull();
   });
 
-  /**
-   * **A tap target is only a target if the tap lands** (#1675). The grid looked
-   * its row up as `diver-row-<bookingId>` — the *live* manifest's id — while
-   * every row on this page answers to `offline-roll-call-<bookingId>`, so
-   * `getElementById` returned null and every tap on every face was a silent
-   * no-op, under a hint that says "Tap a diver to jump to their row" on the one
-   * surface that exists for having no signal.
-   *
-   * Nothing caught it: the grid's own suite mounts a stub row and this file
-   * asserted the button *exists*. Existing is not the promise. This asserts the
-   * jump reaches **that diver's row**, which is the only version that fails if
-   * the ids drift apart again or a third prefix is looked up.
-   */
-  it("jumps from a face in the grid to that diver's own row", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
-    vi.mocked(loadOfflineManifest).mockResolvedValue(
-      richEnvelope("trip-1", { withCarriedNotBoarded: true }),
-    );
-    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
-
-    render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-
-    // jsdom ships no layout, so `src/test/setup.ts` installs a no-op
-    // `scrollIntoView` on the prototype — which is exactly why the spies go on
-    // the *rows themselves*: a jump to some other element, or to nothing, is
-    // swallowed by that no-op and would read as green. `elsewhere` is what the
-    // prototype catches, i.e. any element that is not one of these two rows.
-    const priya = document.getElementById("offline-roll-call-diver-priya");
-    const marcus = document.getElementById("offline-roll-call-diver-marcus");
-    if (!priya || !marcus) throw new Error("the diver rows are missing");
-    const elsewhere = vi.spyOn(Element.prototype, "scrollIntoView");
-    onTestFinished(() => elsewhere.mockRestore());
-    priya.scrollIntoView = vi.fn();
-    marcus.scrollIntoView = vi.fn();
-
-    const grid = document.getElementById("missing-divers-grid");
-    if (!grid) throw new Error("the missing-divers grid is missing");
-    fireEvent.click(within(grid).getByRole("button", { name: /Priya/ }));
-
-    expect(priya.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
-    expect(marcus.scrollIntoView).not.toHaveBeenCalled();
-    expect(elsewhere).not.toHaveBeenCalled();
-    // The ring is the other half of the jump: on a nine-diver roster, landing
-    // mid-list without a mark leaves the crew counting rows to find the face.
-    expect(priya.classList.contains("ring-4")).toBe(true);
-  });
-
-  /**
-   * The glossary's offline exception covers the whole page, not one pill
-   * (#1360). A face in this grid and that diver's own row are one scroll apart
-   * on a surface whose only real risk is being read as current, so a bare
-   * "Blocked" beside the face was the one wording that could make a stale copy
-   * look live.
-   */
-  it("qualifies the grid's blocked chip the way the diver's own row does", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1" });
-    vi.mocked(loadOfflineManifest).mockResolvedValue(
-      richEnvelope("trip-1", { readiness: "blocked" }),
-    );
-    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
-
-    render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-
-    const grid = document.getElementById("missing-divers-grid");
-    if (!grid) throw new Error("the missing-divers grid is missing");
-    expect(within(grid).getByText("Blocked when saved")).toBeInTheDocument();
-    // `getByText` with a string matches an element's whole normalised text, so
-    // this finds an *unqualified* chip and never the qualified one above.
-    expect(within(grid).queryByText("Blocked")).toBeNull();
-  });
-
-  /**
-   * The checkpoint rule the live page applies three times — the roll-call row's
-   * untouched fill, its capsule (`blockedAtDock`) and the summary panel's
-   * blocked sentence (`isDeparture && summary.blocked`) — and which
-   * this page states of itself and then broke in one place. After a dive every
-   * face in the grid is somebody who went in the water, so the saved paperwork
-   * word beside it is stale by definition, and its red competed with the one
-   * red on the page that means a diver has not come back.
-   *
-   * The diver's own row is the deliberate exception and is asserted here in the
-   * same breath: it is the snapshot's two-state record, not an exception accent
-   * on a checkpoint-scoped prompt, so it keeps its badge at every checkpoint.
-   */
-  it("drops the grid's blocked chip after a dive, and keeps the diver row's badge", async () => {
+  it("counts who is not yet counted back aboard after a dive, in the live page's words", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
-    vi.mocked(loadOfflineManifest).mockResolvedValue(
-      richEnvelope("trip-1", { readiness: "blocked" }),
-    );
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
-    const grid = document.getElementById("missing-divers-grid");
-    if (!grid) throw new Error("the missing-divers grid is missing");
-    // She is still uncalled, so she is still a face to tap — this asserts the
-    // chip went away, not the grid.
-    expect(within(grid).getByRole("button", { name: /Priya/ })).toBeInTheDocument();
-    expect(within(grid).queryByText("Blocked when saved")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: /^Not yet counted back aboard: \d+$/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Still to board/ })).toBeNull();
+  });
 
-    const row = document.getElementById("offline-roll-call-diver-priya");
-    if (!row) throw new Error("Priya's row missing");
-    expect(within(row).getByText("Blocked when saved")).toBeInTheDocument();
+  /**
+   * **A blocked diver stays visibly blocked at every checkpoint** on this
+   * copy: the row's one status line carries readiness's word in danger ink,
+   * at the dock and after a dive alike. It is the snapshot's record of what
+   * the desk knew, and a boat with no signal has nowhere else to read it.
+   */
+  it("keeps a blocked diver's block on their own row at the dock and after a dive", async () => {
+    for (const checkpoint of ["departure", "after_dive_1"] as const) {
+      cleanup();
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint });
+      vi.mocked(loadOfflineManifest).mockResolvedValue(
+        richEnvelope("trip-1", { readiness: "blocked" }),
+      );
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+      const row = document.getElementById("offline-roll-call-diver-priya");
+      if (!row) throw new Error("Priya's row missing");
+      const line = row.querySelector("h3")?.parentElement?.nextElementSibling;
+      expect(line, checkpoint).toHaveClass("text-danger");
+      expect(line?.textContent, checkpoint).toContain("Blocked");
+      expect(row.textContent, checkpoint).not.toContain("when saved");
+    }
   });
 
   /**
@@ -504,7 +440,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
     const row = document.getElementById("offline-roll-call-diver-priya");
     if (!row) throw new Error("Priya's row missing");
-    expect(within(row).getByText("Not here when saved")).toBeInTheDocument();
+    expect(row).toHaveTextContent("Not here");
     // It refuses nothing: the crew tap boards a body they can see, and the
     // rail takes the released seat back when the event syncs.
     expect(within(row).getByRole("button", { name: "Mark boarded" })).toBeEnabled();
@@ -526,10 +462,12 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
     const row = document.getElementById("offline-roll-call-diver-priya");
     if (!row) throw new Error("Priya's row missing");
-    const line = within(row).getByText("Running late, said 7:42 AM");
-    expect(line.className).toContain("text-muted");
-    // It is a line, never the row's state: the pill still says nobody called.
-    expect(within(row).queryByText(/^Boarded/)).toBeNull();
+    // On the row's one status line, after the state it never replaces (B01):
+    // the line still starts with what roll call says, and nobody called.
+    const line = row.querySelector("h3")?.parentElement?.nextElementSibling;
+    expect(line?.textContent).toMatch(/Running late, said 7:42\sAM/);
+    expect(line?.textContent).not.toMatch(/^Running late/);
+    expect(line?.textContent).not.toMatch(/^Boarded/);
     cleanup();
 
     const boarded: OfflineManifestEnvelope = {
@@ -551,7 +489,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(boarded);
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
-    expect(screen.queryByText(/^Running late/)).toBeNull();
+    expect(screen.queryByText(/Running late/)).toBeNull();
   });
 
   it("never says running late after a dive", async () => {
@@ -563,7 +501,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
-    expect(screen.queryByText(/^Running late/)).toBeNull();
+    expect(screen.queryByText(/Running late/)).toBeNull();
   });
 
   it("says nothing on a copy where nobody was written off", async () => {
@@ -574,27 +512,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
-    expect(screen.queryByText("Not here when saved")).toBeNull();
-  });
-
-  /**
-   * The other half of the same rule, kept beside it so a session that gates the
-   * chip one checkpoint too far has a failing test rather than a quieter dock.
-   * At departure the word is the thing to fix before this diver boards.
-   */
-  it("keeps the grid's blocked chip at the dock", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
-    vi.mocked(loadOfflineManifest).mockResolvedValue(
-      richEnvelope("trip-1", { readiness: "blocked" }),
-    );
-    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
-
-    render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-
-    const grid = document.getElementById("missing-divers-grid");
-    if (!grid) throw new Error("the missing-divers grid is missing");
-    expect(within(grid).getByText("Blocked when saved")).toBeInTheDocument();
+    expect(screen.queryByText(/Not here/)).toBeNull();
   });
 
   it("keeps all device controls in the collapsed On this phone group", async () => {

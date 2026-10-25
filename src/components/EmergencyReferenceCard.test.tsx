@@ -94,6 +94,36 @@ describe("EmergencyReferenceCard", () => {
     expect(container.textContent).toContain(copy.distressChannel);
   });
 
+  it("omits the working-channel row where no not-recorded words are given, keeping the distress line (B51)", () => {
+    const { workingChannelNotRecorded: _omitted, ...savedCopy } = copy;
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={savedCopy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: null, mmsi: null, workingChannel: null },
+        }}
+      />,
+    );
+    expect(container.textContent).not.toContain("Working channel");
+    expect(container.textContent).not.toContain("not recorded");
+    expect(container.textContent).toContain(copy.distressChannel);
+  });
+
+  it("still says a recorded channel when no not-recorded words are given", () => {
+    const { workingChannelNotRecorded: _omitted, ...savedCopy } = copy;
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={savedCopy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: null, mmsi: null, workingChannel: "68" },
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Working channel (VHF): 68");
+  });
+
   it("leaves out a radio fact the boat's row does not hold", () => {
     const { container } = render(
       <EmergencyReferenceCard

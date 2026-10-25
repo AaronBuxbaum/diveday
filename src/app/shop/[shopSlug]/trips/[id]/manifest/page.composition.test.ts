@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { routeSource } from "@/test/route-source";
 
@@ -51,16 +53,16 @@ describe("a cancelled departure's roll call", () => {
   it("reads the writers' gate and closes both lists and the banner on it", () => {
     expect(READS).toMatch(/cancelledRollCall\(\{[^}]*rollCallOpen/s);
     expect(SOURCE).toContain("    cancelled,\n");
-    const diverList = SOURCE.slice(
-      SOURCE.indexOf("<DiverRollCall"),
-      SOURCE.indexOf("<CrewRollCall"),
+    // One set of props per list, read by the screen and the packet's paper alike.
+    expect(SOURCE).toContain('rollCallClosed: cancelled === "closed",');
+    expect(SOURCE).toContain("<DiverRollCall context={rollCall.divers} />");
+    expect(SOURCE).toContain("<CrewRollCall {...rollCall.crew} />");
+    expect(SOURCE).toContain("rollCall={rollCall}");
+    const props = readFileSync(
+      path.join(import.meta.dirname, "_components/roll-call-props.ts"),
+      "utf8",
     );
-    expect(diverList).toContain('rollCallClosed: cancelled === "closed",');
-    const crewList = SOURCE.slice(
-      SOURCE.indexOf("<CrewRollCall"),
-      SOURCE.indexOf("/>", SOURCE.indexOf("<CrewRollCall")),
-    );
-    expect(crewList).toContain('rollCallClosed={cancelled === "closed"}');
+    expect(props.match(/^ {6}rollCallClosed,$/gm)).toHaveLength(2);
     expect(SOURCE).toContain("<CancelledRollCallBanner state={cancelled}");
   });
 });

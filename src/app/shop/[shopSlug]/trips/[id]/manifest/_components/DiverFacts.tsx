@@ -46,6 +46,7 @@ export function DiverFacts({
   timezone,
   columns,
   waiverHref,
+  contactClassName = "",
   t,
 }: {
   diver: TripManifest["divers"][number];
@@ -70,6 +71,12 @@ export function DiverFacts({
    * (issue #2348). Paper has nothing to tap. Absent, both are drawn unlinked.
    */
   waiverHref?: (record: { personId: string; recordId: string }) => string;
+  /**
+   * The emergency contact's own box, on screen (visual review 2026-10-24,
+   * B08): the card holds contact facts only, and every other fact sits
+   * beside it. Paper passes nothing.
+   */
+  contactClassName?: string;
   t: StaffTranslator;
 }) {
   // The pickup belongs to the booking, not to the matched person, so a held
@@ -103,7 +110,7 @@ export function DiverFacts({
         <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
         {/* Its own field, never `emergencyContact*` (H7, Y3). */}
         {diver.heldEmergencyContact ? (
-          <p>
+          <p className={contactClassName}>
             <span className="font-bold">{t("manifest.heldEmergencyContactLabel")}</span>
             <span className="mt-0.5 block text-muted">
               {diver.heldEmergencyContact.name} ·{" "}
@@ -117,7 +124,7 @@ export function DiverFacts({
   }
   return (
     <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
-      <p>
+      <p className={contactClassName}>
         <span className="font-bold">{t("manifest.emergencyContactLabel")}</span>
         <span className="mt-0.5 block text-muted">
           {diver.emergencyContactName && diver.emergencyContactPhone ? (

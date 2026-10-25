@@ -2,108 +2,48 @@
 
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
-import type { AssignGearUnitResult } from "../actions";
 import type { ConfirmProposalsResult } from "../proposal-actions";
 
 export interface ProposedUnitCopy {
-  /** "Proposed: BCD #4 · L" — said as a proposal, so it never reads as held. */
-  proposed: string;
-  assign: string;
-  assigning: string;
-  change: string;
-  /** One sentence per refusal the write can answer with, keyed by its code. */
-  refusals: Record<string, string>;
-  refusalFallback: string;
+  /** "Proposed: BCD #4 · L", said as a proposal so it never reads as held. */
+  line: string;
+  /** "Change". */
+  reveal: string;
 }
 
 /**
- * **One proposed unit, confirmed in one tap** (UX audit 2026-10-07, item 9).
+ * **One piece, one line, one text button** (visual review 2026-10-24, A10).
  *
- * The row says which unit DiveDay would hand over and offers two acts:
- * Assign, which reserves exactly that unit through the same `assignGearUnit`
- * the picker uses (marked as a proposed pick, so its care is re-read), and Change, which opens the picker (`children`, the row's
- * own `RentalUnitPicker`) for a staffer who knows better. Nothing is held
- * until Assign: the proposal is a suggestion, and the exclusion constraint is
- * still the only thing that can say the unit is free. A refusal stays on the
- * row and opens the picker, because the one thing to do next is pick another.
+ * The row says which unit DiveDay would hand over and offers one quiet act:
+ * Change reveals the row's own
+ * picker inline (`children`, its `RentalUnitPicker`), where choosing a unit is
+ * the assignment. Nothing is held by the proposal: "Assign all" at the top
+ * confirms every proposal at once, and the exclusion constraint is still the
+ * only thing that can say a unit is free. The per-row Assign is gone; a
+ * proposal confirmed alone is a Change and a pick of that unit.
  */
-export function ProposedUnit({
-  tripId,
-  bookingId,
-  gearItemId,
-  assign,
-  copy,
-  children,
-}: {
-  tripId: string;
-  bookingId: string;
-  gearItemId: string;
-  assign: (input: {
-    tripId: string;
-    bookingId: string;
-    gearItemId: string;
-    proposed?: boolean;
-  }) => Promise<AssignGearUnitResult>;
-  copy: ProposedUnitCopy;
-  /** The row's picker, shown on Change or after a refusal. */
-  children: ReactNode;
-}) {
+export function ProposedUnit({ copy, children }: { copy: ProposedUnitCopy; children: ReactNode }) {
   const [changing, setChanging] = useState(false);
-  const [refusal, setRefusal] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  // Both buttons are client-only acts painted by the static shell; a tap
-  // before React owns them is swallowed, so the suite waits on this flag
-  // (the instant-navigation skill's "A static shell paints a control").
+  // A client-only act painted by the static shell; a tap before React owns it
+  // is swallowed, so the suite waits on this flag (the instant-navigation
+  // skill's "A static shell paints a control").
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
 
   if (changing) return <>{children}</>;
 
   return (
-    <div className="flex flex-col gap-1" data-hydrated={hydrated ? "true" : undefined}>
-      {/* **One line with its two acts on a phone** (UX review 2026-10-10,
-          item 13): the words take what the buttons leave, so a proposed piece
-          is one 44px row rather than words over buttons. In a desk tile the
-          words get the tile's whole line and the acts sit under them, every
-          proposed tile alike, rather than some squeezing "BCD #5" over an
-          orphaned "· L" and some not. */}
-      <div className="flex items-center gap-x-2 gap-y-1 sm:flex-wrap">
-        <span className="min-w-0 flex-1 font-medium sm:basis-full">{copy.proposed}</span>
-        <span className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => {
-              setRefusal(null);
-              startTransition(async () => {
-                // Said as a proposal, so the server re-reads the unit's care too:
-                // one that gained a lapsed clock or a concern since the page
-                // loaded is refused rather than reserved unseen.
-                const result = await assign({ tripId, bookingId, gearItemId, proposed: true });
-                if (result.ok) return;
-                setRefusal(copy.refusals[result.reason] ?? copy.refusalFallback);
-                setChanging(true);
-              });
-            }}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {isPending ? copy.assigning : copy.assign}
-          </button>
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => setChanging(true)}
-            className={buttonClass({ variant: "ghost", size: "sm" })}
-          >
-            {copy.change}
-          </button>
-        </span>
+    <div data-hydrated={hydrated ? "true" : undefined}>
+      <div className="flex items-center gap-x-2">
+        <span className="min-w-0 flex-1 font-medium">{copy.line}</span>
+        <button
+          type="button"
+          onClick={() => setChanging(true)}
+          className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+        >
+          {copy.reveal}
+        </button>
       </div>
-      {refusal ? (
-        <p role="alert" className="text-xs font-medium text-warning-strong">
-          {refusal}
-        </p>
-      ) : null}
     </div>
   );
 }

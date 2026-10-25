@@ -21,6 +21,7 @@ import { readDepartureStage } from "../_arrivals/departure-record";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
+import { PAPER_PACKET } from "../manifest/_components/manifest-search-params";
 import { PrepBody } from "./_components/PrepBody";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -74,10 +75,18 @@ export default async function TripPrepPage({
      * value on this route changes nothing.
      */
     idPrefix?: string;
+    /** Composed as the trip packet's paper; see `PAPER_PACKET`. */
+    [PAPER_PACKET]?: true;
   }>;
 }) {
   const { shopSlug, id: tripId } = await params;
-  const { notice, count, group, idPrefix: requestedIdPrefix } = await searchParams;
+  const {
+    notice,
+    count,
+    group,
+    idPrefix: requestedIdPrefix,
+    [PAPER_PACKET]: paper,
+  } = await searchParams;
   const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
   // An unparseable id names no row. Guarded here rather than in the query
@@ -114,6 +123,51 @@ export default async function TripPrepPage({
   // Once home, every unit still out on this boat (fifth-loop ideas, item 5).
   const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
 
+  // **The packet's paper** (B03, B55): the packing list alone. The packet's
+  // dive plan already names the departure once, so this section carries no
+  // header of its own, no tabs, and no control.
+  const body = (
+    <PrepBody
+      prep={prep}
+      t={t}
+      locale={locale}
+      shopSlug={shopSlug}
+      tripId={tripId}
+      rentalItems={shop.rentalItems}
+      notice={paper ? undefined : notice}
+      noticeCount={count}
+      grouping={grouping}
+      cancelled={trip.status === "cancelled"}
+      sailed={sailed}
+      home={finished}
+      backFromBoat={backFromBoat}
+      groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
+      emptyState={
+        <EmptyState
+          title={t("tripPrep.emptyHeading")}
+          body={t("tripPrep.noDivers")}
+          action={
+            paper ? null : (
+              <Link href={shopPath(shopSlug, "trips", tripId)} className={buttonClass()}>
+                {t("tripPrep.emptyAction")}
+              </Link>
+            )
+          }
+        />
+      }
+      idPrefix={idPrefix}
+      paper={paper === true}
+      className="space-y-10"
+    />
+  );
+  if (paper) {
+    return (
+      <div id={scopedId(idPrefix, PREP_SECTION_ID)} className="scroll-mt-6">
+        {body}
+      </div>
+    );
+  }
+
   return (
     <>
       <FlashParams params={["notice", "count"]} />
@@ -139,38 +193,7 @@ export default async function TripPrepPage({
       {/* The anchor every "fix the packing list" link lands on, prefixed like
           every other id here when the paper day composes this page per departure. */}
       <div id={scopedId(idPrefix, PREP_SECTION_ID)} className="mt-10 scroll-mt-6">
-        <PrepBody
-          prep={prep}
-          t={t}
-          locale={locale}
-          shopSlug={shopSlug}
-          tripId={tripId}
-          rentalItems={shop.rentalItems}
-          notice={notice}
-          noticeCount={count}
-          grouping={grouping}
-          cancelled={trip.status === "cancelled"}
-          sailed={sailed}
-          home={finished}
-          backFromBoat={backFromBoat}
-          groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
-          emptyState={
-            // The whole page's content region, so this one wears an h2 — and the
-            // packing list can only become real once someone is on the boat,
-            // which happens on the departure page.
-            <EmptyState
-              title={t("tripPrep.emptyHeading")}
-              body={t("tripPrep.noDivers")}
-              action={
-                <Link href={shopPath(shopSlug, "trips", tripId)} className={buttonClass()}>
-                  {t("tripPrep.emptyAction")}
-                </Link>
-              }
-            />
-          }
-          idPrefix={idPrefix}
-          className="space-y-10"
-        />
+        {body}
       </div>
     </>
   );

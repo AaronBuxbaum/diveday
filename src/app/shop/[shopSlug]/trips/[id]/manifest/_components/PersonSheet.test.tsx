@@ -9,8 +9,8 @@ const props = {
   name: "Meera Iyer",
   trigger: <span>Meera Iyer</span>,
   triggerLabel: "Open details for Meera Iyer",
-  subtitle: "Diver · Own kit",
-  status: <span>Not back aboard</span>,
+  subtitle: "Diver · age 27",
+  status: { text: "Not back aboard", tone: "danger" as const },
   trail: [
     { label: "Boarded at the dock", detail: "6:51 · Dana", state: "aboard" as const },
     { label: "Not back after dive 1", detail: "8:29 · Keiko", state: "notBack" as const },
@@ -134,8 +134,9 @@ describe("the trigger's caret", () => {
 
 /**
  * **The sheet's shell and header are the shared ones** (K-557, K-269): its top
- * corners on the 20px panel rung, not an arbitrary 22px, and its pill, name
- * and close centred on one row with the subtitle under all three.
+ * corners on the 20px panel rung, not an arbitrary 22px, and its name and
+ * close centred on one row with the subtitle under both. The status is a line
+ * under the name, in its tone's ink, never a chip beside the close (B08).
  */
 describe("the opened sheet's geometry", () => {
   it("rounds on the panel rung and centers its header row", () => {
@@ -147,10 +148,14 @@ describe("the opened sheet's geometry", () => {
 
     const header = screen.getByRole("heading", { name: "Meera Iyer" }).parentElement;
     expect(header).toHaveClass("grid", "items-center");
-    const group = screen.getByText("Not back aboard").parentElement;
-    expect(group).toHaveClass("items-center");
-    expect(group).toContainElement(screen.getByRole("button", { name: "Close person details" }));
-    expect(screen.getByText("Diver · Own kit")).toHaveClass("col-span-2");
+    const close = screen.getByRole("button", { name: "Close person details" });
+    expect(close.parentElement).toHaveClass("items-center");
+    const status = screen.getByText("Not back aboard");
+    expect(close.parentElement).not.toContainElement(status);
+    expect(status).toHaveClass("block", "text-danger");
+    expect(status.parentElement).toHaveClass("col-span-2");
+    expect(status.parentElement).toHaveTextContent(/^Diver · age 27Not back aboard$/);
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription(/Not back aboard/);
   });
 });
 

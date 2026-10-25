@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { BOAT_SEGMENT_TRACK_CLASS, boatSegmentClass } from "@/components/boat-segments";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { isHomewardStage } from "@/lib/checkpoint-gaps";
@@ -30,8 +31,11 @@ export type StageStripAction = (
 export type StageStripCopy = {
   legend: string;
   errorRefusal: string;
-  /** The five taps, in the order the crew works through them. */
-  taps: { stage: TripStage; label: string }[];
+  /**
+   * The five taps, in the order the crew works through them. `shortLabel` is
+   * the word a phone shows; the full label stays the accessible name.
+   */
+  taps: { stage: TripStage; label: string; shortLabel: string }[];
   /** "Keiko Tanaka · 7:04 AM", composed server-side, or undefined if nobody has said anything. */
   recordedLine?: string;
   /**
@@ -82,21 +86,18 @@ export function StageStrip({
           word is the crew's own, the pressed tap's label, and it prints only
           when somebody has said one; until then the whole strip stays on
           screen. */}
-      {/* **Equal columns, never a ragged wrap** (UX audit 2026-10-07, item
-          2). The five words were a wrapping flex row, and at 390 it broke 4 + 1:
-          "Home" alone on a second line under "Boarding", a target whose
-          neighbours moved every time the row reflowed, at the rail. Five
-          columns do not fit a phone with a readable label in either locale
-          ("Embarcando", "En superficie"), so below `sm` the row is three equal
-          columns, 3 + 2, the same balance `SegmentedControl` settles a wrapped
-          track into; from `sm` it is one line of five. Every target keeps its
-          place whichever word is pressed.
+      {/* **One row of five, the checkpoint switch's own control** (visual
+          review 2026-10-24, B06; `boat-segments.ts`). The words used to wrap
+          3 + 2 as outline buttons above a differently drawn Dock / Dive 1 /
+          Dive 2 track: two selectors one above the other in two idioms. A
+          phone takes the short word, and a row still too wide scrolls inside
+          its track; every target keeps its place whichever word is pressed.
 
           Not one "Next" button: on a two-tank day the word after "Surface" is
           "Underway" again as often as it is "Heading in", so a single next
           word would be wrong half the time on exactly the boats that use it
           most. */}
-      <div className="mt-2 grid grid-cols-3 gap-2 sm:max-w-2xl sm:grid-cols-5 print:hidden">
+      <div className={`mt-2 ${BOAT_SEGMENT_TRACK_CLASS}`}>
         {copy.taps.map((tap) => (
           <form action={formAction} key={tap.stage} className="flex">
             <input type="hidden" name="stage" value={tap.stage} />
@@ -105,20 +106,12 @@ export function StageStrip({
               disabled={isPending}
               aria-busy={isPending}
               aria-pressed={current === tap.stage}
-              className={buttonClass({
-                variant: current === tap.stage ? "primary" : "secondary",
-                // `sm`'s 14px label and 12px padding, at the dock's 56px
-                // height: `boat` is the rail's size, but its 24px padding and
-                // 16px label leave about 64px for a word in a third of a
-                // phone, and "Underway" or "Embarcando" cannot break. The
-                // height is what a wet thumb needs; `min-h-14` stands above the
-                // base's `min-h-11` the way `md`'s `min-h-12` does, and
-                // `touch-manipulation` is `boat`'s own (no double-tap wait).
-                size: "sm",
-                className: "min-h-14 w-full touch-manipulation text-balance",
-              })}
+              className={`w-full ${boatSegmentClass(current === tap.stage)}`}
             >
-              {tap.label}
+              <span aria-hidden="true" className="sm:hidden">
+                {tap.shortLabel}
+              </span>
+              <span className="max-sm:sr-only">{tap.label}</span>
             </button>
           </form>
         ))}

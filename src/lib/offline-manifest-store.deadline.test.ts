@@ -108,7 +108,12 @@ describe("syncOfflineManifest on a network that never answers", () => {
     );
     // Polled on setImmediate, not vi.waitFor: the latter advances the faked
     // clock while it polls, which would spend the deadline being measured.
-    for (let turn = 0; posts === 0 && turn < 10_000; turn += 1) {
+    // Bounded by real time, not a turn count: under a loaded machine the
+    // IndexedDB read and the interceptor took more than 10,000 turns, and the
+    // count ran out before the request was sent (flaked in a full run).
+    // `Date.now` is real here — only setTimeout/clearTimeout are faked.
+    const started = Date.now();
+    while (posts === 0 && Date.now() - started < 5_000) {
       await new Promise((resolve) => setImmediate(resolve));
     }
     expect(posts).toBeGreaterThan(0);

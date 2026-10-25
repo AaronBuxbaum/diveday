@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { BOAT_SEGMENT_TRACK_CLASS, boatSegmentClass } from "@/components/boat-segments";
 import { checkpointGapLine } from "@/components/checkpoint-gap-words";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { previousCheckpointGaps } from "@/lib/checkpoint-gaps";
@@ -63,32 +63,36 @@ export function CheckpointSwitch({
   return (
     <>
       <CheckpointGapGuard prompts={prompts} current={checkpoint}>
-        {/* A segmented control, not a row of buttons: the active checkpoint used
-          to wear the same filled-primary costume as "Mark boarded", which gave
-          the page a second primary that was not an action at all (principle
-          8). The same shared track the grouping switches use (`SegmentedControl`),
-          at boat size because this row is switched at the rail. */}
-        <SegmentedControl
-          ariaLabel={t("manifest.checkpointNavAriaLabel")}
-          items={checkpoints.map((value) => ({
-            key: value,
-            label: rollCallCheckpointText(t, value),
-            // Below `sm` the full names overran a 390px track and the row read as
-            // two — the one segmented control in the app that did (issue #1320).
-            // This is the call site that earns the short form, and what makes it
-            // a handle rather than a rename is `DiverRollCall`'s heading
-            // underneath: the condition is spelled out over
-            // `rollCallCheckpointShortText`.
-            shortLabel: rollCallCheckpointShortText(t, value),
-            href: checkpointHref(shopSlug, tripId, value),
-          }))}
-          currentKey={checkpoint}
-          size="boat"
-          currentIsLink
-          ariaCurrentValue="true"
-          scroll={false}
-          className="mt-7"
-        />
+        {/* The boat's one segmented control (`boat-segments.ts`, visual review
+          2026-10-24, B06): the stage strip above wears the identical track,
+          segment and selected fill, so the two selectors at the rail read as
+          one idiom. Below `sm` each segment shows its short word, a handle
+          rather than a rename: `DiverRollCall`'s heading underneath spells the
+          condition out, and the full name stays the link's accessible name.
+          `data-key` is what `CheckpointGapGuard` catches. */}
+        <nav
+          aria-label={t("manifest.checkpointNavAriaLabel")}
+          className={`mt-7 ${BOAT_SEGMENT_TRACK_CLASS}`}
+        >
+          {checkpoints.map((value) => {
+            const current = value === checkpoint;
+            return (
+              <Link
+                key={value}
+                href={checkpointHref(shopSlug, tripId, value)}
+                data-key={value}
+                scroll={false}
+                aria-current={current ? "true" : undefined}
+                className={boatSegmentClass(current)}
+              >
+                <span aria-hidden="true" className="sm:hidden">
+                  {rollCallCheckpointShortText(t, value)}
+                </span>
+                <span className="max-sm:sr-only">{rollCallCheckpointText(t, value)}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </CheckpointGapGuard>
       {/* The checkpoint before this one is still open: said here, by the
           server, on the checkpoint it leads to. */}

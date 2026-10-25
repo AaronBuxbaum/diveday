@@ -226,7 +226,7 @@ test.describe("staff", () => {
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
     const change = assignments.getByRole("button", { name: "Change" }).first();
     await expect(change).toBeVisible();
-    await expect(change.locator("xpath=../../..")).toHaveAttribute("data-hydrated", "true");
+    await expect(change.locator("xpath=../..")).toHaveAttribute("data-hydrated", "true");
     await change.click();
     const firstSelect = page.locator("select[id^='assign-']").first();
     await firstSelect.waitFor();
@@ -268,19 +268,20 @@ test.describe("staff", () => {
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
     await expect(assignments.getByRole("heading", { name: "Rental assignments" })).toBeVisible();
 
-    // The cart line states what is on it, which is the fact the description
-    // sentence it replaced never carried.
-    await expect(assignments.getByText(/\d+ units? for \d+ divers?/)).toBeVisible();
+    // The cart line states what is on it, in one number set (B54).
+    await expect(assignments.getByText(/\d+ of \d+ units? assigned/)).toBeVisible();
 
-    // Assign one proposed unit in its one tap, so there is a set to hand
-    // across, and remember its tag (UX audit 2026-10-07, item 9).
-    const proposed = assignments.getByText(/^Proposed: /).first();
-    await expect(proposed).toBeVisible();
-    const label = ((await proposed.textContent()) ?? "").replace(/^Proposed: /, "");
-    const tag = label.split(" · ")[0]?.trim() ?? "";
+    // Assign one unit so there is a set to hand across: a proposed row's one
+    // text button reveals its picker, and the pick is the assignment (A10).
+    const change = assignments.getByRole("button", { name: "Change" }).first();
+    await expect(change.locator("xpath=../..")).toHaveAttribute("data-hydrated", "true");
+    await change.click();
+    const select = page.locator("select[id^='assign-']").first();
+    await select.waitFor();
+    const option = (await select.locator("option:not([disabled])").first().textContent()) ?? "";
+    const tag = option.split(" · ")[0]?.trim() ?? "";
     expect(tag.length).toBeGreaterThan(0);
-    await expect(proposed.locator("xpath=../..")).toHaveAttribute("data-hydrated", "true");
-    await proposed.locator("xpath=..").getByRole("button", { name: "Assign" }).click();
+    await select.selectOption({ label: option });
     await expect(assignments.getByText(tag, { exact: true })).toBeVisible();
 
     // One deliberate act per diver. The row it belongs to is the one holding

@@ -580,10 +580,14 @@ describe("the prose under the pinned card", () => {
     });
   }
 
-  it("insets its content by the card's border as well as its padding", () => {
+  it("says what is still open inside the pinned card, under the head count (B53)", () => {
     renderAwaiting();
-    const prose = document.querySelector('[aria-live="polite"]')?.parentElement;
-    expect(prose).toHaveClass("border-x", "border-transparent", "px-4");
+    const live = document.querySelector('[aria-live="polite"]');
+    const card = document.querySelector("section.sticky");
+    expect(card).not.toBeNull();
+    expect(card?.contains(live)).toBe(true);
+    // The same column as the count's own rows, after them.
+    expect(live?.parentElement?.querySelector("p")?.textContent).toMatch(/aboard/);
   });
 
   it("keeps the live line mounted while it is empty", () => {

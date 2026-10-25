@@ -22,6 +22,11 @@ export type PrepView = {
    * return controls give way to "Back from the boat". Absent reads as not yet.
    */
   home?: boolean;
+  /**
+   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): the lines a
+   * printed packing list carries, and none of the controls that work them.
+   */
+  paper?: boolean;
 };
 
 /** One piece a renting diver still wants a unit for. */

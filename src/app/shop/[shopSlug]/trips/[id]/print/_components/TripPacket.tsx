@@ -6,7 +6,10 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { TripPageHeader } from "../../_components/TripPageHeader";
-import { PRINTED_MEDICAL_ALERTS } from "../../manifest/_components/manifest-search-params";
+import {
+  PAPER_PACKET,
+  PRINTED_MEDICAL_ALERTS,
+} from "../../manifest/_components/manifest-search-params";
 import TripManifestPage from "../../manifest/page";
 import TripPrepPage from "../../prep/page";
 import { PacketDives } from "./PacketDives";
@@ -76,6 +79,8 @@ export async function TripPacket({
   // component's props are pinned to Next's `PageProps`.
   const searchParams = Promise.resolve({
     idPrefix: tripId,
+    // The composed pages render their paper, not their controls (B03, B55).
+    [PAPER_PACKET]: true as const,
     ...(printedMedicalAlerts ? { [PRINTED_MEDICAL_ALERTS]: printedMedicalAlerts } : {}),
   });
   const db = await getDb();
@@ -95,6 +100,19 @@ export async function TripPacket({
     TripPrepPage({ params, searchParams }),
   ]);
 
+  // The one title block per departure (B55), and the same header again on the
+  // packing list's sheet on paper only: that sheet starts a page of its own
+  // and goes to the gear room, so it still says which boat it is for.
+  const header = (
+    <TripPageHeader
+      trip={details.trip}
+      boardHref={shopPath(shopSlug, "schedule", "board")}
+      backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+      locale={locale}
+      timeZone={shop.timezone}
+    />
+  );
+
   return (
     <>
       {/* Section ids carry the trip id: the day's sheet holds one of these
@@ -107,13 +125,7 @@ export async function TripPacket({
         {/* Each section breaks onto its own page, so page one has to say which
             departure it is — through the same header its sub-pages wear, not a
             hand-rolled title line that would drift from them. */}
-        <TripPageHeader
-          trip={details.trip}
-          boardHref={shopPath(shopSlug, "schedule", "board")}
-          backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-          locale={locale}
-          timeZone={shop.timezone}
-        />
+        {header}
         <PacketDives
           dives={details.tripDiveList.map(({ dive, diveSite }) => ({
             diveNumber: dive.diveNumber,
@@ -141,6 +153,7 @@ export async function TripPacket({
         <h2 id={`print-prep-${tripId}`} className="sr-only">
           {t("trips.surfaces.prep")}
         </h2>
+        <div className="hidden print:block">{header}</div>
         {prep}
       </section>
     </>

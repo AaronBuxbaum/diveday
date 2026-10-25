@@ -46,18 +46,18 @@
   departure board — uses these words and one tone per state (blocked is always danger), resolved
   through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
   fact used to read as "Needs attention" in warning at the counter and "Blocked" in danger on the
-  manifest, for the same diver. **The offline manifest is a deliberate exception**: it says
-  "Ready when saved" / "Blocked when saved" (`shared.offlineManifest.single.readyBadge` /
-  `.blockedBadge`) rather than resolving through those helpers, because a snapshot on a boat with
-  no signal cannot know whether a waiver was signed or a card sighted since it was taken. Dropping
-  the qualifier there would be the one lie a roll-call surface must not tell — a stale copy reading
-  as current (design/principles.md #4, "safety surfaces keep their precision"). The exception
-  covers **every readiness word on that page, not just the diver row's status pill** — the
-  missing-divers grid's blocked chip reads the same qualified key, and no caller anywhere under
-  `/offline-manifest` resolves through `readinessStatusText`. The grid held a bare "Blocked" one
-  scroll from a qualified badge until #1360; a future session narrowing this sentence back to the
-  row would re-open that gap. The **refusal** counts too: the sentence a turned-down boarding tap
-  shows (`shared.offlineManifest.single.record.notAllowed`) reads "wasn't ready to board when this
+  manifest, for the same diver. **The offline manifest is a deliberate exception**: it never resolves through those helpers,
+  because a snapshot on a boat with no signal cannot know whether a waiver was signed or a card
+  sighted since it was taken. Since the 2026-10-24 visual review (B01) the qualifier is said
+  **once, at the top of the page**, rather than on every chip: the banner under the title reads
+  "Saved {when}. Readiness reflects that moment…" (`shared.offlineManifest.single.freshnessBanner`;
+  `unansweredBanner` and `expiredBanner` in their states), and each row's status line then says
+  the bare word ("Blocked", `.blockedBadge`) with the blocking reason. Dropping that banner would
+  be the one lie a roll-call surface must not tell — a stale copy reading as current
+  (design/principles.md #4, "safety surfaces keep their precision"); a future change that removes
+  or hides it must put the qualifier back on every readiness word under `/offline-manifest`. The
+  **refusal** keeps its own past tense: the sentence a turned-down boarding tap shows
+  (`shared.offlineManifest.single.record.notAllowed`) reads "wasn't ready to board when this
   copy was saved", never the present tense.
 - **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
   decision 4): once every departure of the shop day has settled, each station reads its end state

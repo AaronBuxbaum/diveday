@@ -126,30 +126,21 @@ export function WantedPiece({
           <span className="text-muted">{t("gear.prep.noneFree", { kindLabel })}</span>
         ) : (
           // The tile is the measure: the picker and a proposal's words
-          // with its two acts both take the tile's width.
+          // with its one act both take the tile's width.
           <div className="w-full min-w-0">
-            {/* **No "Assign" beside it.** The pick is the
-                                      act; a second tap to confirm it is an
-                                      "Edit" button once per row, twenty-one
-                                      times on a seeded departure (issue #802).
-                                      The refusal the exclusion constraint can
-                                      still answer with lands on this row, and
-                                      reverts it. */}
+            {/* **No "Assign" beside it.** The pick is the act
+                (issue #802). A proposed piece shows its unit and holds the
+                picker behind one "Change" text button (A10); a piece with
+                no proposal is the picker itself, since picking is the only
+                thing to do there. The refusal the exclusion constraint can
+                still answer with lands on this row, and reverts it. */}
             {proposal ? (
               <ProposedUnit
-                tripId={tripId}
-                bookingId={bookingId}
-                gearItemId={proposal.id}
-                assign={assignGearUnit}
                 copy={{
-                  proposed: t("gear.prep.proposal.unit", {
+                  line: t("gear.prep.proposal.unit", {
                     unit: unitLine(t, proposal, wantsNitrox),
                   }),
-                  assign: t("gear.prep.proposal.assign"),
-                  assigning: t("gear.prep.assigning"),
-                  change: t("gear.prep.proposal.change"),
-                  refusals: pickRefusals,
-                  refusalFallback: t("gear.prep.notice.assignFailed"),
+                  reveal: t("gear.prep.proposal.change"),
                 }}
               >
                 {picker}
