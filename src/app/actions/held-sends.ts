@@ -97,6 +97,15 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
   if (!parsed.ok) throw new Error("unreadable hold form");
   const form = parsed.data;
   const kind = form.holdKind;
+  // A discount's kind with no amount is a discount the staffer meant and
+  // left blank: refused, never sent on as an ordinary offer (layer 3 review).
+  if (
+    kind === "seat_offer" &&
+    String(form.discountKind ?? "").trim() !== "" &&
+    String(form.discount ?? form.discountPercent ?? "").trim() === ""
+  ) {
+    throw new Error("invalid_discount");
+  }
   const raw =
     kind === "waiver_send"
       ? {
