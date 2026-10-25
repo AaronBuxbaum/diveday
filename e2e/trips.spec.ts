@@ -230,10 +230,13 @@ test.describe("trip pulse", () => {
     // The work facts fold into one line above the count, "Needs you · N",
     // which opens to Today's own rows for this boat (UX audit item 23; fourth
     // review, item 36: the band counts what Today counts). A size is a size
-    // missing or a diver not yet asked about kit, by name or as a count.
+    // missing or a diver not yet asked about kit, by name or as a count; two
+    // or more prep rows are one "Prep · N" chip (visual review A46).
     await page.getByText(/^Needs you · \d+$/).click();
     await expect(
-      page.getByRole("link", { name: /missing a (rental )?size|not asked about kit/i }).first(),
+      page
+        .getByRole("link", { name: /^Prep · \d+$|missing a (rental )?size|not asked about kit/i })
+        .first(),
     ).toBeVisible();
     // This boat is inside its arrivals window, so the desk's count leads the
     // roster and says "N blocked" itself; the pulse's door to the same

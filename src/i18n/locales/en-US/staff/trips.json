@@ -215,6 +215,7 @@
     "overRatioInstructor": "Over student ratio: add an instructor",
     "overIntroRatio": "Over intro ratio: add an instructor",
     "needsYou": "Needs you · {count}",
+    "kindCount": "{kind} · {count}",
     "noRequirements": "Set the requirements before anyone can board",
     "boatClash": "{boat} is also on {departure}"
   },

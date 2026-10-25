@@ -115,3 +115,68 @@ describe("shownPulseFacts", () => {
     ]);
   });
 });
+
+describe("the opened Needs you strip (visual review A46)", () => {
+  const contact = (name: string) => ({
+    text: `${name} · No emergency contact`,
+    href: `/divers/${name}`,
+    chip: { kind: "Contact", icon: "divers" as const, tone: "neutral" as const },
+  });
+
+  it("draws one chip per kind, counted, and keeps every door one tap away", () => {
+    const { container } = render(
+      <PulseFacts
+        facts={[
+          contact("Nadia"),
+          { ...contact("Mara"), href: "/divers/Mara" },
+          {
+            text: "1 order awaiting payment",
+            href: "/orders",
+            chip: { kind: "Payment", tone: "neutral" },
+          },
+          {
+            text: "Diego · Missing a rental size",
+            href: "/prep",
+            chip: { kind: "Prep", tone: "neutral" },
+          },
+          {
+            text: "Not asked about kit: Lena",
+            href: "/prep",
+            chip: { kind: "Prep", tone: "neutral" },
+          },
+        ]}
+        foldLabel={label}
+        rosterHref="/trip#roster"
+      />,
+    );
+    expect(screen.getByText("Needs you · 5")).toBeInTheDocument();
+    const chips = [...container.querySelectorAll("details li a")];
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "Contact · 2",
+      "1 order awaiting payment",
+      "Prep · 2",
+    ]);
+    // Two divers' records: the roster holds both rows. Two prep rows on one list: that list.
+    expect(chips.map((chip) => chip.getAttribute("href"))).toEqual([
+      "/trip#roster",
+      "/orders",
+      "/prep",
+    ]);
+  });
+
+  it("leaves a fact with no kind as its own chip in its own words", () => {
+    const { container } = render(
+      <PulseFacts
+        facts={[
+          { text: "4 divers are missing rental sizes", href: "/prep" },
+          { text: "1 order is awaiting payment", href: "/orders" },
+        ]}
+        foldLabel={label}
+      />,
+    );
+    expect([...container.querySelectorAll("details li a")].map((a) => a.textContent)).toEqual([
+      "4 divers are missing rental sizes",
+      "1 order is awaiting payment",
+    ]);
+  });
+});

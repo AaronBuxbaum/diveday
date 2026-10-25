@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { RowIconName } from "@/app/shop/[shopSlug]/_components/today/row-glyph";
 import { BoardingSeats } from "@/components/BoardingBar";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
@@ -19,6 +20,12 @@ export type TripPulseFact = {
   /** A stable React key when two facts share a door (two Today rows open the prep list). */
   key?: string;
   tone?: "danger" | "warning";
+  /**
+   * The Needs you strip's grouping (visual review 2026-10-24, A46): the kind
+   * word Today's row leads with, its drawing and its tone. Facts that share a
+   * kind become one chip; a fact without one stands as its own chip.
+   */
+  chip?: { kind: string; icon?: RowIconName; tone: "danger" | "warning" | "neutral" };
 };
 
 /**

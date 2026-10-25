@@ -456,6 +456,8 @@ export default async function ManageTripPage({
             <PulseFacts
               facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
               foldLabel={(count) => t("trips.pulse.needsYou", { count })}
+              kindCount={(kind, count) => t("trips.pulse.kindCount", { kind, count })}
+              rosterHref={`${shopPath(shopSlug, "trips", tripId)}#roster`}
             />
 
             <TripRosterContent
