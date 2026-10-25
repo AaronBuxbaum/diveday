@@ -10,6 +10,7 @@ import { JumpNav } from "@/components/JumpNav";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
+import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { withTranslatedFields } from "@/db/shop-text-translations";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -119,7 +120,19 @@ export default async function CoursePage({
   const staffView = await isLiveShopStaff(db, shop.id, session);
   if (!stored.isActive && !staffView) notFound();
 
-  const sessions = await listUpcomingSessionsForCourse(db, shop.id, stored.id);
+  const scheduled = await listUpcomingSessionsForCourse(db, shop.id, stored.id);
+  // Who leads each date, named on its row in the same terms the session's own
+  // page uses: only instructors who agreed to be named, and nobody away on its
+  // days (visual review 2026-10-24, B42).
+  const crews = await Promise.all(
+    scheduled.map((session) => diverCrewWithAway(db, shop.id, session, shop.timezone)),
+  );
+  const sessions = scheduled.map((session, index) => ({
+    ...session,
+    instructors: (crews[index] ?? [])
+      .filter((member) => member.tripRole === "instructor" && !member.away)
+      .map((member) => member.firstName),
+  }));
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   // Every `{depth18}` in the shop's own prose becomes "18 meters" or "60 feet"
   // here, once, before anything reads a field — a component that reached past

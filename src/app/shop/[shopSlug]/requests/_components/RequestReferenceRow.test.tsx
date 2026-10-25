@@ -70,27 +70,25 @@ describe("a request seen from a day it did not name first", () => {
     expect(screen.queryByRole("link", { name: "Create a booking" })).toBeNull();
   });
 
-  it("links up to the group holding the full record", () => {
-    row();
+  // A23 (visual review 2026-10-24): the day that holds the full record is
+  // named in plain words, a label rather than a destination, so the page's
+  // only link on the row is its act.
+  it("names the group holding the full record in words, not a link", () => {
+    const item = row();
     // The date is one unit on the line (src/lib/date-parts.ts): U+00A0 binds
-    // the month to its day, and an accessible name keeps it.
-    const up = screen.getByRole("link", { name: /First choice Mar\u00A06, 2027/ });
-    expect(up.getAttribute("href")).toBe("#date-2027-03-06");
-    // Inside a run of text, so colour alone may not be what marks it (axe
-    // `link-in-text-block`).
-    expect(up).toHaveClass("underline");
+    // the month to its day.
+    expect(item.textContent).toMatch(/First choice Mar\u00A06, 2027/);
+    expect(screen.queryByRole("link", { name: /First choice/ })).toBeNull();
   });
 
   it("keeps the flexible neighbor's own words rather than claiming it asked", () => {
-    row(
+    const item = row(
       "nearby",
       { preferredDate: "2027-03-04", alternateDate: null, dateFlexible: true },
       "2027-03-04",
     );
-    const up = screen.getByRole("link", {
-      name: /Asked for Mar\u00A04, 2027, and can move a few days/,
-    });
-    expect(up.getAttribute("href")).toBe("#date-2027-03-04");
+    expect(item.textContent).toMatch(/Asked for Mar\u00A04, 2027, and can move a few days/);
+    expect(screen.queryByRole("link", { name: /Asked for/ })).toBeNull();
   });
 
   it("stands in for a diver who left no name", () => {

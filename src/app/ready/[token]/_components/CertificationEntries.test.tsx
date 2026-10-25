@@ -156,4 +156,25 @@ describe("CertificationEntries", () => {
     expect(summaries(container)).toEqual([t("ready.certHeading")]);
     expect(screen.queryByRole("button", { name: t("ready.certNotYetButton") })).toBeNull();
   });
+
+  // B26 (visual review 2026-10-24): the step's one action at rest is a filled
+  // primary, as Sign and Gear are; the other cards stay quiet disclosure rows,
+  // and the form's own save is primary once it opens.
+  it("makes the card's resting action the step's filled primary", () => {
+    const { container } = render(
+      <CertificationEntries
+        token="tok"
+        item={item([{ code: "certification_missing" }, { code: "nitrox_missing" }])}
+        offerNitrox={false}
+        notYet={null}
+        t={t}
+      />,
+    );
+    const [card, nitrox] = [...container.querySelectorAll("summary")];
+    expect(card).toHaveTextContent(t("ready.certHeading"));
+    expect(card).toHaveClass("bg-primary", "text-primary-foreground", "group-open/cert:sr-only");
+    expect(nitrox).not.toHaveClass("bg-primary");
+    const [cardSave] = screen.getAllByRole("button", { name: t("ready.certSubmit") });
+    expect(cardSave).toHaveClass("bg-primary");
+  });
 });

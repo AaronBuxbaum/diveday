@@ -208,8 +208,10 @@ describe("oneRowPerDiver", () => {
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.kind).toBe("certification");
+    // The emergency contact before the rental size: contact gaps rank above
+    // prep (visual review 2026-10-24, A43).
     expect(rows[0]?.detail).toBe(
-      "Not certified for this trip; also waiver, nitrox certification, rental size, emergency contact",
+      "Not certified for this trip; also waiver, nitrox certification, emergency contact, rental size",
     );
   });
 

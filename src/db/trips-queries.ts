@@ -965,11 +965,22 @@ export async function listUpcomingSessionsForCourse(
   const rows = await db
     .select({
       trip: trips,
+      // The session's site, named on its row as plain text (visual review
+      // 2026-10-24, B42); a deleted site names nothing.
+      siteName: diveSites.name,
       booked: count(bookings.id),
       certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(bookings, liveBookingJoin)
+    .leftJoin(
+      diveSites,
+      and(
+        eq(diveSites.id, trips.diveSiteId),
+        eq(diveSites.shopId, trips.shopId),
+        isNull(diveSites.deletedAt),
+      ),
+    )
     .where(
       and(
         liveTrip(),
@@ -980,11 +991,12 @@ export async function listUpcomingSessionsForCourse(
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
       ),
     )
-    .groupBy(trips.id)
+    .groupBy(trips.id, diveSites.id)
     .orderBy(asc(trips.startsAt));
   // A diver-only read: `capacity` here is the seats on sale (#2321).
-  return rows.map(({ trip, booked, certifiedPassengers }) => ({
+  return rows.map(({ trip, siteName, booked, certifiedPassengers }) => ({
     ...trip,
+    siteName,
     capacity: sellableSeats(trip.capacity, certifiedPassengers),
     booked,
   }));

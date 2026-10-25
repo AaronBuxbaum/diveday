@@ -223,7 +223,6 @@ export type BuilderCopy = {
   minimumDecisionDescription: string;
   diversSuffix: string;
   hoursBeforeSuffix: string;
-  hoursSuffix: string;
   repeatLegend: string;
   howOftenLabel: string;
   doesntRepeat: string;

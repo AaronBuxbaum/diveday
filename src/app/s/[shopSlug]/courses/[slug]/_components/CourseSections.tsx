@@ -22,7 +22,7 @@ import {
   resolveImageAlt,
 } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
-import { cachedFormatter } from "@/lib/intl-cache";
+import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import { minorToMajor, type ShopCurrency } from "@/lib/money";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -384,6 +384,38 @@ export function CourseGallery({
   );
 }
 
+/** What a session row reads off the schedule. */
+type CourseSession = {
+  id: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+  booked: number;
+  /** The session's site, or null when the shop has not set one. */
+  siteName?: string | null;
+  /** First names of the instructors who agreed to be named and are not away. */
+  instructors?: readonly string[];
+};
+
+/**
+ * Who leads the date and where, as plain words on the row (visual review
+ * 2026-10-24, B42): never a link of its own, so the row stays one tap. Null
+ * when the session names neither.
+ */
+function sessionLead(session: CourseSession, locale: string, t: DiverTranslator): string | null {
+  const names = session.instructors ?? [];
+  const parts = [
+    names.length > 0
+      ? t("course.sessionWith", {
+          names: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(names),
+        })
+      : null,
+    session.siteName ?? null,
+  ].filter((part): part is string => part !== null && part !== "");
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 /** One session's dates/time/seats, shared by the featured row and the compact list. */
 function sessionFacts(
   session: { startsAt: Date; endsAt: Date; capacity: number; booked: number },
@@ -430,14 +462,7 @@ export function CourseSessions({
   waitlistOn = true,
   t,
 }: {
-  sessions: Array<{
-    id: string;
-    title: string;
-    startsAt: Date;
-    endsAt: Date;
-    capacity: number;
-    booked: number;
-  }>;
+  sessions: CourseSession[];
   shopSlug: string;
   timezone: string;
   locale: string;
@@ -493,6 +518,7 @@ export function CourseSessions({
           <>
             {(() => {
               const facts = sessionFacts(next, timezone, locale, t);
+              const lead = sessionLead(next, locale, t);
               const full = isFull(next);
               return (
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
@@ -504,6 +530,7 @@ export function CourseSessions({
                     <p className="mt-1 text-sm text-muted">
                       {facts.time} · {facts.capacity}
                     </p>
+                    {lead ? <p className="mt-0.5 text-sm text-muted">{lead}</p> : null}
                   </div>
                   <Link
                     href={publicTripPath(shopSlug, next.id)}
@@ -522,26 +549,31 @@ export function CourseSessions({
                 <ul className="mt-1 divide-y divide-border">
                   {later.map((session) => {
                     const facts = sessionFacts(session, timezone, locale, t);
+                    const lead = sessionLead(session, locale, t);
                     const full = isFull(session);
+                    // The whole row is the one link (B42): the date, who
+                    // leads it and where are its words, and the button face
+                    // at its end is the same tap, not a second target.
                     return (
-                      <li
-                        key={session.id}
-                        className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-medium">{facts.dates}</p>
-                          <p className="mt-0.5 text-sm text-muted">
-                            {facts.time} · {facts.capacity}
-                          </p>
-                        </div>
+                      <li key={session.id}>
                         <Link
                           href={publicTripPath(shopSlug, session.id)}
-                          className={buttonClass({
-                            variant: "secondary",
-                            size: "sm",
-                          })}
+                          className="group/session flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-3"
                         >
-                          {full ? fullLabel : t("course.bookThisDate")}
+                          <span className="min-w-0">
+                            <span className="block font-medium group-hover/session:underline">
+                              {facts.dates}
+                            </span>
+                            <span className="mt-0.5 block text-sm text-muted">
+                              {facts.time} · {facts.capacity}
+                            </span>
+                            {lead ? (
+                              <span className="mt-0.5 block text-sm text-muted">{lead}</span>
+                            ) : null}
+                          </span>
+                          <span className={buttonClass({ variant: "secondary", size: "sm" })}>
+                            {full ? fullLabel : t("course.bookThisDate")}
+                          </span>
                         </Link>
                       </li>
                     );

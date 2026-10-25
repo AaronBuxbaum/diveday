@@ -482,7 +482,7 @@
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1269,
+    "src/i18n/label-maps.test.ts": 1259,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1978,
     "src/lib/import.test.ts": 1423,
@@ -542,7 +542,7 @@
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 680,
     "src/db/seed-more-trips.ts#seedMoreTrips": 627,
-    "src/db/seed-trips.ts#seedTrips": 384,
+    "src/db/seed-trips.ts#seedTrips": 381,
     "src/lib/import.ts#prepareContactImport": 455
   },
   "live-people": {

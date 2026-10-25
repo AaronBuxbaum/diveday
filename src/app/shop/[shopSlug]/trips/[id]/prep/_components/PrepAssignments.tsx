@@ -75,31 +75,35 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                           (issue #1185). */}
           {loadOut ? (
             <p className="mt-1 text-sm text-muted print:hidden">
+              {/* One count that matters, "3 divers still need a unit", and
+                  the rest a muted tail (visual review 2026-10-24, A10 /
+                  B54): "· 13 proposed", the button's own number, so "Assign
+                  all 13 proposed units" beside it is the same count. The
+                  lead is dropped on a cancellation, where it is an
+                  instruction to pick on a day nothing is picked for, and at
+                  sea, where nothing more is picked; then the line is what
+                  went out. */}
+              {counts.missing > 0 && !cancelled && !sailed ? (
+                <span className="font-medium text-foreground">
+                  {t("gear.prep.cartDiversWaiting", { divers: counts.diversWaiting })}
+                </span>
+              ) : (
+                t("gear.prep.cartLineAssigned", {
+                  assigned: counts.assigned,
+                  needed: counts.needed,
+                })
+              )}
               {[
-                // "3 of 9 units assigned · 6 still to pick", one number set
-                // (B54). The tail is dropped on a cancellation, where "still
-                // to pick" is an instruction to pick on a day nothing is
-                // picked for, and at sea, where nothing more is picked.
-                // With proposals on screen the line ends on the button's
-                // own number, "· 13 proposed", so "Assign all 13 proposed
-                // units" beside it is the same count, not a third one.
-                counts.missing > 0 && !cancelled && !sailed
-                  ? t(counts.proposed > 0 ? "gear.prep.cartLineProposed" : "gear.prep.cartLine", {
-                      assigned: counts.assigned,
-                      needed: counts.needed,
-                      missing: counts.missing,
-                      proposed: counts.proposed,
-                    })
-                  : t("gear.prep.cartLineAssigned", {
-                      assigned: counts.assigned,
-                      needed: counts.needed,
-                    }),
+                counts.missing > 0 && !cancelled && !sailed && counts.proposed > 0
+                  ? t("gear.prep.cartProposed", { proposed: counts.proposed })
+                  : null,
                 loadOut.serviceFlagged > 0
                   ? t("gear.prep.cartServiceFlagged", { count: loadOut.serviceFlagged })
                   : null,
               ]
                 .filter((line) => line !== null)
-                .join(" · ")}
+                .map((line) => ` · ${line}`)
+                .join("")}
             </p>
           ) : null}
         </div>

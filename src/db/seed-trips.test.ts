@@ -5,6 +5,8 @@ import { seededShopContext } from "@/test/db";
 import { people, personRoles, tripAssignments, trips } from "./schema";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
 import { crewClashes, setTripCrew } from "./trips-crew";
+import { listUpcomingSessionsForCourse } from "./trips-queries";
+import { tripPublicCrew } from "./trips-record";
 
 /**
  * DOM-M7 (review 20260802). `crew-roles.test.ts` asserts the rule abstractly —
@@ -224,5 +226,30 @@ describe("every seeded crew passes the product's own crew writer", () => {
     }
 
     expect(refused).toEqual([]);
+  });
+});
+
+/**
+ * B42 (visual review 2026-10-24): the course page's date row names who leads
+ * the Open Water class and where it dives, as plain words. The demo is where
+ * that row is seen, so the seeded session carries both: a site on the
+ * session, and an instructor of record who agreed to be named to divers.
+ */
+describe("seeded Open Water session — what its course-page row names", () => {
+  it("has a site and a named instructor the public read returns", async () => {
+    const { db, shop } = await seededShopContext();
+    const [openWater] = await db
+      .select({ courseId: trips.courseId })
+      .from(trips)
+      .where(
+        and(eq(trips.shopId, shop.id), eq(trips.title, "Open Water Diver — three-day course")),
+      );
+    if (!openWater?.courseId) throw new Error("expected the seeded Open Water session");
+
+    const [session] = await listUpcomingSessionsForCourse(db, shop.id, openWater.courseId);
+    expect(session?.siteName).toBe("Pickles Reef");
+
+    const crew = await tripPublicCrew(db, shop.id, session.id);
+    expect(crew.filter((member) => member.tripRole === "instructor").length).toBeGreaterThan(0);
   });
 });

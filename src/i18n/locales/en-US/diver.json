@@ -351,12 +351,6 @@
     "changedByShop": "Changed by the shop on {when}",
     "changedByCrew": "Changed by the crew on {when}"
   },
-  "factSource": {
-    "forecast": "Forecast",
-    "plan": "Plan",
-    "crew": "Crew",
-    "observed": "Observed"
-  },
   "booking": {
     "heading": "Grab a seat",
     "knownDiver": {
@@ -601,6 +595,7 @@
     "joinWaitList": "Join the wait list",
     "seeFullDate": "See this date",
     "bookThisDate": "Book this date",
+    "sessionWith": "With {names}",
     "faqsHeading": "Questions divers ask",
     "howItRunsHeading": "How the course runs",
     "notIncludedHeading": "Not included",
@@ -3486,7 +3481,8 @@
       "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
       "dontSeeSystem": "Not listed here",
       "dontSeeSystemBody": "An export comes in as it is: a name column is the one thing a row needs, and certification and size columns come along when they exist.",
-      "closingTitle": "Your divers, certifications and sizes come across before your first trip"
+      "closingTitle": "Your divers, certifications and sizes come across before your first trip",
+      "closingSupport": "Send us what you have and a person here brings your divers in with you, free, or helps you carry it all back out if DiveDay is ever the wrong fit; anything else can go to {email}."
     },
     "competitor": {
       "keepOrLeaveEyebrow": "Keep it, or leave it",
@@ -4671,11 +4667,6 @@
       "dataExit": {
         "eyebrow": "Your records",
         "title": "What happens to my records if I leave?",
-        "note1": "“Download export” hands over one ZIP of CSVs and stored photos.",
-        "note2": "contacts.csv is one flat row per person, the shape another system’s import wizard expects.",
-        "note3": "waiver_records.csv keeps each integrity hash and the exact text the diver signed.",
-        "note4": "Each file shows its row count, to check against the counts in your own system.",
-        "securityNote": "“Not included, on purpose:” names the credentials held back from your shop’s records: passwords and push keys.",
         "door": "Open the demo as the owner →",
         "mockupLabel": "The Data export screen in DiveDay, listing the bundle’s files with a row count for each and the account credentials that stay protected"
       },

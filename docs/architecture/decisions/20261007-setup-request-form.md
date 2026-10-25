@@ -37,7 +37,7 @@ The market sheet of 2026-10-22 (item 5). The pricing FAQ answered "What do I hav
 - **"Which one?"** follows "A booking system" or "Dive-shop software", and only those, offering each switching guide's system and "Another one". It is optional. The answer is a guide's slug in the new nullable column `setup_requests.current_system_guide`; `parseSetupRequest` keeps it only after one of those two answers and only for a registered guide, so a crafted value or one left behind by a changed answer is stored as null.
 - **A switching guide's door preselects its system.** `/get-set-up?from=switching-<slug>[-mid|-close|-concierge]` starts with that guide's answer and system checked (`setupPreselection`, `guideOfSource` in `src/lib/funnel.ts`).
 - **The thank-you page links that system's guide** (`?guide=<slug>` beside `?uses=`), and the onboarding mail reads "Uses today: a booking system, FareHarbor". The `setup_request` alert accepts only a registered guide's slug.
-- **The concierge's door on every switching page is the form** (`SwitchingConcierge` takes a tag: `switching-hub-concierge`, `switching-spreadsheet-concierge`, `switching-<slug>-concierge`), and so is the FareHarbor guide's website offer. `switch@dive.day` is no longer linked anywhere. The pricing FAQ's set-up answer names the form.
+- **The concierge's door on every switching page is the form** (`SwitchingConcierge` takes a tag: `switching-spreadsheet-concierge`, `switching-<slug>-concierge`; on the hub the offer is the closing band's support line since the 2026-10-24 visual review, B15), and so is the FareHarbor guide's website offer. `switch@dive.day` is no longer linked anywhere. The pricing FAQ's set-up answer names the form.
 
 ## Amendment 2026-10-25: no Reply-To from an unverified address
 

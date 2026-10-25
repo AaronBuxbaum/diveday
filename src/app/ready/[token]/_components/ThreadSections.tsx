@@ -113,9 +113,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             }}
             trip={fullTrip}
             locale={locale}
-            // Where the day is planned to go, in the order it runs them. It
-            // wears the Plan chip (Budget rule 5) — the shop wrote it down, and
-            // the ledger below is where a change to it would appear.
+            // Where the day is planned to go, in the order it runs them. No
+            // source chip (visual review 2026-10-24, B21): the card is the
+            // shop's plan by its heading, and the ledger below is where a
+            // change to it would appear, with who changed it and when.
             sites={tripDives
               .map(({ diveSite }) => diveSite?.name)
               .filter((name): name is string => Boolean(name))}

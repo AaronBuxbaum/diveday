@@ -1,10 +1,11 @@
 import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
-import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
+import { MarketingMockup } from "@/components/MarketingSections";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { fullShopExport } from "@/lib/marketing";
 
 /** `/pricing`'s "what happens to my records if I leave?" band. */
 export function PricingExportBand({ locale }: { locale: DiverLocale }) {
@@ -15,8 +16,8 @@ export function PricingExportBand({ locale }: { locale: DiverLocale }) {
           day. It sits here rather than in the FAQ because this is where the
           objection actually lands — the fee anchor above has just made
           switching look attractive, and the next thought a shop owner has is
-          about being stuck again. The promise itself is written once, on the
-          invoice's leaving row (`#export`); this band shows the screen.
+          about being stuck again. The promise is the invoice's leaving row
+          (`#export`); this band shows the screen beside the same sentence.
 
           The mockup is a claim, so it mirrors the real Settings → Data export
           element for element — including the "Not included, on purpose:" line
@@ -30,22 +31,15 @@ export function PricingExportBand({ locale }: { locale: DiverLocale }) {
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.pricing.dataExit.title")}
             </h2>
-            {/* The builder's notes, each read off one row of the drawing
-                beside them (docs/design/brand.md, "The builder's note"),
-                ending in the one door into the demo as the owner, who is
-                the role that downloads the export (issue #1955). The door
-                is link-weight, so this band holds no primary and the
-                page's two pairs stay its only ones. */}
-            <MarginNotes
-              className="mt-6"
-              notes={[
-                t("marketing.pricing.dataExit.note1"),
-                t("marketing.pricing.dataExit.note2"),
-                t("marketing.pricing.dataExit.note3"),
-                t("marketing.pricing.dataExit.note4"),
-                t("marketing.pricing.dataExit.securityNote"),
-              ]}
-            />
+            {/* The invoice's leaving row, said once more beside the screen
+                it describes; the drawing carries the detail, so the band
+                lists none of it (visual review 2026-10-24, B10). The door is
+                link-weight, so this band holds no primary and the page's two
+                pairs stay its only ones; it opens the demo as the owner, the
+                role that downloads the export (issue #1955). */}
+            <p className="mt-6 max-w-xl text-base leading-7 text-pretty text-muted">
+              {t(fullShopExport.termsKey)}
+            </p>
             <ScreenDoor
               locale={locale}
               demoRole="owner"

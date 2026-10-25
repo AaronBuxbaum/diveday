@@ -104,7 +104,8 @@ describe("rankBoatRows (A43)", () => {
     ({ id, kind, ...(tone ? { tone } : {}) }) as unknown as TodayAction;
 
   it("puts readiness and medical first, then contact, prep, money and the rest", () => {
-    // The order `src/lib/today.ts` hands over: money and prep above contact.
+    // An order with money and prep above contact, which `src/lib/today.ts`
+    // no longer hands over (A43) and this still must not trust.
     const rows = [
       row("payment", "payment"),
       row("help", "help_request"),

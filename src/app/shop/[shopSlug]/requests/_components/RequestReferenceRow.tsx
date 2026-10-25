@@ -17,13 +17,11 @@ import type { DateRequestMatch } from "@/lib/date-requests";
  * not tell thirteen interests from five.
  *
  * So the full record renders once, under `homeDate` (`src/lib/date-requests.ts`),
- * and every other group it reaches gets this: who, how many, and a link up to
- * where the rest of it is. One line, because everything else on it would be a
- * second copy of something already on the page (principle 9).
- *
- * The link is a fragment on this same page — the group headings carry
- * `id="date-<date>"` — so following it is a scroll rather than a navigation,
- * and the day a staffer was considering is still one flick away.
+ * and every other group it reaches gets this: who, how many, and which day
+ * holds the rest of it, named in words (that day is a heading on this page,
+ * and the page has one link idiom, the row act; A23). One line, because
+ * everything else on it would be a second copy of something already on the
+ * page (principle 9).
  */
 export function RequestReferenceRow({
   request,
@@ -36,7 +34,7 @@ export function RequestReferenceRow({
   request: DateInterestRow;
   /** Never `preferred`: a first choice is where the full record renders. */
   match: Exclude<DateRequestMatch, "preferred">;
-  /** The group holding the full record, and this row's link target. */
+  /** The group holding the full record, named on the row. */
   homeDate: CalendarDate;
   locale: string;
   /**
@@ -52,29 +50,27 @@ export function RequestReferenceRow({
   const date = formatCalendarDate(homeDate, locale);
   return (
     <LedgerRow as="li">
-      <div className="min-w-0">
-        <p className="text-sm text-muted">
+      {/* One line from `sm`: the words, then the day's act at the end of the
+          same line; a phone wraps the act under them (visual review
+          2026-10-24, A23). */}
+      <div className="flex min-w-0 flex-col items-start gap-x-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <p className="min-w-0 text-sm text-muted">
           <span className="font-medium">{name}</span>
           {request.partySize ? ` · ${t("requests.divers", { count: request.partySize })}` : null}
           {" · "}
-          {/* **Underlined always, not on hover.** The link sits inside a run of
-            text — the name and the head count beside it — where colour alone
-            is the only thing marking it, and `--primary` against the
-            surrounding ink is under WCAG's 3:1 floor for exactly that (axe
-            `link-in-text-block`, the same rule the full row's mailto keeps). */}
-          <Link href={`#date-${homeDate}`} className="text-primary underline">
-            {/* A second choice *asked for* the other day; a flexible neighbour
-              never named this one at all, so it keeps the words the full row
-              uses for the same fact. */}
-            {match === "alternate"
-              ? t("requests.alternateOf", { date })
-              : t("requests.flexibleAround", { date })}
-          </Link>
+          {/* Plain words, not a link (A23): "First choice …" labels the
+            request, and the day it names is a heading on this same page. A
+            second choice *asked for* the other day; a flexible neighbour
+            never named this one at all, so it keeps the words the full row
+            uses for the same fact. */}
+          {match === "alternate"
+            ? t("requests.alternateOf", { date })
+            : t("requests.flexibleAround", { date })}
         </p>
         {openDeparture ? (
           <Link
             href={openDeparture.href}
-            className={buttonClass({ variant: "link", size: "sm", flush: true, className: "mt-2" })}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {openDeparture.label}
           </Link>

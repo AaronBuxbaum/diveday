@@ -175,7 +175,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   personal, bidirectional help switching — a person will help a shop bring its data *in* (map any
   export or spreadsheet, migrate the roster with them) and, if DiveDay is ever not right, take its
   data back *out* just as personally.** It lives on **every** `/switching` page as the shared
-  `SwitchingConcierge` block, whose door is the Get set up form tagged per page (2026-10-22; until then a `switch@dive.day` mail link). Phrase these as a human
+  `SwitchingConcierge` block, whose door is the Get set up form tagged per page (2026-10-22; until then a `switch@dive.day` mail link); on the hub, which has no guide below it, the same offer is the closing band's support line (`switching.hub.closingSupport`, visual review 2026-10-24, B15), so the page closes once. Phrase these as a human
   commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
   capability, and never promise a turnaround time. **It is offered twice on a guide, and the compressed
   form comes first** (2026-08-28): `switching.common.moveIntro`, the line that opens
@@ -311,8 +311,8 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   V-02 fails, the claim comes off every page in the change that records the result.
 - **What the export withholds is stated scoped, never as an absolute** (2026-08-28). The honest
   short answer to "what stays behind" is *credentials* — passwords and per-device push keys, which
-  no other system could use anyway — and that is what `/pricing`'s `dataExit.securityNote` and the
-  export mockup say. But it is only true of the shop's **records**: the bundle also leaves out
+  no other system could use anyway — and that is what the `/pricing` export mockup says (its
+  margin notes went in the 2026-10-24 visual review, B10). But it is only true of the shop's **records**: the bundle also leaves out
   notification retry queues, provider linkage, DiveDay's own reconciliation ledgers, and the
   close-out and buddy-team trails, which is why the real Settings screen names all of them
   (`settings.export.notIncluded.text`, and `EXCLUDED_TABLES` in `src/db/export.test.ts`). So the

@@ -4,7 +4,7 @@ import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { planCopyParams } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
@@ -142,7 +142,9 @@ export function heroPriceLine(t: DiverTranslator, offer: PlanTerms, locale: stri
  * `/product`, each feature page, `/pricing`, `/about` and `/switching` each
  * had their own composition (centred with four lines, left with buttons right,
  * the support address three times, a tinted card); a page now passes only its
- * heading, its tag and where the demo opens.
+ * heading, its tag and where the demo opens. `/switching` also passes its own
+ * support line, which carries the concierge offer the hub's separate card
+ * used to close on, so that page closes once.
  *
  * The container is the marketing shell's (`max-w-7xl px-6`, the nav's and the
  * footer's), so the close starts on the same left edge as every band above it.
@@ -152,17 +154,20 @@ export function ClosingCta({
   source,
   title,
   demo,
+  supportKey = "marketing.common.closingSupport",
 }: {
   locale: DiverLocale;
   source: FunnelSource;
   title: string;
   demo?: { role: DemoRoleId; landing: DemoLanding | null };
+  /** The support line's bundle key; its sentence names `{email}`. */
+  supportKey?: DiverMessageKey;
 }) {
   const t = diverTranslator(locale);
   // The address is a link inside the bundle's sentence, so the sentence is
   // split on it rather than concatenated from fragments a translator cannot
   // reorder.
-  const line = t("marketing.common.closingSupport", { email: SUPPORT_EMAIL });
+  const line = t(supportKey, { email: SUPPORT_EMAIL });
   const at = line.indexOf(SUPPORT_EMAIL);
   return (
     <section className="border-t border-border bg-surface">

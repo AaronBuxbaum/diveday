@@ -96,13 +96,36 @@ const NITROX_ENTRY_CODES = new Set<ReadinessBlockerCode>([
 function CertificationDisclosure({
   summary,
   optionalLabel,
+  lead = false,
   children,
 }: {
   summary: string;
   /** Rendered as a pill beside the summary. Present only on an offer the trip does not require. */
   optionalLabel?: string;
+  /**
+   * The step's own card: at rest its summary is the step's one action, a
+   * filled primary like "Sign your waiver" and "Save rental fit" (visual
+   * review 2026-10-24, B26). Open, the summary steps out of sight and the
+   * form's save is the primary; it stays the focused control, so a keyboard
+   * can still close it.
+   */
+  lead?: boolean;
   children: React.ReactNode;
 }) {
+  if (lead) {
+    return (
+      <details className="group/cert">
+        <summary
+          className={`${buttonClass({ variant: "primary" })} w-full list-none sm:w-auto [&::-webkit-details-marker]:hidden group-open/cert:sr-only`}
+        >
+          {summary}
+        </summary>
+        <div className="rounded-inset border border-border bg-surface-sunken/50 p-4">
+          {children}
+        </div>
+      </details>
+    );
+  }
   return (
     <details className="group/cert overflow-hidden rounded-inset border border-border bg-surface-sunken/50">
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-base font-semibold">
@@ -211,7 +234,7 @@ export function CertificationEntries({
  */
 function CertificationEntry({ token, t }: { token: string; t: DiverTranslator }) {
   return (
-    <CertificationDisclosure summary={t("ready.certHeading")}>
+    <CertificationDisclosure summary={t("ready.certHeading")} lead>
       <form action={saveCertificationFromReady.bind(null, token)} className="flex flex-col gap-3">
         <p className="text-sm text-muted">{t("ready.certBody")}</p>
         <FieldGrid columns={2}>

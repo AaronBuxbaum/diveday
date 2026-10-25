@@ -100,10 +100,9 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // day they did name. Printing it whole under both is how five divers came to
   // appear twice each on one screen, identical down to the phone number.
   await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toHaveCount(0);
-  await expect(firstDay.getByRole("link", { name: /First choice Mar 13, 2027/ })).toHaveAttribute(
-    "href",
-    "#date-2027-03-13",
-  );
+  // Named in words, a label rather than a link (visual review 2026-10-24, A23).
+  await expect(firstDay.getByText(/First choice Mar 13, 2027/)).toBeVisible();
+  await expect(firstDay.getByRole("link", { name: /First choice/ })).toHaveCount(0);
 
   const secondDay = dayGroup("Mar 13, 2027");
   await expect(secondDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);

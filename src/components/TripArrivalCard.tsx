@@ -2,8 +2,6 @@ import { ArrivalMap } from "@/components/ArrivalMap";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
-import { FactSource } from "@/components/ui/FactSource";
-import { DIVER_FACT_SOURCE_KEYS } from "@/i18n/fact-source-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { dockCallAt } from "@/lib/dock-call";
 import { formatTime } from "@/lib/format";
@@ -129,8 +127,7 @@ export function TripArrivalCard({
   locale: string;
   /**
    * Where this departure is planned to go, in the order the day runs them (ADR
-   * 20260904-reef-all-the-way-down, Budget rule 5). The row carries the Plan
-   * chip and renders nothing when the caller passes none — so the public trip
+   * 20260904-reef-all-the-way-down, Budget rule 5). The row renders nothing when the caller passes none — so the public trip
    * page and the downloadable card are untouched by its arrival.
    *
    * A shop-typed title need not name a site, and this is the only place the
@@ -213,13 +210,10 @@ export function TripArrivalCard({
         <dl className="grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
           {sites && sites.length > 0 ? (
             <div>
-              <dt className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm font-semibold">
-                {t("trip.arrivalSites")}
-                {/* No `at`: the plan's own timestamp is what the change ledger
-                    below already carries, and a second one here would be the
-                    same fact twice. */}
-                <FactSource kind="plan" label={t(DIVER_FACT_SOURCE_KEYS.plan)} />
-              </dt>
+              {/* No source chip: the card is the shop's plan by its own
+                  heading, and the "● Plan" stamp is the idiom B21 took off
+                  the change ledger (visual review 2026-10-24). */}
+              <dt className="text-sm font-semibold">{t("trip.arrivalSites")}</dt>
               <dd className="mt-1 text-sm text-muted">{siteRunsLine(sites, locale, t)}</dd>
             </div>
           ) : null}
