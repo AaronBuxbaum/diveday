@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { openAddUnitDetails } from "./AddUnitDetails";
+import { openAddUnitSheet } from "./AddUnitSheet";
 
 /**
  * The door into the "Add a unit" form at the bottom of the page, hidden until
@@ -28,13 +28,11 @@ export function AddUnitLink({
     <button
       type="button"
       className={className}
-      // Opening is all it asks; `AddUnitDetails` scrolls to itself once the
-      // open state has committed, because the closed band is `hidden` and a
-      // hidden summary has nowhere to scroll to in this tick.
-      onClick={openAddUnitDetails}
+      // Opening is all it asks; `AddUnitSheet` hears it and opens.
+      onClick={openAddUnitSheet}
       // **This door does nothing until React owns it**, and it is painted
       // before then. The whole of it — this handler, and the `window` listener
-      // `AddUnitDetails` registers to hear from it — is client-side, so a click
+      // `AddUnitSheet` registers to hear from it — is client-side, so a click
       // that lands early is swallowed in silence: no error, no open panel,
       // nothing for a person or a test to see except a form that did not
       // appear. That window used to be closed by accident, because `/shop/**`
@@ -44,7 +42,7 @@ export function AddUnitLink({
       //
       // The same `data-hydrated` flag the rest of the staff surfaces publish
       // (`CheckInSearch`, `OrdersToolbar`, `CrewSection`, …), and the e2e suite
-      // waits on it before clicking. `AddUnitDetails` needs none of its own:
+      // waits on it before clicking. `AddUnitSheet` needs none of its own:
       // no `<Suspense>` sits between the two, so React attaches its listener in
       // the same commit that runs this effect.
       data-hydrated={hydrated ? "true" : undefined}

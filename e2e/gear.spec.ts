@@ -11,12 +11,11 @@ import { e2eNow, seededTripId } from "./helpers";
  */
 
 /**
- * Open the "Add a unit" form at the foot of the register through the page's one
- * door, the header's "Add a unit", once React owns both ends.
+ * Open the "Add a unit" sheet through the page's one door, the header's "Add
+ * a unit" (visual review A48), once React owns it.
  *
- * The band under the last row is hidden until a door opens it (third review
- * #36), so the header is the way in. The wait stays: `AddUnitLink` is a client
- * handler talking to a client listener in `AddUnitDetails`, and a click that
+ * The wait stays: `AddUnitLink` is a client
+ * handler talking to a client listener in `AddUnitSheet`, and a click that
  * lands before hydration is swallowed in silence. That window used to be
  * closed by accident, because `/shop/**` had no static shell and nothing
  * painted until the server had finished; giving the staff surfaces one (issue
@@ -27,12 +26,8 @@ import { e2eNow, seededTripId } from "./helpers";
 async function openAddGear(page: Page) {
   const door = page.getByRole("button", { name: "Add a unit", exact: true });
   await expect(door).toHaveAttribute("data-hydrated", "true");
-  await expect(page.locator("details:has(> summary#add-unit)")).toHaveAttribute(
-    "data-hydrated",
-    "true",
-  );
   await door.click();
-  await expect(page.getByLabel("Tag")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Add a unit" }).getByLabel("Tag")).toBeVisible();
 }
 
 test.describe("staff", () => {
@@ -52,7 +47,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("link", { name: tag })).toBeVisible();
   });
 
-  test("the header's Add a unit is the one door to the form at the foot of the register", async ({
+  test("the header's Add a unit is the one door, and opens the form as a sheet", async ({
     page,
   }) => {
     // The page's primary (UX audit 2026-10-07, item 31): an owner with a
@@ -63,14 +58,14 @@ test.describe("staff", () => {
     const door = page.getByRole("button", { name: "Add a unit", exact: true });
     await expect(door).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Add gear" })).toHaveCount(0);
-    await expect(page.locator("summary#add-unit")).toBeHidden();
+    await expect(page.getByLabel("Tag")).toHaveCount(0);
     await expect(door).toHaveAttribute("data-hydrated", "true");
-    await expect(page.locator("details:has(> summary#add-unit)")).toHaveAttribute(
-      "data-hydrated",
-      "true",
-    );
     await door.click();
-    await expect(page.getByLabel("Tag")).toBeVisible();
+    const sheet = page.getByRole("dialog", { name: "Add a unit" });
+    await expect(sheet.getByLabel("Tag")).toBeVisible();
+    // The first field takes focus, and the submit is the sheet's primary.
+    await expect(sheet.locator(":focus")).toHaveCount(1);
+    await expect(sheet.getByRole("button", { name: "Add to the register" })).toBeVisible();
   });
 
   test("refuses a duplicate tag beside the field, not in a page banner", async ({ page }) => {
@@ -92,7 +87,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("link", { name: tag })).toBeVisible();
 
     // A successful add redirects with `?notice=added` — a real navigation
-    // that remounts the page, so the disclosure is closed again, and the
+    // that remounts the page, so the sheet is closed again, and the
     // remounted door has to be hydrated again before it answers.
     await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);

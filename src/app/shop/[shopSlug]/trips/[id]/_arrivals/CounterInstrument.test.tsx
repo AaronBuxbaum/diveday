@@ -60,7 +60,7 @@ describe("the counter instrument", () => {
     expect(container.innerHTML).not.toContain("accent");
   });
 
-  it("renders exactly one coral element when the boat is clear", () => {
+  it("says the boat is clear in the success wash, with no coral or amber (visual review A07)", () => {
     const { container } = renderInstrument({
       here: 10,
       expected: 10,
@@ -69,7 +69,8 @@ describe("the counter instrument", () => {
       remainder: null,
     });
     expect(screen.getByRole("status")).toHaveTextContent("Everyone’s checked in");
-    expect(container.querySelectorAll("[class*='accent']")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveClass("bg-success-tint");
+    expect(container.querySelectorAll("[class*='accent'], [class*='warning']")).toHaveLength(0);
   });
 
   it("plays no entrance on a page that loaded already cleared", () => {
