@@ -8,7 +8,8 @@ import { SAFETY_LIST_IDS } from "./SafetyLists";
  * month to month, each the link to the list behind it. "Boarded at the
  * dock" goes as a tile, but a seat never marked there is still said, as
  * attention under the roll calls it belongs to; a boat with no crew on
- * record keeps its own list below. The year keeps every figure: it prints
+ * record keeps its own list below, and a month with no crew on record at all
+ * says so in one line. The year keeps every figure: it prints
  * for a broker and has no lists to point at.
  */
 export function safetyMonthTiles({
@@ -17,12 +18,15 @@ export function safetyMonthTiles({
   filed,
   drafts,
   activityHref,
+  staffingHref,
 }: {
   t: StaffTranslator;
   safety: SafetyMonth;
   filed: number;
   drafts: number;
   activityHref: string;
+  /** The crew schedule, or null when the shop runs without it. */
+  staffingHref: string | null;
 }): MonthFigure[] {
   const attention = (detail: string | null) =>
     detail ? { detail, detailTone: "attention" as const } : {};
@@ -47,26 +51,41 @@ export function safetyMonthTiles({
       value: String(safety.certOverrides),
       href: activityHref,
     },
-    {
-      key: "crew",
-      label: t("incidents.safety.crew"),
-      value:
-        safety.crewSailings > 0 && safety.checkedSailings === 0
-          ? t("staffing.credentials.noneOnFile")
-          : t("incidents.safety.crewValue", {
-              lapsed: safety.lapsedSailings.length,
-              sailings: safety.checkedSailings,
-            }),
-      href: `#${safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length === 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
-      ...attention(
-        safety.unrecordedSailings > 0
-          ? t("incidents.safety.crewDetailUnrecorded", {
-              unrecorded: safety.unrecordedSailings,
-              sailings: safety.crewSailings,
-            })
-          : null,
-      ),
-    },
+    // A month with no crew recorded on any departure is a shop that does not
+    // roster crew here: the record judged nothing, so it says so in one quiet
+    // line and points at where crew are rostered, never "0 of 0" over a list
+    // that is not drawn (layer 3 review F3; review F1 on the year).
+    safety.noCrewOnRecord
+      ? {
+          key: "crew",
+          label: t("incidents.safety.crew"),
+          value: "—",
+          detail: t("incidents.safety.noCrewNone"),
+          detailTone: "quiet" as const,
+          ...(staffingHref
+            ? { link: { href: staffingHref, label: t("shared.shopNavLinks.staffing") } }
+            : {}),
+        }
+      : {
+          key: "crew",
+          label: t("incidents.safety.crew"),
+          value:
+            safety.crewSailings > 0 && safety.checkedSailings === 0
+              ? t("staffing.credentials.noneOnFile")
+              : t("incidents.safety.crewValue", {
+                  lapsed: safety.lapsedSailings.length,
+                  sailings: safety.checkedSailings,
+                }),
+          href: `#${safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length === 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
+          ...attention(
+            safety.unrecordedSailings > 0
+              ? t("incidents.safety.crewDetailUnrecorded", {
+                  unrecorded: safety.unrecordedSailings,
+                  sailings: safety.crewSailings,
+                })
+              : null,
+          ),
+        },
     {
       key: "incidents",
       label: t("incidents.safety.incidents"),
