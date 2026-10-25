@@ -149,13 +149,14 @@ test.describe("the paper day", () => {
     });
     expect(controls).toEqual([]);
 
-    // **And every roll-call name is on it.** The person is the one button the
-    // packet prints on purpose: its content is the index and the name, and
-    // while the backstop hid it with every other button the day's two
-    // departures printed 8 + 2 and 9 + 2 roster rows with no name in any of
-    // them. Every person the sheet carries is on paper and says who they are.
+    // **And every roll-call name is on it.** The person's name line is the
+    // packet's `data-print-content` (a plain line since the packet renders its
+    // paper, B03; a button once): while the backstop hid it with every other
+    // button the day's two departures printed 8 + 2 and 9 + 2 roster rows
+    // with no name in any of them. Every person the sheet carries is on paper
+    // and says who they are.
     const people = await popup
-      .locator(".trip-print-bundle button[data-print-content]")
+      .locator(".trip-print-bundle [data-print-content]")
       .evaluateAll((elements) =>
         elements.map((element) => ({
           onPaper:
@@ -173,7 +174,7 @@ test.describe("the paper day", () => {
     // boat's roll call ran to extra sheets of the packet a captain counts
     // pages on. On paper the button is its content and 4px a side.
     const slack = await popup
-      .locator(".trip-print-bundle button[data-print-content]")
+      .locator(".trip-print-bundle [data-print-content]")
       .evaluateAll((elements) =>
         elements.map((element) => {
           const tallest = Math.max(

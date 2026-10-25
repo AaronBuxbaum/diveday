@@ -142,7 +142,9 @@ export function DiverRollCallRow({
     return (
       <li id={diverRowId(diver.bookingId)} className={rowClass}>
         <div className={ruleClass}>
-          <div className={PAPER_ROW_CLASS}>{rowTrigger}</div>
+          <div data-print-content className={PAPER_ROW_CLASS}>
+            {rowTrigger}
+          </div>
           {rowPrint}
         </div>
       </li>

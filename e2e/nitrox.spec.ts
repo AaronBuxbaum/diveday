@@ -178,12 +178,14 @@ test.describe("a shop that stops filling nitrox", () => {
     // The request survives even with nitrox off — read it back from the
     // prep list (visible with the catalog disabled per the live-data check
     // above) rather than re-enabling nitrox just to look at the checkbox.
+    // The tank line names nitrox only when a fill is approved (B54), so the
+    // request is read off the list that names who asked for it.
     await page.goto(`/shop/${SHOP}/trips/${tripId}/prep`);
-    const tanks = page
-      .getByRole("heading", { name: "Tanks" })
+    const requested = page
+      .getByRole("heading", { name: "Nitrox requested without a certified card" })
       .locator("xpath=..")
       .filter({ visible: true });
-    await expect(tanks).toContainText("Nitrox");
+    await expect(requested).toContainText("Priya Sharma");
 
     await anonContext.close();
   });

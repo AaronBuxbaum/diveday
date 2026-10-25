@@ -334,7 +334,9 @@ export function CrewRollCall({
                   >
                     {paper ? (
                       // The packet's paper (B03): the name line, no sheet or mark.
-                      <div className={PAPER_ROW_CLASS}>{crewTrigger}</div>
+                      <div data-print-content className={PAPER_ROW_CLASS}>
+                        {crewTrigger}
+                      </div>
                     ) : (
                       <PersonSheet
                         name={member.fullName}
