@@ -87,7 +87,7 @@ describe("OfflineDiverRollCall", () => {
       if (!priya) throw new Error("fixture diver missing");
       priya.readiness = {
         status: "blocked",
-        blockers: [{ code: "waiver_missing", text: "Waiver not signed" }],
+        blockers: [{ code: "waiver_not_sent", text: "Waiver not signed" }],
       };
       copy.events = status
         ? [
@@ -131,7 +131,10 @@ describe("OfflineDiverRollCall", () => {
 
   it("keeps the danger fill and ring on a diver recorded not back aboard", () => {
     const copy = savedCopy();
-    const event = (checkpoint: "departure" | "after_dive_1", status: "boarded" | "not_boarded") => ({
+    const event = (
+      checkpoint: "departure" | "after_dive_1",
+      status: "boarded" | "not_boarded",
+    ) => ({
       clientEventId: `event-${checkpoint}`,
       snapshotId: "snap-trip-1",
       snapshotSavedAt: "2026-08-01T12:00:00.000Z",

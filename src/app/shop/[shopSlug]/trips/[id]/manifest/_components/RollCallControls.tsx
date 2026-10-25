@@ -13,6 +13,7 @@ import {
   ROLL_CALL_NOTE_MAX,
   type RollCallCheckpoint,
   type RollCallRecord,
+  type RollCallRecordedTone,
   rollCallRowState,
 } from "@/lib/manifests";
 

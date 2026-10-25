@@ -117,9 +117,7 @@ export function OfflineCrewRollCall({
                   tap. */}
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <h3 className={`min-w-0 break-words ${ITEM_TITLE_CLASS}`}>
-                      {member.fullName}
-                    </h3>
+                    <h3 className={`min-w-0 break-words ${ITEM_TITLE_CLASS}`}>{member.fullName}</h3>
                     <p
                       className={`mt-1 text-base font-semibold break-words ${
                         missingCrew ? "text-danger" : "text-ink"
