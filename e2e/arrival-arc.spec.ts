@@ -132,7 +132,7 @@ test.describe("the dive arrival arc", () => {
     await crew.selectOption({ label: helperName });
     await helpRow.getByRole("button", { name: "Confirm helper" }).click();
     await expect(
-      helpRow.getByText(`${helperName} will help with carry gear.`, { exact: true }),
+      helpRow.getByText(`${helperName} will help with carry gear`, { exact: true }),
     ).toBeVisible();
     await helpRow.getByRole("button", { name: "Help completed" }).click();
     // The row leaves the active queue after completion; the page-level outcome
@@ -150,7 +150,7 @@ test.describe("the dive arrival arc", () => {
 
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(helpRow).toHaveCount(1);
-    await expect(helpRow.getByText(`${helperName} will help with carry gear.`)).toBeVisible();
+    await expect(helpRow.getByText(`${helperName} will help with carry gear`)).toBeVisible();
 
     await page.goto(readyPath);
     // The response lives in the day-of step's body, and at most one step is

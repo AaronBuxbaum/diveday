@@ -55,7 +55,7 @@ test.describe("demo billing history", () => {
     await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
     const orderRefund = page.getByRole("button", { name: /Refund|Void|Refresh/ }).first();
     await expect(orderRefund).toBeDisabled();
-    await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
+    await expect(page.getByText(staffCopy("orders.detail.demoRefundHint")).first()).toBeVisible();
   });
 
   test("an order opened from the index says when it was raised and offers both ways back", {
