@@ -5,6 +5,7 @@ import {
   e2eNow,
   openDiverFileGroup,
   openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
@@ -180,7 +181,7 @@ test.describe("contact import — specialty cards", () => {
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
     await openTripAbout(page);
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAboutRow(page, "Who can book");
     await page.getByRole("checkbox", { name: "Deep" }).check();
     await page.getByRole("button", { name: /Save requirements/ }).click();
     await expect(page.getByRole("status")).toBeVisible();

@@ -288,7 +288,7 @@ export function AddPanel({
             min={0}
             max={price.max}
             placeholder={price.placeholder}
-            className={`${controlClass} tabular-nums max-w-40`}
+            className={`${controlClass} w-28 tabular-nums`}
           />
         </Field>
       </FieldGrid>
@@ -359,23 +359,18 @@ export function AddPanel({
             value={diveSiteId}
             disabled={expanded}
             onChange={(event) => setDiveSiteId(event.target.value)}
-            className={controlClass}
+            aria-busy={options === null ? true : undefined}
+            className={`${controlClass}${options === null ? " animate-pulse" : ""}`}
           >
             <option value="">{copy.decideLater}</option>
             {initialSite && options === null ? (
               <option value={initialSite.id}>{initialSite.name}</option>
             ) : null}
-            {options === null ? (
-              <option value="" disabled>
-                {copy.optionsLoading}
+            {(options?.diveSites ?? []).map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.title}
               </option>
-            ) : (
-              options.diveSites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.title}
-                </option>
-              ))
-            )}
+            ))}
           </select>
         </Field>
       </FieldGrid>

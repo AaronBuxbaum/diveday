@@ -1,0 +1,78 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2f56d75e-23ae-4020-99a2-a6f652051ae4",
+  "prevIds": [
+    "f36eafc3-1e95-4320-a886-b133d9aef0cd"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "medical_clearance_document_from_diver"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.medical_clearance_document_from_diver",
+        "n|col|public.waiver_records.medical_clearance_document_from_diver",
+        "e|col|public.waiver_records.medical_clearance_document_from_diver"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "waiver_records"
+      ],
+      "writes": [
+        "s|ck|public.waiver_records.waiver_records_clearance_document_from_diver",
+        "n|ck|public.waiver_records.waiver_records_clearance_document_from_diver",
+        "e|ck|public.waiver_records.waiver_records_clearance_document_from_diver",
+        "n|con|public.waiver_records.waiver_records_clearance_document_from_diver"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public",
+        "n|col|public.waiver_records.medical_clearance_document_from_diver",
+        "n|col|public.waiver_records.medical_clearance_document_url",
+        "n|col|public.waiver_records.anonymized_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "medical_clearance_document_from_diver",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "waiver_records_clearance_document_from_diver",
+        "value": "not \"medical_clearance_document_from_diver\"\n        or \"medical_clearance_document_url\" is not null\n        or \"anonymized_at\" is not null",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

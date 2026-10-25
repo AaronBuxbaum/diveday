@@ -1,53 +1,55 @@
 # 20261022-pricing-ab-test — Test a percent-of-volume plan against the flat price, off by default
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-22
 - **Amends:** [20261007-subscription-billing](20261007-subscription-billing.md)
 
 ## Context
 
-DiveDay sells one flat monthly price. Aaron wants to measure whether a share of what a shop takes
-through DiveDay converts better, with adjustable numbers.
+Aaron wants to measure whether a share of what a shop takes through DiveDay converts better than
+the flat price. On 2026-10-24 he chose to run the public
+50/50 test now, with a lawyer reviewing the terms after launch (#2947; the Tier 1 item in
+[legal-engagement-scope.md](../../product/stakeholders/legal-engagement-scope.md)). With a handful
+of shops, results are directional.
 
 ## Decision
 
 - Two plans in `src/lib/billing/pricing-plans.ts`: `flat_monthly` and `percent_of_volume` (basis
-  points of the month's volume, plus an optional base fee). A **pricing arm** is the plan a visitor
-  or shop is put in.
-- **Volume** is card money paid through DiveDay in the shop's calendar month, by the Reports
-  page's rules (`cardMoneyThroughDiveDayCents`): Stripe-collected invoices and online booking
-  checkouts, net of refunds recorded by the close, never tips, tax, pass-through fees, counter
-  money, hand-marked payments or imported history. Trial and free-term money is not billed.
-  The fee is integer cents, half up, never negative.
-- The numbers are five optional env vars read by `src/lib/pricing-flags.ts`. Unset, the **test is
-  off**: no cookie, no request read, today's copy and price.
-  One invalid value sends all five to defaults, test off, logged once.
+  points of the month's volume, plus an optional base fee); a shop or visitor is in one **pricing
+  arm**.
+- **Volume** is card money paid through DiveDay in the shop's calendar month
+  (`cardMoneyThroughDiveDayCents`): Stripe invoices and online booking checkouts, less
+  refunds, each netted on the next statement, never tips, tax, pass-through fees, counter money, hand-marked
+  payments or imported history. Free-term money is not billed. The fee is integer cents, half up.
+- Five optional env vars, read by `src/lib/pricing-flags.ts`. Unset, the **test is off**: no
+  cookie, no request read, today's copy. One invalid value resets all five.
 - The proxy gives a new marketing visitor's GET an arm cookie (`dd_pricing`, 90 days, HttpOnly)
-  and overwrites a request header so the first render shows it. The setup request stores the arm; shop
-  creation copies it to `shop_subscriptions`, or a shop with none takes its id's SHA-256 bucket.
-  `pnpm billing:pricing-plan` sets an override by hand, never under an open Checkout.
-- Checkout snapshots the numbers it sells (`plan_monthly_cents`, `plan_basis_points`), and a live
-  subscription keeps them whatever the env says later. Any fee but today's is `price_data` on the
-  existing price's product (read once per process); the percent plan adds a metered price.
-- A cron on the 2nd and 3rd writes each percent shop's statement once, with the basis points used,
-  then reports its fee to a Stripe Billing Meter under identifier `diveday-fee-<shop>-<yyyy-mm>`.
-  Past Stripe's 24-hour dedupe it reads the meter before re-sending; a mid-month cancel is invoiced.
-  `invoice.paid` adds to `paid_total_cents`; `pnpm billing:pricing-test` reads both arms.
+  and a request header for the first render. The setup request stores the arm; shop creation
+  stores it in `shop_subscriptions`, or, with none recorded and the test on, the new shop's id
+  bucket. **A shop read with no stored arm is flat**, so existing shops never move. `pnpm billing:pricing-plan` sets an
+  override, never under an open Checkout.
+- Checkout snapshots the numbers it sells, and a live subscription keeps them. Any fee but today's
+  is `price_data` on the existing product; the percent plan adds a metered price.
+- A cron on the 2nd and 3rd writes each percent shop's statement once, then reports its fee to a
+  Stripe Billing Meter (`diveday-fee-<shop>-<yyyy-mm>`), reading the meter before re-sending past
+  Stripe's dedupe.
+- **`/terms` carries the percent-plan clause**, rate and base fee from
+  `pricingConfig`, test on or off: the fee base above, a monthly statement, the shop pays and never
+  the diver, 30 days' notice of any change.
 
 ## Alternatives considered
 
 - **Connect `application_fee_amount`.** Changes the shop's merchant charges, needs per-charge
   disclosure, and cannot see counter or invoice nuance.
 - **Shop-reported volume.** Unverifiable.
-- **Edge Config, SSM, AppConfig.** Each adds a service or dependency; a redeploy per change is
-  acceptable for a test tuned rarely, and env vars add nothing to run.
+- **Edge Config, SSM, AppConfig.** Each adds a service a rarely tuned test does not need.
 
 ## Consequences
 
 - With the env unset the flat arm's copy is byte-identical.
-- Flat-only claims are the flat arm's alone; the percent arm has its own lines, and no
-  per-booking-fee box on the guides or JSON-LD `Offer` on `/`.
-- The arm cookie is client-editable: a visitor can pick either arm on offer, never other numbers.
-- A month's statement is never recomputed; a refund recorded after the close is not credited.
-- A meter event timestamped in a Stripe period already invoiced may be billed late or not at all.
-- An override stands with the test off, and `PRICING_FLAT_MONTHLY_CENTS` applies with the test off.
+- Flat-only claims ("no cut of your bookings") are the flat arm's alone; the percent arm has its
+  own lines, and no per-booking-fee box on the guides or JSON-LD `Offer` on `/`.
+- A visitor can edit the arm cookie to pick either arm, never other numbers.
+- A closed statement is never recomputed; a late refund nets next month, excess carried.
+- A meter event in an already invoiced Stripe period may bill late or never.
+- With the test off, an override stands and `PRICING_FLAT_MONTHLY_CENTS` applies.

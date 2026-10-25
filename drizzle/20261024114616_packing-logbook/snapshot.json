@@ -1,0 +1,72 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9751187e-1fbd-4bda-a544-a74ed190e97d",
+  "prevIds": [
+    "aa5aa2c4-74b9-493d-9bfb-e9d1ac1cfb6e"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "packing_logbook"
+      ],
+      "writes": [
+        "s|col|public.shops.packing_logbook",
+        "n|col|public.shops.packing_logbook",
+        "e|col|public.shops.packing_logbook"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "packing_list"
+      ],
+      "writes": [
+        "s|colprop|public.shops.packing_list.default"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.shops.packing_list"
+      ],
+      "sqlHash": "49743aefc22abce0"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "packing_logbook",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"shops\",\"packing_list\"]",
+      "set": {
+        "default": "'[\"Swimsuit and towel\",\"Reef-safe sun protection\"]'"
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -12,8 +13,10 @@ import { requestLocale } from "@/i18n/request";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { capabilityPagePrintRule } from "@/lib/print-sheets";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MedicalReviewContact } from "../MedicalReviewContact";
 import { DoctorAnswers } from "./DoctorAnswers";
+import { DoctorFormUpload } from "./DoctorFormUpload";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -27,13 +30,17 @@ export const instant = true;
 /** The published form the doctor completes: its examiner page, never a restyled copy. */
 const FORM = RSTC_QUESTIONNAIRE.published;
 
+/** The "Can't send it here?" lead-in: on paper there is no upload for it to answer. */
+const onlineOnly = (chunks: ReactNode) => <span className="print:hidden">{chunks}</span>;
+
 /**
  * **Take this to your doctor** (fifth-loop ideas, item 17; H-127 and ADR
  * 20261016-doctor-referral-page, both amended by the layer r5-3 reviews). A
  * diver whose questionnaire referred them opens this from their own waiver
  * link and prints it: their name, the official form's examiner page to print,
  * the answers that call for a physician behind their date of birth, and how
- * the signed form gets back to the shop.
+ * the signed form gets back to the shop: sent from here, privately, or by the
+ * shop's email or counter (issue #2797, ADR 20261024-diver-sent-doctors-form).
  *
  * The waiver link opens it only while the release waits on a physician and its
  * seat's departure has not ended; any other state goes back to the waiver
@@ -142,18 +149,45 @@ export default async function DoctorReferralPage({
         <h2 id="doctor-return" className={SECTION_TITLE_CLASS}>
           {t("waiver.doctor.returnHeading")}
         </h2>
-        <p className="mt-3 text-base text-foreground">
-          {shop.contactEmail
-            ? t.rich("waiver.doctor.returnWithEmail", {
-                emailAddress: shop.contactEmail,
-                email: (chunks) => (
-                  <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
-                    {chunks}
-                  </a>
-                ),
-              })
-            : t("waiver.doctor.returnToShop")}
-        </p>
+        {referral.formSent ? (
+          <p className="mt-3 text-base text-foreground">{t("waiver.doctor.formSent")}</p>
+        ) : (
+          <>
+            <p className="mt-3 text-base text-foreground print:hidden">
+              {t("waiver.doctor.returnUpload")}
+            </p>
+            <DoctorFormUpload
+              token={token}
+              copy={{
+                label: t("waiver.doctor.formLabel"),
+                choose: t("waiver.doctor.formChoose"),
+                chooseAnother: t("waiver.doctor.formChooseAnother"),
+                submit: t("waiver.doctor.formSubmit"),
+                sending: t("waiver.doctor.formSending"),
+                sent: t("waiver.doctor.formSent"),
+                invalid: t("waiver.doctor.formInvalid", { mb: MAX_IMAGE_MB }),
+                rate: t("waiver.doctor.formRate"),
+                closed: t("waiver.doctor.unlockClosed"),
+                unavailable: t("waiver.doctor.formUnavailable"),
+              }}
+              fallback={
+                <p className="mt-4 text-base text-foreground">
+                  {shop.contactEmail
+                    ? t.rich("waiver.doctor.returnWithEmail", {
+                        emailAddress: shop.contactEmail,
+                        email: (chunks) => (
+                          <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
+                            {chunks}
+                          </a>
+                        ),
+                        online: onlineOnly,
+                      })
+                    : t.rich("waiver.doctor.returnToShop", { online: onlineOnly })}
+                </p>
+              }
+            />
+          </>
+        )}
         <MedicalReviewContact shop={shop} t={t} />
       </section>
     </ThreadShell>

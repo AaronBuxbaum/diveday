@@ -16,7 +16,6 @@ import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { toShopCurrency } from "@/lib/money";
-import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { noticeRole } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -24,6 +23,7 @@ import { resolveWeekStart, weekDates } from "@/lib/week-board";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { RescheduleNotice } from "../../_components/RescheduleNotice";
 import { ScheduleViews } from "../_components/ScheduleViews";
+import { BoardHeaderActions } from "./_components/BoardHeaderActions";
 import { requestedCourseAndSite, weekAroundRead } from "./_components/board-reads";
 import type { BoardSearchParams } from "./_components/board-search-params";
 import { boardWeekView } from "./_components/board-week-view";
@@ -273,50 +273,7 @@ export default async function ScheduleBoardPage({
         // while its list is empty rather than doubling the empty state's.
         actions={
           hasUpcoming ? (
-            <>
-              {/* **The rare door, at the weight of a rare door** (principle 8:
-                collapse the rare path). Three buttons stood here — two of them
-                filled — and this is the only one that is not an operational
-                act: a shop looks at its own public page occasionally, and
-                `/shop/[shopSlug]` and the embed settings page both carry the
-                same link. At `link` weight it keeps its label at every width,
-                which retires the icon-only phone twin issue #954 needed when
-                all three were buttons: what did not fit at 390px in either
-                locale was three *filled* controls, and there are two now. It
-                does not move into `ShopIdentityMenu` — that menu holds the
-                reader's own session and never a place in the shop
-                (`.claude/rules/surfaces.md`). */}
-              <Link
-                href={publicSchedulePath(shopSlug)}
-                className={buttonClass({ variant: "link" })}
-              >
-                {st("schedule.viewPublicPage")}
-              </Link>
-              {/* **One primary, the board's own act** (UX audit 2026-10-07,
-                item 30): "Add a departure" leads for a role that can make one,
-                and "Add a booking" sits beside it at secondary weight. A role
-                that cannot configure trips (issue #1831's gate) sees no
-                departure door, so its booking door keeps the primary.
-                A link to `?add=1`, not a button: the open-the-panel state
-                lives in ScheduleBuilder. `data-board-add` is how the panel's
-                Cancel hands focus back here. */}
-              {canConfigure ? (
-                <Link
-                  href={`/shop/${shopSlug}/schedule/board?add=1`}
-                  data-board-add
-                  scroll={false}
-                  className={buttonClass()}
-                >
-                  {st("schedule.builder.addDeparture")}
-                </Link>
-              ) : null}
-              <Link
-                href={`/shop/${shopSlug}/bookings/new`}
-                className={buttonClass({ variant: canConfigure ? "secondary" : "primary" })}
-              >
-                {st("schedule.addBooking")}
-              </Link>
-            </>
+            <BoardHeaderActions st={st} shopSlug={shopSlug} canConfigure={canConfigure} />
           ) : undefined
         }
       />
@@ -387,6 +344,8 @@ export default async function ScheduleBoardPage({
           loadPattern: loadWeekdayPatternAction,
           loadTideWindow: loadTideWindowAction,
           loadOptions: loadBuilderOptionsAction,
+          initialOptions:
+            addPanelState !== "closed" && canConfigure ? await loadBuilderOptionsAction() : null,
           loadMovePreflight: loadMovePreflightAction,
           price: priceInput,
           // Only a real `YYYY-MM-DD` from `?date=` is honoured; anything else

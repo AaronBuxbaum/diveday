@@ -26,6 +26,12 @@
  * - **More than {@link PARTY_TEAM_MAX}.** A family of four arrives together
  *   and dives in pairs the divemaster picks.
  *
+ * A seat with no date of birth and no "Under 18" box passes all of these as an
+ * adult (H-08, H-113: the sale never asks an age), so two undeclared
+ * thirteen-year-olds would pass. {@link partyAgesUnconfirmed} names those
+ * parties, and one tap teams one only after a staffer confirms everyone in it
+ * is 18 or over (issue 2808).
+ *
  * Boring on purpose: plain comparisons, a fixed order, no scoring. The order
  * decides only which reason is said when several apply, so every age reason
  * comes before the size one: the divemaster who splits a family of four by
@@ -90,4 +96,25 @@ export function partyLeftReason(
   if (junior && !certifiedAdult) return "junior_without_adult";
   if (members.length > PARTY_TEAM_MAX) return "too_large";
   return null;
+}
+
+/**
+ * Whether one tap must ask a staffer to confirm this party is all adults
+ * before teaming it: some member has neither a date of birth nor the "Under 18"
+ * box, so nothing on file says how old they are. A ticked box is not asked
+ * about, because `partyLeftReason` already leaves that party; a verified card
+ * says nothing about age.
+ */
+export function partyAgesUnconfirmed(members: readonly PartyMember[]): boolean {
+  return members.some((member) => member.age === null && !member.declaredMinor);
+}
+
+/**
+ * What a "Team up each party" tap that teamed nobody says (issue 2808): when a
+ * party waited on its "18 or over" tick, the staffer is asked for it, never
+ * left with a tap that seemed to do nothing. A code; the words are the
+ * manifest bundle's.
+ */
+export function teamUpRefusal(formed: number, awaitingConfirm: number): "confirm-adults" | null {
+  return formed === 0 && awaitingConfirm > 0 ? "confirm-adults" : null;
 }

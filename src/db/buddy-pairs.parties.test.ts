@@ -4,7 +4,14 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { partyLeftReason } from "@/lib/party-teams";
 import { fileScopedShopContext } from "@/test/db";
-import { formBuddyTeam, formPartyTeams, listTripBuddyTeams, planPartyTeams } from "./buddy-pairs";
+import {
+  formBuddyTeam,
+  formPartyTeams,
+  listTripBuddyTeamEvents,
+  listTripBuddyTeams,
+  partyConfirmKey,
+  planPartyTeams,
+} from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { bookings, certifications, courses, people, shops } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -38,7 +45,14 @@ describe("party teams (fifth-loop ideas, item 50)", () => {
     expect(parties.get(b.booking.id)).toBe(a.booking.id);
     expect(parties.get(c.booking.id)).toBe(c.booking.id);
 
-    const input = { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id };
+    // The demo divers have no date of birth on file, so the staffer confirms
+    // the party is all adults (issue 2808).
+    const input = {
+      shopId: shop.id,
+      tripId: trip.id,
+      recordedByPersonId: staff.id,
+      confirmedAdultParties: [partyConfirmKey([a.booking.id, b.booking.id])],
+    };
     expect(await formPartyTeams(db, input)).toBe(1);
     const teams = await listTripBuddyTeams(db, shop.id, trip.id);
     expect(teams).toHaveLength(1);
@@ -188,10 +202,20 @@ describe("which parties one tap leaves for the divemaster", () => {
     return ids;
   }
 
-  async function tap(db: AppDb, shopId: string, tripId: string) {
+  async function tap(
+    db: AppDb,
+    shopId: string,
+    tripId: string,
+    confirmedAdultParties?: readonly string[],
+  ) {
     const [staff] = await listStaff(db, shopId);
     if (!staff) throw new Error("demo staff missing");
-    return formPartyTeams(db, { shopId, tripId, recordedByPersonId: staff.person.id });
+    return formPartyTeams(db, {
+      shopId,
+      tripId,
+      recordedByPersonId: staff.person.id,
+      confirmedAdultParties,
+    });
   }
 
   const reasons = async (db: AppDb, shopId: string, tripId: string) =>
@@ -453,5 +477,151 @@ describe("which parties one tap leaves for the divemaster", () => {
     );
     expect(left).toHaveLength(3);
     expect(left.flatMap((entry) => entry.bookingIds)).not.toContain(solo);
+  });
+
+  /**
+   * **Safety-critical: a party nobody has said is adult** (issue 2808). Two
+   * thirteen-year-olds booked with no date of birth and no "Under 18" box read
+   * as adults to every reason above, so the tap teams such a party only when
+   * the staffer confirmed that exact party is 18 or over.
+   */
+  describe("a party with no date of birth and no Under 18 box", () => {
+    const undeclared = { age: null } satisfies Member;
+    const teamedIds = async (db: AppDb, shopId: string, tripId: string) =>
+      (await listTripBuddyTeams(db, shopId, tripId)).map((team) =>
+        team.members
+          .flatMap((member) => (member.kind === "diver" ? [member.bookingId] : []))
+          .sort(),
+      );
+
+    it("is not teamed by a tap with no confirmation, and the plan asks about it", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const ids = await party(db, shop.id, trip, [undeclared, undeclared]);
+      const plan = await planPartyTeams(db, shop.id, trip.id);
+      expect(plan.teamable).toEqual([]);
+      expect(plan.left).toEqual([]);
+      expect(plan.ageUnconfirmed.map((party) => [...party].sort())).toEqual([[...ids].sort()]);
+      expect(await tap(db, shop.id, trip.id)).toBe(0);
+      expect(await tap(db, shop.id, trip.id, [])).toBe(0);
+      expect(await listTripBuddyTeams(db, shop.id, trip.id)).toHaveLength(0);
+    });
+
+    it("is asked about beside a certified adult of forty: the other one could be ten", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const ids = await party(db, shop.id, trip, [adult, undeclared]);
+      expect(await tap(db, shop.id, trip.id)).toBe(0);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey(ids)])).toBe(1);
+    });
+
+    it("is teamed once the staffer confirms that party", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const ids = await party(db, shop.id, trip, [undeclared, undeclared]);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey(ids)])).toBe(1);
+      expect(await teamedIds(db, shop.id, trip.id)).toEqual([[...ids].sort()]);
+      expect((await planPartyTeams(db, shop.id, trip.id)).ageUnconfirmed).toEqual([]);
+    });
+
+    it("records the staffer's 18-or-over attestation on that team's trail line, and only there", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const couple = await party(db, shop.id, trip, [adult, adult]);
+      const unknown = await party(db, shop.id, trip, [undeclared, undeclared]);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey(unknown)])).toBe(2);
+      const teams = await listTripBuddyTeams(db, shop.id, trip.id);
+      const teamOf = (ids: string[]) =>
+        teams.find((team) =>
+          team.members.some((member) => member.kind === "diver" && ids.includes(member.bookingId)),
+        )?.teamId;
+      const events = await listTripBuddyTeamEvents(db, shop.id, trip.id);
+      expect(events.find((event) => event.teamId === teamOf(unknown))).toMatchObject({
+        action: "formed",
+        adultsConfirmed: true,
+      });
+      expect(events.find((event) => event.teamId === teamOf(couple))).toMatchObject({
+        action: "formed",
+        adultsConfirmed: false,
+      });
+    });
+
+    it("reads the confirmation whatever order its ids arrive in", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const ids = await party(db, shop.id, trip, [undeclared, undeclared, undeclared]);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey([...ids].reverse())])).toBe(1);
+    });
+
+    it("does not team a party on another party's confirmation", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const first = await party(db, shop.id, trip, [undeclared, undeclared]);
+      const second = await party(db, shop.id, trip, [undeclared, undeclared]);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey(first)])).toBe(1);
+      expect(await teamedIds(db, shop.id, trip.id)).toEqual([[...first].sort()]);
+      const plan = await planPartyTeams(db, shop.id, trip.id);
+      expect(plan.ageUnconfirmed.map((party) => [...party].sort())).toEqual([[...second].sort()]);
+    });
+
+    it("does not team a party that gained a member after the staffer confirmed it", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const ids = await party(db, shop.id, trip, [undeclared, undeclared]);
+      const confirmed = partyConfirmKey(ids);
+      // A third seat books into the party between the panel's render and the tap.
+      const [person] = await db
+        .insert(people)
+        .values({ shopId: shop.id, fullName: "Late joiner" })
+        .returning({ id: people.id });
+      if (!person) throw new Error("person not created");
+      await db.insert(bookings).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: person.id,
+        bookedAs: "diver",
+        participantType: "diver",
+        status: "booked",
+        partyLeadBookingId: ids[0],
+      });
+      expect(await tap(db, shop.id, trip.id, [confirmed])).toBe(0);
+      expect(await listTripBuddyTeams(db, shop.id, trip.id)).toHaveLength(0);
+    });
+
+    it("does not team on a confirmation of only part of the party", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const ids = await party(db, shop.id, trip, [undeclared, undeclared, undeclared]);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey(ids.slice(0, 2))])).toBe(0);
+    });
+
+    it("never overrides a reason the party was left for: a confirmation is not a waiver", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const boxed = await party(db, shop.id, trip, [undeclared, { age: null, minor: true }]);
+      const big = await party(db, shop.id, trip, [undeclared, adult, adult, adult]);
+      const withChild = await party(db, shop.id, trip, [undeclared, { age: 10, minor: true }]);
+      expect(
+        await tap(db, shop.id, trip.id, [
+          partyConfirmKey(boxed),
+          partyConfirmKey(big),
+          partyConfirmKey(withChild),
+        ]),
+      ).toBe(0);
+      expect(await reasons(db, shop.id, trip.id)).toEqual(
+        expect.arrayContaining(["minor_age_unknown", "too_large", "young_child"]),
+      );
+    });
+
+    it("on a mixed boat, teams the clear parties unconfirmed and the asked one only when confirmed", async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      const couple = await party(db, shop.id, trip, [adult, adult]);
+      const unknown = await party(db, shop.id, trip, [undeclared, undeclared]);
+      expect(await tap(db, shop.id, trip.id)).toBe(1);
+      expect(await teamedIds(db, shop.id, trip.id)).toEqual([[...couple].sort()]);
+      expect(await tap(db, shop.id, trip.id, [partyConfirmKey(unknown)])).toBe(1);
+      expect(await listTripBuddyTeams(db, shop.id, trip.id)).toHaveLength(2);
+    });
   });
 });

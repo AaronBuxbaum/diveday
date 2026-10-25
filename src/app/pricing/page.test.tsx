@@ -16,6 +16,8 @@ vi.mock("next/headers", () => ({
 vi.mock("next/cache", () => ({ cacheLife: () => {} }));
 
 const { default: PricingPage, generateMetadata } = await import("./page");
+const { pricingFaq } = await import("./faq");
+const { diverTranslator } = await import("@/i18n/messages");
 
 /** Every string in a rendered tree, async components rendered as they are met. */
 async function textOf(node: unknown): Promise<string> {
@@ -80,6 +82,17 @@ describe("/pricing with the test on", () => {
     expect(text).not.toContain("no cut");
     const metadata = await generateMetadata();
     expect(JSON.stringify(metadata)).not.toMatch(/no cut|flat price/);
+  });
+
+  it("promises the percent arm no cut anywhere, its FAQ JSON-LD included (issue 2947)", async () => {
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const t = diverTranslator(locale);
+      const offer = { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 300 } as const;
+      const faq = JSON.stringify(pricingFaq(t, "Rezdy and FareHarbor", offer, locale));
+      expect(faq).not.toMatch(/no cut|sin comisión|ninguna comisión/i);
+      const { text } = await pricingBody("percent_of_volume", locale);
+      expect(text).not.toMatch(/no cut|sin comisión|ninguna comisión/i);
+    }
   });
 
   it("follows the configured numbers, a base fee included", async () => {

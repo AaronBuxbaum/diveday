@@ -8,6 +8,7 @@ import type { DeskPayment } from "@/lib/desk-payment";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
+import type { NitroxFillMethod } from "@/lib/nitrox-fill";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import {
@@ -137,11 +138,19 @@ export async function getShopById(db: AppDb, id: string) {
  */
 export const shopByIdCached = cache((db: AppDb, id: string) => getShopById(db, id));
 
-/** Replaces the shop-wide diver packing checklist after route-level validation. */
-export async function setShopPackingList(db: AppDb, shopId: string, packingList: string[]) {
+/**
+ * Replaces the shop-wide diver packing checklist after route-level validation,
+ * and whether it also suggests a logbook (`shops.packing_logbook`).
+ */
+export async function setShopPackingList(
+  db: AppDb,
+  shopId: string,
+  packingList: string[],
+  packingLogbook: boolean,
+) {
   const [shop] = await db
     .update(shops)
-    .set({ packingList })
+    .set({ packingList, packingLogbook })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
@@ -602,6 +611,19 @@ export async function setShopReplyNotes(db: AppDb, shopId: string, replyNotes: s
     .set({ replyNotes })
     .where(eq(shops.id, shopId))
     .returning({ id: shops.id });
+  return shop ?? null;
+}
+
+/**
+ * Sets how the shop fills nitrox (issue 3004), which decides where Rent out's
+ * O2-clean warning starts (`o2CleanWarnsForFill`). Advisory only.
+ */
+export async function setShopNitroxFillMethod(db: AppDb, shopId: string, method: NitroxFillMethod) {
+  const [shop] = await db
+    .update(shops)
+    .set({ nitroxFillMethod: method })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

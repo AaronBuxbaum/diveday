@@ -288,7 +288,7 @@ function cardsOnFile(
   if (noCertificationDeclared) {
     return { text: t("shared.certificationSummary.notCertified"), tone: "warning" };
   }
-  return { text: t("divers.file.noneOnFile"), tone: "muted" };
+  return { text: t("divers.file.certificationsNone"), tone: "muted" };
 }
 
 /**

@@ -1,10 +1,10 @@
-import type { listTripBuddyTeams, PartyTeamPlan } from "@/db/buddy-pairs";
+import { type listTripBuddyTeams, type PartyTeamPlan, partyConfirmKey } from "@/db/buddy-pairs";
 import { partyLeftReasonText } from "@/i18n/buddy-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ManifestBuddyTeam, TripManifest } from "@/lib/manifests";
 import { unteamedDivers as divingAndUnteamed } from "@/lib/participant-types";
-import { partyLeftReason } from "@/lib/party-teams";
+import { partyAgesUnconfirmed, partyLeftReason } from "@/lib/party-teams";
 
 /**
  * **The buddy-team builder's inputs**: who can still join a new team, the
@@ -102,9 +102,11 @@ export function buddyBuilderView({
           ? t("manifest.buddyErrorTooFew")
           : buddyError === "not-diver"
             ? t("manifest.buddyErrorNotDiver")
-            : buddyError
-              ? t("manifest.buddyErrorGeneric")
-              : null;
+            : buddyError === "confirm-adults"
+              ? t("manifest.buddyErrorConfirmAdults")
+              : buddyError
+                ? t("manifest.buddyErrorGeneric")
+                : null;
   // A refusal renders beside the form that produced it
   // (docs/design/forms-and-controls.md). `few` is the one code only the
   // new-team builder can earn, so it lands in that fieldset's action row;
@@ -121,7 +123,11 @@ export function buddyBuilderView({
   // seat, the one "Team up each party" reads (dive-domain review of layer
   // r5-4, second pass, N7), so the lines and the tap cannot disagree.
   const nameOf = (bookingId: string) => partyPlan.names.get(bookingId) ?? "";
-  const together = [...partyPlan.teamable, ...partyPlan.left.map((party) => party.bookingIds)];
+  const together = [
+    ...partyPlan.teamable,
+    ...partyPlan.ageUnconfirmed,
+    ...partyPlan.left.map((party) => party.bookingIds),
+  ];
   const groupList = cachedListFormat(locale, { type: "unit", style: "short" });
   const partyLines =
     together.length === 0
@@ -146,6 +152,25 @@ export function buddyBuilderView({
           ),
           /** Parties "Team up each party" would make a team of: the action's own plan. */
           teamable: partyPlan.teamable.length,
+          // Each party the tap teams only once the staffer says everyone in it
+          // is 18 or over (issue 2808): its tick box carries the party's exact
+          // seats, so a confirmation never reaches a party that changed since.
+          // The label names who has no age on file, so a staffer facing a
+          // forty-year-old beside an unknown knows whom they vouch for.
+          confirmAdults: partyPlan.ageUnconfirmed.map((bookingIds) => ({
+            key: partyConfirmKey(bookingIds),
+            label: t("manifest.buddyPartyConfirmAdults", {
+              names: teamNameList.format(bookingIds.map(nameOf)),
+              unknown: teamNameList.format(
+                bookingIds
+                  .filter((bookingId) => {
+                    const member = partyPlan.members.get(bookingId);
+                    return !member || partyAgesUnconfirmed([member]);
+                  })
+                  .map(nameOf),
+              ),
+            }),
+          })),
         };
   return {
     buddyTeamLabel,

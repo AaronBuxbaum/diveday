@@ -160,8 +160,8 @@ describe("tripPulseFacts", () => {
       input({ needs, pulse: { blocked: 0, boarded: 0, work: { ...noWork, openOrders: 5 } } }),
     );
     expect(facts.map((fact) => fact.text)).toEqual([
-      "Diego Alvarez · Asked for help: carry gear.",
-      "Say hello to Ana.",
+      "Diego Alvarez · Asked for help: carry gear",
+      "Say hello to Ana",
       "1 missing a size · 3 not asked about kit",
     ]);
     // A row that opens this very page lands on its roster, never a dead tap.

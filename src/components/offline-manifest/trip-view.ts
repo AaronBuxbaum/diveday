@@ -1,9 +1,11 @@
 import { personsAboveTotalPersonsAboard } from "@/lib/boat-safety";
 import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
+import { keepUnitsWhole } from "@/lib/date-parts";
 import { cachedFormatter } from "@/lib/intl-cache";
 import {
   boardedBefore,
   isNotBackAboard,
+  isTurnedAwayOffBoat,
   medicalHoldAfterDive,
   type RollCallCheckpoint,
   rollCallCheckpointOrdinal,
@@ -164,8 +166,22 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
       blockerCodes: diver.readiness.blockers.map((blocker) => blocker.code),
     }),
   );
+  // A seat the desk turned away is off the boat until somebody at the rail
+  // records a result for it: the live manifest's own predicate, read off this
+  // device's taps (`isTurnedAwayOffBoat`, issue #2907). **Only while this copy
+  // is current**: the desk can put the diver back on the list after the save,
+  // and a phone with no signal never hears it, so an aging or stale copy
+  // counts her as awaiting again. One tap too many, never "all aboard" with
+  // her uncounted (independent domain review of #2907).
+  const turnAwayStands = freshness === "current";
+  const offBoat = manifest.divers.map(
+    (diver, index) =>
+      turnAwayStands &&
+      isTurnedAwayOffBoat({ turnedAway: diver.turnedAway, rollCall: localStates[index] }),
+  );
+  const countedDivers = offBoat.filter((off) => !off).length;
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
-  const awaiting = localStates.filter((state) => !state).length;
+  const awaiting = localStates.filter((state, index) => !state && !offBoat[index]).length;
   // The dock copy splits `not_boarded` exactly the way the live manifest does
   // (`isNotBackAboard`, src/lib/manifests.ts): at departure it means the diver
   // never left, after a dive it means they have not come back. Offline and
@@ -213,7 +229,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   );
   const completeness = rollCallCompleteness({
     checkpoint,
-    totalDivers: manifest.summary.totalDivers,
+    totalDivers: countedDivers,
     awaiting,
     notBackAboard,
     crew: crewWithState.map((member) => ({ rollCall: member.state })),
@@ -246,10 +262,11 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   const crewMissing = completeness.crewReason === "crew_not_back_aboard";
   const crewWithoutId = crewWithKeys.filter((member) => !member.id).length;
   const rollCallComplete = completeness.complete;
-  // The actual roster rendered on this device, not the (possibly stale,
-  // save-time) `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
+  // The people this device counts (every row but a turned-away seat nobody
+  // has answered for), not the (possibly stale, save-time)
+  // `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
   // roll-call-complete celebration below.
-  const totalDivers = manifest.divers.length;
+  const totalDivers = countedDivers;
   // Dive-domain-expert review (task 72, invariant 4): "not boarded" carries
   // forward at later checkpoints and never resets to awaiting, so
   // `rollCallComplete` (awaiting === 0) goes true for a checkpoint with
@@ -258,7 +275,9 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // "everyone's aboard" celebration must not fire on that basis. Gate it on
   // the true boarded count instead.
   const allBoarded = totalDivers > 0 && boarded === totalDivers;
-  const missingDivers = manifest.divers.filter((_diver, index) => !localStates[index]);
+  const missingDivers = manifest.divers.filter(
+    (_diver, index) => !localStates[index] && !offBoat[index],
+  );
   // Whether anyone on this saved copy carries a team — gates the one line that
   // says the split-team read belongs to the live roll call. Crew count too:
   // a boat where only the divemaster's groups were recorded still needs the
@@ -275,6 +294,18 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     timeStyle: "short",
     timeZone: envelope.snapshot.shop.timezone,
   });
+  // The save time the roll call's caveat names (issue #2980): with its zone,
+  // since a phone set to another zone would otherwise read the age wrong.
+  const savedAtZoned = keepUnitsWhole(
+    cachedFormatter("dtz", Intl.DateTimeFormat, deviceLocale(), {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone: envelope.snapshot.shop.timezone,
+    }).formatToParts(new Date(envelope.snapshot.savedAt)),
+  );
   return {
     envelope,
     checkpoint,
@@ -288,6 +319,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     pending,
     rejected,
     localStates,
+    offBoat,
     blockedAtRail,
     medicalHold,
     boarded,
@@ -309,6 +341,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     anyBuddies,
     previousGaps,
     dateTime,
+    savedAtZoned,
   };
 }
 

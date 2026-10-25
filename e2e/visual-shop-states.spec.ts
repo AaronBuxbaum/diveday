@@ -107,7 +107,11 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
       await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
       await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
-      await page.locator("details#briefing-planning > summary").click();
+      await page
+        .locator("details#briefing-planning")
+        .filter({ visible: true })
+        .locator("> summary")
+        .click();
       await page
         .getByLabel("What to remember about running this site")
         .fill("The entry silted up after the storm. Brief the swim-through before you go in.");

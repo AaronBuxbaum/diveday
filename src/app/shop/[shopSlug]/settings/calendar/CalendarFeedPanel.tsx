@@ -22,7 +22,7 @@ function ActionButton({
 }: {
   label: string;
   pendingLabel: string;
-  variant: "primary" | "link" | "ghost";
+  variant: "primary" | "secondary" | "link" | "ghost";
 }) {
   const { pending } = useFormStatus();
   return (
@@ -58,12 +58,13 @@ export function CalendarFeedPanel({
   copy: CalendarFeedCopy;
   subscribed: boolean;
   /**
-   * Two panels share this screen, and only one is a button (principle 8;
-   * visual review 2026-10-24, A37): the personal feed is the common path; the
-   * shop-wide feed renders its create as a text link, so the page never shows
-   * the same words as two buttons.
+   * Two panels share this screen (visual review 2026-10-24, A37). Until the
+   * person holds a stored feed, both creates are one secondary weight: two
+   * equal choices, neither the page's one primary nor one a stray link. Once
+   * a feed exists, the personal feed's create is the button and the
+   * shop-wide one a text link.
    */
-  createVariant?: "primary" | "link";
+  createVariant?: "primary" | "secondary" | "link";
 }) {
   // One state for both buttons. Two `useActionState` hooks could not say which
   // of them ran last, so a revoke followed by a create rendered the revoked

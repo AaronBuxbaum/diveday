@@ -344,6 +344,29 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.medicalClearanceEvidenceRequired",
   },
+  // The form the diver sent was ticked as the evidence, but the staffer did
+  // not type the physician from it, or has not opened it (issue #2797).
+  "medical-clearance-diver-form-physician": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDiverFormPhysician",
+  },
+  "medical-clearance-diver-form-not-opened": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDiverFormNotOpened",
+  },
+  // "Can't use this form": deleted, and the diver may send another.
+  "diver-form-not-used": {
+    form: "waiver",
+    tone: "success",
+    key: "divers.notices.diverFormNotUsed",
+  },
+  "diver-form-gone": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.diverFormGone",
+  },
   // No outcome chosen. Reachable only with the radios stripped, since the form
   // marks both `required` — but a write this final does not get a default, so
   // the server refuses rather than picking one.

@@ -9,8 +9,9 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  *
  * The page is kept on the phone for the marina with no signal
  * (`src/worker/ready-page-cache.ts`). This pins the two ends of that promise:
- * with no signal the saved copy shows, and landing on `?cancelled=` forgets it,
- * so a seat the diver cancelled does not keep telling them to come to the dock.
+ * with no signal the saved copy shows, and cancelling with the page's own
+ * button forgets it, so a seat the diver cancelled does not keep telling them
+ * to come to the dock.
  *
  * What is *not* pinned, on purpose (decided 2026-10-16): a staff cancel or a
  * blow-out does not reach a phone that never opens the link online again.
@@ -86,9 +87,15 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   // It is the diver's only copy at the dock: nothing on it deletes it (domain review 2).
   await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toHaveCount(0);
 
-  // Back online, the diver lands on the page their own cancel redirects to.
+  // Back online, the diver cancels with the page's own button. Its redirect
+  // reaches the hydrated page without a navigation the worker sees, so the
+  // cancelled card is what forgets the copy (issue #2979).
   await context.setOffline(false);
-  await page.goto(`${readyPath}?cancelled=1`, { waitUntil: "domcontentloaded" });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: diver("ready.cancelSpot") }).click();
+  await page.getByRole("button", { name: diver("ready.cancelConfirmButton") }).click();
+  await page.waitForURL((url) => url.searchParams.has("cancelled"));
+  await expect(page.getByRole("heading", { name: diver("ready.cancelledHeading") })).toBeVisible();
   await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBe(0);
 
   // And with no signal again there is nothing saved to show.

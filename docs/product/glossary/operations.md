@@ -74,7 +74,8 @@
   `still_out` ("Dive 2 count open, 2 people and 1 crew member to mark"), a count in progress rather
   than one never closed, only before she is due back, on a trip within today's shop day, when every
   open count on the boat, diver and crew, is at the latest checkpoint anybody marked with no later
-  dive logged, and never on a past day's record; a person recorded not back
+  dive logged, while somebody was marked there within the last 20 minutes (`OPEN_COUNT_QUIET_MS`;
+  a missing mark time reads loud, issue #2925), and never on a past day's record; a person recorded not back
   aboard, diver or crew, reads `unreconciled` wherever the boat is. There is **no act of closing the day**: a "Close the day" button that recorded who closed
   it (`day_closeouts`) and a leftovers list with per-row Dismiss were removed on 2026-10-05,
   because nothing read the record and the leftovers repeated Needs you (ADR 20260804-day-closeout,
@@ -302,7 +303,8 @@
   (vegetarian, halal, no pork), 160 characters, from the diver's Day-of form or the desk. **A galley
   note, not an allergy record**: a food allergy is medical, belongs on the person and on every
   departure with whether they carry an auto-injector, and is not modeled yet (dive-domain review
-  B1). So the form never invites one and sends an allergy to the shop, and an empty list is never
+  B1). So the form never invites one and sends an allergy to the **medical alert for the crew** (the
+  waiver's "For the crew, in an emergency" box, H-153), and an empty list is never
   read as "nobody has a restriction". It is in the diver's own export, cleared by erasure, and
   nulled 30 days after the boat sailed (`DIETARY_NOTE_RETENTION_DAYS`).
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
@@ -842,6 +844,10 @@
   was before sailing. Later time edits and hull changes cannot reopen sailed evidence. An older
   tap never overwrites a newer record. Judged on the departure's own
   local day; a deleted hull supplies no fresh evidence and does not remove kept history.
+  The log prints the pre-departure checklist's answer as of the same tap beside the notices (the
+  lines on the list at that tap and each one not checked, issue 2725). It is read from the
+  append-only checklist taps by when they happened, not stored, so a tap an offline tablet syncs
+  after the count still counts if it was made before it.
   Head-count lines are left out because the roll call records them. The log says when
   nothing was kept or the departure names no boat, and when the departure has moved to another
   boat since.
@@ -1203,7 +1209,10 @@
   diver under 15 and no diver of 18 or more by a date of birth on file holding a verified card the
   shop has not deleted in the same party, and a party of more than three. Every age reason is said
   before the size one, so whoever splits a family of four by hand is told there is a child in it.
-  Ages are taken on the departure's own local date; the bands are PADI's and SSI's, kept once in
+  A party it would team where someone has neither a date of birth nor the "Under 18" box gets a
+  tick box, "… are all 18 or over", and is teamed only when the staffer ticks it; the tick names
+  that party's exact seats (`partyConfirmKey`), and the sale still asks no age (issue 2808, H-113,
+  H-22). Ages are taken on the departure's own local date; the bands are PADI's and SSI's, kept once in
   `src/lib/age.ts` (`partyLeftReason` in `src/lib/party-teams.ts`, read against **Junior
   certification**). Only booked and checked-in diver seats that are not held count, and every line
   on the panel and the button's number are drawn from that one plan. A team built by hand carries
@@ -1513,14 +1522,23 @@
   their physician, opened from the held waiver page's "Take this to your doctor" (ADR
   20261016-doctor-referral-page, H-127). It names the official form and the page the examiner
   signs (page 3 of the UHMS/DMSC participant questionnaire, linked rather than restyled), prints the
-  diver's name, and says to send a photo of the signed form to the shop before the dive day. The
+  diver's name, and takes the signed form back as a **diver-sent doctor's form**, the shop's email
+  or counter as the fallback. The
   answers that called for a physician sit behind the diver's **date of birth**, re-entered on the
   page and never printed by it: each one's published prompt (never free-text detail) and the form
   version answered. Twenty wrong dates on one release (`waiver_records.doctor_unlock_failures`)
   lock the answers for the rest of the hold. With no date of birth on file, or nothing to show, it says to go through the
   whole questionnaire. It opens only while the release waits on a physician (`awaitsPhysician`)
   on a held seat whose departure has not ended plus a day, and prints without the browser's
-  URL header and footer. DiveDay records nothing from it; staff record the **physician clearance**.
+  URL header and footer. DiveDay decides nothing from it; staff record the **physician clearance**.
+- **Diver-sent doctor's form** — the signed physician's form a referred diver sends from the
+  **doctor's page** (`waiver_records.diver_medical_form_url`, issue #2797, ADR
+  20261024-diver-sent-doctors-form): one photo or PDF per release, stored privately like the
+  evaluation, never replaced from the link. Not a clearance and not evidence until a staffer who
+  opened it records the physician's answer, types the physician's name from it and ticks to use it:
+  it becomes the evaluation, marked "Sent by the diver". Otherwise recording the answer deletes it,
+  and so does "Can't use this form", which lets the diver send another. Every live staff role may open it until then, each open on the diver's trail
+  (`diver_medical_form_opened`). Erased with the diver; the day it arrived survives.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
   `medical_review` record itself (a clean later release can stand over it, below), and it is a
@@ -1884,11 +1902,16 @@
   rider's seat. Not the **Milestone stamp**, which is the recap's roundel and also marks the first
   day.
 - **Standing line** — the one line under a diver's name on their record that says what they are to
-  the shop: "23 visits since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2 friends"
-  (`diverStanding` in `src/lib/diver-standing.ts`). Visits are the record's own count, every seat
-  not cancelled and no longer ahead plus every imported visit; it is a count of visits, not of
-  **dive days**, which is the milestone's and the recap's unit. Since and last out are the first
-  and last of those on the shop's calendar. Spent is drawn only for a reader who may manage
+  the shop: "23 dive days since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2 friends"
+  (`diverStanding` in `src/lib/diver-standing.ts`). It counts **dive days**, the milestone's and
+  the recap's unit (issue 2809): the distinct days in the shop's zone, merged across the diver's
+  seats that are numbered dive days (`numberedDiveDay`, asked of each seat by `getDiverProfile`)
+  and no longer ahead, and the imported visits not standing `did_not_happen`
+  (`mergeShopHistory`). A morning and an afternoon boat on one date are one day, a no-show is
+  none, and an imported visit on a day with a seat is not counted twice. Since is the first of
+  those days on the shop's calendar. Last out is the last day the person was out with the shop in
+  any seat known to be theirs, a ride-along or a snorkel included, so a rider regular with no dive
+  days still reads it. Spent is drawn only for a reader who may manage
   orders, in the shop's currency, net of refunds; friends brought counts the distinct other people
   whose live seats name one of this diver's seats as the one that brought them
   (`booking_referrals`), at this shop only (`friendsBroughtBy`, `src/db/buddy-referrals.ts`).

@@ -188,7 +188,7 @@ describe("the extension's copy of the protocol", () => {
       chrome: {
         runtime: { id: "test", onMessage: { addListener: () => {} } },
         tabs: {
-          create: async () => ({ id: 1 }),
+          create: async () => ({ id: 1, status: "loading" }),
           get: async () => ({ url: filled ? options.after : options.before, status: "complete" }),
           remove: async () => {},
           onUpdated: { addListener: () => {}, removeListener: () => {} },
@@ -261,8 +261,44 @@ describe("the extension's copy of the protocol", () => {
       },
       pages,
     );
-    return { reply, ran, fills: () => fills, elapsed: () => clock - 1_000_000 };
+    return {
+      reply,
+      ran,
+      fills: () => fills,
+      elapsed: () => clock - 1_000_000,
+      phases: () => worker.DiveDayCheckPhases as [number, string][],
+      record: worker.phase as (name: string) => void,
+    };
   }
+
+  /** #2878: where a stalled lookup stopped, by fixed phase names and times, and nothing of the diver. */
+  it("records each lookup's phases by name and time only, and keeps a bounded number", async () => {
+    const { phases, record } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check?diver_name=Lena",
+    });
+    const names = phases().map(([, name]) => name);
+    expect(names.slice(0, 8)).toEqual([
+      "check:start",
+      "tab:created:loading",
+      "tab:get:complete",
+      "tab:loaded",
+      "run:readAgencyPage",
+      "ran:readAgencyPage",
+      "run:fillAgencyForm",
+      "ran:fillAgencyForm",
+    ]);
+    expect(names).toContain("fill:ok");
+    for (const [at, name] of phases()) {
+      expect(typeof at).toBe("number");
+      expect(name).toMatch(/^[a-z]+:[a-zA-Z:_-]+$/);
+      expect(name).not.toMatch(/Lena|Ortiz|123|1990|divessi/);
+    }
+    // A worker that lives through many lookups keeps only the latest phases.
+    for (let index = 0; index < 500; index += 1) record(`run:readAgencyPage`);
+    expect(phases()).toHaveLength(200);
+  });
 
   /** Security review R4-2: a public lookup sent to PADI's signed-in site is never read. */
   it("never fills or reads a public lookup's tab once it is on another site", async () => {

@@ -595,7 +595,7 @@ export default async function TeamSettingsPage({
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
         {/* The team first; inviting is a button under its heading (item 58). */}
-        <section>
+        <section id="credentials" className="scroll-mt-24">
           {/* Not a card — a heading over a list of them, so a bare `h2` at
               `SECTION_TITLE_CLASS`, the rung `SectionCard` draws its own title
               at and `card.tsx` prescribes for a heading over a plural body. */}
@@ -635,7 +635,7 @@ export default async function TeamSettingsPage({
           )}
           {/* Every credential is read, reviewed and removed on its person's
               card above (A09); adding one is the door under the team. */}
-          <div id="credentials" className="mt-4 scroll-mt-24">
+          <div className="mt-4">
             <AutoOpenDetails
               id="add-credential"
               openOnHash="add-credential"

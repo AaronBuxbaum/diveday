@@ -11,6 +11,7 @@ import {
   openRosterDetails,
   openThreadStep,
   openTripAbout,
+  openTripAboutRow,
   openTripActivity,
   openTripFromBoard,
   openTripMore,
@@ -188,7 +189,7 @@ test.describe("staff", () => {
     // The conditions form waits behind the section's disclosure (summary-first
     // Overview); no prediction is published yet, so the toggle reads "Publish".
     await openTripAbout(page);
-    await page.getByText("Write a crew prediction", { exact: true }).click();
+    await openTripAboutRow(page, "Conditions");
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
@@ -230,7 +231,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Book my seat" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
-    await page.getByText("Edit details", { exact: true }).click();
+    await openTripAboutRow(page, "The plan");
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");
@@ -612,14 +613,16 @@ test.describe("the shopfront on a phone", () => {
       page.getByText("Small-boat reef and wreck diving out of Key Largo."),
     ).toBeVisible();
 
-    const card = page.getByRole("region", { name: "Next boat with space" });
-    await expect(card).toBeVisible();
-    // The page's one primary — every week row below it is a link.
-    const primaries = page.getByRole("link", { name: "Book this boat" });
-    await expect(primaries).toHaveCount(1);
-    await primaries.click();
+    // The next boat is the week's first row on the seeded board, so no card
+    // repeats it above the list (visual review 2026-10-24, B17): the row is the
+    // bookable object, one tap from the booking form. The card's own branch,
+    // a full boat first, is next-departure.spec.ts.
+    await expect(page.getByRole("region", { name: /Next boat with space/ })).toHaveCount(0);
+    const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
+    await expect(first).toContainText(/seats?/);
+    await first.getByRole("link").first().click();
 
-    await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}#book$/);
+    await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   });
 });

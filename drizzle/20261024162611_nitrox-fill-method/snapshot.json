@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "324b0024-7f5f-4b7a-9895-060b9e808919",
+  "prevIds": [
+    "9807bfaf-8d02-4b9c-885e-f4cf97d2fda5"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "nitrox_fill_method"
+      ],
+      "writes": [
+        "s|enum|public.nitrox_fill_method",
+        "n|enum|public.nitrox_fill_method",
+        "e|enum|public.nitrox_fill_method",
+        "n|type|public.nitrox_fill_method"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "nitrox_fill_method"
+      ],
+      "writes": [
+        "s|col|public.shops.nitrox_fill_method",
+        "n|col|public.shops.nitrox_fill_method",
+        "e|col|public.shops.nitrox_fill_method"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|enum|public.nitrox_fill_method"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "nitrox_fill_method",
+        "values": [
+          "blending",
+          "membrane_premix"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "nitrox_fill_method",
+        "type": "nitrox_fill_method",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'blending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

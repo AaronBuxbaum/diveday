@@ -1,0 +1,116 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9807bfaf-8d02-4b9c-885e-f4cf97d2fda5",
+  "prevIds": [
+    "f2e5f9f3-0dc2-4246-b187-92f0a21a4b1a",
+    "f00941d0-7b67-428f-b3b2-0915becbbc0d"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "incident_reports",
+        "missing_alert_attempting_person_ids"
+      ],
+      "writes": [
+        "s|col|public.incident_reports.missing_alert_attempting_person_ids",
+        "n|col|public.incident_reports.missing_alert_attempting_person_ids",
+        "e|col|public.incident_reports.missing_alert_attempting_person_ids"
+      ],
+      "reads": [
+        "n|tbl|public.incident_reports",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "incident_reports",
+        "missing_all_clear_sent_person_ids"
+      ],
+      "writes": [
+        "s|col|public.incident_reports.missing_all_clear_sent_person_ids",
+        "n|col|public.incident_reports.missing_all_clear_sent_person_ids",
+        "e|col|public.incident_reports.missing_all_clear_sent_person_ids"
+      ],
+      "reads": [
+        "n|tbl|public.incident_reports",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "incident_reports",
+        "missing_all_clear_leased_at"
+      ],
+      "writes": [
+        "s|col|public.incident_reports.missing_all_clear_leased_at",
+        "n|col|public.incident_reports.missing_all_clear_leased_at",
+        "e|col|public.incident_reports.missing_all_clear_leased_at"
+      ],
+      "reads": [
+        "n|tbl|public.incident_reports",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "incident_reports",
+        "name": "missing_alert_attempting_person_ids",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "incident_reports",
+        "name": "missing_all_clear_sent_person_ids",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "incident_reports",
+        "name": "missing_all_clear_leased_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

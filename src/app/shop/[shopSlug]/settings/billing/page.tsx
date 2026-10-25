@@ -94,7 +94,7 @@ export default async function BillingSettingsPage({
   // The shop's plan and numbers (ADR 20261022-pricing-ab-test): today's flat
   // price for everyone while the pricing test is off. The percent plan is
   // sellable only once its metered price and meter are configured too.
-  const terms = shopPricing(shop.id, row, pricingConfig());
+  const terms = shopPricing(row, pricingConfig());
   const percentPlan = terms.plan === "percent_of_volume";
   const billingOn = billingConfigFromEnvironment() !== null;
   const configured = billingOn && (!percentPlan || percentBillingFromEnvironment() !== null);

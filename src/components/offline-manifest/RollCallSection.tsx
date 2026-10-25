@@ -1,5 +1,4 @@
 import { DecompressionReminder } from "@/components/DecompressionReminder";
-import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { crewDives, needsDecompressionCardReminder } from "@/lib/decompression-reminder";
@@ -17,9 +16,13 @@ export function OfflineRollCallSection({
   view: OfflineTripView;
   controls: OfflineTripControls;
 }) {
-  const { manifest, checkpoint, boarded, awaiting, rollCallComplete, anyBuddies } = view;
+  const { manifest, checkpoint, boarded, awaiting, rollCallComplete, anyBuddies, totalDivers } =
+    view;
   const { t, locale } = controls;
-  const passengerTypes = countParticipants(manifest.divers);
+  // The people this copy counts: a seat the desk turned away is off the boat (#2907).
+  const passengerTypes = countParticipants(
+    manifest.divers.filter((_diver, index) => !view.offBoat[index]),
+  );
   // A copy saved before the flag rode along has none, and says nothing.
   const showsDecompressionReminder =
     checkpoint === "departure" &&
@@ -50,7 +53,7 @@ export function OfflineRollCallSection({
             below `sm`: three tiles on a phone. */}
       <section className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
         {[
-          [t("shared.offlineManifest.single.statsDivers"), manifest.summary.totalDivers],
+          [t("shared.offlineManifest.single.statsDivers"), totalDivers],
           [t("shared.offlineManifest.single.statsBoarded"), boarded],
           [t("shared.offlineManifest.single.statsAwaiting"), awaiting],
         ].map(([label, value]) => (
@@ -90,7 +93,7 @@ export function OfflineRollCallSection({
 
       <section className="mt-8">
         <h2 className={`flex items-center gap-2 ${SUB_TITLE_CLASS}`}>
-          {rollCallComplete ? <StatusMark variant="success" size="md" /> : null}
+          {/* No all-clear mark: a saved copy's list may itself be short (#2980). */}
           <span>
             {rollCallComplete
               ? t("shared.offlineManifest.single.rollCallCompleteHeading")
@@ -99,15 +102,32 @@ export function OfflineRollCallSection({
                 })}
           </span>
         </h2>
+        {/* **This copy may be missing someone, or carry someone gone**
+            (issue #2980, option (a), decided 2026-10-24; domain reviews the
+            same day). A walk-up seated after the save has no row below, and a
+            seat cancelled since still has one. The line names the save time,
+            in its zone, and asks for a head count ahead of the first row:
+            against the live list (once DiveDay answers, if it did not), or on
+            the boat with no signal. On every saved copy, never a live page. No count field and no live rows merged in. */}
+        <p className="mt-1 text-sm font-semibold text-pretty text-warning-strong">
+          {t(
+            controls.copyCaveat === "offline"
+              ? "shared.offlineManifest.single.copyCaveatOffline"
+              : controls.copyCaveat === "unanswered"
+                ? "shared.offlineManifest.single.copyCaveatUnanswered"
+                : "shared.offlineManifest.single.copyCaveatOnline",
+            { when: view.savedAtZoned },
+          )}
+        </p>
         {showsDecompressionReminder ? (
           <DecompressionReminder text={t("manifest.decompressionReminder")} />
         ) : null}
         {rollCallComplete ? (
           <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
-            {boarded === manifest.summary.totalDivers
+            {boarded === totalDivers
               ? t("shared.offlineManifest.single.allAboard")
               : t("shared.offlineManifest.single.someNotBoarded", {
-                  count: manifest.summary.totalDivers - boarded,
+                  count: totalDivers - boarded,
                 })}
           </p>
         ) : null}

@@ -1,0 +1,115 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f36eafc3-1e95-4320-a886-b133d9aef0cd",
+  "prevIds": [
+    "324b0024-7f5f-4b7a-9895-060b9e808919",
+    "aa1da90e-40bc-4778-b709-e265c2294911"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "diver_medical_form_url"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.diver_medical_form_url",
+        "n|col|public.waiver_records.diver_medical_form_url",
+        "e|col|public.waiver_records.diver_medical_form_url"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "diver_medical_form_sent_at"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.diver_medical_form_sent_at",
+        "n|col|public.waiver_records.diver_medical_form_sent_at",
+        "e|col|public.waiver_records.diver_medical_form_sent_at"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "waiver_records"
+      ],
+      "writes": [
+        "s|ck|public.waiver_records.waiver_records_diver_medical_form_held",
+        "n|ck|public.waiver_records.waiver_records_diver_medical_form_held",
+        "e|ck|public.waiver_records.waiver_records_diver_medical_form_held",
+        "n|con|public.waiver_records.waiver_records_diver_medical_form_held"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public",
+        "n|col|public.waiver_records.diver_medical_form_url",
+        "n|col|public.waiver_records.diver_medical_form_sent_at",
+        "n|col|public.waiver_records.medical_review_required",
+        "n|col|public.waiver_records.medical_cleared_at",
+        "n|col|public.waiver_records.medical_clearance_declined_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "diver_medical_form_url",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "diver_medical_form_sent_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "waiver_records_diver_medical_form_held",
+        "value": "\"diver_medical_form_url\" is null or (\n        \"diver_medical_form_sent_at\" is not null\n        and \"medical_review_required\"\n        and \"medical_cleared_at\" is null\n        and \"medical_clearance_declined_at\" is null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

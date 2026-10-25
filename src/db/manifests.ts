@@ -13,6 +13,7 @@ import {
   buildTripManifest,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
+  isTurnedAwaySeat,
   type ManifestBuddyTeam,
   type ManifestCrewMember,
   manifestAtCheckpoint,
@@ -43,6 +44,7 @@ import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { listTripGearAssignments } from "./gear";
+import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import { bookingsWithMedicalAlert, standingReleaseByBooking } from "./medical-alerts";
 import { verifiedNitroxPersonIds } from "./nitrox";
@@ -1359,7 +1361,10 @@ export async function getTripManifests(
       notHere: booking.status === "no_show",
       // Seen at the desk and refused (H-135), which the row says apart from a
       // diver who never came.
-      turnedAway: booking.status === "no_show" && booking.turnedAwayAt !== null,
+      turnedAway: isTurnedAwaySeat(booking),
+      // The category only (H-135); the departure log prints it on the seat's
+      // "turned away" line (#2907).
+      turnedAwayReason: booking.status === "no_show" ? booking.turnedAwayReason : null,
       buddyTeam: teamByBooking.get(booking.id) ?? null,
     };
   });
@@ -2052,7 +2057,7 @@ async function writeRollCall(
       // under the departure lock taken above, as `undoBookingNoShow` counts.
       // Only here: after a dive the body is on the boat, and the reclaim
       // below stays unrefusable.
-      if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
+      if (isTurnedAwaySeat(booking)) {
         const held = await heldSeatCounts(tx, input.shopId, input.tripId);
         const capacity = await sellableCapacity(tx, booking);
         if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
@@ -2244,6 +2249,10 @@ export async function recordCrewRollCall(
         // (`pauseRecapOnMissingAfterDive`); booking-then-trip deadlocked against
         // the counter on a staffer's seat (`seat-lock-order.postgres.test.ts`).
         // `no key update`, so the event's own foreign-key `KEY SHARE` passes.
+        // Bounded like the diver half's `lockSeatDeparture`: behind a stuck
+        // holder the tap fails in five seconds with `55P03` rather than with
+        // its function (#2983, `roll-call.postgres.test.ts`).
+        await boundLockWaits(tx);
         const [trip] = await tx
           .select({ id: trips.id, plannedDives: trips.plannedDives })
           .from(trips)

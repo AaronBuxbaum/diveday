@@ -188,7 +188,6 @@ export function participantTermsRows({
       ) : (
         summary
       ),
-      editLabel: t("participants.terms.edit"),
       editorOpen: Boolean(status),
       editor: canConfigure ? (
         <ParticipantTermsSection

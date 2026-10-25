@@ -230,4 +230,14 @@ describe("GET /api/medical-clearances/[recordId]", () => {
     const response = await GET(request(), params());
     expect(response.headers.get("Content-Type")).toBe("application/octet-stream");
   });
+
+  it("does not hand the file over when the trail could not name who opened it", async () => {
+    // `recordDiverActivity` answers false, writing nothing, for a removed actor
+    // or diver: the bytes do not go out unaudited (security review of #2797, 1).
+    everythingInPlace();
+    vi.mocked(recordDiverActivity).mockResolvedValueOnce(false);
+    const response = await GET(request(), params());
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not_found" });
+  });
 });

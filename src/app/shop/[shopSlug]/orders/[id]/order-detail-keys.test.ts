@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { NOTICES, recordPaymentNotice } from "./order-detail-keys";
+import { orderLineItemKind } from "@/db/schema";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { KIND_KEYS, NOTICES, recordPaymentNotice } from "./order-detail-keys";
+
+describe("KIND_KEYS", () => {
+  // `e_learning_fee` rendered raw on the order page (visual review A02): every
+  // kind the column can hold has a label, in both languages, and none reads as
+  // the enum value.
+  it.each(["en-US", "es-ES"] as const)("labels every order-line kind in %s", (locale) => {
+    const t = staffTranslator(locale);
+    for (const kind of orderLineItemKind.enumValues) {
+      const key = KIND_KEYS[kind];
+      expect(key, kind).toBeDefined();
+      const label = t(key);
+      expect(label, kind).not.toBe(key);
+      expect(label, kind).not.toContain("_");
+    }
+  });
+});
 
 describe("recordPaymentNotice", () => {
   it("tells a payment still with Stripe apart from a real failure", () => {

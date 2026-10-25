@@ -55,7 +55,9 @@ import { liveTrip } from "./trips-live";
  * gets the count and the log her crew would have written
  * (`bringDemoBoatsAtSeaHome`, `src/db/seed-boat-at-sea.ts`): the seed leaves
  * dive 2's count open as of the instant it ran, and a count left open past
- * `endsAt` reads as divers lost at sea.
+ * `endsAt` reads as divers lost at sea. The hourly trip-reminder pass runs it
+ * too (`/api/cron/trip-reminders`, issue 2917), so she is home within an hour
+ * of her return rather than at this tick.
  *
  * It is deliberately **not** re-exported from `@/db/seed` the way the demo
  * lifecycle helpers are: it imports `resetDemoSchedule` from there, and

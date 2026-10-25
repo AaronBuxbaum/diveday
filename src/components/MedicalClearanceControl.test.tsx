@@ -25,12 +25,21 @@ const COPY: MedicalClearanceCopy = {
   confirm: "Record the answer",
   neverMind: "Never mind",
   earlierLetterConfirm: null,
+  useDiverForm: null,
 };
 
 afterEach(cleanup);
 
-function open(copy: MedicalClearanceCopy) {
-  render(<MedicalClearanceControl action={() => {}} copy={copy} today="2026-10-20" defaultOpen />);
+function open(copy: MedicalClearanceCopy, diverFormRecordId: string | null = null) {
+  render(
+    <MedicalClearanceControl
+      action={() => {}}
+      copy={copy}
+      today="2026-10-20"
+      defaultOpen
+      diverFormRecordId={diverFormRecordId}
+    />,
+  );
 }
 
 describe("MedicalClearanceControl", () => {
@@ -47,5 +56,15 @@ describe("MedicalClearanceControl", () => {
   it("asks nothing extra when there is no earlier referral", () => {
     open(COPY);
     expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("offers the form the diver sent, unticked, carrying its release", () => {
+    open({ ...COPY, useDiverForm: "Use the form the diver sent as the evaluation" }, "rec-1");
+    const box = screen.getByRole("checkbox", {
+      name: "Use the form the diver sent as the evaluation",
+    });
+    expect(box).not.toBeChecked();
+    expect(box).toHaveAttribute("name", "diverFormRecordId");
+    expect(box).toHaveAttribute("value", "rec-1");
   });
 });

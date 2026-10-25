@@ -63,6 +63,7 @@
     "documentChooseAnother": "Elige otro archivo",
     "recording": "Registrando…",
     "confirm": "Registrar la respuesta",
+    "useDiverForm": "Usar como evaluación el formulario que envió el buceador. Ábrelo primero y escribe el nombre del médico que aparece en él.",
     "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}."
   },
   "waiverSend": {
@@ -256,6 +257,7 @@
   },
   "shopNav": {
     "language": "Idioma",
+    "boatMode": "Modo barco",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
     "signOutPending": "Cerrando sesión…",
@@ -402,8 +404,8 @@
       "statsAwaiting": "Pendientes",
       "rollCallCompleteHeading": "Pase de lista completo",
       "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
-      "allAboard": "Todos tienen un resultado y todos están a bordo.",
-      "someNotBoarded": "Todos tienen un resultado, con {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
+      "allAboard": "Todos los de esta lista tienen un resultado y están a bordo.",
+      "someNotBoarded": "Todos los de esta lista tienen un resultado, con {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
       "crewHeading": "Tripulación a bordo",
       "crewAllAccountedFor": "{assigned, plural, one {# tripulante, contabilizado} other {Los # tripulantes, contabilizados}}",
       "crewNoneAssigned": "No hay tripulación asignada a esta salida, así que no hay a quién pasar lista. La tripulación se agrega en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
@@ -411,6 +413,9 @@
       "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
       "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}} porque se guardó antes de que el pase de lista de tripulación funcionara sin conexión. Actualiza la copia la próxima vez que tengas cobertura o regístralos en el manifiesto en vivo.",
       "buddyReadOnlyHere": "Las parejas de buceo se muestran tal como se guardaron. Si alguien de la pareja está a bordo se registra en el pase de lista en vivo, y esta copia no lo sigue.",
+      "copyCaveatUnanswered": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con el listado en vivo cuando DiveDay responda.",
+      "copyCaveatOffline": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con esta lista.",
+      "copyCaveatOnline": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con el listado en vivo.",
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}}",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",

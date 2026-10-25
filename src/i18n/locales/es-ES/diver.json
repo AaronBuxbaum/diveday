@@ -205,6 +205,7 @@
     "calendarDockCall": "Presentación en el muelle a las {dockCall}. Salimos a las {departure}.",
     "calendarMeetingPoint": "Punto de encuentro: {place}.",
     "packBring": "Trae",
+    "packLogbook": "Bitácora de buceo",
     "packRenting": "Alquilas",
     "packProvided": "Lo ponemos nosotros",
     "packNothingRequested": "Aún no has pedido nada",
@@ -347,7 +348,8 @@
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera.",
     "runLine": "Sale {cadence} · la próxima, {date}",
     "crewToBeConfirmed": "{role} · por confirmar",
-    "changedAt": "Cambiado el {when}"
+    "changedByShop": "Cambiado por el centro el {when}",
+    "changedByCrew": "Cambiado por la tripulación el {when}"
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -451,10 +453,8 @@
     },
     "confirmationOnTheWay": "Tu confirmación va en camino por correo.",
     "confirmationWithWaiverOnTheWay": "Tu confirmación va en camino por correo. Firmar tu exención es el primer paso.",
-    "alreadyDoor": {
-      "sendLink": "Envíame mi enlace",
-      "addSeat": "¿Vienes con alguien? Abre tu enlace y agrega una plaza para esa persona."
-    },
+    "sentHeading": "Te enviamos un correo",
+    "sentBody": "Enviamos un mensaje a la dirección que indicaste. Ahí dice qué sigue.",
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
     "continueToPayment": "Continuar al pago",
     "alsoOnTheSchedule": "También en el calendario",
@@ -1048,7 +1048,7 @@
     "hotelPickupFieldLabel": "Dónde te alojas",
     "hotelPickupPlaceholder": "Nombre del hotel, habitación o punto de referencia",
     "dietaryLabel": "¿Alguna preferencia para el almuerzo a bordo?",
-    "dietaryHint": "Solo para tu almuerzo. Una alergia alimentaria es un tema médico: avísale al centro antes de bucear.",
+    "dietaryHint": "Solo para tu almuerzo. Una alergia alimentaria es un tema médico: escríbela en el recuadro “Para la tripulación, en una emergencia” de la exención, o avísale a la tripulación en el briefing.",
     "dietaryPlaceholder": "Vegetariano, halal, sin cerdo…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Recogida a las {time}",
@@ -1178,8 +1178,18 @@
       "box": "Box {box}, pregunta {number}",
       "dental": "La pregunta dental",
       "returnHeading": "Cuando esté firmado",
-      "returnWithEmail": "Envía una foto del formulario firmado a <email>{emailAddress}</email> antes del día de tu buceo, o tráelo al centro antes de bucear.",
-      "returnToShop": "Trae el formulario firmado al centro antes de bucear."
+      "returnUpload": "Envía aquí una foto o un PDF del formulario firmado, con la firma del médico y la fecha a la vista. Solo el personal del centro puede abrirlo.",
+      "formLabel": "Formulario firmado",
+      "formChoose": "Elegir una foto o un PDF",
+      "formChooseAnother": "Elegir otro archivo",
+      "formSubmit": "Enviar el formulario",
+      "formSending": "Enviando…",
+      "formSent": "El centro ya tiene tu formulario firmado. No estás autorizado a bucear hasta que el personal lo haya revisado y te lo confirme.",
+      "formInvalid": "Envía una foto o un PDF de menos de {mb} MB.",
+      "formRate": "Demasiados intentos. Espera unos minutos y vuelve a intentarlo.",
+      "formUnavailable": "Ahora mismo no se puede enviar, así que usa una de las opciones de abajo.",
+      "returnWithEmail": "<online>¿No puedes enviarlo aquí?</online> Manda una foto a <email>{emailAddress}</email> antes del día de tu buceo, o tráelo al centro antes de bucear.",
+      "returnToShop": "<online>¿No puedes enviarlo aquí?</online> Trae el formulario firmado al centro antes de bucear."
     },
     "signing": "Firmando…",
     "beforeDockTitle": "Un paso rápido antes del muelle",
@@ -1234,7 +1244,7 @@
     "medicalAlertHeading": "Para la tripulación, en una emergencia",
     "medicalAlertIntro": "Lo que la tripulación debe saber si algo sale mal en el barco: una alergia y dónde está tu medicamento, diabetes, un inhalador. Déjalo en blanco si no hay nada.",
     "medicalAlertIntroMinor": "Lo que la tripulación debe saber sobre {name} si algo sale mal en el barco: una alergia y dónde está su medicamento, diabetes, un inhalador. Déjalo en blanco si no hay nada.",
-    "medicalAlertNotQuestionnaire": "No reemplaza las preguntas médicas de arriba, y pueden leerla el propietario del centro, sus gerentes y la tripulación del barco.",
+    "medicalAlertNotQuestionnaire": "No reemplaza las preguntas médicas de arriba y nadie la revisa para decidir quién puede bucear. Pueden leerla el propietario del centro, sus gerentes y la tripulación del barco; díselo también a la tripulación en el briefing.",
     "medicalAlertEarlier": "Tu última exención aquí tenía una alerta médica para la tripulación. Si sigue siendo válida, vuelve a escribirla.",
     "medicalAlertCounterOne": "Queda 1 carácter",
     "medicalAlertCounterOther": "Quedan {count} caracteres",
@@ -1246,6 +1256,8 @@
     "full": "{tripTitle}",
     "gear": "Equipo de alquiler",
     "gearForDiver": "Equipo de alquiler — {name}",
+    "nitrox": "Cargas de nitrox",
+    "nitroxForDiver": "Cargas de nitrox — {name}",
     "tip": "Propina para la tripulación",
     "seatFull": "{tripTitle} ({type})",
     "seatDeposit": "Depósito — {tripTitle} ({type})"
@@ -3690,6 +3702,7 @@
     "sendWaiver": "Enviar exención",
     "tripLine": "Arrecife de dos tanques · 7:30",
     "rollCallHeading": "Pase de lista · Antes de zarpar",
+    "afterDiveRollCallHeading": "Pase de lista · Después de la inmersión 1",
     "bookingCard": {
       "label": "Pecio Spiegel Grove",
       "requirement": "Esta salida es para buceadores con Advanced Open Water o superior y certificación de Profundidad.",
@@ -3910,7 +3923,10 @@
         },
         "aboard": {
           "when": "En el muelle, y después de cada inmersión",
-          "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella"
+          "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella",
+          "note1": "El recuento de cada inmersión, buceadores y tripulación por su nombre, sigue abierto hasta contar a bordo a todos los que zarparon.",
+          "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal.",
+          "mockupLabel": "El pase de lista de la tripulación después de la inmersión 1: 8 de 9 buceadores a bordo, un nombre marcado a bordo y el último aún por llamar."
         },
         "recap": {
           "when": "Después de que vuelva el barco",
@@ -4605,7 +4621,7 @@
     "pricing": {
       "heroTitle": "Lo que paga un centro, línea por línea",
       "lockNote": "El precio de hoy, congelado dos años para los centros fundadores.",
-      "trialNote": "La prueba es un centro tuyo, gratis 3 semanas sin tarjeta, y nada se apaga cuando termina.",
+      "trialNote": "La prueba es un centro tuyo, gratis 3 semanas sin tarjeta, y nada se apaga cuando termina. Para pasar al plan de pago, escribe a {email}.",
       "earlyAccessBadge": "Acceso anticipado",
       "invoice": {
         "title": "La factura",
@@ -4709,7 +4725,7 @@
         "invoiceFeeValue": "{percent} del dinero cobrado con tarjeta a través de DiveDay",
         "ours": "{hasBase, select, yes {DiveDay cobra {base} al mes más el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.} other {DiveDay no tiene cuota mensual. Su tarifa es el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.}} No se suma nada al precio de tu cliente.",
         "whatCountsQuestion": "¿Qué cuenta para el {percent}?",
-        "whatCountsAnswer": "El dinero que tu centro cobra con tarjeta a través de DiveDay: las reservas hechas por internet, y las facturas y los paquetes que los buceadores pagan con tarjeta. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el dinero cobrado en el mostrador y el historial importado del sistema que usabas antes nunca cuentan. Un reembolso registrado antes de que cierre el mes se descuenta de ese mes."
+        "whatCountsAnswer": "El dinero que tu centro cobra con tarjeta a través de DiveDay: las reservas hechas por internet, y las facturas y los paquetes que los buceadores pagan con tarjeta. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el dinero cobrado en el mostrador y el historial importado del sistema que usabas antes nunca cuentan. Un reembolso se descuenta del mes en que se registra."
       }
     },
     "privacy": {
@@ -4856,6 +4872,22 @@
       "payments": {
         "heading": "El dinero",
         "body": "Los buceadores pagan al centro, no a nosotros. Los pagos con tarjeta pasan por la cuenta de Stripe del propio centro, así que el dinero del centro nunca está con DiveDay e irse no significa sacarnos fondos. A esos pagos se les aplican las comisiones y condiciones de Stripe. Lo que cobra DiveDay por sí mismo está en la página de precios."
+      },
+      "percentPlan": {
+        "heading": "Planes con precio en un porcentaje de los pagos con tarjeta",
+        "intro": "A un centro que se da de alta con una solicitud nueva le podemos ofrecer un plan con precio en una parte del dinero que recibe en pagos con tarjeta a través de DiveDay, en lugar del precio fijo. Los centros que ya usan DiveDay siguen con el precio fijo mensual. En ese plan:",
+        "feeTerm": "La tarifa",
+        "feeBody": "el {percent} del dinero que tu centro recibe en pagos con tarjeta a través de DiveDay en un mes calendario{hasBase, select, yes {, con una cuota base de {base} cada mes además} other {}}. El mes sigue la zona horaria de tu centro.",
+        "countsTerm": "Qué cuenta",
+        "countsBody": "los pagos con tarjeta que tu centro recibe a través de DiveDay con Stripe Connect: reservas por internet, facturas y paquetes. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el efectivo del mostrador, el dinero marcado como pagado en el mostrador y el historial importado de otro sistema nunca cuentan.",
+        "refundsTerm": "Reembolsos",
+        "refundsBody": "un reembolso se descuenta en el mes en que se registra el reembolso: sale del dinero con tarjeta del primer estado de cuenta mensual que se emita después de registrarlo, sea cual sea el mes en que se cobró el pago. Lo que el dinero con tarjeta de ese mes no cubra pasa al estado de cuenta siguiente, de modo que una comisión nunca queda por debajo de cero.",
+        "statementTerm": "Un estado de cuenta mensual",
+        "statementBody": "a principios del mes siguiente, Ajustes le muestra a tu centro el dinero del mes, la tasa y la tarifa, y la tarifa se cobra con tu suscripción a DiveDay.",
+        "whoPaysTerm": "Quién paga la tarifa",
+        "whoPaysBody": "el centro, nunca el buceador. DiveDay no suma nada al precio ni al pago del buceador.",
+        "noticeTerm": "Cambios en el plan",
+        "noticeBody": "avisamos a tu centro con al menos 30 días de anticipación antes de cambiar la tasa, la cuota base o lo que cuenta para la tarifa."
       },
       "data": {
         "heading": "De quién son los datos",
@@ -5352,7 +5384,12 @@
     },
     "seatAlreadyHeld": {
       "subject": "Ya tienes una plaza en {tripTitle}",
-      "body": "Alguien usó un enlace para reclamar una plaza de {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
+      "body": "Alguien usó un enlace para reclamar una plaza de {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada.",
+      "bookingBody": "Alguien intentó reservar {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
+    },
+    "partyNotBooked": {
+      "subject": "No se reservó tu grupo para {tripTitle}",
+      "body": "No pudimos reservar juntos a tu grupo para {tripTitle} el {date} con {shopName}, así que no se reservó nada. Para intentarlo otra vez, reserva a cada persona por separado, y cada una recibe su propio enlace."
     },
     "tripBlowout": {
       "subject": "Salida cancelada: {tripTitle}",
@@ -5413,6 +5450,10 @@
       "body": "Tu plaza en {tripTitle} sigue reservada. Solo falta terminar de pagar.",
       "pickUp": "Continúa justo donde lo dejaste",
       "finishPaying": "Terminar de pagar"
+    },
+    "flySafeCorrection": {
+      "subject": "Cambio en cuándo puedes volar: {tripTitle}",
+      "body": "La salida {tripTitle} ahora incluye inmersiones con descompresión, así que el tiempo para volar de nuestro recordatorio ya no aplica. Pregúntale a la tripulación cuánto esperar antes de volar."
     },
     "tripReminder": {
       "weekSubject": "Sales esta semana: {tripTitle}",
@@ -5883,7 +5924,7 @@
   "embed": {
     "book": "Reservar",
     "enrol": "Inscribirme",
-    "askToBeTold": "Avísenme si se libera un asiento"
+    "askToBeTold": "Avísame si se libera una plaza"
   },
   "shopYear": {
     "card": {

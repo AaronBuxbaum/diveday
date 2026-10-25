@@ -8,7 +8,10 @@ import { proseLinkClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import { planCopyParams } from "@/lib/billing/plan-display";
+import { type PlanTerms, termsFor } from "@/lib/billing/pricing-plans";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { pricingConfig } from "@/lib/pricing-flags";
 import { openGraphSite } from "@/lib/site-metadata";
 
 // `instant = true` — see the note on `/privacy`, and ADR
@@ -46,10 +49,16 @@ export const metadata: Metadata = {
  * claim `docs/product/marketing.md` forbids, and conceding it loudly is worth
  * more than asserting it.
  *
- * The price is **not** restated here. H-12 requires one source for that number,
- * which is `earlyAccessPrice` (`src/lib/marketing.ts`) rendered on `/pricing`;
- * this page points there instead. A terms page quoting a stale figure is a
- * worse problem than a terms page that does not quote one.
+ * The flat price is **not** restated here. H-12 requires one source for that
+ * number, which is `earlyAccessPrice` (`src/lib/marketing.ts`) rendered on
+ * `/pricing`; this page points there instead. A terms page quoting a stale
+ * figure is a worse problem than a terms page that does not quote one.
+ *
+ * The percent plan's clause (#2947, ADR 20261022-pricing-ab-test) does quote
+ * its rate, because the rate is the clause; it reads the one source the
+ * billing reads (`pricingConfig`), so the page and the bill cannot disagree.
+ * It shows whether or not `PRICING_TEST` is on: a shop can be on that plan by
+ * a deal made by hand while the public test is off.
  *
  * Linked from the marketing footer, which carries both legal pages, and from
  * nowhere else — not the marketing nav, not `/onboard`. See the note on
@@ -58,12 +67,13 @@ export const metadata: Metadata = {
  */
 export default async function TermsPage() {
   const locale = await requestLocale();
+  const percentPlan = termsFor("percent_of_volume", pricingConfig());
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <TermsBody locale={locale} />
+      <TermsBody locale={locale} percentPlan={percentPlan} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
@@ -71,12 +81,20 @@ export default async function TermsPage() {
   );
 }
 
-/** Cached per negotiated locale — no session-scoped content anywhere on it. */
-async function TermsBody({ locale }: { locale: DiverLocale }) {
+/**
+ * Cached per negotiated locale and per percent-plan numbers, so a changed
+ * `PRICING_PERCENT_*` value is a new cache entry. No session-scoped content.
+ */
+async function TermsBody({ locale, percentPlan }: { locale: DiverLocale; percentPlan: PlanTerms }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
   const p = (key: string) => t(`marketing.terms.${key}` as Parameters<typeof t>[0]);
+  const percent = (key: string) =>
+    t(
+      `marketing.terms.percentPlan.${key}` as Parameters<typeof t>[0],
+      planCopyParams(percentPlan, locale),
+    );
 
   return (
     <LegalDocument
@@ -101,6 +119,20 @@ async function TermsBody({ locale }: { locale: DiverLocale }) {
 
       <LegalSection heading={p("payments.heading")}>
         <p>{p("payments.body")}</p>
+      </LegalSection>
+
+      <LegalSection heading={p("percentPlan.heading")}>
+        <p>{p("percentPlan.intro")}</p>
+        <LegalTermList
+          items={[
+            { term: percent("feeTerm"), body: percent("feeBody") },
+            { term: percent("countsTerm"), body: percent("countsBody") },
+            { term: percent("refundsTerm"), body: percent("refundsBody") },
+            { term: percent("statementTerm"), body: percent("statementBody") },
+            { term: percent("whoPaysTerm"), body: percent("whoPaysBody") },
+            { term: percent("noticeTerm"), body: percent("noticeBody") },
+          ]}
+        />
       </LegalSection>
 
       <LegalSection heading={p("data.heading")}>

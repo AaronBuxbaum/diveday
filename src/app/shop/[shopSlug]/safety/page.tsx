@@ -30,6 +30,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type MonthFigure, MonthFigures } from "../reports/_components/MonthFigures";
 import { SafetyLists } from "./_components/SafetyLists";
+import { safetyMonthTiles } from "./_components/safety-month-tiles";
 
 // Paints from its own `loading.tsx`, like Reports (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -206,6 +207,15 @@ export default async function SafetyReportPage({
     },
   ];
 
+  const monthTiles = safetyMonthTiles({
+    t,
+    safety,
+    filed: incidents.length - draftReports,
+    drafts: draftReports,
+    activityHref,
+    staffingHref: shop.crewScheduleEnabled ? shopPath(shopSlug, "staffing") : null,
+  });
+
   function noCrewDetail(): Pick<MonthFigure, "detail" | "detailTone"> {
     const parts = [
       safety.noCrewDepartures.length > 0
@@ -283,10 +293,6 @@ export default async function SafetyReportPage({
           </p>
         </div>
       ) : null}
-      <p className="mb-6 max-w-prose text-muted">
-        {t(year ? "incidents.safety.year.intro" : "incidents.safety.intro")}
-      </p>
-
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>
           {year ? String(year.number) : monthLabel(current, locale)}
@@ -343,22 +349,15 @@ export default async function SafetyReportPage({
         />
       ) : year ? (
         // The year is the figures alone: the lists behind them stay on each
-        // month. The boarding caveat goes with them (review F5): this is the
-        // page printed for a third party.
-        <div>
-          <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
-          <p className="mt-3 max-w-prose text-sm text-muted">
-            {t("incidents.safety.boardingNote")}
-          </p>
-        </div>
+        // month. This is the page printed for a third party.
+        <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
       ) : (
         <div className="space-y-10">
-          <div>
-            <MonthFigures label={t("incidents.safety.figuresLabel")} figures={figures} />
-            <p className="mt-3 max-w-prose text-sm text-muted">
-              {t("incidents.safety.boardingNote")}
-            </p>
-          </div>
+          <MonthFigures
+            label={t("incidents.safety.figuresLabel")}
+            figures={monthTiles}
+            columns={4}
+          />
           <SafetyLists
             month={safety}
             incidents={incidents}

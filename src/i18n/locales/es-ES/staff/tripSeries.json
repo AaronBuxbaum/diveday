@@ -18,7 +18,6 @@
     "saving": "Guardando…",
     "stopRepeating": "Dejar de repetir",
     "startRepeating": "Volver a repetir",
-    "editCadence": "Cambiar los días en que sale",
     "editCadenceDescription": "Agregar un día lo pone en el calendario al momento. Quitar uno no toca las fechas ya programadas: te las mostramos, con quién tiene reserva, y te preguntamos.",
     "saveCadence": "Guardar los días",
     "offCadenceHeading": "{count, plural, one {# fecha del calendario ya no forma parte de esta salida:} other {# fechas del calendario ya no forman parte de esta salida:}}",

@@ -66,8 +66,10 @@ test("a lens narrows the board, and every row left wears its word", {
   await expect(
     list(page).getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
   ).not.toHaveCount(0);
-  // Nothing is narrowed yet, so the card claims the shop's own next boat.
-  await expect(nextBoat(page)).toHaveAccessibleName("Next boat with space");
+  // Nothing is narrowed yet, and the board's first row is the shop's next boat
+  // with space, so no card repeats it above the list (visual review
+  // 2026-10-24, B17).
+  await expect(nextBoat(page)).toHaveCount(0);
 
   await rail(page).getByRole("link", { name: "After dark", exact: true }).click();
 
@@ -91,10 +93,10 @@ test("a lens narrows the board, and every row left wears its word", {
   await expect(
     list(page).getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" }),
   ).toHaveCount(0);
-  // And the card says which question it answered (issue #1391): the lens can
-  // hide an earlier bookable boat, so "Next boat with space" on its own would
-  // be a claim about a board the reader is not looking at.
-  await expect(nextBoat(page)).toHaveAccessibleName("Next boat with space in this view");
+  // The narrowed board's first row has space too, so no card repeats it
+  // (B17). The card's narrowed name, "in this view" (issue #1391), is pinned
+  // where a full boat leads a filtered board: next-departure.spec.ts.
+  await expect(nextBoat(page)).toHaveCount(0);
 });
 
 test("'Every departure' puts the whole board back", { tag: READ_ONLY }, async ({ page }) => {

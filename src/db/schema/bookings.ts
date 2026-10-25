@@ -364,6 +364,19 @@ export const bookings = pgTable(
     rescheduleMissedFrom: timestamp("reschedule_missed_from", { withTimezone: true }),
     rescheduleMissedPlace: boolean("reschedule_missed_place").notNull().default(false),
     /**
+     * **The fly-safe wait the night-before email told this seat, in hours**
+     * (issue #2927; H-150). Written once that email is sent with the line, so
+     * a departure later marked as decompression diving knows exactly who holds
+     * a figure that no longer applies. Null on every seat told nothing.
+     */
+    flySafeHoursTold: integer("fly_safe_hours_told"),
+    /**
+     * When this seat was sent the one correction to that figure (issue
+     * #2927), claimed before the send so a diver hears it once. Null while
+     * nothing is owed or the correction has not gone.
+     */
+    flySafeCorrectedAt: timestamp("fly_safe_corrected_at", { withTimezone: true }),
+    /**
      * **Whoever booked this seat said its diver is under 18** (the "Under 18"
      * box on the public party form; H-21 follow-up, decision of 2026-10-13).
      * The guardian co-signature rule reads it beside the date of birth

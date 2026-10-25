@@ -578,6 +578,29 @@ export function packingConfidence(
   };
 }
 
+/**
+ * Whether the packing list suggests a logbook (issue #2795). The shop decides
+ * whether it suggests one at all (`shops.packing_logbook`). It is left off for
+ * a student on a try-dive session (`courses.is_intro_course`, Discover Scuba)
+ * who holds no certification: a taster certifies nothing and has no dives to
+ * log. Every other course keeps it, since an Open Water student's training
+ * dives are logged and signed (dive-domain review). Flags and facts, never a
+ * match on the shop's own free-text list.
+ */
+export function packsLogbook(input: {
+  shopSuggests: boolean;
+  introCourseSession: boolean;
+  /**
+   * At least one live certification card on file for this diver, verified or
+   * not. A surface that cannot know (the confirmation email, the paper pass)
+   * says false: on a try-dive the line is then left off, which costs a
+   * certified diver nothing they need.
+   */
+  holdsCertification: boolean;
+}): boolean {
+  return input.shopSuggests && (!input.introCourseSession || input.holdsCertification);
+}
+
 export function conditionsChangedSinceBooking(
   conditionsUpdatedAt: Date | null,
   conditionsBriefedAt: Date | null,

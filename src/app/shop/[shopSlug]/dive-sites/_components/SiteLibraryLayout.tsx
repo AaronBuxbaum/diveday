@@ -27,12 +27,14 @@ export function SiteLibraryLayout({
 
   // **The list first, the map under it** (visual review 2026-10-24, A35):
   // the sites are what a staffer came to open; the map is a second reading of
-  // the same rows, in a 16:9 box on a muted ground that stays empty while the
-  // map library loads.
+  // the same rows, on a muted ground that stays empty while the map library
+  // loads. The box keeps the map's old heights: a 16:9 box at the library's
+  // width is under 400px tall, where Leaflet clusters every pin and no site
+  // can be opened from the map without zooming first.
   return (
     <div className="mt-6 flex flex-col gap-8">
       <div className="min-w-0 w-full">{children}</div>
-      <div className="aspect-[16/9] w-full overflow-hidden rounded-xl border border-border bg-surface-sunken">
+      <div className="h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface-sunken sm:h-[540px] lg:h-[620px]">
         <QuietSiteMap
           viewportStorageKey={viewportStorageKey}
           center={defaultCenter}

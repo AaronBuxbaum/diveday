@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { forgetReadyPageCopy, READY_CACHE_NAME, readyCopyKeepUntil } from "./ready-offline";
+import {
+  forgetReadyPageCopy,
+  forgetThisReadyPage,
+  READY_CACHE_NAME,
+  READY_FORGOTTEN_CACHE_NAME,
+  readyCopyKeepUntil,
+} from "./ready-offline";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -51,7 +57,7 @@ describe("forgetReadyPageCopy", () => {
     });
 
     expect(await forgetReadyPageCopy()).toBe(true);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
+    expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
     expect(unregistered).toEqual(["https://dive.day/ready/"]);
   });
 
@@ -78,7 +84,7 @@ describe("forgetReadyPageCopy", () => {
     });
     await forgetReadyPageCopy();
     // Security review 2, N2: another tab's save cannot land after the delete.
-    expect(steps).toEqual(["unregister", "delete"]);
+    expect(steps).toEqual(["unregister", "delete", "delete"]);
   });
 
   it("answers false, and throws nothing, when the cache cannot be deleted", async () => {
@@ -112,7 +118,7 @@ describe("forgetReadyPageCopy", () => {
     });
     expect(await forgetReadyPageCopy()).toBe(true);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
+    expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
   });
 
   it("still deletes the copy when the registrations cannot be read", async () => {
@@ -127,12 +133,46 @@ describe("forgetReadyPageCopy", () => {
       serviceWorker: { getRegistrations: () => Promise.reject(new Error("insecure")) },
     });
     expect(await forgetReadyPageCopy()).toBe(true);
-    expect(deleted).toEqual([READY_CACHE_NAME]);
+    expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
   });
 
   it("answers false, and throws nothing, in a browser with no Cache Storage", async () => {
     vi.stubGlobal("caches", undefined);
     vi.stubGlobal("navigator", {});
     expect(await forgetReadyPageCopy()).toBe(false);
+  });
+});
+
+/**
+ * **The cancelled landing tells the worker** (issue #2979, security review
+ * 2026-10-24, finding 1): a self-cancel's redirect is not a navigation the
+ * worker sees, so the card asks it to forget this page's copy.
+ */
+describe("forgetThisReadyPage", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("asks the worker controlling this page to forget its copy, and says what it answered", async () => {
+    const posted: unknown[] = [];
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: {
+          postMessage: (data: unknown, [port]: MessagePort[]) => {
+            posted.push(data);
+            port?.postMessage({ ok: true });
+          },
+        },
+      },
+    });
+    expect(await forgetThisReadyPage()).toBe(true);
+    expect(posted).toEqual([{ type: "FORGET_READY_PAGE" }]);
+  });
+
+  it("answers false, never throws, with no worker controlling the page", async () => {
+    vi.stubGlobal("navigator", { serviceWorker: { controller: null } });
+    expect(await forgetThisReadyPage()).toBe(false);
+    vi.stubGlobal("navigator", {});
+    expect(await forgetThisReadyPage()).toBe(false);
   });
 });

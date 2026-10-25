@@ -2,6 +2,7 @@ import Link from "next/link";
 import { RowMenu } from "@/components/RowMenu";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
 import type { DateInterestRow } from "@/db/interest-dates";
@@ -88,9 +89,15 @@ export function RequestLedgerRow({
   shopSlug,
   shopName,
   markDoneAction,
+  openDeparture,
   t,
 }: {
   request: DateInterestRow;
+  /**
+   * The day's one act, on each request it answers (visual review A23): the
+   * group header no longer carries it. Absent on the undated tail.
+   */
+  openDeparture?: { href: string; label: string };
   locale: string;
   timezone: string;
   shopSlug: string;
@@ -145,13 +152,10 @@ export function RequestLedgerRow({
       pad="lg"
       // The booking link on the name's line, not centred on the whole request.
       align="first-line"
-      // Below `sm` the booking link drops beneath the request, which takes
-      // the row's whole width: beside a 112px link column the request wrapped
-      // in 230px (K-462). There the link's unseen lower 12px sinks into the
-      // row's inset (`block-end-phone`), or the row has 24px under the word
-      // against 12px over the request; its box then ends on the rule, so its
-      // ring is drawn inside it.
-      stacked
+      // The "⋯" stays on the name's line at every width (visual review A23):
+      // the request wraps beneath the name, the menu never drops a line.
+      // `first-line` aligns on the baseline from `sm`; a phone takes the same.
+      className="max-sm:items-baseline"
       trailing={
         <RowMenu label={t("requests.moreFor", { name })} panelClassName="w-60">
           <Link
@@ -240,6 +244,14 @@ export function RequestLedgerRow({
             </p>
           ) : null}
           {request.message ? <p className="mt-1 text-sm text-pretty">{request.message}</p> : null}
+          {openDeparture ? (
+            <Link
+              href={openDeparture.href}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+            >
+              {openDeparture.label}
+            </Link>
+          ) : null}
         </div>
       </div>
     </LedgerRow>

@@ -1,17 +1,14 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { type WeatherCalls, weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
-import { crewSheetForMonth } from "@/db/crew-sheet";
 import { bookingLeadTimes } from "@/db/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { MonthRef } from "@/lib/calendar";
-import { assembleCrewSheet } from "@/lib/crew-sheet";
-import { formatMoneyCents, joinFacts, weekdayNames } from "@/lib/format";
+import { weekdayNames } from "@/lib/format";
 import { leadTimeLines, wholePercent } from "@/lib/lead-time";
 
 /**
- * **The month's owner lines** (fifth loop, items 27, 31 and 34): what the
- * weather called off, who the tips go to, and how far ahead boats sell. Each
+ * **The month's owner lines** (fifth loop, items 27 and 34): what the
+ * weather called off, and how far ahead boats sell. Each
  * is a sentence under the figures it explains, and each says nothing when
  * there is nothing to say.
  */
@@ -20,42 +17,11 @@ import { leadTimeLines, wholePercent } from "@/lib/lead-time";
 export async function readMonthOwner(
   db: DbExecutor,
   shop: { id: string; timezone: string },
-  month: MonthRef,
   window: { startUtc: Date; endUtc: Date },
-  locale: string,
 ) {
-  const [weather, crew] = await Promise.all([
-    weatherCallsInWindow(db, shop.id, { ...window, timeZone: shop.timezone }),
-    crewSheetForMonth(db, shop.id, shop.timezone, month),
-  ]);
-  return { weather, crewRows: assembleCrewSheet({ ...crew, locale }) };
-}
-
-/**
- * **The Tips figure's split** (item 31): "Equal shares: Keiko $180.00 · Sal $160.00",
- * the crew sheet's own equal shares, so the payday conversation reads off the
- * tile instead of a download in Settings. Tips on a departure nobody crewed
- * stay on the shop's line, as the sheet keeps them. Shares keep the currency's
- * minor units so they reconcile with the pool and the crew export (#2858).
- */
-export function tipsSplitLine(
-  rows: ReturnType<typeof assembleCrewSheet>,
-  t: StaffTranslator,
-  currency: string,
-  locale: string,
-): string | undefined {
-  const shares = rows
-    .filter((row) => row.tipsCents > 0)
-    .sort((left, right) => right.tipsCents - left.tipsCents)
-    .map((row) =>
-      t("reports.tipsShare", {
-        name: row.personName ?? t("settings.crewSheet.unassigned"),
-        amount: formatMoneyCents(row.tipsCents, currency, locale),
-      }),
-    );
-  // The sheet splits equally; many shops split by role, so the line says
-  // which rule it shows rather than reading as the shop's own (review N6).
-  return shares.length > 0 ? t("reports.tipsSplit", { shares: joinFacts(shares) }) : undefined;
+  return {
+    weather: await weatherCallsInWindow(db, shop.id, { ...window, timeZone: shop.timezone }),
+  };
 }
 
 /**

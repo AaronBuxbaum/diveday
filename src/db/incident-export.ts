@@ -12,9 +12,14 @@ import {
   ROSTER_CHANGE_CODES,
   rosterChangeFromActivity,
   rosterCutoff,
+  seatBoardingInstants,
 } from "@/lib/incident-export";
 import { canPersonExportIncidentRecord } from "./authz";
-import { departureBoatId, departureBoatSafetySnapshot } from "./boat-safety";
+import {
+  departureBoatId,
+  departureBoatSafetySnapshot,
+  departureChecklistAnswer,
+} from "./boat-safety";
 import { snagsOpenWhenSailed } from "./boat-snags";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
@@ -113,17 +118,24 @@ export async function getIncidentExport(
   // Which signature governs, and whether it still stands, as of when the boat
   // was due out (domain re-review 2026-10-16, item 3), the instant the
   // builder states it at: never as of the printing, which moves.
-  const readinessRows = await listTripReadiness(
-    db,
-    shopId,
-    tripId,
-    new Date(
-      rosterCutoff(departure.trip, [
-        ...diverEventRows.map(({ event }) => event),
-        ...crewEventRows.map(({ event }) => event),
-      ]),
-    ),
+  const cutoff = new Date(
+    rosterCutoff(departure.trip, [
+      ...diverEventRows.map(({ event }) => event),
+      ...crewEventRows.map(({ event }) => event),
+    ]),
   );
+  // Each seat's release as it stood when that diver boarded, or at the cutoff
+  // with no departure mark (issue #3002); the terms as they stood when the
+  // last of them boarded.
+  const boardedAt = seatBoardingInstants(diverEventRows.map(({ event }) => event));
+  const lastBoarded = [...boardedAt.values()].reduce(
+    (latest, at) => (at.getTime() > latest.getTime() ? at : latest),
+    cutoff,
+  );
+  const readinessRows = await listTripReadiness(db, shopId, tripId, cutoff, {
+    recordsAsOf: (bookingId) => boardedAt.get(bookingId) ?? cutoff,
+    termsAsOf: lastBoarded,
+  });
 
   // A paper waiver and a certification review are accountable staff acts, not
   // anonymous completions. Resolve only the ids the governing evidence names,
@@ -267,6 +279,12 @@ export async function getIncidentExport(
   // lock, so a gate that drifted wider fails closed rather than printing "no
   // reports" (auditor review 2026-10-16, item 12).
   if (reportRows === null) return null;
+  // The crew's checklist answer at the snapshot's own instant (issue 2725),
+  // read from the taps as they happened, so a tap synced after the count
+  // still counts as of when it was made.
+  const boatChecklist = boatSafety
+    ? await departureChecklistAnswer(db, shopId, tripId, boatSafety.capturedAt)
+    : null;
   const rosterChanges = rosterRows.flatMap((row): IncidentRosterChangeInput[] => {
     const change = rosterChangeFromActivity(row);
     return change ? [change] : [];
@@ -288,6 +306,7 @@ export async function getIncidentExport(
     action: event.action,
     memberNames: event.memberNames,
     recordedByName: event.recordedByName,
+    adultsConfirmed: event.adultsConfirmed,
     occurredAt: event.occurredAt,
     createdAt: event.createdAt,
   }));
@@ -366,7 +385,7 @@ export async function getIncidentExport(
       };
     }),
     sailedWithSnags,
-    boatSafety,
+    boatSafety: boatSafety && { ...boatSafety, checklist: boatChecklist },
     departureBoatId: boatId,
     generatedAt,
     generatedByName,

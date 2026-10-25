@@ -171,8 +171,9 @@ each action. A manager is refused, as is a session whose JWT still says owner.
   grant founding free months by hand". Aaron amended H-12 on 2026-10-14 to keep it.
   - The column is inert unless the script writes it.
   - A shop without it reads exactly as before: trialing, then trial ended.
-- **The pricing FAQ goes stale once billing is turned on.** It still says to move to paid by
-  emailing `onboarding@dive.day` (`marketing.pricing.faq.trialMeaning`). Aaron decided on
+- **The pricing page's trial note goes stale once billing is turned on.** It still says to move to
+  paid by emailing `onboarding@dive.day` (`marketing.pricing.trialNote`; the FAQ row it replaced
+  left on 2026-10-24). Aaron decided on
   2026-10-14 (H-12) that it stays until billing goes live.
 - Taxes are untouched. Stripe Tax on DiveDay's own invoices is the finance owner's call
   (`docs/product/stakeholders/finance-and-tax.md`). Turning it on is a Stripe price and dashboard

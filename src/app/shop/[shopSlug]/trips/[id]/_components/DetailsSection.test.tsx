@@ -45,6 +45,7 @@ function renderDetails(
     laterDates: [],
   },
   shown: Trip = trip,
+  flySafeTold?: number,
 ) {
   return render(
     <DetailsSection
@@ -64,6 +65,7 @@ function renderDetails(
         hasShoreDiving: false,
         hasPoolDiving: false,
         rentalItems: [],
+        ...(flySafeTold === undefined ? {} : { flySafeTold }),
       }}
     />,
   );
@@ -135,5 +137,29 @@ describe("a session of a priced course", () => {
     renderDetails(undefined, session);
     const price = document.querySelector<HTMLInputElement>('input[name="priceDollars"]');
     expect(price?.type).toBe("number");
+  });
+});
+
+/**
+ * **Ticking decompression diving tells the staffer who holds a figure**
+ * (#2927): divers the night-before email told a fly-safe wait are counted
+ * beside the box, and the save corrects them.
+ */
+describe("DetailsSection — the decompression box and the divers told when to fly", () => {
+  it("counts the divers told a fly-safe wait beside the box", () => {
+    renderDetails(undefined, trip, 3);
+    expect(
+      screen.getByText(
+        "3 divers were emailed a time they could fly. Saving with this ticked sends each one a correction.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says one diver in the singular, and nothing when nobody was told", () => {
+    renderDetails(undefined, trip, 1);
+    expect(screen.getByText(/^1 diver was emailed a time they could fly\./)).toBeTruthy();
+    cleanup();
+    renderDetails(undefined, trip, 0);
+    expect(screen.queryByText(/emailed a time they could fly/)).toBeNull();
   });
 });

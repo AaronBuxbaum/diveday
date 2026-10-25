@@ -232,6 +232,7 @@
     "dateOfBirthLabel": "Date of birth",
     "adultAttestedHint": "18 or older, per {name}",
     "adultAttestedHintNoName": "18 or older, per staff",
+    "minorDeclaredHint": "Booked as under 18, no date on file",
     "optionalHint": "(optional)",
     "diveInsuranceFieldLabel": "Dive insurance",
     "diveInsurancePlaceholder": "DAN #12345",
@@ -239,8 +240,8 @@
     "emergencyContactPhoneLabel": "Emergency contact phone",
     "saving": "Saving…",
     "saveDetails": "Save details",
-    "visits": "{count, plural, one {# visit} other {# visits}}",
-    "visitsSince": "{count, plural, one {# visit} other {# visits}} since {since}",
+    "diveDays": "{count, plural, one {# dive day} other {# dive days}}",
+    "diveDaysSince": "{count, plural, one {# dive day} other {# dive days}} since {since}",
     "lastOut": "Last out {date}",
     "spent": "{amount} spent",
     "broughtFriends": "Brought {count, plural, one {# friend} other {# friends}}",
@@ -505,6 +506,10 @@
     "medicalClearanceRecordedEarlierHeld": "Recorded from the earlier letter. The diver’s other seat is still held by that earlier referral. Record the letter against it too.",
     "medicalClearanceDocumentFailed": "That evaluation file couldn’t be stored.",
     "medicalClearanceEvidenceRequired": "Name the physician, or attach their evaluation.",
+    "medicalClearanceDiverFormPhysician": "Type the physician’s name from the form the diver sent.",
+    "medicalClearanceDiverFormNotOpened": "Open the form the diver sent and check it before you use it.",
+    "diverFormNotUsed": "Form deleted. The diver can send another from their doctor’s page.",
+    "diverFormGone": "That form is no longer on file.",
     "medicalClearanceOutcomeRequired": "Say what the physician decided.",
     "medicalClearanceAnswerRecorded": "A physician’s answer is already on this record. Seat them on a departure and send a new release from there.",
     "medicalClearanceNoHold": "Nothing of this diver’s is waiting on medical review here.",
@@ -618,6 +623,7 @@
     "conversationUnanswered": "{count, plural, one {# unanswered} other {# unanswered}}",
     "noteCount": "{count, plural, one {# note} other {# notes}}",
     "noneOnFile": "None on file",
+    "certificationsNone": "None on file",
     "gearHeading": "Gear and sizes",
     "rentalFitOnFile": "Rental fit on file",
     "rentsFromUs": "Rents from us",
@@ -634,6 +640,10 @@
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
     "viewReferralRecord": "View the referral",
     "openClearanceDocument": "Open the physician’s evaluation",
+    "openDiverForm": "Open the signed form the diver sent on {date}",
+    "rejectDiverForm": "Can’t use this form",
+    "rejectingDiverForm": "Deleting…",
+    "evaluationFromDiver": "Sent by the diver",
     "openSignedRecord": "Open the signed waiver"
   },
   "details": {
@@ -641,7 +651,8 @@
     "summaryEmergency": "Emergency contact: {name}",
     "summaryEmergencyNoPhone": "Emergency contact: {name}, no phone number",
     "summaryEmergencyNoName": "Emergency contact: {phone}, no name",
-    "summaryNoEmergency": "No emergency contact"
+    "summaryNoEmergency": "No emergency contact",
+    "minorDeclaredNoDateOfBirth": "A booking says this diver is under 18, so their waiver needs a parent or guardian’s signature. Add the date of birth to settle it."
   },
   "lastDive": {
     "heading": "Last dive",

@@ -61,17 +61,23 @@ export {
   recordInPersonWaiver,
 } from "./waivers-in-person";
 export {
+  attachDiverMedicalForm,
   type DoctorReferral,
   type DoctorReferralAnswers,
+  diverMedicalFormOpen,
   doctorPageOpen,
   earlierReferralForOpenHold,
+  getDiverMedicalForm,
+  getDiverMedicalFormForHold,
   getDoctorReferral,
   getMedicalClearanceDocument,
   hasUnansweredMedicalHold,
   type MedicalEvaluationOutcome,
   type MedicalEvaluationResult,
+  type RejectDiverMedicalFormResult,
   type RetireMedicalRefusalResult,
   recordMedicalEvaluation,
+  rejectDiverMedicalForm,
   retireMedicalRefusal,
   revealDoctorReferral,
 } from "./waivers-medical";

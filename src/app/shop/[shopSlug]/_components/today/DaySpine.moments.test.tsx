@@ -102,14 +102,14 @@ describe("the good-news moments, beside a forecast still arriving", () => {
 
   it("never calls today's boats clear above a wind warning on one of them", async () => {
     const html = await prerenderSpine(cleanRoster, Promise.resolve([windRow]));
-    expect(html).toContain("Forecast 25 kt wind from NE.");
+    expect(html).toContain("Forecast 25 kt wind from NE");
     expect(html).not.toContain("Today’s boats are all clear");
     expect(html).not.toContain("Nothing is waiting on you");
   });
 
   it("never says nothing is waiting while a wind warning is", async () => {
     const html = await prerenderSpine([], Promise.resolve([windRow]));
-    expect(html).toContain("Forecast 25 kt wind from NE.");
+    expect(html).toContain("Forecast 25 kt wind from NE");
     expect(html).not.toContain("Nothing is waiting on you");
     expect(html).not.toContain("Today’s boats are all clear");
   });

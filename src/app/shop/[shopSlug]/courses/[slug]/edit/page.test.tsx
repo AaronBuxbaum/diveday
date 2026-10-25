@@ -49,7 +49,8 @@ vi.mock("@/db/courses", () => ({
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("@/lib/storage/limits", () => ({
+vi.mock("@/lib/storage/limits", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/storage/limits")>()),
   MAX_IMAGE_MB: 5,
   MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION: 8,
 }));
@@ -144,7 +145,7 @@ describe("EditCoursePage template update panel", () => {
  * and the refusal anchors still land on a section of the form.
  */
 describe("EditCoursePage sections", () => {
-  async function renderEditor() {
+  async function renderEditor(query: { error?: string; field?: string } = {}) {
     vi.mocked(requireShopSurface).mockResolvedValue({
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
@@ -155,7 +156,7 @@ describe("EditCoursePage sections", () => {
     return render(
       await EditCoursePage({
         params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
-        searchParams: Promise.resolve({}),
+        searchParams: Promise.resolve(query),
       }),
     );
   }
@@ -170,6 +171,23 @@ describe("EditCoursePage sections", () => {
     const closed = [...container.querySelectorAll("details[id]")].map((row) => row.id);
     for (const id of ["photos", "enroll", "fee-covers", "learningMaterialsJson", "faq"]) {
       expect(closed, `${id} is a closed row`).toContain(id);
+    }
+  });
+
+  it("opens the closed section holding the field a refused save names", async () => {
+    // The FAQ posts as `faqsJson`, and Included / Not included sit in what the
+    // fee covers: a refusal names the field, and its section opens around it.
+    for (const [field, section] of [
+      ["faqsJson", "faq"],
+      ["includes", "fee-covers"],
+      ["learningMaterialsJson", "learningMaterialsJson"],
+    ] as const) {
+      const { container, unmount } = await renderEditor({ error: "invalid", field });
+      expect(container.querySelector<HTMLDetailsElement>(`details#${section}`)?.open, field).toBe(
+        true,
+      );
+      expect(container.querySelector<HTMLDetailsElement>("details#photos")?.open).toBe(false);
+      unmount();
     }
   });
 

@@ -356,6 +356,8 @@ describe("the pricing page says the trial and card fees once", () => {
     it(`keeps the trial in the notes beside the price alone in ${locale}`, () => {
       const messages = marketingMessages(locale);
       expect(messages["marketing.pricing.trialNote"]).toBeDefined();
+      // How a trial becomes paid, through the upgrade inbox (marketing.md).
+      expect(messages["marketing.pricing.trialNote"]).toContain("{email}");
       expect(messages["marketing.pricing.faq.trialMeaning.answer"]).toBeUndefined();
       expect(messages["marketing.pricing.invoice.trial.label"]).toBeUndefined();
       expect(messages["marketing.pricing.notes.note4"]).toBeUndefined();

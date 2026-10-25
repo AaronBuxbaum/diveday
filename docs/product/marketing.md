@@ -201,7 +201,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   it once), the sign-up
   reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
   `onboarding@dive.day` — used only for "how do I move a trial shop to paid," on the pricing page's
-  trial FAQ, the sign-up form's trial note, and the shop Settings trial-status card (3-week trial,
+  trial note (the Notes list beside the invoice), the sign-up form's trial note, and the shop Settings trial-status card (3-week trial,
   soft expiry — see `src/lib/trial.ts`). Both addresses are hosted mailboxes reaching the same
   people as `aaron@dive.day` always did; see
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).

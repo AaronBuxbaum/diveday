@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
@@ -29,6 +29,7 @@ import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { getPendingMoveAsk, type PendingMoveAsk } from "./inbound-messages";
+import { peopleMinorDeclared } from "./minor-declared";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
@@ -41,7 +42,7 @@ import {
 } from "./rental-fit";
 import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBookedOnce } from "./trips";
+import { getTripWithBookedOnce, listTripScheduleDays } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { diveDayCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -317,6 +318,18 @@ export type ReadyPageData = {
    * (`nitroxCardOnFilePersonIds`).
    */
   nitroxCardOnFile: boolean;
+  /**
+   * At least one live certification card on file, verified or not; false
+   * while the seat is held. Decides only whether a course student's packing
+   * list suggests a logbook (`packsLogbook`) — never a gate.
+   */
+  holdsCertification: boolean;
+  /**
+   * How many days this departure meets on (`trip_schedule_days`), read on a
+   * course session only (0 elsewhere): its one-day plan is said on a
+   * one-meeting session alone (`SessionDayPlan`).
+   */
+  meetingDayCount: number;
   /** Projected: staff-only fit columns never reach the diver's browser. */
   rentalFit: DiverRentalFit | null;
   /** The one active, non-medical day-of request this booking has made. */
@@ -516,6 +529,10 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
       tripLunchAboard: trips.lunchAboard,
+      // Any live card, verified or not: whether a course student has dives to
+      // log (`packsLogbook`, issue #2795). In this row rather than a query of
+      // its own, so the page stays inside its round-trip budget.
+      holdsAnyCertification: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.deletedAt} is null)`,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -552,6 +569,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     pendingMoveAsk,
+    meetingDays,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -591,6 +609,9 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.identityUnconfirmedAt === null
       ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
       : null,
+    // How many days a course session meets on, for its own day plan
+    // (`SessionDayPlan`, issue #2795); a charter says no plan day.
+    row.tripCourseId !== null ? listTripScheduleDays(db, row.shopId, row.tripId) : [],
   ]);
   if (!trip) return null;
   return {
@@ -609,6 +630,9 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    // Nothing is read off a held seat's matched person, so a held seat holds none.
+    holdsCertification: row.identityUnconfirmedAt === null && row.holdsAnyCertification,
+    meetingDayCount: meetingDays.length,
   };
 }
 
@@ -644,6 +668,8 @@ export async function getReadyPageData(
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    holdsCertification,
+    meetingDayCount,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -784,6 +810,8 @@ export async function getReadyPageData(
         : null,
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
+    holdsCertification,
+    meetingDayCount,
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
     // Said even after the shop stops offering hotel pickups (the Features
@@ -850,7 +878,7 @@ export async function carriedPreparationForDiver(
   db: AppDb,
   input: { shopId: string; personId: string; hasRentalFit: boolean },
 ): Promise<CarriedPreparation[]> {
-  const [levelCards, signedWaivers, waiverTemplate, signerRows] = await Promise.all([
+  const [levelCards, signedWaivers, waiverTemplate, signerRows, declared] = await Promise.all([
     db
       .select()
       .from(certifications)
@@ -872,6 +900,14 @@ export async function carriedPreparationForDiver(
       .innerJoin(shops, eq(shops.id, people.shopId))
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1),
+    // The booker's "Under 18" on a seat still ahead, or on the called-off day
+    // this card is about (issue #2553): a solo signature is then not kept.
+    peopleMinorDeclared(db, {
+      shopId: input.shopId,
+      personIds: [input.personId],
+      now: nowDate(),
+      calledOffToo: true,
+    }),
   ]);
   const signer = signerRows[0];
 
@@ -879,10 +915,12 @@ export async function carriedPreparationForDiver(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      // Person-scoped, so no seat's "Under 18" is in hand: the next booking
-      // carries its own, and its readiness asks for the co-signature then.
       signer: signer
-        ? { dateOfBirth: signer.dateOfBirth, minorDeclared: false, timezone: signer.timezone }
+        ? {
+            dateOfBirth: signer.dateOfBirth,
+            minorDeclared: declared.has(input.personId),
+            timezone: signer.timezone,
+          }
         : undefined,
     }),
     certifications: levelCards,

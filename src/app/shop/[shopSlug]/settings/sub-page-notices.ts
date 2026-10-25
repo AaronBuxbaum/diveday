@@ -32,6 +32,7 @@ export function rentalsNoticeMessages(t: StaffTranslator): NoticeMessages {
       tone: "danger",
       text: t("settings.main.notice.regulatorServiceInvalid"),
     },
+    "nitrox-fill-invalid": { tone: "danger", text: t("settings.main.notice.nitroxFillInvalid") },
   };
 }
 

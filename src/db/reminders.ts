@@ -42,6 +42,7 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
+import { rememberFlySafeTold } from "./fly-safe-correction";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import {
   notificationProviderForDb,
@@ -370,6 +371,25 @@ function seatEarnsItsSend(
     courseMaterialsDue,
     weekOutHello: shop.weekOutReminderEnabled,
   });
+}
+
+/**
+ * One reminder email's outcome, recorded; and when it went out (or was queued
+ * to) carrying the fly-safe line, the figure the seat now holds, so marking the departure as
+ * decompression diving later can correct it (#2927).
+ */
+async function settleReminderEmail(
+  db: AppDb,
+  work: { shopId: string; bookingId: string; kind: ReminderKind; notification: Notification },
+  delivery: Parameters<typeof recordNotificationDelivery>[1]["delivery"],
+): Promise<void> {
+  await recordNotificationDelivery(db, {
+    shopId: work.shopId,
+    bookingId: work.bookingId,
+    kind: work.kind,
+    delivery,
+  });
+  await rememberFlySafeTold(db, { ...work, delivery });
 }
 
 /**
@@ -771,12 +791,7 @@ export async function sendDueReminders(
           { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
         );
       }
-      await recordNotificationDelivery(db, {
-        shopId: work.shopId,
-        bookingId: work.bookingId,
-        kind: work.kind,
-        delivery,
-      });
+      await settleReminderEmail(db, work, delivery);
       links.settle(summary, work.bookingId, delivery);
     }
 

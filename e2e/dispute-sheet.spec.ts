@@ -33,6 +33,8 @@ test.describe("as the owner", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await openSeatOrder(page);
+    // The sheet's door sits in the header's More menu (visual review A16).
+    await page.getByRole("button", { name: staff("orders.detail.more"), exact: true }).click();
     await page.getByRole("link", { name: staff("disputeSheet.door") }).click();
     await page.waitForURL(/\/orders\/[0-9a-f-]{36}\/print\/dispute$/);
 
@@ -85,6 +87,7 @@ test.describe("as a captain", () => {
     const orderPath = await openSeatOrder(page);
     // Positive pair: the order did render, and the door is not on it.
     await expect(page.getByRole("link", { name: "Diver record" })).toBeVisible();
+    await page.getByRole("button", { name: staff("orders.detail.more"), exact: true }).click();
     await expect(page.getByRole("link", { name: staff("disputeSheet.door") })).toHaveCount(0);
 
     // The refusal redirects to the order with a notice. `FlashParams` strips

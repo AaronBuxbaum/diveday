@@ -14,12 +14,12 @@ afterEach(cleanup);
  */
 describe("Trip About panel", () => {
   const props = {
+    editLabel: "Edit",
     rows: [
       {
         id: "details",
         label: "The plan",
         value: "Molasses Reef + Winch Hole",
-        editLabel: "Edit details",
         editor: <div>Details editor</div>,
       },
       { id: "conditions", label: "Conditions", value: "Wind 10 kt SE · viz 60 ft" },
@@ -44,10 +44,10 @@ describe("Trip About panel", () => {
     expect(screen.getByText("Molasses Reef + Winch Hole")).toBeVisible();
     // The row's own control is its summary — no separate "Edit" link, and no
     // headed duplicate of the row below it.
-    expect(screen.queryByRole("link", { name: "Edit details" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
     const row = container.querySelector("details#details");
     expect(row).not.toBeNull();
-    expect(row?.querySelector("summary")?.textContent).toContain("Edit details");
+    expect(row?.querySelector("summary")?.textContent).toContain("Edit");
     expect(row?.textContent).toContain("Details editor");
     // Closed until asked, because nothing about the plan has gone wrong.
     expect(row).not.toHaveAttribute("open");
@@ -94,7 +94,7 @@ describe("Trip About panel", () => {
       expect(grid).toHaveClass("sm:items-baseline");
       expect(grid).not.toHaveClass("sm:items-start");
     }
-    const action = screen.getByText("Edit details");
+    const action = screen.getByText("Edit");
     expect(action).toHaveClass("min-h-11");
     expect(action).not.toHaveClass("self-start");
   });
@@ -151,7 +151,7 @@ describe("TripMoreDisclosure", () => {
     expect(container.querySelector("details#about-more")).toHaveAttribute("open");
   });
 
-  it("gives the summary no ring utility, so it keeps the global ring", () => {
+  it("rings its summary inside the bordered foot group it sits in (A13)", () => {
     const { container } = render(
       <TripMoreDisclosure label="More for this departure">
         <button type="button">Cancel this departure</button>
@@ -160,7 +160,20 @@ describe("TripMoreDisclosure", () => {
 
     const more = container.querySelector("details#about-more > summary");
     expect(more).not.toBeNull();
-    expect(more?.className).not.toMatch(/focus-ring|outline/);
+    // The group clips its rows (`DisclosureRowList`), so the ring is drawn inside.
+    expect(more).toHaveClass("focus-visible:focus-ring-inset");
+    expect(more?.className).not.toMatch(/focus-visible:outline-/);
+  });
+
+  it("is a row of the foot group: no rule of its own, the shared caret at its end", () => {
+    const { container } = render(
+      <TripMoreDisclosure label="More for this departure">
+        <button type="button">Cancel this departure</button>
+      </TripMoreDisclosure>,
+    );
+    const more = container.querySelector("details#about-more");
+    expect(more?.className).not.toMatch(/border-/);
+    expect(more?.querySelector("summary > svg")).not.toBeNull();
   });
 
   it("is named by its label", () => {

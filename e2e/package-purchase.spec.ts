@@ -48,7 +48,10 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
   await nav.getByRole("link", { name: "Packages" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
   await expect(page.getByRole("radio", { name: /Ten-dive card/ })).toBeChecked();
-  await expect(page.getByText(/10 dives · \$45 a dive/)).toBeVisible();
+  // The card's facts are a short list since the visual review of 2026-10-24
+  // (B39): the dives, then the price per dive.
+  await expect(page.getByText("10 dives", { exact: true })).toBeVisible();
+  await expect(page.getByText("$45 a dive", { exact: true })).toBeVisible();
 
   const buy = page.getByRole("button", { name: "Buy for $450" });
   await expect(buy.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");

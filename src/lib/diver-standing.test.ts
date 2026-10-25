@@ -9,10 +9,17 @@ const base = {
   showMoney: true,
 };
 
+/**
+ * `numberedDiveDay` is the database's own answer (`numberedDiveDay()` in
+ * src/db/dive-days.ts, selected beside the seat): false for a cancelled seat, a
+ * no-show, a ride-along, a held seat or a departure nobody dived.
+ */
 function seat(id: string, startsAt: string, status = "booked") {
   return {
     booking: { id, status },
     trip: { id: `trip-${id}`, status: "scheduled", startsAt: new Date(startsAt) },
+    numberedDiveDay: status === "booked" || status === "checked_in",
+    outWithShop: status === "booked" || status === "checked_in",
   };
 }
 
@@ -28,7 +35,7 @@ function diver(over: Partial<Record<string, unknown>> = {}): DiverProfile {
 }
 
 describe("diverStanding", () => {
-  it("counts sailed seats and imported visits, first and last on the shop's calendar", () => {
+  it("counts dive days from sailed seats and imported visits, first and last on the shop's calendar", () => {
     const standing = diverStanding(
       diver({
         bookings: [
@@ -40,7 +47,67 @@ describe("diverStanding", () => {
       }),
       base,
     );
-    expect(standing).toMatchObject({ visits: 2, since: "2024-03-02", lastOut: "2026-09-30" });
+    expect(standing).toMatchObject({ diveDays: 2, since: "2024-03-02", lastOut: "2026-09-30" });
+  });
+
+  // Issue 2809: the standing line counts what the milestone, the recap and
+  // Your days count.
+  it("counts a morning and an afternoon boat on one date as one dive day", () => {
+    const standing = diverStanding(
+      diver({
+        bookings: [seat("am", "2026-09-30T12:00:00Z"), seat("pm", "2026-09-30T18:00:00Z")],
+      }),
+      base,
+    );
+    expect(standing).toMatchObject({ diveDays: 1, since: "2026-09-30", lastOut: "2026-09-30" });
+  });
+
+  it("does not count a no-show, or a seat the database says was no dive day", () => {
+    const standing = diverStanding(
+      diver({
+        bookings: [
+          seat("gone", "2026-09-20T12:00:00Z", "no_show"),
+          { ...seat("rode", "2026-09-25T12:00:00Z"), numberedDiveDay: false },
+          seat("dived", "2026-09-28T12:00:00Z"),
+        ],
+      }),
+      base,
+    );
+    expect(standing).toMatchObject({ diveDays: 1, since: "2026-09-28", lastOut: "2026-09-28" });
+  });
+
+  // Review 2 of issue 2809: a partner who rides along every Saturday has no
+  // dive days, and still reads when they were last out.
+  it("keeps last out for a rider or snorkeler regular with no dive days", () => {
+    const rode = (id: string, startsAt: string) => ({
+      ...seat(id, startsAt),
+      numberedDiveDay: false,
+    });
+    const standing = diverStanding(
+      diver({
+        bookings: [
+          rode("sat1", "2026-10-03T12:00:00Z"),
+          rode("sat2", "2026-10-10T12:00:00Z"),
+          seat("gone", "2026-10-14T12:00:00Z", "no_show"),
+        ],
+      }),
+      base,
+    );
+    expect(standing).toMatchObject({ diveDays: 0, since: null, lastOut: "2026-10-10" });
+  });
+
+  it("does not count an imported visit twice on a day with a seat, nor one that did not happen", () => {
+    const standing = diverStanding(
+      diver({
+        bookings: [seat("a", "2026-09-30T12:00:00Z")],
+        priorVisits: [
+          { visitedOn: "2026-09-30", statusLabel: "Completed" },
+          { visitedOn: "2025-01-04", statusLabel: "Cancelled" },
+        ],
+      }),
+      base,
+    );
+    expect(standing).toMatchObject({ diveDays: 1, since: "2026-09-30", lastOut: "2026-09-30" });
   });
 
   it("counts money kept once per seat, in the shop's currency only", () => {

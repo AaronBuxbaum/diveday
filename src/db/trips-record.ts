@@ -17,6 +17,7 @@ import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import { log } from "@/lib/log";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { ParticipantTermsPatch } from "@/lib/participant-terms";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
@@ -37,6 +38,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
+import { type FlySafeCorrectionOutcome, sendFlySafeCorrections } from "./fly-safe-correction";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { rearmTripReminders } from "./reminder-rearm";
@@ -535,6 +537,13 @@ export type UpdateTripOutcome =
        * the same line the schedule builder's move writes (issue #2313).
        */
       startMoved: boolean;
+      /**
+       * The fly-safe corrections this save sent (#2927), present whenever the
+       * departure is marked as decompression diving after it; `"failed"` when
+       * sending threw. The save stands either way: what is owed is kept owed
+       * and the next save tries again.
+       */
+      flySafe?: FlySafeCorrectionOutcome | "failed";
     }
   | { ok: false; reason: "invalid" | "not_found" }
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
@@ -877,7 +886,30 @@ export async function updateTrip(
   if (timeMoved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId] });
   // Its manifest, and any charter whose training mark rests on its times.
   if (timesChanged) await publishManifestEvent(db, shopId, tripId);
+  // **Marked as decompression diving: correct the fly-safe figure** (#2927).
+  // Here, after the commit, so every door that sets the flag fires it, and a
+  // send that throws never turns a saved departure into a failed save.
+  if (outcome.ok && outcome.trip.exceedsNoDecoLimits) {
+    return { ...outcome, flySafe: await flySafeCorrectionsAfterSave(db, shopId, tripId) };
+  }
   return outcome;
+}
+
+async function flySafeCorrectionsAfterSave(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<FlySafeCorrectionOutcome | "failed"> {
+  try {
+    return await sendFlySafeCorrections(db, { shopId, tripId });
+  } catch (error) {
+    log("fly_safe.correction_failed", "error", {
+      shopId,
+      tripId,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+    return "failed";
+  }
 }
 
 /** Ordered dive details for a trip, scoped through the owning shop. */

@@ -232,6 +232,7 @@
     "dateOfBirthLabel": "Fecha de nacimiento",
     "adultAttestedHint": "18 años o más, según {name}",
     "adultAttestedHintNoName": "18 años o más, según el personal",
+    "minorDeclaredHint": "Reservado como menor de 18 años, sin fecha registrada",
     "optionalHint": "(opcional)",
     "diveInsuranceFieldLabel": "Seguro de buceo",
     "diveInsurancePlaceholder": "DAN n.º 12345",
@@ -239,8 +240,8 @@
     "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
     "saving": "Guardando…",
     "saveDetails": "Guardar datos",
-    "visits": "{count, plural, one {# visita} other {# visitas}}",
-    "visitsSince": "{count, plural, one {# visita} other {# visitas}} desde {since}",
+    "diveDays": "{count, plural, one {# día de buceo} other {# días de buceo}}",
+    "diveDaysSince": "{count, plural, one {# día de buceo} other {# días de buceo}} desde {since}",
     "lastOut": "Última salida: {date}",
     "spent": "Gasto: {amount}",
     "broughtFriends": "Trajo {count, plural, one {# amigo} other {# amigos}}",
@@ -505,6 +506,10 @@
     "medicalClearanceRecordedEarlierHeld": "Registrado desde la carta anterior. La otra plaza del buceador sigue retenida por esa derivación anterior. Registra también la carta ahí.",
     "medicalClearanceDocumentFailed": "No se pudo guardar ese archivo de evaluación.",
     "medicalClearanceEvidenceRequired": "Indica el nombre del médico o adjunta su evaluación.",
+    "medicalClearanceDiverFormPhysician": "Escribe el nombre del médico que aparece en el formulario que envió el buceador.",
+    "medicalClearanceDiverFormNotOpened": "Abre el formulario que envió el buceador y revísalo antes de usarlo.",
+    "diverFormNotUsed": "Formulario eliminado. El buceador puede enviar otro desde su página para el médico.",
+    "diverFormGone": "Ese formulario ya no está en el archivo.",
     "medicalClearanceOutcomeRequired": "Indica qué decidió el médico.",
     "medicalClearanceAnswerRecorded": "Este registro ya tiene la respuesta de un médico. Resérvale una plaza en una salida y envía desde ahí una exención nueva.",
     "medicalClearanceNoHold": "Este buceador no tiene nada pendiente de revisión médica aquí.",
@@ -618,6 +623,7 @@
     "conversationUnanswered": "{count, plural, one {# sin responder} other {# sin responder}}",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
     "noneOnFile": "Sin datos",
+    "certificationsNone": "Ninguna registrada",
     "gearHeading": "Equipo y tallas",
     "rentalFitOnFile": "Ajuste de alquiler registrado",
     "rentsFromUs": "Renta con nosotros",
@@ -634,6 +640,10 @@
     "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada. Regístrala o pregunta.",
     "viewReferralRecord": "Ver la derivación",
     "openClearanceDocument": "Abrir la evaluación médica",
+    "openDiverForm": "Abrir el formulario firmado que el buceador envió el {date}",
+    "rejectDiverForm": "No se puede usar este formulario",
+    "rejectingDiverForm": "Eliminando…",
+    "evaluationFromDiver": "Enviado por el buceador",
     "openSignedRecord": "Abrir la exención firmada"
   },
   "details": {
@@ -641,7 +651,8 @@
     "summaryEmergency": "Contacto de emergencia: {name}",
     "summaryEmergencyNoPhone": "Contacto de emergencia: {name}, sin teléfono",
     "summaryEmergencyNoName": "Contacto de emergencia: {phone}, sin nombre",
-    "summaryNoEmergency": "Sin contacto de emergencia"
+    "summaryNoEmergency": "Sin contacto de emergencia",
+    "minorDeclaredNoDateOfBirth": "Una reserva indica que este buceador es menor de 18 años, así que su exención necesita la firma de su madre, padre o tutor. Agrega la fecha de nacimiento para resolverlo."
   },
   "lastDive": {
     "heading": "Última inmersión",

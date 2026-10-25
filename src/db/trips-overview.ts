@@ -19,6 +19,7 @@ import { type BoatWork, boatWorkFor, readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { listCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { listDiveSites } from "./dive-sites";
+import { flySafeToldUncorrected } from "./fly-safe-correction";
 import { listDepartureBoardedByTrip } from "./manifests";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { ratingCredentialsByPerson } from "./staff-credentials";
@@ -327,6 +328,12 @@ export async function getTripOverview(
     startWall,
     endWall,
     pulse,
+    /**
+     * Seats the night-before email told a fly-safe wait and nobody has
+     * corrected yet (#2927): the Details form warns beside the decompression
+     * box. Read off the pulse's seats, so only while the trip is ahead.
+     */
+    flySafeTold: flySafeToldUncorrected(pulseReadiness.map((row) => row.booking)),
     boatClashes: hullClashes,
     crew: {
       crewIds,

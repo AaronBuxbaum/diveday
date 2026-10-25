@@ -30,7 +30,10 @@ describe("rankFailedSpecs", () => {
       ],
     ];
     expect(
-      rankFailedSpecs(jobs, { max: 1, exists: (spec) => spec !== "e2e/gone.spec.ts" }),
+      rankFailedSpecs(jobs, {
+        max: 1,
+        exists: (spec) => spec !== "e2e/gone.spec.ts",
+      }),
     ).toEqual(["e2e/a.spec.ts"]);
   });
 
@@ -56,7 +59,11 @@ it("uses structured github reporter title identity when an error originates in a
 
 it("distinguishes successful empty history from failed or partial pagination", async () => {
   const { readFailureHistory, pages } = await import("./e2e-recent-failures.mjs");
-  expect(readFailureHistory("owner/repo", "2026-10-01", () => ({ workflow_runs: [] }))).toEqual({
+  expect(
+    readFailureHistory("owner/repo", "2026-10-01", () => ({
+      workflow_runs: [],
+    })),
+  ).toEqual({
     perJob: [],
     runCount: 0,
   });
@@ -114,4 +121,26 @@ describe("newestFailedSpecs", () => {
     expect(readFailureHistory("o/r", "2026-10-01", request, { maxRuns: 2 }).runCount).toBe(3);
     expect(asked.filter((url) => url.includes("/jobs"))).toHaveLength(2);
   });
+});
+
+it("reads a full page of 100 failed CI runs, which overflowed execFileSync's 1 MiB (2026-10-23)", async () => {
+  // One page of 100 failed ci.yml runs was 1.27 MB once the 7-day window held 97 of them; the
+  // default buffer killed gh with ENOBUFS and the nightly flake hunt exited "could not read CI
+  // history" on 2026-10-23 and 2026-10-24 (#2976).
+  const { ghJson } = await import("./e2e-recent-failures.mjs");
+  const page = JSON.stringify({
+    workflow_runs: Array.from({ length: 100 }, (_, id) => ({
+      id,
+      padding: "x".repeat(13_000),
+    })),
+  });
+  const read = (_command, _args, options) => {
+    if (Buffer.byteLength(page) > (options.maxBuffer ?? 1024 * 1024)) {
+      throw Object.assign(new Error("spawnSync gh ENOBUFS"), {
+        code: "ENOBUFS",
+      });
+    }
+    return page;
+  };
+  expect(ghJson("repos/o/r/actions/workflows/ci.yml/runs", read).workflow_runs).toHaveLength(100);
 });

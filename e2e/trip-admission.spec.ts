@@ -4,6 +4,7 @@ import {
   daysFromNow,
   e2eNow,
   openTripAbout,
+  openTripAboutRow,
   openTripTab,
   seededTripId,
   walkInFormPath,
@@ -260,7 +261,7 @@ test.describe("as owner", () => {
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
     await openTripAbout(page);
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAboutRow(page, "Who can book");
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated");
@@ -339,7 +340,7 @@ test.describe("as owner", () => {
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
     await openTripAbout(page);
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAboutRow(page, "Who can book");
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
 

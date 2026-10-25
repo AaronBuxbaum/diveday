@@ -7,6 +7,7 @@ vi.mock("@/db/series-next", () => ({ nextPublicTripInSeries: vi.fn(async () => n
 
 const { nextPublicTripInSeries } = await import("@/db/series-next");
 const { cancelledNotice } = await import("./CancelledNotice");
+const { ForgetReadyCopy } = await import("./ForgetReadyCopy");
 
 const t = diverTranslator("en-US");
 const db = {} as never;
@@ -24,6 +25,21 @@ function input(paymentStatus: string | null, shopName = "Blue Mantis Divers") {
 }
 
 describe("cancelledNotice", () => {
+  /** Issue #2979: the card a cancel lands on takes the phone's saved copy with it. */
+  it("carries the step that forgets the phone's saved copy", async () => {
+    const notice = await cancelledNotice(db, input(null));
+    const found: unknown[] = [];
+    const walk = (node: unknown) => {
+      if (!node || typeof node !== "object") return;
+      const element = node as { type?: unknown; props?: { children?: unknown } };
+      if (element.type === ForgetReadyCopy) found.push(element);
+      const children = element.props?.children;
+      for (const child of Array.isArray(children) ? children : [children]) walk(child);
+    };
+    walk(notice);
+    expect(found).toHaveLength(1);
+  });
+
   it("says the seat was released when nothing was paid", async () => {
     render(await cancelledNotice(db, input(null)));
     expect(screen.getByText(t("ready.cancelledHeading"))).toBeTruthy();

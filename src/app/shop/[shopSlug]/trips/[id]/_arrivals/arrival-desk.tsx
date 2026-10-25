@@ -43,7 +43,7 @@ import { CounterInstrument } from "./CounterInstrument";
 import { NoShowSalvage, NoShowScript } from "./NoShowScript";
 import { RowActionForm } from "./RowActionForm";
 import { noShowSalvageCopy } from "./salvage-copy";
-import { TurnAwayScript } from "./TurnAwayScript";
+import { TurnAwayDoor, TurnAwayScript } from "./TurnAwayScript";
 
 /** What the Divers tab adds while a departure's arrivals are open. */
 export type ArrivalDesk = {
@@ -196,7 +196,7 @@ export async function buildArrivalDesk({
             offer: salvage,
             shopSlug,
             tripId,
-            diver: { id: row.personId, name: row.personName },
+            diver: { id: row.personId, name: row.personName, bookingId: row.bookingId },
             formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, timeZone),
             turnedAway: turnedAway !== null,
             moveClosed: turnedAwayAfterStart || partyLeads.has(row.bookingId),
@@ -249,8 +249,7 @@ export async function buildArrivalDesk({
       } else {
         // A diver who arrived and has since gone blocked can still be sent
         // home, until the boat leaves with them.
-        const door = turnAwayFor(row);
-        if (door) below.set(row.bookingId, door);
+        placeTurnAway(turnAwayFor(row), row.bookingId, { controls, below });
       }
       continue;
     }
@@ -270,8 +269,10 @@ export async function buildArrivalDesk({
         />,
       );
     }
-    const turnAwayDoor = ready ? null : turnAwayFor(row);
-    if (turnAwayDoor) below.set(row.bookingId, turnAwayDoor);
+    // The door beside the Blocked pill, its confirm at the row's foot (A08).
+    const turnAway = ready ? null : turnAwayFor(row);
+    placeTurnAway(turnAway, row.bookingId, { controls, below });
+    const turnAwayDoor = turnAway?.panel ?? null;
     const claim = noShowClaimFor(row);
     if (claim) {
       // **"Not here" on a blocked row too** (dive-domain review 2026-10-05):
@@ -493,7 +494,7 @@ function turnAwayDoor({
   now: Date;
   t: StaffTranslator;
   action: (formData: FormData) => Promise<void>;
-}): ReactNode {
+}): { door: ReactNode; panel: ReactNode } | null {
   const reasons = turnAwayOffer({
     bookingStatus: row.bookingStatus,
     onTheWater: row.onTheWater,
@@ -503,7 +504,14 @@ function turnAwayDoor({
     readiness: row.readiness,
   });
   if (reasons.length === 0) return null;
-  return (
+  const door = (
+    <TurnAwayDoor
+      key="turn-away-door"
+      bookingId={row.bookingId}
+      label={t("checkIn.turnAway.door")}
+    />
+  );
+  const panel = (
     <TurnAwayScript
       key="turn-away"
       action={action}
@@ -513,7 +521,6 @@ function turnAwayDoor({
         label: t(`checkIn.turnAway.reason.${reason}`),
       }))}
       copy={{
-        door: t("checkIn.turnAway.door"),
         legend: t("checkIn.turnAway.legend"),
         consequence: t("checkIn.turnAway.consequence"),
         confirm: t("checkIn.turnAway.confirm"),
@@ -523,4 +530,33 @@ function turnAwayDoor({
       }}
     />
   );
+  return { door, panel };
+}
+
+/**
+ * The turn-away door leads the row's controls (beside the Blocked pill, A08)
+ * and its confirm sits at the row's foot. Whatever the row already holds in
+ * its control slot stays, after the door.
+ */
+function placeTurnAway(
+  turnAway: { door: ReactNode; panel: ReactNode } | null,
+  bookingId: string,
+  slots: { controls: Map<string, ReactNode>; below: Map<string, ReactNode> },
+) {
+  if (!turnAway) return;
+  const held = slots.controls.get(bookingId);
+  slots.controls.set(
+    bookingId,
+    held ? (
+      // One line beside what the row already held ("Checked in", Undo): the
+      // action side stays one row at every width (visual triage, layer 3).
+      <span className="inline-flex items-center gap-3 whitespace-nowrap">
+        {turnAway.door}
+        {held}
+      </span>
+    ) : (
+      turnAway.door
+    ),
+  );
+  slots.below.set(bookingId, turnAway.panel);
 }

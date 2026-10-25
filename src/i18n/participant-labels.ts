@@ -167,25 +167,3 @@ export function staffPassengerCount(
       })
     : summary.totalDivers;
 }
-
-/**
- * Reports' bookings detail: how many departures the month's seats were on, and
- * who the seats were once anybody aboard was not diving (ADR
- * 20261007-participant-types). The split sums to the figure it sits under.
- */
-export function staffBookingsDetail(
-  t: StaffTranslator,
-  report: { tripCount: number; seatsByType: ParticipantCounts },
-  isThisMonth: boolean,
-): string {
-  const detail = isThisMonth
-    ? t("reports.metrics.bookingsThisMonth", { count: report.tripCount })
-    : t("reports.metrics.bookingsOther", { count: report.tripCount });
-  const seats = report.seatsByType;
-  return hasNonDivers(seats)
-    ? t("participants.reports.bookingsDetailSplit", {
-        detail,
-        split: staffPassengerSplit(t, seats),
-      })
-    : detail;
-}

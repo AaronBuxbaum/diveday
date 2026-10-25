@@ -283,6 +283,15 @@ describe("operator_alert setup_request", () => {
     }
   });
 
+  // Issue 2834, security review 2: the mail carries a setup link and the
+  // address was typed into a public form, so no caller can put a Reply-To back.
+  it("refuses a Reply-To, whoever the caller", () => {
+    expect(
+      notificationSchema.safeParse({ ...alert, sender: { replyTo: "ana@shop.invalid" } }).success,
+    ).toBe(false);
+    expect(notificationSchema.safeParse({ ...alert, sender: {} }).success).toBe(true);
+  });
+
   it("names a system only by a switching guide's slug", () => {
     const named = { ...alert, currentSystem: "booking_system" };
     expect(
@@ -387,6 +396,7 @@ describe("seat_already_held is keyed once per held seat per hour", () => {
       startsAt: new Date("2026-10-20T14:00:00Z"),
       timezone: "America/New_York",
       requestedAt,
+      attempt: "claim",
     });
 
   it("gives every attempt inside one hour the same key, and the next hour another", () => {

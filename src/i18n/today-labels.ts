@@ -980,6 +980,29 @@ export function helpRequestDetailText(
   );
 }
 
+/** One handled help request on the Today "Handled" line: who, what help, which departure, who helped. */
+export function handledHelpRequestText(
+  t: StaffTranslator,
+  input: {
+    kind: "carry_gear" | "first_timer" | "find_group";
+    personName: string;
+    tripLabel: string;
+    helperPersonName: string | null;
+  },
+): string {
+  const help = t(
+    input.kind === "carry_gear"
+      ? "today.helpRequest.kind.carryGear"
+      : input.kind === "first_timer"
+        ? "today.helpRequest.kind.firstTimer"
+        : "today.helpRequest.kind.findGroup",
+  );
+  const values = { name: input.personName, help, trip: input.tripLabel };
+  return input.helperPersonName
+    ? t("today.helpRequest.handled.rowWithHelper", { ...values, helper: input.helperPersonName })
+    : t("today.helpRequest.handled.row", values);
+}
+
 /** The label `HelpRequestControl` opens its crew choice with; the row hands it over. */
 export function helpRequestActionText(
   t: StaffTranslator,
@@ -1278,11 +1301,14 @@ export function rollCallAlertedText(
  */
 export function emergencyCardBlankText(
   t: StaffTranslator,
-  input: { time: string; day: string },
+  input: { time: string; day: string; out?: boolean },
 ): { subject: string; detail: string; actionLabel: string } {
   return {
     subject: t("today.emergencyCard.subject"),
-    detail: t("today.emergencyCard.detail", input),
+    // A boat already out is named as out, not as one about to sail (#2802).
+    detail: input.out
+      ? t("today.emergencyCard.detailOut", { time: input.time })
+      : t("today.emergencyCard.detail", { time: input.time, day: input.day }),
     actionLabel: t("today.emergencyCard.action"),
   };
 }

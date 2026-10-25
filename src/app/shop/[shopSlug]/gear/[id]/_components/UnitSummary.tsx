@@ -33,7 +33,6 @@ import { StatusControls, UnitStatusLine } from "./UnitStatus";
 export function UnitSummary({
   detail,
   hull,
-  held,
   editing,
   unitPath,
   t,
@@ -42,7 +41,6 @@ export function UnitSummary({
 }: {
   detail: GearItemDetail;
   hull: GearUnitHull;
-  held: { name: string; until: string } | null;
   editing: boolean;
   /** The unit's own page, which Cancel returns to. */
   unitPath: string;
@@ -152,7 +150,6 @@ export function UnitSummary({
           </FieldGrid>
         </div>
       ) : null}
-      {/* The controls carry their own rule above Delete; one rule, not two. */}
       <div className="mt-6">
         {deletedAt ? (
           <form action={restoreGearItemAction}>
@@ -165,7 +162,7 @@ export function UnitSummary({
             </SubmitButton>
           </form>
         ) : (
-          <StatusControls item={item} held={held} t={t} />
+          <StatusControls item={item} t={t} />
         )}
       </div>
     </SectionCard>

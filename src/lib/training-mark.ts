@@ -186,6 +186,21 @@ function seatTrainingRoom(
   const { assistantCount } = countInWaterCrew(departureCrew);
   const load = new Map<string, number>();
   // The tightest cap among the seats already on each instructor: a taker's new load must fit it too.
+  //
+  // **Deliberate, not an accident of the arithmetic** (issue #2830, Aaron
+  // 2026-10-22). A DSD seat caps the same instructor's Open Water seats at the
+  // DSD ratio, although the DSD seat lowers no level and the published DSD
+  // figure is written for DSD participants. Every seat on one instructor is one
+  // group in the water at once, under one pair of eyes, and a DSD participant
+  // has never breathed from a regulator in open water: the instructor has to
+  // stay within reach of them for the whole dive, so the Open Water students
+  // beside them get the attention a DSD group leaves over, not the attention a
+  // dedicated Open Water ratio assumes. No standard we hold (HD-6) says a mixed
+  // group may be counted as two ratios, and counting it that way is the
+  // over-ratio direction. The cost is seats on mixed days; the shop's answer is
+  // a second instructor for one group. An assistant does not lift it, because
+  // the DSD ratio credits none (`INTRO_COURSE_RATIO`). Pinned in
+  // `training-mark.test.ts` ("caps later Open Water seats at the DSD ratio").
   const tightest = new Map<string, number>();
   const seated = new Set<string>();
   const overRatio = new Set<string>();

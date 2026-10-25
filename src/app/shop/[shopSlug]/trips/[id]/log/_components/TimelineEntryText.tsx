@@ -2,6 +2,7 @@ import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-label
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import {
   hasRollCallEntries,
+  type IncidentExportDocument,
   type IncidentRosterChangeAction,
   type IncidentTimelineEntry,
 } from "@/lib/incident-export";
@@ -70,6 +71,11 @@ export function TimelineEntryText({
             names: memberList.format(entry.memberNames),
           })}
         </span>
+      ) : null}
+      {/* Issue 2808: the recorder vouched that everyone on the team is 18 or
+          over, where nothing on file said so. */}
+      {entry.kind === "buddy_team" && entry.adultsConfirmed ? (
+        <span className="text-muted">{t("incidentExport.timelineBuddyAdultsConfirmed")}</span>
       ) : null}
       {(entry.kind === "diver" || entry.kind === "crew") && entry.source === "offline" ? (
         <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
@@ -148,4 +154,35 @@ function actText(entry: IncidentTimelineEntry, t: StaffTranslator): string {
       return `${who} — ${act}`;
     }
   }
+}
+
+/**
+ * **The roster's note, and the seats the desk turned away** (issue #2907):
+ * a turned-away seat is off the boat and out of every count on this page,
+ * and still stated, so a turn-away before the first dock count leaves a
+ * sentence in the record. The category only, in the timeline's own words,
+ * never the answers behind it (H-135).
+ */
+export function RosterIntro({
+  turnedAway,
+  t,
+}: {
+  turnedAway: IncidentExportDocument["turnedAway"];
+  t: StaffTranslator;
+}) {
+  return (
+    <>
+      <p className="mt-1 max-w-prose text-sm text-muted">{t("incidentExport.rosterDescription")}</p>
+      {turnedAway.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-sm">
+          {turnedAway.map((seat) => (
+            <li key={seat.bookingId}>
+              {seat.fullName} —{" "}
+              {t("incidentExport.timelineSeatTurnedAway", { reason: seat.reason ?? "other" })}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
 }

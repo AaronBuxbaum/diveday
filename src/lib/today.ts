@@ -1,3 +1,4 @@
+import type { HandledHelpRequest } from "@/db/help-requests";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   blockerActionLabelText,
@@ -1780,6 +1781,8 @@ export type DaySpine = {
   tomorrow: { stations: DayStation[]; jobs: number };
   /** The rest of the horizon: a count, and the rows behind it, opened in place. */
   week: { jobs: number; rows: TodayAction[] };
+  /** Handled help requests on today's departures, each reopenable (issue #2939). */
+  handledHelp: readonly HandledHelpRequest[];
 };
 
 /** Tone first: danger, then warning, then everything quiet. */
@@ -1870,6 +1873,8 @@ export type SpineWork = {
    * hand-built spine in a test can leave it out.
    */
   outTripIds?: readonly string[];
+  /** `TodayWork.handledHelp`; optional so a hand-built spine in a test can leave it out. */
+  handledHelp?: readonly HandledHelpRequest[];
 };
 
 /**
@@ -1973,6 +1978,7 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
       ),
     },
     week: { jobs: weekRows.filter(countsAsJob).length, rows: sortStationRows(weekRows) },
+    handledHelp: today.handledHelp ?? [],
   };
 }
 
@@ -2306,6 +2312,8 @@ export function groupByDeparture(rows: readonly TodayAction[]): NeedsYouGroup[] 
  * waiting on a staffer to arrange help, and a neutral row ranks last, so a
  * fold would hide the one row a diver is waiting on. A list only one longer than the cap shows whole, because "and 1
  * more" costs the room of the row it hides (`nameListText`'s rule).
+ * The rows that never fold count toward the five (visual review A43), so a
+ * group shows five unless more than five can never fold.
  */
 export const BOAT_ROWS_SHOWN = 5;
 
@@ -2325,8 +2333,19 @@ export function foldBoatRows(rows: readonly TodayAction[]): {
   // keeps Arrange help in reach. Only boat work and the boat's other chores fold.
   const neverFolds = (row: TodayAction) =>
     rowTone(row) === "danger" || READINESS_KINDS.has(row.kind) || row.kind === "help_request";
-  const shown = rows.filter((row, index) => index < BOAT_ROWS_SHOWN || neverFolds(row));
-  const more = rows.filter((row, index) => index >= BOAT_ROWS_SHOWN && !neverFolds(row));
+  // The rows that never fold take their seats among the five first, so the
+  // group still shows five (A43) and folds more boat work instead, unless
+  // more than five can never fold.
+  let open = Math.max(0, BOAT_ROWS_SHOWN - rows.filter(neverFolds).length);
+  const shown: TodayAction[] = [];
+  const more: TodayAction[] = [];
+  for (const row of rows) {
+    if (neverFolds(row)) shown.push(row);
+    else if (open > 0) {
+      shown.push(row);
+      open -= 1;
+    } else more.push(row);
+  }
   return more.length <= 1 ? { shown: [...rows], more: [] } : { shown, more };
 }
 

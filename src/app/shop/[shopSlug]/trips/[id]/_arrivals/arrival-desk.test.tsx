@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { eq } from "drizzle-orm";
 import { isValidElement, type ReactElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { listCheckInQueue } from "@/db/check-in";
 import { createCertification } from "@/db/readiness";
 import {
@@ -21,6 +21,9 @@ import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
+// Unmount each test's rows: a row's links schedule React work that would
+// otherwise run after the file's jsdom is gone ("window is not defined").
+afterEach(cleanup);
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // A blocked row carries the "Turned away" door, whose form refreshes the
@@ -192,7 +195,7 @@ describe("the counter's turned-away door (H-135)", () => {
     const expected = turnAwayReasons(row.readiness);
     expect(expected).toContain("identity");
     const below = await belowFor(seat);
-    expect(below).toHaveTextContent("Turn away…");
+    expect(below).toHaveTextContent("Turn away");
     const offered = reasonsOffered(below);
     expect(offered).toEqual(expected);
     // Security F1: the matched person's blockers are not this seat's reasons.
@@ -229,9 +232,14 @@ describe("the counter's turned-away door (H-135)", () => {
       .where(eq(bookings.id, seat.bookingId));
     const below = await belowFor(seat);
     expect(below).toHaveTextContent("Seen at the desk, turned away: card");
-    // dde-2 #3: the one money door that works is the move on their row.
-    expect(below).toHaveTextContent(
-      "Nothing was charged or refunded. Open their row to move the booking to another day.",
+    // dde-2 #3: the one money door that works is the move on their row, and
+    // it is a link to that door (#2907), not a sentence pointing at it.
+    expect(below).toHaveTextContent("Nothing was charged or refunded.");
+    const move = Array.from(below.querySelectorAll("a")).find(
+      (link) => link.textContent === "Move the booking to another day",
+    );
+    expect(move?.getAttribute("href")).toBe(
+      `/shop/${seat.shop.slug}/trips/${seat.trip.id}#move-booking-${seat.bookingId}`,
     );
     expect(below).not.toHaveTextContent("Marking someone not here");
     expect(below).not.toHaveTextContent("Open their orders");
@@ -269,8 +277,8 @@ describe("a turned-away row around the boat's start", () => {
     return { control, below };
   }
 
-  const MOVE = "Open their row to move the booking to another day.";
-  const REMOVE = "Open their row to remove the booking and refund it by hand.";
+  const MOVE = "Move the booking to another day";
+  const REMOVE = "Remove the booking and refund it by hand";
 
   it("keeps Undo and the move a minute before the start, and offers neither from it", async () => {
     const { seat, at } = await turnedAwaySeat();

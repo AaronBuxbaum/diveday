@@ -44,7 +44,7 @@ export function RowActionForm({
   sendFailedLabel,
   onSubmitting,
   className,
-  sendFailedClassName = "mt-2 text-sm font-medium text-danger-strong",
+  sendFailedClassName = "mt-2 text-sm font-medium text-danger",
   children,
 }: {
   /**

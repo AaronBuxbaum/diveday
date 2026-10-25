@@ -32,17 +32,18 @@ import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
+import { TripAddBookingLink } from "./_components/TripAddBookingLink";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { TripMoreActions } from "./_components/TripMoreActions";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
+import { TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { DETAILS_FORMS } from "./_components/trip-notice-tabs";
-import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
+import { paymentAsks, savedHeld, tripPageNotices } from "./_components/trip-page-asks";
 import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
@@ -313,17 +314,13 @@ export default async function ManageTripPage({
           }
           price={tripHeaderPrice(trip, shop.currency, locale, t)}
           daySpan={tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t)}
-          // Only while the boat can take a seat: full, sailed, held or
-          // cancelled, and the header offers nothing (owner, 2026-10-06). A
-          // full boat's wait list stays in the roster's own Add band.
+          // Only while the boat can take a seat (owner, 2026-10-06); a full
+          // boat's wait list stays in the roster's own Add band.
           actions={
             !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
-              <TripAddDiverLink
-                // The roster's own band, on the Divers tab: from Details the
-                // anchor is not on the page.
-                href={`${shopPath(shopSlug, "trips", tripId)}#add-diver`}
+              <TripAddBookingLink
+                tripHref={shopPath(shopSlug, "trips", tripId)}
                 label={t("trips.addDiver.heading")}
-                compactLabel={t("trips.about.add")}
                 ariaLabel={t("trips.about.addDiverJump")}
               />
             )
@@ -343,9 +340,8 @@ export default async function ManageTripPage({
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
 
         {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
-          // A card in a tone: the card's radius, bed and inset, so its words
-          // start where the cards around it do; only the border and fill are its
-          // own (pixel-craft classes 3 and 12).
+          // A card in a tone: the card's radius, bed and inset, so its words start
+          // where the cards around it do; only border and fill differ (pixel-craft 3, 12).
           <section className={`${TONE_PANEL_CLASS} border-danger/40 bg-danger/10`}>
             <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
               {lifecycleStatus?.text}
@@ -391,12 +387,13 @@ export default async function ManageTripPage({
                   shopLenses,
                   automatedForecast,
                   tideLines,
-                  held: notice === "saved" ? held : undefined,
+                  held: savedHeld(notice, held),
                   tell,
                   refundsHeld: !mayWriteOffPayment,
                 }),
                 ...(await readRows),
               ]}
+              editLabel={t("trips.about.edit")}
               actions={
                 <TripAboutLinks
                   shop={shop}

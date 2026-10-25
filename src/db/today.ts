@@ -18,6 +18,8 @@ import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import { emergencyCardHasNumbers } from "@/lib/emergency-reference";
 import {
   type CrewIncompleteReason,
+  isTurnedAwayOffBoat,
+  isTurnedAwaySeat,
   rollCallCheckpoints,
   rollCallCompleteness,
 } from "@/lib/manifests";
@@ -63,7 +65,7 @@ import {
   listGearServiceDue,
   listOverdueGearReservations,
 } from "./gear";
-import { listTodayHelpRequests } from "./help-requests";
+import { type HandledHelpRequest, listTodayHelpWork } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
 import { countWaitingDateInterests } from "./interest-dates";
@@ -303,6 +305,8 @@ export type CrewedSessionSummary = {
 export type TodayWork = {
   departures: DepartureSummary[];
   actions: TodayAction[];
+  /** Today's handled help requests, so Today can offer Reopen after the undo toast (issue #2939). */
+  handledHelp: HandledHelpRequest[];
   /**
    * The high-wind rows, still arriving: the marine forecast is the one read
    * here that is not the database, so the queue answers without it and the
@@ -436,6 +440,12 @@ export type OpenRollCall = {
    * so a gap assembled by hand says nothing, and nothing softens.
    */
   latestMarkedDive?: number;
+  /**
+   * When the newest standing result at `latestMarkedDive` was taken, diver or
+   * crew, or null when there is none. The close-out softens an open count only
+   * while this is recent (issue #2925). Optional for the same reason.
+   */
+  latestMarkAt?: Date | null;
 };
 
 /**
@@ -582,7 +592,12 @@ export async function listRollCallGaps(
 
   const [roster, events, crewEvents] = await Promise.all([
     db
-      .select({ tripId: bookings.tripId, bookingId: bookings.id })
+      .select({
+        tripId: bookings.tripId,
+        bookingId: bookings.id,
+        status: bookings.status,
+        turnedAwayAt: bookings.turnedAwayAt,
+      })
       .from(bookings)
       .where(
         and(
@@ -647,6 +662,11 @@ export async function listRollCallGaps(
       ),
   ]);
 
+  // Seats the desk turned away: off the boat at any checkpoint nobody at the
+  // boat has recorded them at (`isTurnedAwayOffBoat`, issue #2907).
+  const turnedAwayIds = new Set(
+    roster.filter((row) => isTurnedAwaySeat(row)).map((row) => row.bookingId),
+  );
   const rosterByTrip = new Map<string, string[]>();
   for (const row of roster) {
     const list = rosterByTrip.get(row.tripId) ?? [];
@@ -702,6 +722,8 @@ export async function listRollCallGaps(
     const crewUnaccounted = checkpoints.map(() => 0);
     const crewNotBackAboard = checkpoints.map(() => 0);
     let departureAwaiting = 0;
+    // Seats turned away at the desk with no dock result: not the dock count's.
+    let dockOffBoat = 0;
     let anyEvent = false;
 
     for (const bookingId of bookingIds) {
@@ -715,7 +737,9 @@ export async function listRollCallGaps(
         return event.status;
       });
       if (states.some((state) => state !== undefined)) anyEvent = true;
-      if (states[0] === undefined) departureAwaiting += 1;
+      if (isTurnedAwayOffBoat({ turnedAway: turnedAwayIds.has(bookingId), rollCall: states[0] })) {
+        dockOffBoat += 1;
+      } else if (states[0] === undefined) departureAwaiting += 1;
       if (!inAfterDivePopulation(states)) continue;
       for (let dive = 1; dive < checkpoints.length; dive++) {
         const state = states[dive];
@@ -755,6 +779,24 @@ export async function listRollCallGaps(
     for (let dive = 1; dive < checkpoints.length; dive++) {
       if ((recorded[dive] ?? 0) > 0 || (crewRecorded[dive] ?? 0) > 0) latestMarkedDive = dive;
     }
+    // The newest standing result at that checkpoint: how recently anybody was
+    // counted there, which tells a count being taken from one left half done.
+    let latestMarkAt: Date | null = null;
+    if (latestMarkedDive > 0) {
+      const checkpoint = checkpoints[latestMarkedDive];
+      const standing = [
+        ...bookingIds.map((bookingId) =>
+          latestByBookingCheckpoint.get(`${bookingId}\0${checkpoint}`),
+        ),
+        ...crewIds.map((personId) =>
+          latestByCrewCheckpoint.get(`${trip.id}\0${personId}\0${checkpoint}`),
+        ),
+      ];
+      for (const event of standing) {
+        if (!event || event.status === "cleared") continue;
+        if (!latestMarkAt || event.occurredAt > latestMarkAt) latestMarkAt = event.occurredAt;
+      }
+    }
 
     const base = {
       tripId: trip.id,
@@ -769,6 +811,7 @@ export async function listRollCallGaps(
       alertedAt: trip.alertedAt,
       shoreAlertedAt: trip.shoreAlertedAt,
       latestMarkedDive,
+      latestMarkAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on
@@ -843,15 +886,16 @@ export async function listRollCallGaps(
     // carrying a month of it would bury the rows above. Divers only: a
     // dock-side crew gap on a shop that has not adopted crew roll call is every
     // trip it has ever run.
-    if (home && !stale && bookingIds.length > 0) {
+    const dockRoster = bookingIds.length - dockOffBoat;
+    if (home && !stale && dockRoster > 0) {
       if (!anyEvent) {
         gaps.push({
           ...base,
           reason: "no_roll_call",
           diveNumber: 0,
-          uncounted: bookingIds.length,
-          awaiting: bookingIds.length,
-          total: bookingIds.length,
+          uncounted: dockRoster,
+          awaiting: dockRoster,
+          total: dockRoster,
         });
       } else if (departureAwaiting > 0) {
         gaps.push({
@@ -860,7 +904,7 @@ export async function listRollCallGaps(
           diveNumber: 0,
           uncounted: departureAwaiting,
           awaiting: departureAwaiting,
-          total: bookingIds.length,
+          total: dockRoster,
         });
       }
     }
@@ -1708,7 +1752,7 @@ async function readTodayWave(
     crewClashState,
     boardedAnywhere,
     sharedWelcomeSeats,
-    helpRequests,
+    { open: helpRequests, handled: handledHelp },
     rawStaff,
     credentialRows,
     { diveIntents, boatNames, crewByTrip, meetingWindows },
@@ -1797,7 +1841,7 @@ async function readTodayWave(
     // Today's departures only: a cue is permission for one day, and a row about
     // Thursday's boat on Tuesday morning would be a badge with a date on it.
     sharedWelcomeSeatsByTrip(db, shopId, todayTripIds, now),
-    listTodayHelpRequests(db, shopId, todayTripIds, now),
+    listTodayHelpWork(db, shopId, todayTripIds, now),
     listStaff(db, shopId),
     listStaffCredentials(db, shopId),
     // What each card shows beyond readiness and the roll call - intents, hull,
@@ -1913,6 +1957,7 @@ async function readTodayWave(
     boardedAnywhere,
     sharedWelcomeSeats,
     helpRequests,
+    handledHelp,
     rawStaff,
     credentialRows,
     diveIntents,
@@ -2095,6 +2140,7 @@ export async function getTodayWork(
     stagesByTrip,
     crewClashState,
     helpRequests,
+    handledHelp,
     rawStaff,
     diveIntents,
     boatNames,
@@ -2281,6 +2327,7 @@ export async function getTodayWork(
   return {
     departures,
     actions: visibleActions,
+    handledHelp,
     highWind,
     outTripIds: [
       ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),

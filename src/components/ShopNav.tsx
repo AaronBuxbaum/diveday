@@ -149,6 +149,7 @@ export function ShopNav({
               tellUs={{ to: SUPPORT_EMAIL }}
               accountHref={`${root}${staffDestination("security").suffix}`}
               copy={{
+                boatMode: t("shared.shopNav.boatMode"),
                 language: t("shared.shopNav.language"),
                 accountSettings: t("shared.shopNav.accountSettings"),
                 signOut: t("shared.shopNav.signOut"),

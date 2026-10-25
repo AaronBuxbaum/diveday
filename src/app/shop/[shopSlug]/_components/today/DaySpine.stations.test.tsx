@@ -79,7 +79,7 @@ describe("a station owns its departure's facts", () => {
     });
     expect(within(heading).getByRole("link")).toHaveAttribute("href", "/shop/blue-mantis/trips/t1");
     expect(within(needsYou).getAllByText("Two-Tank Reef · 7:00 AM")).toHaveLength(1);
-    expect(within(needsYou).getByText("3 divers still need rental sizes.")).toBeInTheDocument();
+    expect(within(needsYou).getByText("3 divers still need rental sizes")).toBeInTheDocument();
     expect(within(needsYou).getByText("Priya Sharma")).toBeInTheDocument();
   });
 
@@ -436,7 +436,7 @@ describe("the desk group", () => {
     const rows = within(needsYou).getAllByRole("listitem");
     // Warning before quiet, wherever each row is filed.
     expect(rows[0]).toHaveTextContent("Priya Sharma");
-    expect(rows[1]).toHaveTextContent("One review is waiting on you.");
+    expect(rows[1]).toHaveTextContent("One review is waiting on you");
     expect(screen.queryByText("At the desk")).toBeNull();
   });
 
@@ -481,7 +481,7 @@ describe("the desk group", () => {
       drafts: [{ form: "add_departure", href: "/shop/blue-mantis/schedule/board?add=1" }],
     });
     const sentence = (text: string) => screen.getByText(text).closest("p");
-    const chore = sentence("One review is waiting on you.");
+    const chore = sentence("One review is waiting on you");
     const draft = sentence("A departure you started adding.");
     const payments = sentence(
       "Payments aren’t connected, so divers can book and pay at the counter.",

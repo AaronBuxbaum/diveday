@@ -138,7 +138,11 @@ test("a tampered password-reset token reveals nothing and points back to sign-in
 test("a dead account-token door draws its mark and names no shop", async ({ page }) => {
   await page.goto("/verify/not-a-real-token");
   await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
-  await expect(page.locator("main svg")).toHaveCount(1);
+  // The drawn mark in the circle, and DiveDay's wordmark above it: every dead
+  // link wears both since the visual review of 2026-10-24 (B29), and nothing
+  // else in the door is a drawing.
+  await expect(page.locator('main > div[aria-hidden="true"] svg')).toHaveCount(1);
+  await expect(page.locator("main svg")).toHaveCount(2);
   const door = await page.locator("main").innerText();
   expect(door).not.toMatch(/\p{Extended_Pictographic}/u);
   expect(door).not.toContain("Blue Mantis");

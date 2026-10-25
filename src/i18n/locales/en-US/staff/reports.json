@@ -22,17 +22,9 @@
     "revenueCounter": "Plus {amount} at the counter",
     "revenueDetailWithImported": "Current-trip payments and deposits after Stripe Tax, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
     "bookingsLabel": "Seats",
-    "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",
-    "bookingsOther": "across {count, plural, one {# trip} other {# trips}}",
     "seatFillLabel": "Fill",
-    "seatFillDetail": "{booked} of {offered} seats · {count, plural, one {# boat} other {# boats}} full",
     "waiversLabel": "Waivers",
-    "waiversOutstanding": "{count} still to collect",
-    "waiversAllIn": "Everyone’s paperwork is in",
-    "revenueViewOrders": "View orders",
-    "tipsLabel": "Tips",
-    "tipsDetail": "{count, plural, =0 {No tips left on this month’s trips} one {# tip, for the shop to pass on to the crew} other {# tips, for the shop to pass on to the crew}}",
-    "split": "Sailed {sailed} · Still to sail {toSail}"
+    "tipsLabel": "Tips"
   },
   "noTripsFuture": "Nothing on the books for this month yet",
   "noTripsPast": "No trips sailed this month",
@@ -63,7 +55,8 @@
     "busiest": "The busiest day was {day}.",
     "quietest": "The quietest month was {month}.",
     "stripLabel": "The year’s days",
-    "stripLegend": "Each square is a day; the deeper the water, the fuller the boats. Nothing after today is drawn.",
+    "stripQuiet": "Quiet",
+    "stripFull": "Full",
     "stripDay": "{day} · {divers, number} divers on {boats, number} boats",
     "stripQuietDay": "{day} · no boats",
     "numbersLabel": "The year’s numbers",
@@ -126,7 +119,6 @@
   "payouts": {
     "heading": "Paid to your bank"
   },
-  "tipsShare": "{name} {amount}",
   "downloadCrewSheet": "Download crew sheet",
   "weather": {
     "month": "Weather called off {departures, plural, one {# departure} other {# departures}}: {divers, plural, one {# diver} other {# divers}}, {refunded} refunded, {moved} moved to another date."
@@ -156,11 +148,11 @@
     "invalid": "That isn’t an email address. Check it and save again.",
     "confirmationSent": "Saved. A confirm link went to that address; nothing is sent until it’s used.",
     "confirmationNotSent": "Saved, but the confirm link couldn’t go just now. Save again later to resend it.",
-    "setBy": "Set by {name}, {date}",
-    "setByGone": "Set {date} by someone no longer on the team",
+    "setBy": "Set by {name}, {date}.",
+    "setByGone": "Set {date} by someone no longer on the team.",
     "waiting": "Waiting for {email} to confirm; nothing is sent until then.",
     "setterLapsed": "They can no longer export the shop’s data, so nothing is sent. Save the address again to keep it, or change it.",
     "bounced": "The last month-end files to {email} bounced. Check the address and save it."
   },
-  "tipsSplit": "Equal shares: {shares}"
+  "export": "Export"
 }

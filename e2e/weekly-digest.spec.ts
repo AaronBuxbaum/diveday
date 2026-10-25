@@ -39,11 +39,12 @@ test.describe("the Monday email, on a shop of the test's own", () => {
 test.describe("the Monday email preview", () => {
   signedInAs("owner");
 
-  test("My account opens Email settings", async ({ page }) => {
+  test("Account settings opens Email settings", async ({ page }) => {
     await page.goto("/shop/blue-mantis/settings");
     await page.locator("header [data-identity-menu]").click();
+    await page.locator("header").getByRole("link", { name: "Account settings" }).click();
     await page
-      .getByRole("navigation", { name: "My account" })
+      .getByRole("navigation", { name: "Account security" })
       .getByRole("link", { name: "Email settings" })
       .click();
     await expect(page.getByRole("heading", { level: 1, name: "Email" })).toBeVisible();

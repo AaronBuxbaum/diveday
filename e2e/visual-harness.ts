@@ -2004,7 +2004,7 @@ export function publicReefCard(page: Page) {
 /**
  * A seat's dispute sheet, reached the way an owner reaches it: the Orders
  * index narrowed to the history's deposit orders (each raised for a real seat),
- * the first one, then its "Dispute sheet" door. Waits on the last section's
+ * the first one, then its More menu's "Dispute sheet" door. Waits on the last section's
  * heading so a capture never photographs the skeleton.
  */
 export async function openDisputeSheet(page: Page) {
@@ -2012,6 +2012,8 @@ export async function openDisputeSheet(page: Page) {
   const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
   await ledgerRow.filter({ visible: true }).first().waitFor();
   await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+  // The sheet's door sits in the order header's More menu (visual review A16).
+  await page.getByRole("main").getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("link", { name: "Dispute sheet" }).click();
   await page.getByRole("heading", { level: 2, name: "What staff did" }).waitFor();
 }

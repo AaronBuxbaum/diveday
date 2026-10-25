@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Certification, NitroxCertification, SpecialtyCertification } from "@/db/schema";
 import { type ActivityCode, activityParams } from "./activity";
 import {
+  type BoatChecklistAnswer,
   type BoatPaperRecord,
   type BoatRadioRecord,
   type BoatSafetyNotice,
@@ -11,6 +12,7 @@ import type { DepthUnit } from "./depth-units";
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { IncidentKind, IncidentSeverity } from "./incident-reports";
 import {
+  isTurnedAwayOffBoat,
   type RollCallCheckpoint,
   type RollCallLabel,
   rollCallLabel,
@@ -245,6 +247,14 @@ export type IncidentRosterEntry = {
   waiver: IncidentWaiverStatus | null;
 };
 
+/** One seat the desk turned away (`IncidentExportDocument.turnedAway`). */
+export type IncidentTurnedAwayEntry = {
+  bookingId: string;
+  /** A held seat by the name it was booked as, as on the roster. */
+  fullName: string;
+  reason: TurnAwayReason | null;
+};
+
 export type IncidentCrewEntry = {
   fullName: string;
   /** Role codes as the roster holds them (effectiveCrewRoles). */
@@ -327,6 +337,13 @@ export type IncidentBoatSafety = {
    */
   radio?: BoatRadioRecord;
   notices: BoatSafetyNotice[];
+  /**
+   * The pre-departure checklist at the same instant as `notices` (issue
+   * 2725), printed beside them and read from the taps as of the snapshot's
+   * `capturedAt`. Present only when the input carries it, so a document
+   * built without one keeps its code; absent reads as not kept.
+   */
+  checklist?: BoatChecklistAnswer;
 };
 
 export type IncidentTimelineEntry =
@@ -373,6 +390,12 @@ export type IncidentTimelineEntry =
       teamNumber: number;
       memberNames: string[];
       recordedByName: string;
+      /**
+       * The recorder said everyone on the team is 18 or over, where nothing on
+       * file did (issue 2808). Present only when true, so a line without it
+       * hashes as it did before the field existed.
+       */
+      adultsConfirmed?: true;
     }
   /**
    * A seat or crew place added, removed or moved **once the boat was due out**
@@ -478,6 +501,18 @@ export type IncidentExportDocument = {
     crewAssigned: number;
   };
   roster: IncidentRosterEntry[];
+  /**
+   * **Seats the desk turned away, off the boat** (issue #2907): a seat turned
+   * away that nobody at the boat recorded a result for at any checkpoint. It
+   * is not in `roster` or in any `departureSummary` count, and the page
+   * states it on a line of its own, so a turn-away before the first dock
+   * count still leaves a sentence in the record. The reason is the category
+   * only (H-135), never the answers behind it; null after erasure.
+   *
+   * Empty on a departure with none, and then outside the hash, so every log
+   * printed without one keeps its code.
+   */
+  turnedAway: IncidentTurnedAwayEntry[];
   crew: IncidentCrewEntry[];
   /** Post-dive execution evidence, including fields staff explicitly left unknown. */
   executedDives: IncidentExecutedDive[];
@@ -685,6 +720,7 @@ export type IncidentExportInput = {
     papers: BoatPaperRecord;
     radio?: BoatRadioRecord;
     notices: readonly BoatSafetyNotice[];
+    checklist?: BoatChecklistAnswer | null;
   } | null;
   /** The boat the departure names now, for the swap and absence wording. */
   departureBoatId?: string | null;
@@ -707,6 +743,7 @@ export type IncidentBuddyTeamEventInput = {
   action: "formed" | "dissolved" | "member_added" | "member_removed";
   memberNames: readonly string[];
   recordedByName: string;
+  adultsConfirmed?: boolean;
   occurredAt: Date;
   createdAt: Date;
 };
@@ -860,6 +897,27 @@ export function hasRollCallEntries(timeline: readonly IncidentTimelineEntry[]): 
 }
 
 /**
+ * **When each diver boarded, for reading their release** (domain reviews of
+ * issue #3002): the seat's latest departure roll-call mark. A boat that sailed
+ * late had divers sign at the dock after the scheduled start, and the release
+ * that stood when the boat left is the one she boarded on. A seat with no
+ * departure mark is read at the log's cutoff instead.
+ */
+export function seatBoardingInstants(
+  events: readonly { bookingId: string; checkpoint: string; occurredAt: Date }[],
+): Map<string, Date> {
+  const boarded = new Map<string, Date>();
+  for (const event of events) {
+    if (event.checkpoint !== "departure") continue;
+    const seen = boarded.get(event.bookingId);
+    if (!seen || event.occurredAt.getTime() > seen.getTime()) {
+      boarded.set(event.bookingId, event.occurredAt);
+    }
+  }
+  return boarded;
+}
+
+/**
  * **From when a seat change is this log's business**: the scheduled start, or
  * the first departure roll-call mark if the boat began loading before it
  * (domain reviews 2026-10-16). A seat taken off between a diver's boarding and
@@ -934,8 +992,25 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   // release are facts about somebody else (issue #2128, the manifest's rule
   // from #1690). `identityWithheld` says so, so the page states it rather
   // than printing "no cards on file" or "not sent", which would be wrong facts.
-  const roster: IncidentRosterEntry[] = departure.divers
-    .map(withholdHeldSeatParticulars)
+  // A seat the desk turned away is off the boat at a checkpoint where nobody
+  // recorded a result for it (`isTurnedAwayOffBoat`, issue #2907). Only one
+  // that is off the boat at **every** checkpoint leaves the table: a result
+  // anybody at the boat recorded, at any count, is a fact this document keeps.
+  const offBoatEverywhere = (bookingId: string) =>
+    input.manifests.every((manifest) => {
+      const row = manifest.divers.find((entry) => entry.bookingId === bookingId);
+      return row !== undefined && isTurnedAwayOffBoat(row);
+    });
+  const seats = departure.divers.map(withholdHeldSeatParticulars);
+  const turnedAway: IncidentTurnedAwayEntry[] = seats
+    .filter((diver) => offBoatEverywhere(diver.bookingId))
+    .map((diver) => ({
+      bookingId: diver.bookingId,
+      fullName: diver.fullName,
+      reason: diver.turnedAwayReason ?? null,
+    }));
+  const roster: IncidentRosterEntry[] = seats
+    .filter((diver) => !offBoatEverywhere(diver.bookingId))
     .map((diver) => {
       if (diver.identityWithheld) {
         return {
@@ -1022,6 +1097,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         teamNumber: teamNumberById.get(event.teamId) ?? 0,
         memberNames: [...event.memberNames],
         recordedByName: event.recordedByName,
+        ...(event.adultsConfirmed ? { adultsConfirmed: true as const } : {}),
       } satisfies IncidentTimelineEntry,
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,
@@ -1106,6 +1182,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       crewAssigned: departure.crew.length,
     },
     roster,
+    turnedAway,
     crew,
     executedDives,
     preDepartureCheck: (input.preDepartureCheck ?? []).map((item) => ({
@@ -1131,6 +1208,14 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
             ? { radio: input.boatSafety.radio }
             : {}),
           notices: [...input.boatSafety.notices],
+          ...(input.boatSafety.checklist
+            ? {
+                checklist: {
+                  itemCount: input.boatSafety.checklist.itemCount,
+                  unchecked: [...input.boatSafety.checklist.unchecked],
+                },
+              }
+            : {}),
         }
       : null,
     boatSafetyAbsence: (input.boatSafety
@@ -1157,16 +1242,18 @@ function unsealedMeta<T extends { generatedAt: string; generatedByName: string }
 /**
  * Whether a log holds anything no version-1 code could seal (ADR
  * 20261016-departure-log-code-v2): a seat or crew line from when the boat was
- * due out, an incident report, or a timeline line later than the log says it
- * was made, which only a backdated `generatedAt` produces.
+ * due out, an incident report, a seat turned away at the desk (#2907), or a
+ * timeline line later than the log says it was made, which only a backdated
+ * `generatedAt` produces.
  */
 function holdsVersion2Facts(
-  body: Pick<IncidentExportDocument, "meta" | "timeline"> &
+  body: Pick<IncidentExportDocument, "meta" | "timeline" | "turnedAway"> &
     Partial<Pick<IncidentExportDocument, "incidentReports">>,
 ): boolean {
   const madeAt = Date.parse(body.meta.generatedAt);
   return (
     (body.incidentReports ?? []).length > 0 ||
+    body.turnedAway.length > 0 ||
     body.timeline.some(
       (entry) => entry.kind === "roster_change" || Date.parse(entry.occurredAt) > madeAt,
     )
@@ -1212,6 +1299,10 @@ export function incidentExportContentHash(
     meta: version === 1 ? meta : unsealedMeta(meta),
     departureSummary: body.departureSummary,
     roster: body.roster.map(({ bookingId: _bookingId, ...entry }) => entry),
+    // Only when there is one, like the snags below.
+    ...(body.turnedAway.length > 0
+      ? { turnedAway: body.turnedAway.map(({ bookingId: _bookingId, ...entry }) => entry) }
+      : {}),
     crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
     executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,

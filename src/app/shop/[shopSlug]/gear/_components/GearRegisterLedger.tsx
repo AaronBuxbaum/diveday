@@ -1,4 +1,3 @@
-import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -93,7 +92,14 @@ export function GearRegisterLedger({
   return (
     <div className="space-y-8">
       {allHome ? (
-        <EarnedMomentLine animate={celebrate}>{t("gear.notice.allHome")}</EarnedMomentLine>
+        // The success wash, never coral: a calm state is not a warning (visual
+        // review A07).
+        <p
+          role="status"
+          className={`${celebrate ? "rise-in " : ""}rounded-lg border border-success/30 bg-success-tint px-3 py-2 text-sm font-semibold text-success-strong`}
+        >
+          {t("gear.notice.allHome")}
+        </p>
       ) : null}
       {/* A group renders only when it has rows: "Out — 0" is a heading over
           nothing, and a register that says it three times on a quiet morning

@@ -266,7 +266,9 @@ describe("filing a report of a missing diver", () => {
     expect(await sendMissingDiverAlerts(db, { provider: retry.provider })).toMatchObject({
       alerted: 1,
     });
-    expect(retry.sent.length).toBeGreaterThanOrEqual(2);
+    // Only the owner the first send missed: who it reached is on the report
+    // now (#2828), so nobody is paged twice.
+    expect(retry.sent.map((notification) => notification.to)).toEqual([account.email]);
     expect(await sentAtOf(target.reportId)).toBeInstanceOf(Date);
     const done = recorder();
     expect(await sendMissingDiverAlerts(db, { provider: done.provider })).toMatchObject({
