@@ -14,6 +14,7 @@ import {
   e2eNow,
   openCounterFor,
   openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   publicTripUrl,
   seededTripId,
@@ -54,7 +55,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await page.getByText("Edit details", { exact: true }).click();
+        await openTripAboutRow(page, "The plan");
         await page.getByLabel("Departs").fill("13:45");
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
@@ -683,7 +684,7 @@ for (const scheme of ["light", "dark"] as const) {
         // And the cadence editor open — the weekday chips carrying the run's
         // real answer, which is the state the collapsed panel above can never
         // show. Same page, one click, so it costs a click rather than a build.
-        await page.getByText("Change the days it runs").click();
+        await openTripAboutRow(page, "Repeats");
         await page.getByRole("group", { name: "Repeats on" }).waitFor();
         await capture(page, "trip-repeating-cadence", scheme);
 

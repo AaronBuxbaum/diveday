@@ -398,6 +398,7 @@ export default async function ManageTripPage({
                 }),
                 ...(await readRows),
               ]}
+              editLabel={t("trips.about.edit")}
               actions={
                 <TripAboutLinks
                   shop={shop}

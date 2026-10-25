@@ -14,7 +14,6 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { formatShortDate, weekdayNames } from "@/lib/format";
-import { hasCrewPrediction } from "@/lib/marine-forecast";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
@@ -253,7 +252,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         ) : (
           planSummary
         ),
-      editLabel: t("trips.details.edit"),
       editorOpen: Boolean(detailsStatus),
       editor: canConfigure ? (
         <DetailsEditor
@@ -299,9 +297,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       id: "conditions",
       label: t("trips.about.conditions"),
       value: conditionsSummary,
-      editLabel: hasCrewPrediction(trip)
-        ? t("trips.conditions.editPublished")
-        : t("trips.conditions.editEmpty"),
       editorOpen: Boolean(conditionsStatus),
       /* Conditions are crew-entered (glossary) — open to all staff. Its
    fields are uncontrolled (`defaultValue`, not `value`), so a save
@@ -352,7 +347,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       // refuses to edit it — so its row opens onto where the rules come
       // from rather than onto a form, and says so in the word on the
       // control.
-      editLabel: trip.course ? t("trips.about.details") : t("trips.requirements.edit"),
       // Fail-closed, open: with no requirements row readiness blocks
       // every diver, so that state may never wait behind a tap. A frozen
       // course gate opens for the opposite reason — one read-only
@@ -397,7 +391,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         ) : (
           boatCrewSummary
         ),
-      editLabel: t("trips.crew.edit"),
       // **A row with open work stays open** (principles.md §9's
       // "collapse the settled row", read the other way). A boat with
       // nobody on it, a clash, a course with no instructor, a shortfall
@@ -474,7 +467,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       id: "series",
       label: t("trips.about.repeats"),
       value: repeatsRowText(t, locale, series),
-      editLabel: t("tripSeries.panel.editCadence"),
       editorOpen: Boolean(seriesStatus),
       editor:
         canConfigure && series ? (

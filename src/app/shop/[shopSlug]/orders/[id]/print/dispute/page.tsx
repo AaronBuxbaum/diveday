@@ -20,7 +20,7 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { KIND_KEYS, STATUS_KEYS } from "../../order-detail-keys";
+import { lineKindKey, STATUS_KEYS } from "../../order-detail-keys";
 
 export const instant = true;
 
@@ -142,8 +142,7 @@ export default async function DisputeSheetPage({
                 {t("disputeSheet.lineKind", {
                   description: line.description,
                   kind:
-                    t(KIND_KEYS[line.kind]) +
-                    (line.quantity > 1 ? ` × ${line.quantity}` : ""),
+                    t(lineKindKey(line.kind)) + (line.quantity > 1 ? ` × ${line.quantity}` : ""),
                 })}
               </span>
               <span className="shrink-0 tabular-nums">

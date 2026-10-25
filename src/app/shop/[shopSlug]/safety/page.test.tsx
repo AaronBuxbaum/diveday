@@ -106,7 +106,7 @@ describe("the Safety page", () => {
    * counts, each a link to the list behind it, and no paragraph explains them.
    */
   it("reads the month as four counts, each a door to its list", async () => {
-    const figures = figuresIn(await renderTree(["owner"])) as {
+    const figures = figuresIn(await renderTree(["owner"])) as unknown as {
       key: string;
       label: string;
       href?: string;

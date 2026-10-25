@@ -325,7 +325,7 @@ export default async function ReportsPage({
     t,
   });
   const figureBasis = monthFigureBasis({ report, currency, locale, t });
-  const month = monthKey(current);
+  const currentMonthKey = monthKey(current);
 
   const departureRows = departureLedgerRows({
     trips,
@@ -347,19 +347,19 @@ export default async function ReportsPage({
           hasMonthlyActivity ? (
             <MoreMenu label={t("reports.export")}>
               <a
-                href={`${shopPath(shopSlug, "reports", "download")}?month=${month}`}
+                href={`${shopPath(shopSlug, "reports", "download")}?month=${currentMonthKey}`}
                 className={menuRowClass("quiet", { gutter: false })}
               >
                 {t("reports.downloadCsv")}
               </a>
               <a
-                href={`${shopPath(shopSlug, "settings", "export", "crew-sheet")}?month=${month}`}
+                href={`${shopPath(shopSlug, "settings", "export", "crew-sheet")}?month=${currentMonthKey}`}
                 className={menuRowClass("quiet", { gutter: false })}
               >
                 {t("reports.downloadCrewSheet")}
               </a>
               <a
-                href={`${shopPath(shopSlug, "reports", "download", "month-end")}?month=${month}`}
+                href={`${shopPath(shopSlug, "reports", "download", "month-end")}?month=${currentMonthKey}`}
                 className={menuRowClass("quiet", { gutter: false })}
               >
                 {t("reports.downloadMonthEnd")}

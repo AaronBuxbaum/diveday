@@ -15,6 +15,7 @@ import {
   openPaperWaiverForm,
   openRosterDetails,
   openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   openTripTab,
   seatFromRoster,
@@ -219,7 +220,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await openTripAbout(page);
-        await page.getByText("Edit requirements", { exact: true }).click();
+        await openTripAboutRow(page, "Who can book");
         await page.getByLabel("Minimum certification").selectOption("rescue");
         await page.getByRole("button", { name: "Save requirements" }).click();
         // Raising the bar mid-season strands the divers already booked under
@@ -304,7 +305,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Pickles Reef");
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await openTripAbout(page);
-        await page.getByText("Edit requirements", { exact: true }).click();
+        await openTripAboutRow(page, "Who can book");
         await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
         await page.getByRole("button", { name: "Save requirements" }).click();
         // Raising the bar on a seated charter answers with the warning variant

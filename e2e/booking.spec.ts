@@ -11,6 +11,7 @@ import {
   openRosterDetails,
   openThreadStep,
   openTripAbout,
+  openTripAboutRow,
   openTripActivity,
   openTripFromBoard,
   openTripMore,
@@ -188,7 +189,7 @@ test.describe("staff", () => {
     // The conditions form waits behind the section's disclosure (summary-first
     // Overview); no prediction is published yet, so the toggle reads "Publish".
     await openTripAbout(page);
-    await page.getByText("Write a crew prediction", { exact: true }).click();
+    await openTripAboutRow(page, "Conditions");
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
@@ -230,7 +231,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Book my seat" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
-    await page.getByText("Edit details", { exact: true }).click();
+    await openTripAboutRow(page, "The plan");
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");

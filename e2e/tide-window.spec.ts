@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openIfClosed, openTripAbout } from "./helpers";
+import { openIfClosed, openTripAbout, openTripAboutRow } from "./helpers";
 
 /**
  * **The tide window** (ADR 20260907-noaa-tide-predictions): a site that names
@@ -51,7 +51,7 @@ test.describe("the tide window", () => {
     await page.getByRole("link", { name: REEF_TRIP }).first().click();
     await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
     await openTripAbout(page);
-    await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
+    await openTripAboutRow(page, "Conditions");
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
     // And whose water it is (issue #1732). The fleet's fixture station is
     // Carysfort Reef, FL, whatever id is asked for — which is the station the

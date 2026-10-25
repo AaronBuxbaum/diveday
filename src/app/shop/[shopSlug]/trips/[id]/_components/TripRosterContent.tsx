@@ -8,6 +8,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -31,6 +32,7 @@ import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
+import { FOOT_ROW_BODY, FOOT_ROW_SUMMARY } from "./TripAboutSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WhoWantsInPanel } from "./WhoWantsInPanel";
 import { whoWantsInGroupsOf } from "./who-wants-in-rows";
@@ -482,64 +484,66 @@ export function TripPromoteAndActivity({
   return (
     // A shop's taps and its audit trail, not the departure a staffer prints.
     <div className="print:hidden">
-      {showPromote ? (
-        <AutoOpenDetails
-          openOnHash="last-minute-deal"
-          className="group/promote scroll-mt-6 border-t border-border"
-        >
-          <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
-            <span>{t("trips.guests.promoteHeading")}</span>
-            <span className="flex items-center gap-2">
-              {t("trips.guests.promoteSentCount", { count: lastMinute.promos.length })}
-              <DisclosureCaret direction="down" className="size-4 group-open/promote:rotate-180" />
-            </span>
+      <DisclosureRowList>
+        {showPromote ? (
+          <AutoOpenDetails openOnHash="last-minute-deal" className="group/promote scroll-mt-6">
+            <summary className={FOOT_ROW_SUMMARY}>
+              <span>{t("trips.guests.promoteHeading")}</span>
+              <span className="flex items-center gap-2">
+                {t("trips.guests.promoteSentCount", { count: lastMinute.promos.length })}
+                <DisclosureCaret
+                  direction="down"
+                  className="size-4 group-open/promote:rotate-180"
+                />
+              </span>
+            </summary>
+            <div className={FOOT_ROW_BODY}>
+              <LastMinuteDealSection
+                locale={locale}
+                tripPath={canOffer ? shopPath(shopSlug, "trips", trip.id) : null}
+                promos={lastMinute.promos}
+                promoRecipients={lastMinute.promoRecipients}
+                timezone={timezone}
+                currency={currency}
+                status={noticeForForm(tripNotice, "last-minute-deal")}
+                leadTime={
+                  <Suspense fallback={null}>
+                    <DealLeadTime
+                      shopId={shop.id}
+                      startsAt={trip.startsAt}
+                      timeZone={timezone}
+                      locale={locale}
+                    />
+                  </Suspense>
+                }
+              />
+            </div>
+          </AutoOpenDetails>
+        ) : null}
+
+        <DepartureNoteSection locale={locale} shop={shop} trip={trip} />
+
+        {more}
+
+        <details className="group/activity">
+          <summary className={FOOT_ROW_SUMMARY}>
+            <span>{t("trips.guests.activityHeading")}</span>
+            <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
           </summary>
-          <div className="pb-5">
-            <LastMinuteDealSection
+          <div className={FOOT_ROW_BODY}>
+            <ActivityLog
+              events={activity.map((event) => ({
+                id: event.id,
+                message: activityLine(t, event),
+                occurredAt: event.occurredAt,
+              }))}
               locale={locale}
-              tripPath={canOffer ? shopPath(shopSlug, "trips", trip.id) : null}
-              promos={lastMinute.promos}
-              promoRecipients={lastMinute.promoRecipients}
-              timezone={timezone}
-              currency={currency}
-              status={noticeForForm(tripNotice, "last-minute-deal")}
-              leadTime={
-                <Suspense fallback={null}>
-                  <DealLeadTime
-                    shopId={shop.id}
-                    startsAt={trip.startsAt}
-                    timeZone={timezone}
-                    locale={locale}
-                  />
-                </Suspense>
-              }
+              timeZone={timezone}
+              emptyText={t("trips.guests.noActivity")}
             />
           </div>
-        </AutoOpenDetails>
-      ) : null}
-
-      <DepartureNoteSection locale={locale} shop={shop} trip={trip} />
-
-      {more}
-
-      <details className="group/activity border-y border-border">
-        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
-          <span>{t("trips.guests.activityHeading")}</span>
-          <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
-        </summary>
-        <div className="pb-5">
-          <ActivityLog
-            events={activity.map((event) => ({
-              id: event.id,
-              message: activityLine(t, event),
-              occurredAt: event.occurredAt,
-            }))}
-            locale={locale}
-            timeZone={timezone}
-            emptyText={t("trips.guests.noActivity")}
-          />
-        </div>
-      </details>
+        </details>
+      </DisclosureRowList>
       {/* Today, Promotions and a held send link here at `#last-minute-deal`;
           the roster's own ScrollToHash is not on this tab. */}
       <ScrollToHash />

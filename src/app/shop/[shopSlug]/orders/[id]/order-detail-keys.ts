@@ -38,6 +38,15 @@ export const KIND_KEYS: Record<OrderLineItemKind, StaffMessageKey> = {
   other: "orders.detail.kind.other",
 };
 
+/**
+ * A line's kind where the reader types it as a plain string (the dispute
+ * sheet's read): its own word when the enum has it, "Other" when not, never
+ * the raw value (visual review 2026-10-24, A02).
+ */
+export function lineKindKey(kind: string): StaffMessageKey {
+  return Object.hasOwn(KIND_KEYS, kind) ? KIND_KEYS[kind as OrderLineItemKind] : KIND_KEYS.other;
+}
+
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
 export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {

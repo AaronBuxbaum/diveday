@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
-import { openTripAbout, openTripMore } from "./helpers";
+import { openTripAbout, openTripAboutRow, openTripMore } from "./helpers";
 
 /**
  * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff
@@ -127,10 +127,14 @@ test.describe("H-14 role permissions", () => {
       // Each About row is its own disclosure, so the visible half for a captain
       // is the row's control — "Write a crew prediction" or "Edit crew
       // prediction", depending on whether one is live.
-      await expect(page.getByText(/Write a crew prediction|Edit crew prediction/)).toBeVisible();
+      await expect(
+        page.getByRole("group", { name: "Conditions", exact: true }).locator(":scope > summary"),
+      ).toContainText("Edit");
       // Crew editing is unconditional (no config-gated form around it), so its
       // presence for a captain is the row's own control, not a submit button.
-      await expect(page.getByText("Edit crew", { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("group", { name: "Boat & crew", exact: true }).locator(":scope > summary"),
+      ).toContainText("Edit");
       // Cancelling the departure is one of the rare acts, in the panel's "More"
       // list — still a captain's to reach.
       const more = await openTripMore(page);
@@ -353,7 +357,7 @@ test.describe("H-14 role permissions", () => {
       // The details form waits behind its Edit disclosure (summary-first
       // Overview) — the owner sees the toggle, and the form behind it.
       await openTripAbout(page);
-      await page.getByText("Edit details", { exact: true }).click();
+      await openTripAboutRow(page, "The plan");
       await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
     });
 

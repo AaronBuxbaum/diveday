@@ -9,6 +9,7 @@ import {
   findTripOnBoard,
   openThreadStep,
   openTripAbout,
+  openTripAboutRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -49,7 +50,7 @@ test.describe("the dive arrival arc", () => {
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: helperName });
     await expect(page.getByRole("button", { name: `Unassign ${helperName}` })).toBeVisible();
-    await page.getByText("Edit details", { exact: true }).click();
+    await openTripAboutRow(page, "The plan");
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
     // By form name: "Landmark" is a substring of the photo control's own label

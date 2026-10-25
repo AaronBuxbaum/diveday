@@ -24,7 +24,6 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "belowBooked": "{count, plural, one {Ya hay # buceador reservado} other {Ya hay # buceadores reservados}}, así que las plazas de buceo no pueden ser menos.",
-    "edit": "Editar",
     "divesOnly": "Solo buceadores",
     "priceLine": "{type} {price}",
     "free": "gratis",

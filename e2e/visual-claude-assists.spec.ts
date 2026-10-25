@@ -12,6 +12,7 @@ import {
   openDiverFileGroup,
   openIfClosed,
   openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
@@ -221,7 +222,7 @@ test.describe("light mode — Claude's assists, lit", () => {
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
       await openTripAbout(page);
-      await page.getByText("Edit details", { exact: true }).click();
+      await openTripAboutRow(page, "The plan");
       await page.getByRole("button", { name: "Draft it", exact: true }).click();
       await expect(page.locator('textarea[name="description"]')).toHaveValue(
         /a crew who know the reef well/,
