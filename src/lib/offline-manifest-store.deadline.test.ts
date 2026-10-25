@@ -111,9 +111,9 @@ describe("syncOfflineManifest on a network that never answers", () => {
     // Bounded by real time, not a turn count: under a loaded machine the
     // IndexedDB read and the interceptor took more than 10,000 turns, and the
     // count ran out before the request was sent (flaked in a full run).
-    // `Date.now` is real here — only setTimeout/clearTimeout are faked.
-    const started = Date.now();
-    while (posts === 0 && Date.now() - started < 5_000) {
+    // `performance.now` is real here — only setTimeout/clearTimeout are faked.
+    const started = performance.now();
+    while (posts === 0 && performance.now() - started < 5_000) {
       await new Promise((resolve) => setImmediate(resolve));
     }
     expect(posts).toBeGreaterThan(0);
