@@ -213,6 +213,7 @@ export default async function SafetyReportPage({
     filed: incidents.length - draftReports,
     drafts: draftReports,
     activityHref,
+    staffingHref: shop.crewScheduleEnabled ? shopPath(shopSlug, "staffing") : null,
   });
 
   function noCrewDetail(): Pick<MonthFigure, "detail" | "detailTone"> {

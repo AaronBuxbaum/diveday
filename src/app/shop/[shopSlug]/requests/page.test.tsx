@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -119,6 +119,33 @@ describe("a day's Add a departure", () => {
       screen.getByRole("heading", { level: 2, name: /1 group · 2 divers/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("Priya Sharma")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **A day reached only by second choices keeps its act** (layer 3 review,
+ * dive-domain run B, item 1). A date that is only someone's alternate is a
+ * real group with real people, rendered as reference rows; the act lives in
+ * the day's header, so it is there with no full record beneath it.
+ */
+describe("a day named only as someone's alternate", () => {
+  it("still offers to open a departure on that date, carrying the request", async () => {
+    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+    vi.mocked(listOpenDateInterests).mockResolvedValue({
+      rows: [
+        { ...REQUEST, preferredDate: "2027-03-12", alternateDate: "2027-03-14", partySize: 4 },
+      ],
+      total: 1,
+      page: 1,
+      pageCount: 1,
+    } as never);
+    await renderPage();
+
+    const group = document.getElementById("date-2027-03-14")?.closest("section");
+    if (!group) throw new Error("the Mar 14 group renders as a section");
+    const add = within(group).getByRole("link", { name: "Open a departure for this date" });
+    expect(add.getAttribute("href")).toContain("date=2027-03-14");
+    expect(add.getAttribute("href")).toContain(`requests=${REQUEST.id}`);
   });
 });
 

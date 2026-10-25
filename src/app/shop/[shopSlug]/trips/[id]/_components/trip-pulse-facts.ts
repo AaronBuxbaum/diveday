@@ -155,6 +155,7 @@ export function tripPulseFacts({
               text: todayRowText(action),
               href: awayFromThisPage(action.href, shopPath(shopSlug, "trips", tripId)),
               chip: {
+                group: action.diver?.readiness ? `${action.kind}:readiness` : action.kind,
                 kind: t(ACTION_KIND_KEYS[action.kind]),
                 icon: quietIcon(action.kind),
                 tone: rowTone(action),
@@ -181,7 +182,12 @@ const BOAT_WORK_KIND = {
 
 function boatWorkChip(code: BoatWorkItem["code"], t: StaffTranslator) {
   const kind = BOAT_WORK_KIND[code];
-  return { kind: t(ACTION_KIND_KEYS[kind]), icon: quietIcon(kind), tone: "neutral" as const };
+  return {
+    group: kind,
+    kind: t(ACTION_KIND_KEYS[kind]),
+    icon: quietIcon(kind),
+    tone: "neutral" as const,
+  };
 }
 
 /** A Today row as one line: the person, then the sentence, as the row reads on Today. */

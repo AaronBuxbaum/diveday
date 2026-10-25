@@ -138,6 +138,28 @@ describe("rankBoatRows (A43)", () => {
     expect(rankBoatRows(rows).map((action) => action.id)).toEqual(["loud-payment", "contact"]);
   });
 
+  it("ranks a diver's readiness blocker of a money kind with readiness", () => {
+    // Today's order: the unpaid-seat blocker first, then contact and prep. A
+    // shop that requires payment before boarding raises it as kind `payment`.
+    const blocked = {
+      id: "p1-payment",
+      kind: "payment",
+      diver: { personId: "p1", items: ["payment due"], readiness: true },
+    } as unknown as TodayAction;
+    const rows = [
+      row("orders", "payment"),
+      row("p2-contact", "emergency_contact"),
+      row("p3-prep", "dive_prep"),
+      blocked,
+    ];
+    expect(rankBoatRows(rows).map((action) => action.id)).toEqual([
+      "p1-payment",
+      "p2-contact",
+      "p3-prep",
+      "orders",
+    ]);
+  });
+
   it("ranks a kind it does not name with readiness, never under money", () => {
     const rows = [row("payment", "payment"), row("aboard", "blocked_aboard")];
     expect(rankBoatRows(rows)[0]?.id).toBe("aboard");

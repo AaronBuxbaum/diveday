@@ -79,8 +79,9 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       const week = page.getByRole("region", { name: "Who’s working" });
       await week.getByText("Boat 2", { exact: true }).first().waitFor();
       await capture(page, "staffing-shift-remove-disclosure", "light", {
-        // The grid has a disclosure; the phone day-list shows Remove inline.
-        // Locate the shift in the visible layout after each resize.
+        // The grid has a disclosure; the phone day-list keeps Remove in the
+        // shift's own "⋯" (visual review A40). Locate the shift in the
+        // visible layout after each resize.
         beforeShot: async () => {
           const shift = week
             .locator("details, li")
@@ -92,6 +93,9 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
             if (!(await shift.evaluate((element) => element.hasAttribute("open")))) {
               await summary.click();
             }
+          } else {
+            const menu = shift.getByRole("button", { name: /^Shift for Keiko Tanaka on / });
+            if ((await menu.getAttribute("aria-expanded")) !== "true") await menu.click();
           }
           await expect(shift.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
         },

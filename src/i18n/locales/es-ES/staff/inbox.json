@@ -41,7 +41,7 @@
   "openRecord": "Abrir la ficha de {name}",
   "openRecordShort": "Abrir la ficha",
   "replyByEmail": "Responder por correo",
-  "timesIn": "Horas en {zone}",
+  "timesIn": "Zona horaria: {zone}",
   "delete": {
     "action": "Eliminar",
     "actionFor": "Eliminar el mensaje de {address}",

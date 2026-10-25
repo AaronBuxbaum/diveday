@@ -12,6 +12,7 @@ import { SendHold, type SendHoldCopy } from "@/components/SendHold";
 import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import type { HeldSendOutcome } from "@/db/held-sends";
 import { fill } from "@/i18n/fill";
+import { useOfferDiscountBlank } from "./OfferDiscount";
 
 /** Every word this client component renders, resolved on the server (`offerSeatCopy`). */
 export type OfferSeatCopy = {
@@ -136,6 +137,7 @@ export function OfferSeat({
     else if (only) void copyMessage(only);
   }
 
+  const discountBlank = useOfferDiscountBlank();
   const buttonText = emailed ? copy.sent : (label ?? copy.offerSeat);
 
   return (
@@ -162,7 +164,7 @@ export function OfferSeat({
         {discountFields}
         <button
           type="submit"
-          disabled={count === 0}
+          disabled={count === 0 || discountBlank}
           aria-label={emailed ? undefined : ariaLabel}
           className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
         >

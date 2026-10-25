@@ -244,6 +244,22 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(served).not.toContain(claim);
   });
 
+  it("drops a script whose end tag carries whitespace or junk, and one the first pass joins", async () => {
+    const body = [
+      `<p>Kept</p>`,
+      `<script>self.__next_f.push([1,"a"])</script\t\n bar>`,
+      // Removing the inner element joins the outer one's halves into a script.
+      `<scr<script src="/x.js"></script>ipt>self.__next_f.push([1,"b"])</script>`,
+    ].join("");
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+
+    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
+    const stored = (await kept?.clone().text()) ?? "";
+    expect(stored).not.toContain("__next_f");
+    expect(stored).not.toContain("x.js");
+    expect(stored).toContain("<p>Kept</p>");
+  });
+
   /**
    * D2: a copy does not outlive the trip it is for (the page names the day
    * after the boat is due back), and a page that names no day (a cancelled

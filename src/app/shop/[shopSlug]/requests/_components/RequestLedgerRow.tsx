@@ -2,7 +2,6 @@ import Link from "next/link";
 import { RowMenu } from "@/components/RowMenu";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
 import type { DateInterestRow } from "@/db/interest-dates";
@@ -89,15 +88,9 @@ export function RequestLedgerRow({
   shopSlug,
   shopName,
   markDoneAction,
-  openDeparture,
   t,
 }: {
   request: DateInterestRow;
-  /**
-   * The day's one act, on each request it answers (visual review A23): the
-   * group header no longer carries it. Absent on the undated tail.
-   */
-  openDeparture?: { href: string; label: string };
   locale: string;
   timezone: string;
   shopSlug: string;
@@ -242,14 +235,6 @@ export function RequestLedgerRow({
             </p>
           ) : null}
           {request.message ? <p className="mt-1 text-sm text-pretty">{request.message}</p> : null}
-          {openDeparture ? (
-            <Link
-              href={openDeparture.href}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
-            >
-              {openDeparture.label}
-            </Link>
-          ) : null}
         </div>
       </div>
     </LedgerRow>
