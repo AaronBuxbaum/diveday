@@ -128,7 +128,8 @@
   },
   "tripChange": {
     "meeting_point": "{actor} changed the meeting point",
-    "conditions": "{actor} posted conditions"
+    "conditions": "{actor} posted conditions",
+    "site_change": "{actor} changed the dive sites"
   },
   "log": {
     "title": "Activity",

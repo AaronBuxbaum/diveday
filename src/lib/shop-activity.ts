@@ -178,8 +178,12 @@ export type ShopActivitySource = "activity" | "review" | "trip_change";
 /** A review moderation act, as `review_moderation_events.action` stores it. */
 export type ReviewModerationLineCode = "published" | "hidden";
 
-/** A departure plan change, as `trip_change_events.kind` stores it. */
-export type TripChangeLineCode = "meeting_point" | "conditions";
+/**
+ * A departure plan change, as `trip_change_events.kind` stores it. Every
+ * value of that enum, which `activity-labels.test.ts` holds this to, so a
+ * kind added there cannot reach the log as "unknown" (review of #3061).
+ */
+export type TripChangeLineCode = "meeting_point" | "conditions" | "site_change";
 
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 

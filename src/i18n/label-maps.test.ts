@@ -319,10 +319,10 @@ const REVIEW_MODERATION_LINES = everyCodeOf<ReviewModerationLineCode>({
   published: true,
   hidden: true,
 });
-
 const TRIP_CHANGE_LINES = everyCodeOf<TripChangeLineCode>({
   meeting_point: true,
   conditions: true,
+  site_change: true,
 });
 
 const DEPTH_UNITS = everyCodeOf<DepthUnit>({ meters: true, feet: true });

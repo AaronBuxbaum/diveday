@@ -67,19 +67,26 @@ describe("public trip change snapshots", () => {
 });
 
 describe("tripSitesSnapshot (issue #3060)", () => {
-  it("keeps the run in order, each name once, blanks dropped and space folded", () => {
+  it("keeps the run as the row reads it: dive order, repeats kept, blanks dropped, space folded", () => {
     const snapshot = tripSitesSnapshot(["Molasses Reef", null, " French  Reef ", "Molasses Reef"]);
-    expect(snapshot).toEqual({ siteNames: "Molasses Reef\nFrench Reef" });
-    expect(tripSiteNames(snapshot)).toEqual(["Molasses Reef", "French Reef"]);
+    expect(snapshot).toEqual({ siteNames: "Molasses Reef\nFrench Reef\nMolasses Reef" });
+    expect(tripSiteNames(snapshot)).toEqual(["Molasses Reef", "French Reef", "Molasses Reef"]);
   });
 
   it("is null with no site, and compares by the run, not the object", () => {
     expect(tripSitesSnapshot([null, undefined, " "])).toEqual({ siteNames: null });
     expect(tripSiteNames({ siteNames: null })).toEqual([]);
     expect(tripSiteNames(null)).toEqual([]);
+    // A third dive back at the first site is a different day (review of #3061).
     expect(
       tripChangeSnapshotsEqual(tripSitesSnapshot(["A", "B"]), tripSitesSnapshot(["A", "B", "A"])),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      tripChangeSnapshotsEqual(
+        tripSitesSnapshot(["A", "B", "A"]),
+        tripSitesSnapshot(["A", "A", "B"]),
+      ),
+    ).toBe(false);
     expect(
       tripChangeSnapshotsEqual(tripSitesSnapshot(["A", "B"]), tripSitesSnapshot(["B", "A"])),
     ).toBe(false);

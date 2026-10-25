@@ -128,7 +128,8 @@
   },
   "tripChange": {
     "meeting_point": "{actor} cambió el punto de encuentro",
-    "conditions": "{actor} publicó las condiciones"
+    "conditions": "{actor} publicó las condiciones",
+    "site_change": "{actor} cambió los sitios de buceo"
   },
   "log": {
     "title": "Actividad",
