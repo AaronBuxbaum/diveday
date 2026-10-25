@@ -156,8 +156,8 @@
     "invalid": "That isn’t an email address. Check it and save again.",
     "confirmationSent": "Saved. A confirm link went to that address; nothing is sent until it’s used.",
     "confirmationNotSent": "Saved, but the confirm link couldn’t go just now. Save again later to resend it.",
-    "setBy": "Set by {name}, {date}",
-    "setByGone": "Set {date} by someone no longer on the team",
+    "setBy": "Set by {name}, {date}.",
+    "setByGone": "Set {date} by someone no longer on the team.",
     "waiting": "Waiting for {email} to confirm; nothing is sent until then.",
     "setterLapsed": "They can no longer export the shop’s data, so nothing is sent. Save the address again to keep it, or change it.",
     "bounced": "The last month-end files to {email} bounced. Check the address and save it."
