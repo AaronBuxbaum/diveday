@@ -12,6 +12,7 @@ import {
   RelevantBookingRequests,
 } from "@/components/seat-diver/BookingRequestCards";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
@@ -321,19 +322,29 @@ export default async function NewBookingPage({
         t={t}
       />
 
-      {/* `padding="none"`: summary and body pad themselves. Opens on its own
-          refusal or a kept draft, never hiding an answer or a half-typed call. */}
+      {/* `padding="none"`: summary and body pad themselves. Closed by default
+          (visual review A32): a booking starts from a departure, and a call
+          form open under the picker read as the page's own form. It opens on
+          `#call` or its own answer; a kept draft keeps it closed and says
+          "Unsaved" beside the title, so a half-typed call is never hidden. */}
       <AutoOpenDetails
         openOnHash="call"
         id="call"
-        open={callNotice !== null || callDraft !== null}
+        open={callNotice !== null}
         className={sectionCardClass({
           padding: "none",
           className: "group/call mt-10 scroll-mt-24",
         })}
       >
         <summary className={cardSummaryClass({ className: "min-h-11 justify-between p-5 sm:p-6" })}>
-          <h2 className={SECTION_TITLE_CLASS}>{t("calls.title")}</h2>
+          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className={SECTION_TITLE_CLASS}>{t("calls.title")}</h2>
+            {callDraft ? (
+              <Badge size="sm" className="tracking-normal normal-case group-open/call:hidden">
+                {t("shared.formDraft.unsavedSection")}
+              </Badge>
+            ) : null}
+          </span>
           <SummaryCaret
             line={`h-lh ${SECTION_TITLE_CLASS}`}
             className="size-4 text-muted group-open/call:rotate-90"
