@@ -62,7 +62,7 @@ import {
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
 import { rowKey } from "./row-key";
-import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
+import { rowLine, spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
 import { WeekHorizon } from "./WeekHorizon";
@@ -381,7 +381,9 @@ function StationRow({
     <>
       {action.aboutDeparture ? null : (
         <>
-          <span className="font-medium">{action.subject}</span>
+          <span className="font-medium">
+            {action.detail ? action.subject : rowLine(action.subject)}
+          </span>
           {action.detail ? (
             <span aria-hidden="true" className="text-muted">
               {" · "}
@@ -390,7 +392,9 @@ function StationRow({
         </>
       )}
       {action.detail ? (
-        <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
+        <span className={tone === "neutral" ? "text-muted" : undefined}>
+          {rowLine(action.detail)}
+        </span>
       ) : null}
       {action.departure && !grouped ? (
         <span className="block text-sm text-muted">{action.departure.label}</span>

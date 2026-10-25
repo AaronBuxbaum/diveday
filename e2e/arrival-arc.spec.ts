@@ -122,7 +122,7 @@ test.describe("the dive arrival arc", () => {
       .filter({ hasText: "Arrival Diver" })
       .filter({ has: page.getByText(staff("today.actionKind.helpRequest"), { exact: true }) });
     await expect(helpRow).toHaveCount(1);
-    await expect(helpRow.getByText("Asked for help: carry gear.")).toBeVisible();
+    await expect(helpRow.getByText("Asked for help: carry gear")).toBeVisible();
     await helpRow.getByRole("button", { name: "Arrange help" }).click();
     const crew = helpRow.getByLabel("Crew member");
     await expect(crew.locator("option").filter({ hasText: helperName })).toHaveText(helperName);

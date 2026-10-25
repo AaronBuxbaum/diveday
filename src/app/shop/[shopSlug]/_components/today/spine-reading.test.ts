@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
+import type { TodayAction } from "@/lib/today";
+import {
+  rankBoatRows,
+  rowLine,
+  spineClearUnlessWindy,
+  spineEntries,
+  spineMoment,
+} from "./spine-reading";
 
 const at = (iso: string) => new Date(iso);
 
@@ -89,5 +96,67 @@ describe("spineClearUnlessWindy", () => {
     expect(spineClearUnlessWindy(none, idle, { stations: [{ blocked: 1 }] })).toBe(false);
     expect(spineClearUnlessWindy(none, { ...idle, blocked: 1 }, clearDay)).toBe(false);
     expect(spineClearUnlessWindy(none, { ...idle, jobs: 1 }, clearDay)).toBe(false);
+  });
+});
+
+describe("rankBoatRows (A43)", () => {
+  const row = (id: string, kind: TodayAction["kind"], tone?: TodayAction["tone"]) =>
+    ({ id, kind, ...(tone ? { tone } : {}) }) as unknown as TodayAction;
+
+  it("puts readiness and medical first, then contact, prep, money and the rest", () => {
+    // The order `src/lib/today.ts` hands over: money and prep above contact.
+    const rows = [
+      row("payment", "payment"),
+      row("help", "help_request"),
+      row("prep", "dive_prep"),
+      row("contact-a", "emergency_contact"),
+      row("medical", "medical_review"),
+      row("contact-b", "emergency_contact"),
+      row("waiver", "waiver"),
+      row("wanted", "seat_wanted"),
+    ];
+    expect(rankBoatRows(rows).map((action) => action.id)).toEqual([
+      "medical",
+      "waiver",
+      "contact-a",
+      "contact-b",
+      "prep",
+      "payment",
+      "help",
+      "wanted",
+    ]);
+  });
+
+  it("keeps the incoming order inside a tier and drops nobody", () => {
+    const rows = [row("c2", "emergency_contact"), row("c1", "emergency_contact")];
+    expect(rankBoatRows(rows).map((action) => action.id)).toEqual(["c2", "c1"]);
+    expect(rankBoatRows([])).toEqual([]);
+  });
+
+  it("lifts any danger row to the top, whatever its kind", () => {
+    const rows = [row("contact", "emergency_contact"), row("loud-payment", "payment", "danger")];
+    expect(rankBoatRows(rows).map((action) => action.id)).toEqual(["loud-payment", "contact"]);
+  });
+
+  it("ranks a kind it does not name with readiness, never under money", () => {
+    const rows = [row("payment", "payment"), row("aboard", "blocked_aboard")];
+    expect(rankBoatRows(rows)[0]?.id).toBe("aboard");
+  });
+});
+
+describe("rowLine (A22)", () => {
+  it("drops the one final period of a one-sentence line", () => {
+    expect(rowLine("No emergency contact.")).toBe("No emergency contact");
+    expect(rowLine("Sin contacto de emergencia.")).toBe("Sin contacto de emergencia");
+    expect(rowLine("1 review is waiting on you.")).toBe("1 review is waiting on you");
+  });
+
+  it("leaves a line of two sentences, a line with no period, and an ellipsis alone", () => {
+    expect(rowLine("$40 disputed. Answer it in Stripe.")).toBe(
+      "$40 disputed. Answer it in Stripe.",
+    );
+    expect(rowLine("Waiver not signed, not sent yet")).toBe("Waiver not signed, not sent yet");
+    expect(rowLine("Loading...")).toBe("Loading...");
+    expect(rowLine("")).toBe("");
   });
 });
