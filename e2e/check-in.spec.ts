@@ -761,7 +761,7 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   await expect(odile.getByText("Not here", { exact: true })).toHaveCount(0);
 
   // The door, its one reason already chosen, and one confirm.
-  await odile.getByText("Turn away…", { exact: true }).click();
+  await odile.getByRole("button", { name: "Turn away", exact: true }).click();
   await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
   await expect(odile.getByRole("radio", { name: "Medical" })).toHaveCount(0);
   await odile.getByRole("button", { name: "Turn Odile Marchand away" }).click();
@@ -820,7 +820,7 @@ test("a diver turned away before the boat leaves is told the seat was released, 
 
   await page.goto(counterPath("blue-mantis", tripId));
   const row = deskRow(page, name);
-  await row.getByText("Turn away…", { exact: true }).click();
+  await row.getByRole("button", { name: "Turn away", exact: true }).click();
   await row.getByRole("radio").first().check();
   await row.getByRole("button", { name: `Turn ${name} away` }).click();
   await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();

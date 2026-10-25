@@ -678,11 +678,8 @@ for (const scheme of ["light", "dark"] as const) {
           .locator('#roster li[id^="booking-"]')
           .filter({ visible: true })
           .filter({ has: page.getByRole("link", { name: "Odile Marchand", exact: true }) });
-        const door = row
-          .locator("details")
-          .filter({ has: page.getByText("Turn away…", { exact: true }) });
-        await door.locator("> summary").click();
-        await disclosureSettled(door);
+        await row.getByRole("button", { name: "Turn away", exact: true }).click();
+        await expect(row.getByRole("button", { name: "Turn Odile Marchand away" })).toBeVisible();
         await capture(page, "trip-desk-turn-away", scheme);
 
         await row.getByRole("button", { name: "Turn Odile Marchand away" }).click();

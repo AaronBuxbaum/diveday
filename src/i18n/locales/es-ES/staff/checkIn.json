@@ -34,7 +34,7 @@
     "moneyDoor": "Abrir sus pedidos"
   },
   "turnAway": {
-    "door": "No embarca",
+    "door": "Rechazar",
     "legend": "Motivo",
     "reason": {
       "medical": "Médico",

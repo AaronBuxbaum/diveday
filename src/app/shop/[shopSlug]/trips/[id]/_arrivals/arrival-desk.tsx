@@ -43,7 +43,7 @@ import { CounterInstrument } from "./CounterInstrument";
 import { NoShowSalvage, NoShowScript } from "./NoShowScript";
 import { RowActionForm } from "./RowActionForm";
 import { noShowSalvageCopy } from "./salvage-copy";
-import { TurnAwayScript } from "./TurnAwayScript";
+import { TurnAwayDoor, TurnAwayScript } from "./TurnAwayScript";
 
 /** What the Divers tab adds while a departure's arrivals are open. */
 export type ArrivalDesk = {
@@ -249,8 +249,17 @@ export async function buildArrivalDesk({
       } else {
         // A diver who arrived and has since gone blocked can still be sent
         // home, until the boat leaves with them.
-        const door = turnAwayFor(row);
-        if (door) below.set(row.bookingId, door);
+        const turnAway = turnAwayFor(row);
+        if (turnAway) {
+          controls.set(
+            row.bookingId,
+            <>
+              {turnAway.door}
+              {controls.get(row.bookingId)}
+            </>,
+          );
+          below.set(row.bookingId, turnAway.panel);
+        }
       }
       continue;
     }
@@ -270,8 +279,13 @@ export async function buildArrivalDesk({
         />,
       );
     }
-    const turnAwayDoor = ready ? null : turnAwayFor(row);
-    if (turnAwayDoor) below.set(row.bookingId, turnAwayDoor);
+    // The door beside the Blocked pill, its confirm at the row's foot (A08).
+    const turnAway = ready ? null : turnAwayFor(row);
+    if (turnAway) {
+      controls.set(row.bookingId, turnAway.door);
+      below.set(row.bookingId, turnAway.panel);
+    }
+    const turnAwayDoor = turnAway?.panel ?? null;
     const claim = noShowClaimFor(row);
     if (claim) {
       // **"Not here" on a blocked row too** (dive-domain review 2026-10-05):
@@ -493,7 +507,7 @@ function turnAwayDoor({
   now: Date;
   t: StaffTranslator;
   action: (formData: FormData) => Promise<void>;
-}): ReactNode {
+}): { door: ReactNode; panel: ReactNode } | null {
   const reasons = turnAwayOffer({
     bookingStatus: row.bookingStatus,
     onTheWater: row.onTheWater,
@@ -503,7 +517,14 @@ function turnAwayDoor({
     readiness: row.readiness,
   });
   if (reasons.length === 0) return null;
-  return (
+  const door = (
+    <TurnAwayDoor
+      key="turn-away-door"
+      bookingId={row.bookingId}
+      label={t("checkIn.turnAway.door")}
+    />
+  );
+  const panel = (
     <TurnAwayScript
       key="turn-away"
       action={action}
@@ -513,7 +534,6 @@ function turnAwayDoor({
         label: t(`checkIn.turnAway.reason.${reason}`),
       }))}
       copy={{
-        door: t("checkIn.turnAway.door"),
         legend: t("checkIn.turnAway.legend"),
         consequence: t("checkIn.turnAway.consequence"),
         confirm: t("checkIn.turnAway.confirm"),
@@ -523,4 +543,5 @@ function turnAwayDoor({
       }}
     />
   );
+  return { door, panel };
 }
