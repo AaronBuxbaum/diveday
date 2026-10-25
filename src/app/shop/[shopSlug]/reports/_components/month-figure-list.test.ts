@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { summarizeMonth } from "@/lib/reporting";
-import { monthFigureList } from "./month-figure-list";
+import { monthFigureBasis, monthFigureList } from "./month-figure-list";
 
 const month = (overrides: Partial<Parameters<typeof summarizeMonth>[0]> = {}) =>
   summarizeMonth({
@@ -19,21 +19,9 @@ const month = (overrides: Partial<Parameters<typeof summarizeMonth>[0]> = {}) =>
   });
 
 const revenueDetail = (report: ReturnType<typeof summarizeMonth>, locale = "en-US") =>
-  monthFigureList({
-    report,
-    baselineReport: null,
-    comparison: null,
-    baselineMonthLabel: null,
-    toDateDay: null,
-    currency: "usd",
-    locale,
-    t: staffTranslator(locale),
-    split: null,
-    bookingsDetail: "",
-    revenueOrdersHref: "/orders",
-  }).find((figure) => figure.key === "revenue")?.detail;
+  monthFigureBasis({ report, currency: "usd", locale, t: staffTranslator(locale) });
 
-describe("the net revenue tile's basis line", () => {
+describe("the tile row's basis caption", () => {
   it("names counter money, which no departure row carries, so the rows add up to it", () => {
     // Fifth loop, item 26: $6,527 of departures and $349 at the counter is the $6,876 tile.
     expect(revenueDetail(month({ counterCents: 34_900 }))).toBe(
@@ -78,13 +66,36 @@ describe("the tip pool being reconciled with the crew shares", () => {
       currency,
       locale,
       t: staffTranslator(locale),
-      split: null,
-      bookingsDetail: "",
-      revenueOrdersHref: "/orders",
     });
     expect(figures.find((figure) => figure.key === "tips")?.value.replace(/\u00a0/g, " ")).toBe(
       expected,
     );
     expect(figures.find((figure) => figure.key === "revenue")?.value).not.toMatch(/[.,]00(?:\D|$)/);
+  });
+});
+
+describe("a tile", () => {
+  it("is one number, one label and at most one delta line (visual review A06)", () => {
+    const figures = monthFigureList({
+      report: month({ counterCents: 34_900, tipsCents: 500, tipCount: 1 }),
+      baselineReport: null,
+      comparison: null,
+      baselineMonthLabel: null,
+      toDateDay: null,
+      currency: "usd",
+      locale: "en-US",
+      t: staffTranslator("en-US"),
+    });
+    for (const figure of figures) {
+      expect(Object.keys(figure).sort()).toEqual(
+        figure.comparison === undefined
+          ? expect.arrayContaining(["key", "label", "value"])
+          : ["comparison", "key", "label", "value"],
+      );
+      expect(figure.detail).toBeUndefined();
+      expect(figure.split).toBeUndefined();
+      expect(figure.link).toBeUndefined();
+      expect(figure.earned).toBeUndefined();
+    }
   });
 });

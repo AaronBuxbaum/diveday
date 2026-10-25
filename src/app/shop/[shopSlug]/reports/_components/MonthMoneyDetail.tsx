@@ -150,7 +150,7 @@ export function MoneyByLine({
         {t("reports.byLine.heading")}
       </h2>
       <p className="mt-1 text-sm text-muted">{t("reports.byLine.caption")}</p>
-      <dl className="mt-3 max-w-md">
+      <dl className="mt-3">
         {detail.lines.map(({ line, cents }) => (
           <div
             key={line}
@@ -220,19 +220,14 @@ export function QuietMonth({
 }
 
 /**
- * **The quiet lines under the month's figures.**
- *
- * The month's two quiet doors on one line: what Stripe Tax took out of the
- * revenue figure above, and the CSV an owner sends their accountant (issue
- * #700 — the full-shop export is the right tool for a bookkeeper and the wrong
- * one for "just this month"). Tax used to be the sixth tile; it is a footnote
- * to net revenue, not a headline beside it.
+ * **The quiet line under the month's figures**: what Stripe Tax took out of
+ * the revenue figure above. Tax used to be the sixth tile; it is a footnote to
+ * net revenue, not a headline beside it. The month's three files sit in the
+ * page header's Export menu (visual review A06).
  */
 export function MonthFootnotes({
   taxCents,
   counterTaxIncludedCents = 0,
-  csvHref,
-  monthEnd,
   t,
   money,
 }: {
@@ -243,42 +238,13 @@ export function MonthFootnotes({
    * to split it by.
    */
   counterTaxIncludedCents?: number;
-  csvHref: string;
-  /**
-   * The month's other files (fifth loop, items 31 and 35): the crew sheet,
-   * all three as one zip, and the bookkeeper's address they go to on the 2nd.
-   */
-  monthEnd?: { shopSlug: string; month: string; locale: string; timeZone: string };
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
-  const link = "font-medium text-primary hover:underline";
   return (
     <>
       <p className="mt-3 text-end text-sm text-muted tabular-nums">
         {t("reports.taxLine", { amount: money(taxCents) })}
-        {" · "}
-        <a href={csvHref} className={link}>
-          {t("reports.downloadCsv")}
-        </a>
-        {monthEnd ? (
-          <>
-            {" · "}
-            <a
-              href={`${shopPath(monthEnd.shopSlug, "settings", "export", "crew-sheet")}?month=${monthEnd.month}`}
-              className={link}
-            >
-              {t("reports.downloadCrewSheet")}
-            </a>
-            {" · "}
-            <a
-              href={`${shopPath(monthEnd.shopSlug, "reports", "download", "month-end")}?month=${monthEnd.month}`}
-              className={link}
-            >
-              {t("reports.downloadMonthEnd")}
-            </a>
-          </>
-        ) : null}
       </p>
       {counterTaxIncludedCents > 0 ? (
         <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
@@ -310,7 +276,7 @@ export function MonthPayouts({
       <h2 id="reports-payouts" className={SECTION_TITLE_CLASS}>
         {t("reports.payouts.heading")}
       </h2>
-      <ul className="mt-3 max-w-xl text-sm">
+      <ul className="mt-3 text-sm">
         {detail.payouts.map((payout) => (
           <li
             key={payout.id}

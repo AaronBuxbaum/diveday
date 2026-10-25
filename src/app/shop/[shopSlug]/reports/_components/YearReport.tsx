@@ -182,7 +182,10 @@ export function YearReport({
             months={monthMarkers}
             copy={stripCopy(t, locale, year.firstDay)}
           />
-          <p className="mt-3 text-sm text-muted">{t("reports.year.stripLegend")}</p>
+          <p className="mt-2 flex justify-between text-xs text-muted">
+            <span>{t("reports.year.stripQuiet")}</span>
+            <span>{t("reports.year.stripFull")}</span>
+          </p>
         </section>
 
         <MonthFigures label={t("reports.year.numbersLabel")} figures={figures} columns={4} />

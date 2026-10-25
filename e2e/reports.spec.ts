@@ -43,7 +43,7 @@ test.describe("owner", () => {
     ).toBeVisible();
 
     // The tax figure is a footnote to net revenue now, not a sixth tile beside
-    // it — it shares one quiet line with the CSV door.
+    // it; the month's files are in the header's Export menu.
     await expect(page.getByText(/Tax collected/)).toBeVisible();
 
     // The seeded back-fill means the current month always has trips to show.
@@ -59,7 +59,7 @@ test.describe("owner", () => {
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
   });
 
-  test("the visible tip pool and crew shares reconcile with the crew export", {
+  test("the visible tip pool reconciles with the crew export's shares", {
     tag: READ_ONLY,
   }, async ({ page, request }) => {
     const month = E2E_FROZEN_CLOCK.slice(0, 7);
@@ -81,16 +81,8 @@ test.describe("owner", () => {
     await page.goto(`/shop/blue-mantis/reports?month=${month}`);
     const t = staffTranslator("en-US");
     const metrics = page.getByRole("region", { name: t("reports.numbersLabel") });
-    const splitLine = metrics.getByText(t("reports.tipsSplit", { shares: "" }), { exact: false });
-    await expect(splitLine).toBeVisible();
-    for (const share of shares) {
-      await expect(splitLine).toContainText(
-        t("reports.tipsShare", {
-          name: share.name,
-          amount: formatMoneyCents(share.cents, share.currency, "en-US"),
-        }),
-      );
-    }
+    // The shares themselves are the crew sheet's (visual review A06: a tile
+    // is one number); the pool on the tile is their sum to the cent (#2858).
     const poolCents = shares.reduce((sum, share) => sum + share.cents, 0);
     await expect(
       metrics.getByText(formatMoneyCents(poolCents, "usd", "en-US"), { exact: true }),
@@ -178,6 +170,7 @@ test.describe("owner", () => {
   }, async ({ page, request }) => {
     await page.goto("/shop/blue-mantis/reports");
     const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export", exact: true }).click();
     await page.getByRole("link", { name: "Download CSV" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(

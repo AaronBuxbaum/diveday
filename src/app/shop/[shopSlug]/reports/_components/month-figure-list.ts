@@ -37,10 +37,6 @@ export function monthFigureList({
   currency,
   locale,
   t,
-  split,
-  bookingsDetail,
-  revenueOrdersHref,
-  tipsSplit,
 }: {
   report: MonthlyReport;
   baselineReport: MonthlyReport | null;
@@ -51,11 +47,6 @@ export function monthFigureList({
   currency: string;
   locale: string;
   t: StaffTranslator;
-  split: { revenue?: string; seats?: string; fill?: string } | null;
-  bookingsDetail: string;
-  revenueOrdersHref: string;
-  /** "Keiko $180.00 · Sal $160.00", the crew sheet's exact shares (item 31). */
-  tipsSplit?: string;
 }): MonthFigure[] {
   // **No line against nothing** (UX audit 2026-10-07, item 21): "vs $0 in
   // October 2025" compares a month to one that had none of the thing, which
@@ -109,17 +100,68 @@ export function monthFigureList({
       : undefined;
   };
 
-  // The five figures, in reading order. Six tiles became five: the tax tile is
-  // a footnote to net revenue and drops to the quiet line beside the CSV door,
-  // and the departure count was always the Seats figure's own denominator, so
-  // it folds into that figure's subline (ADR 20260827-the-shops-shelves).
+  // The five figures, in reading order: one number, one label, one optional
+  // delta line each (visual review A06). What used to sit under a number (the
+  // basis, the sailed split, the tip shares, the waiver count) is elsewhere:
+  // the basis is the row's one caption (`monthFigureBasis`), the shares are
+  // the crew sheet's, and each departure row names its own waivers to collect.
   //
   // The two percentages still render only over a denominator that exists
   // (`formatPercent` answers an em dash for a null ratio, which is what
   // `summarizeMonth` returns when a month offered no seat and took no booking).
-  const waiversAllIn = report.waiverCompletion === 1;
-  // Counter money sits inside the figure but on no departure, so the ledger's
-  // rows add up to the figure only once the line names it (fifth loop, item 26).
+  return [
+    {
+      key: "revenue",
+      label: t("reports.metrics.revenueLabel"),
+      value: formatReportMoney(report.revenueCents, currency, locale),
+      comparison: moneyLine("revenueCents"),
+    },
+    {
+      key: "tips",
+      label: t("reports.metrics.tipsLabel"),
+      value: formatMoneyCents(report.tipsCents, currency, locale),
+      comparison: moneyLine("tipsCents"),
+    },
+    {
+      key: "seats",
+      label: t("reports.metrics.bookingsLabel"),
+      value: String(report.seatsBooked),
+      comparison: bookingsComparison,
+    },
+    {
+      key: "fill",
+      label: t("reports.metrics.seatFillLabel"),
+      value: formatPercent(report.fillRate),
+      comparison: ratioLine("fillRate"),
+    },
+    {
+      key: "waivers",
+      label: t("reports.metrics.waiversLabel"),
+      value: formatPercent(report.waiverCompletion),
+      comparison: ratioLine("waiverCompletion"),
+    },
+  ];
+}
+
+/**
+ * **The basis caption, once under the tile row** (third review, item 1;
+ * visual review A06): net revenue is anchored to the month's departures, and
+ * "Money in, by line" below it to the day money was paid, so the two totals
+ * differ and the row says which it is. The imported case names money inside
+ * the figure Stripe has not confirmed, and the counter case money inside it
+ * that no departure row carries.
+ */
+export function monthFigureBasis({
+  report,
+  currency,
+  locale,
+  t,
+}: {
+  report: MonthlyReport;
+  currency: string;
+  locale: string;
+  t: StaffTranslator;
+}): string {
   const counter =
     report.counterCents !== 0 ? formatReportMoney(report.counterCents, currency, locale) : null;
   const importedDetail =
@@ -130,77 +172,12 @@ export function monthFigureList({
           refunds: formatReportMoney(report.importedRefundCents, currency, locale),
         })
       : null;
-  const revenueDetail = importedDetail
-    ? counter
+  if (importedDetail) {
+    return counter
       ? `${importedDetail} ${t("reports.metrics.revenueCounter", { amount: counter })}`
-      : importedDetail
-    : counter
-      ? t("reports.metrics.revenueBasisWithCounter", { amount: counter })
-      : t("reports.metrics.revenueBasis");
-  return [
-    {
-      key: "revenue",
-      label: t("reports.metrics.revenueLabel"),
-      value: formatReportMoney(report.revenueCents, currency, locale),
-      // The basis line: this figure is anchored to the month's departures, and
-      // "Money in, by line" below it to the day money was paid, so the two
-      // totals differ and each says which it is (third review, item 1). The
-      // imported case names money inside this figure Stripe has not confirmed,
-      // and the counter case money inside it that no departure row carries.
-      detail: revenueDetail,
-      split: split?.revenue,
-      comparison: moneyLine("revenueCents"),
-      link: { href: revenueOrdersHref, label: t("reports.metrics.revenueViewOrders") },
-    },
-    {
-      // Tips sit beside revenue rather than inside it (PAY-M2): they are their
-      // own Stripe charge, 100% to the shop, and never part of the booking
-      // payment gate. The split under it is who they go to (item 31), so the
-      // pool keeps its minor units too: it must add up to the shares (#2858).
-      key: "tips",
-      label: t("reports.metrics.tipsLabel"),
-      value: formatMoneyCents(report.tipsCents, currency, locale),
-      detail: t("reports.metrics.tipsDetail", { count: report.tipCount }),
-      split: tipsSplit,
-      comparison: moneyLine("tipsCents"),
-    },
-    {
-      key: "seats",
-      label: t("reports.metrics.bookingsLabel"),
-      value: String(report.seatsBooked),
-      detail: bookingsDetail,
-      split: split?.seats,
-      comparison: bookingsComparison,
-    },
-    {
-      key: "fill",
-      label: t("reports.metrics.seatFillLabel"),
-      value: formatPercent(report.fillRate),
-      detail: t("reports.metrics.seatFillDetail", {
-        booked: report.seatsBooked,
-        offered: report.seatsOffered,
-        count: report.atCapacityTrips,
-      }),
-      split: split?.fill,
-      comparison: ratioLine("fillRate"),
-    },
-    {
-      key: "waivers",
-      label: t("reports.metrics.waiversLabel"),
-      value: formatPercent(report.waiverCompletion),
-      // The month's one coral element, and the only one this surface may ever
-      // carry (ADR 20260827-clearwater-surface-language, decision 11). It is
-      // condition-derived and nothing stores it: `waiverCompletion` is null
-      // whenever the month took no booking at all, so a completion of exactly 1
-      // cannot be reached without counted signatures behind it.
-      earned: waiversAllIn ? t("reports.metrics.waiversAllIn") : undefined,
-      detail: waiversAllIn
-        ? undefined
-        : t("reports.metrics.waiversOutstanding", { count: report.waiverOutstanding }),
-      // Unsigned waivers are work somebody has to chase — the same judgement
-      // the ledger's own remainder-toned meter makes one screen below.
-      detailTone: "attention",
-      comparison: ratioLine("waiverCompletion"),
-    },
-  ];
+      : importedDetail;
+  }
+  return counter
+    ? t("reports.metrics.revenueBasisWithCounter", { amount: counter })
+    : t("reports.metrics.revenueBasis");
 }

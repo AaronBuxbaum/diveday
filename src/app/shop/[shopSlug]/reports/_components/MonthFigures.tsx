@@ -133,9 +133,12 @@ export function MonthFigures({
   /** Names the region for a screen reader; the row carries no visible heading. */
   label,
   figures,
+  caption,
   columns = 5,
 }: {
   label: string;
+  /** One quiet line under the row, said once: the month's basis (visual review A06). */
+  caption?: string;
   /** The month's five figures, in reading order. */
   figures: MonthFigure[];
   /** How many the row holds at `lg`. The hairline rules read the index alone and need no telling. */
@@ -214,6 +217,7 @@ export function MonthFigures({
           </div>
         ))}
       </dl>
+      {caption ? <p className="mt-2 text-sm text-muted">{caption}</p> : null}
     </section>
   );
 }

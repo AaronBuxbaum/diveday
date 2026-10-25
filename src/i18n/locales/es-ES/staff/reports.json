@@ -22,17 +22,9 @@
     "revenueCounter": "Más {amount} en el mostrador",
     "revenueDetailWithImported": "Pagos y depósitos de salidas actuales después del impuesto de Stripe, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
     "bookingsLabel": "Plazas",
-    "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
-    "bookingsOther": "en {count, plural, one {# salida} other {# salidas}}",
     "seatFillLabel": "Ocupación",
-    "seatFillDetail": "{booked} de {offered} plazas · {count, plural, one {# barco completo} other {# barcos completos}}",
     "waiversLabel": "Exenciones",
-    "waiversOutstanding": "quedan {count} por recoger",
-    "waiversAllIn": "Toda la documentación está en regla",
-    "revenueViewOrders": "Ver pedidos",
-    "tipsLabel": "Propinas",
-    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina, para que el centro la pase a la tripulación} other {# propinas, para que el centro las pase a la tripulación}}",
-    "split": "Zarpado {sailed} · Por zarpar {toSail}"
+    "tipsLabel": "Propinas"
   },
   "noTripsFuture": "Todavía no hay nada reservado para este mes",
   "noTripsPast": "Ninguna salida zarpó este mes",
@@ -63,7 +55,8 @@
     "busiest": "El día más movido fue el {day}.",
     "quietest": "El mes más tranquilo fue {month}.",
     "stripLabel": "Los días del año",
-    "stripLegend": "Cada cuadro es un día; cuanto más profunda el agua, más llenos iban los barcos. No se dibuja nada después de hoy.",
+    "stripQuiet": "Tranquilo",
+    "stripFull": "Lleno",
     "stripDay": "{day} · {divers, number} buceadores en {boats, number} barcos",
     "stripQuietDay": "{day} · sin salidas",
     "numbersLabel": "Los números del año",
@@ -126,7 +119,6 @@
   "payouts": {
     "heading": "Pagado a tu banco"
   },
-  "tipsShare": "{name} {amount}",
   "downloadCrewSheet": "Descargar la hoja de la tripulación",
   "weather": {
     "month": "El clima canceló {departures, plural, one {# salida} other {# salidas}}: {divers, plural, one {# buceador} other {# buceadores}}, {refunded} reembolsados, {moved} con otra fecha."
@@ -162,5 +154,5 @@
     "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala.",
     "bounced": "Los últimos archivos de fin de mes a {email} rebotaron. Revisa la dirección y guárdala."
   },
-  "tipsSplit": "A partes iguales: {shares}"
+  "export": "Exportar"
 }

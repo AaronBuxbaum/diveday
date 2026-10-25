@@ -42,8 +42,5 @@
   "headCount": {
     "aboardOfTotalPeople": "{aboard} of {total, plural, one {# person} other {# people}} aboard",
     "ofTotalAboardPeople": "of {total, plural, one {# person} other {# people}} aboard"
-  },
-  "reports": {
-    "bookingsDetailSplit": "{detail}: {split}"
   }
 }

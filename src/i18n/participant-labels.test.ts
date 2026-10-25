@@ -1,19 +1,16 @@
 import { describe, expect, it } from "vitest";
-import {
-  staffBookingsDetail,
-  staffPassengerCount,
-  staffSoulsOnBoardLine,
-} from "./participant-labels";
+import { staffPassengerCount, staffSoulsOnBoardLine } from "./participant-labels";
 import { staffTranslator } from "./staff-messages";
 
 const t = staffTranslator("en-US");
 
 describe("the passenger split on staff surfaces", () => {
-  it("leaves out a type nobody is, on Reports as on the manifests", () => {
-    const detail = staffBookingsDetail(
-      t,
-      { tripCount: 2, seatsByType: { diver: 5, snorkeler: 1, rider: 0 } },
-      true,
+  it("leaves out a type nobody is, on the manifests", () => {
+    const detail = String(
+      staffPassengerCount(t, {
+        totalDivers: 6,
+        byType: { diver: 5, snorkeler: 1, rider: 0 },
+      }),
     );
     expect(detail).toContain("5 divers · 1 snorkeler");
     expect(detail).not.toContain("rider");
