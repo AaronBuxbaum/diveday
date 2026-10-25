@@ -48,8 +48,13 @@ async function openWhoWantsIn(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   // A tick before React owns the panel is lost when it hydrates (CI saw
   // "Clicking the checkbox did not change its state" on main too), so every
-  // test starts once the send form says it is hydrated.
-  await expect(page.locator('form[id="offer-seat"]')).toHaveAttribute("data-hydrated", "true");
+  // test starts once the send forms say they are hydrated. Each row has its
+  // own Offer form since A14 (`offer-seat-<interest id>`); the first stands
+  // for the panel, and `offerFor` waits on the row it acts on.
+  await expect(page.locator('form[id^="offer-seat-"]').first()).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   // The panel keeps the names past its preview cap behind "Show N more".
   const more = page.getByText(/^Show \d+ more$/);
   if ((await more.count()) > 0) await more.first().click();
