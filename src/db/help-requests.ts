@@ -120,7 +120,48 @@ export async function listTodayHelpRequests(
   tripIds: readonly string[],
   now: Date = nowDate(),
 ): Promise<TodayHelpRequest[]> {
-  if (tripIds.length === 0) return [];
+  return (await listTodayHelpWork(db, shopId, tripIds, now)).open;
+}
+
+/** A handled request, kept on the departure so a mis-tap can be reopened after the undo toast. */
+export type HandledHelpRequest = {
+  id: string;
+  tripId: string;
+  revision: number;
+  kind: HelpRequestKind;
+  personName: string;
+  helperPersonId: string;
+  helperPersonName: string | null;
+  tripTitle: string;
+  startsAt: Date;
+  handledAt: Date | null;
+};
+
+/**
+ * The handled requests of these departures, while a reopen can still succeed: the same live,
+ * scheduled, unfinished departure and uncancelled booking `undoHelpRequestCompletion` demands. A
+ * request with no recorded helper is left out, since undo is keyed on the helper it recorded.
+ */
+export async function listHandledHelpRequests(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<HandledHelpRequest[]> {
+  return (await listTodayHelpWork(db, shopId, tripIds, now)).handled;
+}
+
+/**
+ * Today's open and handled requests from one read of the requests (and one of the crew), so the
+ * Reopen offer (issue #2939) costs the shop home no query of its own.
+ */
+export async function listTodayHelpWork(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<{ open: TodayHelpRequest[]; handled: HandledHelpRequest[] }> {
+  if (tripIds.length === 0) return { open: [], handled: [] };
   const rows = await db
     .select({
       request: tripHelpRequests,
@@ -142,7 +183,7 @@ export async function listTodayHelpRequests(
         eq(people.shopId, shopId),
         eq(trips.shopId, shopId),
         liveTrip(),
-        inArray(tripHelpRequests.status, [...activeStatuses]),
+        inArray(tripHelpRequests.status, [...activeStatuses, "handled"]),
         ne(bookings.status, "cancelled"),
         eq(trips.status, "scheduled"),
         gt(trips.endsAt, now),
@@ -154,23 +195,26 @@ export async function listTodayHelpRequests(
       asc(people.fullName),
       asc(tripHelpRequests.id),
     );
-  const crewRows = await db
-    .select({ tripId: tripAssignments.tripId, personId: people.id, fullName: people.fullName })
-    .from(tripAssignments)
-    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .innerJoin(people, eq(people.id, tripAssignments.personId))
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(
-        inArray(tripAssignments.tripId, [...tripIds]),
-        eq(trips.shopId, shopId),
-        liveTrip(),
-        eq(people.shopId, shopId),
-        livePerson(),
-        inArray(personRoles.role, [...STAFF_ROLES]),
-      ),
-    )
-    .orderBy(asc(people.fullName), asc(people.id));
+  const openRows = rows.filter(({ request }) => request.status !== "handled");
+  const crewRows = openRows.length
+    ? await db
+        .select({ tripId: tripAssignments.tripId, personId: people.id, fullName: people.fullName })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .innerJoin(people, eq(people.id, tripAssignments.personId))
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(
+          and(
+            inArray(tripAssignments.tripId, [...tripIds]),
+            eq(trips.shopId, shopId),
+            liveTrip(),
+            eq(people.shopId, shopId),
+            livePerson(),
+            inArray(personRoles.role, [...STAFF_ROLES]),
+          ),
+        )
+        .orderBy(asc(people.fullName), asc(people.id))
+    : [];
   const crewByTrip = new Map<string, Map<string, { personId: string; fullName: string }>>();
   for (const crew of crewRows) {
     const byPerson = crewByTrip.get(crew.tripId) ?? new Map();
@@ -178,11 +222,11 @@ export async function listTodayHelpRequests(
     crewByTrip.set(crew.tripId, byPerson);
   }
 
-  return rows.map(({ request, personName, helperPersonName, trip }) => ({
+  const open = openRows.map(({ request, personName, helperPersonName, trip }) => ({
     ...request,
-    // The query is explicitly restricted to `activeStatuses`; keep that
-    // invariant in the returned type so Today cannot expose a handled or
-    // withdrawn request as an actionable row.
+    // The filter above leaves only `activeStatuses`; keep that invariant in
+    // the returned type so Today cannot expose a handled or withdrawn request
+    // as an actionable row.
     status: request.status as TodayHelpRequest["status"],
     personName,
     helperPersonName,
@@ -200,6 +244,34 @@ export async function listTodayHelpRequests(
     tripTitle: trip.title,
     startsAt: trip.startsAt,
   }));
+
+  const handled = rows
+    .flatMap(({ request, personName, helperPersonName, trip }) =>
+      request.status === "handled" && request.helperPersonId
+        ? [
+            {
+              id: request.id,
+              tripId: trip.id,
+              revision: request.revision,
+              kind: request.kind,
+              personName,
+              helperPersonId: request.helperPersonId,
+              helperPersonName,
+              tripTitle: trip.title,
+              startsAt: trip.startsAt,
+              handledAt: request.handledAt,
+            },
+          ]
+        : [],
+    )
+    // Departure, then the order they were handled in; the read is in departure
+    // order already, and the sort is stable.
+    .sort(
+      (a, b) =>
+        a.startsAt.getTime() - b.startsAt.getTime() ||
+        (a.handledAt?.getTime() ?? 0) - (b.handledAt?.getTime() ?? 0),
+    );
+  return { open, handled };
 }
 
 export type SaveHelpRequestResult =

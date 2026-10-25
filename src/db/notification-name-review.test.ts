@@ -27,6 +27,7 @@ function held(shopId: string, extra: Partial<Notification> = {}): Notification {
     startsAt: new Date("2026-10-20T14:00:00Z"),
     timezone: "America/New_York",
     requestedAt: nowDate(),
+    attempt: "claim",
     ...extra,
   } as Notification;
 }

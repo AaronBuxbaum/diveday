@@ -7,19 +7,12 @@ import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";
 import { mediaStorageConfigFromEnvironment, readS3Object } from "@/lib/storage";
-
-const NO_STORE = { "Cache-Control": "private, no-store" } as const;
-
-/** The one prefix `storeMedicalClearanceDocument` writes under, and the only one this reads. */
-const MEDICAL_CLEARANCE_PREFIX = "medical-clearances";
-
-/**
- * What the uploader can actually have stored: a re-encoded image, or a PDF
- * proven by its magic bytes (`src/lib/storage/index.ts`). Anything else means
- * the object is not what this route thinks it is, and it goes out as bytes
- * rather than as a type the browser might act on.
- */
-const SERVED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+import {
+  MEDICAL_CLEARANCE_PREFIX,
+  medicalDocumentResponse,
+  medicalDocumentUnauthenticated,
+  medicalDocumentNotFound as notFound,
+} from "../document-response";
 
 /**
  * **The physician's evaluation, handed back to the shop that stored it**
@@ -70,7 +63,7 @@ export async function GET(
   // connection. The roles it reads are whatever the JWT was stamped with at
   // sign-in, which is exactly why it cannot be the last word.
   if (!session?.user || !isStaff(session.user.roles)) {
-    return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
+    return medicalDocumentUnauthenticated();
   }
 
   const { recordId } = await params;
@@ -117,37 +110,15 @@ export async function GET(
   // swallowed, which is the same call the diver-export route makes one door
   // over. An audit trail that can be skipped by breaking it is not one: if the
   // shop cannot record who opened this file, the file does not go out.
-  await recordDiverActivity(db, {
+  // A `false` means no line was written (no live actor or diver row to name),
+  // and an unrecorded read is refused like any other.
+  const recorded = await recordDiverActivity(db, {
     shopId: shop.id,
     personId: document.personId,
     actorPersonId: session.user.personId,
     code: "medical_clearance_opened",
   });
+  if (!recorded) return notFound();
 
-  return new Response(object.bytes, {
-    headers: {
-      // **Allow-listed, not echoed.** The stored type was established against
-      // the real bytes on the way in — `storeImage` re-encodes through sharp
-      // and `storePdfDocument` proves the magic bytes — but the value now
-      // round-trips through an external service, and a type this route did not
-      // choose is one assumption too many for the file it is handing over.
-      "Content-Type": SERVED_TYPES.has(object.contentType)
-        ? object.contentType
-        : "application/octet-stream",
-      // Never rendered inline: an evaluation is a PDF or a photograph of one,
-      // and a page that framed it would put a diver's medical document into
-      // the browser's own history and preview cache.
-      "Content-Disposition": "attachment",
-      // Belt and braces beside the header below — this response must not be
-      // stored by a shared cache or indexed.
-      "X-Content-Type-Options": "nosniff",
-      "X-Robots-Tag": "noindex, nofollow",
-      ...NO_STORE,
-    },
-  });
-}
-
-/** Every refusal looks the same from outside, so the route is not an oracle. */
-function notFound() {
-  return Response.json({ error: "not_found" }, { status: 404, headers: NO_STORE });
+  return medicalDocumentResponse(object);
 }

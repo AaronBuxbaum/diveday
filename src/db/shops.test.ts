@@ -14,6 +14,7 @@ import {
   setShopAddress,
   setShopCrewLead,
   setShopDepthUnit,
+  setShopNitroxFillMethod,
   setShopReopensOn,
   setShopSearchListing,
   setShopTemperatureUnit,
@@ -129,6 +130,37 @@ describe("setShopTemperatureUnit", () => {
       .from(trips)
       .where(eq(trips.id, trip.id));
     expect(after?.waterTemperatureC).toBe(24);
+  });
+});
+
+/** Issue 3004: how the shop fills nitrox, which places Rent out's O2-clean warning. */
+describe("setShopNitroxFillMethod", () => {
+  it("starts a brand-new shop on blending, so the warning stays on every EANx fill", async () => {
+    const [freshShop] = await ctx.db
+      .insert(shops)
+      .values({ name: "Plain Shop", slug: "plain-shop-nitrox-fill", timezone: "America/New_York" })
+      .returning();
+    expect(freshShop?.nitroxFillMethod).toBe("blending");
+  });
+
+  it("starts the seeded shop on blending", async () => {
+    expect((await getShopBySlug(ctx.db, ctx.shop.slug))?.nitroxFillMethod).toBe("blending");
+  });
+
+  it("stores the shop's choice and reads it back, for this shop only", async () => {
+    const { db, shop } = ctx;
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-nitrox-fill", timezone: "America/New_York" })
+      .returning();
+    expect((await setShopNitroxFillMethod(db, shop.id, "membrane_premix"))?.nitroxFillMethod).toBe(
+      "membrane_premix",
+    );
+    expect((await getShopBySlug(db, shop.slug))?.nitroxFillMethod).toBe("membrane_premix");
+    expect((await getShopBySlug(db, "other-shop-nitrox-fill"))?.nitroxFillMethod).toBe("blending");
+    expect(other).toBeDefined();
+    await setShopNitroxFillMethod(db, shop.id, "blending");
+    expect((await getShopBySlug(db, shop.slug))?.nitroxFillMethod).toBe("blending");
   });
 });
 

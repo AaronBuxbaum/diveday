@@ -28,4 +28,9 @@ describe("the new-rental form", () => {
     const afterLine = CODE.slice(CODE.indexOf("/>", line));
     expect(afterLine).not.toMatch(/waiver/i);
   });
+
+  /** Issue 3004: the cart's O2-clean warning starts where the shop's fill method says. */
+  it("hands the cart the shop's own nitrox fill method", () => {
+    expect(CODE).toContain("nitroxFillMethod={shop.nitroxFillMethod}");
+  });
 });

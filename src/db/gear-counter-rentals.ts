@@ -29,6 +29,7 @@ import {
   openServiceConcerns,
   pullReturnedUnitsForService,
 } from "./gear";
+import { peopleMinorDeclared } from "./minor-declared";
 import { authorizesNitroxFill } from "./nitrox";
 import { violatesExclusionConstraint } from "./query-helpers";
 import {
@@ -1005,7 +1006,8 @@ export async function counterRentalWaiverStandings(
   const standings = new Map<string, ShopWaiverStatus>();
   const personIds = [...new Set(input.personIds)];
   if (personIds.length === 0) return standings;
-  const [holders, signed, template] = await Promise.all([
+  const now = nowDate();
+  const [holders, signed, template, declaredPeople] = await Promise.all([
     db
       .select({ id: people.id, dateOfBirth: people.dateOfBirth })
       .from(people)
@@ -1018,15 +1020,20 @@ export async function counterRentalWaiverStandings(
       ),
     listSignedWaiversByPerson(db, input.shopId, personIds),
     getCurrentWaiverGeneration(db, input.shopId),
+    // A counter rental has no seat, so it reads the booker's "Under 18" off
+    // any of the holder's seats still ahead (issue #2553), as the diver
+    // record does.
+    peopleMinorDeclared(db, { shopId: input.shopId, personIds, now }),
   ]);
   for (const holder of holders) {
+    const minorDeclared = declaredPeople.has(holder.id);
     standings.set(
       holder.id,
       shopWaiverStatus({
         personSignedWaivers: signed.get(holder.id) ?? [],
         currentTemplateVersion: template?.materialGeneration ?? null,
-        // Person-scoped, a counter rental has no seat: no booker's "Under 18".
-        signer: { dateOfBirth: holder.dateOfBirth, minorDeclared: false, timezone: input.timezone },
+        signer: { dateOfBirth: holder.dateOfBirth, minorDeclared, timezone: input.timezone },
+        now,
       }),
     );
   }

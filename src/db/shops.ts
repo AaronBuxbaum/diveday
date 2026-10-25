@@ -8,6 +8,7 @@ import type { DeskPayment } from "@/lib/desk-payment";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
+import type { NitroxFillMethod } from "@/lib/nitrox-fill";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import {
@@ -610,6 +611,19 @@ export async function setShopReplyNotes(db: AppDb, shopId: string, replyNotes: s
     .set({ replyNotes })
     .where(eq(shops.id, shopId))
     .returning({ id: shops.id });
+  return shop ?? null;
+}
+
+/**
+ * Sets how the shop fills nitrox (issue 3004), which decides where Rent out's
+ * O2-clean warning starts (`o2CleanWarnsForFill`). Advisory only.
+ */
+export async function setShopNitroxFillMethod(db: AppDb, shopId: string, method: NitroxFillMethod) {
+  const [shop] = await db
+    .update(shops)
+    .set({ nitroxFillMethod: method })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

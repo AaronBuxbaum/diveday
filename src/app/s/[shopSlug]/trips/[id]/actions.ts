@@ -71,6 +71,7 @@ import { clientIp } from "@/lib/request-ip";
 import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
+import { answerAlreadyHeld } from "./_lib/already-held";
 import { checkoutGearLines, persistCheckoutGear } from "./_lib/checkout-gear";
 
 /**
@@ -111,14 +112,6 @@ function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
 export type BookingFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
-  /**
-   * The address the "already on this trip" refusal was about, as the diver
-   * typed it, so the refusal can offer "Send me my link" to that inbox (UX
-   * review 2026-10-11, item 8). It goes through `requestFindMyBookingAction`,
-   * which answers the same whatever the address holds and mails only the
-   * address on file, so echoing it back reveals nothing the refusal did not.
-   */
-  alreadyBookedEmail?: string;
 };
 
 const bookSchema = z.object({
@@ -153,7 +146,6 @@ const bookingForm = z
 function bookingRefusalCode(reason: string): ErrorCode {
   const codes: Record<string, ErrorCode> = {
     trip_full: "full",
-    already_booked: "already",
     course_unstaffed: "course-unavailable",
     course_ratio_full: "course-ratio-full",
     divers_full: "divers-full",
@@ -402,6 +394,17 @@ export async function bookSpot(
     })),
   ).catch(busyOnLockWait);
   if (outcome === "busy") return { error: t(ERROR_MESSAGE_KEYS.busy) };
+  if (!outcome.ok && outcome.reason === "already_booked") {
+    // One neutral page for a repeat and a rolled-back party; the answer is email.
+    answerAlreadyHeld(dbi, {
+      shopId: shopNow.id,
+      tripId,
+      party: validParty,
+      failedIndex: outcome.failedIndex ?? 0,
+      leadLocale: (await requestFirstHandLocale()) ?? locale,
+    });
+    redirect(`${publicTripPath(shopSlug, tripId)}?sent=1${embedParam(embed, "&")}`);
+  }
   if (!outcome.ok) {
     // This form is anonymous (the schedule route is auth-exempt), and the
     // submitter is only ever asked for a name and an email — never proof that
@@ -445,25 +448,14 @@ export async function bookSpot(
       }
     }
 
+    // None of these refusals is about one party member (an already-held seat
+    // took the neutral page above), so each is the plain banner.
     const code = bookingRefusalCode(outcome.reason);
-    // "already_booked" is the one refusal that names a specific party member
-    // (task 25) — `createBookingParty` reports which index it rolled back
-    // on, so the form can highlight that diver's fieldset instead of the
-    // generic top-of-form banner reading as if diver 1 were the problem when
-    // it was diver 4 (src/db/bookings.ts "rolls back the whole party" is the
-    // contract this reads off of). Every other refusal reason isn't about
-    // any one member, so it stays the plain banner.
-    const memberFieldErrors =
-      code === "already" && outcome.failedIndex !== undefined
-        ? { [`email-${outcome.failedIndex}`]: t(ERROR_MESSAGE_KEYS[code]) }
-        : undefined;
     const message =
       code === "unavailable" && shopNow.contactEmail
         ? t("booking.errors.unavailableWithContact", { contact: shopNow.contactEmail })
         : t(ERROR_MESSAGE_KEYS[code]);
-    const alreadyBookedEmail =
-      code === "already" ? validParty[outcome.failedIndex ?? 0]?.email || undefined : undefined;
-    return { error: message, fieldErrors: memberFieldErrors, alreadyBookedEmail };
+    return { error: message };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
   // The shop's first booking through its own public pages is an activation

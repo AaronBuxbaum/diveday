@@ -24,7 +24,6 @@ import { hasAnyRentalPricing, type LastGear, type RentalPricing } from "@/lib/re
 import { capacityLabel } from "@/lib/trips";
 import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
-import { AlreadyBookedDoor } from "./AlreadyBookedDoor";
 import { BookingGearFields } from "./BookingGearFields";
 import { KnownDiverPanel, type KnownDiverPanelProps } from "./KnownDiverPanel";
 import { MoneyBlock, type MoneyBlockSeatLine } from "./MoneyBlock";
@@ -728,9 +727,6 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           <ErrorNotice message={state.error ?? errorMessage} />
         </div>
       </form>
-      {state.alreadyBookedEmail ? (
-        <AlreadyBookedDoor shopSlug={tripRef.shopSlug} email={state.alreadyBookedEmail} />
-      ) : null}
     </SectionCard>
   );
 }

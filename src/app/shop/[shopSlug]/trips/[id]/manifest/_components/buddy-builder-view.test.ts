@@ -26,6 +26,7 @@ function plan(overrides: Partial<PartyTeamPlan>): PartyTeamPlan {
     members: new Map(),
     parties: new Map(),
     teamable: [],
+    ageUnconfirmed: [],
     left: [],
     alone: [],
     names: NAMES,
@@ -207,6 +208,7 @@ describe("buddyBuilderView", () => {
       alone: null,
       left: [],
       teamable: 1,
+      confirmAdults: [],
     });
   });
 
@@ -239,6 +241,11 @@ describe("buddyBuilderView", () => {
    * is said even with no party to team, and a seat the manifest no longer lists
    * keeps the plan's own name for it.
    */
+  it("says a tap that teamed nobody needs a tick (issue 2808)", () => {
+    expect(view("confirm-adults").panel.buddyErrorText).toBe(t("manifest.buddyErrorConfirmAdults"));
+    expect(view("confirm-adults").panel.buddyErrorForm).toBe("panel");
+  });
+
   it("draws every line from the plan's own seats and names", () => {
     const { panel } = view(
       undefined,
@@ -259,6 +266,42 @@ describe("buddyBuilderView", () => {
         }),
       ],
       teamable: 0,
+      confirmAdults: [],
+    });
+  });
+
+  /**
+   * Issue 2808: a party with someone who has neither a date of birth nor the
+   * "Under 18" box is named on its own tick box, carrying that party's exact
+   * seats, and is counted among the parties who came together.
+   */
+  it("asks the staffer to confirm each party whose ages nobody has said, naming who", () => {
+    const { panel } = view(
+      undefined,
+      [],
+      plan({
+        ageUnconfirmed: [["b-2", "b-1"]],
+        members: new Map([
+          ["b-1", { age: 40, declaredMinor: false, verifiedCard: true }],
+          ["b-2", { age: null, declaredMinor: false, verifiedCard: true }],
+        ]),
+        names: new Map([...NAMES, ["b-9", "Dara Ruiz"]]),
+      }),
+    );
+    expect(panel.partyLines).toEqual({
+      together: t("manifest.buddyCameTogether", { parties: "Ben Okafor and Ana Ruiz" }),
+      alone: null,
+      left: [],
+      teamable: 0,
+      confirmAdults: [
+        {
+          key: "b-1,b-2",
+          label: t("manifest.buddyPartyConfirmAdults", {
+            names: "Ben Okafor and Ana Ruiz",
+            unknown: "Ben Okafor",
+          }),
+        },
+      ],
     });
   });
 });

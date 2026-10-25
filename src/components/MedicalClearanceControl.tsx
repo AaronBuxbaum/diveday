@@ -57,6 +57,7 @@ export function MedicalClearanceControl({
   variant = "secondary",
   defaultOpen = false,
   today,
+  diverFormRecordId = null,
 }: {
   // i18n-exempt: type annotation, not copy.
   action: (formData: FormData) => void | Promise<void>;
@@ -72,6 +73,12 @@ export function MedicalClearanceControl({
   variant?: "link" | "secondary" | "ghost";
   /** Open on mount — for a refusal landing back on the form that produced it. */
   defaultOpen?: boolean;
+  /**
+   * The release holding the signed form the diver sent (issue #2797), posted
+   * back when the staffer ticks to use it; the domain checks it is still this
+   * diver's unanswered hold.
+   */
+  diverFormRecordId?: string | null;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [picked, setPicked] = useState<string | null>(null);
@@ -149,6 +156,13 @@ export function MedicalClearanceControl({
         {copy.earlierLetterConfirm ? (
           <ChoicePill type="checkbox" name="earlierLetterConfirmed">
             {copy.earlierLetterConfirm}
+          </ChoicePill>
+        ) : null}
+        {/* The diver's own copy, offered only when there is one. Unticked by
+            default: the staffer says which evidence the answer rests on. */}
+        {copy.useDiverForm && diverFormRecordId ? (
+          <ChoicePill type="checkbox" name="diverFormRecordId" value={diverFormRecordId}>
+            {copy.useDiverForm}
           </ChoicePill>
         ) : null}
         <Field

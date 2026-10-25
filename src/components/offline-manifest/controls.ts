@@ -8,6 +8,13 @@ import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
 import type { OfflineStatement } from "./shared";
 
 /**
+ * Why the roll call warns that this copy may differ from the live list: it
+ * was reached without a live answer (`"unanswered"`), or the device has no
+ * signal (`"offline"`), or it is a copy opened with signal (`"online"`).
+ */
+export type CopyCaveat = "online" | "unanswered" | "offline";
+
+/**
  * **What the offline manifest's sections can do**, and the device state they
  * read while doing it: the words, the status line, which row is saving, the
  * per-row note drafts, and the three taps
@@ -24,6 +31,11 @@ export type OfflineTripControls = {
    * because the captain asked for it: never worded as live or current.
    */
   servedWithoutAnswer: boolean;
+  /**
+   * The roll call's line naming the save time and asking for a head count
+   * (issue #2980): which instruction it gives. Every saved copy carries one.
+   */
+  copyCaveat: CopyCaveat;
   /**
    * The live manifest's address once DiveDay answers it again in time and
    * nothing is waiting to send; null otherwise. Offered, never followed.

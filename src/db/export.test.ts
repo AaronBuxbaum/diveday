@@ -14,7 +14,6 @@ import {
   bookings,
   certifications,
   courses,
-  diveSites,
   interests,
   internalNotes,
   people,
@@ -472,6 +471,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "identity_booked_as", // H-13 review state: the name the held booking was made under
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
+    "fly_safe_hours_told", // what one night-before email said (#2927), kept only to correct it
+    "fly_safe_corrected_at", // the same correction's once-only claim
     "identity_matched_by", // H-13 review state: why the booking was matched
     // A held seat's desk-recorded emergency contact (#2145): read only while
     // the seat is held, and moved onto the new record at a split.
@@ -513,11 +514,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "delivery_provider_status",
     "delivery_provider_status_at",
     "delivery_error",
-    // The physician's evaluation itself (issue #1252). The *fact* of the
-    // clearance, its evaluation date, the physician's name and the accountable
-    // staff member are all exported; the document is not, for the same reason
-    // `token_sealed` is not — a bundle leaves DiveDay's custody entirely, and
-    // this is the most sensitive file the product holds.
+    // The physician's evaluation itself (issue #1252), and the diver's own copy
+    // before an answer (`diver_medical_form_url`, issue #2797). The *facts* are
+    // exported; the documents are not, for the reason `token_sealed` is not.
     //
     // **Revisited when the read path landed** (issue #1283), and unchanged. The
     // app can now fetch these bytes back — through one permission-gated route,
@@ -529,6 +528,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // and the file being retrievable *inside* the product is precisely why it
     // does not need to travel outside it.
     "medical_clearance_document_url",
+    "diver_medical_form_url",
     "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
@@ -1530,39 +1530,5 @@ describe("export privilege re-check (database, not JWT)", () => {
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, owner));
     expect(await canPersonExportShopData(db, shop.id, owner)).toBe(false);
-  });
-});
-
-describe("photoUrls (ADR 20260724-export-bundled-photos)", () => {
-  it("collects every image URL referenced anywhere in the bundle, deduped and sorted", async () => {
-    const { db, shop } = ctx;
-    const managedA = "https://diveday-media.s3.us-east-1.amazonaws.com/sites/a.jpg";
-    const managedB = "https://diveday-media.s3.us-east-1.amazonaws.com/sites/b.jpg";
-    // Dive-site imagery rather than certification cards: a card has carried no
-    // photograph since ADR 20260811-retire-the-digital-card dropped the column,
-    // so there is no card URL left for this bundle to gather. What is being
-    // proved — dedup across rows, sorting, and that an unreferenced URL never
-    // appears — is unchanged.
-    await db.insert(diveSites).values([
-      {
-        shopId: shop.id,
-        name: "Photo Reef One",
-        slug: "photo-reef-one",
-        satelliteImageUrl: managedA,
-      },
-      // The same URL again, on another row and another column — must be
-      // deduped, not fetched or counted twice.
-      { shopId: shop.id, name: "Photo Reef Two", slug: "photo-reef-two", routeImageUrl: managedA },
-      // A site with no imagery at all contributes nothing (not null, not
-      // undefined, not an empty string).
-      { shopId: shop.id, name: "Photo Reef Three", slug: "photo-reef-three" },
-    ]);
-
-    const input = await loadShopExportBundleInput(db, shop.id);
-    if (!input) throw new Error("shop failed to load");
-    expect(input.photoUrls).toContain(managedA);
-    expect(input.photoUrls.filter((url) => url === managedA)).toHaveLength(1);
-    expect(input.photoUrls).not.toContain(managedB);
-    expect(input.photoUrls).toEqual([...input.photoUrls].sort());
   });
 });

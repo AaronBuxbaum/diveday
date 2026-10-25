@@ -450,6 +450,19 @@ describe("the Rentals form", () => {
     expect(html).not.toContain('name="regulatorServiceMonths"');
   });
 
+  /** Issue 3004: how the shop fills nitrox places Rent out's O2-clean warning. */
+  it("asks how the shop fills nitrox, opening on what is stored", async () => {
+    const { shop } = await demoShop();
+    const html = renderToStaticMarkup(<RentalsForm shop={shop} t={t} locale="en-US" />);
+    expect(html).toContain('name="nitroxFillMethod"');
+    expect(html).toContain(t("settings.main.rentals.nitroxFill.label"));
+    expect(html).toMatch(/<option value="blending" selected="">/);
+    const membrane = renderToStaticMarkup(
+      <RentalsForm shop={{ ...shop, nitroxFillMethod: "membrane_premix" }} t={t} locale="en-US" />,
+    );
+    expect(membrane).toMatch(/<option value="membrane_premix" selected="">/);
+  });
+
   it("says nothing when no fit asks for a dropped piece", async () => {
     const { shop } = await demoShop();
     const html = renderToStaticMarkup(

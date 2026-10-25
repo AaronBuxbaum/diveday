@@ -92,7 +92,7 @@ export function TripNeedsList({ lines }: { lines: TripNeedsLine[] }) {
   return (
     <ul className="mt-2 list-disc space-y-1 ps-5 text-sm">
       {lines.map((line) => (
-        <li key={line.text} className={line.notHeld ? "text-danger-strong" : "text-muted"}>
+        <li key={line.text} className={line.notHeld ? "text-danger" : "text-muted"}>
           {line.text}
         </li>
       ))}

@@ -83,6 +83,14 @@ const COUNTER_PATTERN = /^\/shop\/[^/]+\/trips\/([0-9a-f]{8}-[0-9a-f-]{27})\/?$/
 const NAVIGATION_TIMEOUT_MS = 4_000;
 
 /**
+ * How long a push waits on the roll-call flush and the board refresh before
+ * it shows the captain's notification anyway (issue #2981). The same four
+ * seconds as a navigation: a push event a browser lets run for well under a
+ * minute, and an alert that comes late is worth more than one that never does.
+ */
+const PUSH_REFRESH_TIMEOUT_MS = 4_000;
+
+/**
  * Network-first with a deadline: the live page whenever the network answers,
  * the device's saved copy when it fails, and the saved copy too once
  * `NAVIGATION_TIMEOUT_MS` passes without an answer. `saved` is told which of
@@ -288,11 +296,12 @@ self.addEventListener("message", (event) => {
       port?.postMessage({ ok: false });
       return;
     }
+    const requestedAt = nowMs();
     event.waitUntil(
       fetch(path, { credentials: "same-origin", cache: "no-store" })
         .then(async (response) => {
           const html = await response.clone().text();
-          const kept = await saveReadyPage(caches, path, response, nowMs());
+          const kept = await saveReadyPage(caches, path, response, nowMs(), requestedAt);
           if (kept) await keepStylesheets(readyPageStylesheets(html, self.location.origin));
           return kept;
         })
@@ -300,6 +309,27 @@ self.addEventListener("message", (event) => {
           (ok) => port?.postMessage({ ok }),
           () => port?.postMessage({ ok: false }),
         ),
+    );
+    return;
+  }
+  if (event.data?.type === "FORGET_READY_PAGE") {
+    // **The cancelled landing asks** (issue #2979, security review finding
+    // 1). A self-cancel is a server action whose redirect a hydrated page
+    // follows without a navigation, so the fetch listener below never sees
+    // the `?cancelled=` load; the cancelled card asks here instead. Only the
+    // page that asked, by its own path, so one booking cannot drop another's.
+    const port = event.ports[0];
+    const source = event.source as Client | null;
+    const sourceUrl = source?.url ? new URL(source.url) : null;
+    const path = sourceUrl
+      ? readyPagePath(new URL(sourceUrl.pathname, self.location.origin), self.location.origin)
+      : null;
+    if (!inReadyScope() || !path) {
+      port?.postMessage({ ok: false });
+      return;
+    }
+    event.waitUntil(
+      forgetReadyPage(caches, path, nowMs()).then(() => port?.postMessage({ ok: true })),
     );
     return;
   }
@@ -476,36 +506,59 @@ self.addEventListener("push", (event) => {
       // the snapshot is replaced — the events are the record of who came back
       // aboard, and getting them off one phone matters more than the roster
       // being current on it.
-      await flushPendingRollCall().catch(() => undefined);
-
+      //
       // Then the inbound half: write the device copy. This is what makes a
       // pocketed phone actually carry the change rather than merely learn about
       // it — before this, a locked phone got a notification and a snapshot that
       // stayed exactly as stale as it was.
-      await refreshSavedManifests();
+      //
+      // **Both halves race a deadline, the notification never waits past it**
+      // (issue #2981). On a dead link a fetch neither answers nor fails, and a
+      // notification queued behind it never showed: the captain got no alert
+      // at all. The work is not dropped at the deadline; it runs on behind
+      // the notification, and this event waits for it below.
+      const work = flushPendingRollCall()
+        .catch(() => undefined)
+        .then(refreshSavedManifests);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        work,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, PUSH_REFRESH_TIMEOUT_MS);
+        }),
+      ]);
+      clearTimeout(timer);
 
-      if (!payload.title) return;
-      await self.registration.showNotification(payload.title, {
-        body: payload.body,
-        // Collapses on the device as well as on the server: a second push for
-        // the same trip replaces the first rather than stacking.
-        tag: payload.tripId ? `manifest-${payload.tripId}` : "manifest",
-        // Replacing the sitting notification must still alert. With
-        // `renotify: false` a stable tag silently swaps identical text, so only
-        // the day's *first* change would ever buzz and every later one would be
-        // mute — the server's 60-second coalescing window is already the noise
-        // bound, and this would have been a second, undeclared throttle that
-        // swallowed everything after it.
-        renotify: true,
-        data: { url: payload.url },
-        // `renotify` ships in Chrome and is what makes a replaced notification
-        // still alert, but lib.dom does not declare it — so the object is cast
-        // rather than the property dropped, which would silence every change
-        // after the day's first.
-      } as NotificationOptions & { renotify: boolean });
+      if (payload.title) await showManifestNotification(payload.title, payload);
+      await work;
     })(),
   );
 });
+
+/** The captain's alert for a changed manifest; one per trip on the device. */
+function showManifestNotification(
+  title: string,
+  payload: { tripId?: string; body?: string; url?: string },
+): Promise<void> {
+  return self.registration.showNotification(title, {
+    body: payload.body,
+    // Collapses on the device as well as on the server: a second push for
+    // the same trip replaces the first rather than stacking.
+    tag: payload.tripId ? `manifest-${payload.tripId}` : "manifest",
+    // Replacing the sitting notification must still alert. With
+    // `renotify: false` a stable tag silently swaps identical text, so only
+    // the day's *first* change would ever buzz and every later one would be
+    // mute — the server's 60-second coalescing window is already the noise
+    // bound, and this would have been a second, undeclared throttle that
+    // swallowed everything after it.
+    renotify: true,
+    data: { url: payload.url },
+    // `renotify` ships in Chrome and is what makes a replaced notification
+    // still alert, but lib.dom does not declare it — so the object is cast
+    // rather than the property dropped, which would silence every change
+    // after the day's first.
+  } as NotificationOptions & { renotify: boolean });
+}
 
 /**
  * Send the roll call that was recorded at sea, once signal comes back — with
@@ -635,23 +688,36 @@ self.addEventListener("fetch", (event) => {
   if (inReadyScope() && event.request.mode === "navigate") {
     const path = readyPagePath(url, self.location.origin);
     if (!path) return;
+    if (url.searchParams.has("cancelled")) {
+      // The diver just cancelled this seat (`cancelMyBookingAction`): the copy
+      // goes with it (security review of layer 8, D2), **before** the network
+      // is asked, and this load never falls back to it (issue #2979). A slow
+      // answer is waited for and a failed one is the browser's own offline
+      // error: the pre-cancel page, links and all, is never what a cancel
+      // lands on.
+      const forgotten = forgetReadyPage(caches, path, nowMs());
+      event.waitUntil(forgotten);
+      event.respondWith(forgotten.then(() => fetch(event.request)).catch(() => Response.error()));
+      return;
+    }
     event.respondWith(
       // Network-first: online, the diver always gets the live page. Only a
       // clean load is kept (a `?saved=` notice is a moment, not the page).
       networkFirst(
-        (signal) =>
-          fetch(event.request, { signal }).then((response) => {
+        (signal) => {
+          // A cancel landing that forgets this path after now outranks it (#2979).
+          const requestedAt = nowMs();
+          return fetch(event.request, { signal }).then((response) => {
             if (url.search === "") {
               event.waitUntil(
-                saveReadyPage(caches, path, response.clone(), nowMs()).catch(() => false),
+                saveReadyPage(caches, path, response.clone(), nowMs(), requestedAt).catch(
+                  () => false,
+                ),
               );
-            } else if (url.searchParams.has("cancelled")) {
-              // The diver just cancelled this seat (`cancelMyBookingAction`):
-              // the copy goes with it (security review of layer 8, D2).
-              event.waitUntil(forgetReadyPage(caches, path).catch(() => undefined));
             }
             return response;
-          }),
+          });
+        },
         () => readyPageFallback(caches, path, nowMs()),
       ),
     );

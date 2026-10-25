@@ -387,6 +387,7 @@ describe("seat_already_held is keyed once per held seat per hour", () => {
       startsAt: new Date("2026-10-20T14:00:00Z"),
       timezone: "America/New_York",
       requestedAt,
+      attempt: "claim",
     });
 
   it("gives every attempt inside one hour the same key, and the next hour another", () => {

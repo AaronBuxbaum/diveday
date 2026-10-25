@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  boolean,
   check,
   date,
   index,
@@ -638,6 +639,12 @@ export const buddyTeamEvents = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
+    /**
+     * The recorder said everyone on the team is 18 or over, where no date of
+     * birth or "Under 18" box on file said so ("Team up each party", issue
+     * 2808). The attestation and who gave it, kept with the act.
+     */
+    adultsConfirmed: boolean("adults_confirmed").notNull().default(false),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: appNowTimestamp("created_at").notNull(),
   },

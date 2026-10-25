@@ -71,7 +71,23 @@ type AgencyPages = {
   requests: string[];
   /** Anything typed into the PADI sign-in form, by box name. */
   typedIntoSignIn: string[];
+  /**
+   * When each agency request and agency tab event happened, redacted: host, path and the
+   * query's keys, never a value (#2878). Attached with the worker's phases when a test fails.
+   */
+  ledger: [number, string][];
 };
+
+/** An agency address with its query's values left out: `GET my.divessi.com/online_diver_check?diver_name&card_number`. */
+function redactedAddress(href: string): string {
+  try {
+    const url = new URL(href);
+    const keys = [...url.searchParams.keys()];
+    return `${url.host}${url.pathname}${keys.length > 0 ? `?${keys.join("&")}` : ""}`;
+  } catch {
+    return "(unreadable address)";
+  }
+}
 
 function html(title: string, body: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head><body>${body}</body></html>`;
@@ -227,6 +243,7 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
     async (request, response) => {
       const url = new URL(request.url ?? "/", `https://${request.headers.host}`);
       pages.requests.push(`${request.method} ${url.href}`);
+      pages.ledger.push([Date.now(), `agency:${request.method} ${redactedAddress(url.href)}`]);
       const send = (status: number, body = "", headers: Record<string, string> = {}) => {
         response.writeHead(status, { "content-type": "text/html; charset=utf-8", ...headers });
         response.end(body);
@@ -234,7 +251,9 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
       if (url.hostname === "my.divessi.com" && url.pathname === "/online_diver_check") {
         const lookups = pages.requests.filter((each) => each.includes("diver_name=")).length;
         if (url.search.includes("diver_name=") && pages.ssiHold && lookups > pages.ssiHold.after) {
+          pages.ledger.push([Date.now(), `agency:held lookup ${lookups}`]);
           await pages.ssiHold.open;
+          pages.ledger.push([Date.now(), `agency:released lookup ${lookups}`]);
         }
         return send(200, ssiPage(url, pages.ssiListsMore, pages.ssiForm));
       }
@@ -322,6 +341,7 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
       padiCardNumber: "",
       requests: [],
       typedIntoSignIn: [],
+      ledger: [],
     });
   },
 
@@ -358,6 +378,25 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
       cookies: Parameters<BrowserContext["addCookies"]>[0];
     };
     await context.addCookies(state.cookies);
+    // The extension's worker and each tab it opens, seen from the browser's side (#2878).
+    context.on("serviceworker", (sw) => {
+      if (!sw.url().startsWith("chrome-extension://")) return;
+      agencyPages.ledger.push([Date.now(), "worker:started"]);
+      sw.on("close", () => agencyPages.ledger.push([Date.now(), "worker:closed"]));
+    });
+    context.on("page", (opened) => {
+      agencyPages.ledger.push([Date.now(), `tab:opened ${redactedAddress(opened.url())}`]);
+      opened.on("domcontentloaded", () =>
+        agencyPages.ledger.push([
+          Date.now(),
+          `tab:domcontentloaded ${redactedAddress(opened.url())}`,
+        ]),
+      );
+      opened.on("load", () =>
+        agencyPages.ledger.push([Date.now(), `tab:load ${redactedAddress(opened.url())}`]),
+      );
+      opened.on("close", () => agencyPages.ledger.push([Date.now(), "tab:closed"]));
+    });
     await context.addInitScript((iso) => {
       const fixed = new Date(iso).getTime();
       const RealDate = Date;
@@ -373,13 +412,37 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
   },
 
   // The MV3 service worker, up: the extension loaded and its background ran.
-  extensionId: async ({ context }, use) => {
+  extensionId: async ({ context, agencyPages }, use, testInfo) => {
     const worker =
       context.serviceWorkers().find((sw) => sw.url().startsWith("chrome-extension://")) ??
       (await context.waitForEvent("serviceworker", {
         predicate: (sw) => sw.url().startsWith("chrome-extension://"),
       }));
+    agencyPages.ledger.push([Date.now(), "worker:up"]);
     await use(new URL(worker.url()).host);
+    if (testInfo.status === testInfo.expectedStatus) return;
+    // A failed check says where it stopped: the worker's own phases (names and times only,
+    // extension/background.js) beside the agency requests and tabs, on one clock (#2878).
+    const current =
+      context.serviceWorkers().find((sw) => sw.url().startsWith("chrome-extension://")) ?? null;
+    const phases = current
+      ? await current
+          .evaluate(
+            () =>
+              (globalThis as { DiveDayCheckPhases?: [number, string][] }).DiveDayCheckPhases ?? [],
+          )
+          .catch(() => [] as [number, string][])
+      : [];
+    const events = [
+      ...agencyPages.ledger,
+      ...phases.map(([at, name]): [number, string] => [at, `worker:${name}`]),
+      ...(current === worker ? [] : [[Date.now(), "worker:restarted"] as [number, string]]),
+    ].sort(([a], [b]) => a - b);
+    const start = events[0]?.[0] ?? 0;
+    await testInfo.attach("extension-phases", {
+      contentType: "text/plain",
+      body: events.map(([at, event]) => `+${String(at - start).padStart(6)}ms ${event}`).join("\n"),
+    });
   },
 });
 

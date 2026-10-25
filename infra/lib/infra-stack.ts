@@ -2252,6 +2252,25 @@ exports.handler = async (event) => {
         note: "The role ARNs are stored as repository variables, not secrets: they are identifiers, not credentials, and a secret's value is redacted from logs, which would make a failed sts:AssumeRoleWithWebIdentity impossible to read. Re-running the environment prompt only ever adds the current gh user as a reviewer -- it never removes anyone else's approval right, so adding a second reviewer is a manual GitHub-side edit.",
       },
       {
+        id: "restore-drill-role-variable",
+        title: "Give the restore drill its AWS role",
+        category: "Credentials",
+        when: "once, after the first deploy that includes GitHubActionsRestoreDrillRole",
+        why: "The role ARN is a GitHub environment variable and this stack has no credential for GitHub's API. The drill's role can read every database dump, so the variable lives on the restore-drill environment only, never on the repository, where any workflow could read it.",
+        run: [
+          "gh variable set RESTORE_DRILL_ROLE_ARN --env restore-drill --repo AaronBuxbaum/diveday --body <GitHubActionsRestoreDrillRoleArn output>",
+        ],
+        produces:
+          ".github/workflows/restore-drill.yml passes its first step and can list and read dumps/ in the dump bucket.",
+        store:
+          "GitHub repo Settings -> Environments (restore-drill) -> Environment variables (RESTORE_DRILL_ROLE_ARN) -- the CfnOutput is GitHubActionsRestoreDrillRoleArn.",
+        verify: [
+          "gh variable list --env restore-drill --repo AaronBuxbaum/diveday -- RESTORE_DRILL_ROLE_ARN is listed.",
+          "gh api repos/AaronBuxbaum/diveday/environments/restore-drill --jq '.protection_rules, .deployment_branch_policy' -- a required_reviewers rule is listed and the branch policy admits main only (custom_branch_policies true, with a single branch policy named main). If either is missing, Aaron must fix it before the first run: the role can read every dump.",
+        ],
+        note: "The role trusts the restore-drill environment, and only that environment's branch rule (main alone) and required reviewer keep a pushed branch from assuming it. Check both before the first run (docs/engineering/backup-and-restore-runbook.md, 'Monthly restore drill').",
+      },
+      {
         id: "ci-github-admin-token",
         title: "Mint a GitHub token for the CI deploy job's own gh CLI calls",
         category: "Credentials",
@@ -2939,6 +2958,44 @@ exports.handler = async (event) => {
       value: regSuitRole.roleArn,
       description:
         "role-to-assume for .github/workflows/ci.yml's visual-report job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
+    });
+
+    // The monthly restore drill's identity (issue #2986): `.github/workflows/restore-drill.yml`
+    // reads the newest full-cluster dump with it. The dump holds every password hash and medical
+    // answer in the platform, so this is the one role in the stack that can read one back, and it
+    // is as narrow as that allows. **Trusted from the `restore-drill` GitHub environment alone**
+    // (not `*`, not a branch, not a pull request): that environment's required reviewer and its
+    // `main`-only branch rule are what keep a pushed branch from assuming it, which is why the
+    // runbook makes them a precondition. **Read-only**: list and get under the dump prefix, no
+    // write, no delete, nothing on the bundle bucket, and the same unscoped Deny on reading any
+    // secret the other CI roles carry. The weekly writer (`DatabaseDumpRole`) stays write-only.
+    const restoreDrillRole = new iam.Role(this, "GitHubActionsRestoreDrillRole", {
+      roleName: "diveday-github-actions-restore-drill",
+      assumedBy: githubActionsPrincipal(`repo:${GITHUB_REPO_SUB}:environment:restore-drill`),
+      description:
+        "Assumed by .github/workflows/restore-drill.yml to read database dumps. List and get under the dump prefix only; cannot write, delete or read a secret.",
+      maxSessionDuration: cdk.Duration.hours(1),
+    });
+    restoreDrillRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ListDumpPrefixForRestoreDrill",
+        actions: ["s3:ListBucket"],
+        resources: [databaseDumpBucket.bucketArn],
+        conditions: { StringLike: { "s3:prefix": [`${DUMP_PREFIX}*`] } },
+      }),
+    );
+    restoreDrillRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadDumpPrefixForRestoreDrill",
+        actions: ["s3:GetObject"],
+        resources: [databaseDumpBucket.arnForObjects(`${DUMP_PREFIX}*`)],
+      }),
+    );
+    restoreDrillRole.addToPolicy(denyReadingAnySecret());
+    new cdk.CfnOutput(this, "GitHubActionsRestoreDrillRoleArn", {
+      value: restoreDrillRole.roleArn,
+      description:
+        "role-to-assume for .github/workflows/restore-drill.yml. Store as the RESTORE_DRILL_ROLE_ARN variable on the restore-drill GitHub environment (manual action restore-drill-role-variable).",
     });
 
     const cdkDiffRole = new iam.Role(this, "GitHubActionsCdkDiffRole", {

@@ -1,5 +1,6 @@
 import { personsAboveTotalPersonsAboard } from "@/lib/boat-safety";
 import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
+import { keepUnitsWhole } from "@/lib/date-parts";
 import { cachedFormatter } from "@/lib/intl-cache";
 import {
   boardedBefore,
@@ -293,6 +294,18 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     timeStyle: "short",
     timeZone: envelope.snapshot.shop.timezone,
   });
+  // The save time the roll call's caveat names (issue #2980): with its zone,
+  // since a phone set to another zone would otherwise read the age wrong.
+  const savedAtZoned = keepUnitsWhole(
+    cachedFormatter("dtz", Intl.DateTimeFormat, deviceLocale(), {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone: envelope.snapshot.shop.timezone,
+    }).formatToParts(new Date(envelope.snapshot.savedAt)),
+  );
   return {
     envelope,
     checkpoint,
@@ -328,6 +341,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     anyBuddies,
     previousGaps,
     dateTime,
+    savedAtZoned,
   };
 }
 

@@ -1,3 +1,4 @@
+import type { HandledHelpRequest } from "@/db/help-requests";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   blockerActionLabelText,
@@ -1780,6 +1781,8 @@ export type DaySpine = {
   tomorrow: { stations: DayStation[]; jobs: number };
   /** The rest of the horizon: a count, and the rows behind it, opened in place. */
   week: { jobs: number; rows: TodayAction[] };
+  /** Handled help requests on today's departures, each reopenable (issue #2939). */
+  handledHelp: readonly HandledHelpRequest[];
 };
 
 /** Tone first: danger, then warning, then everything quiet. */
@@ -1870,6 +1873,8 @@ export type SpineWork = {
    * hand-built spine in a test can leave it out.
    */
   outTripIds?: readonly string[];
+  /** `TodayWork.handledHelp`; optional so a hand-built spine in a test can leave it out. */
+  handledHelp?: readonly HandledHelpRequest[];
 };
 
 /**
@@ -1973,6 +1978,7 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
       ),
     },
     week: { jobs: weekRows.filter(countsAsJob).length, rows: sortStationRows(weekRows) },
+    handledHelp: today.handledHelp ?? [],
   };
 }
 

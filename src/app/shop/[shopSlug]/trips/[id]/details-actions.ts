@@ -323,9 +323,23 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
           actorPersonId: s.user.personId,
         })
       : null;
+  // The save sent any fly-safe corrections it owed (#2927, `updateTrip`); one
+  // that reached nobody, or threw, is said here, never as a failed save.
+  const flySafe = outcome.flySafe;
+  const savedNotice =
+    flySafe === "failed"
+      ? "saved-fly-safe-failed"
+      : flySafe && flySafe.unreached.length > 0
+        ? "saved-fly-safe-unreached"
+        : "saved";
   revalidateAndRedirect(
     back,
-    noticeUrl(back, "saved", notice ? { held: notice.id, tell: notice.told } : undefined),
+    noticeUrl(back, savedNotice, {
+      ...(notice ? { held: notice.id, tell: notice.told } : {}),
+      ...(savedNotice === "saved-fly-safe-unreached" && flySafe && flySafe !== "failed"
+        ? { count: flySafe.unreached.length }
+        : {}),
+    }),
   );
 }
 

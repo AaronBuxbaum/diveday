@@ -5,6 +5,7 @@ import { medicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { FILE_ROW_INSET, WaiverStateRow } from "@/components/person/rows";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
@@ -16,7 +17,11 @@ import type { DiverStatusRow } from "@/lib/diver-status";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { shopPath } from "@/lib/staff-notices";
-import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../waiver-actions";
+import {
+  markWaiverInPersonAction,
+  recordMedicalClearanceAction,
+  rejectDiverMedicalFormAction,
+} from "../waiver-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -450,8 +455,8 @@ export function WaiverGroup({
                   requiresGuardian={guardianSignatureRequired(
                     diver.person.dateOfBirth,
                     signingDate(nowDate(), timezone),
-                    // Person-scoped: no seat, so no booker's "Under 18".
-                    false,
+                    // A booker's "Under 18" on a seat still ahead (#2553).
+                    diver.minorDeclared,
                   )}
                   // **No namesake confirmation here, deliberately** —
                   // `offersNamesake` is left off. This door is the absentee
@@ -488,7 +493,43 @@ export function WaiverGroup({
               >
                 {t("divers.waiver.openClearanceDocument")}
               </a>
+              {/* The file is the diver's, accepted by staff: never read as
+                  staff-sourced evidence (issue #2797). */}
+              {clearanceDocument.fromDiver ? (
+                <span className="text-muted"> · {t("divers.waiver.evaluationFromDiver")}</span>
+              ) : null}
             </p>
+          ) : null}
+          {/* **The signed form the diver sent from the doctor's page** (issue
+            #2797), where the answer is recorded. Every staffer who may record
+            the answer may open it (`canReadDiverMedicalForm`), so the link is
+            drawn for whoever sees this control; each open goes on the trail. */}
+          {heldForMedical && diver.diverMedicalForm ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 pb-3 text-sm sm:px-6">
+              <a
+                href={`/api/medical-clearances/${diver.diverMedicalForm.recordId}/diver-form`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                {t("divers.waiver.openDiverForm", {
+                  date: formatCalendarDate(
+                    calendarDateInTimezone(diver.diverMedicalForm.sentAt, timezone),
+                    locale,
+                  ),
+                })}
+              </a>
+              {/* Turned away: deleted, and the diver may send another. */}
+              <form action={rejectDiverMedicalFormAction.bind(null, shopSlug, personId)}>
+                <input type="hidden" name="recordId" value={diver.diverMedicalForm.recordId} />
+                <SubmitButton
+                  pendingLabel={t("divers.waiver.rejectingDiverForm")}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                >
+                  {t("divers.waiver.rejectDiverForm")}
+                </SubmitButton>
+              </form>
+            </div>
           ) : null}
           {heldForMedical ? (
             <div className={FILE_ROW_INSET}>
@@ -499,7 +540,9 @@ export function WaiverGroup({
                   diver.medicalEarlierReferral
                     ? formatCalendarDate(diver.medicalEarlierReferral.on, locale)
                     : null,
+                  Boolean(diver.diverMedicalForm),
                 )}
+                diverFormRecordId={diver.diverMedicalForm?.recordId ?? null}
                 // The shop's own today, so the date box cannot offer tomorrow: a
                 // Key Largo evening is already tomorrow in UTC, and the reader's
                 // browser zone is nobody's business here.

@@ -34,6 +34,7 @@ function renderPanel(
     alone: string | null;
     left: string[];
     teamable: number;
+    confirmAdults: { key: string; label: string }[];
   } | null = null,
   teamWarnings: Record<string, string[]> = {},
 ) {
@@ -175,6 +176,7 @@ describe("who came together (item 50)", () => {
       alone: "Came alone: Cleo",
       left: [],
       teamable: 1,
+      confirmAdults: [],
     });
     expect(screen.getByText("Came together: Ana and Ben")).toBeInTheDocument();
     expect(screen.getByText("Came alone: Cleo")).toBeInTheDocument();
@@ -187,10 +189,45 @@ describe("who came together (item 50)", () => {
       alone: null,
       left: ["Left for you: a family of four (more than three)"],
       teamable: 0,
+      confirmAdults: [],
     });
     expect(screen.queryByRole("button", { name: "manifest.buddyTeamUpParties" })).toBeNull();
     expect(
       screen.getByText("Left for you: a family of four (more than three)"),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * **"Team up each party" asks before teaming a party nobody has said is adult**
+ * (issue 2808): one tick box per such party, carrying its exact seats, and the
+ * button stands even when that party is the only one to team.
+ */
+describe("the one-tap party teams", () => {
+  const lines = {
+    together: "Came together",
+    alone: null,
+    left: [],
+    teamable: 0,
+    confirmAdults: [{ key: "b1,b2", label: "Ana and Ben are 18 or over" }],
+  };
+
+  it("offers a tick box per unconfirmed party, unticked, beside the button", () => {
+    renderPanel([], lines);
+    const box = screen.getByRole("checkbox", { name: "Ana and Ben are 18 or over" });
+    expect(box).not.toBeChecked();
+    expect(box).toHaveAttribute("name", "adultParty");
+    expect(box).toHaveAttribute("value", "b1,b2");
+    expect(screen.getByText("manifest.buddyPartyConfirmHint")).toBeInTheDocument();
+    expect(box.closest("form")).toBe(
+      screen.getByRole("button", { name: "manifest.buddyTeamUpParties" }).closest("form"),
+    );
+  });
+
+  it("asks nothing when every party's ages are on file", () => {
+    renderPanel([], { ...lines, teamable: 1, confirmAdults: [] });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByText("manifest.buddyPartyConfirmHint")).toBeNull();
+    expect(screen.getByRole("button", { name: "manifest.buddyTeamUpParties" })).toBeInTheDocument();
   });
 });

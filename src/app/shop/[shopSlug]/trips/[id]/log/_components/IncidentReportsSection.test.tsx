@@ -114,3 +114,31 @@ describe("TimelineEntryText for a seat change", () => {
     expect(container.textContent).toBe("Ben Cho — Seat removedRecorded by Rae Owner");
   });
 });
+
+/** Issue 2808: a team made on the recorder's word that everyone is 18 or over says so. */
+describe("TimelineEntryText for a buddy team formed on an 18-or-over attestation", () => {
+  const entry: IncidentTimelineEntry = {
+    kind: "buddy_team",
+    occurredAt: "2026-10-12T08:12:00.000Z",
+    checkpoint: null,
+    action: "formed",
+    teamNumber: 1,
+    memberNames: ["Ana Diaz", "Ben Cho"],
+    recordedByName: "Rae Owner",
+  };
+  const text = (line: IncidentTimelineEntry) =>
+    render(
+      <TimelineEntryText
+        entry={line}
+        t={staffTranslator("en-US")}
+        memberList={new Intl.ListFormat("en-US")}
+      />,
+    ).container.textContent;
+
+  it("says the recorder confirmed everyone is 18 or over, and only on that line", () => {
+    const confirmed = staffTranslator("en-US")("incidentExport.timelineBuddyAdultsConfirmed");
+    expect(text({ ...entry, adultsConfirmed: true })).toContain(confirmed);
+    cleanup();
+    expect(text(entry)).not.toContain(confirmed);
+  });
+});

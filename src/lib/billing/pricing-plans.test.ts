@@ -88,16 +88,12 @@ describe("the split", () => {
 });
 
 describe("effectivePricing", () => {
-  const percentShop = Array.from({ length: 200 }, (_, index) => `shop-${index}`).find(
-    (key) => pricingPlanForKey(key, 50) === "percent_of_volume",
-  ) as string;
   const none = { plan: null, source: null, monthlyCents: null, basisPoints: null };
 
   it("is today's flat price for everyone on the defaults", () => {
     expect(
       effectivePricing({
         stored: { ...none, plan: "percent_of_volume", source: "assigned" },
-        shopId: percentShop,
         config: DEFAULT_PRICING_CONFIG,
         hasLiveSubscription: false,
       }),
@@ -106,27 +102,43 @@ describe("effectivePricing", () => {
 
   it("charges the config's flat fee while the test is off", () => {
     const config = { ...DEFAULT_PRICING_CONFIG, flat: { monthlyCents: 12_900 } };
-    expect(
-      effectivePricing({ stored: null, shopId: percentShop, config, hasLiveSubscription: false }),
-    ).toEqual({ plan: "flat_monthly", monthlyCents: 12_900, basisPoints: 0 });
+    expect(effectivePricing({ stored: null, config, hasLiveSubscription: false })).toEqual({
+      plan: "flat_monthly",
+      monthlyCents: 12_900,
+      basisPoints: 0,
+    });
   });
 
   it("lets a stored arm win while the test is on", () => {
     expect(
       effectivePricing({
         stored: { ...none, plan: "flat_monthly", source: "assigned" },
-        shopId: percentShop,
         config: ON,
         hasLiveSubscription: false,
       }).plan,
     ).toBe("flat_monthly");
   });
 
-  it("falls back to the shop id's bucket, on the config's numbers", () => {
+  it("puts a stored percent arm on the config's numbers", () => {
     const config = { ...ON, percent: { basisPoints: 250, monthlyCents: 2_900 } };
     expect(
-      effectivePricing({ stored: null, shopId: percentShop, config, hasLiveSubscription: false }),
+      effectivePricing({
+        stored: { ...none, plan: "percent_of_volume", source: "assigned" },
+        config,
+        hasLiveSubscription: false,
+      }),
     ).toEqual({ plan: "percent_of_volume", monthlyCents: 2_900, basisPoints: 250 });
+  });
+
+  // Aaron's call on #2947: existing shops stay flat, and only a new set-up
+  // request is put in an arm. A shop with nothing stored predates the test,
+  // so turning it on never moves it.
+  it("keeps a shop with no stored arm on the flat plan while the test is on", () => {
+    expect(effectivePricing({ stored: null, config: ON, hasLiveSubscription: false })).toEqual({
+      plan: "flat_monthly",
+      monthlyCents: 9_900,
+      basisPoints: 0,
+    });
   });
 
   it("keeps a live subscription on the numbers it was sold, whatever the config says now", () => {
@@ -137,14 +149,15 @@ describe("effectivePricing", () => {
       basisPoints: 300,
     };
     const raised = { ...ON, percent: { basisPoints: 500, monthlyCents: 1_000 } };
-    expect(
-      effectivePricing({ stored, shopId: percentShop, config: raised, hasLiveSubscription: true }),
-    ).toEqual({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 300 });
+    expect(effectivePricing({ stored, config: raised, hasLiveSubscription: true })).toEqual({
+      plan: "percent_of_volume",
+      monthlyCents: 0,
+      basisPoints: 300,
+    });
     // Turning the test off does not move a percent subscriber either.
     expect(
       effectivePricing({
         stored,
-        shopId: percentShop,
         config: DEFAULT_PRICING_CONFIG,
         hasLiveSubscription: true,
       }).plan,
@@ -155,7 +168,6 @@ describe("effectivePricing", () => {
     expect(
       effectivePricing({
         stored: null,
-        shopId: percentShop,
         config: { ...ON, flat: { monthlyCents: 14_900 } },
         hasLiveSubscription: true,
       }),
@@ -170,9 +182,11 @@ describe("effectivePricing", () => {
       basisPoints: 200,
     };
     for (const config of [ON, DEFAULT_PRICING_CONFIG]) {
-      expect(
-        effectivePricing({ stored, shopId: "any", config, hasLiveSubscription: false }),
-      ).toEqual({ plan: "percent_of_volume", monthlyCents: 1_500, basisPoints: 200 });
+      expect(effectivePricing({ stored, config, hasLiveSubscription: false })).toEqual({
+        plan: "percent_of_volume",
+        monthlyCents: 1_500,
+        basisPoints: 200,
+      });
     }
   });
 
@@ -180,11 +194,10 @@ describe("effectivePricing", () => {
     expect(
       effectivePricing({
         stored: { ...none, plan: "bogus", source: "assigned" },
-        shopId: percentShop,
         config: ON,
         hasLiveSubscription: false,
       }).plan,
-    ).toBe("percent_of_volume");
+    ).toBe("flat_monthly");
   });
 });
 

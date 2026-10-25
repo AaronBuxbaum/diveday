@@ -69,6 +69,11 @@ export type DetailsSectionContext = {
   currency: string;
   /** Claude's Draft button for the description, inside this form; absent while dark. */
   descriptionAssist?: ReactNode;
+  /**
+   * Divers the night-before email told a fly-safe wait, not yet corrected
+   * (#2927): said beside the decompression box, which corrects them.
+   */
+  flySafeTold?: number;
 };
 
 /** The departure's title and description, and Claude's Draft button under the description. */
@@ -123,6 +128,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
     boats,
     lenses,
     hasBoatDiving,
+    flySafeTold = 0,
   } = context;
   const t = staffTranslator(locale);
   // Both price boxes follow the shop's currency: whole-number entry and a
@@ -413,7 +419,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
           </Field>
         ) : null}
       </FieldGrid>
-      <DepartureSwitches t={t} trip={trip} />
+      <DepartureSwitches t={t} trip={trip} flySafeTold={flySafeTold} />
       <PayAtBookingFields
         t={t}
         trip={trip}
@@ -599,7 +605,15 @@ function PayAtBookingFields({
  * one never sits alone under three selects in a narrow column (visual
  * triage, round 5).
  */
-function DepartureSwitches({ t, trip }: { t: StaffTranslator; trip: Trip }) {
+function DepartureSwitches({
+  t,
+  trip,
+  flySafeTold,
+}: {
+  t: StaffTranslator;
+  trip: Trip;
+  flySafeTold: number;
+}) {
   return (
     <FieldGrid columns={2}>
       {/* `htmlFor`, so the caption is a label beside the row's own rather
@@ -635,7 +649,7 @@ function DepartureSwitches({ t, trip }: { t: StaffTranslator; trip: Trip }) {
                 action parses an absent checkbox as `false` rather than
                 `undefined`, so `updateTrip` writes the correction. */}
       {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
-      <AboardFields t={t} trip={trip} />
+      <AboardFields t={t} trip={trip} flySafeTold={flySafeTold} />
     </FieldGrid>
   );
 }
@@ -645,7 +659,15 @@ function DepartureSwitches({ t, trip }: { t: StaffTranslator; trip: Trip }) {
  * stops, so a departure marked here gets no flying sentence on the recap.
  * Nothing else reads it.
  */
-function DecompressionField({ t, checked }: { t: StaffTranslator; checked: boolean }) {
+function DecompressionField({
+  t,
+  checked,
+  flySafeTold,
+}: {
+  t: StaffTranslator;
+  checked: boolean;
+  flySafeTold: number;
+}) {
   return (
     <Field label={t("trips.details.exceedsNoDecoLabel")} htmlFor="trip-details-exceeds-no-deco">
       <ChoiceRow
@@ -657,6 +679,12 @@ function DecompressionField({ t, checked }: { t: StaffTranslator; checked: boole
       >
         {t("trips.details.exceedsNoDecoHint")}
       </ChoiceRow>
+      {/* Divers already holding a fly-safe figure this box makes wrong (#2927). */}
+      {flySafeTold > 0 ? (
+        <p className="mt-2 text-sm font-medium text-warning-strong">
+          {t("trips.details.exceedsNoDecoTold", { count: flySafeTold })}
+        </p>
+      ) : null}
     </Field>
   );
 }
@@ -665,13 +693,15 @@ function DecompressionField({ t, checked }: { t: StaffTranslator; checked: boole
 function AboardFields({
   t,
   trip,
+  flySafeTold,
 }: {
   t: StaffTranslator;
   trip: { exceedsNoDecoLimits: boolean; lunchAboard: boolean };
+  flySafeTold: number;
 }) {
   return (
     <>
-      <DecompressionField t={t} checked={trip.exceedsNoDecoLimits} />
+      <DecompressionField t={t} checked={trip.exceedsNoDecoLimits} flySafeTold={flySafeTold} />
       <LunchAboardField t={t} checked={trip.lunchAboard} />
     </>
   );

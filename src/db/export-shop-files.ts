@@ -215,6 +215,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // How often the shop services a customer's regulator (#2272): a policy
       // the shop chose, so a restore keeps its customers' reminders on time.
       "customer_regulator_service_months",
+      // How the shop fills nitrox (issue 3004): its own safety policy, which
+      // places the counter's O2-clean warning, so its backup records it.
+      "nitrox_fill_method",
       // The shop's own emergency numbers. Exported because the bundle is
       // the backup: a shop restoring from one must come back with the
       // chamber's number on its manifests, not an empty card.
@@ -321,6 +324,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.rentalTerms,
         shop.replyNotes,
         shop.customerRegulatorServiceMonths,
+        shop.nitroxFillMethod,
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,

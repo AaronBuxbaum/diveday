@@ -10,6 +10,7 @@ import {
   type PartyDeparture,
   type PartyLeftReason,
   type PartyMember,
+  partyAgesUnconfirmed,
   partyLeftReason,
 } from "@/lib/party-teams";
 import { isUuid } from "@/lib/uuid";
@@ -333,6 +334,7 @@ async function recordTeamEvent(
     members: readonly ResolvedMember[];
     recordedByPersonId: string;
     occurredAt: Date;
+    adultsConfirmed?: boolean;
   },
 ): Promise<void> {
   // The innermost of the three layers guarding this row's contents. A safety
@@ -354,6 +356,7 @@ async function recordTeamEvent(
     memberNames,
     recordedByPersonId: input.recordedByPersonId,
     occurredAt: input.occurredAt,
+    adultsConfirmed: input.adultsConfirmed ?? false,
   });
 }
 
@@ -371,6 +374,11 @@ export async function formBuddyTeam(
     tripId: string;
     members: readonly BuddyTeamMemberInput[];
     recordedByPersonId: string;
+    /**
+     * The staffer said everyone on the team is 18 or over, where nothing on
+     * file says so ("Team up each party", issue 2808). Written on the trail.
+     */
+    adultsConfirmed?: boolean;
     now?: Date;
   },
 ): Promise<FormBuddyTeamOutcome> {
@@ -396,6 +404,11 @@ async function formBuddyTeamInTx(
     tripId: string;
     members: readonly BuddyTeamMemberInput[];
     recordedByPersonId: string;
+    /**
+     * The staffer said everyone on the team is 18 or over, where nothing on
+     * file says so ("Team up each party", issue 2808). Written on the trail.
+     */
+    adultsConfirmed?: boolean;
     now?: Date;
   },
 ): Promise<FormBuddyTeamOutcome> {
@@ -453,6 +466,7 @@ async function formBuddyTeamInTx(
     members: sortMembers(resolved.members, memberKey),
     recordedByPersonId: staffId,
     occurredAt,
+    adultsConfirmed: input.adultsConfirmed,
   });
   return { ok: true, teamId };
 }
@@ -466,6 +480,12 @@ export type PartyTeamPlan = {
   parties: Map<string, string>;
   /** Diver seats not yet on a team, one list per party one tap would team. */
   teamable: string[][];
+  /**
+   * Parties one tap teams only once a staffer confirms everyone in it is 18
+   * or over: no reason to leave them, but someone has neither a date of birth
+   * nor the "Under 18" box (`partyAgesUnconfirmed`, issue 2808).
+   */
+  ageUnconfirmed: string[][];
   /** Parties of two or more it leaves, with the reason the panel says. */
   left: { bookingIds: string[]; reason: PartyLeftReason }[];
   /** Diver seats still to team that came alone. */
@@ -510,6 +530,7 @@ export async function planPartyTeams(
     members: new Map(),
     parties: new Map(),
     teamable: [],
+    ageUnconfirmed: [],
     left: [],
     alone: [],
     names: new Map(),
@@ -584,30 +605,58 @@ export async function planPartyTeams(
       party.map((seat) => seat.member),
     );
     if (reason) plan.left.push({ bookingIds, reason });
-    else plan.teamable.push(bookingIds);
+    else if (partyAgesUnconfirmed(party.map((seat) => seat.member))) {
+      plan.ageUnconfirmed.push(bookingIds);
+    } else plan.teamable.push(bookingIds);
   }
   return plan;
 }
 
 /**
+ * A party's confirmation token: its booking ids, sorted and comma-joined. The
+ * staffer's "18 or over" tick carries it, so a confirmation stands for exactly
+ * the seats it named: a party that gained or lost a seat since is asked again.
+ */
+export function partyConfirmKey(bookingIds: readonly string[]): string {
+  return [...bookingIds].sort().join(",");
+}
+
+/**
  * **"Team up each party"** (fifth-loop ideas, item 50): one team per party
- * {@link planPartyTeams} says one tap may team. A suggestion staff tap, never
- * automatic, and every team goes through `formBuddyTeam`, so each one keeps
- * that write's refusals and its line on the trail. Returns how many teams
- * formed.
+ * {@link planPartyTeams} says one tap may team, and each `ageUnconfirmed`
+ * party whose exact {@link partyConfirmKey} is in `confirmedAdultParties`: the
+ * staffer said everyone in it is 18 or over (issue 2808). A confirmation never
+ * reaches a party the plan left, whatever it names. A suggestion staff tap,
+ * never automatic, and every team goes through `formBuddyTeam`, so each one
+ * keeps that write's refusals and its line on the trail. Returns how many
+ * teams formed.
  */
 export async function formPartyTeams(
   db: AppDb,
-  input: { shopId: string; tripId: string; recordedByPersonId: string; now?: Date },
+  input: {
+    shopId: string;
+    tripId: string;
+    recordedByPersonId: string;
+    confirmedAdultParties?: readonly string[];
+    now?: Date;
+  },
 ): Promise<number> {
-  const { teamable } = await planPartyTeams(db, input.shopId, input.tripId);
+  const plan = await planPartyTeams(db, input.shopId, input.tripId);
+  const confirmed = new Set(input.confirmedAdultParties ?? []);
+  const teamable = [
+    ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
+    ...plan.ageUnconfirmed
+      .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
+      .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
+  ];
   let formed = 0;
-  for (const bookingIds of teamable) {
+  for (const { bookingIds, adultsConfirmed } of teamable) {
     const outcome = await formBuddyTeam(db, {
       shopId: input.shopId,
       tripId: input.tripId,
       members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
       recordedByPersonId: input.recordedByPersonId,
+      adultsConfirmed,
       now: input.now,
     });
     if (outcome.ok) formed += 1;
@@ -1055,6 +1104,8 @@ export type TripBuddyTeamEvent = {
   action: "formed" | "dissolved" | "member_added" | "member_removed";
   memberNames: string[];
   recordedByName: string;
+  /** The recorder said everyone on the team is 18 or over (issue 2808). */
+  adultsConfirmed: boolean;
   occurredAt: Date;
   createdAt: Date;
 };
@@ -1076,6 +1127,7 @@ export async function listTripBuddyTeamEvents(
       action: buddyTeamEvents.action,
       memberNames: buddyTeamEvents.memberNames,
       recordedByName: people.fullName,
+      adultsConfirmed: buddyTeamEvents.adultsConfirmed,
       occurredAt: buddyTeamEvents.occurredAt,
       createdAt: buddyTeamEvents.createdAt,
     })

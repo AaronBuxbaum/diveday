@@ -16,7 +16,7 @@ import {
   verifyStrandedBookingCapability,
 } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
-import { bookingCapabilities } from "./schema";
+import { bookingCapabilities, trips as tripRows } from "./schema";
 import { setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
@@ -219,6 +219,33 @@ describe("booking capabilities (in-memory PGlite)", () => {
       purpose: "confirm",
     });
     expect(ctx).toBeNull();
+  });
+
+  it("deletion: a departure deleted while still scheduled fails a previously-issued token closed (#2926)", async () => {
+    // `deleteTrip` refuses a departure with a roster, so a seat on a deleted
+    // departure is a stamp written past it (raw SQL, a restore gone wrong).
+    // The link must still read as dead rather than act on a boat nobody sees.
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    const confirm = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "confirm",
+    });
+    await db.update(tripRows).set({ deletedAt: nowDate() }).where(eq(tripRows.id, open.id));
+    expect(
+      await verifyBookingCapability(db, { token: readiness?.token ?? "", purpose: "readiness" }),
+    ).toBeNull();
+    expect(
+      await verifyBookingCapability(db, { token: confirm?.token ?? "", purpose: "confirm" }),
+    ).toBeNull();
+    // Still scheduled, so the stranded door stays shut as well.
+    expect(await verifyStrandedBookingCapability(db, { token: readiness?.token ?? "" })).toBeNull();
   });
 
   describe("verifyStrandedBookingCapability (UX sheet 2026-10-22, item 5)", () => {

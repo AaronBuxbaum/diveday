@@ -1,0 +1,82 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "aa1da90e-40bc-4778-b709-e265c2294911",
+  "prevIds": [
+    "f2e5f9f3-0dc2-4246-b187-92f0a21a4b1a",
+    "f00941d0-7b67-428f-b3b2-0915becbbc0d"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_hours_told"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_hours_told",
+        "n|col|public.bookings.fly_safe_hours_told",
+        "e|col|public.bookings.fly_safe_hours_told"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_corrected_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_corrected_at",
+        "n|col|public.bookings.fly_safe_corrected_at",
+        "e|col|public.bookings.fly_safe_corrected_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_hours_told",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_corrected_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

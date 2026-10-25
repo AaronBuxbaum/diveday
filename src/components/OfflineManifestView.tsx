@@ -71,6 +71,7 @@ function OfflineManifestScreen() {
     reconcile,
     fallback,
     servedWithoutAnswer,
+    copyCaveat,
   } = useSavedManifest(t);
   // A marker for the tools that photograph this page (`scripts/screenshot.mjs`,
   // issue #2235): set on the document once the store has been read, so a
@@ -177,6 +178,7 @@ function OfflineManifestScreen() {
     locale,
     message,
     servedWithoutAnswer,
+    copyCaveat,
     // Offered only with nothing waiting to send: on the live list a mark still
     // queued here shows only as "still sending", and its diver looks uncounted.
     liveOffer:

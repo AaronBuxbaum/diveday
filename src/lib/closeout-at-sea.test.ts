@@ -6,6 +6,7 @@ import {
   assembleEveningClose,
   type CloseoutRollCallGap,
   type CloseoutTripInput,
+  OPEN_COUNT_QUIET_MS,
 } from "./closeout";
 import type { TripStage, TripStageReading } from "./trip-stages";
 import { DEPARTURE_BUFFER_MS } from "./trips";
@@ -83,6 +84,7 @@ describe("an open count on a boat still out", () => {
     diveNumber: 2,
     uncounted: 2,
     latestMarkedDive: 2,
+    latestMarkAt: new Date(now.getTime() - 5 * MINUTE),
   });
   const expectLoud = (
     departure: ReturnType<typeof read>,
@@ -231,6 +233,75 @@ describe("an open count on a boat still out", () => {
       read(atSea({ loggedDives: undefined }), diveTwo("after_dive_uncounted")),
       "after_dive_uncounted",
     );
+  });
+
+  /**
+   * **A count nobody is taking any more reads loud** (issue #2925). Crew mark
+   * half the boat after a dive and stop; without a clock on the marks the
+   * station read "count open" until she was due back, hours later.
+   */
+  it("reads loud once nobody has marked anyone for the quiet window (#2925)", () => {
+    const markedAgo = (minutes: number) => ({
+      ...diveTwo("after_dive_uncounted"),
+      latestMarkAt: new Date(now.getTime() - minutes * MINUTE),
+    });
+    expect(OPEN_COUNT_QUIET_MS).toBe(20 * MINUTE);
+    for (const minutes of [0, 1, 19]) {
+      expect(read(atSea(), markedAgo(minutes))?.status).toBe("still_out");
+    }
+    // The window is shut at its own edge, and stays shut.
+    for (const minutes of [20, 21, 90, 180]) {
+      expectLoud(read(atSea(), markedAgo(minutes)), "after_dive_uncounted");
+    }
+    // Abandoned after dive 1 on a two-tank boat that never logged dive 2.
+    const diveOneAbandoned: CloseoutRollCallGap = {
+      tripId: "t1",
+      reason: "crew_uncounted",
+      diveNumber: 1,
+      uncounted: 1,
+      latestMarkedDive: 1,
+      latestMarkAt: new Date(now.getTime() - 2 * HOUR),
+    };
+    expectLoud(read(atSea({ loggedDives: 1 }), diveOneAbandoned), "crew_uncounted", 1);
+    // The same count with a mark a minute ago is still being taken.
+    expect(
+      read(atSea({ loggedDives: 1 }), {
+        ...diveOneAbandoned,
+        latestMarkAt: new Date(now.getTime() - MINUTE),
+      })?.status,
+    ).toBe("still_out");
+  });
+
+  it("reads loud when the newest mark has no time, or one later than now (#2925)", () => {
+    const { latestMarkAt: _, ...noTime } = diveTwo("after_dive_uncounted");
+    expectLoud(read(atSea(), noTime), "after_dive_uncounted");
+    expectLoud(
+      read(atSea(), { ...diveTwo("after_dive_uncounted"), latestMarkAt: null }),
+      "after_dive_uncounted",
+    );
+    expectLoud(
+      read(atSea(), { ...diveTwo("crew_uncounted"), latestMarkAt: new Date(Number.NaN) }),
+      "crew_uncounted",
+    );
+    // A device clock ahead of shore cannot hold the count soft.
+    expectLoud(
+      read(atSea(), {
+        ...diveTwo("after_dive_uncounted"),
+        latestMarkAt: new Date(now.getTime() + 3 * HOUR),
+      }),
+      "after_dive_uncounted",
+    );
+  });
+
+  it("reads loud when either half of the count has gone quiet or lost its time (#2925)", () => {
+    const stale = {
+      ...diveTwo("crew_uncounted"),
+      uncounted: 1,
+      latestMarkAt: new Date(now.getTime() - 45 * MINUTE),
+    };
+    expectLoud(read(atSea(), [diveTwo("after_dive_uncounted"), stale]), "after_dive_uncounted");
+    const { latestMarkAt: _, ...noTime } = diveTwo("crew_uncounted");
+    expectLoud(read(atSea(), [diveTwo("after_dive_uncounted"), noTime]), "after_dive_uncounted");
   });
 
   it("says the count is open and how many are left to mark (captain F3, auditor F3)", () => {

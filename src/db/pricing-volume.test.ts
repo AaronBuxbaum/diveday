@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
@@ -88,6 +89,17 @@ async function paidOrder(
     })
     .returning();
   if (!order) throw new Error("order insert failed");
+  await insertLines(db, shop, order.id, lines);
+  return order;
+}
+
+async function insertLines(
+  db: AppDb,
+  shop: { shopId: string },
+  orderId: string,
+  lines: Array<{ kind: NonNullable<(typeof orderLineItems.$inferInsert)["kind"]>; cents: number }>,
+) {
+  const order = { id: orderId };
   await db.insert(orderLineItems).values(
     lines.map((line) => ({
       shopId: shop.shopId,
@@ -313,5 +325,175 @@ describe("closePricingMonth", () => {
     await markPricingStatementReported(db, statement.id, first);
     await markPricingStatementReported(db, statement.id, new Date("2031-07-03T14:00:00Z"));
     expect((await latestPricingStatement(db, shop.shopId))?.reportedAt).toEqual(first);
+  });
+});
+
+/**
+ * **A refund recorded after its month's statement closed** (issue 3024, Aaron:
+ * option A). It nets in the month it is recorded: the next statement to close
+ * takes it off that month's card money, never lost and never taken twice, and
+ * what that month cannot absorb carries to the one after rather than going
+ * below zero. Adversarial: the exact close, a part refund, a payment two
+ * months back, two refunds of one payment, a re-run.
+ */
+describe("closePricingMonth and late refunds", () => {
+  const MONTHS = {
+    june: { year: 2031, month: 6 },
+    july: { year: 2031, month: 7 },
+    august: { year: 2031, month: 8 },
+    september: { year: 2031, month: 9 },
+  };
+  const MID = {
+    july: new Date("2031-07-15T15:00:00Z"),
+    august: new Date("2031-08-15T15:00:00Z"),
+    september: new Date("2031-09-15T15:00:00Z"),
+  };
+
+  async function close(db: AppDb, shopId: string, month: { year: number; month: number }) {
+    return closePricingMonth(db, {
+      shopId,
+      month,
+      timeZone: ZONE,
+      terms: PERCENT,
+      freeUntil: null,
+    });
+  }
+
+  /** Stripe reported `cents` more reversed on this invoice. */
+  async function refund(db: AppDb, order: { id: string }, cents: number) {
+    const [row] = await db.select().from(orders).where(eq(orders.id, order.id));
+    if (!row) throw new Error("order missing");
+    const refundedCents = row.refundedCents + cents;
+    await db
+      .update(orders)
+      .set({
+        refundedCents,
+        amountPaidCents: row.totalCents - refundedCents,
+        status: refundedCents >= row.totalCents ? "refunded" : "partly_refunded",
+      })
+      .where(eq(orders.id, order.id));
+  }
+
+  it("credits a refund recorded after June closed on July's statement, and leaves June as billed", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const june = await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }]);
+    const juneStatement = await close(db, shop.shopId, MONTHS.june);
+    expect(juneStatement).toMatchObject({ volumeCents: 10_000, feeCents: 300 });
+
+    await refund(db, june, 10_000);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 50_000 }], { paidAt: MID.july });
+    const july = await close(db, shop.shopId, MONTHS.july);
+    expect(july).toMatchObject({
+      monthCardCents: 50_000,
+      lateRefundCents: 10_000,
+      volumeCents: 40_000,
+      feeCents: 1_200,
+      refundCarryCents: 0,
+    });
+    // June's own statement still says what it billed.
+    expect(await close(db, shop.shopId, MONTHS.june)).toMatchObject({
+      volumeCents: 10_000,
+      feeCents: 300,
+    });
+    // August finds nothing new to credit.
+    const august = await close(db, shop.shopId, MONTHS.august);
+    expect(august).toMatchObject({ lateRefundCents: 0, volumeCents: 0, feeCents: 0 });
+  });
+
+  it("takes a refund recorded before the close in that month, and never again after", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const june = await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }]);
+    // Recorded on the 2nd, the moment before June's statement is written.
+    await refund(db, june, 4_000);
+    expect(await close(db, shop.shopId, MONTHS.june)).toMatchObject({ volumeCents: 6_000 });
+    await paidOrder(db, shop, [{ kind: "rental", cents: 20_000 }], { paidAt: MID.july });
+    expect(await close(db, shop.shopId, MONTHS.july)).toMatchObject({
+      lateRefundCents: 0,
+      volumeCents: 20_000,
+    });
+  });
+
+  it("credits a part refund by the part refunded", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const june = await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }]);
+    await close(db, shop.shopId, MONTHS.june);
+    await refund(db, june, 2_500);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.july });
+    expect(await close(db, shop.shopId, MONTHS.july)).toMatchObject({
+      lateRefundCents: 2_500,
+      volumeCents: 7_500,
+      feeCents: 225,
+    });
+  });
+
+  it("credits a refund of a payment from two months back on the month it is recorded", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const june = await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }]);
+    await close(db, shop.shopId, MONTHS.june);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.july });
+    expect(await close(db, shop.shopId, MONTHS.july)).toMatchObject({ lateRefundCents: 0 });
+    await refund(db, june, 6_000);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.august });
+    expect(await close(db, shop.shopId, MONTHS.august)).toMatchObject({
+      lateRefundCents: 6_000,
+      volumeCents: 4_000,
+    });
+  });
+
+  it("credits two refunds of one payment once each, on the month each is recorded", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const june = await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }]);
+    await close(db, shop.shopId, MONTHS.june);
+    await refund(db, june, 3_000);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.july });
+    expect(await close(db, shop.shopId, MONTHS.july)).toMatchObject({ lateRefundCents: 3_000 });
+    await refund(db, june, 7_000);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.august });
+    expect(await close(db, shop.shopId, MONTHS.august)).toMatchObject({ lateRefundCents: 7_000 });
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.september });
+    expect(await close(db, shop.shopId, MONTHS.september)).toMatchObject({
+      lateRefundCents: 0,
+      volumeCents: 10_000,
+    });
+  });
+
+  it("carries a refund bigger than the month's card money forward instead of going below zero", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const june = await paidOrder(db, shop, [{ kind: "rental", cents: 50_000 }]);
+    await close(db, shop.shopId, MONTHS.june);
+    await refund(db, june, 50_000);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 20_000 }], { paidAt: MID.july });
+    expect(await close(db, shop.shopId, MONTHS.july)).toMatchObject({
+      lateRefundCents: 50_000,
+      volumeCents: 0,
+      feeCents: 0,
+      refundCarryCents: 30_000,
+    });
+    await paidOrder(db, shop, [{ kind: "rental", cents: 40_000 }], { paidAt: MID.august });
+    expect(await close(db, shop.shopId, MONTHS.august)).toMatchObject({
+      lateRefundCents: 30_000,
+      volumeCents: 10_000,
+      feeCents: 300,
+      refundCarryCents: 0,
+    });
+  });
+
+  it("credits nothing twice when a close is run again", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    const june = await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }]);
+    await close(db, shop.shopId, MONTHS.june);
+    await refund(db, june, 5_000);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.july });
+    const first = await close(db, shop.shopId, MONTHS.july);
+    expect(await close(db, shop.shopId, MONTHS.july)).toEqual(first);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { paidAt: MID.august });
+    expect(await close(db, shop.shopId, MONTHS.august)).toMatchObject({ lateRefundCents: 0 });
   });
 });

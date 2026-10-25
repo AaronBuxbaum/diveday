@@ -29,6 +29,7 @@ import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { getPendingMoveAsk, type PendingMoveAsk } from "./inbound-messages";
+import { peopleMinorDeclared } from "./minor-declared";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
@@ -877,7 +878,7 @@ export async function carriedPreparationForDiver(
   db: AppDb,
   input: { shopId: string; personId: string; hasRentalFit: boolean },
 ): Promise<CarriedPreparation[]> {
-  const [levelCards, signedWaivers, waiverTemplate, signerRows] = await Promise.all([
+  const [levelCards, signedWaivers, waiverTemplate, signerRows, declared] = await Promise.all([
     db
       .select()
       .from(certifications)
@@ -899,6 +900,14 @@ export async function carriedPreparationForDiver(
       .innerJoin(shops, eq(shops.id, people.shopId))
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1),
+    // The booker's "Under 18" on a seat still ahead, or on the called-off day
+    // this card is about (issue #2553): a solo signature is then not kept.
+    peopleMinorDeclared(db, {
+      shopId: input.shopId,
+      personIds: [input.personId],
+      now: nowDate(),
+      calledOffToo: true,
+    }),
   ]);
   const signer = signerRows[0];
 
@@ -906,10 +915,12 @@ export async function carriedPreparationForDiver(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      // Person-scoped, so no seat's "Under 18" is in hand: the next booking
-      // carries its own, and its readiness asks for the co-signature then.
       signer: signer
-        ? { dateOfBirth: signer.dateOfBirth, minorDeclared: false, timezone: signer.timezone }
+        ? {
+            dateOfBirth: signer.dateOfBirth,
+            minorDeclared: declared.has(input.personId),
+            timezone: signer.timezone,
+          }
         : undefined,
     }),
     certifications: levelCards,
