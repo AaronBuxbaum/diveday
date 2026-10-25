@@ -10,7 +10,8 @@ import { refreshAction, voidAction } from "../actions";
  * **One overflow for the order's rare doors** (visual review A16): Print
  * first, then the dispute sheet, then the Stripe acts on an open invoice.
  * Record payment stays in the receipt card as the one row of work. A demo
- * shop sees Refresh and Void disabled, with the reason under them.
+ * shop sees Refresh and Void disabled, with the reason under them. Void asks
+ * before it posts: it sits one row under Refresh and cannot be undone.
  */
 export function OrderMoreMenu({
   t,
@@ -67,6 +68,9 @@ export function OrderMoreMenu({
               <input type="hidden" name="orderId" value={orderId} />
               <SubmitButton
                 pendingLabel={t("orders.detail.voiding")}
+                // One row under Refresh in a menu: a void cannot be taken
+                // back, so it asks first, as the inbox's Delete does.
+                confirmMessage={t("orders.detail.voidConfirm")}
                 className={menuRowClass("danger", { gutter: false })}
               >
                 {t("orders.detail.voidOrder")}
