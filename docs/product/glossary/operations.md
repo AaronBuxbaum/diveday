@@ -1901,11 +1901,14 @@
   rider's seat. Not the **Milestone stamp**, which is the recap's roundel and also marks the first
   day.
 - **Standing line** — the one line under a diver's name on their record that says what they are to
-  the shop: "23 visits since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2 friends"
-  (`diverStanding` in `src/lib/diver-standing.ts`). Visits are the record's own count, every seat
-  not cancelled and no longer ahead plus every imported visit; it is a count of visits, not of
-  **dive days**, which is the milestone's and the recap's unit. Since and last out are the first
-  and last of those on the shop's calendar. Spent is drawn only for a reader who may manage
+  the shop: "23 dive days since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2 friends"
+  (`diverStanding` in `src/lib/diver-standing.ts`). It counts **dive days**, the milestone's and
+  the recap's unit (issue 2809): the distinct days in the shop's zone, merged across the diver's
+  seats that are numbered dive days (`numberedDiveDay`, asked of each seat by `getDiverProfile`)
+  and no longer ahead, and the imported visits not standing `did_not_happen`
+  (`mergeShopHistory`). A morning and an afternoon boat on one date are one day, a no-show is
+  none, and an imported visit on a day with a seat is not counted twice. Since and last out are
+  the first and last of those days on the shop's calendar. Spent is drawn only for a reader who may manage
   orders, in the shop's currency, net of refunds; friends brought counts the distinct other people
   whose live seats name one of this diver's seats as the one that brought them
   (`booking_referrals`), at this shop only (`friendsBroughtBy`, `src/db/buddy-referrals.ts`).

@@ -23,7 +23,7 @@ import { shopWaiverStatus, waiverClockInstant } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
 import type { AppDb, DbExecutor } from "./client";
-import { diveDay } from "./dive-days";
+import { diveDay, numberedDiveDay } from "./dive-days";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { recordDiverActivity } from "./operations";
@@ -983,6 +983,9 @@ export async function getDiverProfile(
         trip: trips,
         course: courses,
         reviewRating: tripReviews.rating,
+        // The one dive-day rule, asked of this seat (issue 2809): the standing
+        // line counts what the milestone and the recap count.
+        numberedDiveDay: sql<boolean>`${numberedDiveDay()}`,
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))

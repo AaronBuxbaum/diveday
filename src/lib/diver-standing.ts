@@ -1,15 +1,20 @@
-import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import type { CalendarDate } from "@/lib/calendar-date";
 import type { DiverProfile } from "@/lib/diver-profile";
 import { bookingIsAhead } from "@/lib/diver-status";
+import { mergeShopHistory, priorVisitStanding } from "@/lib/prior-visits";
 
 /**
  * **Who this person is to the shop, in one line** (fifth-loop ideas, item 36):
- * "23 visits since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2
+ * "23 dive days since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2
  * friends", under the name on the diver record. Facts and counts; the header
  * words them.
  *
- * - **Visits** are the record's existing count: every seat that is not
- *   cancelled and no longer ahead, plus imported visits.
+ * - **Dive days** are the milestone's, the recap's and Your days' unit
+ *   (issue 2809): distinct days in the shop's zone, merged across the seats
+ *   the database counts as numbered dive days (`numberedDiveDay()`, no
+ *   cancelled seat, no-show, ride-along or held seat) that are no longer
+ *   ahead, and imported visits that did not stand `did_not_happen`
+ *   (`mergeShopHistory`).
  * - **Since** and **last out** are the first and last of those, on the shop's
  *   own calendar.
  * - **Spent** is money collected and kept, in the shop's currency only: an
@@ -20,7 +25,7 @@ import { bookingIsAhead } from "@/lib/diver-status";
  *   (`canManageOrders`), and null at zero.
  */
 export type DiverStanding = {
-  visits: number;
+  diveDays: number;
   since: CalendarDate | null;
   lastOut: CalendarDate | null;
   spent: { cents: number; currency: string } | null;
@@ -31,17 +36,21 @@ export function diverStanding(
   diver: DiverProfile,
   input: { now: Date; shop: { timezone: string; currency: string }; showMoney: boolean },
 ): DiverStanding {
-  // Visits share `bookingIsAhead`'s late-arrival buffer, so the boat somebody
-  // is still boarding is not counted as a visit yet.
-  const days: CalendarDate[] = [
-    ...diver.bookings
-      .filter((entry) => entry.booking.status !== "cancelled" && !bookingIsAhead(entry, input.now))
-      .map((entry) => calendarDateInTimezone(entry.trip.startsAt, input.shop.timezone)),
-    ...diver.priorVisits.map((visit) => visit.visitedOn),
-  ].sort();
+  // Seats share `bookingIsAhead`'s late-arrival buffer, so the boat somebody
+  // is still boarding is not counted as a day yet.
+  const history = mergeShopHistory(
+    diver.bookings.filter((entry) => entry.numberedDiveDay && !bookingIsAhead(entry, input.now)),
+    diver.priorVisits.filter((visit) => priorVisitStanding(visit.statusLabel) !== "did_not_happen"),
+    {
+      bookingStartsAt: (entry) => entry.trip.startsAt,
+      visitedOn: (visit) => visit.visitedOn,
+      timezone: input.shop.timezone,
+    },
+  );
+  const days: CalendarDate[] = [...new Set(history.map((entry) => entry.on))].sort();
 
   return {
-    visits: days.length,
+    diveDays: days.length,
     since: days[0] ?? null,
     lastOut: days.at(-1) ?? null,
     spent: input.showMoney ? spentWithShop(diver, input.shop.currency) : null,
