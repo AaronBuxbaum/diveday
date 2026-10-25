@@ -470,6 +470,11 @@ async function returnOneUnitFitAdjusted(
         ne(bookings.status, "cancelled"),
       ),
     )
+    // The earliest seat, named: without an order this is whichever row the
+    // heap returns first, which a fresh re-seed and a replayed reset
+    // (`src/db/demo-reset-snapshot.ts`) lay out differently, so the evening
+    // captures named two different divers for the same question.
+    .orderBy(asc(bookings.createdAt), asc(bookings.id))
     .limit(1);
   if (!seat) return null;
 
