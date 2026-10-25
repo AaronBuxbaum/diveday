@@ -104,9 +104,10 @@ test.describe("light mode — Claude's assists, lit", () => {
       await expect(row.getByText(/^In Spanish: /)).toBeVisible();
       await capture(page, "assist-inbox-row", "light");
 
-      await row
-        .getByRole("link", { name: "Open the record for Diego Alvarez" })
-        .click({ position: { x: 4, y: 4 } });
+      // The row opens in place (visual review A15); its first act is the
+      // door to the diver's record.
+      await row.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
+      await row.getByRole("link", { name: "Open the record for Diego Alvarez" }).click();
       await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
       const conversation = page.getByRole("region", { name: "Conversation" });
       await conversation.getByRole("button", { name: "Draft a reply" }).click();
