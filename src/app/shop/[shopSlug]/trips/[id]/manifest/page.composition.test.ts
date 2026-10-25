@@ -21,12 +21,15 @@ const READS = routeSource(import.meta.dirname, "_components/manifest-reads.ts");
  */
 describe("the dock desk's seat list", () => {
   it("reads the withheld manifest, never the raw departure one", () => {
+    // One prop set for the live dock desk and the packet's paper.
+    expect(SOURCE).toContain("<DockDesk {...dockDesk} />");
+    expect(SOURCE).toContain("dockDesk={dockDesk}");
     const dockDesk = SOURCE.slice(
-      SOURCE.indexOf("<DockDesk"),
-      SOURCE.indexOf("/>", SOURCE.indexOf("<DockDesk")),
+      SOURCE.indexOf("const dockDesk = {"),
+      SOURCE.indexOf("};", SOURCE.indexOf("const dockDesk = {")),
     );
-    expect(dockDesk).toContain("seats={manifest.divers}");
-    expect(dockDesk).not.toContain("seats={departureManifest.divers}");
+    expect(dockDesk).toContain("seats: manifest.divers");
+    expect(dockDesk).not.toContain("departureManifest.divers");
   });
 });
 
