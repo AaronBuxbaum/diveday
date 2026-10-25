@@ -318,8 +318,10 @@ describe("the all-home line", () => {
     const line = screen.getByRole("status");
     expect(line.textContent).toBe("All home. Every unit is back on the wall.");
     expect(line.className).not.toMatch(/rise-in/);
-    // One coral element, and one group heading — nothing else on the surface.
-    expect(container.querySelectorAll(".bg-accent\\/10")).toHaveLength(1);
+    // The success wash, no coral or amber (visual review A07), and one group
+    // heading — nothing else on the surface.
+    expect(line).toHaveClass("bg-success-tint");
+    expect(container.querySelectorAll("[class*='accent'], [class*='warning']")).toHaveLength(0);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
       "On the wall — 2",
     ]);

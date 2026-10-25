@@ -76,9 +76,17 @@ export function RecordPaymentForm({
   /** False on a demo shop: only cash and the card machine are recorded there. */
   roomCharge?: boolean;
 }) {
+  const labelId = `record-payment-${orderId}`;
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-medium">{t("orders.detail.recordPayment.label")}</span>
+    // One group, named once (visual review A16): the label and its two
+    // machines read as a single row of work.
+    <fieldset
+      aria-labelledby={labelId}
+      className="m-0 flex min-w-0 flex-wrap items-center gap-2 border-0 p-0"
+    >
+      <span id={labelId} className="w-full text-sm font-medium sm:w-auto">
+        {t("orders.detail.recordPayment.label")}
+      </span>
       {(["cash", "card_machine"] as const).map((collection) => (
         <form key={collection} action={recordPaymentAction}>
           <input type="hidden" name="orderId" value={orderId} />
@@ -135,6 +143,6 @@ export function RecordPaymentForm({
           </FieldGrid>
         </details>
       ) : null}
-    </div>
+    </fieldset>
   );
 }

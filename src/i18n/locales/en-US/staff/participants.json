@@ -24,7 +24,6 @@
     "save": "Save",
     "saving": "Saving…",
     "belowBooked": "{count, plural, one {# diver is} other {# divers are}} already booked, so diver seats can’t go lower than that.",
-    "edit": "Edit",
     "divesOnly": "Divers only",
     "priceLine": "{type} {price}",
     "free": "free",
@@ -42,8 +41,5 @@
   "headCount": {
     "aboardOfTotalPeople": "{aboard} of {total, plural, one {# person} other {# people}} aboard",
     "ofTotalAboardPeople": "of {total, plural, one {# person} other {# people}} aboard"
-  },
-  "reports": {
-    "bookingsDetailSplit": "{detail}: {split}"
   }
 }

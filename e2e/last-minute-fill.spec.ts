@@ -22,7 +22,7 @@ const staff = staffTranslator("en-US");
 const REEF = "Two-Tank Reef — Molasses & French";
 
 /** The Today row that says people want in on the reef morning's open seats. */
-const WANT_IN_ROW = /3 seats open, \d+ want in\./;
+const WANT_IN_ROW = /3 seats open, \d+ want in/;
 
 /**
  * Puts one joiner on Blue Mantis's last-minute list through the same write the
@@ -46,19 +46,31 @@ async function openWhoWantsIn(page: Page): Promise<void> {
   const tripPath = await tripPathByTitle(page, "blue-mantis", REEF);
   await page.goto(`${tripPath}#who-wants-in`);
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  // A tick before React owns the panel is lost when it hydrates (CI saw
+  // "Clicking the checkbox did not change its state" on main too), so every
+  // test starts once the send forms say they are hydrated. Each row has its
+  // own Offer form since A14 (`offer-seat-<interest id>`); the first stands
+  // for the panel, and `offerFor` waits on the row it acts on.
+  await expect(page.locator('form[id^="offer-seat-"]').first()).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   // The panel keeps the names past its preview cap behind "Show N more".
   const more = page.getByText(/^Show \d+ more$/);
   if ((await more.count()) > 0) await more.first().click();
 }
 
-/** Tick one joiner and wait until React owns the send form, so a tap is not a native submit. */
-async function tickForSend(page: Page, name: string) {
-  await page.getByLabel(staff("trips.whoWantsIn.tickLabel", { name })).check();
+/**
+ * One joiner's own "Offer a seat", once React owns its form so a tap is not a
+ * native submit, with the list's one discount turned on (A14: the discount
+ * disclosure above the list rides with every row's offer).
+ */
+async function offerFor(page: Page, name: string) {
   const send = page.getByRole("button", {
-    name: staff("trips.whoWantsIn.offerSeatTo", { count: 1 }),
+    name: staff("trips.whoWantsIn.offerSeatAria", { name }),
   });
   await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel(staff("trips.whoWantsIn.withDiscount")).check();
+  await page.getByText(staff("trips.whoWantsIn.addDiscount"), { exact: true }).click();
   return send;
 }
 
@@ -173,7 +185,7 @@ test.describe("staff and the list", () => {
       certificationLevel: "open_water",
     });
     await openWhoWantsIn(page);
-    const send = await tickForSend(page, "Nora Quinn");
+    const send = await offerFor(page, "Nora Quinn");
     await send.click();
     const stripeFailed = page.getByText(staff("trips.notices.lastMinuteStripeFailed"));
     try {
@@ -218,7 +230,7 @@ test.describe("staff and the list", () => {
     // Stripe is seeded connected but has no real key, so this send fails at the
     // Stripe step: durable proof an *attempt* happened, but no code actually
     // went out, so the Today row (people still want in) keeps prompting staff.
-    const send = await tickForSend(page, "Priya Shah");
+    const send = await offerFor(page, "Priya Shah");
     // A fixed amount rather than a percent (amendment 2026-10-09 to ADR
     // 20260729-shop-promo-codes): the attempt's line names it once per booking.
     await page.getByRole("combobox", { name: "Discount type" }).selectOption("amount");
@@ -268,9 +280,10 @@ test.describe("staff and the list", () => {
     // And the offer is still there: informing, never gating. A filter here would
     // quietly stop the offer reaching everyone the shop has never carded, which
     // is most of a deal list.
-    await page.getByLabel(staff("trips.whoWantsIn.tickLabel", { name: "Tess Alvarez" })).check();
     await expect(
-      page.getByRole("button", { name: staff("trips.whoWantsIn.offerSeatTo", { count: 1 }) }),
+      page.getByRole("button", {
+        name: staff("trips.whoWantsIn.offerSeatAria", { name: "Tess Alvarez" }),
+      }),
     ).toBeEnabled();
   });
 
@@ -308,10 +321,12 @@ test.describe("staff and the list", () => {
     await expect(rosterRow(page, "Nell Byrne").filter({ visible: true })).toHaveCount(0);
     await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
-    // Other eligible recipients can still be offered a seat, and the bulk tick
-    // reaches only the rows that fit.
-    await page.getByRole("button", { name: staff("trips.whoWantsIn.tickAllFit") }).click();
-    await expect(page.getByRole("button", { name: /Offer a seat to \d+/ })).toBeEnabled();
+    // Other eligible recipients can still be offered a seat, each from their own row.
+    await expect(
+      page.getByRole("button", {
+        name: staff("trips.whoWantsIn.offerSeatAria", { name: "Owen Achebe" }),
+      }),
+    ).toBeEnabled();
   });
 
   /**

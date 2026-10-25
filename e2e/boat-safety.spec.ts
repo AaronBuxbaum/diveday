@@ -162,8 +162,6 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
 
   // 2. The gear register: an AED, aboard the boat, with its pads' date.
   await page.goto(`${shop}/gear`);
-  const panel = page.locator("details:has(> summary#add-unit)");
-  await expect(panel).toHaveAttribute("data-hydrated", "true");
   const addUnit = page.getByRole("button", { name: "Add a unit", exact: true });
   await expect(addUnit).toHaveAttribute("data-hydrated", "true");
   await addUnit.click();
@@ -192,7 +190,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
   await expect(section).toBeVisible();
   // A lapsed paper is danger ink, named by its date (H-136).
-  await expect(section.getByText(/^Hull insurance ended /)).toHaveClass(/text-danger-strong/);
+  await expect(section.getByText(/^Hull insurance ended /)).toHaveClass(/(^| )text-danger( |$)/);
   await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();

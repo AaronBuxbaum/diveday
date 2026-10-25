@@ -1188,8 +1188,8 @@
       "formInvalid": "Send a photo or PDF under {mb} MB.",
       "formRate": "Too many tries. Wait a few minutes and try again.",
       "formUnavailable": "Sending isn’t working right now, so use one of the ways below.",
-      "returnWithEmail": "Can’t send it here? Email a photo to <email>{emailAddress}</email> before your dive day, or bring it to the shop before you dive.",
-      "returnToShop": "Can’t send it here? Bring the signed form to the shop before you dive."
+      "returnWithEmail": "<online>Can’t send it here?</online> Email a photo to <email>{emailAddress}</email> before your dive day, or bring it to the shop before you dive.",
+      "returnToShop": "<online>Can’t send it here?</online> Bring the signed form to the shop before you dive."
     },
     "signing": "Signing…",
     "beforeDockTitle": "A quick step before the dock",

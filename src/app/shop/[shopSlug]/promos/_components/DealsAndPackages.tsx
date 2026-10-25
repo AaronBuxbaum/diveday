@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
+import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
+import { menuRowClass } from "@/components/ui/menu";
 import type { AppDb } from "@/db/client";
 import { listDivePackages } from "@/db/dive-packages";
 import { packageDivesOwedAt } from "@/db/report-lines";
@@ -87,8 +89,8 @@ export function TripDealsSection({
 /**
  * **Prepaid packages are the third price this tab holds** (ADR
  * 20261001-logbook), listed here rather than behind a door (visual review
- * 2026-10-24, A26): a row per package (name, dives, price, scope) with its
- * Delete, what the shop still owes in dives, and "Add a package" opening the
+ * 2026-10-24, A26): a row per package (name, dives, price, scope) ending on
+ * one "⋯" that holds its Delete (a red word wrapped under each row at 390), what the shop still owes in dives, and "Add a package" opening the
  * form. `/promos/packages` redirects here. Packages have no edit: a package is
  * a price already sold against, so a change is a new package and a Delete.
  * Drawn only while the shop sells dive packages (the Features page).
@@ -138,17 +140,18 @@ export async function DivePackagesSection({
           {packages.map((pkg) => (
             <LedgerRow
               key={pkg.id}
-              stacked
               trailing={
-                <form action={deleteDivePackageAction}>
-                  <input type="hidden" name="packageId" value={pkg.id} />
-                  <SubmitButton
-                    pendingLabel={t("settings.main.divePackages.deleting")}
-                    className={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                  >
-                    {t("settings.main.divePackages.delete")}
-                  </SubmitButton>
-                </form>
+                <RowMenu label={t("settings.main.divePackages.rowMenu", { name: pkg.name })}>
+                  <form action={deleteDivePackageAction}>
+                    <input type="hidden" name="packageId" value={pkg.id} />
+                    <SubmitButton
+                      pendingLabel={t("settings.main.divePackages.deleting")}
+                      className={menuRowClass("danger", { gutter: false })}
+                    >
+                      {t("settings.main.divePackages.delete")}
+                    </SubmitButton>
+                  </form>
+                </RowMenu>
               }
             >
               <span className="block min-w-0">

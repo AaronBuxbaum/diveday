@@ -141,7 +141,6 @@ export type BuilderCopy = {
   diveSite: string;
   ordinaryTrip: string;
   decideLater: string;
-  optionsLoading: string;
   adding: string;
   putOnBoard: string;
   newDate: string;

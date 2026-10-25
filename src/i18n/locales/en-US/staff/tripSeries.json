@@ -18,7 +18,6 @@
     "saving": "Saving…",
     "stopRepeating": "Stop repeating",
     "startRepeating": "Start repeating again",
-    "editCadence": "Change the days it runs",
     "editCadenceDescription": "Adding a day puts it on the board straight away. Removing one leaves the dates already scheduled alone: you’ll be shown them, with who’s booked, and asked.",
     "saveCadence": "Save the days",
     "offCadenceHeading": "{count, plural, one {# date on the board is no longer part of this run:} other {# dates on the board are no longer part of this run:}}",

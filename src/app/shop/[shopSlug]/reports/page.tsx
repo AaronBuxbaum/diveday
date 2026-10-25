@@ -16,7 +16,6 @@ import {
   getMonthlyReport,
   pagedMonthlyReportTrips,
 } from "@/db/reporting";
-import { staffBookingsDetail } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -32,7 +31,6 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatMonthDay } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { sailedSplit } from "@/lib/report-split";
 import {
   compareMonthlyReports,
   formatReportMoney,
@@ -56,15 +54,10 @@ import {
   MonthPayouts,
   QuietMonth,
 } from "./_components/MonthMoneyDetail";
-import {
-  LeadTimes,
-  readMonthOwner,
-  tipsSplitLine,
-  WeatherLine,
-} from "./_components/MonthOwnerLines";
-import { monthFigureList } from "./_components/month-figure-list";
+import { LeadTimes, readMonthOwner, WeatherLine } from "./_components/MonthOwnerLines";
+import { monthFigureBasis, monthFigureList } from "./_components/month-figure-list";
+import { ReportExportMenu } from "./_components/ReportExportMenu";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
-import { sailedSplitLines } from "./_components/sailed-split-lines";
 import { YearView } from "./_components/YearView";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -263,13 +256,12 @@ export default async function ReportsPage({
         now,
       ),
       underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
-      // The weather's month and the crew sheet's tip shares (fifth loop, items 27 and 31).
-      readMonthOwner(db, shop, current, { startUtc: monthStart, endUtc: monthEnd }, locale),
+      // The weather's month (fifth loop, item 27).
+      readMonthOwner(db, shop, { startUtc: monthStart, endUtc: monthEnd }),
     ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
   const sailedReport = sailedInput ? summarizeMonth(sailedInput) : null;
-  const split = sailedSplitLines(t, sailedReport ? sailedSplit(report, sailedReport) : null, money);
   const baselineReport = baselineInput ? summarizeMonth(baselineInput) : null;
   // To date, what has sailed is what last year's same days are set against.
   const compared = toDate && sailedReport ? sailedReport : report;
@@ -305,8 +297,6 @@ export default async function ReportsPage({
     compareMonths(current, floorMonth) > 0 ? monthKey(addMonths(current, -1)) : null;
   const nextMonthKey = isThisMonth ? null : monthKey(next);
 
-  const bookingsDetail = staffBookingsDetail(t, report, isThisMonth);
-
   // A square 44px target holding one glyph, through the shared `size: "icon"`
   // rather than a hand-spelled `size-11` — this pair was one of the four
   // spellings that size exists to end (see components/ui/button.ts). Plain
@@ -331,11 +321,9 @@ export default async function ReportsPage({
     currency,
     locale,
     t,
-    split,
-    bookingsDetail,
-    revenueOrdersHref,
-    tipsSplit: tipsSplitLine(owner.crewRows, t, currency, locale),
   });
+  const figureBasis = monthFigureBasis({ report, currency, locale, t });
+  const currentMonthKey = monthKey(current);
 
   const departureRows = departureLedgerRows({
     trips,
@@ -350,7 +338,15 @@ export default async function ReportsPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader title={t("shared.shopSections.money")} />
+      <ShopPageHeader
+        title={t("shared.shopSections.money")}
+        // The month's three files, one menu (visual review A06).
+        actions={
+          hasMonthlyActivity ? (
+            <ReportExportMenu t={t} shopSlug={shopSlug} month={currentMonthKey} />
+          ) : undefined
+        }
+      />
       <StaffSectionTabs
         section="money"
         current="reports"
@@ -424,13 +420,11 @@ export default async function ReportsPage({
       ) : (
         <>
           <MonthDays {...{ db, now, locale, t }} shopId={shop.id} timeZone={tz} month={current} />
-          <MonthFigures label={t("reports.numbersLabel")} figures={figures} />
+          <MonthFigures label={t("reports.numbersLabel")} figures={figures} caption={figureBasis} />
 
           <MonthFootnotes
             taxCents={report.taxCents}
             counterTaxIncludedCents={moneyDetail.counterTaxIncludedCents}
-            csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
-            monthEnd={{ shopSlug, month: monthKey(current), locale, timeZone: tz }}
             {...{ t, money }}
           />
           <WeatherLine weather={owner.weather} t={t} money={money} />

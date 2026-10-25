@@ -321,6 +321,22 @@ describe("foldBoatRows", () => {
     expect(more.every((row) => row.kind === "dive_prep")).toBe(true);
     expect([...shown, ...more]).toHaveLength(all.length);
   });
+
+  it("shows five, counting the rows that never fold among them (A43)", () => {
+    // Two help requests ranked last still show, and take two of the five
+    // seats: three prep rows above them, four folded, not five prep plus two.
+    const all = [...rows(7, "dive_prep"), ...rows(2, "help_request")];
+    const { shown, more } = foldBoatRows(all);
+    expect(shown).toHaveLength(BOAT_ROWS_SHOWN);
+    expect(shown.map((row) => row.kind)).toEqual([
+      "dive_prep",
+      "dive_prep",
+      "dive_prep",
+      "help_request",
+      "help_request",
+    ]);
+    expect(more).toHaveLength(4);
+  });
 });
 
 describe("waiverBatchActions", () => {

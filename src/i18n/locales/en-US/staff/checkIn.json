@@ -34,7 +34,7 @@
     "moneyDoor": "Open their orders"
   },
   "turnAway": {
-    "door": "Turn away…",
+    "door": "Turn away",
     "legend": "Reason",
     "reason": {
       "medical": "Medical",

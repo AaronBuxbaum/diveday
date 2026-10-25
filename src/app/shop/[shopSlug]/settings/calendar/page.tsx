@@ -128,7 +128,9 @@ export default async function CalendarSubscriptionsPage({
             view={view}
             copy={copy}
             subscribed={feeds.some((feed) => feed.scope === view.scope)}
-            createVariant={view.scope === "assignments" ? "primary" : "link"}
+            createVariant={
+              feeds.length === 0 ? "secondary" : view.scope === "assignments" ? "primary" : "link"
+            }
           />
         ))}
       </div>

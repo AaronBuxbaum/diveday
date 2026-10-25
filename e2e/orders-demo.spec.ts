@@ -55,7 +55,7 @@ test.describe("demo billing history", () => {
     await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
     const orderRefund = page.getByRole("button", { name: /Refund|Void|Refresh/ }).first();
     await expect(orderRefund).toBeDisabled();
-    await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
+    await expect(page.getByText(staffCopy("orders.detail.demoRefundHint")).first()).toBeVisible();
   });
 
   test("an order opened from the index says when it was raised and offers both ways back", {
@@ -256,9 +256,11 @@ test.describe("demo billing history", () => {
     await expect(page.getByRole("button", { name: "Cash", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Card machine", exact: true })).toBeEnabled();
     await expect(page.getByText("Charge to room", { exact: true })).toHaveCount(0);
+    // Refresh and Void sit in the header's More menu (visual review A16).
+    await page.getByRole("button", { name: "More", exact: true }).click();
     await expect(page.getByRole("button", { name: "Refresh status" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Void order" })).toBeDisabled();
-    await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
+    await expect(page.getByText(staffCopy("orders.detail.demoActionHint"))).toBeVisible();
   });
 
   test("an exceptional status wears the row's one pill", { tag: READ_ONLY }, async ({ page }) => {

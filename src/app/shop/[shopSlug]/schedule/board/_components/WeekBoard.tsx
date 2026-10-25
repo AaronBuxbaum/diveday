@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { type ReactNode, useRef } from "react";
-import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
@@ -162,7 +161,7 @@ export type BuilderWeek = LastYearWeekView & {
    * with nothing upcoming anywhere.
    */
   nextDeparture: { label: string; href: string } | null;
-  words: { previous: string; next: string; thisWeek: string; today: string; print: string };
+  words: { previous: string; next: string; thisWeek: string; today: string };
   /**
    * "62 of 84 seats" — the one number a shop asks a week for, formatted for
    * the reader from `weekSeatTally` (`src/lib/week-seats.ts`). Data rather
@@ -792,10 +791,6 @@ export function WeekBoard({
             {week.seatTally}
           </p>
           <LastYearTally text={week.lastYearTally} />
-          {/* The week a shop pins by the dock: beside the range it prints.
-              Desk-sized only: on a phone it would push the tally onto a
-              line of its own, and nobody prints the schedule from one. */}
-          <PrintButton label={week.words.print} quiet className="max-sm:hidden" />
         </div>
       </div>
 

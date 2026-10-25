@@ -40,7 +40,7 @@ export function EmptySeats({
           seats: summary.seats,
         })}
       </p>
-      <ul className="mt-3 max-w-xl text-sm">
+      <ul className="mt-3 text-sm">
         {summary.list.slice(0, LISTED).map((departure) => (
           <li
             key={departure.tripId}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import {
@@ -94,7 +94,6 @@ function week(overrides: Partial<BuilderWeek> = {}, entries: WeekEntry[] = []): 
       next: "Next week",
       thisWeek: "This week",
       today: "Today",
-      print: "Print",
     },
     days: DAY_ISOS.map((dateIso, index) => ({
       dateIso,
@@ -158,17 +157,9 @@ describe("the week's label rows (K-254)", () => {
     expect(container.querySelector("[data-week-board]")?.textContent).not.toContain("The week");
   });
 
-  it("prints the week from its own line, and stays off the paper it prints", () => {
-    // The rota a shop pins up by the dock: the door sits beside the range it
-    // prints rather than in the header's cluster of acts.
+  it("leaves Print to the page header (visual review A17)", () => {
     board(week());
-    const print = vi.spyOn(window, "print").mockImplementation(() => {});
-    const door = screen.getByRole("button", { name: "Print" });
-    expect(door.closest("[data-week-line]")).toBeTruthy();
-    expect(door).toHaveClass("print:hidden");
-    fireEvent.click(door);
-    expect(print).toHaveBeenCalledOnce();
-    print.mockRestore();
+    expect(screen.queryByRole("button", { name: "Print" })).toBeNull();
   });
 
   it("set the asked count the same way, under the label its section is named by", () => {

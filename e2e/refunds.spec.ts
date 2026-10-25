@@ -6,6 +6,7 @@ import {
   e2eNow,
   openRosterDetails,
   openTripAbout,
+  openTripAboutRow,
   openTripActivity,
   signInAsOwner,
   signOut,
@@ -51,7 +52,7 @@ test.describe("refunds", () => {
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
     await openTripAbout(page);
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAboutRow(page, "Who can book");
     await page.getByLabel("Require payment to board").check();
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("requirements updated");

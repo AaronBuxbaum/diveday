@@ -661,6 +661,7 @@
       "submitting": "Agregando…",
       "delete": "Eliminar",
       "deleting": "Eliminando…",
+      "rowMenu": "Más para {name}",
       "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})",
       "createTitle": "Agregar un paquete",
       "empty": "Todavía no hay paquetes a la venta"

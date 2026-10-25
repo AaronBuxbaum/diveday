@@ -79,7 +79,9 @@ describe("CourseSelect", () => {
       />,
     );
     expect(screen.getByRole("option", { name: "Deep" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "optionsLoading" })).toBeTruthy();
+    // No "Loading…" option: the box pulses, busy, and says no word (A33).
+    expect(screen.queryByRole("option", { name: /loading/i })).toBeNull();
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-busy", "true");
   });
 });
 

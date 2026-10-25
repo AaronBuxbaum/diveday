@@ -694,9 +694,8 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   await page.waitForURL(new RegExp(`/shop/blue-mantis/trips/${tripId}#who-wants-in$`));
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
 
-  // Tick Nora and offer: the panel's one act, never a button per row.
-  await page.getByLabel("Offer Nora Quinn a seat").check();
-  await page.getByRole("button", { name: "Offer a seat to 1" }).click();
+  // Nora's own row ends in its Offer: one act per person (visual review A14).
+  await page.getByRole("button", { name: "Offer Nora Quinn a seat" }).click();
   // The send holds eight seconds with Undo where the button stood, then runs.
   // The fleet configures no email provider, so the server reports what it
   // could not do and the control falls back to its composer — but the outreach
@@ -761,7 +760,7 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   await expect(odile.getByText("Not here", { exact: true })).toHaveCount(0);
 
   // The door, its one reason already chosen, and one confirm.
-  await odile.getByText("Turn away…", { exact: true }).click();
+  await odile.getByRole("button", { name: "Turn away", exact: true }).click();
   await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
   await expect(odile.getByRole("radio", { name: "Medical" })).toHaveCount(0);
   await odile.getByRole("button", { name: "Turn Odile Marchand away" }).click();
@@ -820,7 +819,7 @@ test("a diver turned away before the boat leaves is told the seat was released, 
 
   await page.goto(counterPath("blue-mantis", tripId));
   const row = deskRow(page, name);
-  await row.getByText("Turn away…", { exact: true }).click();
+  await row.getByRole("button", { name: "Turn away", exact: true }).click();
   await row.getByRole("radio").first().check();
   await row.getByRole("button", { name: `Turn ${name} away` }).click();
   await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();

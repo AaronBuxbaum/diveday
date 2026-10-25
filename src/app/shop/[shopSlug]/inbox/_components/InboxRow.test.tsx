@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/db/inbox-seats";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { InboxRow } from "./InboxRow";
 
 afterEach(cleanup);
@@ -66,8 +66,12 @@ function renderRow(
 }
 
 describe("a message on file", () => {
-  it("opens the diver's record on this very message", () => {
+  it("opens the diver's record on this very message, from the row's open view", async () => {
     renderRow();
+    expect(screen.queryByRole("link", { name: "Open the record for Priya Sharma" })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
     expect(screen.getByRole("link", { name: "Open the record for Priya Sharma" })).toHaveAttribute(
       "href",
       `/shop/blue-mantis/divers/af000000-1111-4222-8333-444444444444#message-${MESSAGE.id}`,
@@ -86,12 +90,18 @@ describe("a message on file", () => {
 });
 
 describe("a message from a stranger", () => {
-  it("shows the address instead of a door, because there is no record to open", () => {
+  it("shows the address as muted words, and offers the reply in its open view", async () => {
     renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
     expect(screen.getByText("Unknown sender")).toBeInTheDocument();
-    // The one link on the row starts a reply in the staffer's own mail app.
+    // Words, not a second blue link beside the seat's (visual review A15).
+    expect(screen.getByText(/marta\.keller@example\.net/).closest("a")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Unknown sender" }),
+    );
+    // The one link starts a reply in the staffer's own mail app.
     expect(screen.getAllByRole("link")).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "marta.keller@example.net" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Reply by email" })).toHaveAttribute(
       "href",
       "mailto:marta.keller@example.net",
     );
@@ -103,7 +113,7 @@ describe("a message from a stranger", () => {
     expect(screen.getByText(/\+13055550142/)).toBeInTheDocument();
   });
 
-  it("offers a Delete behind its ⋯, since a stranger's message has no record to live on", async () => {
+  it("offers a Delete in its open view, since a stranger's message has no record to live on", async () => {
     // Issue #1506: no record means no door and no composer, so a stranger's
     // message could only be read, and nothing else on any surface clears it.
     const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
@@ -118,7 +128,7 @@ describe("a message from a stranger", () => {
     expect(remove.closest("form")?.querySelector('input[name="messageId"]')).toHaveValue(
       MESSAGE.id,
     );
-    expect(container.querySelector("[data-row-menu]")).toContainElement(remove);
+    expect(container.querySelector("[data-inbox-open-view]")).toContainElement(remove);
   });
 });
 
@@ -131,43 +141,32 @@ function slotOf(container: HTMLElement, node: Element): Element {
 }
 
 /**
- * **One column of dates, door or not** (pixel-craft class 3, K-459). Every row
- * ends on the same date, ⋯ and door's slot, whatever the row offers, so the
- * dates down the column end on one edge and no row's first line sits lower
- * than its neighbours' (K-465).
+ * **One column of dates, one control** (pixel-craft class 3, K-459; visual
+ * review A15). Every row ends on the same bare time and the same chevron,
+ * whatever the row offers, so the dates down the column end on one edge. The
+ * zone is the list header's, said once.
  */
-describe("where the row sets its date and its acts", () => {
-  const RECEIVED = formatDateTimeTz(MESSAGE.receivedAt, "en-US", "America/Cancun");
-  // By exact text: the formatted date keeps its no-break spaces, which
-  // `getByText`'s normalizer would collapse on the node's side only.
+describe("where the row sets its date and its one control", () => {
+  const RECEIVED = `${formatShortDate(MESSAGE.receivedAt, "en-US", "America/Cancun")}, ${formatTime(
+    MESSAGE.receivedAt,
+    "en-US",
+    "America/Cancun",
+  )}`;
   const received = () =>
     screen.getByText((_, node) => node?.children.length === 0 && node.textContent === RECEIVED);
 
-  it("holds the date and the ⋯ in a door row's trailing slot, with the door's glyph after it", () => {
-    const container = renderRow();
+  it.each([
+    ["a door row", {}, "Priya Sharma"],
+    ["a stranger's row", { personId: null, fromAddress: "marta.keller@example.net" }, null],
+  ] as const)("ends %s on its bare time and one chevron, nothing after", (_, overrides, name) => {
+    const container = renderRow(overrides, name);
     const trailing = slotOf(container, received());
     expect(trailing).toContainElement(
-      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+      screen.getByRole("button", { name: `More for the message from ${name ?? "Unknown sender"}` }),
     );
-    const glyph = trailing.nextElementSibling;
-    expect(glyph?.querySelector("svg")).not.toBeNull();
-    expect(glyph).not.toHaveClass("invisible");
-  });
-
-  it("holds the same in a stranger's trailing slot, and keeps the door's slot after it", () => {
-    const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
-    const trailing = slotOf(container, received());
-    expect(trailing).toContainElement(
-      screen.getByRole("button", { name: "More for the message from Unknown sender" }),
-    );
-    // The door's glyph, unseen: the date ends where a door row's date ends.
-    const glyph = trailing.nextElementSibling;
-    expect(glyph?.querySelector("svg")).not.toBeNull();
-    expect(glyph).toHaveClass("invisible");
-    // No door: the row's one link is the address's own reply.
-    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
-      "mailto:marta.keller@example.net",
-    ]);
+    expect(trailing.querySelectorAll("button, a")).toHaveLength(1);
+    expect(trailing.nextElementSibling).toBeNull();
+    expect(trailing.textContent).not.toMatch(/EDT|EST|CDT|CST/);
   });
 });
 

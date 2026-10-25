@@ -229,6 +229,23 @@ export function formatTimeZoneName(locale = "en-US", timeZone: string, now = now
 }
 
 /**
+ * A timezone as its generic short name, "ET", for a list that states its zone
+ * once in its header and leaves each row's time bare (visual review A15). The
+ * generic name is true of every row whatever half of the year it was received
+ * in: "EDT" read at today's instant mislabels a row from February, while each
+ * row's clock time is already DST-correct for its own instant. A zone with no
+ * generic abbreviation reads as its region ("hora de Nueva York"); falls back
+ * to the id when the runtime has neither.
+ */
+export function formatTimeZoneGeneric(locale = "en-US", timeZone: string): string {
+  const parts = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    timeZone,
+    timeZoneName: "shortGeneric",
+  }).formatToParts(nowDate());
+  return parts.find((part) => part.type === "timeZoneName")?.value ?? timeZone;
+}
+
+/**
  * A byte count as a human-readable size ("42.3 MB"), in the reader's locale.
  * Decimal units (1 MB = 1,000,000 bytes) because that is what every storage
  * console the number will be compared against reports.

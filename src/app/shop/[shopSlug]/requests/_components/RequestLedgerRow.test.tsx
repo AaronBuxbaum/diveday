@@ -133,12 +133,32 @@ describe("where a request's lines may break", () => {
     }
   });
 
-  it("drops the booking link beneath the request below sm, at the row's full width", () => {
+  it("keeps the ⋯ on the name's line at every width (visual review A23)", () => {
     const item = row({});
-    expect(item).toHaveClass("max-sm:flex-wrap");
-    const book = screen.getByRole("link", { name: "Create a booking" });
-    const slot = [...item.children].find((child) => child.contains(book));
-    expect(slot).toHaveClass("max-sm:order-3", "max-sm:basis-full");
+    expect(item).not.toHaveClass("max-sm:flex-wrap");
+  });
+
+  it("carries the day's one act, opening a departure for that date", () => {
+    render(
+      <ul>
+        <RequestLedgerRow
+          request={BASE}
+          locale="en-US"
+          timezone="America/Cancun"
+          shopSlug="blue-mantis"
+          shopName="Blue Mantis Divers"
+          markDoneAction={() => {}}
+          openDeparture={{
+            href: "/shop/blue-mantis/schedule/board?add=full&date=2027-03-06",
+            label: t("requests.openDeparture"),
+          }}
+          t={t}
+        />
+      </ul>,
+    );
+    expect(
+      screen.getByRole("link", { name: "Open a departure for this date" }).getAttribute("href"),
+    ).toContain("date=2027-03-06");
   });
 
   /**

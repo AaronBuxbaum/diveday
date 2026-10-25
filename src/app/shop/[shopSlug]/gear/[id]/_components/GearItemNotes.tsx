@@ -72,45 +72,72 @@ export function GearItemNotes({
           what somebody already noticed. The door carries the act's own words,
           so the box inside needs no second label of its own. */}
       {readOnly ? null : (
-        <details
-          open={formOpen || undefined}
-          className={`group ${notes.length > 0 ? "mt-5 border-t border-border pt-5" : "mt-4"}`}
-        >
-          <summary
-            className={buttonClass({
-              variant: "link",
-              size: "sm",
-              flush: true,
-              className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-            })}
-          >
-            {t("gear.unit.notes.addLabel")}
-            <DisclosureCaret direction="down" className="group-open:rotate-180" />
-          </summary>
-          <form action={recordGearServiceAction} className="mt-3 grid gap-3">
-            <input type="hidden" name="gearItemId" value={gearItemId} />
-            <input type="hidden" name="kind" value="note" />
-            <input type="hidden" name="servicedOn" value={todayLocal} />
-            <textarea
-              name="note"
-              required
-              maxLength={500}
-              rows={3}
-              aria-label={t("gear.unit.notes.addLabel")}
-              placeholder={t("gear.unit.notes.placeholder")}
-              className={textareaClassFor(3)}
-            />
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("gear.unit.notes.adding")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("gear.unit.notes.add")}
-              </SubmitButton>
-            </FieldActions>
-          </form>
-        </details>
+        <NoteDoor
+          gearItemId={gearItemId}
+          todayLocal={todayLocal}
+          t={t}
+          formOpen={formOpen}
+          className={notes.length > 0 ? "mt-5 border-t border-border pt-5" : "mt-4"}
+        />
       )}
     </SectionCard>
+  );
+}
+
+/**
+ * The "Add a note" door and its box. In the Notes card when the unit has
+ * notes; on the empty unit's one line beside "Log a service" when it has
+ * none (visual review A19), so a unit with no record yet is one line, not a
+ * door and an empty card.
+ */
+export function NoteDoor({
+  gearItemId,
+  todayLocal,
+  t,
+  formOpen,
+  className = "",
+}: {
+  gearItemId: string;
+  todayLocal: CalendarDate;
+  t: StaffTranslator;
+  formOpen: boolean;
+  className?: string;
+}) {
+  return (
+    <details open={formOpen || undefined} className={`group ${className}`.trim()}>
+      <summary
+        className={buttonClass({
+          variant: "link",
+          size: "sm",
+          flush: true,
+          className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+        })}
+      >
+        {t("gear.unit.notes.addLabel")}
+        <DisclosureCaret direction="down" className="group-open:rotate-180" />
+      </summary>
+      <form action={recordGearServiceAction} className="mt-3 grid gap-3">
+        <input type="hidden" name="gearItemId" value={gearItemId} />
+        <input type="hidden" name="kind" value="note" />
+        <input type="hidden" name="servicedOn" value={todayLocal} />
+        <textarea
+          name="note"
+          required
+          maxLength={500}
+          rows={3}
+          aria-label={t("gear.unit.notes.addLabel")}
+          placeholder={t("gear.unit.notes.placeholder")}
+          className={textareaClassFor(3)}
+        />
+        <FieldActions>
+          <SubmitButton
+            pendingLabel={t("gear.unit.notes.adding")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("gear.unit.notes.add")}
+          </SubmitButton>
+        </FieldActions>
+      </form>
+    </details>
   );
 }

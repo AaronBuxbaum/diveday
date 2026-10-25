@@ -4,6 +4,7 @@ import {
   daysFromNow,
   e2eNow,
   openTripAbout,
+  openTripAboutRow,
   openTripMore,
   signInAsOwner,
   tripPathByTitle,
@@ -163,7 +164,7 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await row.getByRole("link", { name: title, exact: true }).click();
   await openTripAbout(page);
   // About is already open from the summary read above; the edit disclosure lives inside it.
-  await page.getByText("Edit details", { exact: true }).click();
+  await openTripAboutRow(page, "The plan");
   await expect(page.getByLabel("Days")).toHaveValue("3");
   await page.getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
@@ -206,7 +207,7 @@ test("staff moves a departure to a different boat after it is on the board", asy
   // summary fails axe's nested-interactive rule). Every field below is inside
   // it.
   await openTripAbout(page);
-  await page.getByText("Edit details", { exact: true }).click();
+  await openTripAboutRow(page, "The plan");
   // Located by its form name, the same shape the visual specs use for the
   // onboarding inputs. Not by label: `Field` renders its `(optional)` hint
   // inside the caption, so an accessible-name match here is fragile in a way
@@ -246,7 +247,7 @@ test("staff moves a departure to a different boat after it is on the board", asy
   // select kept what was typed into it.
   await page.goto(tripPath);
   await openTripAbout(page);
-  await page.getByText("Edit details", { exact: true }).click();
+  await openTripAboutRow(page, "The plan");
   await expect(page.locator('select[name="boatId"]')).toHaveValue(other[0]);
 });
 
@@ -268,7 +269,7 @@ test("a departure's own meeting point reaches the diver once they hold a seat", 
   await page.goto(tripPath);
 
   await openTripAbout(page);
-  await page.getByText("Edit details", { exact: true }).click();
+  await openTripAboutRow(page, "The plan");
   // By form name, not label: `Field` renders its "(optional)" hint inside
   // the caption, so an accessible-name match here is fragile — same reason
   // the boat-swap test above locates its `<select>` this way.

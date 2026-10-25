@@ -54,15 +54,15 @@ export type MonthFigure = {
    * row may ever carry one, and only while its condition holds.
    */
   earned?: string;
-  /**
-   * "Sailed 104 · Still to sail 25" (fourth UX review, item 22): the current
-   * month's figure split at now, so boats still for sale do not read as done.
-   */
-  split?: string;
   /** "up 18% vs $6,690 in August 2025" — the baseline, one step quieter. */
   comparison?: string;
   /** One quiet jump to the surface behind the number (revenue → Orders). */
   link?: { href: string; label: string };
+  /**
+   * The figure itself is the door to its list (visual review A05: Safety's
+   * tiles, each a link to the list behind its count).
+   */
+  href?: string;
 };
 
 /**
@@ -133,9 +133,12 @@ export function MonthFigures({
   /** Names the region for a screen reader; the row carries no visible heading. */
   label,
   figures,
+  caption,
   columns = 5,
 }: {
   label: string;
+  /** One quiet line under the row, said once: the month's basis (visual review A06). */
+  caption?: string;
   /** The month's five figures, in reading order. */
   figures: MonthFigure[];
   /** How many the row holds at `lg`. The hairline rules read the index alone and need no telling. */
@@ -163,14 +166,23 @@ export function MonthFigures({
                   carrying it for everything inside — the lines beneath are a
                   different size, and inheriting one to override it three times
                   is how a ramp drifts. */}
-              <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
+              {figure.href ? (
+                <Link
+                  href={figure.href}
+                  className={`block ${FIGURE_LARGE_CLASS} hover:underline print:no-underline`}
+                >
+                  {figure.value}
+                </Link>
+              ) : (
+                <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
+              )}
               {/* **One block owns the lines under the value**, so the first of
                   them starts 8px down whichever it is. The detail took `mt-2`
                   and the comparison `mt-1`, so a figure with no detail (net
                   revenue) set its comparison 4px higher than every
                   neighbour's first line (K-287). Rendered only when it holds
                   something: an empty `mt-2` block is a phantom gap. */}
-              {figure.earned || figure.detail || figure.split || figure.comparison ? (
+              {figure.earned || figure.detail || figure.comparison ? (
                 <div className="mt-2 space-y-1">
                   {figure.earned ? (
                     <EarnedMomentLine animate={false}>{figure.earned}</EarnedMomentLine>
@@ -182,9 +194,6 @@ export function MonthFigures({
                     >
                       {figure.detail}
                     </span>
-                  ) : null}
-                  {figure.split ? (
-                    <span className="block text-sm text-muted tabular-nums">{figure.split}</span>
                   ) : null}
                   {figure.comparison ? (
                     <span className="block text-sm text-muted tabular-nums">
@@ -214,6 +223,7 @@ export function MonthFigures({
           </div>
         ))}
       </dl>
+      {caption ? <p className="mt-2 text-sm text-muted">{caption}</p> : null}
     </section>
   );
 }

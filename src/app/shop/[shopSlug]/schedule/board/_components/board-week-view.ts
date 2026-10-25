@@ -410,7 +410,6 @@ export function boardWeekView({
           next: st("schedule.week.next"),
           thisWeek: st("schedule.week.thisWeek"),
           today: st("schedule.week.today"),
-          print: st("print.sheet.door"),
         },
         nextDeparture: weekNextDeparture,
         days: weekViewDays,

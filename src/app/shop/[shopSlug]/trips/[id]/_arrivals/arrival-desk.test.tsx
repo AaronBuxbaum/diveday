@@ -195,7 +195,7 @@ describe("the counter's turned-away door (H-135)", () => {
     const expected = turnAwayReasons(row.readiness);
     expect(expected).toContain("identity");
     const below = await belowFor(seat);
-    expect(below).toHaveTextContent("Turn away…");
+    expect(below).toHaveTextContent("Turn away");
     const offered = reasonsOffered(below);
     expect(offered).toEqual(expected);
     // Security F1: the matched person's blockers are not this seat's reasons.
