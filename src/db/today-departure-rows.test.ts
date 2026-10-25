@@ -95,11 +95,12 @@ describe("pushDepartureRows", () => {
     expect(actions[5]?.aboutDeparture).toBe(true);
     expect(actions[5]?.detail).toBe("2 orders awaiting payment");
 
-    // Then Ana is one row with everything open for her, the warning first.
+    // Then Ana is one row with everything open for her, the warning first,
+    // then her contact gap above her size (the rank, visual review A43).
     const folded = oneRowPerDiver(actions);
     expect(folded.filter((action) => action.subject === "Ana Ruiz")).toHaveLength(1);
     expect(folded.find((action) => action.subject === "Ana Ruiz")?.detail).toBe(
-      "nitrox certification, rental size, emergency contact",
+      "nitrox certification, emergency contact, rental size",
     );
     expect(folded).toHaveLength(4);
   });
@@ -537,8 +538,14 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         .sort(),
     ).toEqual(roster.map((entry) => entry.person.fullName).sort());
     // Never a boarding blocker: a diver whose only gap it is gets the plain
-    // contact row, pointed at the roster to settle at the counter.
-    const contactOnly = contactRows(flagged).find((action) => action.kind === "emergency_contact");
+    // contact row, pointed at the roster to settle at the counter. A diver
+    // with a size open too is one row naming both, and since A43 their
+    // contact gap leads it, so that row is a contact row as well: the
+    // standalone nudge is the one naming nothing else.
+    const contactOnly = contactRows(flagged).find(
+      (action) => action.kind === "emergency_contact" && action.diver?.items.length === 1,
+    );
+    expect(contactOnly).toBeDefined();
     if (contactOnly) {
       expect(contactOnly.detail).toBe("No emergency contact.");
       expect(contactOnly.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);

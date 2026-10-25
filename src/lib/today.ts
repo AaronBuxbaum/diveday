@@ -2328,6 +2328,17 @@ const READINESS_KINDS: ReadonlySet<TodayActionKind> = new Set([
   ...Object.values(BLOCKER_ACTIONS).map((action) => action.kind),
 ]);
 
+/**
+ * A row raised by a readiness blocker. `payment` is also the boat's own
+ * "orders awaiting payment" row, which gates nobody: only the diver's
+ * unpaid-seat row (`diver.readiness`) counts, or the orders row would take a
+ * seat among the five and fold a missing contact under it (A43, layer 6).
+ */
+function isReadinessRow(row: TodayAction): boolean {
+  if (!READINESS_KINDS.has(row.kind)) return false;
+  return row.kind !== "payment" || row.diver?.readiness === true;
+}
+
 export function foldBoatRows(rows: readonly TodayAction[]): {
   shown: TodayAction[];
   more: TodayAction[];
@@ -2337,7 +2348,7 @@ export function foldBoatRows(rows: readonly TodayAction[]): {
   // review, note 1). A diver's help request is their ask, not a chore: it
   // keeps Arrange help in reach. Only boat work and the boat's other chores fold.
   const neverFolds = (row: TodayAction) =>
-    rowTone(row) === "danger" || READINESS_KINDS.has(row.kind) || row.kind === "help_request";
+    rowTone(row) === "danger" || isReadinessRow(row) || row.kind === "help_request";
   // The rows that never fold take their seats among the five first, so the
   // group still shows five (A43) and folds more boat work instead, unless
   // more than five can never fold.

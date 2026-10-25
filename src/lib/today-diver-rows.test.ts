@@ -531,7 +531,13 @@ describe("a merged row keeps what the blocker says and does", () => {
     const { more } = foldBoatRows([
       ...named("certification", 5),
       ...named("waiver", 2),
-      ...named("payment", 1),
+      // A diver's unpaid seat, raised from their blocker as every one is; the
+      // boat's own orders row is also `payment` and does fold (A43).
+      action({
+        id: "payment-0",
+        kind: "payment",
+        diver: { personId: "p", items: ["payment"], readiness: true },
+      }),
       ...named("identity", 1),
       ...named("dive_prep", 3),
     ]);
