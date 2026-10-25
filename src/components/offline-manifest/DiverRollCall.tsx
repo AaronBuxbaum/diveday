@@ -193,14 +193,17 @@ function OfflineDiverRow({
             roll-call state, then whatever stands in the way or must be in
             view at the rail, in the order the chips this replaces stood.
             Every word the chips said is still here; only the pills went.
-            Danger ink for a diver not back aboard or blocked: readiness is
-            said at every checkpoint, because this copy is what the desk knew
-            and a boat with no signal has nowhere else to read it. The page's
+            Readiness is said at every checkpoint, because this copy is what
+            the desk knew and a boat with no signal has nowhere else to read
+            it. Danger ink only for a diver not back aboard or blocked at the
+            rail (`blockedAtRail`, #2286): after a dive a boarded diver's block
+            is words in plain ink, never the red that means a diver has not
+            come back (layer 4 review, dde-a F2). The page's
             banner says once that this is a saved copy, so no word here says
             "when saved". */}
           <p
             className={`mt-1 text-base font-semibold break-words ${
-              missing || !ready ? "text-danger" : "text-ink"
+              missing || blockedAtDock ? "text-danger" : "text-ink"
             }`}
           >
             {offlineDiverStatusLine({

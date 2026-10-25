@@ -422,6 +422,58 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
   });
 
   /**
+   * **After a dive, the one red is the diver not back** (layer 4 review,
+   * dde-a F2). A blocked diver the crew boarded at the dock keeps every word
+   * of their block on the status line, in plain ink; danger ink there would
+   * compete with the row that means somebody has not come back.
+   */
+  for (const [afterDive, red] of [
+    ["boarded", false],
+    ["not_boarded", true],
+  ] as const) {
+    it(`inks a blocked diver boarded at the dock and recorded ${afterDive} after dive 1 ${red ? "as the alarm" : "plainly"}`, async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      const event = (
+        checkpoint: "departure" | "after_dive_1",
+        status: "boarded" | "not_boarded",
+      ) => ({
+        clientEventId: `evt-${checkpoint}`,
+        snapshotId: "snap-trip-1",
+        snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+        tripId: "trip-1",
+        bookingId: "diver-priya",
+        checkpoint,
+        status,
+        occurredAt: new Date(FROZEN_MS).toISOString(),
+        syncStatus: "pending" as const,
+      });
+      vi.mocked(loadOfflineManifest).mockResolvedValue(
+        richEnvelope(
+          "trip-1",
+          { readiness: "blocked" },
+          { events: [event("departure", "boarded"), event("after_dive_1", afterDive)] },
+        ),
+      );
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+      const row = document.getElementById("offline-roll-call-diver-priya");
+      if (!row) throw new Error("Priya's row missing");
+      const line = row.querySelector("h3")?.parentElement?.nextElementSibling;
+      if (red) {
+        expect(line).toHaveClass("text-danger");
+      } else {
+        expect(line).not.toHaveClass("text-danger");
+        expect(line).toHaveClass("text-ink");
+        // Every word of the block stays; only the ink changed.
+        expect(line?.textContent).toContain("Blocked");
+      }
+    });
+  }
+
+  /**
    * **A released seat reads as one on the only copy at the rail** (#1209,
    * `dive-domain-expert` review 20260911). The dock copy carried one booking
    * signal — the counter's arrival — so a diver the desk wrote off at 07:20
