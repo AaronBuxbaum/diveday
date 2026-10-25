@@ -4,7 +4,7 @@ import { getDb } from "@/db/client";
 import { commitCounterPaymentHold } from "@/db/counter-payment-hold";
 import { getShopById } from "@/db/shops";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
-import { isCrossSiteRequest } from "@/lib/same-origin";
+import { isCrossSiteHeaders } from "@/lib/same-origin";
 import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
@@ -21,13 +21,15 @@ const body = z.object({ heldId: z.uuid() });
  * The same gate as the release action it stands in for: a staff session of
  * this shop, the money step-up the tap asked, and only a `counter_payment`
  * row of this shop (`commitCounterPaymentHold`). A cookie-authenticated POST
- * from another site is refused before the session is read.
+ * from another site is refused before the session is read, against the host
+ * the request was sent to (`isCrossSiteHeaders`): behind a proxy the
+ * handler's own `request.url` need not carry the page's origin.
  */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ shopSlug: string; id: string }> },
 ) {
-  if (isCrossSiteRequest(request)) return new Response(null, { status: 403 });
+  if (isCrossSiteHeaders(request.headers)) return new Response(null, { status: 403 });
   const { shopSlug } = await params;
   const session = await requireStaffSession();
   const db = await getDb();

@@ -24,7 +24,11 @@ const URL_ = `http://localhost/shop/blue-mantis/orders/${ORDER}/leave`;
 function post(init: { origin?: string; heldId?: string; slug?: string } = {}) {
   const request = new Request(URL_, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: init.origin ?? "http://localhost" },
+    headers: {
+      "content-type": "application/json",
+      host: "127.0.0.1:3000",
+      origin: init.origin ?? "http://127.0.0.1:3000",
+    },
     body: JSON.stringify({ heldId: init.heldId ?? HELD }),
   });
   return POST(request, {
