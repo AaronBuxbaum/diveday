@@ -73,19 +73,20 @@ test.describe("print", () => {
     // "Trip" on the manifest's and the prep list's. `TripPageHeader` marks all
     // three `print:hidden` for exactly this reason, and a paper sheet with a
     // link on it is the regression.
-    // **The packet marks its chrome, and paper honours the mark.** This used to
-    // count the two tab strips the composed surfaces brought with them; slice
-    // 23c deleted the strip (ADR 20260919-one-idea), and what is left to keep
-    // off paper is each composed header's way back up plus the rental-ticket
-    // door on an assigned gear row — a count the seed decides, so the rule is
-    // the assertion rather than a number that drifts with the fixture.
+    // **No link prints.** This used to count the two tab strips the composed
+    // surfaces brought with them; slice 23c deleted the strip (ADR
+    // 20260919-one-idea), and the packet now composes paper rows that carry
+    // no links at all (visual review 2026-10-24, B03). What is left is the
+    // packet's one "‹ Schedule", whose wrapper is `print:hidden`, so the rule
+    // is the assertion: the packet holds a link, and none of its links is
+    // on paper.
     //
     // A CSS locator, deliberately: `getByRole` reads the accessibility tree,
     // `display:none` is not in it, and a role locator here finds nothing and
     // passes for the wrong reason.
-    const chrome = page.locator('a[class*="print:hidden"]');
-    await expect(chrome).not.toHaveCount(0);
-    for (const link of await chrome.all()) await expect(link).not.toBeVisible();
+    const links = page.locator(".trip-print-bundle a");
+    await expect(links).not.toHaveCount(0);
+    for (const link of await links.all()) await expect(link).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });
