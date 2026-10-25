@@ -3,7 +3,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { TripPrep } from "@/db/trips";
-import { PrepTanks } from "./PrepTanks";
+import { PrepTanks, tanksLine } from "./PrepTanks";
 import { heldPrep, prepFor, t, viewOf } from "./prep-test-fixtures";
 
 afterEach(cleanup);
@@ -29,8 +29,16 @@ describe("PrepTanks", () => {
     expect(derivation.textContent).toContain("2 divers");
     expect(derivation.textContent).toContain("1 diving crew member");
     expect(derivation.textContent).toContain("2 dives");
-    // (2 divers + 1 diving crew) × 2 dives — the arithmetic that sentence names.
-    expect(screen.getAllByText("6").length).toBeGreaterThan(0);
+    // (2 divers + 1 diving crew) × 2 dives — the arithmetic that sentence
+    // names, as one line (B54): no nitrox on this boat, so nitrox is unsaid.
+    expect(screen.getByText("6 tanks, air")).toBeInTheDocument();
+    expect(screen.queryByText(/nitrox/i)).toBeNull();
+  });
+
+  it("names nitrox only when a cylinder on the departure is nitrox (B54)", () => {
+    expect(tanksLine(t, { total: 6, air: 4, nitrox: 2 }, true)).toBe("6 tanks: 4 air, 2 nitrox");
+    expect(tanksLine(t, { total: 6, air: 6, nitrox: 0 }, true)).toBe("6 tanks, air");
+    expect(tanksLine(t, { total: 1, air: 1, nitrox: 0 }, false)).toBe("1 tank, air");
   });
 });
 

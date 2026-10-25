@@ -1,7 +1,6 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { RollCallMarkTap, rollCallMarkState } from "@/components/RollCallMarkTap";
 import { rollCallRowTone } from "@/components/row-tones";
-import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
@@ -12,7 +11,6 @@ import {
   rollCallLabelText,
   trainingDiveLines,
 } from "@/i18n/manifest-labels";
-import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
@@ -24,11 +22,13 @@ import { runningLateOnManifest } from "@/lib/running-late";
 import type { OfflineTripControls } from "./controls";
 import { OfflineRollCallException } from "./RollCallException";
 import {
+  BUDDY_NAMES_WRAP,
+  buddyNamesList,
   OFFLINE_DISCLOSURE_SUMMARY_CLASS,
-  OfflineBuddyTeamChip,
   offlineRollCallRowId,
   reTap,
 } from "./shared";
+import { offlineDiverStatusLine } from "./status-line";
 import type { OfflineTripView } from "./trip-view";
 
 /**
@@ -174,160 +174,55 @@ function OfflineDiverRow({
         }
       >
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {/* **The first line takes the boat buttons' height,
-              through the chip's wrapper** (`sm:h-14`), so the
-              chip, the name and the readiness badge share the
-              56px buttons' centre rather than riding 12px above
-              it. On the wrapper and not the whole box: on most
-              rows the state word and buddy team wrap to a second
-              line (32 + 8 + 30 = 70px, past 56), and a min height
-              on the box did nothing there. Not on an expired copy,
-              whose right column is one sentence, not buttons.
+              through the chip's wrapper** (`sm:h-14`), so the chip and
+              the name share the 56px mark's centre. Not on an expired
+              copy, whose right column is one sentence, not buttons.
 
-              `bg-surface`, never the awaiting row's own sunken
-              fill: a chip painted the row's colour has no edge, and
-              its number started 7px right of the row's. */}
+              `bg-surface`, never the awaiting row's own sunken fill: a
+              chip painted the row's colour has no edge. */}
             <span className={`flex shrink-0 items-center${expired ? "" : " sm:h-14"}`}>
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
                 {String(index + 1).padStart(2, "0")}
               </span>
             </span>
-            <h3 className={ITEM_TITLE_CLASS}>{diver.fullName}</h3>
-            {/* The shared pill, and the shared tone resolver. The
-              hand-rolled one this replaces paired `text-success`
-              with `bg-success/10`, the combination `Badge`
-              documents as measuring under AA at pill sizes — on
-              the surface read in direct sunlight. The words stay
-              the offline ones ("Ready when saved"), because that
-              distinction is real: this is a snapshot, not live.
-
-              **Every checkpoint, unlike the live capsule and
-              unlike the grid below.** The live row's readiness
-              word is `blockedAtDock` — one exception capsule, and
-              readiness stops being an exception once the boat is
-              back. This is a different construct: a two-state
-              statement on every diver saying what the desk knew
-              when this copy was taken, which is the per-diver
-              instance of the freshness banner at the top of the
-              page. Gating it would have to gate the blocked half
-              alone — leaving "Ready when saved" as the only
-              readiness word on the page and silence beside the one
-              diver it is not true of — and the desk's record has
-              nowhere else to be read on a boat with no signal. The
-              row's *alarm* already follows the live rule: its
-              untouched fill is checkpoint-gated above. */}
-            <Badge tone={readinessStatusTone(ready ? "ready" : "blocked")}>
-              {ready
-                ? t("shared.offlineManifest.single.readyBadge")
-                : t("shared.offlineManifest.single.blockedBadge")}
-            </Badge>
-            {/* **The desk released this seat** (#1209), with the
-              same qualifier the badge above wears and for the same
-              reason: a copy saved at 07:05 cannot know that the
-              counter put them back on the list at 07:20. Neutral,
-              because it is the absence of an exception rather than
-              one, and it refuses nothing — the control below still
-              boards a body the crew can see, which is the live
-              manifest's rule on a phone with no signal. Without
-              it this copy is the one surface where a written-off
-              name and a diver still walking down the dock are the
-              same row. */}
-            {diver.notHere ? (
-              <Badge tone="neutral">
-                {diver.turnedAway
-                  ? t("shared.offlineManifest.single.turnedAwayBadge")
-                  : t("shared.offlineManifest.single.notHereBadge")}
-              </Badge>
-            ) : null}
-            {/* The live roll call's capsule for the same facts, strongest
-              first (`medicalWarningChips`): a rider riding only under a
-              "no" or an open referral (H-109), an earlier refusal (H-98),
-              a referral replaced. Never a block; the crew at the rail
-              decides with it in view. */}
-            {medicalChip ? <Badge tone="warning">{medicalChip}</Badge> : null}
-            {/* The diver wrote a medical alert for the crew (issue #2960):
-              the fact on every copy, the words in the details below only
-              on a copy saved by a reader allowed them. Never a gate. */}
-            {diver.medicalAlert && !withheld ? (
-              <Badge tone="primary">{t("manifest.medicalAlertChip")}</Badge>
-            ) : null}
-            {/* Snorkeler or rider, as on the live roll call (ADR
-              20261007-participant-types). Every row is still called;
-              this only says who the body is. */}
-            {leftDiving(diver) === "snorkeler" ? (
-              <Badge tone="warning">{t("manifest.participantType.bookedAsDiver.snorkeler")}</Badge>
-            ) : leftDiving(diver) === "rider" ? (
-              <Badge tone="warning">{t("manifest.participantType.bookedAsDiver.rider")}</Badge>
-            ) : joinedDiving(diver) === "snorkeler" ? (
-              <Badge tone="warning">
-                {t("manifest.participantType.bookedAsNonDiver.snorkeler")}
-              </Badge>
-            ) : joinedDiving(diver) === "rider" ? (
-              <Badge tone="warning">{t("manifest.participantType.bookedAsNonDiver.rider")}</Badge>
-            ) : diver.participantType === "snorkeler" ? (
-              <Badge tone="neutral">{t("manifest.participantType.snorkeler")}</Badge>
-            ) : diver.participantType === "rider" ? (
-              <Badge tone="neutral">{t("manifest.participantType.rider")}</Badge>
-            ) : null}
-            {/* Same resolver the live manifest renders (DOM-H3):
-              one word list, so a diver who has not come back from
-              dive one cannot read "Not boarded" here and "Not back
-              aboard" on the captain's screen. */}
-            {/* The neutral word wears a border and the surface
-              fill, so its box is painted on the sunken awaiting
-              row: the pill used to be that row's own fill, so its
-              padding was invisible and its word started at
-              nobody's edge. It keeps its foreground semibold ink,
-              not the neutral `Badge`'s muted medium: this is the
-              row's state in words, read across a wet deck, and
-              the defect was the pill's edge, never the word. */}
-            {missing ? (
-              <span className="rounded-full border border-danger bg-danger-tint px-3 py-1 text-sm font-bold text-danger">
-                {stateWord}
-              </span>
-            ) : (
-              <span className="rounded-full border border-border bg-surface px-3 py-1 text-sm font-semibold">
-                {stateWord}
-              </span>
-            )}
-            {/* The saved team, always quiet here: this copy shows
-              who you are with and never judges whether the team is
-              split — that read is live-roll-call only (see the
-              note above the list). */}
-            <OfflineBuddyTeamChip t={t} locale={locale} names={diver.buddyTeamNames} />
+            <h3 className={`min-w-0 break-words ${ITEM_TITLE_CLASS}`}>{diver.fullName}</h3>
           </div>
-          {/* What is already on the record about this person, from
-            whichever statement this row is showing — the saved
-            snapshot or this device's own queued event. Without it a
-            crew member offshore meets an empty box on an alarmed
-            row and writes the same observation twice, while the
-            live manifest and the departure log carry the first
-            one. */}
-          {/* Muted under the name, never a pill: the state pill above is
-            the row's answer, and this is only context for it (#2319). */}
-          {lateAt ? (
-            <p className="mt-1 text-base text-muted">
-              {t("manifest.runningLate", {
-                time: formatTime(lateAt, locale, view.envelope.snapshot.shop.timezone),
-              })}
-            </p>
-          ) : null}
-          {state?.note ? <p className="mt-1 text-sm">{state.note}</p> : null}
-          {/* The live manifest's "Contact & gear" disclosure, in the
-            same clothes and under the same words — this copy and
-            that one are read minutes apart by the same captain, and
-            reference facts standing open on every row here while
-            they fold there is the divergence this closes.
-
-            `manifest.diverFactsSummary`, not an offline key
-            of its own: one word list is the whole point, exactly as
-            `rollCallLabelText` is shared for the state pills above.
-
-            The only medical facts the dock payload carries are the
-            two warnings (`medicalWarnings` in offline-manifests.ts,
-            issue #2163), so the summary says "& medical" exactly when
-            one of them is on the row. */}
+          {/* **One status line** (visual review 2026-10-24, B01): the row's
+            roll-call state, then whatever stands in the way or must be in
+            view at the rail, in the order the chips this replaces stood.
+            Every word the chips said is still here; only the pills went.
+            Danger ink for a diver not back aboard or blocked: readiness is
+            said at every checkpoint, because this copy is what the desk knew
+            and a boat with no signal has nowhere else to read it. The page's
+            banner says once that this is a saved copy, so no word here says
+            "when saved". */}
+          <p
+            className={`mt-1 text-base font-semibold break-words ${
+              missing || !ready ? "text-danger" : "text-ink"
+            }`}
+          >
+            {offlineDiverStatusLine({
+              stateWord,
+              blockerTexts: ready ? null : diver.readiness.blockers.map((blocker) => blocker.text),
+              blockedWord: t("shared.offlineManifest.single.blockedBadge"),
+              notHereWord: diver.notHere
+                ? diver.turnedAway
+                  ? t("shared.offlineManifest.single.turnedAwayBadge")
+                  : t("shared.offlineManifest.single.notHereBadge")
+                : null,
+              medicalWord: medicalChip ?? null,
+              medicalAlertWord:
+                diver.medicalAlert && !withheld ? t("manifest.medicalAlertChip") : null,
+              participantWord: participantWord(diver, t),
+              lateWord: lateAt
+                ? t("manifest.runningLate", {
+                    time: formatTime(lateAt, locale, view.envelope.snapshot.shop.timezone),
+                  })
+                : null,
+            })}
+          </p>
           <details className="group/offlinefacts mt-2 max-w-xl">
             <summary className={OFFLINE_DISCLOSURE_SUMMARY_CLASS}>
               <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
@@ -340,6 +235,18 @@ function OfflineDiverRow({
               </span>
             </summary>
             <div className="mb-1 grid gap-2 rounded-inset border border-border/70 bg-surface-sunken/50 p-3 text-base">
+              {/* The saved team, always quiet here: this copy shows who you
+                are with and never judges whether the team is split. And
+                what is already on the record about this person, so a crew
+                member offshore does not write the same observation twice. */}
+              {diver.buddyTeamNames && diver.buddyTeamNames.length > 0 ? (
+                <p className={BUDDY_NAMES_WRAP}>
+                  {t("shared.buddyTeam.with", {
+                    names: buddyNamesList(locale, diver.buddyTeamNames),
+                  })}
+                </p>
+              ) : null}
+              {state?.note ? <p className="break-words">{state.note}</p> : null}
               {/* A held seat was saved with the matched person's
                 particulars already cleared (`serializeManifests`),
                 so it says why rather than "Not on file" (issue
@@ -373,7 +280,11 @@ function OfflineDiverRow({
                         : t("shared.offlineManifest.single.notOnFile")}
                     </span>
                   </p>
-                  {diver.participantType === "rider" ? null : (
+                  {/* Omitted when nothing was recorded and no nitrox asked
+                    for: a fact not recorded is never shown as one (B51), the
+                    live facts block's own rule. */}
+                  {diver.participantType === "rider" ||
+                  (diver.rentalFit.state === "not_recorded" && !diver.nitroxRequested) ? null : (
                     <p>
                       <span className="font-bold">
                         {t("shared.offlineManifest.single.rentalFit")}
@@ -462,13 +373,6 @@ function OfflineDiverRow({
               )}
             </div>
           </details>
-          {!ready ? (
-            <ul className="mt-2 text-sm text-danger">
-              {diver.readiness.blockers.map((blocker) => (
-                <li key={blocker.code}>• {blocker.text}</li>
-              ))}
-            </ul>
-          ) : null}
         </div>
         {expired ? (
           // `sm:py-1.5` centres the sentence's first 20px line on the name
@@ -540,4 +444,23 @@ function OfflineDiverRow({
       )}
     </li>
   );
+}
+
+/**
+ * Snorkeler or rider, as on the live roll call (ADR 20261007-participant-types):
+ * every row is still called; this only says who the body is.
+ */
+function participantWord(
+  diver: OfflineTripView["manifest"]["divers"][number],
+  t: OfflineTripControls["t"],
+): string | null {
+  const left = leftDiving(diver);
+  if (left === "snorkeler") return t("manifest.participantType.bookedAsDiver.snorkeler");
+  if (left === "rider") return t("manifest.participantType.bookedAsDiver.rider");
+  const joined = joinedDiving(diver);
+  if (joined === "snorkeler") return t("manifest.participantType.bookedAsNonDiver.snorkeler");
+  if (joined === "rider") return t("manifest.participantType.bookedAsNonDiver.rider");
+  if (diver.participantType === "snorkeler") return t("manifest.participantType.snorkeler");
+  if (diver.participantType === "rider") return t("manifest.participantType.rider");
+  return null;
 }

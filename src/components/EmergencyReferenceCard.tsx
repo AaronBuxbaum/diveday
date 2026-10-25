@@ -28,8 +28,13 @@ export type EmergencyReferenceCopy = {
    * the channel to call on (dock review B1).
    */
   workingChannelLabel: string;
-  /** "not recorded", for a boat whose row holds no working channel. */
-  workingChannelNotRecorded: string;
+  /**
+   * "not recorded", for a boat whose row holds no working channel. Absent,
+   * the row is omitted instead (the saved offline copy, visual review
+   * 2026-10-24, B51: a fact not recorded is never shown as a fact there).
+   * The distress line under it stays either way.
+   */
+  workingChannelNotRecorded?: string;
   /** The fixed line under it: distress and calling stay on VHF 16. */
   distressChannel: string;
   shoreContactLabel: string;
@@ -124,14 +129,16 @@ export function EmergencyReferenceCard({
                   a working channel and always followed by the fixed line
                   that distress stays on 16 (dock review B1). An empty one
                   says so rather than vanishing. */}
-              <p>
-                <span className="font-medium">{copy.workingChannelLabel}</span>{" "}
-                {reference.boat.workingChannel ? (
-                  <span className="font-mono tabular-nums">{reference.boat.workingChannel}</span>
-                ) : (
-                  copy.workingChannelNotRecorded
-                )}
-              </p>
+              {reference.boat.workingChannel || copy.workingChannelNotRecorded ? (
+                <p>
+                  <span className="font-medium">{copy.workingChannelLabel}</span>{" "}
+                  {reference.boat.workingChannel ? (
+                    <span className="font-mono tabular-nums">{reference.boat.workingChannel}</span>
+                  ) : (
+                    copy.workingChannelNotRecorded
+                  )}
+                </p>
+              ) : null}
               <p className="font-medium">{copy.distressChannel}</p>
               {reference.vessel ? <p className="text-pretty">{reference.vessel}</p> : null}
             </>

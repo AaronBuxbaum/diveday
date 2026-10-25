@@ -5,16 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { TripPrep } from "@/db/trips";
 import { buildDivePrepChecklist } from "@/lib/dive-prep";
 import { PrepFitGaps } from "./PrepFitGaps";
-import {
-  byText,
-  diver,
-  everyPanelPrep,
-  heldPrep,
-  spacingPx,
-  t,
-  tokens,
-  viewOf,
-} from "./prep-test-fixtures";
+import { byText, diver, everyPanelPrep, heldPrep, t, tokens, viewOf } from "./prep-test-fixtures";
 
 afterEach(cleanup);
 
@@ -28,30 +19,15 @@ function renderFitGaps(prep: TripPrep) {
  * measured wrong; the probe re-measures the pixels.
  */
 describe("the packing list's geometry", () => {
-  it("gives every diver's name that stands on its own line a 44px target, and keeps the line (K-146)", () => {
+  it("names every never-asked diver in one paragraph, as a comma list of links (B54)", () => {
     const { container } = renderFitGaps(everyPanelPrep());
     const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
-    const neverAsked = within(lead.nextElementSibling as HTMLElement).getAllByRole("link");
-    expect(neverAsked.map((link) => link.textContent)).toEqual(["Theo Lindqvist", "Nadia Petrov"]);
-    for (const link of neverAsked) {
-      // The 44px floor, and the (44 − 20) / 2 handed back above and below, so
-      // the 20px line the name sits on does not grow to 44.
-      expect(tokens(link)).toEqual(expect.arrayContaining(["inline-flex", "min-h-11", "-my-3"]));
-    }
-  });
-
-  it("sets the never-asked run's rows a whole target apart, so a tap lands on the name it covers (K-146)", () => {
-    const { container } = renderFitGaps(everyPanelPrep());
-    const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
-    const run = lead.nextElementSibling as HTMLElement;
-    const rowGap = spacingPx(run, "gap-y");
-    for (const link of within(run).getAllByRole("link")) {
-      // Each target reaches its give-back above and below its line, and the
-      // next row's reaches as far up. With the rows closer than twice that, a
-      // wrapped row's targets cover the names above them, and the later one
-      // in the DOM wins the tap: a diver's record opens for the name above.
-      expect(rowGap, link.textContent ?? "").toBeGreaterThanOrEqual(2 * spacingPx(link, "-my"));
-    }
+    const paragraph = lead.parentElement as HTMLElement;
+    expect(paragraph.tagName).toBe("P");
+    const names = within(paragraph).getAllByRole("link");
+    expect(names.map((link) => link.textContent)).toEqual(["Theo Lindqvist", "Nadia Petrov"]);
+    expect(paragraph.textContent).toContain("Theo Lindqvist, Nadia Petrov");
+    expect(paragraph.querySelector("ul")).toBeNull();
   });
 
   it("holds no empty list open above the never-asked names (K-184)", () => {

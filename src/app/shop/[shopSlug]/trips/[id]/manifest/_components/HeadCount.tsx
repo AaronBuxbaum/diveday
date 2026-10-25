@@ -47,6 +47,7 @@ export function HeadCount({
   people = false,
   overCertificate = null,
   overTotalPersons = null,
+  statusLine = null,
   className = "",
 }: {
   /** Divers with an *aboard* result at this checkpoint. */
@@ -82,6 +83,13 @@ export function HeadCount({
    * danger, its own line; it caps no sale.
    */
   overTotalPersons?: { limit: number } | null;
+  /**
+   * What is still open when nothing is an emergency — "3 crew members still
+   * to call", "All accounted for" — as the count's own last row (visual
+   * review 2026-10-24, B53). It floated under the card; inside it, the crew
+   * still to call sit with the head count they belong to.
+   */
+  statusLine?: string | null;
   className?: string;
 }) {
   const over = overCertificate !== null || overTotalPersons !== null;
@@ -162,6 +170,10 @@ export function HeadCount({
             {t("manifest.headCountBlocked", { count: blocked })}
           </p>
         ) : null}
+        {/* Stays mounted while empty, so a change is announced when one arrives. */}
+        <p className="text-muted" aria-live="polite">
+          {statusLine}
+        </p>
       </div>
     </div>
   );

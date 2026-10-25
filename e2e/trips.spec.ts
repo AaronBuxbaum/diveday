@@ -667,6 +667,19 @@ test.describe("the printed trip packet", () => {
     });
     expect(controls).toEqual([]);
 
+    // And on screen the packet *is* its paper (visual review 2026-10-24, B03):
+    // the manifest and prep sections are composed as paper, so no control is
+    // rendered at all, the roll call's person included.
+    await page.emulateMedia({ media: "screen" });
+    const rendered = await page.evaluate(() =>
+      [...document.querySelectorAll(".trip-print-bundle :is(button, select, textarea, input)")].map(
+        (element) =>
+          `${element.tagName.toLowerCase()}: ${(element.textContent ?? "").trim().slice(0, 30)}`,
+      ),
+    );
+    expect(rendered).toEqual([]);
+    await page.emulateMedia({ media: "print" });
+
     // And the facts it exists for are still on it: the departure it is about,
     // the dive plan that only ever lived inside the Overview tab's form, and
     // the roster with the head count.
@@ -725,30 +738,20 @@ test.describe("the printed trip packet", () => {
   });
 
   /**
-   * **The tank counts are three tiles on a screen and one line on paper.** The
-   * tiles are right for a wall-mounted screen read across the room and wrong
-   * for a sheet carried to the boat: three cards of whitespace holding two
-   * digits each pushed the packing list that follows them onto its own page.
+   * **The tank count is one line, on screen and on paper** (visual review
+   * 2026-10-24, B54): the three tiles held two digits each, and on paper they
+   * pushed the packing list onto its own page.
    */
-  test("says the tank counts inline rather than as three tiles", async ({ page }) => {
+  test("says the tank count as one line on screen and on paper", async ({ page }) => {
     const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/prep`);
     const tanks = page.getByRole("heading", { name: "Tanks" });
     await tanks.waitFor();
     const section = page.locator("section").filter({ has: tanks });
+    const line = section.getByText(/^\d+ tanks?(, air|: \d+ air, \d+ nitrox)$/);
 
-    // `exact` is what tells the two apart: the tile's label is the word on its
-    // own, the printed line is "Total 20 · Air 20 · Nitrox 0".
-    const tileLabel = section.getByText("Total", { exact: true });
-    const printedLine = section.getByText(/^Total \d+/);
-
-    // On screen: the tiles, and no inline line.
-    await expect(printedLine).toBeHidden();
-    await expect(tileLabel).toBeVisible();
-
+    await expect(line).toBeVisible();
     await page.emulateMedia({ media: "print" });
-    // On paper: the line, and no tiles.
-    await expect(printedLine).toBeVisible();
-    await expect(tileLabel).toBeHidden();
+    await expect(line).toBeVisible();
   });
 });

@@ -4,7 +4,9 @@ import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import type { OfflineTripControls } from "./controls";
+import { offlineHeaderChip } from "./header-chip";
 import type { OfflineTripView } from "./trip-view";
+import { useOnline } from "./use-online";
 
 /**
  * The saved copy's header: which departure, when, how fresh, and what is
@@ -20,6 +22,7 @@ export function OfflineTripHeader({
   const { envelope, manifest, expired, freshness, pending, rejected, dateTime } = view;
   const { t, message, servedWithoutAnswer, liveOffer } = controls;
   const savedAt = dateTime.format(new Date(envelope.snapshot.savedAt));
+  const chip = offlineHeaderChip({ online: useOnline(), servedWithoutAnswer, freshness });
   return (
     <div className="border-b border-border pb-6">
       <ShopPageHeader
@@ -29,7 +32,8 @@ export function OfflineTripHeader({
         title={manifest.trip.title}
         description={t("shared.offlineManifest.single.savedAt", { when: savedAt })}
         actions={
-          <>
+          // One chip (B51): see `offlineHeaderChip`.
+          chip.kind === "connectivity" ? (
             <ConnectivityStatus
               offlineLabel={t("shared.connectivity.offlineWithCopy")}
               unanswered={
@@ -46,15 +50,15 @@ export function OfflineTripHeader({
                 offlineTitle: t("shared.connectivity.offlineTitle"),
               }}
             />
-            {/* How fresh a copy is answers "should I trust it?" for a copy the
-              captain chose. One the worker chose because DiveDay was silent is
-              not the live list however young it is, so it gets no "Fresh". */}
-            {servedWithoutAnswer ? null : (
-              <OfflineFreshnessPill freshness={freshness}>
-                {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
+          ) : (
+            <span role="status" aria-live="polite">
+              <OfflineFreshnessPill freshness={chip.freshness}>
+                {chip.online
+                  ? t("shared.offlineManifest.freshnessPill.currentOnline")
+                  : t(`shared.offlineManifest.freshnessPill.${chip.freshness}`)}
               </OfflineFreshnessPill>
-            )}
-          </>
+            </span>
+          )
         }
       />
       {expired ? (

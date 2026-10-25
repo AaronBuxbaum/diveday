@@ -230,8 +230,9 @@ describe("OfflineManifestView — the counter", () => {
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
     const counter = screen.getByRole("region", { name: "At the counter" });
-    expect(within(counter).getByText("Turned away when saved")).toBeInTheDocument();
-    expect(within(counter).queryByText("Not here when saved")).toBeNull();
+    // One status line, no "when saved": the page's banner says that once (B01).
+    expect(within(counter).getByText("Turned away")).toBeInTheDocument();
+    expect(within(counter).queryByText("Not here")).toBeNull();
     expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
   });
 
@@ -243,12 +244,13 @@ describe("OfflineManifestView — the counter", () => {
     const counter = screen.getByRole("region", { name: "At the counter" });
     expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
     expect(within(counter).getByText("Priya Shah")).toBeInTheDocument();
-    // The desk's record, wearing the qualifier every other saved fact on this
-    // page wears: `undoBookingNoShow` may have put her back at 07:20.
-    expect(within(counter).getByText("Not here when saved")).toBeInTheDocument();
-    // Readiness was clearing her, so the blocked badge is not the reason the
+    // The desk's record on the row's one status line, in plain ink: a release
+    // is not a block (B01).
+    const why = within(counter).getByText("Not here");
+    expect(why).not.toHaveClass("text-danger");
+    // Readiness was clearing her, so the blocked word is not the reason the
     // control is gone and must not be borrowed as one.
-    expect(within(counter).queryByText("Blocked when saved")).toBeNull();
+    expect(within(counter).queryByText(/Blocked/)).toBeNull();
 
     const row = document.getElementById("offline-roll-call-diver-priya");
     if (!row) throw new Error("Priya's row missing");
@@ -333,12 +335,11 @@ describe("OfflineManifestView — the counter's harder readings", () => {
   });
 
   /**
-   * A reading that came off the saved copy is the copy talking, and somebody
-   * may have undone it at the desk since. "A stale copy reading as current" is
-   * the one lie a roll-call surface must not tell (docs/product/glossary.md),
-   * and the counter on the same screen gets no exemption.
+   * A reading that came off the saved copy is the copy talking. The page's
+   * banner says once that this is a saved copy and when it was saved, so the
+   * row says "Checked in" and nothing more (visual review 2026-10-24, B01).
    */
-  it("hedges a check-in that came from the saved copy, not from this device", async () => {
+  it("says a saved check-in plainly, the banner carrying the copy's age", async () => {
     const envelope = richEnvelope("trip-1");
     for (const manifest of envelope.snapshot.manifests) {
       for (const diver of manifest.divers) diver.checkedIn = true;
@@ -348,9 +349,10 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
     const counter = screen.getByRole("region", { name: "At the counter" });
-    expect(within(counter).getByRole("button", { name: /Priya Shah/ })).toHaveTextContent(
-      "Checked in when saved",
-    );
+    const row = within(counter).getByRole("button", { name: /Priya Shah/ });
+    expect(row).toHaveTextContent("Checked in");
+    expect(row).not.toHaveTextContent("when saved");
+    expect(screen.getAllByText(/^Saved /).length).toBeGreaterThan(0);
   });
 
   it("marks a queued check-in as this device's own, and as unsent", async () => {
@@ -374,7 +376,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     expect(row).not.toHaveTextContent("when saved");
   });
 
-  it("says a blocked seat's reasons were true when the copy was saved", async () => {
+  it("says a blocked seat's reasons on its status line, in danger ink", async () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(
       richEnvelope("trip-1", { readiness: "blocked" }),
     );
@@ -382,7 +384,11 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
     const counter = screen.getByRole("region", { name: "At the counter" });
-    expect(within(counter).getByText("Blocked when saved")).toBeInTheDocument();
+    const name = within(counter).getByText("Priya Shah");
+    const line = name.nextElementSibling as HTMLElement;
+    expect(line).toHaveClass("text-danger");
+    expect(line.textContent).not.toBe("");
+    expect(line).not.toHaveTextContent("when saved");
   });
 
   /**

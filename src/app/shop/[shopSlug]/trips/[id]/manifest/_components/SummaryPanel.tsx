@@ -298,6 +298,7 @@ export function SummaryPanel({
             people={summary.byType ? hasNonDivers(summary.byType) : false}
             overCertificate={overCertificate}
             overTotalPersons={overTotalPersons}
+            statusLine={mutedText}
           />
         </div>
         {/* Who the people are, when they are not all divers (ADR
@@ -392,25 +393,6 @@ export function SummaryPanel({
           </p>
         ) : null}
       </PanelHeight>
-      {/* The prose half, immediately below the pinned card and in the same
-          visual language — it may scroll away. Nothing here is an emergency:
-          the closing line when it is calm. The blocked count is not here: it
-          is pinned beside the head count it qualifies (`HeadCount`).
-
-          `border-x border-transparent`: the card above is `border p-4`, so its
-          content starts 17px in, and `px-4` alone started these lines a pixel
-          left of the card's (K-554). The same box model, with nothing
-          painted. */}
-      <div className="border-x border-transparent px-4 pt-2 print:hidden">
-        {/* The line that says whether this checkpoint is closed. It used to go
-            quiet at `awaiting === 0` — every diver counted, nothing said about
-            the crew. Now it names what is still open. */}
-        {/* Stays mounted whether or not it currently has anything to say, so a
-            change is announced when one arrives. Empty, it is 0px tall. */}
-        <p className="text-base font-semibold text-muted" aria-live="polite">
-          {mutedText}
-        </p>
-      </div>
     </>
   );
 }

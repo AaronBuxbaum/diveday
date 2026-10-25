@@ -13,11 +13,11 @@ const copy: StageStripCopy = {
   legend: "Where the boat is",
   errorRefusal: "That didn’t save. Check your connection and tap again.",
   taps: [
-    { stage: "boarding", label: "Boarding" },
-    { stage: "underway", label: "Underway" },
-    { stage: "surface", label: "Surface" },
-    { stage: "heading_in", label: "Heading in" },
-    { stage: "home", label: "Home" },
+    { stage: "boarding", label: "Boarding", shortLabel: "Board" },
+    { stage: "underway", label: "Underway", shortLabel: "Out" },
+    { stage: "surface", label: "Surface", shortLabel: "Surface" },
+    { stage: "heading_in", label: "Heading in", shortLabel: "Inbound" },
+    { stage: "home", label: "Home", shortLabel: "Home" },
   ],
 };
 
@@ -62,21 +62,23 @@ describe("StageStrip", () => {
     expect(container.textContent).not.toMatch(/unknown/i);
   });
 
-  it("lays the five words on equal columns that never leave one alone on a line", () => {
-    // At 390 the wrapping flex row broke 4 + 1 and left "Home" by itself
-    // under "Boarding" (UX audit 2026-10-07, item 2). jsdom has no layout, so
-    // this pins the grid: three equal columns below `sm` (3 + 2), five from it.
-    render(<StageStrip action={noop} copy={copy} current={null} />);
+  it("lays the five words on one row that scrolls inside its track, never wrapping", () => {
+    // At 390 the wrapping flex row broke 4 + 1 (UX audit 2026-10-07, item 2),
+    // and the 3 + 2 grid that followed still took two rows (visual review
+    // 2026-10-24, B06). jsdom has no layout, so this pins one row of equal
+    // columns, the boat's one segment style, and the short word below `sm`.
+    render(<StageStrip action={noop} copy={copy} current="surface" />);
     const row = screen.getByRole("button", { name: "Home" }).closest("form")?.parentElement;
-    expect(row).toHaveClass("grid", "grid-cols-3", "sm:grid-cols-5");
+    expect(row).toHaveClass("grid", "grid-flow-col", "overflow-x-auto");
     expect(row).not.toHaveClass("flex-wrap");
+    expect(row).not.toHaveClass("grid-cols-3");
     for (const tap of copy.taps) {
-      expect(screen.getByRole("button", { name: tap.label })).toHaveClass(
-        "w-full",
-        "min-h-14",
-        "touch-manipulation",
-      );
+      const button = screen.getByRole("button", { name: tap.label });
+      expect(button).toHaveClass("w-full", "min-h-14", "touch-manipulation");
+      expect(button.querySelector(".sm\\:hidden")).toHaveTextContent(tap.shortLabel);
     }
+    expect(screen.getByRole("button", { name: "Surface" })).toHaveClass("bg-primary");
+    expect(screen.getByRole("button", { name: "Home" })).not.toHaveClass("bg-primary");
   });
 
   it("carries no drawing, no coral and no motion", () => {

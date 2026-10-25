@@ -200,21 +200,14 @@ for (const scheme of ["light", "dark"] as const) {
         });
 
         /**
-         * **The missing-divers grid, whose chips are 80px wide.**
-         *
-         * The question that raised the issue: a blocked diver's chip carries
-         * the offline page's qualified readiness word — "Blocked when saved",
-         * which was measured and accepted at two wrapped lines — and the
-         * Spanish is "Bloqueado cuando se guardó", four words and none of them
-         * short, in a tile a fixed 80px wide (`w-20`). The chip **wraps** rather than
-         * truncating, on purpose (`MissingDiversGrid.tsx`: a clipped
-         * "Blocked wh…" says less than the bare word it replaced), so the cost
-         * lands as tile height inside a `flex-wrap` row.
-         *
-         * This is the baseline that lets that be looked at rather than argued
-         * about. It is also the only one of the three whose Spanish does not
-         * come from a request at all: this view renders offline from IndexedDB
-         * and reads `navigator.language`.
+         * **The offline roll call in Spanish**: each saved row's one status
+         * line (visual review 2026-10-24, B01), whose words used to ride in
+         * chips, and the one "Por embarcar: {count}" line that replaced the
+         * face grid (B02). Spanish runs longer than English on every one of
+         * them, so this is the baseline that shows the lines wrap rather
+         * than clip. It is also the only one of the three whose Spanish does
+         * not come from a request at all: this view renders offline from
+         * IndexedDB and reads `navigator.language`.
          */
         test(`the offline roll call reads in Spanish (${scheme})`, async ({ page }) => {
           // Board → trip → Manifest, then the saved copy. By URL, which is
@@ -228,11 +221,9 @@ for (const scheme of ["light", "dark"] as const) {
           await page.getByRole("link", { name: "Abrir pase de lista sin conexión" }).click();
           await page.waitForURL(/offline-manifest/);
           await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
-          // The grid itself, by its own heading — the roster above it renders
-          // first, so a wait on a diver's name is not a wait on this.
-          await expect(
-            page.getByRole("heading", { name: /^Pendientes de embarcar/ }),
-          ).toBeVisible();
+          // The still-to-board line under the roll call: the roster above it
+          // renders first, so a wait on a diver's name is not a wait on this.
+          await expect(page.getByRole("link", { name: /^Por embarcar: / })).toBeVisible();
           await capture(page, "offline-manifest-roll-call", scheme, { locale: SPANISH });
         });
 

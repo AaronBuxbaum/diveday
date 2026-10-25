@@ -78,7 +78,8 @@ describe("proposed units on the Gear tab", () => {
   it("says the proposed unit in words, and keeps the picker open only where there is none", () => {
     renderAssignments(withProposal());
     expect(screen.getByText("Proposed: BCD #3 · L")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Assign" })).toBeInTheDocument();
+    // One text button per proposed row, no per-row Assign (A10).
+    expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
     expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
     // Theo's XL has no exact unit, so his row is the one select on the tab.
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
@@ -107,6 +108,26 @@ describe("proposed units on the Gear tab", () => {
   it("offers every proposal in one tap", () => {
     renderAssignments(withProposal());
     expect(screen.getByRole("button", { name: "Assign the proposed unit" })).toBeInTheDocument();
+  });
+
+  /**
+   * **One number set** (visual review 2026-10-24, A10 and B54): the summary and
+   * "Assign all" read one count, so what the button assigns is exactly the
+   * proposals on screen, and what the summary says is still to pick is exactly
+   * the open rows (each proposal and each picker).
+   */
+  it("counts the button and the summary from the rows on screen", () => {
+    renderAssignments(withProposal());
+    const proposed = screen.getAllByText(/^Proposed: /).length;
+    const pickers = screen.getAllByRole("combobox").length;
+    const summary = screen.getByText(/units? assigned/).textContent ?? "";
+    const [, assigned, needed, missing] =
+      summary.match(/^(\d+) of (\d+) units? assigned · (\d+) still to pick/) ?? [];
+    expect(Number(missing)).toBe(proposed + pickers);
+    expect(Number(needed)).toBe(Number(assigned) + Number(missing));
+    const button = screen.getByRole("button", { name: /^Assign (the proposed unit|all \d+)/ });
+    const n = button.textContent?.match(/\d+/)?.[0] ?? "1";
+    expect(Number(n)).toBe(proposed);
   });
 
   /**

@@ -125,6 +125,7 @@ export function preDepartureCheckView({
       snagStillThere: t("trips.preDepartureCheck.snagStillThere"),
       snagSaving: t("trips.preDepartureCheck.snagSaving"),
       noteProblem: t("trips.preDepartureCheck.noteProblem"),
+      noteItemLabel: t("trips.preDepartureCheck.noteItemLabel"),
       noteLabel: t("trips.preDepartureCheck.noteLabel"),
       noteSave: t("trips.preDepartureCheck.noteSave"),
       noteRefused: t("trips.preDepartureCheck.noteRefused"),

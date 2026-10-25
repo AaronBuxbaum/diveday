@@ -166,10 +166,12 @@ describe("OfflineDiverRollCall", () => {
     if (!trip) throw new Error("the fixture carries a manifest");
     const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
     const turnedAway = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
-    expect(turnedAway).toContain("Turned away when saved");
-    expect(turnedAway).not.toContain("Not here when saved");
+    expect(turnedAway).toContain("Turned away");
+    expect(turnedAway).not.toContain("Not here");
     const notHere = container.querySelector("#offline-roll-call-b-marcus")?.textContent ?? "";
-    expect(notHere).toContain("Not here when saved");
+    expect(notHere).toContain("Not here");
+    // The banner says "saved" once; no row repeats it (B01).
+    expect(container.textContent).not.toContain("when saved");
   });
 
   /**

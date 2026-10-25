@@ -67,4 +67,27 @@ describe("the print with medical alerts", () => {
       expect(readFileSync(path.join(SRC, other), "utf8")).not.toContain("printedMedicalAlerts");
     }
   });
+
+  it("composes the manifest as paper, and the paper rows still carry the words (B03)", () => {
+    const packet = readFileSync(
+      path.join(SRC, "app/shop/[shopSlug]/trips/[id]/print/_components/TripPacket.tsx"),
+      "utf8",
+    );
+    // The words and the paper flag ride the same searchParams to both pages.
+    expect(packet).toMatch(/\[PAPER_PACKET\]: true/);
+    expect(packet).toContain("[PRINTED_MEDICAL_ALERTS]: printedMedicalAlerts");
+    const read = (file: string) =>
+      readFileSync(path.join(SRC, "app/shop/[shopSlug]/trips/[id]/manifest", file), "utf8");
+    // The paper renders the same roll-call props the screen does, and the
+    // words are bound into them.
+    expect(read("_components/roll-call-props.ts")).toContain("...actions.medicalAlert,");
+    const page = read("page.tsx");
+    expect(page).toContain("rollCall={rollCall}");
+    expect(page.indexOf("if (paper) {")).toBeLessThan(page.indexOf("<SkipLink"));
+    const paper = read("_components/ManifestPaper.tsx");
+    expect(paper).toContain("<DiverRollCall context={{ ...rollCall.divers, paper: true }} />");
+    expect(paper).toContain("<PrintedSoulsOnBoard");
+    expect(paper).toContain("<CrewRollCall {...rollCall.crew} paper />");
+    expect(paper).toContain("{boatPaper}");
+  });
 });

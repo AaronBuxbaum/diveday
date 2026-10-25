@@ -200,9 +200,8 @@ test.describe("a shop that stops filling nitrox", () => {
     await expect(page.getByText("Rentals saved")).toBeVisible();
 
     // Two-Tank Reef never had a nitrox request seeded onto it (unlike the
-    // wreck charter above), so with the catalog off there is no live data
-    // to keep the tile alive: Total and Air are the same number with
-    // nothing left to distinguish, and the tile grid collapses to one.
+    // wreck charter above), so with the catalog off the one tank line says
+    // air alone, and nitrox is never named (B54).
     await page.goto(`/shop/${SHOP}/schedule/board`);
     await page
       .locator("li")
@@ -214,9 +213,8 @@ test.describe("a shop that stops filling nitrox", () => {
       .getByRole("heading", { name: "Tanks" })
       .locator("xpath=..")
       .filter({ visible: true });
-    await expect(tanks.getByText("Total", { exact: true })).toHaveCount(1);
-    await expect(tanks.getByText("Air", { exact: true })).toHaveCount(0);
-    await expect(tanks.getByText("Nitrox", { exact: true })).toHaveCount(0);
+    await expect(tanks.getByText(/^\d+ tanks?, air$/)).toHaveCount(1);
+    await expect(tanks.getByText(/nitrox/i)).toHaveCount(0);
   });
 });
 

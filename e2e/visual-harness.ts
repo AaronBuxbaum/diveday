@@ -1492,7 +1492,7 @@ async function waitForEntranceAnimations(page: Page) {
  * Deliberately *not* `reducedMotion: "reduce"` on the context, which would
  * reach the same CSS through the app's own kill-switch: that also flips every
  * `matchMedia("(prefers-reduced-motion: reduce)")` branch in the tree —
- * `MarketingReveal`, `MissingDiversGrid`'s ring, `useExitAnimation` — and the
+ * `MarketingReveal`, `useExitAnimation` — and the
  * suite would quietly stop photographing the app
  * a standard-motion reader sees. Deliberately not `animation: none` either:
  * `.marketing-reveal-pending` holds `opacity: 0` in its base style and relies

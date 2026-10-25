@@ -7,6 +7,7 @@ import {
   careLine,
   diveRecencyLine,
   diverNames,
+  kitCell,
   pieceSize,
   sizeCell,
   suitMismatchLine,
@@ -110,5 +111,35 @@ describe("suitMismatchLine", () => {
     expect(suitMismatchLine(t, suit(7), 7)).toBeNull();
     expect(suitMismatchLine(t, suit(3), null)).toBeNull();
     expect(suitMismatchLine(t, { kind: "bcd", thicknessMm: null }, 7)).toBeNull();
+  });
+});
+
+describe("kitCell", () => {
+  const piece = (overrides: Partial<PrepPiece>): PrepPiece => ({
+    kind: "bcd",
+    size: null,
+    fitAtCheckIn: false,
+    drysuitWeightCheck: false,
+    drysuitFinFit: false,
+    drysuitGloves: false,
+    notOffered: false,
+    ...overrides,
+  });
+
+  it("says Fit at check-in once per diver, not once per piece (B54)", () => {
+    const { container } = render(
+      kitCell(t, {
+        items: [
+          piece({ kind: "bcd", fitAtCheckIn: true }),
+          piece({ kind: "wetsuit", fitAtCheckIn: true }),
+          piece({ kind: "boots", fitAtCheckIn: true, notOffered: true }),
+        ],
+      } as unknown as Parameters<typeof kitCell>[1]),
+    );
+    const text = container.textContent ?? "";
+    expect(text.split(t("tripPrep.fitAtCheckIn")).length - 1).toBe(1);
+    // Every piece is still named, and a dropped one still says so.
+    expect(container.querySelectorAll("li")).toHaveLength(4);
+    expect(text).toContain(t("tripPrep.noLongerRented"));
   });
 });

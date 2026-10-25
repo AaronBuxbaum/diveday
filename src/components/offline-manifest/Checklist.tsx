@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { latestOfflineChecklistCheck } from "@/lib/offline-manifests";
@@ -56,13 +55,14 @@ export function OfflineChecklist({
   const { t, busyChecklistItem, recordChecklistCheck } = controls;
   return envelope.snapshot.checklist && envelope.snapshot.checklist.items.length > 0 ? (
     <section
-      className={sectionCardClass({ className: "mt-6" })}
+      className={sectionCardClass({ padding: "none", className: "mt-6" })}
       aria-labelledby="pre-departure-check-heading"
     >
-      <h2 id="pre-departure-check-heading" className="text-base font-semibold text-ink">
+      <h2 id="pre-departure-check-heading" className="px-4 py-4 text-base font-semibold text-ink">
         {t("shared.offlineManifest.single.checklist.heading")}
       </h2>
-      <ul className="mt-3 flex flex-col gap-2">
+      {/* Flat rows under one divider, the live check's shape (B07). */}
+      <ul className="divide-y divide-border border-t border-border">
         {envelope.snapshot.checklist.items.map((item) => {
           const check = latestOfflineChecklistCheck(
             envelope.snapshot,
@@ -168,13 +168,10 @@ function OfflineChecklistRow({
           }
           if (event.key === "Escape") standDown();
         }}
-        className={buttonClass({
-          variant: checked ? "primary" : "secondary",
-          size: "boat",
-          // `gap-3`, the counter row's below: the same mark and
-          // label, so the words start on one x in both lists.
-          className: "w-full justify-start gap-3 text-start",
-        })}
+        // A flat row (visual review 2026-10-24, B07). `gap-3`, the counter
+        // row's below: the same mark and label, so the words start on one x
+        // in both lists.
+        className="flex min-h-14 w-full touch-manipulation items-start gap-3 px-4 py-3 text-start text-base font-semibold hover:bg-surface-sunken disabled:opacity-60"
       >
         <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
         <span className="flex min-w-0 flex-col">

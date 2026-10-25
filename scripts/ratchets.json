@@ -600,8 +600,8 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 705,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 535,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 476,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 420,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 474,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 511
   },
   "tokens": {

@@ -351,6 +351,7 @@
     },
     "freshnessPill": {
       "current": "Fresh copy",
+      "currentOnline": "Fresh copy · online",
       "aging": "Aging copy",
       "stale": "Stale copy"
     },
@@ -372,7 +373,7 @@
     "list": {
       "eyebrow": "Offline manifests",
       "headingWithTrips": "Saved on this device",
-      "headingEmpty": "No manifest saved on this phone yet",
+      "headingEmpty": "No saved manifest on this phone",
       "readFailedHeading": "Couldn’t open this phone’s saved manifests",
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
@@ -417,10 +418,9 @@
       "copyCaveatOffline": "Saved {when}. Changes since then aren’t shown, so a diver added later has no row and one removed still has one. Count heads on the boat against this list.",
       "copyCaveatOnline": "Saved {when}. Changes since then aren’t shown, so a diver added later has no row and one removed still has one. Count heads against the live list.",
       "crewAwaiting": "{count, plural, one {# crew member still to call} other {# crew members still to call}}",
-      "readyBadge": "Ready when saved",
-      "blockedBadge": "Blocked when saved",
-      "notHereBadge": "Not here when saved",
-      "turnedAwayBadge": "Turned away when saved",
+      "blockedBadge": "Blocked",
+      "notHereBadge": "Not here",
+      "turnedAwayBadge": "Turned away",
       "statePendingSuffix": "· waiting to send",
       "emergencyContact": "Emergency contact",
       "notOnFile": "Not on file",
@@ -456,7 +456,6 @@
         "heading": "At the counter",
         "checkedInLabel": "Checked in",
         "notCheckedInLabel": "Check in",
-        "checkedInWhenSavedLabel": "Checked in when saved",
         "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",
         "refusedNotBookable": "Not checked in: this seat is no longer on the boat’s list. It was either canceled or marked not here at the desk. Open the live counter.",
         "refusedBoarded": "Still checked in: the crew recorded them aboard.",

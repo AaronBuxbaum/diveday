@@ -351,6 +351,7 @@
     },
     "freshnessPill": {
       "current": "Copia reciente",
+      "currentOnline": "Copia reciente · en línea",
       "aging": "Copia antigua",
       "stale": "Copia caducada"
     },
@@ -372,7 +373,7 @@
     "list": {
       "eyebrow": "Manifiestos sin conexión",
       "headingWithTrips": "Guardado en este dispositivo",
-      "headingEmpty": "Todavía no hay ningún manifiesto guardado en este teléfono",
+      "headingEmpty": "No hay manifiesto guardado en este teléfono",
       "readFailedHeading": "No se pudieron abrir los manifiestos guardados en este teléfono",
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
@@ -417,10 +418,9 @@
       "copyCaveatOffline": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con esta lista.",
       "copyCaveatOnline": "Guardado {when}. Los cambios posteriores no aparecen, así que quien se sumó después no tiene fila y quien salió todavía la tiene. Cuenta a las personas a bordo con el listado en vivo.",
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}}",
-      "readyBadge": "Listo cuando se guardó",
-      "blockedBadge": "Bloqueado cuando se guardó",
-      "notHereBadge": "Marcado “no vino” cuando se guardó",
-      "turnedAwayBadge": "Marcado “no embarcó” cuando se guardó",
+      "blockedBadge": "Bloqueado",
+      "notHereBadge": "Marcado “no vino”",
+      "turnedAwayBadge": "Marcado “no embarcó”",
       "statePendingSuffix": "· esperando para enviarse",
       "emergencyContact": "Contacto de emergencia",
       "notOnFile": "Sin datos registrados",
@@ -456,7 +456,6 @@
         "heading": "En el mostrador",
         "checkedInLabel": "Registrado",
         "notCheckedInLabel": "Registrar",
-        "checkedInWhenSavedLabel": "Registrado cuando se guardó",
         "refusedNotReady": "Sin registrar: dejó de estar listo después de que presionaste. Abre el mostrador en vivo antes de que suba a bordo.",
         "refusedNotBookable": "Sin registrar: esta plaza ya no está en la lista del barco. Se canceló o en el mostrador marcaron que no vino. Abre el mostrador en vivo.",
         "refusedBoarded": "Sigue registrado: la tripulación ya lo anotó a bordo.",
