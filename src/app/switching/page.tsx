@@ -8,7 +8,6 @@ import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
-import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
@@ -219,9 +218,18 @@ async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: Pricin
         </div>
       </section>
 
-      {/* The owner-authorized concierge switch offer (shared across /switching). */}
-      <SwitchingConcierge locale={locale} source="switching-hub-concierge" />
-      <ClosingCta locale={locale} source="switching-hub" title={t("switching.hub.closingTitle")} />
+      {/* The owner-authorized concierge offer is the close's support line
+          here, not a card above it, so the hub closes once (visual review
+          2026-10-24, B15); the guides still carry the shared card. It keeps
+          the hub's `max-w-4xl` column, so its heading starts on the same left
+          edge as every section above it. */}
+      <ClosingCta
+        locale={locale}
+        source="switching-hub"
+        title={t("switching.hub.closingTitle")}
+        supportKey="switching.hub.closingSupport"
+        measure="column"
+      />
     </main>
   );
 }

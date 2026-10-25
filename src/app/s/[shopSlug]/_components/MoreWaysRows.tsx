@@ -7,7 +7,8 @@ import { FindMyBookingForm } from "./FindMyBookingForm";
 import { LastMinuteListForm } from "./LastMinuteListForm";
 
 /**
- * **The three asks under the board**, as one group of rows: ask for a date
+ * **The three asks under the board**, as one group of hairline rows (the
+ * course FAQ's and the trip briefing's face, B35): ask for a date
  * that is not on the board, be told when a seat goes cheap, recover the link
  * to a booking already made. The page owns the section and its heading, and
  * renders it only when at least one row is left in it, inside the provider
@@ -38,7 +39,7 @@ export function MoreWaysRows({
   t: DiverTranslator;
 }) {
   return (
-    <DisclosureRowList className="mt-4">
+    <DisclosureRowList hairline className="mt-4">
       {/* The date request is the answer to the question this page
             raises and could not previously answer: the schedule shows the
             dates that exist and stops, so a diver who wants a two-tank on

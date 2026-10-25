@@ -99,7 +99,7 @@ describe("arrivalCardFacts", () => {
  * same fact twice.
  */
 describe("the Sites row", () => {
-  it("reads in the order the day runs them, over the Plan chip", () => {
+  it("reads in the order the day runs them, with no source chip (B21)", () => {
     render(
       <TripArrivalCard
         shop={shop}
@@ -108,10 +108,10 @@ describe("the Sites row", () => {
         sites={["Molasses Reef", "French Reef"]}
       />,
     );
-    expect(screen.getByText("Sites")).toBeInTheDocument();
+    expect(screen.getByText("Planned sites")).toBeInTheDocument();
     // The order is the day's, never alphabetical.
     expect(screen.getByText("Molasses Reef, French Reef")).toBeInTheDocument();
-    expect(screen.getByText("Plan")).toBeInTheDocument();
+    expect(screen.queryByText("Plan")).not.toBeInTheDocument();
   });
 
   it("names a site once when the day dives it twice in a row (UX audit #14)", () => {
@@ -142,11 +142,11 @@ describe("the Sites row", () => {
 
   it("renders nothing at all when the caller names no sites", () => {
     const { rerender } = render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
-    expect(screen.queryByText("Sites")).not.toBeInTheDocument();
+    expect(screen.queryByText("Planned sites")).not.toBeInTheDocument();
     expect(screen.queryByText("Plan")).not.toBeInTheDocument();
 
     rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" sites={[]} />);
-    expect(screen.queryByText("Sites")).not.toBeInTheDocument();
+    expect(screen.queryByText("Planned sites")).not.toBeInTheDocument();
   });
 });
 

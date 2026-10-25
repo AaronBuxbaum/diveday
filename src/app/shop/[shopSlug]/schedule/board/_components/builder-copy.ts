@@ -132,7 +132,6 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     depositTitle: st("schedule.builder.depositTitle"),
     cancellationWindowLabel: st("schedule.builder.cancellationWindowLabel"),
     cancellationWindowDescription: st("schedule.builder.cancellationWindowDescription"),
-    hoursSuffix: st("schedule.builder.hoursSuffix"),
     minimumBookingsLabel: st("schedule.builder.minimumBookingsLabel"),
     minimumBookingsDescription: st("schedule.builder.minimumBookingsDescription"),
     minimumDecisionLabel: st("schedule.builder.minimumDecisionLabel"),

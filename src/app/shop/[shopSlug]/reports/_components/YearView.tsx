@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -137,7 +138,7 @@ export async function YearView({
   const reports = shopPath(shopSlug, "reports");
   const years = Array.from({ length: thisYear - firstYear + 1 }, (_, index) => thisYear - index);
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <ShopPageHeader
         title={t("shared.shopSections.money")}
         actions={
@@ -190,6 +191,6 @@ export async function YearView({
         shopSlug={shopSlug}
         t={t}
       />
-    </main>
+    </StaffPage>
   );
 }

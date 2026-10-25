@@ -64,7 +64,8 @@ export function PayAtBookingGroup({
         fieldset rather than becoming a generic SectionCard. */}
       {/* The paid-booking fields sit two by two from `sm` and in one row only
           from `lg` (visual review A44): four in a row at `md` wrapped every
-          label. The deposit and its window, then the minimum and its deadline. */}
+          label. The deposit and its window, then the minimum and its deadline;
+          "Free cancellation until" is short enough to sit on one line at 1280. */}
       <fieldset hidden={!expanded} disabled={!expanded} className={GROUP_FRAME}>
         <legend className={`${legendClass} text-sm font-medium`}>{copy.payAtBookingLegend}</legend>
         <p className="text-sm text-muted">{copy.payAtBookingDescription}</p>
@@ -100,7 +101,7 @@ export function PayAtBookingGroup({
                 placeholder="48"
                 className={`${controlClass} tabular-nums max-w-28`}
               />
-              <span className="whitespace-nowrap text-sm text-muted">{copy.hoursSuffix}</span>
+              <span className="whitespace-nowrap text-sm text-muted">{copy.hoursBeforeSuffix}</span>
             </div>
           </Field>
           <Field

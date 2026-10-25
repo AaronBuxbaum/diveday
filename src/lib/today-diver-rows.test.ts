@@ -208,8 +208,10 @@ describe("oneRowPerDiver", () => {
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.kind).toBe("certification");
+    // The emergency contact before the rental size: contact gaps rank above
+    // prep (visual review 2026-10-24, A43).
     expect(rows[0]?.detail).toBe(
-      "Not certified for this trip; also waiver, nitrox certification, rental size, emergency contact",
+      "Not certified for this trip; also waiver, nitrox certification, emergency contact, rental size",
     );
   });
 
@@ -529,7 +531,13 @@ describe("a merged row keeps what the blocker says and does", () => {
     const { more } = foldBoatRows([
       ...named("certification", 5),
       ...named("waiver", 2),
-      ...named("payment", 1),
+      // A diver's unpaid seat, raised from their blocker as every one is; the
+      // boat's own orders row is also `payment` and does fold (A43).
+      action({
+        id: "payment-0",
+        kind: "payment",
+        diver: { personId: "p", items: ["payment"], readiness: true },
+      }),
       ...named("identity", 1),
       ...named("dive_prep", 3),
     ]);

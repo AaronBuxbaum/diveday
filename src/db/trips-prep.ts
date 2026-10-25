@@ -60,8 +60,6 @@ export type TripPrep = {
   loadOut: {
     units: number;
     divers: number;
-    /** Sizes a diver asked for that no unit is against yet. */
-    stillToPick: number;
     /**
      * Assigned units that need care before they go, each counted once: pulled
      * out of service since it was assigned, a lapsed service clock, or a
@@ -291,7 +289,6 @@ export async function getTripPrep(
       ? {
           units: assignedUnits.length,
           divers: assignmentRows.length,
-          stillToPick: assignmentRows.reduce((sum, row) => sum + row.wanted.length, 0),
           serviceFlagged: assignedUnits.filter(
             (assignment) =>
               assignment.status === "needs_service" ||

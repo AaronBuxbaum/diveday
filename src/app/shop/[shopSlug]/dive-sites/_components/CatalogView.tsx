@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import type { MapPin } from "@/components/map/SiteMap";
 import { shopMapAnchor } from "@/components/map/shop-map-anchor";
@@ -56,7 +57,7 @@ export async function CatalogView({
 
   if (!locationIsProvided) {
     return (
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <StaffPage width="full">
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
           eyebrowHref={back}
@@ -74,7 +75,7 @@ export async function CatalogView({
             </Link>
           }
         />
-      </main>
+      </StaffPage>
     );
   }
 
@@ -122,7 +123,7 @@ export async function CatalogView({
   }));
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div>
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
@@ -174,6 +175,6 @@ export async function CatalogView({
           words={staffPagerWords(t)}
         />
       </CatalogMapLayout>
-    </main>
+    </StaffPage>
   );
 }

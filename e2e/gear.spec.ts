@@ -268,8 +268,8 @@ test.describe("staff", () => {
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
     await expect(assignments.getByRole("heading", { name: "Rental assignments" })).toBeVisible();
 
-    // The cart line states what is on it, in one number set (B54).
-    await expect(assignments.getByText(/\d+ of \d+ units? assigned/)).toBeVisible();
+    // The cart line leads with the one count that matters (B54, A10).
+    await expect(assignments.getByText(/^\d+ divers? still needs? gear$/)).toBeVisible();
 
     // Assign one unit so there is a set to hand across: a proposed row's one
     // text button reveals its picker, and the pick is the assignment (A10).

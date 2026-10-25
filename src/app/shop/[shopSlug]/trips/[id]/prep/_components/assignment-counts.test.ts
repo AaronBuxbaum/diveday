@@ -13,6 +13,7 @@ describe("assignmentCounts", () => {
       needed: 9,
       missing: 7,
       proposed: 7,
+      diversWaiting: 2,
     });
   });
 
@@ -26,7 +27,7 @@ describe("assignmentCounts", () => {
 
   it("leaves pieces with nothing free to a person: fewer proposed than missing", () => {
     const counts = assignmentCounts([row(0, 3)], ["a"]);
-    expect(counts).toEqual({ assigned: 0, needed: 3, missing: 3, proposed: 1 });
+    expect(counts).toEqual({ assigned: 0, needed: 3, missing: 3, proposed: 1, diversWaiting: 1 });
   });
 
   it("says nothing is missing on a fully assigned departure", () => {
@@ -35,6 +36,11 @@ describe("assignmentCounts", () => {
       needed: 4,
       missing: 0,
       proposed: 0,
+      diversWaiting: 0,
     });
+  });
+
+  it("counts a diver once however many pieces they still need", () => {
+    expect(assignmentCounts([row(0, 3), row(2, 0), row(1, 1)], []).diversWaiting).toBe(2);
   });
 });

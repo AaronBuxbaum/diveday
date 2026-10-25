@@ -51,7 +51,7 @@ describe("proposed units on the Gear tab", () => {
     return {
       ...base,
       gearFleetTotal: 4,
-      loadOut: { units: 0, divers: 2, stillToPick: 2, serviceFlagged: 0 },
+      loadOut: { units: 0, divers: 2, serviceFlagged: 0 },
       freeByKind: new Map([["bcd", [proposed, other]]]),
       assignmentRows: [
         {
@@ -116,23 +116,20 @@ describe("proposed units on the Gear tab", () => {
   });
 
   /**
-   * **One number set** (visual review 2026-10-24, A10 and B54): the summary and
-   * "Assign all" read one count, so what the button assigns is exactly the
-   * proposals on screen, and what the summary says is still to pick is exactly
-   * the open rows (each proposal and each "No unit yet"). The summary ends on
-   * the button's own number, "· 1 proposed", so the two never read as two
-   * counts (visual review polish).
+   * **One count that matters** (visual review 2026-10-24, A10 and B54): the
+   * summary leads with how many divers still need gear, and its muted tail
+   * is the button's own number, "· 1 proposed", so the summary and "Assign
+   * all" never read as two counts.
    */
-  it("counts the button and the summary from the rows on screen", () => {
+  it("leads with the divers still needing gear and ends on the button's number", () => {
     renderAssignments(withProposal());
+    const lead = screen.getByText(/still needs? gear$/);
+    expect(lead).toHaveClass("font-medium");
+    const summary = lead.parentElement?.textContent ?? "";
+    const [, divers, summaryProposed] =
+      summary.match(/^(\d+) divers? still needs? gear · (\d+) proposed$/) ?? [];
+    expect(Number(divers)).toBeGreaterThan(0);
     const proposed = screen.getAllByText(/^Proposed: /).length;
-    const unproposed = screen.getAllByText(t("gear.prep.proposal.none")).length;
-    const summary = screen.getByText(/units? assigned/).textContent ?? "";
-    const [, assigned, needed, missing, summaryProposed] =
-      summary.match(/^(\d+) of (\d+) units? assigned · (\d+) still to pick · (\d+) proposed$/) ??
-      [];
-    expect(Number(missing)).toBe(proposed + unproposed);
-    expect(Number(needed)).toBe(Number(assigned) + Number(missing));
     expect(Number(summaryProposed)).toBe(proposed);
     const button = screen.getByRole("button", { name: /^Assign (the proposed unit|all \d+)/ });
     const n = button.textContent?.match(/\d+/)?.[0] ?? "1";
@@ -141,16 +138,17 @@ describe("proposed units on the Gear tab", () => {
 
   it("says no proposed count when nothing is proposed", () => {
     renderAssignments({ ...withProposal(), proposals: new Map() });
-    expect(screen.getByText("0 of 2 units assigned · 2 still to pick")).toBeInTheDocument();
+    const lead = screen.getByText(/still needs? gear$/);
+    expect(lead.parentElement?.textContent).not.toMatch(/proposed/);
   });
 
   /**
-   * **A boat at sea picks nothing more** (fourth review, item 16): "2 pieces
-   * still to pick" and "Assign all" are the dock's instructions.
+   * **A boat at sea picks nothing more** (fourth review, item 16): "1 diver
+   * still needs gear" and "Assign all" are the dock's instructions.
    */
   it("asks for no picking once the boat has left the dock", () => {
     renderAssignments(withProposal(), { sailed: true });
-    expect(screen.queryByText(/still to pick/)).toBeNull();
+    expect(screen.queryByText(/still needs? gear/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Assign the proposed unit" })).toBeNull();
   });
 
@@ -183,7 +181,7 @@ describe("a diver flagged for a staff fit on the Gear tab", () => {
     return {
       ...base,
       gearFleetTotal: 1,
-      loadOut: { units: 0, divers: 1, stillToPick: 1, serviceFlagged: 0 },
+      loadOut: { units: 0, divers: 1, serviceFlagged: 0 },
       freeByKind: new Map([["regulator", [unit]]]),
       assignmentRows: [
         {
@@ -244,7 +242,7 @@ describe("an assigned unit that needs care", () => {
     return {
       ...base,
       gearFleetTotal: 4,
-      loadOut: { units: 1, divers: 1, stillToPick: 0, serviceFlagged: 1 },
+      loadOut: { units: 1, divers: 1, serviceFlagged: 1 },
       assignmentRows: [
         {
           diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,

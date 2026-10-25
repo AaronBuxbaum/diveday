@@ -180,9 +180,11 @@ export function OfflineRollCallSection({
             read ("someone back, someone not") belongs to the live roll call
             alone — a snapshot cannot know who came back (ADR
             20260804-buddy-teams). Stated the same neutral way as the crew
-            limitation above: a limitation of this copy, not an alarm. */}
+            limitation above: a limitation of this copy, not an alarm. Body
+            weight (visual review 2026-10-24, B01): set semibold it was the
+            heaviest line on the page, louder than the rows it sits between. */}
         {anyBuddies ? (
-          <p className="mt-3 text-sm font-semibold text-pretty text-muted">
+          <p className="mt-3 text-sm text-pretty text-muted">
             {t("shared.offlineManifest.single.buddyReadOnlyHere")}
           </p>
         ) : null}

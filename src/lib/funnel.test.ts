@@ -65,7 +65,6 @@ describe("eventSource", () => {
   it("keeps the concierge's set-up door distinct on every switching page", () => {
     expect(guideSource("eve", "concierge")).toBe("switching-eve-concierge");
     expect(eventSource("switching-eve-concierge")).toBe("switching-eve-concierge");
-    expect(eventSource("switching-hub-concierge")).toBe("switching-hub-concierge");
     expect(eventSource("switching-spreadsheet-concierge")).toBe("switching-spreadsheet-concierge");
   });
 

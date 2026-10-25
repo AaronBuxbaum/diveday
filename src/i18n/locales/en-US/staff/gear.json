@@ -244,8 +244,8 @@
   },
   "prep": {
     "heading": "Rental assignments",
-    "cartLine": "{assigned} of {needed, plural, one {# unit} other {# units}} assigned · {missing} still to pick",
-    "cartLineProposed": "{assigned} of {needed, plural, one {# unit} other {# units}} assigned · {missing} still to pick · {proposed} proposed",
+    "cartDiversWaiting": "{divers, plural, one {# diver still needs gear} other {# divers still need gear}}",
+    "cartProposed": "{proposed} proposed",
     "cartLineAssigned": "{assigned} of {needed, plural, one {# unit} other {# units}} assigned",
     "cartServiceFlagged": "{count, plural, one {# unit needs service} other {# units need service}}",
     "handOver": "Hand over",

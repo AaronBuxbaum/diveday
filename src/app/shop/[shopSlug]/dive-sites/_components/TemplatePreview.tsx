@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -72,7 +73,7 @@ export function TemplatePreview({
   ].filter((fact) => fact !== null);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage>
       <div>
         <ShopPageHeader
           eyebrow={t("diveSites.catalog.backToCatalog")}
@@ -220,6 +221,6 @@ export function TemplatePreview({
           </ul>
         </section>
       ) : null}
-    </main>
+    </StaffPage>
   );
 }

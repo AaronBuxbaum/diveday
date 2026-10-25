@@ -120,12 +120,40 @@ function fieldValue(
 }
 
 /**
+ * **An address breaks where it reads, never inside a word** (layer 5 visual
+ * triage). The table's `overflow-wrap: anywhere` split the kept email as
+ * "…example.co / m" at reading width. Here the address may break after its
+ * "@" and before each dot (`<wbr>`), and only a single part wider than the
+ * whole cell still wraps inside itself (`break-words`, never `break-all`).
+ */
+function EmailCell({ value }: { value: string }) {
+  const at = value.indexOf("@");
+  const local = at < 0 ? value : value.slice(0, at + 1);
+  const domain = at < 0 ? "" : value.slice(at + 1);
+  const parts = domain.split(/(?=\.)/);
+  return (
+    <span className="break-words">
+      {local}
+      {domain ? <wbr /> : null}
+      {parts.map((part, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: the parts of one fixed string
+        <Fragment key={index}>
+          {index > 0 ? <wbr /> : null}
+          {part}
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
+/**
  * How a value reads in its cell. A phone number never breaks inside itself:
  * the table lets long emails wrap anywhere, which at 390px split a number as
  * "+1 305 555 011 / 0", so each number is one unbreakable run.
  */
 function fieldDisplay(field: DiverMergeField, side: DiverMergeSide, value: string): ReactNode {
   if (field === "phone") return <span className="whitespace-nowrap">{value}</span>;
+  if (field === "email") return <EmailCell value={value} />;
   if (field === "emergencyContact" && side.emergencyContactPhone) {
     const phone = displayStoredPhoneWhole(side.emergencyContactPhone);
     return (

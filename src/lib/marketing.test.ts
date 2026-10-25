@@ -431,25 +431,18 @@ describe("the fee anchor reports an unpublished rate as unpublished", () => {
  * `EXCLUDED_TABLES` list pinned by src/db/export.test.ts, and the real Settings
  * screen's own "Not included, on purpose:" line, which names all of it).
  *
- * So the sentence ships scoped to the shop's *records*, and the mockup — which
- * mirrors that Settings screen element for element — lists without claiming to
- * be the whole list. An unscoped absolute here would be the fabricated-proof
- * failure wearing a security badge, so the scope is the rule these pin.
+ * So the mockup — which mirrors that Settings screen element for element, and
+ * since B10 (visual review 2026-10-24) is the pricing page's only word on it —
+ * lists without claiming to be the whole list. An unscoped absolute here would
+ * be the fabricated-proof failure wearing a security badge, so that is the
+ * rule this pins.
  */
 describe("the export's credentials claim never overstates what is held back", () => {
-  const scoped = { "en-US": /records/i, "es-ES": /registros/i } as const;
   const credentials = { "en-US": /credentials/i, "es-ES": /credenciales/i } as const;
   /** Exclusivity words: "the only thing not included is…" is the claim we may not make. */
   const absolute = { "en-US": /\bonly\b/i, "es-ES": /\búnic|\bsolo\b/i } as const;
 
   for (const locale of DIVER_LOCALES) {
-    it(`scopes the pricing page's sentence to the shop's records in ${locale}`, () => {
-      const note = marketingMessages(locale)["marketing.pricing.dataExit.securityNote"];
-      expect(note).toBeDefined();
-      expect(note).toMatch(credentials[locale]);
-      expect(note).toMatch(scoped[locale]);
-    });
-
     it(`keeps the export mockup a list rather than a claim of completeness in ${locale}`, () => {
       const mockup = DIVER_MESSAGES[locale].fallback.export.notIncludedText;
       expect(mockup).toMatch(credentials[locale]);

@@ -60,7 +60,6 @@ import {
   staffDiveIntentLine,
 } from "./dive-intent-labels";
 import { diveSiteDifficultyLabel } from "./dive-site-labels";
-import { DIVER_FACT_SOURCE_KEYS } from "./fact-source-labels";
 import {
   gearItemKindLabel,
   gearPhaseLabel,
@@ -586,13 +585,6 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "fact-source-labels.ts",
-    map: "DIVER_FACT_SOURCE_KEYS",
-    rows: codeRows(keysOf(DIVER_FACT_SOURCE_KEYS), (locale, source) =>
-      diverTranslator(locale)(DIVER_FACT_SOURCE_KEYS[source]),
-    ),
-  },
-  {
     module: "incident-labels.ts",
     map: "INCIDENT_KIND_KEYS",
     // `injury` reads "Injury or illness", and `fatality` is its own kind
@@ -1062,8 +1054,6 @@ function keysOf<Code extends string>(map: Record<Code, unknown>): readonly Code[
  * baseline.
  */
 const SAME_IN_BOTH_LOCALES = new Map<string, string>([
-  // "Plan" is spelled and read the same in Spanish.
-  ["DIVER_FACT_SOURCE_KEYS.plan", "the same word in both languages"],
   // The agency course names, which Spanish-speaking shops use in English —
   // `rescue` is the exception and is translated ("Buceador de Rescate").
   ["CERTIFICATION_LEVEL_KEYS.open_water", "course name, used untranslated"],

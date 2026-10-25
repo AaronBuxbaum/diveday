@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupByDeparture, sortStationRows, type TodayAction } from "./today";
+import { foldBoatRows, groupByDeparture, sortStationRows, type TodayAction } from "./today";
 
 const NOW = new Date("2026-07-20T14:00:00Z");
 const boat = (tripId: string, label = "Reef") => ({ tripId, label });
@@ -36,5 +36,90 @@ describe("groupByDeparture — the emergency reference", () => {
     expect(groups[0]?.rows.map((row) => row.id)).toEqual(["prep"]);
     // The pressing card leads the desk, above the quieter messages row.
     expect(groups[1]?.rows.map((row) => row.id)).toEqual(["card", "messages"]);
+  });
+});
+
+/**
+ * **A missing emergency contact outranks prep and every money row** (visual
+ * review 2026-10-24, A43). Ordering only: the row gates nothing, and tone and
+ * time-to-departure still lead; inside a tie, the number somebody rings from
+ * the dock comes before an unpaid order, so a fold never hides it behind one.
+ */
+describe("Needs you rank: contact gaps above money (A43)", () => {
+  it("sorts a contact gap above prep, payment and the money chores at the same tone and time", () => {
+    // One tone for all of them, so the rank table is what is read: the money
+    // chores are warnings by kind, and tone leads the sort before rank does.
+    const tone = "warning" as const;
+    const sorted = sortStationRows([
+      action({ id: "payment", kind: "payment", subject: "A", tone }),
+      action({ id: "refund", kind: "owed_refund", subject: "B", tone }),
+      action({ id: "dispute", kind: "payment_dispute", subject: "C", tone }),
+      action({ id: "stuck", kind: "stuck_payment_operation", subject: "D", tone }),
+      action({ id: "prep", kind: "dive_prep", subject: "E", tone }),
+      action({ id: "help", kind: "help_request", subject: "F", tone }),
+      action({ id: "contact", kind: "emergency_contact", subject: "Z", tone }),
+    ]);
+    const ids = sorted.map((row) => row.id);
+    expect(ids.indexOf("contact")).toBeLessThan(ids.indexOf("prep"));
+    for (const money of ["payment", "refund", "dispute", "stuck"]) {
+      expect(ids.indexOf("contact")).toBeLessThan(ids.indexOf(money));
+    }
+  });
+
+  it("sorts above an unpaid order as the two arrive, both quiet", () => {
+    const sorted = sortStationRows([
+      action({ id: "payment", kind: "payment", subject: "A" }),
+      action({ id: "contact", kind: "emergency_contact", subject: "Z" }),
+    ]);
+    expect(sorted[0]?.id).toBe("contact");
+  });
+
+  it("still ranks under the boarding gates", () => {
+    const sorted = sortStationRows([
+      action({ id: "contact", kind: "emergency_contact", tone: "warning" }),
+      action({ id: "waiver", kind: "waiver" }),
+    ]);
+    expect(sorted[0]?.id).toBe("waiver");
+  });
+});
+
+/**
+ * **The boat's orders row is money, not a readiness gate** (visual review
+ * 2026-10-24, A43, found by the layer 6 capture). `payment` is also the kind a
+ * diver's unpaid-seat blocker raises, and the fold kept every row of a
+ * readiness kind in view, so "1 order awaiting payment" took a seat among the
+ * five and Owen's missing contact went under "and 4 more". A readiness row is
+ * one raised from a diver's blocker; the departure's orders row folds like the
+ * rest of the boat's money.
+ */
+describe("foldBoatRows: the orders row folds, a contact gap stays (A43)", () => {
+  const diver = (personId: string, readiness?: true) => ({
+    personId,
+    items: ["x"],
+    ...(readiness ? { readiness } : {}),
+  });
+  // The 6:00 PM boat as Today ranks it: readiness, contacts, prep, money, the rest.
+  const ranked = [
+    action({ id: "waiver", kind: "waiver", diver: diver("priya", true) }),
+    action({ id: "mara", kind: "emergency_contact", diver: diver("mara") }),
+    action({ id: "nadia", kind: "emergency_contact", diver: diver("nadia") }),
+    action({ id: "owen", kind: "emergency_contact", diver: diver("owen") }),
+    action({ id: "size", kind: "dive_prep", diver: diver("diego") }),
+    action({ id: "kit", kind: "dive_prep", aboutDeparture: true }),
+    action({ id: "orders", kind: "payment", aboutDeparture: true }),
+    action({ id: "help", kind: "help_request", diver: diver("diego") }),
+    action({ id: "wants", kind: "seat_wanted", aboutDeparture: true }),
+  ];
+
+  it("shows every contact gap and folds the orders row", () => {
+    const { shown, more } = foldBoatRows(ranked);
+    expect(shown.map((row) => row.id)).toEqual(["waiver", "mara", "nadia", "owen", "help"]);
+    expect(more.map((row) => row.id)).toEqual(["size", "kit", "orders", "wants"]);
+  });
+
+  it("still never folds a diver's unpaid-seat blocker", () => {
+    const blocked = action({ id: "unpaid", kind: "payment", diver: diver("tom", true) });
+    const { shown } = foldBoatRows([...ranked, blocked]);
+    expect(shown.map((row) => row.id)).toContain("unpaid");
   });
 });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { SwitchingConcierge } from "@/components/SwitchingConcierge";
+import { ClosingCtaSkeleton } from "@/app/_components/ClosingCtaSkeleton";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import {
   HUB_CLOSING_ROW_CLASS,
@@ -22,7 +22,7 @@ afterEach(cleanup);
  * a 28px title and 28px summary lines, 111–139px at 1280 and 167–223 at 390;
  * the hero's lede bars were 20px for 32px lines; the closing row had no bar
  * for its two doors; and nothing stood in for the import preview or the
- * concierge below the list. Each part is now drawn in the hub's own boxes,
+ * close below the list. Each part is now drawn in the hub's own boxes,
  * with a bar per line its words wrap to.
  */
 describe("the switching hub's skeleton", () => {
@@ -93,11 +93,16 @@ describe("the switching hub's skeleton", () => {
     expect(box?.children[4]).toHaveClass("mt-2", "h-12");
   });
 
-  it("ends with the concierge's own skeleton", () => {
-    const concierge = sections().sections[3];
-    const real = render(<SwitchingConcierge locale="en-US" source="switching-hub-concierge" />)
-      .container.firstElementChild;
-    expect(concierge.className).toBe(real?.className);
+  // The concierge offer is the close's support line on the hub (B15), so
+  // the preview band is followed by the closing band and nothing else.
+  it("ends with the closing band's own skeleton", () => {
+    const all = sections().sections;
+    expect(all).toHaveLength(4);
+    const real = render(<ClosingCtaSkeleton measure="column" />).container.firstElementChild;
+    expect(all[3].className).toBe(real?.className);
+    // On the hub's own column, the left edge of every section above it (B15 review).
+    expect(all[3].firstElementChild?.className).toBe(real?.firstElementChild?.className);
+    expect(all[3].firstElementChild).toHaveClass("max-w-4xl");
   });
 
   it("knows the summary lines of every row the hub lists", () => {

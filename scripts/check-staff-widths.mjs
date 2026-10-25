@@ -23,6 +23,11 @@ import { pathToFileURL } from "node:url";
  *    widths, which is a sideways jump on every navigation into the route.
  *    (`check-loading-skeletons.mjs` compares only spelled `max-w-*` classes,
  *    and a staff pair spells none.)
+ * 3. A `<main>` with its own `max-w-<n>xl` in any file under a staff
+ *    `_components` folder: a view a page hands its whole body to (Reports'
+ *    "This year", the dive-site catalog) is the page, and spelling its own
+ *    shell made "This year" sit 16px off "This month" (layer 5 triage). Only a
+ *    `<main>` counts here; a component's other `max-w-*` bounds a measure.
  *
  * Comments are read out first, so a docblock may say what a width used to be.
  */
@@ -60,6 +65,14 @@ export const ALLOWED = new Map([
   ],
 ]);
 
+/**
+ * Every component `<main>` the guard lets spell its own width: path under
+ * `SHOP` → how many, and why. Empty: a view that is a page takes `StaffPage`.
+ */
+export const ALLOWED_COMPONENT_MAINS = new Map();
+
+const MAIN_WIDTH = /<main\b[^>]*\bmax-w-[0-9]xl/g;
+
 /** `source` with its comments out, keeping a `//` straight after a colon (a URL). */
 export function stripComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
@@ -88,6 +101,21 @@ export function fileProblems(where, source) {
   return [];
 }
 
+/** What is wrong with one `_components` file: a `<main>` that sets its own width. */
+export function componentProblems(where, source) {
+  const found = stripComments(source).match(MAIN_WIDTH) ?? [];
+  const allowed = ALLOWED_COMPONENT_MAINS.get(where)?.count ?? 0;
+  if (found.length > allowed) {
+    return [
+      `${where}: ${found.length} \`<main>\` with its own \`max-w-<n>xl\`, ${allowed} allowed — a view that is a page draws <StaffPage width="reading" | "full">`,
+    ];
+  }
+  if (found.length < allowed) {
+    return [`${where}: the allowlist expects ${allowed} and finds ${found.length}; shrink it`];
+  }
+  return [];
+}
+
 /** A page and its skeleton drawing the shell at different widths. */
 export function pairProblems(where, pageSource, loadingSource) {
   const page = new Set(staffPageWidths(pageSource));
@@ -99,20 +127,28 @@ export function pairProblems(where, pageSource, loadingSource) {
     : [`${where}: page.tsx is ${[...page].join("/")}, loading.tsx is ${[...loading].join("/")}`];
 }
 
-async function routeFiles(dir, found = []) {
+async function routeFiles(dir, found = [], components = []) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) await routeFiles(full, found);
+    if (entry.isDirectory()) await routeFiles(full, found, components);
     else if (entry.name === "page.tsx" || entry.name === "loading.tsx") found.push(full);
+    else if (
+      full.split(path.sep).includes("_components") &&
+      entry.name.endsWith(".tsx") &&
+      !entry.name.includes(".test.")
+    ) {
+      components.push(full);
+    }
   }
-  return found;
+  return { found, components };
 }
 
 /** Every problem under `root`, and how many files and shells were read. */
 export async function staffWidthProblems(root = process.cwd()) {
   const shop = path.join(root, SHOP);
   const rel = (file) => path.relative(shop, file).replaceAll(path.sep, "/");
-  const files = (await routeFiles(shop)).sort();
+  const walked = await routeFiles(shop);
+  const files = walked.found.sort();
   const sources = new Map();
   for (const file of files) sources.set(rel(file), await readFile(file, "utf8"));
   const problems = [];
@@ -121,6 +157,18 @@ export async function staffWidthProblems(root = process.cwd()) {
   for (const where of ALLOWED.keys()) {
     if (!sources.has(where)) problems.push(`${where}: on the allowlist but not found`);
   }
+  const components = walked.components.sort();
+  if (components.length < 100) {
+    problems.push(`found only ${components.length} component files; the walk is broken`);
+  }
+  const componentWheres = new Set();
+  for (const file of components) {
+    componentWheres.add(rel(file));
+    problems.push(...componentProblems(rel(file), await readFile(file, "utf8")));
+  }
+  for (const where of ALLOWED_COMPONENT_MAINS.keys()) {
+    if (!componentWheres.has(where)) problems.push(`${where}: on the allowlist but not found`);
+  }
   let shells = 0;
   for (const [where, source] of sources) {
     shells += staffPageWidths(source).length;
@@ -128,11 +176,11 @@ export async function staffWidthProblems(root = process.cwd()) {
     const loading = sources.get(where.replace(/page\.tsx$/, "loading.tsx"));
     if (loading !== undefined) problems.push(...pairProblems(where, source, loading));
   }
-  return { problems, files: sources.size, shells };
+  return { problems, files: sources.size, components: components.length, shells };
 }
 
 async function main() {
-  const { problems, files, shells } = await staffWidthProblems();
+  const { problems, files, components, shells } = await staffWidthProblems();
   if (problems.length > 0) {
     console.error(
       `Staff page widths outside the two:\n${problems.map((p) => `- ${p}`).join("\n")}`,
@@ -140,7 +188,7 @@ async function main() {
     process.exit(1);
   }
   console.log(
-    `staff-widths: ${files} staff pages and skeletons, ${shells} StaffPage shells at two widths, ${ALLOWED.size} in-page measures allowed`,
+    `staff-widths: ${files} staff pages and skeletons, ${components} component files, ${shells} StaffPage shells at two widths, ${ALLOWED.size} in-page measures allowed`,
   );
 }
 

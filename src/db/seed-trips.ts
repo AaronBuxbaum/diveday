@@ -45,6 +45,30 @@ async function crewIdsByRole(db: DbExecutor, shopId: string): Promise<Map<string
 }
 
 /**
+ * The Open Water class, the session the course page's "See dates" lands on.
+ * It dives a shallow, ungated reef, so the page's date row names where the
+ * class goes beside who leads it (visual review 2026-10-24, B42).
+ */
+function openWaterSession(session: {
+  shopId: string;
+  courseId: string;
+  diveSiteId: string | undefined;
+  startsAt: Date;
+  endsAt: Date;
+}) {
+  return {
+    ...session,
+    title: "Open Water Diver — three-day course",
+    description: "Certification course over three days. No experience required.",
+    // 5 students to one instructor: a realistic class, and it keeps this
+    // session's "N spots left" distinct from every other seeded trip's, which
+    // e2e assertions match on by text.
+    capacity: 5,
+    priceCents: 59500,
+  };
+}
+
+/**
  * The three headline boats plus the rest of the week: each departure with its
  * meeting windows, its dive plan, the readiness requirements it gates on, its
  * crew, and — for the ones close enough that somebody has actually looked — this
@@ -177,19 +201,13 @@ export async function seedTrips(
       // session its "See dates" button lands on.
       ...(openWaterCourse
         ? [
-            {
+            openWaterSession({
               shopId,
               courseId: openWaterCourse.id,
-              title: "Open Water Diver — three-day course",
-              description: "Certification course over three days. No experience required.",
+              diveSiteId: siteByName.get("Pickles Reef")?.id,
               startsAt: at(9, 8, 0),
               endsAt: at(11, 17, 0),
-              // 5 students to one instructor: a realistic class, and it keeps
-              // this session's "N spots left" distinct from every other seeded
-              // trip's, which e2e assertions match on by text.
-              capacity: 5,
-              priceCents: 59500,
-            },
+            }),
           ]
         : []),
       // A working board is not four boats: these fill out the fortnight so the

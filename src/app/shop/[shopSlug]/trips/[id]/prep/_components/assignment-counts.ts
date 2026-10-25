@@ -9,12 +9,15 @@
  * - `missing`: pieces with no unit yet (`needed − assigned`).
  * - `proposed`: of those, the ones DiveDay can propose a free unit for; the
  *   button assigns exactly these, and the rest stay for a person to pick.
+ * - `diversWaiting`: divers with at least one piece still missing — the one
+ *   count the summary leads with (visual review 2026-10-24, A10 / B54).
  */
 export type AssignmentCounts = {
   assigned: number;
   needed: number;
   missing: number;
   proposed: number;
+  diversWaiting: number;
 };
 
 export function assignmentCounts(
@@ -28,5 +31,6 @@ export function assignmentCounts(
     needed: assigned + missing,
     missing,
     proposed: proposalPicks.length,
+    diversWaiting: rows.filter((row) => row.wanted.length > 0).length,
   };
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ALLOWED,
+  componentProblems,
   fileProblems,
   pairProblems,
   staffPageWidths,
@@ -38,6 +39,27 @@ describe("fileProblems", () => {
 
   it("asks for the allowlist to shrink when a measure goes", () => {
     expect(fileProblems("orders/page.tsx", "<p />")[0]).toContain("shrink");
+  });
+});
+
+describe("componentProblems", () => {
+  it("refuses a component <main> that spells its own width", () => {
+    const problems = componentProblems(
+      "reports/_components/YearView.tsx",
+      MAIN("mx-auto w-full max-w-5xl flex-1 px-4 py-8"),
+    );
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("<main>");
+  });
+
+  it("lets a component bound a measure, and a shell call stand", () => {
+    const source = '<StaffPage width="full"><p className="max-w-3xl" /></StaffPage>';
+    expect(componentProblems("reports/_components/YearView.tsx", source)).toEqual([]);
+  });
+
+  it("reads a <main> width in a comment as history", () => {
+    const source = '/* <main className="max-w-5xl"> */\n<StaffPage width="full" />';
+    expect(componentProblems("a/_components/B.tsx", source)).toEqual([]);
   });
 });
 

@@ -400,6 +400,8 @@ describe("OfflineManifestView — one column, one text edge", () => {
     await renderTrip(dressed(richEnvelope("trip-1")));
     expect(screen.getByText(/Readiness reflects that moment/)).toHaveClass("text-pretty");
     expect(screen.getByText(/Buddy teams are shown as saved/)).toHaveClass("text-pretty");
+    // Body weight, never the heaviest line on the page (B01).
+    expect(screen.getByText(/Buddy teams are shown as saved/)).not.toHaveClass("font-semibold");
     const crewTeam = within(crewList()).getByText(/Buddy team:/);
     expect(crewTeam.textContent).toContain("Diego\u00a0Alvarez and June\u00a0Park");
     expect(within(priyaRow()).getByText(/Buddy team:/).textContent).toBe(

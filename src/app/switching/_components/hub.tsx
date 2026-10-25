@@ -1,6 +1,5 @@
 import { ClosingCtaSkeleton } from "@/app/_components/ClosingCtaSkeleton";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
-import { SwitchingConciergeSkeleton } from "@/components/SwitchingConcierge";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { HubGuideRowSkeleton } from "./HubGuideRow";
 
@@ -49,7 +48,8 @@ export const HUB_ROW_SUMMARY_LINES: Record<string, SkeletonLines> = {
  * `sm`) and 32px lede lines; a row per guide, off the same registry the list
  * itself is built from (`HubGuideRowSkeleton`); the closing row's words and
  * its two 48px doors; the import preview band at the mock's measured height;
- * and the concierge (`SwitchingConciergeSkeleton`). The bars it had were a
+ * and the closing band, whose support line carries the concierge offer
+ * (B15). The bars it had were a
  * 105px row for rows of 111–223, 20px lede bars for 32px lines, no doors, and
  * nothing below the list, so everything under the hero shifted as the body
  * landed.
@@ -118,8 +118,7 @@ export function SwitchHubBodySkeleton() {
         </div>
       </section>
 
-      <SwitchingConciergeSkeleton />
-      <ClosingCtaSkeleton />
+      <ClosingCtaSkeleton measure="column" />
     </main>
   );
 }

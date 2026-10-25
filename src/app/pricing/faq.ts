@@ -102,8 +102,8 @@ export function pricingFaq(
     // answers it at depth beside the screen it is about
     // (`marketing.featurePages.boatManifest`).
     // Nothing on this page decides on it (docs/product/marketing-review-20260827.md).
-    // The export left this list on 2026-10-24: the invoice's leaving row
-    // (`#export`) is where the promise is written (B10).
+    // The export left this list on 2026-10-24: the export band (`#export`)
+    // is where the promise is written (B10).
     {
       // The vendor-death objection, answered beside the export it rests on:
       // the shared continuity promise (`continuityPromise`), an authorized

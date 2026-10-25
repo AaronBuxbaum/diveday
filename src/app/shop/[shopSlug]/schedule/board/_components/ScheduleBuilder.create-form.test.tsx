@@ -92,7 +92,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     expect(screen.getByLabelText(/^Description/)).toBeEnabled();
     expect(screen.getByLabelText("How many days")).toBeEnabled();
     expect(screen.getByLabelText(/Deposit per diver/)).toBeEnabled();
-    expect(screen.getByLabelText(/Free cancellation window/)).toBeEnabled();
+    expect(screen.getByLabelText(/Free cancellation until/)).toBeEnabled();
     expect(screen.getByLabelText("How often")).toBeEnabled();
     expect(screen.getByLabelText("Number of dives")).toBeEnabled();
     // …and the quick dive box has handed over rather than vanished.

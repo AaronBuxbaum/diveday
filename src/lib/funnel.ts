@@ -132,9 +132,6 @@ const FIXED_SOURCES = [
   // demo opened instead of asking.
   "setup-sent",
   "switching-hub",
-  // The concierge offer's door, the set-up form since 2026-10-22 (it was a
-  // mail link), a band above each switching page's closing pair.
-  "switching-hub-concierge",
   // The hub's annotated import-preview screen ends in one door into the demo
   // as the owner, the role that runs the import (docs/design/brand.md, "The
   // builder's note"). Its own tag because a reader who opened the demo from

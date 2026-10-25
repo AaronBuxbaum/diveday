@@ -354,8 +354,9 @@ describe("CourseSessions featured date", () => {
       "href",
       "/s/blue-mantis/trips/trip-open",
     );
-    // …and the skipped full session still shows, as a waitlist row beneath.
-    expect(screen.getByRole("link", { name: "Join the wait list" })).toHaveAttribute(
+    // …and the skipped full session still shows, as a waitlist row beneath:
+    // the whole row is its link, so its name starts with the date (B42).
+    expect(screen.getByRole("link", { name: /Join the wait list$/ })).toHaveAttribute(
       "href",
       "/s/blue-mantis/trips/trip-full",
     );
@@ -370,6 +371,37 @@ describe("CourseSessions featured date", () => {
       "/s/blue-mantis/trips/trip-full",
     );
     expect(screen.queryByRole("link", { name: "Book this date" })).not.toBeInTheDocument();
+  });
+
+  // B42 (visual review 2026-10-24): a later date's row is one link, and who
+  // leads it and where are plain words inside it, never links of their own.
+  it("makes a later date's row one link naming its instructors and site as text", () => {
+    const { container } = render(
+      <CourseSessions
+        sessions={[
+          session({ id: "trip-1" }),
+          session({
+            id: "trip-2",
+            startsAt: new Date("2026-08-06T13:00:00Z"),
+            endsAt: new Date("2026-08-08T22:00:00Z"),
+            instructors: ["Keiko", "Marcus"],
+            siteName: "Benwood",
+          }),
+        ]}
+        {...props}
+      />,
+    );
+    const row = container.querySelector("#dates li");
+    const links = row?.querySelectorAll("a") ?? [];
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "/s/blue-mantis/trips/trip-2");
+    expect(links[0]).toHaveTextContent("With Keiko and Marcus · Benwood");
+    expect(links[0]).toHaveTextContent(/Book this date$/);
+  });
+
+  it("names nobody and nowhere when the session sets neither", () => {
+    const { container } = render(<CourseSessions sessions={[session({})]} {...props} />);
+    expect(container).not.toHaveTextContent("With ");
   });
 
   it("renders the public empty-state when there are no public sessions", () => {

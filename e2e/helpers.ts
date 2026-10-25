@@ -509,7 +509,7 @@ export async function createTrip(
     await page.getByLabel(/Price per diver/).fill(String(options.price));
   }
   if (options.cancellationWindowHours !== undefined) {
-    await page.getByLabel("Free cancellation window").fill(String(options.cancellationWindowHours));
+    await page.getByLabel("Free cancellation until").fill(String(options.cancellationWindowHours));
   }
   if (options.minimumBookings !== undefined) {
     await page.getByLabel("Minimum to run").fill(String(options.minimumBookings));

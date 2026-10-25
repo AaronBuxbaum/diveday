@@ -169,7 +169,7 @@
     "arrivalAtShop": "Lugar de encuentro",
     "arrivalAddress": "Dirección",
     "arrivalLandmark": "Referencia",
-    "arrivalSites": "Sitios",
+    "arrivalSites": "Sitios previstos",
     "arrivalSiteRun": "{site}, {count, plural, =2 {dos inmersiones} =3 {tres inmersiones} one {# inmersión} other {# inmersiones}}",
     "arrivalSiteRunInList": "{site} ({count, plural, =2 {dos inmersiones} =3 {tres inmersiones} one {# inmersión} other {# inmersiones}})",
     "arrivalParking": "Estacionamiento",
@@ -350,12 +350,6 @@
     "crewToBeConfirmed": "{role} · por confirmar",
     "changedByShop": "Cambiado por el centro el {when}",
     "changedByCrew": "Cambiado por la tripulación el {when}"
-  },
-  "factSource": {
-    "forecast": "Pronóstico",
-    "plan": "Plan",
-    "crew": "Tripulación",
-    "observed": "Observado"
   },
   "booking": {
     "heading": "Reserva tu plaza",
@@ -601,6 +595,7 @@
     "joinWaitList": "Anotarme en la lista de espera",
     "seeFullDate": "Ver esta fecha",
     "bookThisDate": "Reservar esta fecha",
+    "sessionWith": "Con {names}",
     "faqsHeading": "Preguntas que hacen los buceadores",
     "howItRunsHeading": "Cómo se desarrolla el curso",
     "notIncludedHeading": "No incluye",
@@ -3486,7 +3481,8 @@
       "previewMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
       "dontSeeSystem": "No está en la lista",
       "dontSeeSystemBody": "Una exportación entra tal cual: una columna de nombre es lo único que una fila necesita, y las de certificación y talla vienen cuando existen.",
-      "closingTitle": "Tus buceadores, certificaciones y tallas llegan antes de tu primera salida"
+      "closingTitle": "Tus buceadores, certificaciones y tallas llegan antes de tu primera salida",
+      "closingSupport": "Envíanos lo que tengas y una persona del equipo traerá a tus buceadores contigo, gratis, o te ayudará a llevártelo todo si DiveDay deja de encajar; cualquier otra pregunta puede ir a {email}."
     },
     "competitor": {
       "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
@@ -4651,7 +4647,8 @@
         },
         "leaving": {
           "label": "Irse",
-          "value": "Un ZIP desde Ajustes, cualquier día"
+          "value": "Un ZIP desde Ajustes, cualquier día",
+          "pointer": "Tus registros se van contigo. Míralo más abajo."
         }
       },
       "notes": {
@@ -4671,11 +4668,6 @@
       "dataExit": {
         "eyebrow": "Tus registros",
         "title": "Una exportación completa cuando la necesites",
-        "note1": "“Descargar exportación” te da un ZIP con los CSV y las fotos guardadas.",
-        "note2": "contacts.csv tiene una fila por persona, con el formato que espera el importador de otro sistema.",
-        "note3": "waiver_records.csv guarda el hash de integridad de cada exención y el texto exacto que firmó el buceador.",
-        "note4": "Cada archivo muestra su número de filas, para compararlo con los totales de tu propio sistema.",
-        "securityNote": "“Lo que no se incluye, a propósito:” nombra las credenciales que quedan fuera de los registros de tu centro: contraseñas y claves push.",
         "door": "Abre la demo como propietario →",
         "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
       },

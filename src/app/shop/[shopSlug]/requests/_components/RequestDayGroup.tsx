@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RequestAdvice } from "@/lib/request-advisor";
@@ -119,9 +119,11 @@ export function RequestDayGroup({
         <ul className="mt-2 text-sm tabular-nums">
           {onBoard.map((departure) => (
             <li key={departure.href}>
+              {/* The page's one link idiom, the row act's (A23): link ink,
+                  underlined under the pointer only. */}
               <Link
                 href={departure.href}
-                className={`${tapTargetLinkClass} underline underline-offset-2`}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
               >
                 {departure.label}
               </Link>

@@ -175,6 +175,24 @@ describe("DisclosureRow's inset", () => {
   });
 });
 
+describe("DisclosureRowList's hairline face", () => {
+  // B35 (visual review 2026-10-24): the shopfront's asks read as the course
+  // FAQ does, rows on rules with no card round them, flush with the page.
+  it("draws rules, no card, and takes every row's inset back to the page edge", () => {
+    const { container } = render(
+      <DisclosureRowList hairline>
+        <DisclosureRow id="deals" heading="Last-minute deals">
+          <p>Body</p>
+        </DisclosureRow>
+      </DisclosureRowList>,
+    );
+    const list = container.firstElementChild;
+    expect(list).toHaveClass("divide-y", "border-y", "[&>details>summary]:px-0", "[&>div]:px-0");
+    expect(list).not.toHaveClass("rounded-panel");
+    expect(list).not.toHaveClass("overflow-hidden");
+  });
+});
+
 describe("CompactDisclosureRow", () => {
   it("keeps the value visible and the form behind a native disclosure", () => {
     const { container, getByText } = render(

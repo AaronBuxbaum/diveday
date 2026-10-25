@@ -361,9 +361,6 @@ describe("getTripPrep", () => {
           prep.assignmentRows.reduce((sum, row) => sum + row.assigned.length, 0),
         );
         expect(prep.loadOut.divers).toBe(prep.assignmentRows.length);
-        expect(prep.loadOut.stillToPick).toBe(
-          prep.assignmentRows.reduce((sum, row) => sum + row.wanted.length, 0),
-        );
       });
 
       it("states a zero rather than dropping the exception counts", async () => {
@@ -373,7 +370,6 @@ describe("getTripPrep", () => {
         if (!prep.loadOut) throw new Error("seeded shop has a register, so it has a cart");
         expect(typeof prep.loadOut.serviceFlagged).toBe("number");
         expect(prep.loadOut.serviceFlagged).toBeGreaterThanOrEqual(0);
-        expect(prep.loadOut.stillToPick).toBeGreaterThanOrEqual(0);
       });
 
       /**

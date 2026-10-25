@@ -110,12 +110,29 @@ export function DangerDisclosure({
  * which is also why every row's own heading is an `h3`.
  */
 export function DisclosureRowList({
+  hairline = false,
   className = "",
   children,
 }: {
+  /**
+   * **Rows on hairlines, no card** — a diver page's group of asks, which
+   * reads as the course FAQ and the trip briefing do (visual review
+   * 2026-10-24, B35): a rule above, below and between, the rows flush with the
+   * page's own left edge, and no hover fill to round.
+   */
+  hairline?: boolean;
   className?: string;
   children: ReactNode;
 }) {
+  if (hairline) {
+    return (
+      <div
+        className={`divide-y divide-border border-y border-border [&>details>div]:px-0 [&>details>summary]:px-0 [&>div]:px-0 [&>details>summary:hover]:bg-transparent ${className}`.trim()}
+      >
+        {children}
+      </div>
+    );
+  }
   // `padding="none"` because each row pads itself, and `overflow-hidden` so a
   // row's hover fill is clipped by the corner radius rather than squaring it
   // off — the same two reasons `SettingsRowList` gives.

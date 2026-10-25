@@ -22,6 +22,7 @@ vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/courses", () => ({ getCourseBySlug: vi.fn() }));
 vi.mock("@/db/shops-cached", () => ({ shopBySlugCached: vi.fn() }));
 vi.mock("@/db/trips", () => ({ listUpcomingSessionsForCourse: vi.fn() }));
+vi.mock("@/db/crew-away-diver", () => ({ diverCrewWithAway: vi.fn(async () => []) }));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn(async () => null) }));
 vi.mock("@/lib/session", () => ({ isLiveShopStaff: vi.fn(async () => false) }));
 vi.mock("@/i18n/request", () => ({
