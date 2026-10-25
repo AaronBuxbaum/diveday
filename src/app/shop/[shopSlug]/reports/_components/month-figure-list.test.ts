@@ -93,7 +93,6 @@ describe("a tile", () => {
           : ["comparison", "key", "label", "value"],
       );
       expect(figure.detail).toBeUndefined();
-      expect(figure.split).toBeUndefined();
       expect(figure.link).toBeUndefined();
       expect(figure.earned).toBeUndefined();
     }

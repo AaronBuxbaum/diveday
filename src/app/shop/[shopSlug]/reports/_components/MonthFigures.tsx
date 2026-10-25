@@ -54,11 +54,6 @@ export type MonthFigure = {
    * row may ever carry one, and only while its condition holds.
    */
   earned?: string;
-  /**
-   * "Sailed 104 · Still to sail 25" (fourth UX review, item 22): the current
-   * month's figure split at now, so boats still for sale do not read as done.
-   */
-  split?: string;
   /** "up 18% vs $6,690 in August 2025" — the baseline, one step quieter. */
   comparison?: string;
   /** One quiet jump to the surface behind the number (revenue → Orders). */
@@ -187,7 +182,7 @@ export function MonthFigures({
                   revenue) set its comparison 4px higher than every
                   neighbour's first line (K-287). Rendered only when it holds
                   something: an empty `mt-2` block is a phantom gap. */}
-              {figure.earned || figure.detail || figure.split || figure.comparison ? (
+              {figure.earned || figure.detail || figure.comparison ? (
                 <div className="mt-2 space-y-1">
                   {figure.earned ? (
                     <EarnedMomentLine animate={false}>{figure.earned}</EarnedMomentLine>
@@ -199,9 +194,6 @@ export function MonthFigures({
                     >
                       {figure.detail}
                     </span>
-                  ) : null}
-                  {figure.split ? (
-                    <span className="block text-sm text-muted tabular-nums">{figure.split}</span>
                   ) : null}
                   {figure.comparison ? (
                     <span className="block text-sm text-muted tabular-nums">
