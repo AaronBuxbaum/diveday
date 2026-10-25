@@ -212,9 +212,10 @@ export default async function RequestsPage({
             const joined = lines.map((line) => line.text).join("§");
             const repeats = joined === previousAdvice && !lines.some((l) => l.tone === "warning");
             previousAdvice = joined;
-            // Offered on every day, "On the board" or not: a busy day can
-            // still want a second boat for the people who asked. On each
-            // request it answers, never in the day's header (visual review A23).
+            // Offered on every dated day, "On the board" or not: a busy day
+            // can still want a second boat for the people who asked. In the
+            // day's header, so a day reached only by second choices and
+            // flexible neighbours (reference rows, no full record) keeps it.
             const openDeparture = canAddDeparture
               ? {
                   href: addDepartureHref(
@@ -243,6 +244,7 @@ export default async function RequestsPage({
                     seats: departure.seatsLeft,
                   }),
                 }))}
+                add={openDeparture}
               >
                 {group.entries.map((entry) =>
                   // The full record belongs to one group — the first date this
@@ -260,7 +262,6 @@ export default async function RequestsPage({
                       shopSlug={shopSlug}
                       shopName={shop.name}
                       markDoneAction={outcomeAction}
-                      openDeparture={openDeparture}
                       t={t}
                     />
                   ) : (
