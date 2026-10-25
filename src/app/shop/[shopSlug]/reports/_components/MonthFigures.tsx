@@ -63,6 +63,11 @@ export type MonthFigure = {
   comparison?: string;
   /** One quiet jump to the surface behind the number (revenue → Orders). */
   link?: { href: string; label: string };
+  /**
+   * The figure itself is the door to its list (visual review A05: Safety's
+   * tiles, each a link to the list behind its count).
+   */
+  href?: string;
 };
 
 /**
@@ -166,7 +171,16 @@ export function MonthFigures({
                   carrying it for everything inside — the lines beneath are a
                   different size, and inheriting one to override it three times
                   is how a ramp drifts. */}
-              <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
+              {figure.href ? (
+                <Link
+                  href={figure.href}
+                  className={`block ${FIGURE_LARGE_CLASS} hover:underline print:no-underline`}
+                >
+                  {figure.value}
+                </Link>
+              ) : (
+                <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
+              )}
               {/* **One block owns the lines under the value**, so the first of
                   them starts 8px down whichever it is. The detail took `mt-2`
                   and the comparison `mt-1`, so a figure with no detail (net

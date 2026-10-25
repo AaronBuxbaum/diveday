@@ -99,7 +99,28 @@ describe("the Safety page", () => {
     expect(text).not.toContain("Money");
     expect(text).toContain("Print month");
     expect(text).toContain("Year view");
-    expect(text).toContain("What the shop recorded on departures that left this month");
+  });
+
+  /**
+   * **Four doors, no prose** (visual review A05, A27): the month is four
+   * counts, each a link to the list behind it, and no paragraph explains them.
+   */
+  it("reads the month as four counts, each a door to its list", async () => {
+    const figures = figuresIn(await renderTree(["owner"])) as {
+      key: string;
+      label: string;
+      href?: string;
+    }[];
+    expect(figures.map((figure) => figure.key)).toEqual([
+      "rollCalls",
+      "certOverrides",
+      "crew",
+      "incidents",
+    ]);
+    for (const figure of figures) expect(figure.href, figure.key).toBeTruthy();
+    const text = await renderAs(["owner"]);
+    expect(text).not.toContain("What the shop recorded on departures");
+    expect(text).not.toContain("The dock roll call won’t record");
   });
 
   it.each([["captain"], ["instructor"], ["divemaster"], ["crew"]] as const)(
@@ -115,23 +136,20 @@ describe("the Safety year", () => {
   it("reads the whole year under its own heading, with a way to print it", async () => {
     const year = String(nowDate().getUTCFullYear());
     const text = await renderAs(["owner"], { year });
-    expect(text).toContain("What the shop recorded on the year’s departures that are home.");
     expect(text).toContain(year);
     expect(text).toContain("Month view");
-    expect(text).not.toContain("What the shop recorded on departures that left this month");
     // The year shows the figures alone, so no figure may point at a list below it.
     expect(text).not.toContain("listed below");
     expect(text).not.toContain("this month");
   });
 
-  it("prints whose record it is, over which days and when, with the boarding caveat (review F3, F5)", async () => {
+  it("prints whose record it is, over which days and when (review F3)", async () => {
     const year = String(nowDate().getUTCFullYear());
     const text = await renderAs(["owner"], { year });
     expect(text.replace(/\u00a0/g, " ")).toMatch(
       /Blue Mantis[^\n]* · January 1 to [^\n]*, \d{4} · /,
     );
     expect(text).toContain("Printed ");
-    expect(text).toContain("a person first counted at a later checkpoint is not in this figure.");
   });
 
   it("counts filed incident reports and names drafts beside them (review F4)", async () => {
@@ -154,6 +172,7 @@ describe("the Safety year", () => {
 
   it("reads a year it cannot have as the month", async () => {
     const text = await renderAs(["owner"], { year: "1999" });
-    expect(text).toContain("What the shop recorded on departures that left this month");
+    expect(text).toContain("Year view");
+    expect(text).not.toContain("Month view");
   });
 });

@@ -29,7 +29,7 @@ import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type MonthFigure, MonthFigures } from "../reports/_components/MonthFigures";
-import { SafetyLists } from "./_components/SafetyLists";
+import { SAFETY_LIST_IDS, SafetyLists } from "./_components/SafetyLists";
 
 // Paints from its own `loading.tsx`, like Reports (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -206,6 +206,66 @@ export default async function SafetyReportPage({
     },
   ];
 
+  // **The month is four doors** (visual review A05): the counts that move
+  // month to month, each the link to the list behind it. "Boarded at the
+  // dock" goes as a tile, but a seat never marked there is still said, as
+  // attention under the roll calls it belongs to; a boat with no crew on
+  // record keeps its own list below. The year keeps every figure: it prints
+  // for a broker and has no lists to point at.
+  const attention = (detail: string | null) =>
+    detail ? { detail, detailTone: "attention" as const } : {};
+  const monthTiles: MonthFigure[] = [
+    {
+      key: "rollCalls",
+      label: t("incidents.safety.rollCalls"),
+      value: t("incidents.safety.rollCallsValue", {
+        closed: safety.rollCallsClosed,
+        back: safety.departuresBack,
+      }),
+      href: `#${SAFETY_LIST_IDS.open}`,
+      ...attention(
+        safety.unmarkedAtDock > 0
+          ? t("incidents.safety.boardedDetail", { count: safety.unmarkedAtDock })
+          : null,
+      ),
+    },
+    {
+      key: "certOverrides",
+      label: t("incidents.safety.certOverrides"),
+      value: String(safety.certOverrides),
+      href: activityHref,
+    },
+    {
+      key: "crew",
+      label: t("incidents.safety.crew"),
+      value:
+        safety.crewSailings > 0 && safety.checkedSailings === 0
+          ? t("staffing.credentials.noneOnFile")
+          : t("incidents.safety.crewValue", {
+              lapsed: safety.lapsedSailings.length,
+              sailings: safety.checkedSailings,
+            }),
+      href: `#${safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length === 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
+      ...attention(
+        safety.unrecordedSailings > 0
+          ? t("incidents.safety.crewDetailUnrecorded", {
+              unrecorded: safety.unrecordedSailings,
+              sailings: safety.crewSailings,
+            })
+          : null,
+      ),
+    },
+    {
+      key: "incidents",
+      label: t("incidents.safety.incidents"),
+      value: t("incidents.safety.incidentsValue", {
+        filed: incidents.length - draftReports,
+        drafts: draftReports,
+      }),
+      href: `#${SAFETY_LIST_IDS.incidents}`,
+    },
+  ];
+
   function noCrewDetail(): Pick<MonthFigure, "detail" | "detailTone"> {
     const parts = [
       safety.noCrewDepartures.length > 0
@@ -283,10 +343,6 @@ export default async function SafetyReportPage({
           </p>
         </div>
       ) : null}
-      <p className="mb-6 max-w-prose text-muted">
-        {t(year ? "incidents.safety.year.intro" : "incidents.safety.intro")}
-      </p>
-
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>
           {year ? String(year.number) : monthLabel(current, locale)}
@@ -343,22 +399,15 @@ export default async function SafetyReportPage({
         />
       ) : year ? (
         // The year is the figures alone: the lists behind them stay on each
-        // month. The boarding caveat goes with them (review F5): this is the
-        // page printed for a third party.
-        <div>
-          <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
-          <p className="mt-3 max-w-prose text-sm text-muted">
-            {t("incidents.safety.boardingNote")}
-          </p>
-        </div>
+        // month. This is the page printed for a third party.
+        <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
       ) : (
         <div className="space-y-10">
-          <div>
-            <MonthFigures label={t("incidents.safety.figuresLabel")} figures={figures} />
-            <p className="mt-3 max-w-prose text-sm text-muted">
-              {t("incidents.safety.boardingNote")}
-            </p>
-          </div>
+          <MonthFigures
+            label={t("incidents.safety.figuresLabel")}
+            figures={monthTiles}
+            columns={4}
+          />
           <SafetyLists
             month={safety}
             incidents={incidents}

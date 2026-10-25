@@ -654,7 +654,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the Safety tab renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/safety");
         await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
-        await page.getByRole("region", { name: "Roll calls left open" }).waitFor();
+        await page.getByRole("region", { name: "This month’s safety record" }).waitFor();
         await capture(page, "reports-safety", scheme);
       });
 

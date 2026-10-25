@@ -226,9 +226,11 @@ test.describe("owner, the Safety page", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety");
 
-    await expect(page.getByRole("region", { name: "This month’s safety record" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Roll calls left open" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Incident reports" })).toBeVisible();
+    // Four counts, each the door to its list (visual review A05); a list
+    // renders only when it has rows, so the tiles are what is asserted.
+    const record = page.getByRole("region", { name: "This month’s safety record" });
+    await expect(record).toBeVisible();
+    await expect(record.getByRole("link")).toHaveCount(4);
 
     await expect(page.getByRole("button", { name: "Print month" })).toBeVisible();
     await page.getByRole("link", { name: "Year view", exact: true }).click();
@@ -262,6 +264,6 @@ test.describe("as captain", () => {
   test("the Safety page is gated the same way", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety");
     await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-    await expect(page.getByRole("region", { name: "Roll calls left open" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "This month’s safety record" })).toHaveCount(0);
   });
 });
