@@ -1,7 +1,15 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
@@ -16,6 +24,9 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  * review 2026-10-24: A06's three downloads, A16's Refresh, Void and Print,
  * A17's schedule doors at 390). The rows are the caller's, built with
  * `menuRowClass(…, { gutter: false })`: links, small forms, `MoreMenuPrint`.
+ *
+ * The panel hangs from the trigger's end edge, and from its start edge when
+ * that would push it off the left of the screen (a phone's wrapped header).
  *
  * It closes on a second tap, Escape (focus back to the trigger), a tap
  * outside, or any navigation (`useMenuDismissal`). The first row takes focus
@@ -41,8 +52,20 @@ export function MoreMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  const [hang, setHang] = useState<"end" | "start">("end");
   const close = useCallback(() => setOpen(false), []);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
+
+  // Hang from whichever edge keeps the panel on screen: a header's actions
+  // sit at the right from `sm` up and wrap to the left edge on a phone.
+  useLayoutEffect(() => {
+    if (!open) {
+      setHang("end");
+      return;
+    }
+    const panel = panelRef.current?.getBoundingClientRect();
+    if (panel && panel.left < 0) setHang("start");
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +96,7 @@ export function MoreMenu({
           ref={panelRef}
           id={panelId}
           data-more-menu-panel=""
-          className={`absolute end-0 top-full z-20 mt-1 max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
+          className={`absolute ${hang === "end" ? "end-0" : "start-0"} top-full z-20 mt-1 max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
         >
           {children}
         </div>
