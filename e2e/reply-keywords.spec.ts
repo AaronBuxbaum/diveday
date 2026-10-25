@@ -79,12 +79,11 @@ test.describe("reply keywords", () => {
     await page.goto("/shop/blue-mantis/inbox");
     const row = page.getByRole("listitem").filter({ hasText: "Nora Quinn" }).first();
     await expect(row.getByText("Asked to cancel")).toBeVisible();
-    // The row names the seat she holds (fourth review, item 32) as its own link
-    // above the row's door, so the door is opened at its corner, clear of it.
+    // The row names the seat she holds (fourth review, item 32) as its own
+    // link, and opens in place on its record's door (visual review A15).
     await expect(row.getByRole("link", { name: new RegExp(`^Booked on ${title}`) })).toBeVisible();
-    await row
-      .getByRole("link", { name: "Open the record for Nora Quinn" })
-      .click({ position: { x: 4, y: 4 } });
+    await row.getByRole("button", { name: "More for the message from Nora Quinn" }).click();
+    await row.getByRole("link", { name: "Open the record for Nora Quinn" }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\//);
 
     // The confirmation, in the diver's own thread — and the departure named in

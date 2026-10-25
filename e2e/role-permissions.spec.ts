@@ -205,6 +205,7 @@ test.describe("H-14 role permissions", () => {
       // composer's presence is the whole assertion: nothing is typed and
       // nothing is sent, so this stays READ_ONLY (the send is
       // `e2e/inbox.spec.ts`).
+      await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
       await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
       await expect(
         page.getByLabel("Reply by email to priya.sharma@mail.example", {
@@ -250,7 +251,9 @@ test.describe("H-14 role permissions", () => {
       // (issue #1831, ADR 20260724-role-gated-surfaces-hide-not-explain). The
       // instructor lens below queries the same name positively, which is what
       // keeps this absence honest.
-      await expect(page.getByRole("link", { name: "Add a departure" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Open a departure for this date" })).toHaveCount(
+        0,
+      );
     });
   });
 
@@ -298,14 +301,9 @@ test.describe("H-14 role permissions", () => {
       page,
     }) => {
       await page.goto(`/shop/${SHOP}/requests`);
-      const addDeparture = page.getByRole("link", { name: "Add a departure" });
+      const addDeparture = page.getByRole("link", { name: "Open a departure for this date" });
       await expect(addDeparture.first()).toBeVisible();
-      await page
-        .getByRole("region")
-        .filter({ has: addDeparture })
-        .first()
-        .getByRole("link", { name: "Add a departure" })
-        .click();
+      await addDeparture.first().click();
 
       await expect(page.getByRole("group", { name: "Starting from requests" })).toBeVisible();
     });

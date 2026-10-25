@@ -13,6 +13,7 @@ import {
   formatRelativeDay,
   formatShortDate,
   formatTime,
+  formatTimeZoneShort,
   formatTimeRange,
   formatTimeRangeTz,
   formatTimeTz,
@@ -456,5 +457,16 @@ describe("formatOrdinal", () => {
   it("formats Spanish ordinals correctly", () => {
     expect(formatOrdinal(1, "es-ES")).toBe("1.º");
     expect(formatOrdinal(4, "es-ES")).toBe("4.º");
+  });
+});
+
+describe("formatTimeZoneShort", () => {
+  it("names the zone the way a list header says it once, and follows DST", () => {
+    expect(formatTimeZoneShort("en-US", "America/New_York", new Date("2026-07-01T12:00:00Z"))).toBe(
+      "EDT",
+    );
+    expect(formatTimeZoneShort("en-US", "America/New_York", new Date("2026-01-15T12:00:00Z"))).toBe(
+      "EST",
+    );
   });
 });

@@ -229,6 +229,20 @@ export function formatTimeZoneName(locale = "en-US", timeZone: string, now = now
 }
 
 /**
+ * A timezone as its short name, "EDT", for a list that states its zone once
+ * in its header and leaves each row's time bare (visual review A15). Read
+ * through the clock for the same DST reason as `formatTimeZoneName`; falls
+ * back to the id when the runtime has no short name.
+ */
+export function formatTimeZoneShort(locale = "en-US", timeZone: string, now = nowDate()): string {
+  const parts = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    timeZone,
+    timeZoneName: "short",
+  }).formatToParts(now);
+  return parts.find((part) => part.type === "timeZoneName")?.value ?? timeZone;
+}
+
+/**
  * A byte count as a human-readable size ("42.3 MB"), in the reader's locale.
  * Decimal units (1 MB = 1,000,000 bytes) because that is what every storage
  * console the number will be compared against reports.

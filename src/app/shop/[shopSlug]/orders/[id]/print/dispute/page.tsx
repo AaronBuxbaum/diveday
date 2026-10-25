@@ -142,7 +142,7 @@ export default async function DisputeSheetPage({
                 {t("disputeSheet.lineKind", {
                   description: line.description,
                   kind:
-                    (KIND_KEYS[line.kind] ? t(KIND_KEYS[line.kind]) : line.kind) +
+                    t(KIND_KEYS[line.kind]) +
                     (line.quantity > 1 ? ` × ${line.quantity}` : ""),
                 })}
               </span>

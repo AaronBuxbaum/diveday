@@ -101,7 +101,7 @@ describe("a day's Add a departure", () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
     await renderPage();
 
-    const add = screen.getByRole("link", { name: "Add a departure" });
+    const add = screen.getByRole("link", { name: "Open a departure for this date" });
     expect(add.getAttribute("href")).toContain("/shop/blue-mantis/schedule/board?add=full");
     expect(canPersonConfigureTrips).toHaveBeenCalledWith({}, SHOP_ID, "staff");
   });
@@ -114,7 +114,7 @@ describe("a day's Add a departure", () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(false);
     await renderPage();
 
-    expect(screen.queryByRole("link", { name: "Add a departure" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open a departure for this date" })).toBeNull();
     expect(
       screen.getByRole("heading", { level: 2, name: /1 group · 2 divers/ }),
     ).toBeInTheDocument();

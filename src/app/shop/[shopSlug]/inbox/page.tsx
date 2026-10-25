@@ -5,6 +5,7 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
+import { formatTimeZoneShort } from "@/lib/format";
 import { assistsAvailable } from "@/db/assists";
 import { pagedInboxMessages } from "@/db/inbound-messages";
 import { awaitsTriage, triageInboundMessagesSafely } from "@/db/inbox-assists";
@@ -127,6 +128,9 @@ export default async function InboxPage({
   const banner = noticeFromParam(notice, NOTICES);
   const base = shopPath(shopSlug, "inbox");
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
+  // The rows' times are bare; the list names its zone once, on its first group
+  // (visual review A15: a date names its zone once per list).
+  const timesIn = t("inbox.timesIn", { zone: formatTimeZoneShort(locale, shop.timezone, now) });
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -150,7 +154,11 @@ export default async function InboxPage({
             // whole group shares, and the rows beneath say only who wrote and
             // what about (design/principles.md #9). It counts this page rather
             // than the shop: the pager below says how many messages there are.
-            <LedgerGroup as="h2" label={t("inbox.group.waiting", { count: waiting.length })}>
+            <LedgerGroup
+              as="h2"
+              label={t("inbox.group.waiting", { count: waiting.length })}
+              meta={timesIn}
+            >
               <ul>
                 {waiting.map((row) => (
                   <InboxRow
@@ -173,7 +181,11 @@ export default async function InboxPage({
           ) : null}
 
           {answered.length > 0 ? (
-            <LedgerGroup as="h2" label={t("inbox.group.answered")}>
+            <LedgerGroup
+              as="h2"
+              label={t("inbox.group.answered")}
+              meta={waiting.length > 0 ? undefined : timesIn}
+            >
               <ul>
                 {answered.map((row) => (
                   <InboxRow

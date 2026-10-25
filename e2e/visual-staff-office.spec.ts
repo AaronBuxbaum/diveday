@@ -434,7 +434,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the date requests list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/requests");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
-        await page.getByRole("link", { name: "Add a departure" }).first().waitFor();
+        await page.getByRole("link", { name: "Open a departure for this date" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
         await page
           .getByRole("button", { name: /^Actions for/ })
@@ -494,16 +494,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-inbox", scheme);
       });
 
-      // A row's "⋯" open: the list floats under its button, over the rows
-      // below, and the row it belongs to keeps its height. The stranger's row,
-      // because it is the one whose list carries both acts.
+      // A row opened in place (visual review A15): its acts under the
+      // message. The stranger's row, because it carries Reply, Mark done and
+      // Delete.
       test(`the inbox row menu opens beside its button (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/inbox");
         await page.getByRole("heading", { name: "Done" }).waitFor();
         await page
           .getByRole("button", { name: "More for the message from Unknown sender" })
           .click();
-        await page.locator("[data-row-menu]").waitFor();
+        await page.locator("[data-inbox-open-view]:visible").waitFor();
         await capture(page, "staff-inbox-row-menu", scheme);
       });
 
@@ -514,6 +514,7 @@ for (const scheme of ["light", "dark"] as const) {
       // because this diver is waiting on an answer.
       test(`a diver's conversation renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/inbox");
+        await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
         await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await page

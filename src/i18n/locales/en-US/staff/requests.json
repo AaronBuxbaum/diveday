@@ -7,7 +7,7 @@
     "noDate": "No date named: {count, plural, one {# request} other {# requests}}"
   },
   "onTheBoard": "On the board: {when} · {title} · {seats, plural, =0 {full} one {# seat left} other {# seats left}}",
-  "addDeparture": "Add a departure",
+  "openDeparture": "Open a departure for this date",
   "flexible": "Flexible",
   "flexibleAround": "Asked for {date}, and can move a few days",
   "alternateOf": "First choice {date}",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { PrintButton } from "@/components/PrintButton";
+import { MoreMenu, MoreMenuPrint } from "@/components/MoreMenu";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
+import { menuRowClass } from "@/components/ui/menu";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { getOrderBookingContext } from "@/db/order-booking";
@@ -106,6 +107,8 @@ export default async function OrderDetailPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const demoActionHint = t("orders.detail.demoActionHint");
+  // An open Stripe invoice: the one state with Record payment, Refresh and Void.
+  const stripeOpen = order.order.status === "open" && counterCollection === null;
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
@@ -116,21 +119,65 @@ export default async function OrderDetailPage({
         eyebrowHref={shopPath(shopSlug, "orders")}
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
-        // A diver who paid at the counter and asks for something on paper.
+        // **One overflow for the rare doors** (visual review A16): Print first,
+        // then the dispute sheet, then the Stripe acts on an open invoice.
+        // Record payment stays in the receipt card as the one row of work.
         actions={
-          <>
+          <MoreMenu label={t("orders.detail.more")}>
+            <MoreMenuPrint label={t("print.sheet.door")} />
             {canDisputeSheet ? (
               <Link
                 href={shopPath(shopSlug, "orders", order.order.id, "print", "dispute")}
                 // Opening the sheet writes a trail line, so a viewport prefetch must not open it.
                 prefetch={false}
-                className={buttonClass({ variant: "ghost", size: "sm", className: "print:hidden" })}
+                className={menuRowClass("quiet", { gutter: false })}
               >
                 {t("disputeSheet.door")}
               </Link>
             ) : null}
-            <PrintButton label={t("print.sheet.door")} quiet />
-          </>
+            {stripeOpen ? (
+              demo ? (
+                <>
+                  <button
+                    type="button"
+                    disabled
+                    className={menuRowClass("quiet", { gutter: false })}
+                  >
+                    {t("orders.detail.refreshStatus")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled
+                    className={menuRowClass("danger", { gutter: false })}
+                  >
+                    {t("orders.detail.voidOrder")}
+                  </button>
+                  <p className="px-3 py-2 text-xs text-muted">{demoActionHint}</p>
+                </>
+              ) : (
+                <>
+                  <form action={refreshAction}>
+                    <input type="hidden" name="orderId" value={order.order.id} />
+                    <SubmitButton
+                      pendingLabel={t("orders.detail.refreshing")}
+                      className={menuRowClass("quiet", { gutter: false })}
+                    >
+                      {t("orders.detail.refreshStatus")}
+                    </SubmitButton>
+                  </form>
+                  <form action={voidAction}>
+                    <input type="hidden" name="orderId" value={order.order.id} />
+                    <SubmitButton
+                      pendingLabel={t("orders.detail.voiding")}
+                      className={menuRowClass("danger", { gutter: false })}
+                    >
+                      {t("orders.detail.voidOrder")}
+                    </SubmitButton>
+                  </form>
+                </>
+              )
+            ) : null}
+          </MoreMenu>
         }
         meta={
           <OrderMeta
@@ -153,7 +200,7 @@ export default async function OrderDetailPage({
       ) : null}
       <OrderDisputes header={header} timezone={timezone} locale={locale} t={t} />
       {/* `padding="lg"`: the receipt is a card someone works *inside* —
-          Refresh, Void and Refund all live in it. No `title`; the page header
+          Record payment and Refund live in it. No `title`; the page header
           above already names the order, and the status badge is the heading
           row's whole content. */}
       <SectionCard padding="lg">
@@ -232,7 +279,7 @@ export default async function OrderDetailPage({
               <span className="min-w-0 break-words">
                 {item.description}{" "}
                 <span className="text-muted">
-                  ({KIND_KEYS[item.kind] ? t(KIND_KEYS[item.kind]) : item.kind}
+                  ({t(KIND_KEYS[item.kind])}
                   {item.quantity > 1 ? ` × ${item.quantity}` : ""})
                 </span>
               </span>
@@ -271,58 +318,20 @@ export default async function OrderDetailPage({
         ) : null}
 
         {/* Off the paper: a printed order is the diver's copy of what they
-            paid, and Refresh, Void and Refund are the shop's taps. */}
+            paid, and Record payment and Refund are the shop's taps. */}
         <div className="mt-6 flex flex-wrap items-center gap-3 print:hidden">
           {canVoidCounter ? <VoidCounterOrderForm orderId={order.order.id} t={t} /> : null}
-          {order.order.status === "open" && counterCollection === null ? (
-            demo ? (
-              <>
-                {/* Cash and the card machine never touch Stripe, so a demo
-                    records them (market sheet 2026-10-22, item 6); only the
-                    Stripe actions stay disabled. No room charge here. */}
-                <RecordPaymentForm orderId={order.order.id} t={t} roomCharge={false} />
-                <DisabledDemoButton
-                  label={t("orders.detail.refreshStatus")}
-                  hint={demoActionHint}
-                  variant="secondary"
-                />
-                <DisabledDemoButton
-                  label={t("orders.detail.voidOrder")}
-                  hint={demoActionHint}
-                  variant="danger"
-                />
-              </>
-            ) : (
-              <>
-                {/* Money that came over the counter for an invoice already
-                    sent (fourth UX review, item 19). */}
-                <RecordPaymentForm orderId={order.order.id} t={t} />
-                <form action={refreshAction}>
-                  <input type="hidden" name="orderId" value={order.order.id} />
-                  <SubmitButton
-                    pendingLabel={t("orders.detail.refreshing")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("orders.detail.refreshStatus")}
-                  </SubmitButton>
-                </form>
-                <form action={voidAction}>
-                  <input type="hidden" name="orderId" value={order.order.id} />
-                  <SubmitButton
-                    pendingLabel={t("orders.detail.voiding")}
-                    className={buttonClass({ variant: "danger" })}
-                  >
-                    {t("orders.detail.voidOrder")}
-                  </SubmitButton>
-                </form>
-              </>
-            )
+          {stripeOpen ? (
+            // Cash and the card machine never touch Stripe, so a demo records
+            // them (market sheet 2026-10-22, item 6); no room charge there.
+            // A tap records the whole balance today (A47 is Aaron's call).
+            <RecordPaymentForm orderId={order.order.id} t={t} roomCharge={!demo} />
           ) : null}
           {canOfferRefund ? (
             demo ? (
               <DisabledDemoButton
                 label={t("orders.detail.refundPayment")}
-                hint={demoActionHint}
+                hint={t("orders.detail.demoRefundHint")}
                 variant="danger"
               />
             ) : (
@@ -391,8 +400,8 @@ export default async function OrderDetailPage({
         </FormStatus>
         {/* Only beside a disabled button it explains: a paid order this
             person cannot refund shows no button, so it gets no reason either. */}
-        {demo && (order.order.status === "open" || canOfferRefund) ? (
-          <p className="mt-2 text-xs text-muted">{demoActionHint}</p>
+        {demo && canOfferRefund ? (
+          <p className="mt-2 text-xs text-muted">{t("orders.detail.demoRefundHint")}</p>
         ) : null}
       </SectionCard>
     </main>

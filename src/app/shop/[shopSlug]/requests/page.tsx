@@ -212,6 +212,19 @@ export default async function RequestsPage({
             const joined = lines.map((line) => line.text).join("§");
             const repeats = joined === previousAdvice && !lines.some((l) => l.tone === "warning");
             previousAdvice = joined;
+            // Offered on every day, "On the board" or not: a busy day can
+            // still want a second boat for the people who asked. On each
+            // request it answers, never in the day's header (visual review A23).
+            const openDeparture = canAddDeparture
+              ? {
+                  href: addDepartureHref(
+                    shopSlug,
+                    group.date,
+                    group.entries.map(({ request }) => request.id),
+                  ),
+                  label: t("requests.openDeparture"),
+                }
+              : undefined;
             return (
               <RequestDayGroup
                 key={group.date}
@@ -230,23 +243,6 @@ export default async function RequestsPage({
                     seats: departure.seatsLeft,
                   }),
                 }))}
-                add={
-                  // Offered on every day, "On the board" or not: a busy day can
-                  // still want a second boat for the people who asked.
-                  canAddDeparture
-                    ? {
-                        href: addDepartureHref(
-                          shopSlug,
-                          group.date,
-                          group.entries.map(({ request }) => request.id),
-                        ),
-                        label: t("requests.addDeparture"),
-                        // One visible act on the page, at the first day a
-                        // staffer meets; every day after it offers the same
-                        // act at link weight.
-                      }
-                    : undefined
-                }
               >
                 {group.entries.map((entry) =>
                   // The full record belongs to one group — the first date this
@@ -264,6 +260,7 @@ export default async function RequestsPage({
                       shopSlug={shopSlug}
                       shopName={shop.name}
                       markDoneAction={outcomeAction}
+                      openDeparture={openDeparture}
                       t={t}
                     />
                   ) : (

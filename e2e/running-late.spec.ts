@@ -138,7 +138,7 @@ test("a diver says it in their own words, and the desk marks it from the inbox r
   const message = page.getByRole("listitem").filter({ hasText: name }).first();
   // The row names the boat the message is about…
   await expect(message.getByText(new RegExp(`Booked on ${OPEN_BOAT}`))).toBeVisible();
-  // …and its ⋯ puts the mark on that seat.
+  // …and its open view puts the mark on that seat.
   await message.getByRole("button", { name: `More for the message from ${name}` }).click();
   await page.getByRole("button", { name: `Mark ${name} running late for ${OPEN_BOAT}` }).click();
   await expect(

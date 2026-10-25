@@ -1,5 +1,5 @@
 import type { RecordPaymentOnOrderOutcome } from "@/db/orders";
-import type { OrderStatus } from "@/db/schema";
+import type { OrderLineItemKind, OrderStatus } from "@/db/schema";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import type { NoticeTone } from "@/lib/staff-notices";
 
@@ -24,12 +24,16 @@ export const STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
   refunded: "orders.detail.status.refunded",
 };
 
-export const KIND_KEYS: Record<string, StaffMessageKey> = {
+/** Keyed by the line-kind enum for the same reason: `e_learning_fee` once rendered raw. */
+export const KIND_KEYS: Record<OrderLineItemKind, StaffMessageKey> = {
   trip_fee: "orders.detail.kind.trip_fee",
   course_fee: "orders.detail.kind.course_fee",
+  e_learning_fee: "orders.detail.kind.e_learning_fee",
   rental: "orders.detail.kind.rental",
   nitrox: "orders.detail.kind.nitrox",
   deposit: "orders.detail.kind.deposit",
+  dive_package: "orders.detail.kind.dive_package",
+  pass_through_fee: "orders.detail.kind.pass_through_fee",
   merchandise: "orders.detail.kind.merchandise",
   other: "orders.detail.kind.other",
 };

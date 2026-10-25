@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { addDepartureHref } from "@/lib/date-requests";
 import { adviseRequests, type DepartureShape } from "@/lib/request-advisor";
-import RequestsLoading from "../loading";
 import { RequestDayGroup, requestAdviceLines } from "./RequestDayGroup";
 
 afterEach(cleanup);
@@ -36,7 +35,7 @@ function party(...sizes: number[]) {
  * somewhere, and the loss is silent — the link still works, it just lands on
  * an empty form.
  *
- * Every date offers the same secondary action, so its styling stays consistent.
+ * Each request row carries it as "Open a departure for this date".
  */
 describe("the add-a-departure link", () => {
   it("carries the day, the disclosed form and every interest in the group", () => {
@@ -48,45 +47,7 @@ describe("the add-a-departure link", () => {
     expect(url.searchParams.get("requests")).toBe("r1,r2");
   });
 
-  it("is the one act on a day group, and renders with the href it was given", () => {
-    render(
-      <RequestDayGroup
-        id="date-2027-03-06"
-        label="Mar 6, 2027 — 2 groups · 5 divers"
-        add={{
-          href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]),
-          label: "Add a departure",
-        }}
-      >
-        <li>a request</li>
-      </RequestDayGroup>,
-    );
-    const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(1);
-    expect(links[0]?.getAttribute("href")).toContain("date=2027-03-06");
-  });
-
-  it("uses the same secondary action on every date", () => {
-    const add = { href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]), label: "Add" };
-    const { rerender } = render(
-      <RequestDayGroup id="d1" label="Mar 6" add={add}>
-        <li>a request</li>
-      </RequestDayGroup>,
-    );
-    const initial = screen.getByRole("link", { name: "Add" }).className;
-    expect(initial).toContain("bg-surface");
-
-    rerender(
-      <RequestDayGroup id="d1" label="Mar 6" add={add}>
-        <li>a request</li>
-      </RequestDayGroup>,
-    );
-    const quiet = screen.getByRole("link", { name: "Add" }).className;
-    expect(quiet).toContain("bg-surface");
-    expect(quiet).toBe(initial);
-  });
-
-  it("does not render on the undated tail — there is no day to put a boat on", () => {
+  it("is never in a group's header: the act rides on each request (visual review A23)", () => {
     render(
       <RequestDayGroup id="no-date" label="No date named: 1 request">
         <li>a request</li>
@@ -96,69 +57,6 @@ describe("the add-a-departure link", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "No date named: 1 request" }),
     ).toBeTruthy();
-  });
-});
-
-/**
- * **Every group's label sits at one height, act or no act** (pixel-craft
- * class 4, K-463). A dated group's act is a 44px link, so its header was 44px
- * with the label about 15px down it; the undated tail has no act and its
- * header was the label's own line — so "No date named" sat 15px higher in its
- * section and 13px nearer its rows than every dated label (59 against 44px
- * from the rule above, 34 against 21 to the rule below, at 1280). From `sm`
- * up the header is the act's height either way, with the label centred in it;
- * below `sm` the act wraps onto its own line and the label keeps its baseline.
- */
-describe("the group header's height", () => {
-  const HEADER_ROW = ["sm:min-h-11", "sm:items-center"];
-
-  it("is the act's height with the label centered, on a dated group", () => {
-    render(
-      <RequestDayGroup
-        id="date-2027-03-06"
-        label="Mar 6, 2027 — 2 groups · 5 divers"
-        add={{ href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]), label: "Add" }}
-      >
-        <li>a request</li>
-      </RequestDayGroup>,
-    );
-    expect(screen.getByRole("heading", { level: 2 }).parentElement).toHaveClass(...HEADER_ROW);
-  });
-
-  it("is the same height on the undated tail, which has no act", () => {
-    render(
-      <RequestDayGroup id="no-date" label="No date named: 1 request">
-        <li>a request</li>
-      </RequestDayGroup>,
-    );
-    expect(screen.getByRole("heading", { level: 2 }).parentElement).toHaveClass(...HEADER_ROW);
-  });
-
-  /**
-   * **The skeleton draws the header the page lands with** (class 11: 0px of
-   * shift on load). It drew the act as a 40px bar in a header that neither
-   * wrapped nor took the act's 44px, so every dated header grew 4px when the
-   * page arrived, and below `sm` the act stayed beside a label it wraps under.
-   */
-  it("is the header the loading skeleton draws, with the act at its 44px", () => {
-    render(
-      <RequestDayGroup
-        id="date-2027-03-06"
-        label="Mar 6, 2027 — 2 groups · 5 divers"
-        add={{ href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]), label: "Add" }}
-      >
-        <li>a request</li>
-      </RequestDayGroup>,
-    );
-    const loaded = screen.getByRole("heading", { level: 2 }).parentElement?.className;
-    cleanup();
-    const { container } = render(<RequestsLoading />);
-    const headers = [...container.querySelectorAll(".justify-between")];
-    expect(headers.length).toBeGreaterThan(0);
-    for (const header of headers) {
-      expect(header.className).toBe(loaded);
-      expect(header.lastElementChild).toHaveClass("h-11");
-    }
   });
 });
 
