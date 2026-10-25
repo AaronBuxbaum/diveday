@@ -74,7 +74,7 @@ export function RequestReferenceRow({
         {openDeparture ? (
           <Link
             href={openDeparture.href}
-            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+            className={buttonClass({ variant: "link", size: "sm", flush: true, className: "mt-2" })}
           >
             {openDeparture.label}
           </Link>
