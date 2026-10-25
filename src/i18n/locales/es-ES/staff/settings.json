@@ -16,6 +16,7 @@
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
       "rentalTermsInvalid": "Las condiciones de alquiler no pueden pasar de 1500 caracteres.",
       "regulatorServiceInvalid": "Elige 12 o 24 meses.",
+      "nitroxFillInvalid": "Elige cómo llenas nitrox.",
       "contactSaved": "Datos de contacto guardados",
       "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
@@ -329,6 +330,14 @@
         "label": "Revisión de reguladores de clientes, cada",
         "hint": "Cuándo vuelve a tocar la revisión del regulador de un cliente. Tus propias unidades mantienen sus propios plazos.",
         "months": "{months} meses"
+      },
+      "nitroxFill": {
+        "label": "Cómo llenas nitrox",
+        "hint": "Al alquilar, DiveDay avisa cuando un llenado EANx va a un tanque sin limpieza de O2 vigente. Con mezcla por presión parcial avisa en todo llenado EANx. El menú de llenado llega hasta el 40 %, así que con membrana o premezcla nunca avisa. Elige la mezcla por presión parcial si alguna vez metes oxígeno puro en un tanque.",
+        "options": {
+          "blending": "Mezcla por presión parcial",
+          "membrane_premix": "Solo membrana o premezcla"
+        }
       },
       "submit": "Guardar alquiler",
       "submitting": "Guardando…",

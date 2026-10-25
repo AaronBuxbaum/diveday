@@ -34,6 +34,7 @@ import {
   TripSailedNotice,
   WaitlistConfirmation,
 } from "./_components/BookingSections";
+import { BookingSentLanding } from "./_components/BookingSentLanding";
 import { CancelledTripLanding } from "./_components/CancelledTripLanding";
 import { ConditionsChangedNotice } from "./_components/ConditionsChangedNotice";
 import { ConditionsLine } from "./_components/ConditionsLine";
@@ -145,6 +146,7 @@ export default async function TripDetailPage({
     embed?: string;
     /** A diver's own handoff (ADR 20260906-before-you-ask, decision 3). */
     handoff?: string | string[];
+    sent?: string;
   }>;
 }) {
   await connectionForRoute("/s/[shopSlug]/trips/[id]");
@@ -160,6 +162,7 @@ export default async function TripDetailPage({
     pay,
     embed,
     handoff: handoffParam,
+    sent,
   } = await searchParams;
   // One string or nothing: a repeated `?handoff=` arrives as an array, and an
   // array must read as no handoff rather than reach the hasher.
@@ -181,6 +184,7 @@ export default async function TripDetailPage({
   // stored on their payment row instead (docs ADR 20260731-shop-currency).
   const shopCurrency = toShopCurrency(shop.currency);
   const t = diverTranslator(locale);
+  if (sent === "1") return <BookingSentLanding t={t} />;
   const session = auth();
   const now = nowDate();
   const {

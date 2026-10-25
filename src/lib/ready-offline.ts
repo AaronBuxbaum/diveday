@@ -14,12 +14,26 @@ export const READY_WORKER_SCOPE = "/ready/";
 export const READY_CACHE_NAME = "diveday-ready-page-v1";
 
 /**
+ * Where the worker notes when a readiness link's copy was forgotten (issue
+ * #2979), by a hash of its path: a save whose fetch began earlier stores
+ * nothing. Apart from the copy's cache so that one holds the copy alone.
+ */
+export const READY_FORGOTTEN_CACHE_NAME = "diveday-ready-forgotten-v1";
+
+/**
  * The `<meta name>` the live trip-prep page carries to say **until when** the
  * phone may keep its copy (security review of layer 8, D2). The worker keeps
  * no copy of a page without it, so a cancelled booking, a departure called
  * off or a dead link clears the copy on its next load rather than replacing it.
  */
 export const READY_KEEP_UNTIL_META = "diveday-ready-keep-until";
+
+/**
+ * Marks the page's "No signal" line, which the server draws hidden. The
+ * worker shows it in the kept copy (issue #3003): that copy runs no script,
+ * and it is only ever on screen when the network did not answer.
+ */
+export const READY_OFFLINE_NOTE_ATTR = "data-ready-offline-note";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -80,6 +94,37 @@ export async function keepReadyPageOnDevice(): Promise<boolean> {
 }
 
 /**
+ * **A cancelled seat takes its copy with it** (issue #2979, security review
+ * 2026-10-24, finding 1). A self-cancel is a server action, and a hydrated
+ * page follows its redirect without a navigation the worker can see, so the
+ * card the cancel lands on asks the worker controlling it to forget this
+ * page's copy (by its own path: another booking's copy stays). Answers
+ * whether the worker said it did; never throws.
+ */
+export async function forgetThisReadyPage(): Promise<boolean> {
+  try {
+    const worker =
+      typeof navigator === "undefined" ? undefined : navigator.serviceWorker?.controller;
+    if (!worker) return false;
+    return await new Promise<boolean>((resolve) => {
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => {
+        channel.port1.close();
+        resolve(false);
+      }, ACTIVATE_TIMEOUT_MS);
+      channel.port1.onmessage = (event) => {
+        clearTimeout(timer);
+        channel.port1.close();
+        resolve(event.data?.ok === true);
+      };
+      worker.postMessage({ type: "FORGET_READY_PAGE" }, [channel.port2]);
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
  * **Take the kept copy off this browser** (issue #2693): "Remove saved copy" on
  * `/ready`, and every staff sign-out (`forgetThisDevice`), since a shop tablet
  * that opened a diver's link may still hold their page. Unregisters the
@@ -112,6 +157,10 @@ export async function forgetReadyPageCopy(): Promise<boolean> {
   try {
     if (typeof caches === "undefined" || !caches) return false;
     await caches.delete(READY_CACHE_NAME);
+    // The forget markers too (#2979): they guard against a save landing
+    // after a forget, and with this registration gone none can, so a shared
+    // device keeps no hash of the link's path either.
+    await caches.delete(READY_FORGOTTEN_CACHE_NAME);
     return true;
   } catch {
     return false;

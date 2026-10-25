@@ -148,8 +148,8 @@
     "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo.",
     "confirmationSent": "Guardado. Enviamos un enlace de confirmación a esa dirección; no se envía nada hasta que se use.",
     "confirmationNotSent": "Guardado, pero el enlace de confirmación no se pudo enviar ahora. Guarda de nuevo más tarde para reenviarlo.",
-    "setBy": "Puesto por {name}, {date}",
-    "setByGone": "Puesto el {date} por alguien que ya no está en el equipo",
+    "setBy": "Puesto por {name}, {date}.",
+    "setByGone": "Puesto el {date} por alguien que ya no está en el equipo.",
     "waiting": "Esperando a que {email} confirme; no se envía nada hasta entonces.",
     "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala.",
     "bounced": "Los últimos archivos de fin de mes a {email} rebotaron. Revisa la dirección y guárdala."

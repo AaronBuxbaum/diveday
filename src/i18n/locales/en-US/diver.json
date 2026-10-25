@@ -453,10 +453,8 @@
     },
     "confirmationOnTheWay": "Your confirmation is on its way by email.",
     "confirmationWithWaiverOnTheWay": "Your confirmation is on its way by email. Signing your waiver is its first step.",
-    "alreadyDoor": {
-      "sendLink": "Send me my link",
-      "addSeat": "Bringing someone? Open your link and add a seat for them there."
-    },
+    "sentHeading": "We’ve emailed you",
+    "sentBody": "We sent a note to the address you gave. It says what happens next.",
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
     "continueToPayment": "Continue to payment",
     "alsoOnTheSchedule": "Also on the schedule",
@@ -1050,7 +1048,7 @@
     "hotelPickupFieldLabel": "Where you’re staying",
     "hotelPickupPlaceholder": "Hotel name, room, or landmark",
     "dietaryLabel": "Any preference for lunch aboard?",
-    "dietaryHint": "For your lunch only. A food allergy is medical: tell the shop before you dive.",
+    "dietaryHint": "For your lunch only. A food allergy is medical: write it in the waiver’s “For the crew, in an emergency” box, or tell the crew at the briefing.",
     "dietaryPlaceholder": "Vegetarian, halal, no pork…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Pickup at {time}",
@@ -1180,8 +1178,18 @@
       "box": "Box {box}, question {number}",
       "dental": "The dental question",
       "returnHeading": "When it’s signed",
-      "returnWithEmail": "Send a photo of the signed form to <email>{emailAddress}</email> before your dive day, or bring it to the shop before you dive.",
-      "returnToShop": "Bring the signed form to the shop before you dive."
+      "returnUpload": "Send a photo or PDF of the signed form here, with the physician’s signature and date in it. Only the shop’s staff can open it.",
+      "formLabel": "Signed form",
+      "formChoose": "Choose a photo or PDF",
+      "formChooseAnother": "Choose another file",
+      "formSubmit": "Send the form",
+      "formSending": "Sending…",
+      "formSent": "The shop has your signed form. You’re not cleared to dive until staff have read it and told you.",
+      "formInvalid": "Send a photo or PDF under {mb} MB.",
+      "formRate": "Too many tries. Wait a few minutes and try again.",
+      "formUnavailable": "Sending isn’t working right now, so use one of the ways below.",
+      "returnWithEmail": "Can’t send it here? Email a photo to <email>{emailAddress}</email> before your dive day, or bring it to the shop before you dive.",
+      "returnToShop": "Can’t send it here? Bring the signed form to the shop before you dive."
     },
     "signing": "Signing…",
     "beforeDockTitle": "A quick step before the dock",
@@ -4717,7 +4725,7 @@
         "invoiceFeeValue": "{percent} of card money through DiveDay",
         "ours": "{hasBase, select, yes {DiveDay charges {base} a month plus {percent} of the card money your shop takes through it.} other {DiveDay has no monthly charge. Its fee is {percent} of the card money your shop takes through it.}} Nothing is added to your guest’s price.",
         "whatCountsQuestion": "What counts toward the {percent}?",
-        "whatCountsAnswer": "Card money your shop takes through DiveDay: online bookings, and the invoices and packages divers pay by card. Tips, tax, park and other pass-through fees, money taken at the counter and history imported from your old system never count. A refund recorded before the month closes comes off it."
+        "whatCountsAnswer": "Card money your shop takes through DiveDay: online bookings, and the invoices and packages divers pay by card. Tips, tax, park and other pass-through fees, money taken at the counter and history imported from your old system never count. A refund comes off the month it is recorded in."
       }
     },
     "privacy": {
@@ -4864,6 +4872,22 @@
       "payments": {
         "heading": "Money",
         "body": "Divers pay the shop, not us. Card payments run through the shop’s own Stripe account, so the shop’s money never sits with DiveDay and leaving does not mean extracting funds from us. Stripe’s own fees and terms apply to those payments. What DiveDay charges for itself is on the pricing page."
+      },
+      "percentPlan": {
+        "heading": "Plans priced as a percentage of card payments",
+        "intro": "A shop set up from a new request may be offered a plan priced as a share of the card money it takes through DiveDay, in place of the flat price. Shops already on DiveDay stay on the flat monthly price. On that plan:",
+        "feeTerm": "The fee",
+        "feeBody": "{percent} of the card money your shop takes through DiveDay in a calendar month{hasBase, select, yes {, with a base fee of {base} each month on top} other {}}. The month follows your shop’s own timezone.",
+        "countsTerm": "What counts",
+        "countsBody": "card payments your shop takes through DiveDay with Stripe Connect: online bookings, invoices and packages. Tips, tax, park and other pass-through fees, cash at the counter, money marked paid at the counter and history imported from another system never count.",
+        "refundsTerm": "Refunds",
+        "refundsBody": "a refund nets in the month the refund is recorded: it comes off the card money of the first monthly statement written after it is recorded, whichever month the payment was taken in. What that month’s card money cannot cover carries to the following statement, so a fee never goes below zero.",
+        "statementTerm": "A monthly statement",
+        "statementBody": "early in the next month, Settings shows your shop the month’s card money, the rate and the fee, and the fee is billed with your DiveDay subscription.",
+        "whoPaysTerm": "Who pays the fee",
+        "whoPaysBody": "the shop, never the diver. DiveDay adds nothing to a diver’s price or checkout.",
+        "noticeTerm": "Changes to the plan",
+        "noticeBody": "we tell your shop at least 30 days before we change the rate, the base fee or what counts toward the fee."
       },
       "data": {
         "heading": "Whose data it is",
@@ -5360,7 +5384,12 @@
     },
     "seatAlreadyHeld": {
       "subject": "You already have a seat on {tripTitle}",
-      "body": "Someone used a seat-claim link for {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
+      "body": "Someone used a seat-claim link for {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed.",
+      "bookingBody": "Someone tried to book {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
+    },
+    "partyNotBooked": {
+      "subject": "Your party for {tripTitle} wasn’t booked",
+      "body": "Your party for {tripTitle} on {date} with {shopName} couldn’t be booked together, so nothing was booked. To try again, book each person on their own, and each one gets their own link."
     },
     "tripBlowout": {
       "subject": "Trip canceled: {tripTitle}",
@@ -5421,6 +5450,10 @@
       "body": "Your seat on {tripTitle} is still held. You just haven’t finished paying.",
       "pickUp": "Pick up right where you left off",
       "finishPaying": "Finish paying"
+    },
+    "flySafeCorrection": {
+      "subject": "A change to when you can fly: {tripTitle}",
+      "body": "{tripTitle} now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly."
     },
     "tripReminder": {
       "weekSubject": "You sail this week: {tripTitle}",

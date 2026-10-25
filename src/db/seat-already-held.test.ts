@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { people } from "./schema";
-import { tellSeatAlreadyHeld } from "./seat-already-held";
+import { heldSeatOnTrip, tellPartyNotBooked, tellSeatAlreadyHeld } from "./seat-already-held";
 import { claimPartySeat, issuePartySeatClaims } from "./seat-claims";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -81,7 +81,7 @@ describe("tellSeatAlreadyHeld", () => {
     expect(
       await tellSeatAlreadyHeld(
         h.db,
-        { shopId: h.shop.id, bookingId: h.bookingId },
+        { shopId: h.shop.id, bookingId: h.bookingId, attempt: "claim" },
         { provider: email.provider },
       ),
     ).toBe("sent");
@@ -104,7 +104,11 @@ describe("tellSeatAlreadyHeld", () => {
     expect(
       await tellSeatAlreadyHeld(
         h.db,
-        { shopId: "00000000-0000-4000-8000-000000000000", bookingId: h.bookingId },
+        {
+          shopId: "00000000-0000-4000-8000-000000000000",
+          bookingId: h.bookingId,
+          attempt: "claim",
+        },
         { provider: email.provider },
       ),
     ).toBe("skipped");
@@ -112,7 +116,7 @@ describe("tellSeatAlreadyHeld", () => {
     expect(
       await tellSeatAlreadyHeld(
         h.db,
-        { shopId: h.shop.id, bookingId: h.bookingId },
+        { shopId: h.shop.id, bookingId: h.bookingId, attempt: "claim" },
         { provider: email.provider },
       ),
     ).toBe("skipped");
@@ -124,7 +128,7 @@ describe("tellSeatAlreadyHeld", () => {
     expect(
       await tellSeatAlreadyHeld(
         h.db,
-        { shopId: h.shop.id, bookingId: h.bookingId },
+        { shopId: h.shop.id, bookingId: h.bookingId, attempt: "claim" },
         { provider: email.provider },
       ),
     ).toBe("skipped");
@@ -139,7 +143,7 @@ describe("tellSeatAlreadyHeld", () => {
       results.push(
         await tellSeatAlreadyHeld(
           h.db,
-          { shopId: h.shop.id, bookingId: h.bookingId },
+          { shopId: h.shop.id, bookingId: h.bookingId, attempt: "claim" },
           { provider: email.provider, now: new Date(Date.UTC(2026, 9, 16, 12, 0, attempt)) },
         ),
       );
@@ -159,9 +163,97 @@ describe("tellSeatAlreadyHeld", () => {
     expect(
       await tellSeatAlreadyHeld(
         h.db,
-        { shopId: h.shop.id, bookingId: h.bookingId },
+        { shopId: h.shop.id, bookingId: h.bookingId, attempt: "claim" },
         { provider: email.provider },
       ),
     ).toBe("not_sent");
+  });
+});
+
+/** The public booking form's half (issue #2691). */
+describe("heldSeatOnTrip", () => {
+  it("finds the live seat an address holds on the departure, however it was typed", async () => {
+    const h = await holder();
+    expect(
+      await heldSeatOnTrip(h.db, {
+        shopId: h.shop.id,
+        tripId: h.trip.id,
+        email: " ORLA@example.com ",
+      }),
+    ).toEqual({ shopId: h.shop.id, bookingId: h.bookingId });
+  });
+
+  it("finds nothing for another address, another shop, or a cancelled seat", async () => {
+    const h = await holder();
+    expect(
+      await heldSeatOnTrip(h.db, {
+        shopId: h.shop.id,
+        tripId: h.trip.id,
+        email: "milo@example.com",
+      }),
+    ).toBeNull();
+    expect(
+      await heldSeatOnTrip(h.db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        tripId: h.trip.id,
+        email: "orla@example.com",
+      }),
+    ).toBeNull();
+    await cancelBooking(h.db, h.shop.id, h.bookingId);
+    expect(
+      await heldSeatOnTrip(h.db, {
+        shopId: h.shop.id,
+        tripId: h.trip.id,
+        email: "orla@example.com",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("tellPartyNotBooked", () => {
+  it("tells the lead the party did not book, and stops after five an hour", async () => {
+    const h = await holder();
+    const email = fakeEmail();
+    const results: string[] = [];
+    for (let attempt = 0; attempt < 6; attempt++) {
+      results.push(
+        await tellPartyNotBooked(
+          h.db,
+          {
+            shopId: h.shop.id,
+            tripId: h.trip.id,
+            to: "lena@example.com",
+            leadName: "Lena Lead",
+            locale: "en-US",
+          },
+          { provider: email.provider },
+        ),
+      );
+    }
+    expect(results).toEqual(["sent", "sent", "sent", "sent", "sent", "throttled"]);
+    expect(email.sent[0]).toMatchObject({
+      kind: "party_not_booked",
+      to: "lena@example.com",
+      tripTitle: h.trip.title,
+    });
+  });
+
+  it("sends nothing for a departure that is not this shop's", async () => {
+    const h = await holder();
+    const email = fakeEmail();
+    expect(
+      await tellPartyNotBooked(
+        h.db,
+        {
+          shopId: "00000000-0000-4000-8000-000000000000",
+          tripId: h.trip.id,
+          to: "lena@example.com",
+          leadName: "Lena Lead",
+          locale: "en-US",
+        },
+        { provider: email.provider },
+      ),
+    ).toBe("skipped");
+    expect(email.sent).toEqual([]);
   });
 });

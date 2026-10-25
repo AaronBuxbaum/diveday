@@ -3,7 +3,12 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate, nowMs } from "@/lib/clock";
-import { openSecret, secretKeyFingerprint, secretKeyFromEnvironment } from "@/lib/secret-box";
+import {
+  keyringOpensStored,
+  openSecret,
+  secretKeyFingerprint,
+  secretKeyFromEnvironment,
+} from "@/lib/secret-box";
 import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { recoveryCodeHashes, TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext } from "@/test/db";
@@ -14,6 +19,7 @@ import {
   getTotpSecret,
   grantStepUp,
   hasStepUp,
+  storedSealings,
   verifyAccountSecondFactor,
 } from "./account-security";
 import { accountSecurity, accountSessions, userAccounts } from "./schema";
@@ -336,6 +342,46 @@ describe("account-security across a key rotation", () => {
     expect((await getAccountSecurity(db, account.id))?.recoveryCodeHashes).toHaveLength(
       recoveryCodes.length - 1,
     );
+  });
+
+  /** The deploy's check (`scripts/check-sealing-keys.ts`, issue #2999) against this database. */
+  async function deployCheck(db: Awaited<ReturnType<typeof seededAccount>>["db"]) {
+    const key = secretKeyFromEnvironment();
+    if (key.status !== "ok") throw new Error("the check runs with a sealing key");
+    return keyringOpensStored(key.key, await storedSealings(db));
+  }
+
+  it("lets a deploy with the correct pair through", async () => {
+    const { db } = await enrolledUnderSuiteKey();
+    rotate();
+    expect(await deployCheck(db)).toMatchObject({ status: "ok" });
+  });
+
+  it("stops a deploy whose rotated key came without its previous", async () => {
+    const { db } = await enrolledUnderSuiteKey();
+    rotate({ keepPrevious: false });
+    expect(await deployCheck(db)).toMatchObject({
+      status: "cannot_open",
+      reason: "previous_missing",
+    });
+  });
+
+  it("stops a deploy whose previous key is well formed but wrong", async () => {
+    const { db } = await enrolledUnderSuiteKey();
+    rotate();
+    vi.stubEnv("SECRET_ENCRYPTION_KEY_PREVIOUS", randomBytes(32).toString("base64"));
+    expect(await deployCheck(db)).toMatchObject({
+      status: "cannot_open",
+      reason: "keys_do_not_open",
+    });
+  });
+
+  it("does not count an enrolment never confirmed", async () => {
+    const { db, account } = await seededAccount();
+    await db.delete(accountSecurity);
+    expect(await beginTotpEnrollment(db, account.id)).not.toBeNull();
+    rotate({ keepPrevious: false });
+    expect(await deployCheck(db)).toEqual({ status: "ok", checked: 0 });
   });
 
   it("hashes codes issued after the rotation under the new key", async () => {

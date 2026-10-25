@@ -48,9 +48,7 @@ import {
 import { ClosingStation } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
-import { HelpRequestProvider } from "./HelpRequestControl";
-import { helpRequestCopy } from "./help-request-copy";
-import { helpRequestControl } from "./help-request-row";
+import { HelpRequestSection, helpRequestControl } from "./help-request-row";
 import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
@@ -1166,7 +1164,9 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
   );
   return (
     <TodayAgencyCheck shopSlug={shopSlug} t={t}>
-      <HelpRequestProvider copy={helpRequestCopy(t)}>{spineBody}</HelpRequestProvider>
+      <HelpRequestSection t={t} handled={spine.handledHelp} locale={locale} timeZone={timeZone}>
+        {spineBody}
+      </HelpRequestSection>
     </TodayAgencyCheck>
   );
 }

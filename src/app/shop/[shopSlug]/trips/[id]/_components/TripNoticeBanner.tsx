@@ -41,6 +41,17 @@ const NOTICE_KEYS: Record<
   }
 > = {
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
+  "saved-fly-safe-unreached": {
+    form: "details",
+    tone: "warning",
+    key: "trips.notices.savedFlySafeUnreached",
+    countKey: "trips.notices.savedFlySafeUnreachedCount",
+  },
+  "saved-fly-safe-failed": {
+    form: "details",
+    tone: "warning",
+    key: "trips.notices.savedFlySafeFailed",
+  },
   cancelled: { form: "lifecycle", tone: "danger", key: "trips.notices.cancelled" },
   // Refused: the boat may be on the water (`cancelDeparture`). Nothing changed.
   "cancel-underway": { form: "lifecycle", tone: "danger", key: "trips.notices.cancelUnderway" },

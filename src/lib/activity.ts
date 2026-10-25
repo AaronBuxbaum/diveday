@@ -238,6 +238,12 @@ type ActivityParamShapes = {
   party_seat_self_refunded: { actor: string; diver: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
+  /** A staffer opened the signed doctor's form a diver sent from the doctor's page (issue #2797). */
+  diver_medical_form_opened: { actor: string; diver: string; record?: string };
+  /** A staffer accepted the form a diver sent as the physician's evaluation (issue #2797). */
+  medical_diver_form_accepted: { actor: string; diver: string; record?: string };
+  /** A staffer did not use the form a diver sent, and it was deleted (issue #2797). */
+  medical_diver_form_not_used: { actor: string; diver: string; record?: string };
   /**
    * A physician's answer was recorded from a letter dated before the referral it
    * answers (issue #2616): the letter's date, the earlier referral it was written
@@ -544,6 +550,9 @@ export const ACTIVITY_CODES = [
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",
+  "diver_medical_form_opened",
+  "medical_diver_form_accepted",
+  "medical_diver_form_not_used",
   "medical_answered_by_earlier_letter",
   "medical_answers_read",
   "medical_alert_read",

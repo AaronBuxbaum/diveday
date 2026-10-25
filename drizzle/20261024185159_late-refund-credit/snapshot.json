@@ -1,0 +1,149 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "68c57662-7434-4e72-940b-e799d45d89b2",
+  "prevIds": [
+    "d2c953a3-1fde-46e5-b8c6-36b5c4bc4919"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "month_card_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.month_card_cents",
+        "n|col|public.pricing_volume_statements.month_card_cents",
+        "e|col|public.pricing_volume_statements.month_card_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "late_refund_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.late_refund_cents",
+        "n|col|public.pricing_volume_statements.late_refund_cents",
+        "e|col|public.pricing_volume_statements.late_refund_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "refund_carry_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.refund_carry_cents",
+        "n|col|public.pricing_volume_statements.refund_carry_cents",
+        "e|col|public.pricing_volume_statements.refund_carry_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "refunded_since_close_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.refunded_since_close_cents",
+        "n|col|public.pricing_volume_statements.refunded_since_close_cents",
+        "e|col|public.pricing_volume_statements.refunded_since_close_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "month_card_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "late_refund_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "refund_carry_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "refunded_since_close_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

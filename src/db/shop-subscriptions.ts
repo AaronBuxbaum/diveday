@@ -396,14 +396,9 @@ export function storedPricing(row: ShopSubscriptionRow | null): StoredPricing | 
 }
 
 /** The plan and numbers this shop is on now (ADR 20261022-pricing-ab-test). */
-export function shopPricing(
-  shopId: string,
-  row: ShopSubscriptionRow | null,
-  config: PricingConfig,
-): PlanTerms {
+export function shopPricing(row: ShopSubscriptionRow | null, config: PricingConfig): PlanTerms {
   return effectivePricing({
     stored: storedPricing(row),
-    shopId,
     config,
     hasLiveSubscription: holdsLiveSubscription(row),
   });
@@ -413,14 +408,9 @@ export function shopPricing(
  * The numbers a subscription was sold, whatever its status now: what a
  * subscription that ended inside a month is billed that month at.
  */
-export function soldPricing(
-  shopId: string,
-  row: ShopSubscriptionRow | null,
-  config: PricingConfig,
-): PlanTerms {
+export function soldPricing(row: ShopSubscriptionRow | null, config: PricingConfig): PlanTerms {
   return effectivePricing({
     stored: storedPricing(row),
-    shopId,
     config,
     hasLiveSubscription: true,
   });
@@ -510,7 +500,7 @@ export async function setShopPricingPlan(
   if (shop.isDemo) return { status: "demo_shop" };
   const row = await getShopSubscription(db, shop.id);
   const live = holdsLiveSubscription(row);
-  const current = shopPricing(shop.id, row, config);
+  const current = shopPricing(row, config);
   const openSession = !live ? (row?.stripeCheckoutSessionId ?? null) : null;
   if (openSession) {
     const settled = options.settleCheckout ? await options.settleCheckout(openSession) : null;
@@ -552,7 +542,6 @@ export async function setShopPricingPlan(
       monthlyCents: next.planMonthlyCents,
       basisPoints: next.planBasisPoints,
     },
-    shopId: shop.id,
     config,
     hasLiveSubscription: live,
   });

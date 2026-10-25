@@ -125,12 +125,12 @@ export type StoredPricing = {
  *    is on: its snapshot, or the config's numbers for that plan.
  * 3. **Test off**: the flat plan at the config's flat fee. A stored arm is kept,
  *    so turning the test back on restores it.
- * 4. The stored arm, or the shop id's bucket at the config's split, on the
- *    config's numbers for that plan.
+ * 4. The stored arm, on the config's numbers for that plan. A shop with none
+ *    stays flat: arms go only to new set-up requests (`shop-signup.ts`), and a
+ *    shop from before the test is never moved by turning it on (#2947).
  */
 export function effectivePricing(input: {
   stored: StoredPricing | null;
-  shopId: string;
   config: PricingConfig;
   hasLiveSubscription: boolean;
 }): PlanTerms {
@@ -151,7 +151,7 @@ export function effectivePricing(input: {
     return snapshot(storedPlan) ?? termsFor(storedPlan, config);
   }
   if (!config.test) return termsFor("flat_monthly", config);
-  return termsFor(storedPlan ?? pricingPlanForKey(input.shopId, config.split), config);
+  return termsFor(storedPlan ?? "flat_monthly", config);
 }
 
 /**

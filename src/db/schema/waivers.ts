@@ -301,6 +301,17 @@ export const waiverRecords = pgTable(
      */
     medicalClearancePhysicianName: text("medical_clearance_physician_name"),
     /**
+     * **The evaluation on file is the form the diver sent**, which a staffer
+     * accepted as the evidence (issue #2797, ADR 20261024-diver-sent-doctors-form),
+     * rather than a file staff attached themselves. Every surface that links the
+     * evaluation says so, so a diver-sourced photo never reads as staff-sourced
+     * evidence; who accepted it is `medical_diver_form_accepted` on the trail.
+     * Survives erasure with the rest of the fact.
+     */
+    medicalClearanceDocumentFromDiver: boolean("medical_clearance_document_from_diver")
+      .notNull()
+      .default(false),
+    /**
      * **The physician answered, and the answer was no** (issue #1283).
      *
      * The RSTC Physician's Evaluation Form has two outcomes and DiveDay only
@@ -471,6 +482,23 @@ export const waiverRecords = pgTable(
      * Outside the seal; a count of attempts, not evidence.
      */
     doctorUnlockFailures: integer("doctor_unlock_failures").notNull().default(0),
+    /**
+     * **The signed doctor's form the diver sent from the doctor's page**
+     * (issue #2797, ADR 20261024-diver-sent-doctors-form), re-stored under the
+     * private `medical-clearances` prefix exactly like the evaluation staff
+     * attach. Not `medical_clearance_document_url`: that column is evidence
+     * of a recorded answer (`waiver_records_medical_clearance_attributed`),
+     * and this is a file nobody has answered yet.
+     *
+     * One per release, while it waits on a physician. Recording the answer
+     * empties it: the staffer either uses it as the evaluation (moved into
+     * `medical_clearance_document_url`) or attaches their own evidence, and
+     * then this copy is queued for deletion. Destroyed by `anonymizeDiver`.
+     * Outside the seal and out of the export bundle, like the evaluation.
+     */
+    diverMedicalFormUrl: text("diver_medical_form_url"),
+    /** When the diver sent it. Kept after the file is used or deleted: the fact, not the document. */
+    diverMedicalFormSentAt: timestamp("diver_medical_form_sent_at", { withTimezone: true }),
     /** The shop owner who ordered the erasure — see `people.anonymized_by_person_id`. */
     anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
     /**
@@ -543,6 +571,26 @@ export const waiverRecords = pgTable(
         ${table.medicalClearanceEvaluatedOn} is not null
         and (${table.medicalClearanceDocumentUrl} is not null
           or ${table.medicalClearancePhysicianName} is not null))`,
+    ),
+    // A doctor's form the diver sent is only ever for a referral, carries the
+    // day it arrived, and is gone once a physician's answer is recorded: used
+    // as the evaluation or deleted (issue #2797). The answered record's
+    // evidence is `medical_clearance_document_url`, never this column.
+    // "From the diver" describes a document, so there is one, or there was
+    // one before an erasure destroyed it.
+    check(
+      "waiver_records_clearance_document_from_diver",
+      sql`not ${table.medicalClearanceDocumentFromDiver}
+        or ${table.medicalClearanceDocumentUrl} is not null
+        or ${table.anonymizedAt} is not null`,
+    ),
+    check(
+      "waiver_records_diver_medical_form_held",
+      sql`${table.diverMedicalFormUrl} is null or (
+        ${table.diverMedicalFormSentAt} is not null
+        and ${table.medicalReviewRequired}
+        and ${table.medicalClearedAt} is null
+        and ${table.medicalClearanceDeclinedAt} is null)`,
     ),
     // An erased address stays erased: no writer may put one back on a release
     // the guardian asked to be taken off (H-103, issue #1673).

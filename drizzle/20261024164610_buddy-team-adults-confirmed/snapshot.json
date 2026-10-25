@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d2c953a3-1fde-46e5-b8c6-36b5c4bc4919",
+  "prevIds": [
+    "324b0024-7f5f-4b7a-9895-060b9e808919"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "buddy_team_events",
+        "adults_confirmed"
+      ],
+      "writes": [
+        "s|col|public.buddy_team_events.adults_confirmed",
+        "n|col|public.buddy_team_events.adults_confirmed",
+        "e|col|public.buddy_team_events.adults_confirmed"
+      ],
+      "reads": [
+        "n|tbl|public.buddy_team_events",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "buddy_team_events",
+        "name": "adults_confirmed",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

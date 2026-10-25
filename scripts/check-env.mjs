@@ -88,6 +88,8 @@ if (process.env.VERCEL_ENV === "production") {
   // Set is not enough for the sealing keys: the app reads a value that does not decode to 32 bytes
   // as no usable key (`parseKey` in src/lib/secret-box.ts), so a mistyped or truncated paste locks
   // out every two-factor staffer exactly as a missing one does. Decoded the same lenient way.
+  // A well-formed but wrong key needs the stored data to see: `scripts/check-sealing-keys.ts`
+  // trial-opens it after `db:migrate` (issue #2999).
   const malformed = ["SECRET_ENCRYPTION_KEY", "SECRET_ENCRYPTION_KEY_PREVIOUS"].filter((key) => {
     const raw = process.env[key]?.trim();
     return raw ? Buffer.from(raw, "base64").length !== SEALING_KEY_BYTES : false;

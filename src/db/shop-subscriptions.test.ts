@@ -571,7 +571,7 @@ describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
     });
     await applyBillingEffect(db, changed());
     const raised = { ...ON, percent: { basisPoints: 600, monthlyCents: 2_000 } };
-    expect(shopPricing(shop.id, await getShopSubscription(db, shop.id), raised)).toEqual({
+    expect(shopPricing(await getShopSubscription(db, shop.id), raised)).toEqual({
       plan: "percent_of_volume",
       monthlyCents: 0,
       basisPoints: 300,

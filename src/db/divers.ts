@@ -18,6 +18,7 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { minorDeclaredOnLiveUpcomingSeat } from "@/lib/guardian";
 import { shopWaiverStatus, waiverClockInstant } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
@@ -51,6 +52,7 @@ import { livePerson } from "./trips-live";
 import {
   earlierReferralForOpenHold,
   getCurrentWaiverGeneration,
+  getDiverMedicalFormForHold,
   getDiverWaiverChannelStates,
   getDiverWaiverRequestStatus,
   listSignedWaiversByPerson,
@@ -1036,14 +1038,20 @@ export async function getDiverProfile(
     listAfterDiveRollCallByTrip(db, shopId, diverTripIds),
   ]);
 
+  // **A booker's "Under 18" on a seat still ahead speaks for the record**
+  // (issue #2553, Option A): the roster for that seat already asks for the
+  // guardian, so the record must not say "Signed" over the same release. A
+  // date of birth on file still decides; none is ever written from the stamp.
+  const minorDeclared = minorDeclaredOnLiveUpcomingSeat(
+    bookingRows.map((row) => ({ ...row.booking, trip: row.trip })),
+    waiverNow,
+  );
   const waiver = shopWaiverStatus({
     personSignedWaivers: signedWaivers.get(personId) ?? [],
     currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-    // Person-scoped: no seat in hand, so no booker's "Under 18" (a seat's
-    // own readiness reads it).
     signer: {
       dateOfBirth: personRow.person.dateOfBirth,
-      minorDeclared: false,
+      minorDeclared,
       timezone: shopTimezone,
     },
     // The furthest instant any upcoming seat's roster measures this release
@@ -1064,6 +1072,10 @@ export async function getDiverProfile(
   const medicalEarlierReferral =
     waiver.state === "medical_review"
       ? await earlierReferralForOpenHold(db, shopId, personId)
+      : null;
+  const diverMedicalForm =
+    waiver.state === "medical_review"
+      ? await getDiverMedicalFormForHold(db, shopId, personId)
       : null;
 
   return {
@@ -1104,11 +1116,23 @@ export async function getDiverProfile(
      */
     waiver,
     /**
+     * A live seat still ahead was booked as "Under 18" (issue #2553). With no
+     * date of birth on file, the record reads the release as a minor's and
+     * asks the staffer for the date.
+     */
+    minorDeclared,
+    /**
      * The earlier referral a physician's letter dated before the open one could
      * cover (issue #2616), for the recording form; null when nothing is held or
      * there is none.
      */
     medicalEarlierReferral,
+    /**
+     * The newest signed doctor's form the diver sent from the doctor's page
+     * for a hold nobody has answered (issue #2797): which release holds it and
+     * when it arrived, never the file. Null when nothing is held or none was sent.
+     */
+    diverMedicalForm,
     waiverRequest,
     /**
      * What we know about each way of handing this diver's outstanding link

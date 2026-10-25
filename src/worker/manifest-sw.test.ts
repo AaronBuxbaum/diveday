@@ -19,7 +19,7 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "@/lib/offline-manifests";
-import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
+import { READY_CACHE_NAME, READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   listOfflineManifests: vi.fn(),
@@ -339,6 +339,40 @@ describe("refreshSavedManifests (the push event)", () => {
     expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
 
+  /**
+   * Issue #2981: on a dead link the board fetch neither answers nor fails,
+   * and a notification waiting on it never shows: the captain gets no alert.
+   * The refresh gets a deadline, and still runs on behind the notification.
+   */
+  it("shows the notification on time when the board fetch never answers", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const done = fire("push", {
+        data: {
+          json: () => ({ kind: "manifest-changed", tripId: "trip-1", title: "Manifest changed" }),
+        },
+      });
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(showNotification).toHaveBeenCalledWith(
+        "Manifest changed",
+        expect.objectContaining({ tag: "manifest-trip-1" }),
+      );
+      // The refresh is kept, not dropped: a late answer is still written.
+      answer?.(upcomingResponse("blue-mantis", [tripPayload("trip-1", "blue-mantis")]));
+      await done;
+      expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("writes nothing when the purge itself fails", async () => {
     // Fail closed, the same order the page-side auto-save keeps: writing the
     // board anyway would leave both shops' rosters readable side by side.
@@ -403,9 +437,46 @@ describe("the /ready/ registration's fetch", () => {
       },
     );
 
+  /** Every other cache the worker opens here (the forget markers), kept apart from the copy. */
+  const others = new Map<string, Response>();
+  const otherStub = {
+    keys: async () => [...others.keys()].map((path) => new Request(`https://dive.day${path}`)),
+    delete: async (key: string | Request) =>
+      others.delete(new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname),
+    put: async (key: string | Request, response: Response) => {
+      others.set(
+        new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname,
+        response,
+      );
+    },
+    match: async (key: string | Request) =>
+      others
+        .get(new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname)
+        ?.clone(),
+  };
+
+  function message(type: string, sourceUrl: string) {
+    const handler = listeners.get("message");
+    if (!handler) throw new Error("no message listener");
+    const replies: unknown[] = [];
+    const waits: Promise<unknown>[] = [];
+    handler({
+      data: { type },
+      ports: [{ postMessage: (reply: unknown) => replies.push(reply) }],
+      source: { url: sourceUrl },
+      waitUntil: (promise: Promise<unknown>) => waits.push(promise),
+    });
+    return { replies, settle: () => Promise.allSettled(waits) };
+  }
+
   beforeEach(() => {
     kept.clear();
-    vi.stubGlobal("caches", { open: async () => cacheStub, match: async () => undefined });
+    others.clear();
+    vi.stubGlobal("caches", {
+      open: async (name: string) => (name === READY_CACHE_NAME ? cacheStub : otherStub),
+      match: async () => undefined,
+      delete: async (name: string) => (name === READY_CACHE_NAME ? kept.clear() : others.clear()),
+    });
     scope.registration.scope = "https://dive.day/ready/";
   });
 
@@ -458,6 +529,55 @@ describe("the /ready/ registration's fetch", () => {
     expect(kept.size).toBe(0);
   });
 
+  /**
+   * Issue #2979: the load right after a cancel is the one the deadline must
+   * not answer from the copy. Slow or dead, the pre-cancel page with its links
+   * is never served, and the copy is gone before the network is asked.
+   */
+  it("forgets the copy and never serves it when a cancelled landing is slow", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    let served: Response | undefined;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      fetchMock.mockImplementationOnce(() => new Promise<Response>(() => {}));
+      const slow = navigate(`https://dive.day${PATH}?cancelled=1`);
+      void slow.responded?.then((response) => {
+        served = response;
+      });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(served).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+    // The path's hash is worked out off the event loop the fake clock drives.
+    await vi.waitFor(() => expect(kept.size).toBe(0));
+    expect(served).toBeUndefined();
+
+    // With no signal at all it is the ordinary offline error, not the old page.
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const failed = navigate(`https://dive.day${PATH}?cancelled=1`);
+    expect((await failed.responded)?.type).toBe("error");
+  });
+
+  it("forgets the copy on a cancelled landing even when the network fails outright", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const failed = navigate(`https://dive.day${PATH}?cancelled=1`);
+    expect((await failed.responded)?.type).toBe("error");
+    await failed.settle();
+    expect(kept.size).toBe(0);
+  });
+
   /** The landing's own keep request must not put back the copy its navigation just forgot. */
   it("keeps nothing when a cancelled landing asks to keep its page", async () => {
     const handler = listeners.get("message");
@@ -474,6 +594,43 @@ describe("the /ready/ registration's fetch", () => {
     await Promise.allSettled(waits);
     expect(kept.size).toBe(0);
     expect(replies).toEqual([{ ok: false }]);
+  });
+
+  /**
+   * Security review 2026-10-24 (#2979, finding 1): a self-cancel is a server
+   * action whose redirect a hydrated page follows without a navigation, so the
+   * worker's fetch listener never sees the `?cancelled=` landing. The landing
+   * itself asks the worker to forget its copy.
+   */
+  it("forgets the copy when the cancelled landing asks", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+    await forget.settle();
+    expect(kept.size).toBe(0);
+    expect(forget.replies).toEqual([{ ok: true }]);
+  });
+
+  /** Finding 2: a keep request answered after the cancel brings back the pre-cancel page. */
+  it("does not keep a page whose fetch began before the cancel", async () => {
+    let answer: ((response: Response) => void) | undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
+    const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+    await forget.settle();
+    answer?.(html("before the cancel"));
+    await keep.settle();
+    expect(kept.size).toBe(0);
+    expect(keep.replies).toEqual([{ ok: false }]);
   });
 
   it("does not keep a load that carries a one-time notice", async () => {

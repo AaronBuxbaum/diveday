@@ -7,6 +7,7 @@ import {
   assignHelpRequestHelper,
   completeHelpRequest,
   getHelpRequestForBooking,
+  listHandledHelpRequests,
   listTodayHelpRequests,
   saveHelpRequest,
   undoHelpRequestCompletion,
@@ -815,5 +816,84 @@ describe("day-of help requests", () => {
         request: { status: "acknowledged", helperPersonId: setup.helper.id, handledAt: null },
       });
     });
+  });
+});
+
+describe("handled help requests on a departure", () => {
+  it("lists a handled request with the helper who is recorded, and drops it once reopened", async () => {
+    const { db, shop } = ctx;
+    const setup = await handledRequest(db, shop.id);
+    const listed = await listHandledHelpRequests(db, shop.id, [setup.trip.id], setup.now);
+    expect(listed).toEqual([
+      expect.objectContaining({
+        id: setup.handled.id,
+        tripId: setup.trip.id,
+        revision: setup.handled.revision,
+        kind: "carry_gear",
+        helperPersonId: setup.helper.id,
+        helperPersonName: setup.helper.fullName,
+      }),
+    ]);
+    // The Today list never carries it.
+    expect(await listTodayHelpRequests(db, shop.id, [setup.trip.id], setup.now)).toEqual([]);
+
+    const reopened = await undoHelpRequestCompletion(db, {
+      shopId: shop.id,
+      requestId: setup.handled.id,
+      expectedRevision: setup.handled.revision,
+      actorPersonId: setup.actor.id,
+      expectedHelperPersonId: setup.helper.id,
+      now: setup.now,
+    });
+    expect(reopened).toMatchObject({ ok: true, request: { status: "acknowledged" } });
+    expect(await listHandledHelpRequests(db, shop.id, [setup.trip.id], setup.now)).toEqual([]);
+  });
+
+  it("lists nothing for a finished departure, another shop's trip or no trips", async () => {
+    const { db, shop } = ctx;
+    const setup = await handledRequest(db, shop.id);
+    expect(await listHandledHelpRequests(db, shop.id, [], setup.now)).toEqual([]);
+    const after = new Date(setup.trip.endsAt.getTime() + 1);
+    expect(await listHandledHelpRequests(db, shop.id, [setup.trip.id], after)).toEqual([]);
+    expect(
+      await listHandledHelpRequests(
+        db,
+        "00000000-0000-4000-8000-000000000000",
+        [setup.trip.id],
+        setup.now,
+      ),
+    ).toEqual([]);
+  });
+
+  it("refuses a reopen from someone who is not staff, and leaves the request handled", async () => {
+    const { db, shop } = ctx;
+    const setup = await handledRequest(db, shop.id);
+    expect(
+      await undoHelpRequestCompletion(db, {
+        shopId: shop.id,
+        requestId: setup.handled.id,
+        expectedRevision: setup.handled.revision,
+        actorPersonId: setup.seat.booking.personId,
+        expectedHelperPersonId: setup.helper.id,
+        now: setup.now,
+      }),
+    ).toEqual({ ok: false, reason: "unavailable" });
+    expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
+  });
+
+  it("refuses a reopen that names another shop, and leaves the request handled", async () => {
+    const { db, shop } = ctx;
+    const setup = await handledRequest(db, shop.id);
+    expect(
+      await undoHelpRequestCompletion(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        requestId: setup.handled.id,
+        expectedRevision: setup.handled.revision,
+        actorPersonId: setup.actor.id,
+        expectedHelperPersonId: setup.helper.id,
+        now: setup.now,
+      }),
+    ).toEqual({ ok: false, reason: "invalid_transition" });
+    expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
   });
 });

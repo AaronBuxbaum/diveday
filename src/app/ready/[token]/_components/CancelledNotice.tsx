@@ -12,6 +12,7 @@ import { formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { verifiedCancelNotice } from "./cancel-notices";
+import { ForgetReadyCopy } from "./ForgetReadyCopy";
 
 /**
  * The "This booking was cancelled" notice, with refund copy derived from the
@@ -58,32 +59,36 @@ export async function cancelledNotice(
     now: nowDate(),
   });
   return (
-    <EntryDone
-      glyph="cancelled"
-      title={t("ready.cancelledHeading")}
-      text={keptLine ? `${money} ${keptLine}` : money}
-      action={
-        <span className="flex flex-col items-center gap-2">
-          {next ? (
+    <>
+      {/* The seat is gone, so is the phone's saved copy of its page (#2979). */}
+      <ForgetReadyCopy />
+      <EntryDone
+        glyph="cancelled"
+        title={t("ready.cancelledHeading")}
+        text={keptLine ? `${money} ${keptLine}` : money}
+        action={
+          <span className="flex flex-col items-center gap-2">
+            {next ? (
+              <Link
+                href={`${publicTripPath(shop.slug, next.id)}#book`}
+                className={buttonClass({ size: "sm" })}
+              >
+                {t("ready.cancelledNextInSeries", {
+                  trip: next.title,
+                  date: formatShortDate(next.startsAt, locale, shop.timezone),
+                })}
+              </Link>
+            ) : null}
             <Link
-              href={`${publicTripPath(shop.slug, next.id)}#book`}
-              className={buttonClass({ size: "sm" })}
+              href={publicSchedulePath(shop.slug)}
+              className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
             >
-              {t("ready.cancelledNextInSeries", {
-                trip: next.title,
-                date: formatShortDate(next.startsAt, locale, shop.timezone),
-              })}
+              {t("ready.cancelledSeeSchedule")}
             </Link>
-          ) : null}
-          <Link
-            href={publicSchedulePath(shop.slug)}
-            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
-          >
-            {t("ready.cancelledSeeSchedule")}
-          </Link>
-        </span>
-      }
-    />
+          </span>
+        }
+      />
+    </>
   );
 }
 

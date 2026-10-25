@@ -308,6 +308,44 @@ describe("useSavedManifest and why the copy is on screen", () => {
   });
 });
 
+/**
+ * **When the roll call says this copy may be missing someone** (issue #2980,
+ * domain reviews 2026-10-24): on a copy reached without a live answer, and on
+ * any copy while the device is offline, whatever brought the captain to it.
+ * Losing signal mid-count must never take the warning away.
+ */
+describe("useSavedManifest and the copy's roll-call caveat", () => {
+  it("names a copy reached without an answer, and keeps a caveat when signal then drops", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1&fallback=slow");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.copyCaveat).toBe("unanswered");
+    setOnline(false);
+    await act(async () => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    expect(result.current.copyCaveat).toBe("offline");
+  });
+
+  it("names a copy the captain opened while the device is offline", async () => {
+    setOnline(false);
+    load.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.copyCaveat).toBe("offline");
+  });
+
+  /** Re-review 2026-10-24: any saved copy may be short, a copy opened with signal too. */
+  it("names a copy the captain opened with signal as well", async () => {
+    setOnline(true);
+    load.mockResolvedValue(withEvents("trip-1", {}));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.copyCaveat).toBe("online");
+  });
+});
+
 describe("useSavedManifest on the list", () => {
   it("lists what the device holds and counts it", async () => {
     const saved = [envelope("trip-1", "Morning"), envelope("trip-2", "Night")];

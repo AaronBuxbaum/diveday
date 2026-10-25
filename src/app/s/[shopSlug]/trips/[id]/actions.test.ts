@@ -269,11 +269,6 @@ describe("the Under 18 box", () => {
 });
 
 /**
- * **The already-booked refusal names the inbox its door sends to** (UX review
- * 2026-10-11, item 8): the party member it was about, as typed, and nothing
- * for any other refusal.
- */
-/**
  * **The wait list takes a name and an email, nothing else** (visual review
  * 2026-10-24, B57; security review of layer 2, F2). The panel asks no phone,
  * so a number posted by hand was never given under the SMS consent's words
@@ -297,36 +292,6 @@ describe("joining the wait list", () => {
       .where(and(eq(people.shopId, shop.id), eq(people.email, "waiting@example.com")));
     expect(joiner).toBeDefined();
     expect(joiner?.phone).toBeNull();
-  });
-});
-
-describe("the already-booked refusal", () => {
-  it("hands back the address of the member already on the list", async () => {
-    const { db, shop } = ctx;
-    const tripId = await freeDeparture(db, shop.id);
-    await post(shop.slug, tripId, submission([{ email: "repeat@example.com" }]));
-
-    const state = await post(
-      shop.slug,
-      tripId,
-      submission([{ email: "lead@example.com" }, { email: "repeat@example.com" }]),
-    );
-
-    expect(state?.alreadyBookedEmail).toBe("repeat@example.com");
-    expect(state?.fieldErrors?.["email-1"]).toBeTruthy();
-  });
-
-  it("hands back no address for any other refusal", async () => {
-    // A full departure: the one seat is taken, so the next party is refused
-    // for want of room, not for a repeat.
-    const { db, shop } = ctx;
-    const tripId = await freeDeparture(db, shop.id, 1);
-    await post(shop.slug, tripId, submission([{ email: "first@example.com" }]));
-
-    const state = await post(shop.slug, tripId, submission([{ email: "lead@example.com" }]));
-
-    expect(state?.error).toBeTruthy();
-    expect(state?.alreadyBookedEmail).toBeUndefined();
   });
 });
 
