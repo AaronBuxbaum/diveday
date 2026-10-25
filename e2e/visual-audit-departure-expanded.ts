@@ -103,7 +103,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
       await openIfClosed(editor);
       await editor
         .getByLabel(staff("trips.preDepartureCheck.noteItemLabel"), { exact: true })
-        .selectOption({ label: "VHF radio" });
+        .selectOption({ label: "VHF radio checked" });
       await editor
         .getByLabel(staff("trips.preDepartureCheck.noteLabel"))
         .fill("VHF crackles on 16");
