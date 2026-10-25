@@ -46,16 +46,6 @@ export const ALLOWED = new Map([
   ["settings/export/page.tsx", { count: 4, why: "four paragraphs' measure" }],
   ["dive-sites/[id]/page.tsx", { count: 1, why: "the delete confirmation's paragraph measure" }],
   [
-    "schedule/blowout/[tripId]/page.tsx",
-    { count: 1, why: "the confirm card's own width, one card on a full page" },
-  ],
-  ["schedule/blowout/[tripId]/loading.tsx", { count: 1, why: "the confirm card's skeleton" }],
-  [
-    "schedule/blowout/day/[date]/page.tsx",
-    { count: 1, why: "the day call's confirm card, one card on a full page" },
-  ],
-  ["schedule/blowout/day/[date]/loading.tsx", { count: 1, why: "the confirm card's skeleton" }],
-  [
     "trips/[id]/manifest/loading.tsx",
     { count: 1, why: "the stage strip's five taps, as the manifest draws them" },
   ],

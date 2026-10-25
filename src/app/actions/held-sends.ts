@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { recordPaymentNotice } from "@/app/shop/[shopSlug]/orders/[id]/order-detail-keys";
 import type { HeldTicket } from "@/components/SendHold";
 import {
   canPersonActOnKind,
@@ -19,6 +20,7 @@ import {
 } from "@/db/held-sends";
 import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
 import { formValue, parseForm, readForm, single, trimmedText } from "@/lib/form-parse";
@@ -305,6 +307,23 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
     revalidatePath(waiverSendPath(shop.slug, payload));
     if (outcome.kind === "waiver_send" && outcome.sent.length > 0) {
       await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface: payload.surface });
+    }
+    return { status: "done", outcome };
+  }
+
+  if (payload.kind === "counter_payment") {
+    // The order page shows what the release recorded, as the one-tap
+    // button's redirect did (issue #3030).
+    const back = shopPath(shop.slug, "orders", payload.orderId);
+    revalidatePath(back);
+    revalidatePath(shopPath(shop.slug, "orders"));
+    if (outcome.kind === "counter_payment") {
+      if (outcome.outcome.ok) dispatchIntegrationsAfterResponse();
+      const redirectTo = noticeUrl(
+        back,
+        recordPaymentNotice(outcome.outcome, { demo: outcome.demo }),
+      );
+      return { status: "done", outcome: { ...outcome, redirectTo } };
     }
     return { status: "done", outcome };
   }

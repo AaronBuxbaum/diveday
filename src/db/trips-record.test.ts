@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { createBoat, deleteBoat } from "./boats";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
@@ -11,6 +12,7 @@ import {
   rollCallCrewEvents,
   rollCallEvents,
   shops,
+  tripChangeEvents,
   trips,
   userAccounts,
 } from "./schema";
@@ -756,5 +758,108 @@ describe("updateTrip and the calendar revision", () => {
     await updateTripConditions(db, shop.id, trip.id, { conditionsHold: true });
 
     expect(await revisionOf(db, shop.id, trip.id)).toBe(0);
+  });
+});
+
+/**
+ * **A site change on the diver's ledger** (issue #3060, decided 2026-10-25):
+ * one edit that moves the day's sites writes one `site_change` entry, naming
+ * who made it and when, in the same transaction as the dives; a save that
+ * leaves the run as the diver reads it writes none.
+ */
+describe("updateTrip and the site-change ledger", () => {
+  async function departure() {
+    const { db, shop } = ctx;
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Ledger — a two-tank morning",
+      startsAt: new Date("2030-09-06T12:00:00.000Z"),
+      endsAt: new Date("2030-09-06T16:00:00.000Z"),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("trip not created");
+    const [first, second, third] = await listDiveSites(db, shop.id);
+    if (!first || !second || !third) throw new Error("seeded shop needs three dive sites");
+    const actor = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const patch = {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: 2,
+      changeActorPersonId: actor,
+    };
+    return { db, shop, trip, sites: [first, second, third] as const, actor, patch };
+  }
+
+  const siteEntries = (db: AppDb, tripId: string) =>
+    db
+      .select()
+      .from(tripChangeEvents)
+      .where(and(eq(tripChangeEvents.tripId, tripId), eq(tripChangeEvents.kind, "site_change")));
+
+  it("writes one entry per site edit, naming who and when, with the run before and after", async () => {
+    const { db, shop, trip, sites, actor, patch } = await departure();
+    const [a, b, c] = sites;
+    await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      dives: [{ diveSiteId: a.id }, { diveSiteId: b.id }],
+    });
+    const planned = await siteEntries(db, trip.id);
+    expect(planned).toHaveLength(1);
+
+    // 06:40, the crew's call relayed by the office: the day moves to another site.
+    const before = nowDate();
+    await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      dives: [{ diveSiteId: c.id }, { diveSiteId: c.id }],
+    });
+    const entries = await siteEntries(db, trip.id);
+    expect(entries).toHaveLength(2);
+    const moved = entries.find((entry) => entry.id !== planned[0]?.id);
+    expect(moved).toMatchObject({
+      shopId: shop.id,
+      source: "shop",
+      actorPersonId: actor,
+      beforeValue: { siteNames: [a.name, b.name].join("\n") },
+      afterValue: { siteNames: c.name },
+    });
+    expect(moved?.occurredAt.getTime()).toBeGreaterThanOrEqual(before.getTime() - 1_000);
+    // The diver's ledger reads it.
+    const ledger = await listTripChangeEvents(db, shop.id, trip.id);
+    expect(ledger.filter((event) => event.kind === "site_change")).toHaveLength(2);
+  });
+
+  it("writes nothing for a save that leaves the run as the diver reads it", async () => {
+    const { db, shop, trip, sites, patch } = await departure();
+    const [a, b] = sites;
+    const plan = { ...patch, dives: [{ diveSiteId: a.id }, { diveSiteId: b.id }] };
+    await updateTrip(db, shop.id, trip.id, plan);
+    expect(await siteEntries(db, trip.id)).toHaveLength(1);
+
+    // The identical plan again, a title and price edit, and a patch with no dives.
+    await updateTrip(db, shop.id, trip.id, plan);
+    await updateTrip(db, shop.id, trip.id, { ...plan, title: "Renamed", priceCents: 12_000 });
+    await updateTrip(db, shop.id, trip.id, { ...patch, title: "Renamed again" });
+    expect(await siteEntries(db, trip.id)).toHaveLength(1);
+  });
+
+  it("writes an entry when the same sites swap order: a different day for the diver", async () => {
+    const { db, shop, trip, sites, patch } = await departure();
+    const [a, b] = sites;
+    await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      dives: [{ diveSiteId: a.id }, { diveSiteId: b.id }],
+    });
+    await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      dives: [{ diveSiteId: b.id }, { diveSiteId: a.id }],
+    });
+    const entries = await siteEntries(db, trip.id);
+    expect(entries.map((entry) => entry.afterValue.siteNames)).toEqual(
+      expect.arrayContaining([[b.name, a.name].join("\n")]),
+    );
+    expect(entries).toHaveLength(2);
   });
 });

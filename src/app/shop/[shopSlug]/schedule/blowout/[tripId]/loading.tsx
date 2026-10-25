@@ -9,12 +9,13 @@ import { sectionCardClass } from "@/components/ui/card";
  * own markup, including its `<main>`: the page had none, so at desktop widths
  * its eyebrow, `<h1>` and meta started at x=0 and the header's own control was
  * clipped at the right edge of the viewport. The container is a staff page
- * at `full` width, the trip family's, because this page is a departure's own
- * surface (`_components/staff-page.ts`).
+ * at `reading` width: one confirm card, which sat left-aligned on a full page
+ * (visual review 2026-10-24, layer 7), and a record table that fits a reading
+ * column (`_components/staff-page.ts`).
  *
  * **The confirm state, not the record state.** One URL renders two quite
  * different bodies (`if (!blowout)` in `page.tsx`): the confirm card at
- * `max-w-2xl`, and — once a blow-out has been called — a full-width
+ * the page's reading width, and — once a blow-out has been called — a
  * `sm:grid-cols-3` row of stat tiles above a five-column table. A skeleton can
  * only stand in for one of them, and this is the one a staffer arrives at:
  * the trip page's `weatherBlowout` button is rendered only while the trip is
@@ -32,7 +33,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function BlowoutLoading() {
   return (
-    <StaffPage width="full" className="animate-pulse">
+    <StaffPage width="reading" className="animate-pulse">
       <ShopPageHeaderSkeleton
         titleWidth="w-64 max-w-full"
         // The header carries `meta`, never a description: the trip's name and
@@ -45,10 +46,8 @@ export default function BlowoutLoading() {
           </div>
         }
       />
-      {/* `max-w-2xl` is the card's own width on the page. A skeleton wider
-          than what replaces it is the sideways jump the principle is about,
-          and the card is the narrower of the two bodies this route renders. */}
-      <div className={sectionCardClass({ padding: "lg", className: "max-w-2xl" })}>
+      {/* The card takes the page's reading width, as the page draws it. */}
+      <div className={sectionCardClass({ padding: "lg" })}>
         {/* The lead, then the money note — `text-sm` paragraphs that wrap. */}
         <div className="flex flex-col gap-1">
           <div className="h-4 w-full rounded bg-surface-sunken" />

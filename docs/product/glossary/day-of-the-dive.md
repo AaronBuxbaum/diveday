@@ -43,8 +43,10 @@
   departure time. The panel on the public trip page is public and non-sensitive. The **download**
   is not: it is the booked diver's own card, released only against their `/ready` capability. It
   contains no waiver, readiness or medical state, no credential, and no booking id.
-- **Change ledger** — the chronological, diver-visible record of material meeting-point and
-  conditions changes. Each event stores before/after public-safe snapshots, a broad source
+- **Change ledger** — the chronological, diver-visible record of material meeting-point,
+  conditions and site changes (a site change, `site_change`, is the day's run of sites as the
+  diver reads it, by public name, written in the transaction that changed the dives; issue
+  #3060). Each event stores before/after public-safe snapshots, a broad source
   (`shop` or `crew`), and a timestamp; it never names a staffer or carries private operational
   notes. Re-saving the same facts is not a new event.
 - **Day-of help request** — one controlled, non-medical request a diver can make from `/ready`

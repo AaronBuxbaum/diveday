@@ -175,6 +175,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Coming as
 - Connected Stripe account
 - Counter hand-off
+- Counter payment hold
 - Counter self-registration
 - Counter window
 - Course catalog copy

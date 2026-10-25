@@ -294,6 +294,33 @@ describe("CourseSchedule's day marks", () => {
 });
 
 /**
+ * **The header carries one number** (visual review 2026-10-24, layer 7): the
+ * group-size line reads with how the course runs, never beside the session
+ * row's seat count.
+ */
+describe("CourseSchedule's group size", () => {
+  it("states the group size under the heading, with or without a day plan", () => {
+    render(
+      <CourseSchedule
+        days={[]}
+        groupSize="Maximum 8 students per instructor"
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "How the course runs" })).toBeInTheDocument();
+    expect(screen.getByText("Group size")).toBeInTheDocument();
+    expect(screen.getByText("Maximum 8 students per instructor")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).toBeNull();
+  });
+
+  it("renders nothing with neither a plan nor a group size", () => {
+    const { container } = render(<CourseSchedule days={[]} locale="en-US" t={t} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
  * The featured slot in the booking panel answers "when can I start?", so it
  * holds the soonest *bookable* session — featuring a full one would put a
  * waitlist in the page's most prominent slot (and leave the page with no

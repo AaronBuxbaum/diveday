@@ -5,20 +5,21 @@ import { sectionCardClass } from "@/components/ui/card";
 /**
  * Body-shaped skeleton for the day's weather call (ADR
  * 20260804-instant-navigation): the header with its date line, then the one
- * card at its own `max-w-2xl` — the lead and the money note, the departures
- * heading with its two presets, three ticked rows at the 44px row floor, and
- * the danger button. Mirrors the page's `<main>`, a staff page at `full`
- * width, like the single-trip blow-out beside it.
+ * card — the lead and the money note, the departures heading with its two
+ * presets, three ticked rows at the 44px row floor, and the danger button.
+ * Mirrors the page's `<main>`, a staff page at `reading` width, like the
+ * single-trip blow-out beside it (visual review 2026-10-24, layer 7: the card
+ * had sat left on a full-width page).
  */
 export default function DayBlowoutLoading() {
   return (
-    <StaffPage width="full" className="animate-pulse">
+    <StaffPage width="reading" className="animate-pulse">
       <ShopPageHeaderSkeleton
         titleWidth="w-72 max-w-full"
         description={false}
         meta={<div className="h-5 w-40 max-w-full rounded bg-surface-sunken" />}
       />
-      <div className={sectionCardClass({ padding: "lg", className: "max-w-2xl" })}>
+      <div className={sectionCardClass({ padding: "lg" })}>
         <div className="flex flex-col gap-1">
           <div className="h-4 w-full rounded bg-surface-sunken" />
           <div className="h-4 w-full rounded bg-surface-sunken" />

@@ -115,9 +115,9 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             locale={locale}
             // Where the day is planned to go, in the order it runs them. No
             // source chip (visual review 2026-10-24, B21): the row says
-            // "Planned sites" in words. A site change is not written to this
-            // diver's change ledger today (only the meeting point and
-            // conditions are), so the label is what says the list can move.
+            // "Planned sites" in words. A site change is written to this
+            // diver's change ledger (issue #3060), so "What changed" below
+            // says when the list moved and who moved it.
             sites={tripDives
               .map(({ diveSite }) => diveSite?.name)
               .filter((name): name is string => Boolean(name))}

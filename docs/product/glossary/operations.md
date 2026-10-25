@@ -102,6 +102,11 @@
   (`walkInDoorOpen`, `src/lib/operational-window.ts`): it starts inside the arrivals window and has
   not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
   typed URL or a stale page cannot seat someone on a boat that has gone.
+- **Counter payment hold** — Cash or Card machine tapped on an open order's Record payment row: a
+  **held send** of kind `counter_payment` (`src/db/counter-payment-hold.ts`) that records the
+  order's balance only when its eight seconds run out, from the tapping screen or the sweep. The
+  row reads "Recorded $340 cash" with Undo; Undo records nothing, and a second tap inside the hold
+  is the same hold (issue #3030, H-159).
 - **Walk-in party** — several people seated in one counter submission: the first person's own
   fields plus further rows (`member-<n>-…`, `src/lib/walk-in-party.ts`), each seated by the
   walk-in door with every gate its own. A name that reads like someone on file is settled row by

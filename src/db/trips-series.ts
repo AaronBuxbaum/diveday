@@ -42,6 +42,7 @@ import {
   tripSeriesSkips,
   trips,
 } from "./schema";
+import { recordSiteRunChange, tripSiteRunSnapshot } from "./trip-change-events";
 import {
   insertTripInstance,
   insertTripInstances,
@@ -1362,6 +1363,8 @@ export async function applyDetailsToFutureSeries(
   seriesId: string,
   sourceTripId: string,
   now: Date = nowDate(),
+  /** Who applied it, for each moved date's site-change ledger entry (#3060). */
+  actorPersonId: string | null = null,
 ): Promise<SeriesDetailApplyResult | null> {
   return db.transaction(async (tx) => {
     const [source] = await tx
@@ -1504,6 +1507,22 @@ export async function applyDetailsToFutureSeries(
         })
         .where(and(eq(trips.id, sibling.id), eq(trips.shopId, shopId)));
       await replaceTripDives(tx, sibling.id, drafts);
+      // Each date whose run of sites moved tells its own divers (issue #3060).
+      if (siteListMoved) {
+        await recordSiteRunChange(tx, {
+          shopId,
+          tripId: sibling.id,
+          before: await tripSiteRunSnapshot(
+            tx,
+            shopId,
+            sibling.diveSiteId,
+            tripSiteList(divesByTrip.get(sibling.id) ?? []),
+          ),
+          after: await tripSiteRunSnapshot(tx, shopId, source.diveSiteId, sourceSites),
+          actorPersonId,
+          occurredAt: now,
+        });
+      }
       updated += 1;
     }
     return { updated, skipped };

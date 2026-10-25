@@ -20,6 +20,20 @@ export type TripConditionsSnapshot = TripChangeSnapshot & {
   surfaceConditions: string | null;
 };
 
+/**
+ * **The day's sites, in the order the diver reads them** (issue #3060): the
+ * trip's own site first, then each dive's, each name once, as the diver's
+ * "Planned sites" row lists them. Names only: a site's name is already
+ * public on the trip page. `siteNames` is the run joined by a newline (a
+ * snapshot is flat), null when no site is named.
+ */
+export type TripSitesSnapshot = TripChangeSnapshot & {
+  siteNames: string | null;
+};
+
+/** The separator inside `siteNames`; a site name is one line, so it never holds one. */
+const SITE_RUN_SEPARATOR = "\n";
+
 type TripArrivalSnapshotInput = {
   meetingPointLabel?: string | null;
   meetingPointAddress?: string | null;
@@ -66,6 +80,24 @@ export function tripConditionsSnapshot(trip: TripConditionsSnapshotInput): TripC
     visibilityMeters: trip.visibilityMeters ?? null,
     surfaceConditions: nullableText(trip.surfaceConditions),
   };
+}
+
+/** The ordered, de-duplicated run of site names, ready to compare and to show. */
+export function tripSitesSnapshot(
+  names: readonly (string | null | undefined)[],
+): TripSitesSnapshot {
+  const run: string[] = [];
+  for (const name of names) {
+    const clean = name?.replace(/\s+/g, " ").trim();
+    if (clean && !run.includes(clean)) run.push(clean);
+  }
+  return { siteNames: run.length > 0 ? run.join(SITE_RUN_SEPARATOR) : null };
+}
+
+/** The names a sites snapshot holds, in order; none for a missing or empty value. */
+export function tripSiteNames(snapshot: TripChangeSnapshot | null | undefined): string[] {
+  const value = snapshot?.siteNames;
+  return typeof value === "string" && value ? value.split(SITE_RUN_SEPARATOR) : [];
 }
 
 /** Compares the fixed snapshot fields instead of relying on object key order. */

@@ -46,7 +46,9 @@ export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 // all (see `SiteFormShell`), so that race is gone with the redirect.
 export default function NewDiveSitePage({ params }: { params: Promise<{ shopSlug: string }> }) {
   return (
-    <Suspense fallback={<main className="flex-1" />}>
+    // The fallback is the page's own shell at its width, so the column does
+    // not jump sideways when the body streams in (visual review, layer 7).
+    <Suspense fallback={<StaffPage width="reading">{null}</StaffPage>}>
       <NewDiveSiteBody params={params} />
     </Suspense>
   );

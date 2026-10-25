@@ -144,7 +144,7 @@ export default async function DayBlowoutPage({
   );
 
   return (
-    <StaffPage width="full">
+    <StaffPage width="reading">
       <FlashParams params={["notice", "count", "called", "skipped"]} />
       <ShopPageHeader
         eyebrow={t("shared.shopNavLinks.board")}
@@ -163,7 +163,7 @@ export default async function DayBlowoutPage({
           </StaffNoticeBanner>
         ) : null}
       </div>
-      <SectionCard as="div" padding="lg" className="max-w-2xl">
+      <SectionCard as="div" padding="lg">
         <p className="text-sm">{t("blowout.day.lead")}</p>
         <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
 

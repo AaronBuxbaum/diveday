@@ -167,6 +167,43 @@ function fieldDisplay(field: DiverMergeField, side: DiverMergeSide, value: strin
 }
 
 /**
+ * An email is one unbroken word, so its row takes the card's width: its label
+ * on its own line under the name, then the two values, half the card each,
+ * never a third (visual review 2026-10-24, layer 7).
+ */
+function FullWidthRows({
+  label,
+  source,
+  survivor,
+}: {
+  label: string;
+  source: ReactNode;
+  survivor: ReactNode;
+}) {
+  return (
+    <>
+      <tr className="block border-t border-border sm:table-row">
+        <th
+          scope="rowgroup"
+          colSpan={3}
+          className="block pt-3 pb-1 text-start font-normal text-muted sm:table-cell"
+        >
+          {label}
+        </th>
+      </tr>
+      <tr className="block sm:table-row">
+        <td colSpan={3} className="block pb-3 sm:table-cell">
+          <div className="grid grid-cols-2 gap-x-3">
+            <div className="min-w-0">{source}</div>
+            <div className="min-w-0">{survivor}</div>
+          </div>
+        </td>
+      </tr>
+    </>
+  );
+}
+
+/**
  * **Two records, side by side, before they become one.** The record merged
  * away on the left, the record kept on the right; a field the two disagree on
  * is a choice (the kept record's value preselected), a field they agree on or
@@ -359,16 +396,24 @@ export function MergePreview({
           <tbody className="block sm:table-row-group">
             {DIVER_MERGE_FIELDS.map((field) => (
               <Fragment key={field}>
-                <tr className="grid grid-cols-2 gap-x-3 border-t border-border align-top sm:table-row">
-                  <th
-                    scope="row"
-                    className="col-span-2 pt-3 pb-1 text-start font-normal text-muted sm:py-3 sm:pe-3"
-                  >
-                    {t(FIELD_KEYS[field])}
-                  </th>
-                  <td className="pb-3 sm:py-3 sm:pe-3">{cell(field, source, "source")}</td>
-                  <td className="pb-3 sm:py-3">{cell(field, survivor, "survivor")}</td>
-                </tr>
+                {field === "email" ? (
+                  <FullWidthRows
+                    label={t(FIELD_KEYS[field])}
+                    source={cell(field, source, "source")}
+                    survivor={cell(field, survivor, "survivor")}
+                  />
+                ) : (
+                  <tr className="grid grid-cols-2 gap-x-3 border-t border-border align-top sm:table-row">
+                    <th
+                      scope="row"
+                      className="col-span-2 pt-3 pb-1 text-start font-normal text-muted sm:py-3 sm:pe-3"
+                    >
+                      {t(FIELD_KEYS[field])}
+                    </th>
+                    <td className="pb-3 sm:py-3 sm:pe-3">{cell(field, source, "source")}</td>
+                    <td className="pb-3 sm:py-3">{cell(field, survivor, "survivor")}</td>
+                  </tr>
+                )}
                 {field === "dateOfBirth" && minorDateInPlay ? (
                   <tr className="block sm:table-row">
                     <td className="hidden sm:table-cell" />

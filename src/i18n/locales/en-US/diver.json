@@ -190,6 +190,8 @@
     "changeArrivalPhoto": "Arrival photo updated",
     "changeConditionsWithSummary": "Conditions: {summary}",
     "changeConditionsCleared": "Conditions: no note from the crew",
+    "changeSites": "Sites: {sites}",
+    "changeSitesCleared": "Sites: none planned yet",
     "cancellationAskShop": "Cancellation questions? Ask the shop:",
     "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}",
     "meetingDayLabel": "Day {number} · {date}, {timeRange}",
@@ -3698,7 +3700,6 @@
     "sendWaiver": "Send waiver",
     "tripLine": "Two-Tank Reef · 7:30 AM",
     "rollCallHeading": "Before departure roll call",
-    "afterDiveRollCallHeading": "After dive 1 roll call",
     "bookingCard": {
       "label": "Spiegel Grove Wreck",
       "requirement": "This charter is for divers with Advanced Open Water or higher and a Deep certification.",
@@ -3921,8 +3922,7 @@
           "when": "At the dock, and after every dive",
           "title": "The crew calls the roll by name, signal or not",
           "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
-          "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns.",
-          "mockupLabel": "The crew’s roll call after dive 1: 8 of 9 divers aboard, one name tapped aboard and the last still to call."
+          "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns."
         },
         "recap": {
           "when": "After the boat is back",

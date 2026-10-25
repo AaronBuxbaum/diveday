@@ -176,6 +176,12 @@ describe("CertificationEntries", () => {
     expect(nitrox).not.toHaveClass("bg-primary");
     const [cardSave] = screen.getAllByRole("button", { name: t("ready.certSubmit") });
     expect(cardSave).toHaveClass("bg-primary");
+    // Open, the step keeps its heading above the form (layer 7): the panel
+    // opens with the summary's words, hidden from a screen reader, which has
+    // the summary itself.
+    const heading = card.parentElement?.querySelector("div > p[aria-hidden='true']");
+    expect(heading).toHaveTextContent(t("ready.certHeading"));
+    expect(heading?.nextElementSibling).not.toBeNull();
   });
 
   // B26 review (dde-a F2): a card on file but too low is the shop's to talk

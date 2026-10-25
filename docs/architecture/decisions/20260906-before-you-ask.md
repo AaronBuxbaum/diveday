@@ -176,3 +176,12 @@ filter admits.
   resumed form, and the known diver's page reached through a seeded handoff.
 - The escape hatch is the same as the last two ADRs': every move renders nothing when it is not
   true, so reversing any one of them is deleting a reader, not redrawing a surface.
+
+## Amendment 2026-10-25: a counter payment takes the same hold (issue #3030, H-159)
+
+The hold is not only for mail. Cash or Card machine on an open order is held as a fifth kind,
+`counter_payment`, with the same eight seconds, the same Undo and the same two exits: the tapping
+screen's release, or the hourly sweep when the screen went elsewhere. Its row says what will be
+recorded ("Recorded $340 cash"), and Undo leaves the order untouched. Principle 7's sentence about
+"a payment" now reads "a card charge": money that has already left a card is still confirmed, money
+counted at the desk is held.

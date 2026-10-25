@@ -22,7 +22,7 @@ export function HeldRefundsCard({
 }) {
   if (count === 0) return null;
   return (
-    <SectionCard as="div" padding="lg" className="mb-6 max-w-2xl">
+    <SectionCard as="div" padding="lg" className="mb-6">
       <p className="text-sm font-medium">{t("blowout.record.heldHeading", { count })}</p>
       {mayRefund ? (
         <form action={releaseAction} className="mt-3">

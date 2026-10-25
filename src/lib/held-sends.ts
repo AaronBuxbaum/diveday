@@ -31,6 +31,7 @@ export const HELD_SEND_KINDS = [
   "seat_offer",
   "trip_rescheduled",
   "departure_note",
+  "counter_payment",
 ] as const;
 export type HeldSendKind = (typeof HELD_SEND_KINDS)[number];
 
@@ -108,16 +109,31 @@ const departureNotePayload = z.object({
     .refine((body) => departureNoteProblem(body) === null, { message: "note_refused" }),
 });
 
+/**
+ * **Cash or the card machine at the counter** (issue #3030, decided
+ * 2026-10-25: one tap with an eight-second Undo hold, H-68). Not a message:
+ * the same hold, so a mis-tap on the wrong order is taken back before any
+ * money is recorded. Ids only; the amount is the order's own balance, read by
+ * the executor at record time, never a number off the form.
+ */
+const counterPaymentPayload = z.object({
+  kind: z.literal("counter_payment"),
+  orderId: z.uuid(),
+  collection: z.enum(["cash", "card_machine"]),
+});
+
 export const heldSendPayloadSchema = z.discriminatedUnion("kind", [
   waiverSendPayload,
   seatOfferPayload,
   tripRescheduledPayload,
   departureNotePayload,
+  counterPaymentPayload,
 ]);
 
 export type HeldSendPayload = z.infer<typeof heldSendPayloadSchema>;
 export type WaiverSendPayload = z.infer<typeof waiverSendPayload>;
 export type TripRescheduledPayload = z.infer<typeof tripRescheduledPayload>;
+export type CounterPaymentPayload = z.infer<typeof counterPaymentPayload>;
 
 /**
  * Two moves of one departure inside one hold are one message: the divers were

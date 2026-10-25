@@ -56,7 +56,14 @@ export async function applySeriesDetailsAction(
   const s = await requireTripConfig(shopSlug, tripId);
   const form = readForm(seriesDetailsForm, formData);
   const db = await getDb();
-  const result = await applyDetailsToFutureSeries(db, s.user.shopId, seriesId, tripId);
+  const result = await applyDetailsToFutureSeries(
+    db,
+    s.user.shopId,
+    seriesId,
+    tripId,
+    undefined,
+    s.user.personId,
+  );
   const crew =
     result && form.crewSwitch === "shown"
       ? await setSeriesStandingCrew(db, {

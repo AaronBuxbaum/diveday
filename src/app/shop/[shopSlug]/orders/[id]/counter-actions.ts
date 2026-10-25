@@ -1,15 +1,17 @@
 "use server";
 
+import type { HeldTicket } from "@/components/SendHold";
 import { getDb } from "@/db/client";
+import { holdCounterPayment, pendingCounterPayment } from "@/db/counter-payment-hold";
 import {
   type RecordPaymentOnOrderOutcome,
-  recordDemoPaymentOnOpenOrder,
   recordPaymentOnOpenOrder,
   voidCounterOrder,
 } from "@/db/orders";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { nowMs } from "@/lib/clock";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
@@ -49,70 +51,100 @@ export async function voidCounterAction(formData: FormData) {
 }
 
 /**
- * **Record payment: cash / card machine** on an open invoice (fourth UX
- * review, item 19). Any active staff member, as any counter money is; behind
- * the money step-up, as Void is. `recordPaymentOnOpenOrder` re-checks staff,
- * the shop, the method and that the order is still an open invoice, and tells
- * Stripe so the diver is not asked for the money again; the activity log
- * names who recorded it.
+ * **Record payment: cash / card machine** (issue #3030, decided 2026-10-25:
+ * one tap with an eight-second Undo hold, H-68). The tap holds the payment;
+ * nothing is recorded until the hold runs out (`releaseHeldSendAction`, or the
+ * hourly sweep for a screen that went elsewhere), and Undo leaves the order
+ * as it was. Any active staff member, as any counter money is; behind the
+ * money step-up, as Void is, asked here at the tap. A second tap on the same
+ * order inside the hold is the same hold (`holdCounterPayment`).
  *
- * **On a demo shop, cash and the card machine are recorded locally**
- * (market sheet 2026-10-22, item 6): its invoices are made up, so there is no
- * Stripe invoice to mark, and counter money never needed one.
- * `recordDemoPaymentOnOpenOrder` takes no Stripe provider and re-reads the
- * shop's demo flag in its own transaction. A room charge stays refused there,
- * as Refresh and Void are (`actions.ts`).
+ * On a demo shop the release records locally (market sheet 2026-10-22, item
+ * 6); on a real shop it tells Stripe so the diver is not asked again. Which
+ * path runs is the shop row's call at record time, never the form's.
  */
-export async function recordPaymentAction(formData: FormData) {
+export type HoldCounterPaymentResult =
+  | { ok: true; ticket: HeldTicket; collection: "cash" | "card_machine" }
+  | { ok: false; redirectTo: string };
+
+export async function holdCounterPaymentAction(
+  formData: FormData,
+): Promise<HoldCounterPaymentResult> {
   const session = await requireStaffSession();
   const orderId = postedOrderId(formData);
   const collection = postedCollection(formData);
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
+  const failed = { ok: false, redirectTo: noticeUrl(back, "payment-record-failed") } as const;
+  if (!orderId || (collection !== "cash" && collection !== "card_machine")) return failed;
+  if (!(await hasRequiredStepUp(db, session, "money"))) {
+    return {
+      ok: false,
+      redirectTo: stepUpChallengeUrl(session.user.shopSlug, "money", back),
+    };
+  }
+  const held = await holdCounterPayment(db, {
+    shopId: session.user.shopId,
+    orderId,
+    actorPersonId: session.user.personId,
+    collection,
+  });
+  if (!held) return failed;
+  const pending = await pendingCounterPayment(db, session.user.shopId, orderId);
+  // `holdMs` on the server's clock; the screen counts it down on its own
+  // (see `HeldTicket`). A second tap gets what is left of the first hold.
+  return {
+    ok: true,
+    ticket: {
+      id: held.id,
+      runAt: held.runAt.getTime(),
+      holdMs: Math.max(0, held.runAt.getTime() - nowMs()),
+    },
+    // The way the hold carries, which a second tap does not change.
+    collection: pending?.payload.collection ?? collection,
+  };
+}
+
+/**
+ * **Charge to room** (fifth-loop ideas, item 57): asks which room, so it is a
+ * form with a confirm rather than a tap, and records at once. A demo shop has
+ * no rooms to charge (its invoices are made up), so it is refused there, as
+ * Refresh and Void are (`actions.ts`).
+ */
+export async function recordRoomChargeAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const orderId = postedOrderId(formData);
+  const db = await getDb();
+  const back = shopPath(session.user.shopSlug, "orders", orderId);
   const demo = (await getShopById(db, session.user.shopId))?.isDemo === true;
-  const counterMoney = collection === "cash" || collection === "card_machine" ? collection : null;
-  if (demo && !counterMoney) {
+  if (demo) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
+    return;
+  }
+  if (postedCollection(formData) !== "room_charge") {
+    revalidateAndRedirect(back, noticeUrl(back, "payment-record-failed"));
     return;
   }
   if (!(await hasRequiredStepUp(db, session, "money"))) {
     revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   }
-  let outcome: RecordPaymentOnOrderOutcome | null = null;
-  if (orderId && demo && counterMoney) {
-    outcome = demoOutcome(
-      await recordDemoPaymentOnOpenOrder(db, {
+  const outcome: RecordPaymentOnOrderOutcome | null = orderId
+    ? await recordPaymentOnOpenOrder(db, {
         shopId: session.user.shopId,
         orderId,
         actorPersonId: session.user.personId,
-        collection: counterMoney,
-      }),
-    );
-  } else if (orderId && collection) {
-    outcome = await recordPaymentOnOpenOrder(db, {
-      shopId: session.user.shopId,
-      orderId,
-      actorPersonId: session.user.personId,
-      collection,
-      room: collection === "room_charge" ? postedRoom(formData) : null,
-    });
-  }
-  if (outcome?.ok && collection) {
-    // The money came over the counter (and, on a real shop, Stripe stops
-    // collecting this invoice for good): the log names who recorded it.
+        collection: "room_charge",
+        room: postedRoom(formData),
+      })
+    : null;
+  if (outcome?.ok) {
+    // The log names who recorded it, and Stripe stops collecting the invoice.
     await recordShopActivity(db, {
       shopId: session.user.shopId,
       actorPersonId: session.user.personId,
-      write: counterPaymentActivity(outcome.order.id, collection),
+      write: counterPaymentActivity(outcome.order.id, "room_charge"),
     });
     dispatchIntegrationsAfterResponse();
   }
-  revalidateAndRedirect(back, noticeUrl(back, recordPaymentNotice(outcome, { demo })));
-}
-
-/** A demo write's refusal reads as any failed record: there is nothing in flight to wait on. */
-function demoOutcome(
-  outcome: Awaited<ReturnType<typeof recordDemoPaymentOnOpenOrder>>,
-): RecordPaymentOnOrderOutcome {
-  return outcome.ok ? outcome : { ok: false, reason: "invalid" };
+  revalidateAndRedirect(back, noticeUrl(back, recordPaymentNotice(outcome)));
 }

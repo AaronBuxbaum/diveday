@@ -355,7 +355,8 @@ can't claw back money already sent). **A send that can be held is undone, not co
 already notified, a last-minute deal, a freed seat offered to the wait list — each takes an
 eight-second server-side hold with Undo standing where Send was, and the mail leaves when the hold
 drains. The confirm on a send is reserved for a send that cannot be held: an SMS already handed to
-the carrier, a payment. The reissue keeps its one clause in the row ("the old link stops working")
+the carrier, a card charge. Money taken at the counter is held the same way: Cash or Card machine on
+an open order holds eight seconds with Undo before it is recorded (H-159). The reissue keeps its one clause in the row ("the old link stops working")
 because that consequence is real and the surface cannot show it. A `confirm()` on a purely
 reversible action is a bug: it slows the common path to guard against a mistake that undo already
 handles calmly.

@@ -9,11 +9,10 @@ import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { JsonLd } from "@/components/JsonLd";
-import { WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
+import { ArrivalDeskFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import {
-  CaptainRollCallFallback,
   DiverBookingFallback,
   FrontDeskReadinessFallback,
   RecapPageFallback,
@@ -202,14 +201,14 @@ const STEPS: readonly {
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} />,
   },
   {
-    // The step is the roll call, so it draws the roll call (B14 review: claim
-    // and mockup are one screen), at the checkpoint the hero does not show:
-    // after the first dive, as a flat still, so it does not repeat the phone.
+    // The hero draws the roll-call phone, so this step draws the check-in
+    // page's dock screen, by key (B14, 2026-10-25); the notes keep H-94's
+    // no-signal claim.
     id: "aboard",
     feature: "boat-manifest",
     notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],
-    label: "marketing.home.steps.aboard.mockupLabel",
-    screen: (locale) => <CaptainRollCallFallback locale={locale} checkpoint="afterDive" />,
+    label: "marketing.featurePages.checkIn.screenLabel",
+    screen: (locale) => <ArrivalDeskFallback locale={locale} />,
   },
   {
     // The recap goes out by itself a few hours after the boat is due back,

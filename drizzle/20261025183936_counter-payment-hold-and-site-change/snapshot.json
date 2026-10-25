@@ -1,0 +1,68 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9fb16a26-6372-4381-8a54-4e025da0ad3f",
+  "prevIds": [
+    "2f56d75e-23ae-4020-99a2-a6f652051ae4",
+    "68c57662-7434-4e72-940b-e799d45d89b2"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "trip_change_event_kind"
+      ],
+      "writes": [
+        "s|enum|public.trip_change_event_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "held_send_kind"
+      ],
+      "writes": [
+        "s|enum|public.held_send_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"trip_change_event_kind\"]",
+      "set": {
+        "values": [
+          "meeting_point",
+          "conditions",
+          "site_change"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"held_send_kind\"]",
+      "set": {
+        "values": [
+          "waiver_send",
+          "last_minute_deal",
+          "waitlist_invite",
+          "trip_rescheduled",
+          "departure_note",
+          "seat_offer",
+          "counter_payment"
+        ]
+      }
+    }
+  ]
+}

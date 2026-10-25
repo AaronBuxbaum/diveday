@@ -11,11 +11,13 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } from "@/db/authz";
+import { pendingCounterPayment } from "@/db/counter-payment-hold";
 import { getOrderBookingContext } from "@/db/order-booking";
 import { getOrder, isVoidableCounterOrder } from "@/db/orders";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowMs } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
@@ -107,6 +109,8 @@ export default async function OrderDetailPage({
   const t = staffTranslator(locale);
   // An open Stripe invoice: the one state with Record payment, Refresh and Void.
   const stripeOpen = order.order.status === "open" && counterCollection === null;
+  // A counter payment tapped and still inside its Undo hold (issue #3030).
+  const counterHold = stripeOpen ? await pendingCounterPayment(db, shop.id, order.order.id) : null;
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
@@ -275,8 +279,27 @@ export default async function OrderDetailPage({
           {stripeOpen ? (
             // Cash and the card machine never touch Stripe, so a demo records
             // them (market sheet 2026-10-22, item 6); no room charge there.
-            // A tap records the whole balance today (A47 is Aaron's call).
-            <RecordPaymentForm orderId={order.order.id} t={t} roomCharge={!demo} />
+            // A tap holds the whole balance eight seconds with Undo, then
+            // records it (issue #3030, H-68); a reload inside the hold shows
+            // it still draining.
+            <RecordPaymentForm
+              orderId={order.order.id}
+              amount={formatMoneyCents(order.order.totalCents, order.order.currency, locale)}
+              t={t}
+              roomCharge={!demo}
+              initialHold={
+                counterHold
+                  ? {
+                      ticket: {
+                        id: counterHold.id,
+                        runAt: counterHold.runAt.getTime(),
+                        holdMs: Math.max(0, counterHold.runAt.getTime() - nowMs()),
+                      },
+                      collection: counterHold.payload.collection,
+                    }
+                  : null
+              }
+            />
           ) : null}
           {canOfferRefund ? (
             demo ? (

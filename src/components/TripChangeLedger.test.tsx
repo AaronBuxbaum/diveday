@@ -220,4 +220,57 @@ describe("TripChangeLedger", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  describe("a site change (issue #3060)", () => {
+    const sites = (overrides: Partial<TripChangeEvent> = {}) =>
+      event({
+        id: "sites",
+        kind: "site_change",
+        beforeValue: { siteNames: "Molasses Reef\nFrench Reef" },
+        afterValue: { siteNames: "Pickles Reef" },
+        ...overrides,
+      });
+
+    it("names the new sites, who changed them and when, in English and Spanish", () => {
+      render(<TripChangeLedger events={[sites()]} locale="en-US" timeZone={timeZone} />);
+      expect(screen.getByText("Sites: Pickles Reef")).toBeInTheDocument();
+      expect(screen.getByText(/^Changed by the shop on .*7:40/)).toBeInTheDocument();
+      cleanup();
+      render(<TripChangeLedger events={[sites()]} locale="es-ES" timeZone={timeZone} />);
+      expect(screen.getByText("Sitios: Pickles Reef")).toBeInTheDocument();
+      expect(screen.getByText(/^Cambiado por el centro el /)).toBeInTheDocument();
+    });
+
+    it("lists a run of sites in order, as a sentence list, also on a public page", () => {
+      render(
+        <TripChangeLedger
+          events={[sites({ afterValue: { siteNames: "Pickles Reef\nMolasses Reef" } })]}
+          locale="en-US"
+          timeZone={timeZone}
+          revealArrivalDetails={false}
+        />,
+      );
+      expect(screen.getByText("Sites: Pickles Reef and Molasses Reef")).toBeInTheDocument();
+    });
+
+    it("says a cleared run, and nothing for a run that reads the same", () => {
+      render(
+        <TripChangeLedger
+          events={[sites({ afterValue: { siteNames: null } })]}
+          locale="en-US"
+          timeZone={timeZone}
+        />,
+      );
+      expect(screen.getByText("Sites: none planned yet")).toBeInTheDocument();
+      cleanup();
+      const { container } = render(
+        <TripChangeLedger
+          events={[sites({ afterValue: { siteNames: "Molasses Reef\nFrench Reef" } })]}
+          locale="en-US"
+          timeZone={timeZone}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
+  });
 });

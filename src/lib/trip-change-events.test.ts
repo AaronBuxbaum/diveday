@@ -3,6 +3,8 @@ import {
   tripArrivalSnapshot,
   tripChangeSnapshotsEqual,
   tripConditionsSnapshot,
+  tripSiteNames,
+  tripSitesSnapshot,
 } from "./trip-change-events";
 
 describe("public trip change snapshots", () => {
@@ -61,5 +63,25 @@ describe("public trip change snapshots", () => {
       visibilityMeters: 0,
       surfaceConditions: "Flat",
     });
+  });
+});
+
+describe("tripSitesSnapshot (issue #3060)", () => {
+  it("keeps the run in order, each name once, blanks dropped and space folded", () => {
+    const snapshot = tripSitesSnapshot(["Molasses Reef", null, " French  Reef ", "Molasses Reef"]);
+    expect(snapshot).toEqual({ siteNames: "Molasses Reef\nFrench Reef" });
+    expect(tripSiteNames(snapshot)).toEqual(["Molasses Reef", "French Reef"]);
+  });
+
+  it("is null with no site, and compares by the run, not the object", () => {
+    expect(tripSitesSnapshot([null, undefined, " "])).toEqual({ siteNames: null });
+    expect(tripSiteNames({ siteNames: null })).toEqual([]);
+    expect(tripSiteNames(null)).toEqual([]);
+    expect(
+      tripChangeSnapshotsEqual(tripSitesSnapshot(["A", "B"]), tripSitesSnapshot(["A", "B", "A"])),
+    ).toBe(true);
+    expect(
+      tripChangeSnapshotsEqual(tripSitesSnapshot(["A", "B"]), tripSitesSnapshot(["B", "A"])),
+    ).toBe(false);
   });
 });
