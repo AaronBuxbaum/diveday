@@ -179,9 +179,15 @@ export function registerRemainingExpandedAuditCaptures(
     test("a gear unit opens its identity and purchase fields", async ({ page }) => {
       await page.goto("/shop/blue-mantis/gear");
       await page.getByRole("link", { name: "Reg #1", exact: true }).click();
-      const details = page.locator("#unit-details details");
-      await openIfClosed(details);
-      await details.locator('input[name="serialNumber"]').waitFor();
+      // The identity fields open from the header's "Edit details" (visual
+      // review 2026-10-24, A19), into the unit's one summary panel.
+      await page.getByRole("link", { name: staff("gear.unit.details.edit") }).click();
+      await page.waitForURL(/[?&]edit=details/);
+      await page
+        .locator("#unit-details")
+        .filter({ visible: true })
+        .locator('input[name="serialNumber"]')
+        .waitFor();
       await capture(page, "gear-unit-details-editor", "light");
     });
 
@@ -450,12 +456,13 @@ export function registerRemainingExpandedAuditCaptures(
       page,
     }) => {
       await page.goto("/s/blue-mantis");
-      const filters = page
-        .locator("details")
-        .filter({ has: page.locator('select[name="tripType"]') })
-        .first();
-      await openIfClosed(filters);
-      await filters.locator('select[name="canDive"]').waitFor();
+      // "More filters" is a button that opens the form's own panel since the
+      // row became one row (visual review 2026-10-24, B18), not a <details>.
+      const tripType = page.locator('select[name="tripType"]');
+      await expect(tripType).toHaveAttribute("data-hydrated", "true");
+      const more = page.locator('form:has(select[name="tripType"]) button[aria-expanded]');
+      if ((await more.getAttribute("aria-expanded")) !== "true") await more.click();
+      await page.locator('select[name="canDive"]').waitFor();
       await capture(page, "public-schedule-filters-open", "light");
     });
 

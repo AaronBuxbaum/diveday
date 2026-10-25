@@ -88,7 +88,9 @@ test.describe("account security settings", () => {
     // eject you or the control is decorative. Where it lands is not the point
     // and is not asserted: signed out under DIVEDAY_E2E the app shows the demo
     // shell rather than /sign-in.
-    // The Revoke sits inside the device row's "Show sessions", opened above.
+    // The Revoke sits inside the device row's "Show sessions"; the reload
+    // closed it, so it opens again first.
+    await sessions.first().click();
     await page.getByRole("button", { name: "Revoke", exact: true }).first().click();
     await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toHaveCount(0);
     await page.goto(`/shop/${privateShop.slug}/settings/security`);

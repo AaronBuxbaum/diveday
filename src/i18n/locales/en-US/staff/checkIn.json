@@ -50,8 +50,9 @@
     "confirmAriaLabel": "Turn {name} away",
     "line": "Seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}",
     "badge": "Turned away",
-    "money": "Nothing was charged or refunded. Open their row to move the booking to another day.",
-    "moneyRemove": "Nothing was charged or refunded. Open their row to remove the booking and refund it by hand.",
+    "money": "Nothing was charged or refunded.",
+    "moneyMoveDoor": "Move the booking to another day",
+    "moneyRemoveDoor": "Remove the booking and refund it by hand",
     "noWaitlist": "Nobody is waiting for this seat."
   },
   "sailedRebook": {

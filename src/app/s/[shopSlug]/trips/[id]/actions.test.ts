@@ -68,7 +68,7 @@ const { getDb } = await import("@/db/client");
 const { redirect } = await import("next/navigation");
 const { createBookingParty } = await import("@/db/bookings");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
-const { bookSpot } = await import("./actions");
+const { bookSpot, joinWaitlist } = await import("./actions");
 const { cookies } = await import("next/headers");
 
 /**
@@ -273,6 +273,33 @@ describe("the Under 18 box", () => {
  * 2026-10-11, item 8): the party member it was about, as typed, and nothing
  * for any other refusal.
  */
+/**
+ * **The wait list takes a name and an email, nothing else** (visual review
+ * 2026-10-24, B57; security review of layer 2, F2). The panel asks no phone,
+ * so a number posted by hand was never given under the SMS consent's words
+ * (H-09) and must not reach the person row staff text from.
+ */
+describe("joining the wait list", () => {
+  it("stores no phone a hand-crafted post carries", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id, 1);
+    await post(shop.slug, tripId, submission([{ email: "seated@example.com" }]));
+
+    const form = submission([{ email: "waiting@example.com" }]);
+    form.set("phone", "+1 305 555 0142");
+    await expect(joinWaitlist({ shopSlug: shop.slug, tripId, embed: false }, form)).rejects.toThrow(
+      /REDIRECT:.*\?interest=/,
+    );
+
+    const [joiner] = await db
+      .select({ phone: people.phone })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.email, "waiting@example.com")));
+    expect(joiner).toBeDefined();
+    expect(joiner?.phone).toBeNull();
+  });
+});
+
 describe("the already-booked refusal", () => {
   it("hands back the address of the member already on the list", async () => {
     const { db, shop } = ctx;

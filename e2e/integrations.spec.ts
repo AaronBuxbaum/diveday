@@ -25,7 +25,11 @@ test.describe("shop integrations settings", () => {
     await expect(page.getByRole("heading", { name: "Shopify" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "QuickBooks Online" })).toHaveCount(0);
     // Its state is a line of text, not a pill, and the rest is one foot line.
-    await expect(page.getByText("Not connected", { exact: true })).toHaveCount(1);
+    // The Settings rail's Payments badge says "Not connected" too (Stripe), so
+    // the count is of the page's own words, outside any navigation.
+    await expect(
+      page.getByText("Not connected", { exact: true }).and(page.locator(":not(nav *)")),
+    ).toHaveCount(1);
     await expect(page.getByText(/More integrations come later\. Ask us at .+\./)).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Connect Zapier" })).toBeVisible();
   });

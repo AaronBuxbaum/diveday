@@ -207,7 +207,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
-        course={{ nitroxCompatible: false }}
+        course={{ nitroxCompatible: false, gearIncluded: false }}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -226,7 +226,7 @@ describe("BookingGearFields", () => {
         index={0}
         showDiverLabel={false}
         rentalItems={rentalItems}
-        course={{ nitroxCompatible: true }}
+        course={{ nitroxCompatible: true, gearIncluded: false }}
         pricing={pricing}
         plannedDives={2}
         currency="usd"
@@ -364,5 +364,76 @@ describe("BookingGearFields as on the last trip", () => {
     );
     expect(screen.getByLabelText("Need rental gear?")).not.toBeChecked();
     expect(screen.queryByText("Ticked as on your last trip")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **A course whose fee includes the gear** (issue #2795): the booking form puts
+ * no rental on the card. Its scuba unit is the fee's, and its sizes and the
+ * suit are asked on `/ready` (`RentalFitForm`), so this step quotes no rental
+ * price and no gear total. Nitrox is a fill, not a rental, and keeps its price
+ * where the course runs on it.
+ */
+describe("BookingGearFields on a course that includes the gear", () => {
+  it("asks nothing and charges nothing when the course runs on air", () => {
+    const onSubtotalChange = vi.fn();
+    const { container } = renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={rentalItems}
+        course={{ nitroxCompatible: false, gearIncluded: true }}
+        pricing={pricing}
+        plannedDives={2}
+        currency="usd"
+        onSubtotalChange={onSubtotalChange}
+        asLastTime={{ nitrox: false, rentedKinds: ["bcd", "regulator", "wetsuit"] }}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 0);
+  });
+
+  it("offers only the nitrox fill, at its price, with no rental line", () => {
+    const onSubtotalChange = vi.fn();
+    const { container } = renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={rentalItems}
+        course={{ nitroxCompatible: true, gearIncluded: true }}
+        pricing={pricing}
+        plannedDives={2}
+        currency="usd"
+        onSubtotalChange={onSubtotalChange}
+        asLastTime={{ nitrox: false, rentedKinds: ["bcd", "wetsuit"] }}
+      />,
+    );
+    expect(screen.queryByLabelText("Need rental gear?")).not.toBeInTheDocument();
+    expect(container.querySelectorAll('input[name^="gear-0-"]')).toHaveLength(0);
+    // No rental piece's price anywhere: not the set's, not the BCD's.
+    expect(container.textContent).not.toMatch(/\$45\.00|\$15\.00/);
+    expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 0);
+
+    fireEvent.click(screen.getByLabelText("I’d like nitrox ($12.00 per dive)"));
+    // Two dives of nitrox, and no "Gear for this diver" line to say it twice.
+    expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 2_400);
+    expect(screen.queryByText(/Gear for this diver/)).not.toBeInTheDocument();
+  });
+
+  it("still offers the rental gear on a course that does not include it", () => {
+    renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={rentalItems}
+        course={{ nitroxCompatible: true, gearIncluded: false }}
+        pricing={pricing}
+        plannedDives={2}
+        currency="usd"
+      />,
+    );
+    askForGear();
+    expect(screen.getByLabelText(/^BCD/)).toBeInTheDocument();
   });
 });

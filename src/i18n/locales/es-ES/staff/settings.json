@@ -1,7 +1,6 @@
 {
   "main": {
     "eyebrow": "Ajustes",
-    "boatMode": "Modo barco",
     "notice": {
       "packingSaved": "Lista de equipo guardada para todas las salidas",
       "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
@@ -224,6 +223,7 @@
       "heading": "Lista de equipo de la salida",
       "description": "Un artículo por línea. Los buceadores ven esta misma lista concisa en cada salida.",
       "label": "Elementos de la lista",
+      "logbook": "Sugerir una bitácora de buceo",
       "submit": "Guardar lista de equipo",
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
@@ -1101,6 +1101,7 @@
     "sessions": {
       "group": "{count, plural, one {# sesión} other {# sesiones}} · última vez {when}",
       "thisDevice": "Este dispositivo",
+      "includesThisDevice": "Incluye este dispositivo",
       "showSessions": "Ver sesiones",
       "showAll": "Ver todas"
     },

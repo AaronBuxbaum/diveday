@@ -300,7 +300,7 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
     ).toEqual({ ok: true, changed: true, allClear: "skipped" });
     expect(sent).toEqual([]);
     expect((await stateOf(db, raised.reportId)).allClearAt).toBeNull();
-    // A second tap changes nothing and reports nothing sent.
+    // A second tap stamps nothing and, with nobody owed, sends nothing.
     expect(
       await markMissingDiverFound(db, {
         shopId: input.shopId,
@@ -309,7 +309,7 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
         actorPersonId: f.crew.id,
         provider,
       }),
-    ).toEqual({ ok: true, changed: false, allClear: null });
+    ).toEqual({ ok: true, changed: false, allClear: "skipped" });
   });
 
   it("reports a partial all-clear as partial", async () => {

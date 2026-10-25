@@ -196,7 +196,7 @@ export async function buildArrivalDesk({
             offer: salvage,
             shopSlug,
             tripId,
-            diver: { id: row.personId, name: row.personName },
+            diver: { id: row.personId, name: row.personName, bookingId: row.bookingId },
             formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, timeZone),
             turnedAway: turnedAway !== null,
             moveClosed: turnedAwayAfterStart || partyLeads.has(row.bookingId),

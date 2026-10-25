@@ -17,9 +17,13 @@ export function OfflineRollCallSection({
   view: OfflineTripView;
   controls: OfflineTripControls;
 }) {
-  const { manifest, checkpoint, boarded, awaiting, rollCallComplete, anyBuddies } = view;
+  const { manifest, checkpoint, boarded, awaiting, rollCallComplete, anyBuddies, totalDivers } =
+    view;
   const { t, locale } = controls;
-  const passengerTypes = countParticipants(manifest.divers);
+  // The people this copy counts: a seat the desk turned away is off the boat (#2907).
+  const passengerTypes = countParticipants(
+    manifest.divers.filter((_diver, index) => !view.offBoat[index]),
+  );
   // A copy saved before the flag rode along has none, and says nothing.
   const showsDecompressionReminder =
     checkpoint === "departure" &&
@@ -50,7 +54,7 @@ export function OfflineRollCallSection({
             below `sm`: three tiles on a phone. */}
       <section className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
         {[
-          [t("shared.offlineManifest.single.statsDivers"), manifest.summary.totalDivers],
+          [t("shared.offlineManifest.single.statsDivers"), totalDivers],
           [t("shared.offlineManifest.single.statsBoarded"), boarded],
           [t("shared.offlineManifest.single.statsAwaiting"), awaiting],
         ].map(([label, value]) => (
@@ -104,10 +108,10 @@ export function OfflineRollCallSection({
         ) : null}
         {rollCallComplete ? (
           <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
-            {boarded === manifest.summary.totalDivers
+            {boarded === totalDivers
               ? t("shared.offlineManifest.single.allAboard")
               : t("shared.offlineManifest.single.someNotBoarded", {
-                  count: manifest.summary.totalDivers - boarded,
+                  count: totalDivers - boarded,
                 })}
           </p>
         ) : null}

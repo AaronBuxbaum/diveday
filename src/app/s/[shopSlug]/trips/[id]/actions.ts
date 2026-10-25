@@ -14,11 +14,9 @@ import { type AppDb, getDb } from "@/db/client";
 import { recordShopMilestone } from "@/db/founder-metrics";
 import { askForDeparture } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
-import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
-import { recordPaidRentalKinds, saveRentalFit } from "@/db/rental-fit";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -44,6 +42,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { packsLogbook } from "@/lib/diver-planning";
 import { formValue, parseForm, readForm, trimmedText } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -62,18 +61,17 @@ import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { partnerFromReferralCookie, REFERRAL_COOKIE } from "@/lib/referrals";
 import {
+  checkoutRentableItems,
   hasAnyRentalPricing,
   nitroxAvailableOn,
-  offeredRentableItems,
-  quoteRentalFit,
   type RentableItemKind,
-  rentalFlagsFromKinds,
   withOneSuit,
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
+import { checkoutGearLines, persistCheckoutGear } from "./_lib/checkout-gear";
 
 /**
  * Absolute readiness link, for the confirmation email — and for the redirect a
@@ -168,7 +166,6 @@ function bookingRefusalCode(reason: string): ErrorCode {
 const waitlistForm = z.object({
   "fullName-0": formValue(),
   "email-0": formValue(),
-  phone: formValue().transform((value) => value || undefined),
   partySize: formValue(),
 });
 
@@ -303,7 +300,11 @@ export async function bookSpot(
     payablePerDiverCentsForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
   );
   const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
-  const offeredGearItems = offeredRentableItems(shopNow.rentalItems);
+  // Nothing to rent on a course whose fee includes the gear (issue #2795): the
+  // form offers no box there, so a `gear-N-*` arriving anyway is hand-built and
+  // buys nothing, and the student's fit is left for `/ready` to ask.
+  const offeredGearItems = checkoutRentableItems(shopNow.rentalItems, tripForGear?.course);
+  const rentsAtCheckout = offersGearAtCheckout && offeredGearItems.length > 0;
   // Both gates, re-derived server-side: the shop fills nitrox, and this
   // departure's course runs on it. The checkbox is absent from the form in
   // either case (`BookingGearFields`), so a `nitrox-N=on` arriving anyway is
@@ -526,56 +527,14 @@ export async function bookSpot(
     money: { chargesOnline: payAtBookingForGear, partyTypes },
   });
 
-  // Persist each diver's chosen gear (and nitrox request) the moment their
-  // booking exists — the same durable record `saveRentalFit`/`setBookingNitrox`
-  // already write from the post-booking form, just written a step earlier. The
-  // seats are already committed, so a write failure here is logged and
-  // dropped, never turned into a booking error (docs ADR
-  // 20260801-checkout-upsells-rental-gear).
   if (offersGearAtCheckout) {
-    await Promise.all(
-      outcome.bookings.map(async ({ bookingId, personId, identityUnconfirmed }, index) => {
-        const selection = gearSelections[index];
-        if (!selection) return;
-        const rents = rentalFlagsFromKinds(selection.rentedKinds);
-        try {
-          // **A held seat writes nothing to the person it matched.** The row
-          // is an existing diver's, reached by an email whose name on file
-          // does not match (H-13), so whoever booked may not be them, and the
-          // fit is theirs. A rented wetsuit ticked here would clear their
-          // `dives_dry`, and with it the drysuit weight check on every later
-          // trip (`security-reviewer`, layer 2). The paid gear still stands on
-          // the order, and on the booking itself (`paid_rental_kinds`), where
-          // prep racks it unsized and "Same person" can carry it to the fit;
-          // the nitrox request below is this booking's own too. `/ready`
-          // refuses a held seat's fit for the same reason.
-          await recordPaidRentalKinds(dbi, {
-            shopId: shopNow.id,
-            bookingId,
-            kinds: selection.rentedKinds,
-          });
-          if (!identityUnconfirmed) {
-            await saveRentalFit(dbi, {
-              shopId: shopNow.id,
-              personId,
-              ...rents,
-            });
-          }
-          if (nitroxOfferedAtCheckout) {
-            await setBookingNitrox(dbi, {
-              shopId: shopNow.id,
-              bookingId,
-              wantsNitrox: selection.wantsNitrox,
-            });
-          }
-        } catch (error) {
-          log("booking.rental_fit_save_failed", "error", {
-            bookingId,
-            errorCode: error instanceof Error ? error.name : "unknown_error",
-          });
-        }
-      }),
-    );
+    await persistCheckoutGear(dbi, {
+      shopId: shopNow.id,
+      bookings: outcome.bookings,
+      selections: gearSelections,
+      rentsAtCheckout,
+      nitroxOffered: nitroxOfferedAtCheckout,
+    });
   }
 
   // Only inside the embed widget. Everywhere else a booked diver goes straight
@@ -630,32 +589,18 @@ export async function bookSpot(
   // lookup ran first, as the more specific match, and only one is ever
   // applied: Stripe Checkout takes a single promotion code.
   //
-  // One priced gear line per diver whose selection actually quotes to
-  // something — an item the shop hasn't priced online never reaches here
-  // (quoteRentalFit already leaves it off the subtotal), so it stays
-  // "settled at the shop" exactly as the post-booking form describes it.
   const gearLines = offersGearAtCheckout
-    ? outcome.bookings
-        .map(({ bookingId, personName }, index) => {
-          const selection = gearSelections[index];
-          if (!selection) return null;
-          const quote = quoteRentalFit(shopNow.rentalPricing, {
-            rentedKinds: selection.rentedKinds,
-            offeredKinds: offeredGearItems.map((item) => item.kind),
-            wantsNitrox: selection.wantsNitrox,
-            plannedDives,
-          });
-          if (quote.subtotalCents <= 0) return null;
-          return {
-            bookingId,
-            amountCents: quote.subtotalCents,
-            description:
-              validParty.length > 1
-                ? t("checkoutLine.gearForDiver", { name: personName })
-                : t("checkoutLine.gear"),
-          };
-        })
-        .filter((line): line is NonNullable<typeof line> => line !== null)
+    ? checkoutGearLines({
+        pricing: shopNow.rentalPricing,
+        offeredKinds: offeredGearItems.map((item) => item.kind),
+        plannedDives,
+        bookings: outcome.bookings,
+        selections: gearSelections,
+        describe: (nitroxOnly, name) =>
+          validParty.length > 1
+            ? t(nitroxOnly ? "checkoutLine.nitroxForDiver" : "checkoutLine.gearForDiver", { name })
+            : t(nitroxOnly ? "checkoutLine.nitrox" : "checkoutLine.gear"),
+      })
     : [];
   const started = await startCheckoutUrl(dbi, {
     shopId: shopNow.id,
@@ -937,7 +882,6 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
       ? {
           fullName: joiner.data["fullName-0"],
           email: joiner.data["email-0"],
-          phone: joiner.data.phone,
         }
       : {},
   );
@@ -970,7 +914,8 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     tripId,
     fullName: parsed.data.fullName,
     email: parsed.data.email,
-    phone: parsed.data.phone || undefined,
+    // No phone: the wait list asks a name and an email only (B57), so a
+    // posted number was never given under the SMS consent's words (H-09).
     partySize: partySize.data,
     // Bounded per *subject* address rather than per IP — the only key a
     // rotating set of submitters cannot clear (RATE_LIMITS.declarationByPerson).
@@ -1081,6 +1026,13 @@ function bookSpotConfirmation(input: {
     waiverUrl: input.waiver?.url,
     waiverExpiresAt: input.waiver?.expiresAt,
     packingList: shop.packingList,
+    // The diver's cards are not read here: a try-dive's email leaves the
+    // logbook off, and the thread adds it back for a certified diver.
+    packingLogbook: packsLogbook({
+      shopSuggests: shop.packingLogbook,
+      introCourseSession: trip.course?.isIntroCourse === true,
+      holdsCertification: false,
+    }),
     // A course session's learning materials, delivered with the seat
     // (ADR 20261008-course-learning-materials).
     learningMaterials: trip.course

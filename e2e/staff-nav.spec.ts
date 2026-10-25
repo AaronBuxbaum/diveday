@@ -260,7 +260,7 @@ test.describe("owner", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
   });
 
-  test("the shop's name holds the reader's own things (My account), not a second Settings", async ({
+  test("the shop's name holds the reader's own things (Account settings), not a second Settings", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis");
@@ -268,14 +268,15 @@ test.describe("owner", () => {
     const header = page.locator("header[data-chrome-bar]");
     await expect(header.getByRole("button", { name: "Sign out" })).toBeVisible();
     await expect(header.getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
-    // The reader's own things are one labelled group, My account (issue #2813,
-    // Aaron 2026-10-17): security, calendar feed and email, for every role.
-    const account = header.getByRole("navigation", { name: "My account" });
-    await expect(account.getByRole("link")).toHaveText([
-      "Security",
-      "Calendar subscription",
-      "Email settings",
-    ]);
+    // The reader's own things are one row, Account settings (visual review
+    // 2026-10-24, A42), whose page links the calendar feed and email; Boat
+    // mode stays in the menu, where every role reaches it.
+    await expect(header.getByRole("button", { name: "Boat mode" })).toBeVisible();
+    await header.getByRole("link", { name: "Account settings" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Account security" }).getByRole("link"),
+    ).toHaveText(["Calendar subscription", "Email settings"]);
   });
 
   test("Inbox and Money are one place each, its parts as tabs under the title", async ({

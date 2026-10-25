@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupSessions } from "./group-sessions";
+import { groupDeviceTag, groupSessions } from "./group-sessions";
 
 const at = (iso: string) => new Date(iso);
 
@@ -56,5 +56,21 @@ describe("groupSessions", () => {
     );
     const ids = groupSessions(rows).flatMap((group) => group.sessions.map((row) => row.id));
     expect(ids.sort()).toEqual(rows.map((row) => row.id).sort());
+  });
+});
+
+describe("groupDeviceTag", () => {
+  it("says a group of several includes this device, and only a group of one is this device", () => {
+    const [several, single, other] = [
+      groupSessions([
+        session("a", "Chrome · Linux", "2026-10-20T10:00:00Z", true),
+        session("b", "Chrome · Linux", "2026-10-22T10:00:00Z"),
+      ])[0],
+      groupSessions([session("c", "Safari · iOS", "2026-10-21T10:00:00Z", true)])[0],
+      groupSessions([session("d", "Firefox · Windows", "2026-10-21T10:00:00Z")])[0],
+    ];
+    expect(groupDeviceTag(several)).toBe("includesThisDevice");
+    expect(groupDeviceTag(single)).toBe("thisDevice");
+    expect(groupDeviceTag(other)).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, makeActivitySafe, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -7,12 +8,21 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openIfClosed,
   openRosterDetails,
   openThreadStep,
   openTripAbout,
   openTripTab,
   publicTripUrl,
 } from "./helpers";
+
+/**
+ * Open one of the course editor's closed sections (visual review 2026-10-24,
+ * A11): pitch, pricing, at a glance and the day-by-day stand open; the rest are
+ * closed rows whose controls still post with the one Save.
+ */
+const openCourseSection = (page: Page, id: string) =>
+  openIfClosed(page.locator(`details#${id}`).filter({ visible: true }));
 
 /**
  * **"More details" on the date-request composer** (2026-09-17). An alternative
@@ -76,6 +86,8 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
+  // The session's own afternoon rides along on her thread (issue #2795).
+  await expect(page.getByRole("region", { name: "Your afternoon" })).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
   // open at rest (ADR 20260827-the-divers-thread, decision 3).
@@ -86,6 +98,49 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   // The page-level notice the redirect carries, for the reason `nitrox.spec.ts`
   // gives: the form's own "Saved." is inside the gear step, which comes back shut.
   await expect(page.getByText("the crew will have your sizes")).toBeVisible();
+});
+
+/**
+ * **A course whose fee includes the gear rents nothing at booking** (issue
+ * #2795). With cards taken and gear priced online, an ordinary departure's
+ * booking form asks "Need rental gear?" and prices each piece; the seed's
+ * Discover Scuba session, whose course includes its gear, asks nothing and
+ * prices nothing, so the card is charged the course fee alone. A shop of its
+ * own: connecting Stripe is shop configuration.
+ */
+test("a gear-included course session quotes no rental at booking", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  const diver = diverTranslator("en-US");
+  const SHOP = privateShop.slug;
+  const connected = await request.post(
+    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  );
+  expect(connected.ok()).toBe(true);
+  await page.context().clearCookies();
+
+  await page.goto(`/s/${SHOP}`);
+  await page
+    .getByRole("link", { name: /Night Dive — City of Washington/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]{36}/);
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel(diver("bookingGear.needGear"))).toBeVisible();
+
+  await page.goto(`/s/${SHOP}`);
+  await page
+    .getByRole("link", { name: /Discover Scuba — Pool & Reef/ })
+    .first()
+    .click();
+  await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  // Pay at booking is on here too: the button says so.
+  await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
+  await expect(page.getByLabel(diver("bookingGear.needGear"))).toHaveCount(0);
+  await expect(page.locator("#book").getByText(/Gear for this diver/)).toHaveCount(0);
 });
 
 test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({
@@ -438,6 +493,7 @@ test.describe("staff", () => {
     await page.getByLabel("Day 4 — what happens").fill("Scenario retest\nDebrief and paperwork");
     // Two boxes per pair now, not one textarea carrying a blank-line format
     // (issue #815). The seeded course already has questions; this adds one.
+    await openCourseSection(page, "faq");
     await page.getByRole("button", { name: "Add a question" }).click();
     await page
       .getByLabel(/^Question \d+$/)
@@ -502,6 +558,7 @@ test.describe("staff", () => {
     await row.getByRole("link", { name: "Edit" }).click();
     await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\/edit/);
 
+    await openCourseSection(page, "photos");
     const heroInput = page.locator('input[name="heroImageFile"]').filter({ visible: true });
     await heroInput.setInputFiles({
       name: "hero.jpg",
@@ -782,7 +839,7 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
   // Signed out: this is the composer a prospective diver meets, not staff.
   await page.goto("/s/blue-mantis/courses/open-water-diver");
 
-  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  const inquiry = page.getByRole("region", { name: "Ask about this course" });
   await inquiry.scrollIntoViewIfNeeded();
   await page.getByLabel("Your name").fill("Mira Delgado");
   await page.getByLabel("Your email").fill("mira.delgado.e2e@example.com");
@@ -820,7 +877,7 @@ test("a blank inquiry is rejected, not defaulted — a way to reply is required"
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
-  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  const inquiry = page.getByRole("region", { name: "Ask about this course" });
   await inquiry.scrollIntoViewIfNeeded();
 
   // Nothing filled in: both refusals land at once rather than one after the
@@ -851,7 +908,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
-  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  const inquiry = page.getByRole("region", { name: "Ask about this course" });
   await inquiry.scrollIntoViewIfNeeded();
   await page.getByLabel("Your name").fill("Sena Okafor");
   await page.getByLabel("Your email").fill("sena.okafor.e2e@example.com");
@@ -1226,6 +1283,7 @@ test("writes a FAQ pair through two boxes and shows it to a diver", async ({
 }) => {
   test.setTimeout(60_000);
   await page.goto(`/shop/${privateShop.slug}/courses/rescue-diver/edit`);
+  await openCourseSection(page, "faq");
   await page.getByRole("button", { name: "Add a question" }).click();
   await page
     .getByLabel(/^Question \d+$/)
@@ -1267,6 +1325,7 @@ test("a course's learning materials reach the student's thread, and staff tick t
   test.setTimeout(90_000);
   const slug = privateShop.slug;
   await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
+  await openCourseSection(page, "learningMaterialsJson");
   await page.getByRole("button", { name: "Add a material" }).click();
   await page
     .getByLabel(/^Material \d+$/)

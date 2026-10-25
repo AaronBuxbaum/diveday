@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { Field, FieldActions, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import { ChoiceRow, Field, FieldActions, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { EXTENSION_STORE_URL } from "@/lib/cert-check-extension";
 import { publicAppUrl } from "@/lib/notifications";
@@ -122,6 +122,14 @@ export function BookingsGroup({
                 className={textareaClassFor(6)}
               />
             </Field>
+            <ChoiceRow
+              name="packingLogbook"
+              type="checkbox"
+              defaultChecked={shop.packingLogbook}
+              className="text-sm"
+            >
+              {t("settings.main.packing.logbook")}
+            </ChoiceRow>
             <FieldActions>
               <SubmitButton
                 pendingLabel={t("settings.main.packing.submitting")}

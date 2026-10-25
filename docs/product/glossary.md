@@ -85,6 +85,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dock line
 - Dock rider
 - Last time line
+- Logbook suggestion
 - Lost item
 - Saved trip-prep copy
 - Snag

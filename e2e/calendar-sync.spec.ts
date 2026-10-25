@@ -64,7 +64,7 @@ async function mintLink(panel: Locator): Promise<string> {
 test.describe("staff calendar subscriptions", () => {
   signedInAsOwner();
 
-  test("the door is in My account, not on the Settings hub, and says nothing about what is behind it", async ({
+  test("the door is in Account settings, not on the Settings hub, and says nothing about what is behind it", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings");
@@ -79,10 +79,12 @@ test.describe("staff calendar subscriptions", () => {
       await expect(main.getByText(caption)).toHaveCount(0);
     }
 
-    // The door: the identity menu's My account group, ungated.
+    // The door: the identity menu's one "Account settings" row, ungated, and
+    // the account page's own links (visual review 2026-10-24, A42).
     await page.locator("header [data-identity-menu]").click();
+    await page.locator("header").getByRole("link", { name: "Account settings" }).click();
     await page
-      .getByRole("navigation", { name: "My account" })
+      .getByRole("navigation", { name: "Account security" })
       .getByRole("link", { name: "Calendar subscription", exact: true })
       .click();
     await expect(

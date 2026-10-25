@@ -5,6 +5,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -143,6 +144,36 @@ export const incidentReports = pgTable(
      */
     missingAlertSentAt: timestamp("missing_alert_sent_at", { withTimezone: true }),
     /**
+     * **Who the missing-diver alarm actually reached** (issue #2828): the
+     * `people.id` of every owner whose alarm email was sent, appended at send
+     * time by `sendMissingDiverAlerts`, once per person however many passes
+     * it took. A partial send records the owners it reached; one whose email
+     * failed is not here until a later pass reaches them.
+     *
+     * Found reads exactly this set for the all-clear
+     * (`sendMissingDiverAllClear`), never the owner list as it stands then:
+     * an owner who never saw the alarm is not cleared of it, and one who did
+     * is never skipped. Staff ids only, never an address or a name; the
+     * address is re-read from the person's login at send time.
+     */
+    missingAlertReachedPersonIds: jsonb("missing_alert_reached_person_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    /**
+     * **Owners whose alarm email is being sent right now** (issue #2828,
+     * adversarial review): written before the send, moved to
+     * `missing_alert_reached_person_ids` once it went, and removed when the
+     * provider said it failed. An id left here means nobody knows whether the
+     * mail went (the process died mid-send), so the all-clear goes to them
+     * too: a "found" note an owner may not need is the safe side of an owner
+     * left believing a diver is missing.
+     */
+    missingAlertAttemptingPersonIds: jsonb("missing_alert_attempting_person_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    /**
      * **"Missing diver, alert owners now"** from the roll-call row (issue
      * #2694, decided by Aaron 2026-10-17): the one tap that tells the owners
      * at once, before the report is filled in. The alert then goes as for a
@@ -173,12 +204,31 @@ export const incidentReports = pgTable(
     missingFoundAt: timestamp("missing_found_at", { withTimezone: true }),
     missingFoundByPersonId: uuid("missing_found_by_person_id").references(() => people.id),
     /**
-     * The all-clear's claim: stamped before any of its emails, so it goes at
-     * most once whatever happens after. Not proof of a send.
+     * When the all-clear was first tried: stamped by the first run, never
+     * cleared. Not proof of a send; the report says partial while it is set
+     * and `missing_all_clear_sent_at` is not.
      */
     missingAllClearClaimedAt: timestamp("missing_all_clear_claimed_at", { withTimezone: true }),
-    /** When the all-clear's email went to every owner. Null while any did not (or none were sent). */
+    /**
+     * When the all-clear had gone to every owner it is owed to. Null while any
+     * of them is still owed one (or none were sent).
+     */
     missingAllClearSentAt: timestamp("missing_all_clear_sent_at", { withTimezone: true }),
+    /**
+     * **The owners whose all-clear went** (issue #2828): appended after each
+     * sent email, so a retry (a second Found tap, the hourly pass) sends only
+     * to the owners still owed one, and nobody gets two.
+     */
+    missingAllClearSentPersonIds: jsonb("missing_all_clear_sent_person_ids")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    /**
+     * The all-clear's lease: one run sends at a time. Given back when the run
+     * ends, then the run looks once more for an owner who joined the set
+     * while it held the lease. A run that died leaves it to run out.
+     */
+    missingAllClearLeasedAt: timestamp("missing_all_clear_leased_at", { withTimezone: true }),
     /** Who discarded the draft, named beside it on the departure log. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },

@@ -358,6 +358,47 @@ export const COURSE_FORM_MAX_AGE_MIN = 1;
 export const COURSE_FORM_MAX_AGE_MAX = 120;
 
 /**
+ * **Whether a forms list would be refused for what it names**, before anything
+ * is written: a bound out of range, an id that is not one of this shop's live
+ * forms, or a bound on a medical-screening form, which every student answers.
+ * `setCourseFormRequirements` asks it inside its transaction; the course
+ * editor asks it first, so a refused list refuses the editor's whole save
+ * while the course is still as it was (dive-domain review, visual review
+ * 2026-10-24).
+ */
+export async function courseFormListRefusal(
+  db: DbExecutor,
+  shopId: string,
+  formIds: readonly string[],
+  bounds: ReadonlyMap<string, number> | undefined,
+): Promise<"unknown_form" | "invalid_age" | "medical_bound" | null> {
+  if (
+    bounds &&
+    [...bounds.values()].some(
+      (age) =>
+        !Number.isInteger(age) || age < COURSE_FORM_MAX_AGE_MIN || age > COURSE_FORM_MAX_AGE_MAX,
+    )
+  ) {
+    return "invalid_age";
+  }
+  const ids = [...new Set(formIds)];
+  if (ids.length === 0) return null;
+  const live = await db
+    .select({ id: courseForms.id, medicalScreening: courseForms.medicalScreening })
+    .from(courseForms)
+    .where(
+      and(
+        eq(courseForms.shopId, shopId),
+        inArray(courseForms.id, ids),
+        isNull(courseForms.deletedAt),
+      ),
+    );
+  if (live.length !== ids.length) return "unknown_form";
+  if (live.some((form) => form.medicalScreening && bounds?.has(form.id))) return "medical_bound";
+  return null;
+}
+
+/**
  * Set the forms a course requires, in the order given. Ids that are not one
  * of this shop's live forms are refused as a whole rather than dropped — a
  * list the shop did not mean is worse than no change. A form taken off the
@@ -397,15 +438,6 @@ export async function setCourseFormRequirements(
   const now = input.now ?? nowDate();
   const formIds = [...new Set(input.formIds)];
   const bounds = input.maxAgeYears;
-  if (
-    bounds &&
-    [...bounds.values()].some(
-      (age) =>
-        !Number.isInteger(age) || age < COURSE_FORM_MAX_AGE_MIN || age > COURSE_FORM_MAX_AGE_MAX,
-    )
-  ) {
-    return { ok: false, reason: "invalid_age" };
-  }
   const boundOf = (formId: string) => (bounds ? { maxAgeYears: bounds.get(formId) ?? null } : {});
   return db.transaction(async (tx) => {
     const [course] = await tx
@@ -414,22 +446,8 @@ export async function setCourseFormRequirements(
       .where(and(eq(courses.id, input.courseId), eq(courses.shopId, input.shopId)))
       .for("update");
     if (!course) return { ok: false, reason: "not_found" } as const;
-    if (formIds.length > 0) {
-      const live = await tx
-        .select({ id: courseForms.id, medicalScreening: courseForms.medicalScreening })
-        .from(courseForms)
-        .where(
-          and(
-            eq(courseForms.shopId, input.shopId),
-            inArray(courseForms.id, formIds),
-            isNull(courseForms.deletedAt),
-          ),
-        );
-      if (live.length !== formIds.length) return { ok: false, reason: "unknown_form" } as const;
-      if (live.some((form) => form.medicalScreening && bounds?.has(form.id))) {
-        return { ok: false, reason: "medical_bound" } as const;
-      }
-    }
+    const refused = await courseFormListRefusal(tx, input.shopId, formIds, bounds);
+    if (refused) return { ok: false, reason: refused } as const;
     const existing = await tx
       .select({
         id: courseFormRequirements.id,

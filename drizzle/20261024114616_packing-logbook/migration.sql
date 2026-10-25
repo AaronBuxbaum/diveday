@@ -1,0 +1,2 @@
+ALTER TABLE "shops" ADD COLUMN "packing_logbook" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "shops" ALTER COLUMN "packing_list" SET DEFAULT '["Swimsuit and towel","Reef-safe sun protection"]';

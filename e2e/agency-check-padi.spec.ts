@@ -275,7 +275,9 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   // Settings > Features: the switch, off, and turned back on.
   await page.goto(features);
   await expect(row.getByRole("checkbox")).not.toBeChecked();
-  await expect(row.getByText(/^Beta: check a diver’s PADI card on DiveChek/)).toBeVisible();
+  await expect(
+    row.getByText(/^Check a diver’s PADI card and eLearning in one click/),
+  ).toBeVisible();
   await row.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/notice=feature-saved/);

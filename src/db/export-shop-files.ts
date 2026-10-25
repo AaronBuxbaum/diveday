@@ -202,6 +202,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "crew_lead_minutes",
       "review_url",
       "packing_list",
+      "packing_logbook",
       "rental_items",
       "rental_pricing",
       // The shop's own words on every rental ticket (ADR
@@ -314,6 +315,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.crewLeadMinutes ?? "",
         shop.reviewUrl,
         JSON.stringify(shop.packingList),
+        shop.packingLogbook,
         JSON.stringify(shop.rentalItems),
         JSON.stringify(shop.rentalPricing),
         shop.rentalTerms,
@@ -1829,10 +1831,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "missing_alert_raised_by_person_id",
       "missing_alert_raised_by_name",
       "missing_alert_sent_at",
+      "missing_alert_reached_person_ids",
+      "missing_alert_reached_names",
       "missing_found_at",
       "missing_found_by_person_id",
       "missing_found_by_name",
       "missing_all_clear_sent_at",
+      "missing_all_clear_sent_person_ids",
+      "missing_all_clear_sent_names",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, incidentReportRows }) =>
       incidentReportRows.map((row) => [
@@ -1870,10 +1876,22 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.missingAlertRaisedByPersonId,
         row.missingAlertRaisedByPersonId ? personName.get(row.missingAlertRaisedByPersonId) : null,
         row.missingAlertSentAt,
+        row.missingAlertReachedPersonIds.length > 0
+          ? row.missingAlertReachedPersonIds.join("; ")
+          : null,
+        row.missingAlertReachedPersonIds.length > 0
+          ? row.missingAlertReachedPersonIds.map((id) => personName.get(id) ?? "").join("; ")
+          : null,
         row.missingFoundAt,
         row.missingFoundByPersonId,
         row.missingFoundByPersonId ? personName.get(row.missingFoundByPersonId) : null,
         row.missingAllClearSentAt,
+        row.missingAllClearSentPersonIds.length > 0
+          ? row.missingAllClearSentPersonIds.join("; ")
+          : null,
+        row.missingAllClearSentPersonIds.length > 0
+          ? row.missingAllClearSentPersonIds.map((id) => personName.get(id) ?? "").join("; ")
+          : null,
       ]),
     note: EXPORT_FILE_NOTES["incident_reports.csv"],
   },

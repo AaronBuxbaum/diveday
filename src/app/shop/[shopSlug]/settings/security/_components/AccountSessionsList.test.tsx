@@ -7,6 +7,7 @@ afterEach(cleanup);
 
 const labels = {
   thisDevice: "This device",
+  includesThisDevice: "Includes this device",
   browserLine: (browser: string) => `Browser: ${browser}`,
   networkLine: (network: string) => `Network: ${network}`,
   unknownDevice: "Unknown device",
@@ -63,6 +64,22 @@ describe("active account sessions", () => {
     ).map((input) => input.value);
     expect(ids.sort()).toEqual(rows.map((session) => session.id).sort());
     expect(screen.getAllByRole("button", { name: "Revoke", hidden: true })).toHaveLength(31);
+  });
+
+  it("marks a device row of several as including this device, and the session itself as this device", () => {
+    const { container } = render(
+      <AccountSessionsList
+        rows={[row("today", "Chrome · Linux", 1, true), row("yesterday", "Chrome · Linux", 2)]}
+        labels={labels}
+        shopSlug="blue-mantis"
+        revokeAction={vi.fn(async () => {})}
+      />,
+    );
+    const group = container.querySelector("li.py-3") as HTMLElement;
+    const header = group.firstElementChild as HTMLElement;
+    expect(header).toHaveTextContent("Includes this device");
+    expect(header).not.toHaveTextContent(/^.*\bThis device/);
+    expect(within(group).getAllByText("This device", { exact: true })).toHaveLength(1);
   });
 
   it("shows five devices and folds the rest behind Show all", () => {

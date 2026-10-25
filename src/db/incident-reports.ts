@@ -545,7 +545,7 @@ async function ownersTold(db: DbExecutor, shopId: string, reportId: string): Pro
 }
 
 export type MissingDiverFound =
-  /** `allClear` is what the all-clear really did; null when this tap changed nothing. */
+  /** `allClear` is what the all-clear really did on this tap ("skipped" when nobody was owed one). */
   | { ok: true; changed: boolean; allClear: MissingDiverAllClearOutcome | null }
   | { ok: false; reason: IncidentWriteRefusal | "not_alerted" | "still_missing" };
 
@@ -560,7 +560,8 @@ export type MissingDiverFound =
  *   wrong tap cannot silence a live disappearance.
  * - **Any of the departure's crew**, as well as the report's own readers:
  *   the people at the rail are the ones who see the diver surface.
- * - Recorded once; a second tap changes nothing and sends nothing. It stops
+ * - Recorded once; a second tap stamps nothing and sends only an all-clear
+ *   that failed before (at most one success per owner). It stops
  *   any alert not yet sent. The all-clear is email only, no push, at most
  *   once (`sendMissingDiverAllClear`).
  */
@@ -577,6 +578,8 @@ export async function markMissingDiverFound(
     if (report.status !== "filed" && report.missingAlertRaisedAt === null) {
       return { ok: false, reason: "not_alerted" };
     }
+    // Already found: no new stamp, but the tap retries any owner whose
+    // all-clear failed (#2828).
     if (report.missingFoundAt !== null) return { ok: true, changed: false, allClear: null };
     const subjects = await affectedSubjects(tx, input.shopId, input.reportId);
     for (const subject of subjects) {
@@ -607,7 +610,7 @@ export async function markMissingDiverFound(
     });
     return { ok: true, changed: true, allClear: null };
   });
-  if (found.ok && found.changed) {
+  if (found.ok) {
     // What the all-clear really did, so the reply never claims more.
     let allClear: MissingDiverAllClearOutcome = "skipped";
     try {
