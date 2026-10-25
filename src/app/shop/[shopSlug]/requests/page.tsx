@@ -214,7 +214,8 @@ export default async function RequestsPage({
             previousAdvice = joined;
             // Offered on every day, "On the board" or not: a busy day can
             // still want a second boat for the people who asked. On each
-            // request it answers, never in the day's header (visual review A23).
+            // request it answers, never in the day's header (visual review A23),
+            // reference rows included, so a day of second choices keeps it.
             const openDeparture = canAddDeparture
               ? {
                   href: addDepartureHref(
@@ -270,6 +271,7 @@ export default async function RequestsPage({
                       match={entry.match}
                       homeDate={entry.homeDate}
                       locale={locale}
+                      openDeparture={openDeparture}
                       t={t}
                     />
                   ),

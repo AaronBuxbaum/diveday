@@ -112,6 +112,17 @@ describe("holdSendAction", () => {
     });
   });
 
+  it("refuses a discount's kind with a blank amount, and holds nothing", async () => {
+    const { db, shop, owner, seat } = await context();
+    signIn(shop, owner);
+    const form = dealForm(seat.tripId, owner.personId);
+    form.delete("discountPercent");
+    form.set("discount", " ");
+    form.set("discountKind", "percent");
+    await expect(holdSendAction(form)).rejects.toThrow("invalid_discount");
+    expect(await heldRows(db, shop.id)).toEqual([]);
+  });
+
   it("holds a waiver send from the surface's own hidden inputs, and Undo takes it back", async () => {
     const { db, shop, captain, seat } = await context();
     signIn(shop, captain);

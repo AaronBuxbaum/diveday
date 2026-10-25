@@ -121,7 +121,7 @@ const RECAP_TOKEN_PATTERN = /cmVjYXA6[A-Za-z0-9_-]*\.[A-Za-z0-9_-]{43}/g;
 const RECAP_TOKEN_REMOVED = "__diveday_recap_not_kept__";
 
 /** Every `<script>` element, its opening tag's attributes and its inline text. */
-const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
 
 /**
  * **The page's scripts, minus React's streaming instructions** (issue #3003).
@@ -132,9 +132,19 @@ const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
  * copy needs them to show anything past the loading skeleton.
  */
 function withoutClientRuntime(html: string): string {
-  return html.replace(SCRIPT_ELEMENT_PATTERN, (element, attributes: string, text: string) =>
-    /\bsrc\s*=/i.test(attributes) || text.includes("__next_f") ? "" : element,
-  );
+  // Until nothing more drops, so removing one element cannot join the text
+  // around it into another the pass did not see.
+  let previous: string;
+  let current = html;
+  do {
+    previous = current;
+    current = previous.replace(
+      SCRIPT_ELEMENT_PATTERN,
+      (element, attributes: string, text: string) =>
+        /\bsrc\s*=/i.test(attributes) || text.includes("__next_f") ? "" : element,
+    );
+  } while (current !== previous);
+  return current;
 }
 
 /**

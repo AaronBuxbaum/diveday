@@ -4,15 +4,13 @@ import { useEffect, useState } from "react";
 import { openAddUnitSheet } from "./AddUnitSheet";
 
 /**
- * The door into the "Add a unit" form at the bottom of the page, hidden until
- * opened: the page header's primary on a register with units (UX audit
- * 2026-10-07, item 31), and the empty register's card on one without. Not a `<a href="#add-unit">`
+ * The door into the "Add a unit" sheet (visual review A48): the page header's
+ * primary on a register with units (UX audit 2026-10-07, item 31), and the
+ * empty register's card on one without. Not a `<a href="#add-unit">`
  * (`lint/a11y/useValidAnchor` refuses an anchor whose href is only a click
  * handler in disguise, and it would be exactly that here): opening it is
- * `AddUnitDetails`'s own React state, asked for via `openAddUnitDetails()`
- * rather than reached into as a DOM node — a `details.open = true` mutation
- * from outside React is exactly the kind of change an unrelated re-render
- * elsewhere on the page can silently undo.
+ * `AddUnitSheet`'s own React state, asked for via `openAddUnitSheet()` rather
+ * than reached into as a DOM node.
  */
 export function AddUnitLink({
   className,

@@ -24,8 +24,17 @@ export type TripPulseFact = {
    * The Needs you strip's grouping (visual review 2026-10-24, A46): the kind
    * word Today's row leads with, its drawing and its tone. Facts that share a
    * kind become one chip; a fact without one stands as its own chip.
+   * `group` is what they share: the Today kind, never the translated word,
+   * and a readiness blocker apart from boat work of the same kind (layer 3
+   * review F2: a diver's unpaid-seat blocker and "1 order awaiting payment"
+   * both read "Payment", and are not one thing).
    */
-  chip?: { kind: string; icon?: RowIconName; tone: "danger" | "warning" | "neutral" };
+  chip?: {
+    group: string;
+    kind: string;
+    icon?: RowIconName;
+    tone: "danger" | "warning" | "neutral";
+  };
 };
 
 /**

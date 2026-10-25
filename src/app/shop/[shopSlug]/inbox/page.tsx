@@ -12,7 +12,7 @@ import { inboxSeats } from "@/db/inbox-seats";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatTimeZoneShort } from "@/lib/format";
+import { formatTimeZoneGeneric } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
@@ -129,8 +129,10 @@ export default async function InboxPage({
   const base = shopPath(shopSlug, "inbox");
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
   // The rows' times are bare; the list names its zone once, on its first group
-  // (visual review A15: a date names its zone once per list).
-  const timesIn = t("inbox.timesIn", { zone: formatTimeZoneShort(locale, shop.timezone, now) });
+  // (visual review A15: a date names its zone once per list), by its generic
+  // name, so a row from the other half of the year is not labeled with
+  // today's daylight-saving abbreviation.
+  const timesIn = t("inbox.timesIn", { zone: formatTimeZoneGeneric(locale, shop.timezone) });
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
