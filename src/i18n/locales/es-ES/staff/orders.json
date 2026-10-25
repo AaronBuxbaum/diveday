@@ -129,6 +129,8 @@
     "recordPayment": {
       "label": "Registrar pago",
       "recording": "Registrando…",
+      "heldCash": "Registrado: {amount} en efectivo",
+      "heldCardMachine": "Registrado: {amount} con terminal de pago",
       "roomCharge": "Cargar a la habitación",
       "roomNumber": "Habitación",
       "roomHotel": "Nombre del hotel",

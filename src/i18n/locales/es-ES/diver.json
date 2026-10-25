@@ -190,6 +190,8 @@
     "changeArrivalPhoto": "Foto de llegada actualizada",
     "changeConditionsWithSummary": "Condiciones: {summary}",
     "changeConditionsCleared": "Condiciones: sin nota de la tripulación",
+    "changeSites": "Sitios: {sites}",
+    "changeSitesCleared": "Sitios: aún sin decidir",
     "cancellationAskShop": "¿Dudas sobre la cancelación? Pregunta al centro:",
     "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}",
     "meetingDayLabel": "Día {number} · {date}, {timeRange}",

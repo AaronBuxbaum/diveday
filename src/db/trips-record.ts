@@ -60,7 +60,11 @@ import {
   userAccounts,
 } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
-import { recordTripChangeEvent } from "./trip-change-events";
+import {
+  recordSiteRunChange,
+  recordTripChangeEvent,
+  tripSiteRunSnapshot,
+} from "./trip-change-events";
 import {
   normalizedDiveCount,
   normalizedDiveDrafts,
@@ -802,6 +806,18 @@ export async function updateTrip(
       }
     }
     if (drafts) await replaceTripDives(tx, tripId, drafts);
+    // The diver's "What changed" says the day's sites moved (issue #3060), in
+    // this transaction, so the ledger never disagrees with the dives it names.
+    if (revisionMoved) {
+      await recordSiteRunChange(tx, {
+        shopId,
+        tripId,
+        before: await tripSiteRunSnapshot(tx, shopId, existing.diveSiteId, beforeSites),
+        after: await tripSiteRunSnapshot(tx, shopId, trip.diveSiteId, afterSites),
+        actorPersonId: patch.changeActorPersonId,
+        occurredAt: changedAt,
+      });
+    }
     let scheduleDaysMoved = false;
     if (patch.scheduleDays) {
       const before = await tx

@@ -2,6 +2,8 @@ import { SectionCard } from "@/components/ui/card";
 import type { TripChangeEvent } from "@/db/trip-change-events";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { formatDateTimeTz } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
+import { tripSiteNames } from "@/lib/trip-change-events";
 
 function valueText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
@@ -15,8 +17,8 @@ const ARRIVAL_GUIDANCE_FIELDS = [
   "arrivalFirstInteraction",
 ] as const;
 
-/** The four facts the card can name; each is listed once, at its newest change. */
-type FactKey = "meetingPoint" | "arrivalGuidance" | "arrivalPhoto" | "conditions";
+/** The five facts the card can name; each is listed once, at its newest change. */
+type FactKey = "meetingPoint" | "arrivalGuidance" | "arrivalPhoto" | "conditions" | "sites";
 
 /**
  * The facts one event changed, each "{fact}: {new value}", or none. A part
@@ -27,6 +29,7 @@ type FactKey = "meetingPoint" | "arrivalGuidance" | "arrivalPhoto" | "conditions
 function changedFacts(
   event: TripChangeEvent,
   t: DiverTranslator,
+  locale: string,
   revealArrivalDetails: boolean,
 ): [FactKey, string][] {
   const before = event.beforeValue ?? {};
@@ -52,6 +55,22 @@ function changedFacts(
     if (guidanceChanged) facts.push(["arrivalGuidance", t("trip.changeArrivalGuidance")]);
     if (photoChanged) facts.push(["arrivalPhoto", t("trip.changeArrivalPhoto")]);
     return facts;
+  }
+  if (event.kind === "site_change") {
+    // The day's sites moved (issue #3060): the new run, in the diver's order.
+    // Site names are public on the trip page, so a public page shows them too.
+    const sites = tripSiteNames(event.afterValue);
+    if (sites.join("\n") === tripSiteNames(before).join("\n")) return [];
+    return [
+      [
+        "sites",
+        sites.length > 0
+          ? t("trip.changeSites", {
+              sites: cachedListFormat(locale, { type: "conjunction" }).format(sites),
+            })
+          : t("trip.changeSitesCleared"),
+      ],
+    ];
   }
   const summary = valueText(event.afterValue.conditionsSummary);
   const was = valueText(before.conditionsSummary);
@@ -94,7 +113,7 @@ export function TripChangeLedger({
     { text: string; occurredAt: Date; source: TripChangeEvent["source"]; id: string }
   >();
   for (const event of [...events].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())) {
-    for (const [key, text] of changedFacts(event, t, revealArrivalDetails)) {
+    for (const [key, text] of changedFacts(event, t, locale, revealArrivalDetails)) {
       newest.set(key, {
         text,
         occurredAt: event.occurredAt,

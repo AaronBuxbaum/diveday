@@ -9,6 +9,7 @@ import {
 } from "@/lib/held-sends";
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
+import type { CounterPaymentOutcome } from "./counter-payment-hold";
 import { type SendDepartureNoteOutcome, sendDepartureNote } from "./departure-notes";
 import type { SeatOffersOutcome } from "./interest-offers";
 import { heldSends } from "./schema";
@@ -38,7 +39,8 @@ export type HeldSendOutcome =
   | ({ kind: "waiver_send" } & WaiverBatchOutcome)
   | ({ kind: "seat_offer" } & SeatOffersOutcome)
   | ({ kind: "trip_rescheduled" } & RescheduleNoticeOutcome)
-  | { kind: "departure_note"; outcome: SendDepartureNoteOutcome };
+  | { kind: "departure_note"; outcome: SendDepartureNoteOutcome }
+  | ({ kind: "counter_payment" } & CounterPaymentOutcome);
 
 export async function holdSend(
   db: AppDb,
@@ -209,6 +211,17 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
         createdByPersonId: row.actorPersonId ?? undefined,
       });
       return { kind: "seat_offer", ...outcome };
+    }
+    // Money, not a message (issue #3030): the order's balance is recorded
+    // only now, and the writers refuse an order no longer open.
+    case "counter_payment": {
+      const { recordHeldCounterPayment } = await import("./counter-payment-hold");
+      const outcome = await recordHeldCounterPayment(db, {
+        shopId: row.shopId,
+        actorPersonId: row.actorPersonId,
+        payload,
+      });
+      return { kind: "counter_payment", ...outcome };
     }
     case "trip_rescheduled": {
       // Imported at call time: `trip-rescheduled` holds through this module.

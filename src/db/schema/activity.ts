@@ -30,6 +30,9 @@ import { trips } from "./trips";
 export const tripChangeEventKind = pgEnum("trip_change_event_kind", [
   "meeting_point",
   "conditions",
+  // The day's dive sites, in order (issue #3060): a morning move to another
+  // reef is said on the diver's page with who and when.
+  "site_change",
 ]);
 
 /** The broad source of a published change, not a staff member's private name. */
@@ -187,7 +190,8 @@ export const activityEvents = pgTable(
 
 /**
  * Publicly safe, append-only facts about material changes to one departure.
- * Snapshots contain only meeting-point or conditions values; no contact data,
+ * Snapshots contain only meeting-point, conditions or site-run values (the
+ * sites' public names); no contact data,
  * readiness state, waiver, or capability token belongs in this table.
  */
 export const tripChangeEvents = pgTable(
@@ -327,6 +331,8 @@ export const heldSendKind = pgEnum("held_send_kind", [
   "trip_rescheduled",
   "departure_note",
   "seat_offer",
+  // A counter payment held eight seconds with Undo (issue #3030, H-68).
+  "counter_payment",
 ]);
 
 /**

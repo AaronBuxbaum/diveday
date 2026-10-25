@@ -129,6 +129,8 @@
     "recordPayment": {
       "label": "Record payment",
       "recording": "Recording…",
+      "heldCash": "Recorded {amount} cash",
+      "heldCardMachine": "Recorded {amount} on the card machine",
       "roomCharge": "Charge to room",
       "roomNumber": "Room",
       "roomHotel": "Hotel",

@@ -211,9 +211,9 @@ export function TripArrivalCard({
           {sites && sites.length > 0 ? (
             <div>
               {/* The source in words, not a chip (visual review 2026-10-24,
-                  B21): "Planned sites". A site change is not a change-ledger
-                  kind, so nothing below would say the plan moved; the label
-                  is the one word that says it can. */}
+                  B21): "Planned sites". A site change is ledgered (issue
+                  #3060), so "What changed" says when the plan moved and who
+                  moved it; the label says the list can move before then. */}
               <dt className="text-sm font-semibold">{t("trip.arrivalSites")}</dt>
               <dd className="mt-1 text-sm text-muted">{siteRunsLine(sites, locale, t)}</dd>
             </div>
