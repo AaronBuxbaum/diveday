@@ -477,14 +477,14 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     // UX review 2026-10-10, item 33: says what is true and how to change it,
     // once, with a door back to the day rather than a dead end.
     expect(
-      await screen.findByRole("heading", { name: "No manifest saved on this phone yet" }),
+      await screen.findByRole("heading", { name: "No saved manifest on this phone" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Open a departure’s manifest while online and it is kept here."),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to Today" })).toHaveAttribute("href", "/shop");
     // The heading is said once, not again in the status line under it.
-    expect(screen.getAllByText(/No manifest saved on this phone yet/)).toHaveLength(1);
+    expect(screen.getAllByText(/No saved manifest on this phone/)).toHaveLength(1);
   });
 
   /**
@@ -503,7 +503,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(document.documentElement.dataset.offlineSettled).toBeUndefined();
 
     await act(async () => answer([]));
-    expect(await screen.findByText("No manifest saved on this phone yet")).toBeInTheDocument();
+    expect(await screen.findByText("No saved manifest on this phone")).toBeInTheDocument();
     expect(document.documentElement.dataset.offlineSettled).toBe("");
 
     view.unmount();
@@ -598,13 +598,13 @@ describe("OfflineManifestView — never claims what it hasn't read", () => {
     render(<OfflineManifestView />);
 
     expect(screen.getByText("Opening this device’s saved copy")).toBeInTheDocument();
-    expect(screen.queryByText("No manifest saved on this phone yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("No saved manifest on this phone")).not.toBeInTheDocument();
 
     await act(async () => {
       resolveList([]);
     });
 
-    expect(await screen.findByText("No manifest saved on this phone yet")).toBeInTheDocument();
+    expect(await screen.findByText("No saved manifest on this phone")).toBeInTheDocument();
   });
 });
 

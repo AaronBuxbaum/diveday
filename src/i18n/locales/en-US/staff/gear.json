@@ -244,8 +244,9 @@
   },
   "prep": {
     "heading": "Rental assignments",
-    "cartLine": "{units, plural, one {# unit} other {# units}} for {divers, plural, one {# diver} other {# divers}}",
-    "cartStillToPick": "{count, plural, one {# piece still to pick} other {# pieces still to pick}}",
+    "cartLine": "{assigned} of {needed, plural, one {# unit} other {# units}} assigned · {missing} still to pick",
+    "cartLineProposed": "{assigned} of {needed, plural, one {# unit} other {# units}} assigned · {missing} still to pick · {proposed} proposed",
+    "cartLineAssigned": "{assigned} of {needed, plural, one {# unit} other {# units}} assigned",
     "cartServiceFlagged": "{count, plural, one {# unit needs service} other {# units need service}}",
     "handOver": "Hand over",
     "handingOver": "Handing over…",
@@ -278,8 +279,9 @@
     "pickUnit": "Pick a unit…",
     "proposal": {
       "unit": "Proposed: {unit}",
-      "assign": "Assign",
       "change": "Change",
+      "none": "No unit yet",
+      "pick": "Pick",
       "assignAll": "Assign {count, plural, one {the proposed unit} other {all # proposed units}}",
       "someRefused": "Some of those couldn’t be assigned. Check the rows below."
     },
@@ -298,7 +300,9 @@
     "backUnit": "Back",
     "backProblem": "Back with a problem",
     "backNoteLabel": "What’s wrong with it?",
-    "backNotePlaceholder": "Inflator sticks"
+    "backNotePlaceholder": "Inflator sticks",
+    "tanksLineAir": "{count, plural, one {# tank} other {# tanks}}, air",
+    "tanksLineMixed": "{count, plural, one {# tank} other {# tanks}}: {air} air, {nitrox} nitrox"
   },
   "ticket": {
     "eyebrow": "Rental",

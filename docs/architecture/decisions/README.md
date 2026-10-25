@@ -416,5 +416,6 @@ script again.
 | 20261023-claude-call-content | DiveDay keeps what each Claude… |
 | 20261023-last-known-dive | A diver's last known dive… |
 | 20261024-diver-sent-doctors-form | A referred diver sends the… |
+| 20261024-e2e-reset-replays-a-snapshot | The e2e reset replays the… |
 
 <!-- adr-index:end -->

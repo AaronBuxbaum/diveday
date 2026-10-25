@@ -149,10 +149,30 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     render(<OfflineManifestView />);
 
     expect(await screen.findByText(/This copy is current/)).toBeInTheDocument();
-    expect(screen.getByText(t("shared.connectivity.online"))).toBeInTheDocument();
-    expect(screen.getByText(t("shared.offlineManifest.freshnessPill.current"))).toBeInTheDocument();
+    // One chip says both (visual review 2026-10-24, B51): fresh, and online.
+    expect(
+      screen.getByText(t("shared.offlineManifest.freshnessPill.currentOnline")),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(t("shared.connectivity.online"))).not.toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(LIVE);
+  });
+
+  it("says No signal on a copy opened with no signal, never a green Fresh copy alone (review dde-b 1)", async () => {
+    searchParams = new URLSearchParams("trip=trip-1");
+    setOnline(false);
+
+    render(<OfflineManifestView />);
+
+    expect(await screen.findByText(t("shared.connectivity.offlineWithCopy"))).toBeInTheDocument();
+    // The age is still said, in the banner, once.
+    expect(screen.getByText(/This copy is current/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(t("shared.offlineManifest.freshnessPill.current")),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(t("shared.offlineManifest.freshnessPill.currentOnline")),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the reason on the way from the saved list to a trip (re-review R2)", async () => {

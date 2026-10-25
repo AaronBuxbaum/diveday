@@ -720,7 +720,10 @@ the full suite locally with identical pass counts across repeated runs.
   first-hit compile; the isolated per-worker databases let specs run `fullyParallel`. Every spec
   imports `test`/`expect` from `e2e/fixtures.ts`, not `@playwright/test` directly — the fixtures
   point each worker at its own server and reset the demo shop's schedule (`POST /api/test/reset`)
-  before each test. Iterating on a
+  before each test. A server's first reset is a real `resetDemoSchedule` and copies what it wrote;
+  every later one runs the delete half and replays that copy (`src/db/demo-reset-snapshot.ts`, ADR
+  20261024-e2e-reset-replays-a-snapshot), and says in a `Server-Timing` header how it was served and
+  what it cost. Iterating on a
   single spec, `playwright test <spec>` reuses the existing build; `next start`'s production runtime
   needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
 - **The reset restores the shop's schedule, not its settings — and a spec that writes settings takes

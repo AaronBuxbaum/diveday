@@ -123,17 +123,19 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
      * #2341). Its opaque tint sits within a shade of the not-back row's fill
      * (about 1.05:1), so without a border the pill had no edge in sunlight.
      */
-    it("draws the missing diver's state word with a danger border on an opaque tint", async () => {
+    it("says the missing diver's state on the row's one status line, in danger ink", async () => {
       searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
       vi.mocked(loadOfflineManifest).mockResolvedValue(missingAfterDive());
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
       render(<OfflineManifestView />);
       await screen.findByRole("heading", { name: "Two-Tank Reef" });
       const row = document.getElementById("offline-roll-call-diver-priya");
-      const pill = row?.querySelector<HTMLElement>("span.rounded-full.text-danger");
-      expect(pill).toBeTruthy();
-      expect(pill).toHaveClass("border", "border-danger", "bg-danger-tint");
-      expect(pill?.className).not.toMatch(/\bbg-danger\/\d+/);
+      // One status line, not a pill (visual review 2026-10-24, B01); the
+      // row's own danger tone stays (`rollCallRowTone`).
+      const line = row?.querySelector("h3")?.parentElement?.nextElementSibling;
+      expect(line).toBeTruthy();
+      expect(line).toHaveClass("text-danger", "font-semibold");
+      expect(line?.textContent).toMatch(/^Not back aboard/);
     });
 
     it("never puts an exception within one tap of the list, at any checkpoint", async () => {

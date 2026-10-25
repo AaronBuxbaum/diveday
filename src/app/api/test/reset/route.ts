@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
+import { type DemoReset, resetDemoFromSnapshot } from "@/db/demo-reset-snapshot";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { purgeMintedDemoShops, resetDemoSchedule } from "@/db/seed";
+import { purgeMintedDemoShops } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
@@ -17,30 +18,62 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * It wipes and reseeds data, so it must never be reachable in a real
  * deployment — see `e2eTestRouteAuthorized` for the two independent guards
  * (env-var predicate + `DIVEDAY_E2E_SECRET` bearer token) enforcing that.
+ *
+ * The schedule comes back from a copy taken on this server's first reset, not
+ * from a re-seed (`src/db/demo-reset-snapshot.ts`, ADR
+ * 20261024-e2e-reset-replays-a-snapshot): the re-seed was most of a reset's
+ * 1.2s on an idle runner and 4-5s under load. The response says how it was
+ * served and what each step cost, in a `Server-Timing` header and in the body,
+ * so a slow reset can be read off any request log.
  */
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
+  const startedAt = performance.now();
   const db = await getDb();
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
+  let reset: DemoReset | null = null;
   if (shop?.isDemo) {
     // Browser tests rely on the canonical demo's historical orders and trips
-    // as well as its schedule. Unit fixtures keep the lean default, but the
-    // E2E reset must restore the full customer-facing demo.
-    await resetDemoSchedule(db, shop.id, { history: true });
+    // as well as its schedule, so the copy is of the full customer-facing
+    // demo (`{ history: true }`), not the lean unit-test default.
+    reset = await resetDemoFromSnapshot(db, shop.id);
   }
+  const mode = reset?.mode ?? "skipped";
+  const resetAt = performance.now();
   // Clear any disposable demo shops earlier tests minted via "Try the live
   // demo", so they don't accumulate and bloat the shared test database.
-  await purgeMintedDemoShops(db);
-  await reclaimDeadTuples(db);
-  return NextResponse.json({ ok: true });
+  const purged = await purgeMintedDemoShops(db);
+  const purgedAt = performance.now();
+  await reclaimDeadTuples(db, purged > 0 ? null : (reset?.wrote ?? null));
+  const doneAt = performance.now();
+  const timing = {
+    reset: resetAt - startedAt,
+    purge: purgedAt - resetAt,
+    vacuum: doneAt - purgedAt,
+    total: doneAt - startedAt,
+  };
+  return NextResponse.json(
+    { ok: true, mode, ms: Math.round(timing.total) },
+    {
+      headers: {
+        "Server-Timing": [
+          `reset;dur=${timing.reset.toFixed(1)};desc="${mode}"`,
+          `purge;dur=${timing.purge.toFixed(1)}`,
+          `vacuum;dur=${timing.vacuum.toFixed(1)}`,
+          `total;dur=${timing.total.toFixed(1)}`,
+        ].join(", "),
+      },
+    },
+  );
 }
 
 /**
  * Hand the rows this reset just deleted back to the page allocator.
  *
- * A reset deletes and re-inserts ~4,400 rows, and PGlite ships no autovacuum
+ * A reset deletes and re-inserts ~4,400 rows (a replay from the snapshot
+ * still does: it is the re-seed's statements it saves, not its rows), and PGlite ships no autovacuum
  * worker, so nothing ever reclaims the dead tuples: every call left another
  * ~4,400 of them and ~2MB of heap behind. One worker server serves this
  * endpoint once per test, so across a full local suite (~150 tests on one
@@ -115,13 +148,28 @@ export async function POST(request: Request) {
  * `reuseExistingServer` fleet, for one. `demo.spec.ts` and `nitrox.spec.ts`
  * were both fixed slugs until 2026-08-15; both carry `Date.now()` + pid now.
  */
-async function reclaimDeadTuples(db: Awaited<ReturnType<typeof getDb>>): Promise<void> {
+async function reclaimDeadTuples(
+  db: Awaited<ReturnType<typeof getDb>>,
+  tables: string[] | null,
+): Promise<void> {
   // Postgres refuses VACUUM inside a transaction block, so it is deliberately
   // not wrapped in one. A failure here is never worth failing a reset over —
   // the fixture is already restored by this point, and the only cost of
   // skipping it is the slow growth this exists to prevent.
   try {
-    await db.execute(sql`vacuum`);
+    // A replay names the tables it deleted seeded rows from and wrote them
+    // back to, which is where a round's dead tuples are: vacuuming those
+    // alone cost a fraction of the whole database (catalogs and the
+    // snapshot's own copies included) on the same loaded box. The few rows a
+    // spec wrote elsewhere wait for the next whole vacuum, which anything
+    // other than a replay (a real reset, a purge of minted shops) still runs.
+    await db.execute(
+      tables && tables.length > 0
+        ? sql.raw(
+            `vacuum ${tables.map((table) => `public."${table.replaceAll('"', '""')}"`).join(", ")}`,
+          )
+        : sql`vacuum`,
+    );
   } catch {
     // Nothing to do: a runtime without VACUUM still gets a correct reset.
   }

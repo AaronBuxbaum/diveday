@@ -1,6 +1,7 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { RollCallMarkTap, rollCallMarkState } from "@/components/RollCallMarkTap";
 import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
@@ -97,40 +98,35 @@ export function OfflineCrewRollCall({
               <li
                 key={member.key}
                 // The diver rows' own left rule, tone and inset, and the
-                // live crew list's: one colour vocabulary by import. A
-                // missing crew member's words go danger as well, because
-                // their state is part of a sentence here, not a pill.
-                className={`border-l-4 p-4 text-sm sm:p-5 ${
+                // live crew list's: one colour vocabulary by import.
+                className={`border-l-4 p-4 sm:p-5 ${
                   crewTone ? ROLL_CALL_ROW_TONE[crewTone] : ROLL_CALL_ROW_TONE.awaiting
-                }${missingCrew ? " font-bold text-danger" : ""}`}
+                }`}
               >
-                {/* A name and a mark, as on the diver rows and the live
-                  crew list (#1840): the circle is the row's one tap, the
-                  exception a deliberate tap away in the panel below. No tap
-                  on an expired copy (the H-05 stop rule, stated once in the
-                  banner above and enforced in `record`), and none for a crew
-                  member this copy has no id for. Otherwise always: crew carry
-                  no readiness, so nothing withholds the aboard tap. */}
+                {/* **The passenger row's shape** (visual review polish, B01):
+                  the name, bold, then one status line, as every diver row
+                  reads, so a crew member is not a smaller kind of person on
+                  this list. A missing crew member's status line is danger
+                  ink, as a diver's is. A name and a mark, as on the diver
+                  rows and the live crew list (#1840): the circle is the row's
+                  one tap, the exception a deliberate tap away in the panel
+                  below. No tap on an expired copy (the H-05 stop rule, stated
+                  once in the banner above and enforced in `record`), and none
+                  for a crew member this copy has no id for. Otherwise always:
+                  crew carry no readiness, so nothing withholds the aboard
+                  tap. */}
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p>
-                      {member.fullName} ·{" "}
+                    <h3 className={`min-w-0 break-words ${ITEM_TITLE_CLASS}`}>{member.fullName}</h3>
+                    <p
+                      className={`mt-1 text-base font-semibold break-words ${
+                        missingCrew ? "text-danger" : "text-ink"
+                      }`}
+                    >
                       {rollCallLabelText(t, rollCallLabel(checkpoint, member.state))}
                       {member.state?.pending
                         ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                         : ""}
-                      {/* The groups this crew member is on, saved as names.
-                        Same display-only rule as a diver's — a divemaster
-                        leading three groups needs the dock copy to say
-                        which bodies they are responsible for. */}
-                      {(member.buddyTeamNames ?? []).length > 0 ? (
-                        <span className={`ms-1 font-normal ${BUDDY_NAMES_WRAP}`}>
-                          ·{" "}
-                          {t("shared.buddyTeam.with", {
-                            names: buddyNamesList(locale, member.buddyTeamNames ?? []),
-                          })}
-                        </span>
-                      ) : null}
                     </p>
                     {/* **Printed aboard another boat too** (issue #1779).
                       The dock copy is the one read at the rail with no
@@ -145,7 +141,7 @@ export function OfflineCrewRollCall({
                       search. It marks and gates nothing; the aboard control
                       below is unchanged. */}
                     {isDeparture && !member.state && (member.clashDepartures ?? []).length > 0 ? (
-                      <p className="mt-0.5 text-sm text-warning-strong">
+                      <p className="mt-1 text-sm text-warning-strong">
                         {t("manifest.crewClashDetail", {
                           departures: cachedListFormat(locale, { type: "conjunction" }).format(
                             member.clashDepartures ?? [],
@@ -153,9 +149,21 @@ export function OfflineCrewRollCall({
                         })}
                       </p>
                     ) : null}
-                    {/* The sentence already on the record. */}
+                    {/* The sentence already on the record, under the status
+                      line as on a diver row. */}
                     {member.state?.note ? (
-                      <p className="mt-1 text-sm">{member.state.note}</p>
+                      <p className="mt-1 max-w-xl text-base break-words">{member.state.note}</p>
+                    ) : null}
+                    {/* The groups this crew member is on, saved as names, in
+                      the open: crew have no contact or gear facts on this
+                      copy, so a disclosure would hide the one line a
+                      divemaster leading three groups needs at the rail. */}
+                    {(member.buddyTeamNames ?? []).length > 0 ? (
+                      <p className={`mt-1 text-sm text-muted ${BUDDY_NAMES_WRAP}`}>
+                        {t("shared.buddyTeam.with", {
+                          names: buddyNamesList(locale, member.buddyTeamNames ?? []),
+                        })}
+                      </p>
                     ) : null}
                   </div>
                   {expired || !crewPersonId ? null : (

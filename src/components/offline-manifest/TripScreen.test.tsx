@@ -219,8 +219,12 @@ describe("OfflineManifestView — one column, one text edge", () => {
         crewNotBackAboard: true,
       }),
     );
-    const row = screen.getByText(/Sal Ortiz · Not back aboard/).closest("li");
-    expect(row).toHaveClass("border-danger", "font-bold", "text-danger");
+    const name = within(crewList()).getByRole("heading", { level: 3, name: "Sal Ortiz" });
+    const row = name.closest("li");
+    expect(row).toHaveClass("border-danger");
+    // The words go danger on the status line, the passenger row's shape (B01).
+    expect(name.nextElementSibling).toHaveTextContent("Not back aboard");
+    expect(name.nextElementSibling).toHaveClass("text-danger");
     // The ring is the missing person's, as on every roll-call row. The box
     // keeps its danger border and fill but no inset ring of its own: the
     // flush roster painted over it, so it ringed the heading and stopped
@@ -236,29 +240,29 @@ describe("OfflineManifestView — one column, one text edge", () => {
 
   // K-198: on the sunken awaiting row, a sunken chip is invisible, so the
   // number, state word and buddy team each started their ink at a different x.
-  it("paints every chip on an awaiting row, so each starts at its painted edge", async () => {
+  it("draws a saved row as a name, one status line and one disclosure (B01)", async () => {
     await renderTrip(dressed(richEnvelope("trip-1")));
 
     const row = priyaRow();
     expect(row).toHaveClass("bg-surface-sunken");
     const number = within(row).getByText("01");
     expect(number).toHaveClass("bg-surface");
-    expect(number).not.toHaveClass("bg-surface-sunken");
-    const stateWord = within(row).getByText("Awaiting roll call");
-    expect(stateWord).toHaveClass("rounded-full", "border", "border-border", "bg-surface");
-    // The row's state in words keeps the ink it had before its box was
-    // painted: the pill's edge was the defect, never the word's weight.
-    expect(stateWord).toHaveClass("font-semibold");
-    expect(stateWord).not.toHaveClass("text-muted");
-    expect(stateWord).not.toHaveClass("bg-surface-sunken");
-    // The neutral Badge's edge is an inset ring (K-25), the same line as a
-    // border, so the chip's box shows on the sunken row.
-    expect(within(row).getByText(/Buddy team:/)).toHaveClass(
-      "rounded-full",
-      "ring-1",
-      "ring-inset",
-      "ring-border",
-    );
+    // The state in words, at full ink, on the one line under the name: no
+    // pill, and no second chip beside it.
+    const line = within(row).getByRole("heading", { level: 3 }).parentElement
+      ?.nextElementSibling as HTMLElement;
+    expect(line.textContent).toMatch(/^Awaiting roll call/);
+    expect(line).toHaveClass("font-semibold");
+    expect(line).not.toHaveClass("text-muted", "rounded-full");
+    expect(row.querySelector("span.rounded-full:not([data-mark-state])")).toBeNull();
+    // The buddy team rides in the one facts disclosure under the name; the
+    // exception keeps its own deliberate panel under the row (decision 3).
+    const column = within(row).getByRole("heading", { level: 3 }).parentElement
+      ?.parentElement as HTMLElement;
+    expect(column.querySelectorAll("details")).toHaveLength(1);
+    expect(
+      within(column.querySelector("details") as HTMLElement).getByText(/Buddy team:/),
+    ).toBeTruthy();
   });
 
   // K-210: a 32px name line top-aligned beside 56px boat buttons rode 12px high.
@@ -266,7 +270,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
   // row, and on most rows the state word and buddy team wrap under the name
   // (32 + 8 + 30 = 70px, past 56), so the *first* flex line takes the
   // buttons' height, through the number chip's wrapper.
-  it("gives the name line's first row the boat buttons' height from sm, wrapped or not", async () => {
+  it("gives the name line the boat buttons' height from sm, on every row", async () => {
     await renderTrip(dressed(richEnvelope("trip-1", { withCarriedNotBoarded: true })));
     const list = document.getElementById("offline-roll-call");
     if (!list) throw new Error("diver list missing");
@@ -275,10 +279,7 @@ describe("OfflineManifestView — one column, one text edge", () => {
     for (const row of rows) {
       const nameLine = within(row).getByRole("heading", { level: 3 }).parentElement;
       if (!nameLine) throw new Error("name line missing");
-      expect(nameLine).toHaveClass("flex", "flex-wrap", "items-center");
-      expect(nameLine).not.toHaveClass("sm:min-h-14");
-      // The row that wraps: its buddy team shares the name's flex box.
-      expect(within(nameLine).getByText(/Buddy team:/)).toBeInTheDocument();
+      expect(nameLine).toHaveClass("flex", "items-center");
       const wrapper = nameLine.firstElementChild;
       expect(wrapper).toHaveClass("flex", "shrink-0", "items-center", "sm:h-14");
       expect(wrapper?.textContent).toMatch(/^\d{2}$/);
@@ -305,12 +306,15 @@ describe("OfflineManifestView — one column, one text edge", () => {
   });
 
   // K-209: the blocked counter row's `px-4` sat 8px inside the `boat` rows' `px-6`.
-  it("insets a blocked counter row like the boat rows beside it", async () => {
+  it("gives a blocked counter row the same flat row and inset as a tappable one (B01)", async () => {
     await renderTrip(richEnvelope("trip-1", { readiness: "blocked" }));
     const counter = screen.getByRole("region", { name: "At the counter" });
     const row = within(counter).getByText("Priya Shah").closest("li");
-    expect(row).toHaveClass("px-6");
-    expect(row).not.toHaveClass("px-4");
+    const body = row?.firstElementChild;
+    expect(body).toHaveClass("flex", "gap-3", "px-4", "py-3");
+    // One surface: no sunken, dark or tinted variant on the row itself.
+    expect(row?.className ?? "").not.toMatch(/bg-/);
+    expect(body?.className ?? "").not.toMatch(/bg-/);
   });
 
   // K-472: one checkbox row, one gap, on both lists.
@@ -343,10 +347,15 @@ describe("OfflineManifestView — one column, one text edge", () => {
   });
 
   // K-496: "After dive 2" dropped alone onto a second row at 390.
-  it("lets each wrapped row of checkpoints fill a phone's width", async () => {
+  it("lays the checkpoints on one segmented track that never wraps (B06, B51)", async () => {
     await renderTrip(richEnvelope("trip-1"));
-    expect(screen.getByRole("navigation", { name: "Roll-call checkpoint" })).toHaveClass(
-      "max-sm:[&>*]:grow",
+    const nav = screen.getByRole("navigation", { name: "Roll-call checkpoint" });
+    expect(nav).toHaveClass("grid", "grid-flow-col", "overflow-x-auto");
+    expect(nav).not.toHaveClass("flex-wrap");
+    // The full name is the accessible name at every width.
+    expect(within(nav).getByRole("button", { name: "Before departure" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
   });
 

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { routeSource } from "@/test/route-source";
 
@@ -19,12 +21,15 @@ const READS = routeSource(import.meta.dirname, "_components/manifest-reads.ts");
  */
 describe("the dock desk's seat list", () => {
   it("reads the withheld manifest, never the raw departure one", () => {
+    // One prop set for the live dock desk and the packet's paper.
+    expect(SOURCE).toContain("<DockDesk {...dockDesk} />");
+    expect(SOURCE).toContain("dockDesk={dockDesk}");
     const dockDesk = SOURCE.slice(
-      SOURCE.indexOf("<DockDesk"),
-      SOURCE.indexOf("/>", SOURCE.indexOf("<DockDesk")),
+      SOURCE.indexOf("const dockDesk = {"),
+      SOURCE.indexOf("};", SOURCE.indexOf("const dockDesk = {")),
     );
-    expect(dockDesk).toContain("seats={manifest.divers}");
-    expect(dockDesk).not.toContain("seats={departureManifest.divers}");
+    expect(dockDesk).toContain("seats: manifest.divers");
+    expect(dockDesk).not.toContain("departureManifest.divers");
   });
 });
 
@@ -51,16 +56,16 @@ describe("a cancelled departure's roll call", () => {
   it("reads the writers' gate and closes both lists and the banner on it", () => {
     expect(READS).toMatch(/cancelledRollCall\(\{[^}]*rollCallOpen/s);
     expect(SOURCE).toContain("    cancelled,\n");
-    const diverList = SOURCE.slice(
-      SOURCE.indexOf("<DiverRollCall"),
-      SOURCE.indexOf("<CrewRollCall"),
+    // One set of props per list, read by the screen and the packet's paper alike.
+    expect(SOURCE).toContain('rollCallClosed: cancelled === "closed",');
+    expect(SOURCE).toContain("<DiverRollCall context={rollCall.divers} />");
+    expect(SOURCE).toContain("<CrewRollCall {...rollCall.crew} />");
+    expect(SOURCE).toContain("rollCall={rollCall}");
+    const props = readFileSync(
+      path.join(import.meta.dirname, "_components/roll-call-props.ts"),
+      "utf8",
     );
-    expect(diverList).toContain('rollCallClosed: cancelled === "closed",');
-    const crewList = SOURCE.slice(
-      SOURCE.indexOf("<CrewRollCall"),
-      SOURCE.indexOf("/>", SOURCE.indexOf("<CrewRollCall")),
-    );
-    expect(crewList).toContain('rollCallClosed={cancelled === "closed"}');
+    expect(props.match(/^ {6}rollCallClosed,$/gm)).toHaveLength(2);
     expect(SOURCE).toContain("<CancelledRollCallBanner state={cancelled}");
   });
 });

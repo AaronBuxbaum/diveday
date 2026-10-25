@@ -40,9 +40,10 @@ export function WantedPiece({
   //
   // A row with a proposal says so in words and holds
   // its picker behind Change (`ProposedUnit`); one
-  // without opens on the placeholder, because the
-  // exact units it could have preselected are the
-  // ones proposed to the divers above it.
+  // without holds it behind Pick and opens on the
+  // placeholder, because the exact units it could have
+  // preselected are the ones proposed to the divers
+  // above it.
   const proposal = proposals.get(proposalKey(bookingId, item.kind));
   const preselect = "";
   // On an air diver's row a nitrox-designated regulator sorts after the air
@@ -126,37 +127,31 @@ export function WantedPiece({
           <span className="text-muted">{t("gear.prep.noneFree", { kindLabel })}</span>
         ) : (
           // The tile is the measure: the picker and a proposal's words
-          // with its two acts both take the tile's width.
+          // with its one act both take the tile's width.
           <div className="w-full min-w-0">
-            {/* **No "Assign" beside it.** The pick is the
-                                      act; a second tap to confirm it is an
-                                      "Edit" button once per row, twenty-one
-                                      times on a seeded departure (issue #802).
-                                      The refusal the exclusion constraint can
-                                      still answer with lands on this row, and
-                                      reverts it. */}
-            {proposal ? (
-              <ProposedUnit
-                tripId={tripId}
-                bookingId={bookingId}
-                gearItemId={proposal.id}
-                assign={assignGearUnit}
-                copy={{
-                  proposed: t("gear.prep.proposal.unit", {
-                    unit: unitLine(t, proposal, wantsNitrox),
-                  }),
-                  assign: t("gear.prep.proposal.assign"),
-                  assigning: t("gear.prep.assigning"),
-                  change: t("gear.prep.proposal.change"),
-                  refusals: pickRefusals,
-                  refusalFallback: t("gear.prep.notice.assignFailed"),
-                }}
-              >
-                {picker}
-              </ProposedUnit>
-            ) : (
-              picker
-            )}
+            {/* **No "Assign" beside it.** The pick is the act
+                (issue #802). Every piece is one line and one text button:
+                a proposed piece says its unit and holds the picker behind
+                "Change" (A10); a piece with no proposal says it has no unit
+                yet and holds the picker behind "Pick", so the tab reads in
+                one idiom row by row (visual review polish). The refusal the
+                exclusion constraint can still answer with lands on this row,
+                and reverts it. */}
+            <ProposedUnit
+              proposed={proposal !== undefined}
+              copy={
+                proposal
+                  ? {
+                      line: t("gear.prep.proposal.unit", {
+                        unit: unitLine(t, proposal, wantsNitrox),
+                      }),
+                      reveal: t("gear.prep.proposal.change"),
+                    }
+                  : { line: t("gear.prep.proposal.none"), reveal: t("gear.prep.proposal.pick") }
+              }
+            >
+              {picker}
+            </ProposedUnit>
           </div>
         )}
       </dd>

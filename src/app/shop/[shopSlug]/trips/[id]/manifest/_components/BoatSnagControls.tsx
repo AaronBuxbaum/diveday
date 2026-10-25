@@ -3,7 +3,7 @@
 import { useActionState, useId } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { textareaClassFor } from "@/components/ui/form";
+import { controlClass, textareaClassFor } from "@/components/ui/form";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { SnagResult } from "../actions";
 
@@ -30,6 +30,10 @@ export type SnagCopy = {
   snagStillThere: string;
   snagSaving: string;
   noteProblem: string;
+  /** "Which item?", the picker over the list's lines. */
+  noteItemLabel: string;
+  /** "Pick an item", the picker's empty first choice: nothing is preselected. */
+  noteItemPlaceholder: string;
   noteLabel: string;
   noteSave: string;
   noteRefused: string;
@@ -86,25 +90,30 @@ export function SnagAnswer({
 }
 
 /**
- * **Note a problem**, under one checklist line: a fold with one box ("What's
- * wrong?") and a save. Closed at rest, so five lines stay five lines; a saved
- * note appears above it, and the box empties for the next one.
+ * **Note a problem**, once for the whole list (visual review 2026-10-24, B07):
+ * a fold with an item picker ("Which item?"), one box ("What's wrong?") and a
+ * save. One action at the foot rather than one under every line, so the list
+ * reads as a list. Closed at rest; a saved note appears under the line it
+ * names, and the box empties for the next one. A note informs the next crew
+ * and holds nothing (H-51).
  */
 export function SnagNoteForm({
-  checklistItemId,
+  items,
   action,
   copy,
 }: {
-  checklistItemId: string;
+  /** The list's lines, in their order: the note is written against one. */
+  items: readonly { id: string; label: string }[];
   action: SnagAction;
   copy: SnagCopy;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
   const fieldId = useId();
+  const itemFieldId = `${fieldId}-item`;
   const errorId = `${fieldId}-error`;
   const refused = result !== null && !result.ok;
   return (
-    <details className="group/snag mt-1 print:hidden">
+    <details className="group/snag px-4 py-3 print:hidden">
       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
         <SummaryCaret className="group-open/snag:rotate-90" />
         {copy.noteProblem}
@@ -115,7 +124,29 @@ export function SnagNoteForm({
         action={formAction}
         className="mt-1 flex flex-col gap-2"
       >
-        <input type="hidden" name="checklistItemId" value={checklistItemId} />
+        <label htmlFor={itemFieldId} className="text-sm font-medium">
+          {copy.noteItemLabel}
+        </label>
+        <select
+          id={itemFieldId}
+          name="checklistItemId"
+          required
+          // **No line is picked for the crew** (layer 4 review, dde-a F3): a
+          // note saved without touching the picker would land on whichever
+          // line came first and misinform the next crew. The empty choice is
+          // refused by `required`, and the server refuses an empty id too.
+          defaultValue=""
+          className={controlClass}
+        >
+          <option value="" disabled>
+            {copy.noteItemPlaceholder}
+          </option>
+          {items.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.label}
+            </option>
+          ))}
+        </select>
         <label htmlFor={fieldId} className="text-sm font-medium">
           {copy.noteLabel}
         </label>

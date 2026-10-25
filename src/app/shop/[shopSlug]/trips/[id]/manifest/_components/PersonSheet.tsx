@@ -7,6 +7,7 @@ import { groupLabelClass } from "@/components/ui/group-label";
 import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import { motionMs } from "@/lib/motion";
+import type { PersonStatusTone } from "./person-status-tone";
 
 /**
  * A roll-call event as it happened today. The server resolves the words and
@@ -21,6 +22,13 @@ export type PersonTrailEntry = {
 };
 
 const SHEET_DURATION_MS = motionMs("base");
+
+const STATUS_INK: Record<PersonStatusTone, string> = {
+  danger: "text-danger",
+  success: "text-success-strong",
+  warning: "text-warning-strong",
+  neutral: "text-foreground",
+};
 
 function TrailMark({ state }: { state: PersonTrailEntry["state"] }) {
   const className =
@@ -83,7 +91,12 @@ export function PersonSheet({
   trigger: React.ReactNode;
   triggerLabel: string;
   subtitle: string;
-  status: React.ReactNode;
+  /**
+   * What roll call says of this person here, as a line under the name rather
+   * than a chip beside the close (visual review 2026-10-24, B08). Words always
+   * carry it; the ink only repeats them.
+   */
+  status: { text: string; tone: PersonStatusTone };
   trail: readonly PersonTrailEntry[];
   todayLabel: string;
   noTodayEventsLabel: string;
@@ -145,32 +158,36 @@ export function PersonSheet({
           titleId={titleId}
           descriptionId={descriptionId}
           title={name}
-          subtitle={subtitle}
-          actions={
+          subtitle={
             <>
-              {status}
-              <button
-                type="button"
-                aria-label={closeLabel}
-                className="grid size-11 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
-                onClick={close}
-              >
-                {/* `size-5`, as `DiverSheet` draws the same ×: with only a
+              {subtitle}
+              <span className={`mt-1 block text-base font-semibold ${STATUS_INK[status.tone]}`}>
+                {status.text}
+              </span>
+            </>
+          }
+          actions={
+            <button
+              type="button"
+              aria-label={closeLabel}
+              className="grid size-11 place-items-center rounded-full text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+              onClick={close}
+            >
+              {/* `size-5`, as `DiverSheet` draws the same ×: with only a
                     `viewBox` it stretched to its cell, 26px of ink beside the
                     name. */}
-                <svg
-                  aria-hidden="true"
-                  className="size-5"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                >
-                  <path d="m5 5 10 10M15 5 5 15" />
-                </svg>
-              </button>
-            </>
+              <svg
+                aria-hidden="true"
+                className="size-5"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              >
+                <path d="m5 5 10 10M15 5 5 15" />
+              </svg>
+            </button>
           }
         />
 

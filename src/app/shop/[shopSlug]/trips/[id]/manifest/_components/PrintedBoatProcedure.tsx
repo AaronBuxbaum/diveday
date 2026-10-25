@@ -171,7 +171,7 @@ export function PrintedBoatPaper({
   kitRegister: string | null;
 }) {
   return (
-    <div className="hidden print:block">
+    <div data-print-only className="hidden print:block">
       <PrintedMissingProcedure
         copy={copy}
         headingId={scopedId(idPrefix, "missing-procedure-print-heading")}

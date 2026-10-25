@@ -1,6 +1,5 @@
 import { HapticsToggle } from "@/components/HapticsToggle";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
-import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -8,7 +7,41 @@ import type { OfflineTripControls } from "./controls";
 import { offlineRollCallRowId } from "./shared";
 import { liveManifestHref, type OfflineTripView } from "./trip-view";
 
-/** Below the roll call: the faces still to call, this phone's settings, the live page, and the milestone. */
+/**
+ * Who is still to call at this checkpoint, as one jump: how many, and the row
+ * of the first of them in roster order. `null` when nobody is, so the page
+ * says nothing rather than "0". Every diver here is one the roll call above
+ * renders, so the row id is on the page by construction (#1675).
+ */
+export function stillToCallLine(
+  missingDivers: readonly { bookingId: string }[],
+): { count: number; href: string } | null {
+  const first = missingDivers[0];
+  if (!first) return null;
+  return { count: missingDivers.length, href: `#${offlineRollCallRowId(first.bookingId)}` };
+}
+
+function StillToCallLine({
+  line,
+  label,
+}: {
+  line: { count: number; href: string } | null;
+  label: (count: number) => string;
+}) {
+  if (!line) return null;
+  return (
+    <p className="mt-4 print:hidden">
+      <a
+        href={line.href}
+        className="inline-flex min-h-11 items-center text-base font-semibold text-primary underline underline-offset-2"
+      >
+        {label(line.count)}
+      </a>
+    </p>
+  );
+}
+
+/** Below the roll call: who is still to call, this phone's settings, the live page, and the milestone. */
 export function OfflineTripFoot({
   view,
   controls,
@@ -23,73 +56,19 @@ export function OfflineTripFoot({
   const { t } = controls;
   return (
     <>
-      {/* Same words as the live page, chosen by the same checkpoint rule: at
-          the dock these are people still to board, after a dive they are
-          people nobody has counted back aboard yet. The dock copy must never
-          be louder than the live manifest about a benign state.
-
-          **The grid stays here, and only here** (decision 20260812, closing
-          FU-20260810-offline-manifest-checklist-grammar). The live manifest
-          dropped its face grid, and then the name chips that replaced it,
-          because the roll-call rows directly below already name everyone
-          (Aaron, 2026-10-05).
-
-          The grid is also a scanning surface rather than a jump list, and this
-          is the copy read underway, at the rail, looking up from the water for
-          a face rather than down at a name. Its rents-kit line carries
-          information no chip does. Keeping it is a considered divergence
-          from the live page, not a leftover: the *rows* above now read
-          identically on both surfaces, which is what a captain working the two
-          minutes apart actually needs.
-
-          The blocked accent is **not** part of that divergence — it follows
-          the live chip's checkpoint rule below. The one thing that does stay
-          ungated is the diver row's own readiness badge, for the reason
-          written above it: that badge is the snapshot's two-state record, not
-          an exception accent on a checkpoint-scoped prompt. */}
-      <MissingDiversGrid
-        divers={missingDivers.map((diver) => ({
-          bookingId: diver.bookingId,
-          fullName: diver.fullName,
-          // Where the tap lands, from the same function that wrote the id
-          // onto the row above (#1675). Every face here is a diver from the
-          // roster rendered above, so the target is on the page by
-          // construction, not by hope.
-          rowId: offlineRollCallRowId(diver.bookingId),
-          rentsKit: diver.rentalFit.state === "rents",
-          // A readiness fact, and only at the dock — the same gate the live
-          // chip this grid stands in for applies (`blocked: diver.blocked &&
-          // isDeparture`, SummaryPanel). Every face here is somebody nobody
-          // has called yet, so after a dive every one of them is somebody who
-          // went in the water: the saved paperwork word is stale by
-          // definition there, and its red competed with the one red on the
-          // page that means a diver has not come back. The live row states
-          // the same rule in the same words (`blockedAtDock`, DiverRollCall),
-          // and this page's own head-count note says it of itself
-          // (`isDeparture`, above) — the grid was the one place that said it
-          // and then rendered the word anyway.
-          blocked: isDeparture && diver.readiness.status === "blocked",
-        }))}
-        tone={isDeparture ? "neutral" : "urgent"}
-        copy={{
-          heading: isDeparture
-            ? t("manifest.stillToBoardHeading", { count: missingDivers.length })
-            : t("manifest.notCountedBackHeading", { count: missingDivers.length }),
-          statusLabel: isDeparture
-            ? t("manifest.missingDiversPillDock")
-            : t("manifest.missingDiversPillAfterDive"),
-          tapHint: t("manifest.missingDiversTapHint"),
-          rentsKitLabel: t("manifest.rentsKitLabel"),
-          ownKitLabel: t("manifest.ownKitLabel"),
-          // The offline exception, all the way down: the diver's own row
-          // reads "Blocked when saved", so the face in this grid has to say
-          // the same thing. The bare readiness word here made the glossary's
-          // "every readiness word on this page carries the qualifier"
-          // sentence false, and put an unqualified badge one scroll from a
-          // qualified one on a page whose whole point is that it may be
-          // stale (#1360).
-          blockedLabel: t("shared.offlineManifest.single.blockedBadge"),
-        }}
+      {/* **One line, not a second list of people** (visual review
+          2026-10-24, B02): the roll-call rows above already name everyone,
+          so the face grid that repeated them is gone, as the live
+          manifest's went before it. The line counts who nobody has called
+          yet, in the live page's words for the checkpoint, and jumps to the
+          first of them. Nothing when nobody is left. */}
+      <StillToCallLine
+        line={stillToCallLine(missingDivers)}
+        label={(count) =>
+          isDeparture
+            ? t("manifest.stillToBoardHeading", { count })
+            : t("manifest.notCountedBackHeading", { count })
+        }
       />
 
       {/* Per-device controls are secondary to roll call. Keep them in the

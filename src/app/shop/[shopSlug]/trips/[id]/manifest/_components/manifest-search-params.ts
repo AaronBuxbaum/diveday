@@ -11,6 +11,16 @@ import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
  */
 export const PRINTED_MEDICAL_ALERTS: unique symbol = Symbol("printedMedicalAlerts");
 
+/**
+ * **The key the trip packet composes this page under, as paper** (B03, B55).
+ * A symbol for the same reason as {@link PRINTED_MEDICAL_ALERTS}: no URL can
+ * set it. Under it the manifest and prep pages render only what a printed
+ * sheet carries (the souls-on-board line, the boat check's printed list, the
+ * printed rows, the boat's procedure), so the packet's screen view is the
+ * paper and holds no control a captain could tap. Only `TripPacket` passes it.
+ */
+export const PAPER_PACKET: unique symbol = Symbol("paperPacket");
+
 /** What the manifest reads off its URL. */
 export type ManifestSearchParams = {
   checkpoint?: string;
@@ -32,4 +42,6 @@ export type ManifestSearchParams = {
   idPrefix?: string;
   /** The words for a packet printed with them; see {@link PRINTED_MEDICAL_ALERTS}. */
   [PRINTED_MEDICAL_ALERTS]?: PrintedMedicalAlerts;
+  /** Composed as the packet's paper; see {@link PAPER_PACKET}. */
+  [PAPER_PACKET]?: true;
 };

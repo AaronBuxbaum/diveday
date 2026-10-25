@@ -4,7 +4,6 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import { scopedId } from "@/lib/element-id";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { nameLinkClass } from "./prep-lines";
 import type { PrepView } from "./prep-view";
 
 /** Who the list cannot pack for yet: sizes missing, seats held, fits only staff can do. */
@@ -68,26 +67,34 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
               </ul>
             ) : null}
             {neverAsked.length > 0 ? (
-              <div>
-                <p className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</p>
-                {/* `gap-y-6`, twice the 12px each name's target
-                            reaches above and below its 20px line: wrapped
-                            rows sit 44px apart and their targets meet. At
-                            `gap-y-1` the second row's targets reached over
-                            the names above them, and won the tap. */}
-                <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-6">
-                  {neverAsked.map((diver) => (
-                    <li key={diver.personId}>
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                        className={nameLinkClass}
-                      >
-                        {diver.fullName}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              // **One paragraph, names in a comma list** (visual review
+              // 2026-10-24, B54): the lead, then every never-asked diver,
+              // each still a link to their record. A wrapped flex of
+              // separate targets read as a second list beside the first.
+              <p>
+                <span className="text-muted">{t("tripPrep.missingSizesNobodyAskedLead")}</span>{" "}
+                {/* The locale's own list separators ("A, B, C" in English),
+                    each name still its own link. */}
+                {(() => {
+                  let at = 0;
+                  return cachedListFormat(locale, { style: "short", type: "unit" })
+                    .formatToParts(neverAsked.map((diver) => diver.fullName))
+                    .map((part) => {
+                      if (part.type !== "element") return part.value;
+                      const diver = neverAsked[at++];
+                      if (!diver) return part.value;
+                      return (
+                        <Link
+                          key={diver.personId}
+                          href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                          className="font-medium hover:text-primary hover:underline"
+                        >
+                          {diver.fullName}
+                        </Link>
+                      );
+                    });
+                })()}
+              </p>
             ) : null}
           </div>
         </SectionCard>

@@ -17,6 +17,7 @@ import {
   returnTripGearSetAction,
 } from "../actions";
 import { confirmProposedGearUnits } from "../proposal-actions";
+import { assignmentCounts } from "./assignment-counts";
 import { FoldBelowLg } from "./FoldBelowLg";
 import { GearReturnPane } from "./GearReturnPane";
 import { ConfirmProposals } from "./ProposedUnit";
@@ -49,6 +50,8 @@ export function PrepAssignments({ view }: { view: PrepView }) {
             return unit ? [{ bookingId: diver.bookingId, gearItemId: unit.id }] : [];
           }),
         );
+  // The summary and the button read one count (A10, B54).
+  const counts = assignmentCounts(assignmentRows, proposalPicks);
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "assignments-heading")}
@@ -73,13 +76,24 @@ export function PrepAssignments({ view }: { view: PrepView }) {
           {loadOut ? (
             <p className="mt-1 text-sm text-muted print:hidden">
               {[
-                t("gear.prep.cartLine", { units: loadOut.units, divers: loadOut.divers }),
-                // Dropped on a cancellation: "still to pick" is an
-                // instruction to pick, on a day nothing is picked for.
-                // Dropped at sea too: nothing more is picked for a boat that left.
-                loadOut.stillToPick > 0 && !cancelled && !sailed
-                  ? t("gear.prep.cartStillToPick", { count: loadOut.stillToPick })
-                  : null,
+                // "3 of 9 units assigned · 6 still to pick", one number set
+                // (B54). The tail is dropped on a cancellation, where "still
+                // to pick" is an instruction to pick on a day nothing is
+                // picked for, and at sea, where nothing more is picked.
+                // With proposals on screen the line ends on the button's
+                // own number, "· 13 proposed", so "Assign all 13 proposed
+                // units" beside it is the same count, not a third one.
+                counts.missing > 0 && !cancelled && !sailed
+                  ? t(counts.proposed > 0 ? "gear.prep.cartLineProposed" : "gear.prep.cartLine", {
+                      assigned: counts.assigned,
+                      needed: counts.needed,
+                      missing: counts.missing,
+                      proposed: counts.proposed,
+                    })
+                  : t("gear.prep.cartLineAssigned", {
+                      assigned: counts.assigned,
+                      needed: counts.needed,
+                    }),
                 loadOut.serviceFlagged > 0
                   ? t("gear.prep.cartServiceFlagged", { count: loadOut.serviceFlagged })
                   : null,
@@ -89,14 +103,14 @@ export function PrepAssignments({ view }: { view: PrepView }) {
             </p>
           ) : null}
         </div>
-        {proposalPicks.length > 0 ? (
+        {counts.proposed > 0 ? (
           <ConfirmProposals
             className="shrink-0"
             tripId={tripId}
             picks={proposalPicks}
             confirm={confirmProposedGearUnits}
             copy={{
-              action: t("gear.prep.proposal.assignAll", { count: proposalPicks.length }),
+              action: t("gear.prep.proposal.assignAll", { count: counts.proposed }),
               pending: t("gear.prep.assigning"),
               refused: t("gear.prep.proposal.someRefused"),
               failed: t("gear.prep.notice.assignFailed"),
@@ -198,44 +212,19 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                         said, so nobody packs a second set. Counts stay put. */}
                 {counterHeld.length > 0 ? (
                   <p className="mt-1 text-sm text-warning-strong">
-                    {t("counterRentals.trip.held", {
-                      units: cachedListFormat(locale, {
-                        style: "long",
-                        type: "conjunction",
-                      }).format(counterHeld.map((held) => held.label)),
-                      date: formatCalendarDate(
-                        counterHeld
-                          .map((held) => held.until)
-                          .sort()
-                          .at(-1) ?? "",
-                        locale,
-                      ),
-                    })}
+                    {counterHeldLine(t, locale, counterHeld)}
                   </p>
                 ) : null}
                 <dl className={kitGridClass}>
                   {assigned.map((assignment) => (
                     <div key={assignment.reservationId} className={kitLineSettledClass}>
-                      <dt className="text-muted">
-                        {assignment.size
-                          ? t("gear.prep.kindWithSize", {
-                              kindLabel: gearItemKindLabel(t, assignment.kind),
-                              size: assignment.size,
-                            })
-                          : gearItemKindLabel(t, assignment.kind)}
-                      </dt>
+                      <AssignedUnitTerm t={t} assignment={assignment} />
                       <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="font-mono font-medium">{assignment.label}</span>
-                        {careLine(t, assignment) ? (
-                          <span className="font-medium text-warning-strong">
-                            {careLine(t, assignment)}
-                          </span>
-                        ) : null}
-                        {suitMismatchLine(t, assignment, prep.trip.wetsuitThicknessMm) ? (
-                          <span className="font-medium text-warning-strong">
-                            {suitMismatchLine(t, assignment, prep.trip.wetsuitThicknessMm)}
-                          </span>
-                        ) : null}
+                        <AssignedUnitWords
+                          t={t}
+                          assignment={assignment}
+                          wetsuitThicknessMm={prep.trip.wetsuitThicknessMm}
+                        />
                         {assignment.checkedOutAt ? (
                           <span className="text-muted">{t("gear.prep.outLabel")}</span>
                         ) : (
@@ -312,6 +301,125 @@ export function PrepAssignments({ view }: { view: PrepView }) {
             </li>
           ),
         )}
+      </ul>
+    </section>
+  );
+}
+
+type AssignedUnit = PrepView["prep"]["assignmentRows"][number]["assigned"][number];
+
+/** "BCD · L": the piece an assigned unit fills. */
+function AssignedUnitTerm({ t, assignment }: { t: PrepView["t"]; assignment: AssignedUnit }) {
+  return (
+    <dt className="text-muted">
+      {assignment.size
+        ? t("gear.prep.kindWithSize", {
+            kindLabel: gearItemKindLabel(t, assignment.kind),
+            size: assignment.size,
+          })
+        : gearItemKindLabel(t, assignment.kind)}
+    </dt>
+  );
+}
+
+/** The unit's tag and the two warnings it can carry, the same on screen and paper. */
+function AssignedUnitWords({
+  t,
+  assignment,
+  wetsuitThicknessMm,
+}: {
+  t: PrepView["t"];
+  assignment: AssignedUnit;
+  wetsuitThicknessMm: PrepView["prep"]["trip"]["wetsuitThicknessMm"];
+}) {
+  const care = careLine(t, assignment);
+  const mismatch = suitMismatchLine(t, assignment, wetsuitThicknessMm);
+  return (
+    <>
+      <span className="font-mono font-medium">{assignment.label}</span>
+      {care ? <span className="font-medium text-warning-strong">{care}</span> : null}
+      {mismatch ? <span className="font-medium text-warning-strong">{mismatch}</span> : null}
+    </>
+  );
+}
+
+/** "Already has BCD #2 from the counter until Oct 26", one line for every held unit. */
+function counterHeldLine(
+  t: PrepView["t"],
+  locale: string,
+  counterHeld: PrepView["prep"]["assignmentRows"][number]["counterHeld"],
+) {
+  return t("counterRentals.trip.held", {
+    units: cachedListFormat(locale, {
+      style: "long",
+      type: "conjunction",
+    }).format(counterHeld.map((held) => held.label)),
+    date: formatCalendarDate(
+      counterHeld
+        .map((held) => held.until)
+        .sort()
+        .at(-1) ?? "",
+      locale,
+    ),
+  });
+}
+
+/**
+ * **The assigned units, as the packet's paper carries them** (B03). The
+ * printed packing list has only ever held the assigned lines of this section
+ * (each control above is `print:hidden`, and a diver with nothing assigned
+ * drops off the sheet), so on the packet that is all there is: the diver, the
+ * one warning their row can carry, and each unit with its tag, its warnings
+ * and "Out" once it has left the wall. Nothing to tap. With nothing assigned
+ * yet the section is absent, as it was on paper.
+ */
+export function PrepAssignedPaper({ view }: { view: PrepView }) {
+  const { prep, t, locale, idPrefix } = view;
+  const rows = prep.assignmentRows.filter((row) => row.assigned.length > 0);
+  if (rows.length === 0) return null;
+  return (
+    <section aria-labelledby={scopedId(idPrefix, "assignments-heading")}>
+      <h2 id={scopedId(idPrefix, "assignments-heading")} className={SECTION_TITLE_CLASS}>
+        {t("gear.prep.heading")}
+      </h2>
+      <ul
+        className={sectionCardClass({ padding: "none", className: "mt-4 divide-y divide-border" })}
+      >
+        {rows.map(({ diver, assigned, needsStaffFit, counterHeld }) => (
+          <li key={diver.bookingId} className="px-4 py-3 sm:px-5">
+            <p className="font-medium">{diver.fullName}</p>
+            {needsStaffFit ? (
+              <p className="mt-1 text-sm font-medium text-warning-strong">
+                {rentalFitLineText(t, locale, {
+                  state: "needs_staff_fit",
+                  note: needsStaffFit.note,
+                })}
+              </p>
+            ) : null}
+            {counterHeld.length > 0 ? (
+              <p className="mt-1 text-sm text-warning-strong">
+                {counterHeldLine(t, locale, counterHeld)}
+              </p>
+            ) : null}
+            <dl className={kitGridClass}>
+              {assigned.map((assignment) => (
+                <div key={assignment.reservationId} className={kitLineSettledClass}>
+                  <AssignedUnitTerm t={t} assignment={assignment} />
+                  <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <AssignedUnitWords
+                      t={t}
+                      assignment={assignment}
+                      wetsuitThicknessMm={prep.trip.wetsuitThicknessMm}
+                    />
+                    {assignment.checkedOutAt ? (
+                      <span className="text-muted">{t("gear.prep.outLabel")}</span>
+                    ) : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
       </ul>
     </section>
   );

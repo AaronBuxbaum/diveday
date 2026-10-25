@@ -178,12 +178,14 @@ test.describe("a shop that stops filling nitrox", () => {
     // The request survives even with nitrox off — read it back from the
     // prep list (visible with the catalog disabled per the live-data check
     // above) rather than re-enabling nitrox just to look at the checkbox.
+    // The tank line names nitrox only when a fill is approved (B54), so the
+    // request is read off the list that names who asked for it.
     await page.goto(`/shop/${SHOP}/trips/${tripId}/prep`);
-    const tanks = page
-      .getByRole("heading", { name: "Tanks" })
+    const requested = page
+      .getByRole("heading", { name: "Nitrox requested without a certified card" })
       .locator("xpath=..")
       .filter({ visible: true });
-    await expect(tanks).toContainText("Nitrox");
+    await expect(requested).toContainText("Priya Sharma");
 
     await anonContext.close();
   });
@@ -200,9 +202,8 @@ test.describe("a shop that stops filling nitrox", () => {
     await expect(page.getByText("Rentals saved")).toBeVisible();
 
     // Two-Tank Reef never had a nitrox request seeded onto it (unlike the
-    // wreck charter above), so with the catalog off there is no live data
-    // to keep the tile alive: Total and Air are the same number with
-    // nothing left to distinguish, and the tile grid collapses to one.
+    // wreck charter above), so with the catalog off the one tank line says
+    // air alone, and nitrox is never named (B54).
     await page.goto(`/shop/${SHOP}/schedule/board`);
     await page
       .locator("li")
@@ -214,9 +215,8 @@ test.describe("a shop that stops filling nitrox", () => {
       .getByRole("heading", { name: "Tanks" })
       .locator("xpath=..")
       .filter({ visible: true });
-    await expect(tanks.getByText("Total", { exact: true })).toHaveCount(1);
-    await expect(tanks.getByText("Air", { exact: true })).toHaveCount(0);
-    await expect(tanks.getByText("Nitrox", { exact: true })).toHaveCount(0);
+    await expect(tanks.getByText(/^\d+ tanks?, air$/)).toHaveCount(1);
+    await expect(tanks.getByText(/nitrox/i)).toHaveCount(0);
   });
 });
 

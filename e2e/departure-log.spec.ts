@@ -58,7 +58,8 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   // The document header states what this is — and what it is not.
   await expect(page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ })).toBeVisible();
   await expect(
-    page.getByText("This document reports recorded facts with their timestamps."),
+    // One preamble paragraph now (B52), the disclaimer inside it.
+    page.getByText(/It reports recorded facts with their timestamps and does not assess/),
   ).toBeVisible();
 
   // The roll-call write just recorded is on the timeline, attributed.

@@ -1,14 +1,18 @@
-import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
-import { readinessStatusTone } from "@/i18n/readiness-labels";
 import type { OfflineTripControls } from "./controls";
 import type { OfflineTripView } from "./trip-view";
 
 /**
  * **The desk, with no signal** (ADR 20260907-the-counter-survives-offline):
  * each seat's arrival tap, working seats first. Empty once the boat has gone.
+ *
+ * **One row shape on one surface** (visual review 2026-10-24, B01): a mark, the
+ * name, and one status line under it, every row the same flat row under one
+ * divider. A seat the desk cannot take a tap on says why on that line, in
+ * danger ink when readiness stops it; nothing else about the row changes. The
+ * page's banner says once that this is a saved copy, so no line says "when
+ * saved".
  */
 export function OfflineCounter({
   view,
@@ -21,13 +25,13 @@ export function OfflineCounter({
   const { t, busyArrival, recordArrival } = controls;
   return counterSeats.length > 0 ? (
     <section
-      className={sectionCardClass({ className: "mt-6" })}
+      className={sectionCardClass({ padding: "none", className: "mt-6" })}
       aria-labelledby="offline-counter-heading"
     >
-      <h2 id="offline-counter-heading" className="text-base font-semibold text-ink">
+      <h2 id="offline-counter-heading" className="px-4 py-4 text-base font-semibold text-ink">
         {t("shared.offlineManifest.single.counter.heading")}
       </h2>
-      <ul className="mt-3 flex flex-col gap-2">
+      <ul className="divide-y divide-border border-t border-border">
         {counterSeats.map(({ diver, arrival, refused, settled }) => {
           const arrived = arrival !== undefined;
           const busy = busyArrival === diver.bookingId;
@@ -50,7 +54,7 @@ export function OfflineCounter({
           // costs nothing and says the same thing either way, which is:
           // this seat is not yours to check in, read the live counter.
           const refusal = refused ? (
-            <p className="mt-1 text-sm font-medium text-danger">
+            <p className="px-4 pb-3 ps-12 text-sm font-medium text-danger">
               {t(
                 refused.reason === "not_ready"
                   ? "shared.offlineManifest.single.counter.refusedNotReady"
@@ -83,49 +87,40 @@ export function OfflineCounter({
           // released seat back on sync rather than turning that body
           // away.
           if (diver.readiness.status !== "ready" || diver.notHere) {
+            const blocked = diver.readiness.status !== "ready";
+            // The status line: why the desk cannot tap. Readiness's own
+            // reasons, resolved into this copy when it was saved, so already
+            // in the reader's language; then the desk's release, when there
+            // is one. A blocked seat with no reason saved says "Blocked".
+            const why = [
+              ...(blocked
+                ? diver.readiness.blockers.length > 0
+                  ? diver.readiness.blockers.map((blocker) => blocker.text)
+                  : [t("shared.offlineManifest.single.blockedBadge")]
+                : []),
+              ...(diver.notHere
+                ? [
+                    diver.turnedAway
+                      ? t("shared.offlineManifest.single.turnedAwayBadge")
+                      : t("shared.offlineManifest.single.notHereBadge"),
+                  ]
+                : []),
+            ].join(" · ");
             return (
-              <li
-                key={diver.bookingId}
-                // `px-6`, the `boat` rows' own inset beside it, so the
-                // name starts where their marks do.
-                className="rounded-lg border border-border bg-surface-sunken px-6 py-3"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-medium text-ink">{diver.fullName}</p>
-                  {/* **The qualifier the rows below already wear.** These
-                      blockers were true when the copy was saved and this
-                      page cannot know whether they still are: Priya may
-                      have signed at 07:20 against a copy saved at 06:50,
-                      and a bare "Waiver has not been sent" sends her back
-                      to sign a second time. "A stale copy reading as
-                      current" is the one lie a roll-call surface must not
-                      tell (docs/product/glossary.md), and the counter on
-                      the same screen does not get an exemption from it.
-                      The released seat's own badge carries the same
-                      qualifier for the same reason: `undoBookingNoShow`
-                      may have put them back on the list at 07:20. */}
-                  {diver.readiness.status !== "ready" ? (
-                    <Badge tone={readinessStatusTone("blocked")}>
-                      {t("shared.offlineManifest.single.blockedBadge")}
-                    </Badge>
-                  ) : null}
-                  {diver.notHere ? (
-                    <Badge tone="neutral">
-                      {diver.turnedAway
-                        ? t("shared.offlineManifest.single.turnedAwayBadge")
-                        : t("shared.offlineManifest.single.notHereBadge")}
-                    </Badge>
-                  ) : null}
+              <li key={diver.bookingId}>
+                <div className="flex min-h-14 items-start gap-3 px-4 py-3">
+                  {/* The mark's room, empty: no tap here, and the name starts
+                      where every tappable row's does. */}
+                  <span aria-hidden="true" className="size-5 shrink-0" />
+                  <span className="min-w-0 flex-1 break-words">
+                    <span className="block text-base font-semibold text-ink">{diver.fullName}</span>
+                    <span
+                      className={`mt-1 block text-base ${blocked ? "font-semibold text-danger" : "text-muted"}`}
+                    >
+                      {why}
+                    </span>
+                  </span>
                 </div>
-                {/* Nothing where there are no blockers: a released seat
-                      that readiness was clearing has the badge and the
-                      missing control, and a shop's own words are the only
-                      thing this line ever carries. */}
-                {diver.readiness.blockers.length > 0 ? (
-                  <p className="mt-1 text-sm text-muted">
-                    {diver.readiness.blockers.map((blocker) => blocker.text).join(" · ")}
-                  </p>
-                ) : null}
                 {refusal}
               </li>
             );
@@ -138,17 +133,13 @@ export function OfflineCounter({
                 aria-busy={busy}
                 aria-pressed={arrived}
                 onClick={() => recordArrival(diver.bookingId, arrived ? "cleared" : "arrived")}
-                className={buttonClass({
-                  variant: arrived ? "primary" : "secondary",
-                  size: "boat",
-                  // Settled rows sink and dim: the dock copy has no
-                  // roster groups to file them under.
-                  className: `w-full gap-3 text-start${settled ? " opacity-70" : ""}`,
-                })}
+                // The flat row (B01). Settled rows dim: the dock copy has no
+                // roster groups to file them under.
+                className={`flex min-h-14 w-full touch-manipulation items-start gap-3 px-4 py-3 text-start hover:bg-surface-sunken disabled:opacity-60${settled ? " opacity-70" : ""}`}
               >
                 <StatusMark variant={arrived ? "checked" : "unchecked"} size="md" />
                 <span className="min-w-0 flex-1 whitespace-normal break-words">
-                  <span className="block">{diver.fullName}</span>{" "}
+                  <span className="block text-base font-semibold text-ink">{diver.fullName}</span>{" "}
                   {/* **The act, in words, on the row.** A name beside a
                       circle is what every roll-call row on this page also
                       is, and the one thing a crew member must never do
@@ -159,24 +150,20 @@ export function OfflineCounter({
                       word rather than shrinking it: this is a wet-thumb
                       surface in sun, and 14px on it is the size the
                       critical-text rule exists about. */}
-                  <span className="mt-1 block text-base font-semibold">
+                  <span className="mt-1 block text-base">
                     {/* **Whose statement is this?** A tap this device made
-                        is this device's own and says so plainly, with roll
-                        call's "waiting to send" suffix while it is
-                        unsent. A reading that came off `snapshot.checkedIn`
-                        is the saved copy talking, and wears the same "when
-                        saved" hedge every readiness badge on this page
-                        wears — somebody may have undone it at the desk
-                        since. */}
+                        and has not sent yet carries roll call's "waiting
+                        to send" suffix. A reading off `snapshot.checkedIn`
+                        is the saved copy talking, which the page's banner
+                        says once ("Saved copy from …"), so the line no
+                        longer repeats "when saved" (B01). */}
                     {!arrived
                       ? t("shared.offlineManifest.single.counter.notCheckedInLabel")
-                      : arrival.local
-                        ? `${t("shared.offlineManifest.single.counter.checkedInLabel")}${
-                            arrival.pending
-                              ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
-                              : ""
-                          }`
-                        : t("shared.offlineManifest.single.counter.checkedInWhenSavedLabel")}
+                      : `${t("shared.offlineManifest.single.counter.checkedInLabel")}${
+                          arrival.local && arrival.pending
+                            ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
+                            : ""
+                        }`}
                   </span>
                 </span>
               </button>

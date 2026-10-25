@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -129,11 +128,9 @@ function PreDepartureCheckRow({
             }
             if (event.key === "Escape") standDown();
           }}
-          className={buttonClass({
-            variant: checked ? "primary" : "secondary",
-            size: "md",
-            className: "w-full justify-start gap-2 text-start",
-          })}
+          // A flat row, not a card per line (visual review 2026-10-24, B07):
+          // the mark says checked, and the list's dividers draw the rows.
+          className="flex min-h-14 w-full touch-manipulation items-start gap-3 px-4 py-3 text-start text-base font-semibold hover:bg-surface-sunken disabled:opacity-60"
         >
           <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
           <span className="flex flex-col">
@@ -154,13 +151,13 @@ function PreDepartureCheckRow({
         </span>
       </form>
       {result && !result.ok ? (
-        <p role="alert" className="mt-1 text-sm font-medium text-danger">
+        <p role="alert" className="px-4 pb-2 text-sm font-medium text-danger">
           {copy.errorRefusal}
         </p>
       ) : null}
       {/* What this crew wrote against the line, until somebody fixes it. */}
       {(item.snags ?? []).map((snag) => (
-        <div key={snag.id} className="mt-2 border-s-2 border-warning ps-3 text-sm">
+        <div key={snag.id} className="mx-4 mb-3 border-s-2 border-warning ps-3 text-sm">
           <p className="font-medium">{snag.note}</p>
           <p className="text-muted">{snag.notedBy}</p>
           {snagActions ? (
@@ -173,9 +170,6 @@ function PreDepartureCheckRow({
           ) : null}
         </div>
       ))}
-      {snagActions ? (
-        <SnagNoteForm checklistItemId={item.id} action={snagActions.note} copy={copy} />
-      ) : null}
     </li>
   );
 }
@@ -261,6 +255,7 @@ export function PreDepartureCheckList({
   atDeparture,
   carried = [],
   snagActions,
+  paper = false,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
@@ -273,6 +268,11 @@ export function PreDepartureCheckList({
   carried?: readonly SnagViewItem[];
   /** Present when the departure has a boat to hang a snag on. */
   snagActions?: SnagActions;
+  /**
+   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): only the
+   * printed list below, never the checks, the snag answers or the note form.
+   */
+  paper?: boolean;
 }) {
   if (items.length === 0) return null;
   // Controlled by the facts, not remembered: React writes `open` only when
@@ -287,37 +287,44 @@ export function PreDepartureCheckList({
       aria-labelledby={scopedId(idPrefix, "pre-departure-check-heading")}
       className={sectionCardClass({ padding: "none" })}
     >
-      {carried.length > 0 ? (
+      {carried.length > 0 && !paper ? (
         <CarriedSnags idPrefix={idPrefix} carried={carried} copy={copy} snagActions={snagActions} />
       ) : null}
-      <details open={open} className="group/check print:hidden">
-        <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
-          <SummaryCaret className="group-open/check:rotate-90" />
-          <h2
-            id={scopedId(idPrefix, "pre-departure-check-heading")}
-            className="text-base font-semibold text-balance group-hover/summary:underline"
-          >
-            {copy.summary}
-          </h2>
-        </summary>
-        <ul className="flex flex-col gap-2 px-4 pb-4">
-          {items.map((item) => (
-            <PreDepartureCheckRow
-              key={item.id}
-              action={action}
-              item={item}
-              copy={copy}
-              snagActions={snagActions}
-            />
-          ))}
-        </ul>
-      </details>
+      {paper ? null : (
+        <details open={open} className="group/check print:hidden">
+          <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
+            <SummaryCaret className="group-open/check:rotate-90" />
+            <h2
+              id={scopedId(idPrefix, "pre-departure-check-heading")}
+              className="text-base font-semibold text-balance group-hover/summary:underline"
+            >
+              {copy.summary}
+            </h2>
+          </summary>
+          <ul className="divide-y divide-border border-t border-border">
+            {items.map((item) => (
+              <PreDepartureCheckRow
+                key={item.id}
+                action={action}
+                item={item}
+                copy={copy}
+                snagActions={snagActions}
+              />
+            ))}
+          </ul>
+          {snagActions ? (
+            <div className="border-t border-border">
+              <SnagNoteForm items={items} action={snagActions.note} copy={copy} />
+            </div>
+          ) : null}
+        </details>
+      )}
       {/* The trip packet's print stylesheet hides every button/input in
           `.trip-print-bundle` on the strength that nothing value-bearing lives
           inside one — and a collapsed disclosure prints nothing at all. Both
           are why the printed list is restated here, outside the control, so the
           sheet a captain carries offline still says what was checked. */}
-      <div className="hidden px-4 py-3 print:block">
+      <div data-print-only className="hidden px-4 py-3 print:block">
         <h2 className="text-base font-semibold">{copy.heading}</h2>
         <ul className="mt-1 flex flex-col gap-1">
           {items.map((item) => (

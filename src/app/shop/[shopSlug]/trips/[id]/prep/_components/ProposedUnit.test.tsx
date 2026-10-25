@@ -1,64 +1,40 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AssignGearUnitResult } from "../actions";
 import { ConfirmProposals, ProposedUnit } from "./ProposedUnit";
 
 afterEach(cleanup);
 
-const COPY = {
-  proposed: "Proposed: BCD #3 · L",
-  assign: "Assign",
-  assigning: "Assigning…",
-  change: "Change",
-  refusals: { unit_unavailable: "Somebody got that unit first. Pick another." },
-  refusalFallback: "That pick didn’t take. Try another unit.",
-};
+const COPY = { line: "Proposed: BCD #3 · L", reveal: "Change" };
 
-type Assign = (input: {
-  tripId: string;
-  bookingId: string;
-  gearItemId: string;
-}) => Promise<AssignGearUnitResult>;
-
-function renderRow(assign: Assign) {
+function renderRow() {
   render(
-    <ProposedUnit tripId="t1" bookingId="b1" gearItemId="u3" assign={assign} copy={COPY}>
+    <ProposedUnit copy={COPY}>
       <select aria-label="BCD · L" />
     </ProposedUnit>,
   );
 }
 
+/**
+ * **One line and one text button** (visual review 2026-10-24, A10): the row
+ * says the proposal and holds the picker behind Change. There is no per-row
+ * Assign; "Assign all" confirms proposals, and a pick in the picker is the
+ * assignment.
+ */
 describe("ProposedUnit", () => {
-  it("reserves exactly the proposed unit on one tap", async () => {
-    const assign = vi.fn<Assign>().mockResolvedValue({ ok: true });
-    renderRow(assign);
-    fireEvent.click(screen.getByRole("button", { name: "Assign" }));
-    await waitFor(() =>
-      expect(assign).toHaveBeenCalledWith({
-        tripId: "t1",
-        bookingId: "b1",
-        gearItemId: "u3",
-        proposed: true,
-      }),
-    );
-    expect(screen.queryByRole("alert")).toBeNull();
+  it("says the proposal in words, with no Assign and no picker at rest", () => {
+    renderRow();
+    expect(screen.getByText("Proposed: BCD #3 · L")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
-  it("says why on a refusal and opens the picker, never claiming the unit", async () => {
-    const assign = vi.fn<Assign>().mockResolvedValue({ ok: false, reason: "unit_unavailable" });
-    renderRow(assign);
-    fireEvent.click(screen.getByRole("button", { name: "Assign" }));
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
-    expect(screen.queryByText("Proposed: BCD #3 · L")).toBeNull();
-  });
-
-  it("opens the picker on Change without reserving anything", () => {
-    const assign = vi.fn<Assign>();
-    renderRow(assign);
+  it("reveals the picker inline on Change, in place of the line", () => {
+    renderRow();
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
     expect(screen.getByRole("combobox")).toBeInTheDocument();
-    expect(assign).not.toHaveBeenCalled();
+    expect(screen.queryByText("Proposed: BCD #3 · L")).toBeNull();
   });
 });
 

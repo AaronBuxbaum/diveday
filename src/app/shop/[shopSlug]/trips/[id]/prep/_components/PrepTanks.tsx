@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ShopStat } from "@/components/ShopPageHeader";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { FIGURE_INLINE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { scopedId } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
 import { counterRowId } from "../../_arrivals/focus";
@@ -44,45 +43,20 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
             .filter((line) => line !== null)
             .join(" · ")}
         </p>
-        {/* **Three tiles on a screen; one line on paper.** The tiles are
-                the right shape for a wall-mounted screen a staffer reads
-                across the room, and the wrong one for a sheet carried to the
-                boat: three cards of whitespace holding two digits each pushed
-                the packing list that follows them onto its own page. Same
-                three numbers, said inline. */}
-        <div
-          className={`mt-3 grid gap-3 print:hidden ${showNitrox ? "grid-cols-3" : "grid-cols-1"}`}
-        >
-          {showNitrox ? (
-            <>
-              <ShopStat label={t("tripPrep.total")} value={checklist.tanks.total} />
-              <ShopStat label={t("tripPrep.air")} value={checklist.tanks.air} />
-              <ShopStat label={t("tripPrep.nitrox")} value={checklist.tanks.nitrox} />
-            </>
-          ) : (
-            // Air and total are the same number with no nitrox split to draw,
-            // so there's nothing for a second tile to distinguish.
-            <ShopStat label={t("tripPrep.total")} value={checklist.tanks.total} />
-          )}
-        </div>
-        {/* What the Nitrox tile counts, beside the tile the crew packs
-            cylinders from: seats that asked and hold a verified card, not
-            cylinders analyzed. The analysis itself is never logged here
-            (dive-domain review of UX item 26). On paper it is said once, in
-            the printed day's header (fifth-loop ideas, item 2). */}
-        {showNitrox ? (
-          <p className="mt-2 text-sm text-muted print:hidden">{t("tripPrep.nitroxCountNote")}</p>
+        {/* **One line, on screen and on paper** (visual review 2026-10-24,
+            B54): "18 tanks, air", or "18 tanks: 12 air, 6 nitrox" when any
+            seat breathes nitrox. The three tiles held two digits each and
+            said the total twice on an all-air boat; the numbers are the
+            same ones, and nitrox is named only when there is some. */}
+        <p className={`mt-3 ${FIGURE_INLINE_CLASS}`}>{tanksLine(t, checklist.tanks, showNitrox)}</p>
+        {/* What the nitrox count counts: seats that asked and hold a
+            verified card, not cylinders analyzed. The analysis itself is
+            never logged here (dive-domain review of UX item 26). On paper it
+            is said once, in the printed day's header (fifth-loop ideas,
+            item 2). */}
+        {showNitrox && checklist.tanks.nitrox > 0 && !view.paper ? (
+          <p className="mt-1 text-sm text-muted print:hidden">{t("tripPrep.nitroxCountNote")}</p>
         ) : null}
-        <p className="mt-2 hidden text-base font-semibold tabular-nums print:block">
-          {(showNitrox
-            ? [
-                `${t("tripPrep.total")} ${checklist.tanks.total}`,
-                `${t("tripPrep.air")} ${checklist.tanks.air}`,
-                `${t("tripPrep.nitrox")} ${checklist.tanks.nitrox}`,
-              ]
-            : [`${t("tripPrep.total")} ${checklist.tanks.total}`]
-          ).join(" · ")}
-        </p>
       </section>
 
       {showNitrox && checklist.nitroxBlockers.length > 0 ? (
@@ -141,4 +115,19 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
       ) : null}
     </>
   );
+}
+
+/**
+ * The tank count as one sentence (B54). Nitrox is said only when the shop
+ * fills it and at least one cylinder on this departure is nitrox; the air
+ * figure is then the remainder of the same total, never a second count.
+ */
+export function tanksLine(
+  t: PrepView["t"],
+  tanks: { total: number; air: number; nitrox: number },
+  showNitrox: boolean,
+): string {
+  return showNitrox && tanks.nitrox > 0
+    ? t("gear.prep.tanksLineMixed", { count: tanks.total, air: tanks.air, nitrox: tanks.nitrox })
+    : t("gear.prep.tanksLineAir", { count: tanks.total });
 }

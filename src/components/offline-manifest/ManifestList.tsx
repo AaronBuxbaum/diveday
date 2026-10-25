@@ -1,11 +1,11 @@
 import type { ComponentProps, ReactNode } from "react";
+import { Wordmark } from "@/components/Logo";
 import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { cachedFormatter } from "@/lib/intl-cache";
 import {
@@ -82,6 +82,47 @@ export function OfflineManifestList({
   // over records belonging to another.
   const shopNames = new Set(savedRows.map((row) => row.saved.snapshot.shop.name));
   const oneShopName = shopNames.size === 1 ? [...shopNames][0] : null;
+  if (savedTrips.length === 0) {
+    // **The empty state is one card** (visual review 2026-10-24, B51): the
+    // wordmark, one heading, one line and one way out, centred on the page,
+    // rather than an eyebrow, a page title and a second box under it saying
+    // the same thing. A read that threw keeps its own heading and line
+    // (dive-domain review D4): copies may exist, so it never says none do.
+    return (
+      <main className="boat-mode grid w-full flex-1 place-items-center px-4 py-16">
+        <div className="w-full max-w-md">
+          <OfflineShellVersionBanner copy={shellVersionCopy} />
+          {discardNotice}
+          <section
+            className={sectionCardClass({ className: "flex flex-col items-center text-center" })}
+          >
+            <Wordmark />
+            <h1 className={`mt-6 ${LEAD_TITLE_CLASS} text-balance`}>
+              {readFailed
+                ? t("shared.offlineManifest.list.readFailedHeading")
+                : t("shared.offlineManifest.list.headingEmpty")}
+            </h1>
+            <p className="mt-2 text-muted text-pretty">
+              {readFailed
+                ? t("shared.offlineManifest.single.readFailedHint")
+                : t("shared.offlineManifest.list.emptyHint")}
+            </p>
+            {/* A door, not a dead end (UX review 2026-10-10, item 33). `/shop`
+                lands a signed-in staffer on their own Today (`src/proxy.ts`)
+                and anyone else on sign-in; a plain anchor, because this page
+                is the cached shell and must not lean on the client router. */}
+            <a href="/shop" className={buttonClass({ className: "mt-6" })}>
+              {t("shared.notFound.backToToday")}
+            </a>
+            {/* The store's own word, for a reader who needs it announced. */}
+            <p className="sr-only" role="status" aria-live="polite">
+              {message}
+            </p>
+          </section>
+        </div>
+      </main>
+    );
+  }
   return (
     <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <OfflineShellVersionBanner copy={shellVersionCopy} />
@@ -183,28 +224,7 @@ export function OfflineManifestList({
             },
           )}
         </ul>
-      ) : (
-        <div className="mt-6 rounded-panel border border-border bg-surface-sunken p-8 text-center sm:p-10">
-          <div
-            className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
-            aria-hidden="true"
-          >
-            <DiveDayIcon name="empty" className="size-5 text-primary" />
-          </div>
-          <p className="mx-auto mt-4 max-w-md text-muted">
-            {readFailed
-              ? t("shared.offlineManifest.single.readFailedHint")
-              : t("shared.offlineManifest.list.emptyHint")}
-          </p>
-          {/* A door, not a dead end (UX review 2026-10-10, item 33). `/shop`
-              lands a signed-in staffer on their own Today (`src/proxy.ts`)
-              and anyone else on sign-in; a plain anchor, because this page
-              is the cached shell and must not lean on the client router. */}
-          <a href="/shop" className={buttonClass({ variant: "secondary", className: "mt-6" })}>
-            {t("shared.notFound.backToToday")}
-          </a>
-        </div>
-      )}
+      ) : null}
     </main>
   );
 }

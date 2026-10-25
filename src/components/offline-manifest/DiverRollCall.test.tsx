@@ -41,6 +41,121 @@ describe("OfflineDiverRollCall", () => {
     expect(rowAt("after_dive_2")).toContain("Not medically cleared");
     expect(rowAt("departure")).not.toContain("Not medically cleared");
   });
+  it("shows the observation on a diver not back aboard under the status line, outside any disclosure (review dde-b 2)", () => {
+    const copy = savedCopy();
+    const NOTE = "Surfaced 200 m north, picked up by Reef Runner 11:31";
+    const event = (
+      checkpoint: "departure" | "after_dive_1",
+      status: "boarded" | "not_boarded",
+    ) => ({
+      clientEventId: `event-${checkpoint}`,
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+      tripId: "trip-1",
+      bookingId: "b-priya",
+      checkpoint,
+      status,
+      occurredAt: "2026-08-01T12:58:00.000Z",
+      syncStatus: "pending" as const,
+    });
+    copy.events = [
+      event("departure", "boarded"),
+      { ...event("after_dive_1", "not_boarded"), note: NOTE },
+    ];
+    const trip = offlineTripView(copy, "after_dive_1");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector("#offline-roll-call-b-priya");
+    if (!row) throw new Error("Priya's row missing");
+    const notes = [...row.querySelectorAll("p")].filter((p) => p.textContent === NOTE);
+    // Said once, and in the open: no tap on "Contact & gear" stands before it.
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.closest("details")).toBeNull();
+  });
+
+  /**
+   * **A block is the status line's ink, not the row's fill** (visual review
+   * polish, B01), as in the "At the counter" block: the row keeps the tone of
+   * what was recorded, the words say Blocked in danger ink, and aboard over a
+   * block is never the calm boarded green. A diver not back aboard keeps the
+   * danger fill and ring: that is a recorded state, not a block.
+   */
+  describe("a blocked diver's row", () => {
+    function blockedPriya(status?: "boarded" | "not_boarded", checkpoint = "departure" as const) {
+      const copy = savedCopy();
+      const priya = copy.snapshot.manifests[0]?.divers.find((d) => d.bookingId === "b-priya");
+      if (!priya) throw new Error("fixture diver missing");
+      priya.readiness = {
+        status: "blocked",
+        blockers: [{ code: "waiver_not_sent", text: "Waiver not signed" }],
+      };
+      copy.events = status
+        ? [
+            {
+              clientEventId: "event-1",
+              snapshotId: "snap-trip-1",
+              snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+              tripId: "trip-1",
+              bookingId: "b-priya",
+              checkpoint,
+              status,
+              occurredAt: "2026-08-01T12:58:00.000Z",
+              syncStatus: "pending",
+            },
+          ]
+        : [];
+      const trip = offlineTripView(copy, checkpoint);
+      if (!trip) throw new Error("the fixture carries a manifest");
+      const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+      const row = container.querySelector("#offline-roll-call-b-priya");
+      if (!row) throw new Error("Priya's row missing");
+      const status_ = row.querySelector("h3")?.parentElement?.nextElementSibling;
+      return { row, status: status_ };
+    }
+
+    it("wears no danger fill or rule while awaiting, and says Blocked in danger ink", () => {
+      const { row, status } = blockedPriya();
+      expect(row.className).not.toMatch(/\bbg-danger-tint\b|\bborder-danger\b/);
+      expect(row).toHaveClass("border-border-strong", "bg-surface-sunken");
+      expect(status).toHaveClass("text-danger");
+      expect(status?.textContent).toContain("Waiver not signed");
+    });
+
+    it("is never the boarded green when boarded over the block", () => {
+      const { row, status } = blockedPriya("boarded");
+      expect(row.className).not.toMatch(/\bbg-success-tint\b|\bborder-success\b/);
+      expect(row.className).not.toMatch(/\bbg-danger-tint\b/);
+      expect(status).toHaveClass("text-danger");
+    });
+  });
+
+  it("keeps the danger fill and ring on a diver recorded not back aboard", () => {
+    const copy = savedCopy();
+    const event = (
+      checkpoint: "departure" | "after_dive_1",
+      status: "boarded" | "not_boarded",
+    ) => ({
+      clientEventId: `event-${checkpoint}`,
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+      tripId: "trip-1",
+      bookingId: "b-priya",
+      checkpoint,
+      status,
+      occurredAt: "2026-08-01T12:58:00.000Z",
+      syncStatus: "pending" as const,
+    });
+    copy.events = [event("departure", "boarded"), event("after_dive_1", "not_boarded")];
+    const trip = offlineTripView(copy, "after_dive_1");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    expect(container.querySelector("#offline-roll-call-b-priya")).toHaveClass(
+      "border-danger",
+      "bg-danger-tint",
+      "ring-danger/40",
+    );
+  });
+
   it("draws one roll-call row per diver, each its own jump target", () => {
     const { container } = render(<OfflineDiverRollCall view={view()} controls={controls()} />);
     expect(container.querySelector("#offline-roll-call-b-priya")).not.toBeNull();
@@ -166,10 +281,12 @@ describe("OfflineDiverRollCall", () => {
     if (!trip) throw new Error("the fixture carries a manifest");
     const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
     const turnedAway = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
-    expect(turnedAway).toContain("Turned away when saved");
-    expect(turnedAway).not.toContain("Not here when saved");
+    expect(turnedAway).toContain("Turned away");
+    expect(turnedAway).not.toContain("Not here");
     const notHere = container.querySelector("#offline-roll-call-b-marcus")?.textContent ?? "";
-    expect(notHere).toContain("Not here when saved");
+    expect(notHere).toContain("Not here");
+    // The banner says "saved" once; no row repeats it (B01).
+    expect(container.textContent).not.toContain("when saved");
   });
 
   /**
