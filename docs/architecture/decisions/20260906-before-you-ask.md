@@ -180,8 +180,9 @@ filter admits.
 ## Amendment 2026-10-25: a counter payment takes the same hold (issue #3030, H-159)
 
 The hold is not only for mail. Cash or Card machine on an open order is held as a fifth kind,
-`counter_payment`, with the same eight seconds, the same Undo and the same two exits: the tapping
-screen's release, or the hourly sweep when the screen went elsewhere. Its row says what will be
-recorded ("Recorded $340 cash"), and Undo leaves the order untouched. Principle 7's sentence about
+`counter_payment`, with the same eight seconds and the same Undo. Its exits are the tapping
+screen's release, the screen's own leave (a `keepalive` POST as the page goes, so money is not left
+for an hour), and the hourly sweep as the fallback. Its row says what is being recorded
+("Recording $340.00 cash"), and Undo leaves the order untouched. Principle 7's sentence about
 "a payment" now reads "a card charge": money that has already left a card is still confirmed, money
 counted at the desk is held.
