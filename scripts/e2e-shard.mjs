@@ -75,11 +75,11 @@ const TEST_DECLARATION =
  * `test.step(` and `test.use(` as tests.
  *
  * Validated against `playwright test --list` on 2026-09-02: **77 of 78 specs
- * match Playwright's own count exactly.** The one that does not is
- * `a11y.spec.ts`, where a `for` loop declares one `test(` that Playwright
- * expands into three — a shape no static read can see, the same limit
- * `src/test/shard-sequencer.ts` accepts for `.each` tables. It costs two units
- * of 27,000, and the greedy deal absorbs it.
+ * match Playwright's own count exactly.** The one that did not was
+ * `a11y.spec.ts` (removed 2026-10-24), where a `for` loop declared one `test(`
+ * that Playwright expanded into three — a shape no static read can see, the
+ * same limit `src/test/shard-sequencer.ts` accepts for `.each` tables. A spec
+ * written that way costs a few units of 27,000, and the greedy deal absorbs it.
  */
 const NON_TEST_STATIC =
   /^\s*test\.(?:describe|step|use|configure|slow|setTimeout|before[A-Z]\w*|after[A-Z]\w*)\b/gm;

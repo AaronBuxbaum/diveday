@@ -12,10 +12,7 @@
 //     ratchets this; the report is where you see what it is made of and where the headroom
 //     went.
 //   - **How much of the front end is actually looked at.** The share of routes carrying a
-//     visual capture and the share carrying an axe scan, both read out of
-//     `scripts/route-coverage.json`. The a11y number is the one nothing else states: a new
-//     staff page can ship with a screenshot and never be scanned, and the coverage file
-//     already knows, from the ledger's own `a11y` column.
+//     visual capture, read out of `scripts/route-coverage.json`.
 //   - **Whether the guards are themselves tested.** A `check-*.mjs` with no
 //     `check-*.test.mjs` beside it is a rule whose judgement nobody has pinned; it can
 //     start passing everything and nothing would say so.
@@ -81,19 +78,11 @@ console.log();
 const coverage = await loadCoverage(process.cwd());
 const routes = Object.entries(coverage).filter(([route]) => !route.startsWith("//"));
 const withVisual = routes.filter(([, entry]) => (entry.visual ?? []).length > 0);
-// Reads the `a11y` column, not `e2e`. Until 2026-08-27 this counted the routes
-// whose `e2e` list happened to name `a11y.spec.ts` -- a list maintained to say
-// which specs *navigate* a route, not which ones scan it -- and reported 22%
-// while the spec was in fact scanning better than forty (issue #1056).
-const withA11y = routes.filter(([, entry]) => (entry.a11y ?? []).length > 0);
 const exempt = routes.filter(([, entry]) => entry.exempt);
 
 console.log("Front-end coverage");
 console.log(
   `  visual capture  ${bar(percent(withVisual.length, routes.length))}  ${withVisual.length}/${routes.length} routes (${percent(withVisual.length, routes.length)}%)`,
-);
-console.log(
-  `  axe a11y scan   ${bar(percent(withA11y.length, routes.length))}  ${withA11y.length}/${routes.length} routes (${percent(withA11y.length, routes.length)}%)`,
 );
 console.log(`  written exemptions: ${exempt.length}\n`);
 

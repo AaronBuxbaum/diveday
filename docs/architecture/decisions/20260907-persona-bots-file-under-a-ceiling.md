@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-09-07
 
+> **Note (2026-10-24):** the walk's axe probe was removed with the suite's scans; the ceiling and the rest of this record stand.
+
 ## Context
 
 `docs/product/personas.md` is a standing frame: fifteen personas, each with a "hold the line on"

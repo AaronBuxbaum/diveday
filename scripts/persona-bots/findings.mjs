@@ -42,7 +42,7 @@
  */
 
 import { PARKED_LABEL, WAITING_LABEL } from "../check-follow-ups.mjs";
-import { AXE_PROBE, personaById, probeFor } from "./personas.mjs";
+import { personaById, probeFor } from "./personas.mjs";
 
 /** New issues one weekly run may file. Twelve a month is the ceiling this sets. */
 export const NEW_ISSUES_PER_RUN = 3;
@@ -252,7 +252,10 @@ export function sourceFileForPath(urlPath, routes, exists) {
  * @param runContext `{ runUrl, artifactName, screenshots }` — where the pictures are
  */
 export function renderIssue(entry, { runContext = {}, touches = [] } = {}) {
-  const probe = probeFor(entry.probe) ?? AXE_PROBE;
+  const probe = probeFor(entry.probe);
+  // The walk reports only registered probes and judged ids, so an unknown one
+  // is a broken run, never an issue to file.
+  if (!probe) throw new Error(`persona-bots: no probe record for "${entry.probe}"`);
   const count = entry.surfaces.length;
   const title = probe.title
     ? probe.title(count)
@@ -349,7 +352,7 @@ function promptLines(entry, probe, touches, judged = false) {
     "",
     "Reproduce it first: run `pnpm dev`, wait for the supervisor's `serving` line, then `node scripts/screenshot.mjs <path>` for each surface named above and look at what came back. Fix the cause in the component or page that produces the markup, not at the call site that renders it, and never by narrowing the probe.",
     "",
-    "Done is: the defect is gone on every surface the issue names, `pnpm check` passes, and a focused `pnpm e2e e2e/a11y.spec.ts --reporter=line` still passes if the fix touched anything that spec scans. Add or extend a test that would have caught it. Close this issue when the work lands.",
+    "Done is: the defect is gone on every surface the issue names, `pnpm check` passes, and the specs `pnpm e2e:affected` names still pass. Add or extend a test that would have caught it. Close this issue when the work lands.",
   ];
 }
 

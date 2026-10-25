@@ -2,7 +2,8 @@ name: Persona bots
 
 # The weekly persona walk (N-61): every surface `docs/product/personas.md`
 # names, opened against the demo shop as the persona who lives on it, probed
-# deterministically (an axe scan plus a handful of DOM checks), photographed
+# deterministically (a handful of DOM checks; its axe probe was removed
+# 2026-10-24), photographed
 # through `scripts/screenshot.mjs`, and filed as `needs-triage` issues under a
 # hard weekly ceiling. `scripts/persona-bots.mjs` and
 # docs/engineering/testing.md say what it does; ADR
