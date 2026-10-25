@@ -164,10 +164,15 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   // from the bundle, never an English literal in the component.
   await expect(stepsBand.getByRole("img")).toHaveCount(5);
   await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
-  // The roll-call step draws the roll call (the claim and its mockup are one
-  // screen), at the checkpoint the hero's phone does not: after the first
-  // dive, so the page shows the boat coming back as well as leaving.
-  await expect(stepsBand.getByRole("img", { name: /roll call after dive 1/i })).toBeVisible();
+  // The roll-call step draws the dock check-in, the check-in feature page's
+  // own screen by its key (H-94, applied 2026-10-25): the screen the crew taps
+  // at the dock, under notes that keep the no-signal claim.
+  await expect(
+    stepsBand.getByRole("img", {
+      name: diverTranslator("en-US")("marketing.featurePages.checkIn.screenLabel"),
+    }),
+  ).toBeVisible();
+  await expect(stepsBand.getByRole("img", { name: /roll call after dive 1/i })).toHaveCount(0);
   await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
 
   // Each step ends in its feature page, in the booking's order, and none of
