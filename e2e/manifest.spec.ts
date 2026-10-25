@@ -1473,6 +1473,10 @@ test("an owner prints the packet with the medical alerts, and the print is on th
   ).toBeVisible();
   await expect(popup.getByText(staff("manifest.medicalAlertsPrintedKeep"))).toBeVisible();
   await expect(popup.getByText(staff("manifest.medicalAlertNotReviewed"))).toBeVisible();
+  // The words are for the sheet, never the tab left open after the dialog
+  // closes (layer 4 security review, note 1).
+  await popup.emulateMedia({ media: "screen" });
+  await expect(popup.getByText(DEMO_MEDICAL_ALERT)).toBeHidden();
   await popup.close();
 
   await onDiverTrail(

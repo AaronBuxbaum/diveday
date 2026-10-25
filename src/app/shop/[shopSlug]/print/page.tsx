@@ -162,7 +162,7 @@ export default async function ShopDayPrintPage({
     // The trip layout's shell, which this route is not under: without it the
     // packet had no `<main>` and printed with no gutter at all.
     <main className={TRIP_SHELL_CLASS}>
-      <div className="trip-print-bundle">
+      <div className="trip-print-bundle" data-paper-screen>
         <AutoPrint readySelector={PACKET_READY_SELECTOR} />
         <header className="mb-10 border-b border-border pb-6 print:mb-6">
           <p className={EYEBROW_CLASS}>DiveDay</p>

@@ -31,6 +31,29 @@ describe("the print with medical alerts", () => {
     expect(guard).toBeLessThan(SOURCE.indexOf("await medicalAlertsForPrint(db, {"));
   });
 
+  it("keeps the alert's words off the screen: only the default packets show their paper there (security review, note 1)", () => {
+    const css = readFileSync(path.join(SRC, "app/globals.css"), "utf8");
+    const reveals = [
+      ...css.matchAll(/([^{}]*\[data-print-only\][^{}]*)\{\s*display:\s*block/g),
+    ].map((match) => match[1]?.trim());
+    // Every on-screen reveal of print-only blocks needs the packet's opt-in.
+    expect(reveals.length).toBeGreaterThan(0);
+    for (const selector of reveals) {
+      expect(selector).toContain(".trip-print-bundle[data-paper-screen]");
+    }
+    // This packet never opts in; the two default packets do.
+    expect(SOURCE).toContain('<div className="trip-print-bundle">');
+    expect(SOURCE).not.toContain("data-paper-screen");
+    for (const packet of [
+      "app/shop/[shopSlug]/trips/[id]/print/page.tsx",
+      "app/shop/[shopSlug]/print/page.tsx",
+    ]) {
+      expect(readFileSync(path.join(SRC, packet), "utf8")).toContain(
+        '<div className="trip-print-bundle" data-paper-screen>',
+      );
+    }
+  });
+
   it("prints its own title, never the plain packet's (domain review 1, S3)", () => {
     expect(SOURCE).toContain('t("manifest.medicalAlertsPrintedTitle")');
     expect(SOURCE).not.toContain('t("shared.printPacket.title")');
