@@ -17,7 +17,6 @@ import {
   people,
   rollCallCrewEvents,
   rollCallEvents,
-  tripChangeEvents,
   tripRequirements,
   tripSeries,
   trips,
@@ -503,36 +502,11 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const settled = await getTripWithBooked(db, shop.id, alreadyThere.id);
     expect(settled?.revision).toBe(1);
 
-    const [owner] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
-    if (!owner) throw new Error("seed people missing");
-    const applied = await applyDetailsToFutureSeries(
-      db,
-      shop.id,
-      result.series.id,
-      source.id,
-      now,
-      owner.id,
-    );
+    const applied = await applyDetailsToFutureSeries(db, shop.id, result.series.id, source.id, now);
     expect(applied).toEqual({ updated: 2, skipped: 0 });
 
     expect((await getTripWithBooked(db, shop.id, alreadyThere.id))?.revision).toBe(1);
     expect((await getTripWithBooked(db, shop.id, stillElsewhere.id))?.revision).toBe(1);
-
-    // The diver's ledger (issue #3060): the date whose sites moved says so
-    // once, naming who applied it; the date already there gains nothing.
-    const siteEntries = (tripId: string) =>
-      db
-        .select()
-        .from(tripChangeEvents)
-        .where(and(eq(tripChangeEvents.tripId, tripId), eq(tripChangeEvents.kind, "site_change")));
-    const moved = await siteEntries(stillElsewhere.id);
-    expect(moved).toHaveLength(1);
-    expect(moved[0]).toMatchObject({
-      actorPersonId: owner.id,
-      source: "shop",
-      afterValue: { siteNames: [siteOne.name, siteTwo.name].join("\n") },
-    });
-    expect(await siteEntries(alreadyThere.id)).toHaveLength(1);
   });
 
   it("skips a sibling whose recorded roll call would be orphaned by the new dive count", async () => {

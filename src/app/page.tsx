@@ -201,11 +201,9 @@ const STEPS: readonly {
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} />,
   },
   {
-    // The roll-call phone is the hero's, so this step draws the dock before
-    // it: the check-in screen the check-in page draws, read by key as the
-    // readiness step reads the certifications page (B14, decided 2026-10-25,
-    // option a). The notes keep the no-signal roll-call claim as H-94 words
-    // it, condition included.
+    // The hero draws the roll-call phone, so this step draws the check-in
+    // page's dock screen, by key (B14, 2026-10-25); the notes keep H-94's
+    // no-signal claim.
     id: "aboard",
     feature: "boat-manifest",
     notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],

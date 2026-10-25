@@ -587,7 +587,7 @@
   "page-length": {
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/onboard/page.tsx": 479,
-    "src/app/page.tsx": 491,
+    "src/app/page.tsx": 490,
     "src/app/ready/[token]/page.tsx": 649,
     "src/app/s/[shopSlug]/page.tsx": 841,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 508,
