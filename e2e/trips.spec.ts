@@ -221,7 +221,7 @@ test.describe("trip pulse", () => {
 
     // **How the boat stands, said once**: the header's capacity pill, the same
     // pill every tab of the departure wears.
-    await expect(page.locator("header").getByText("3 seats", { exact: true })).toBeVisible();
+    await expect(page.locator("header").getByText("3 seats left")).toBeVisible();
 
     // Each fact is a door to its fix: the blocked one lands on the Trip
     // ledger, whose "Still to clear" group leads the roster with the divers
