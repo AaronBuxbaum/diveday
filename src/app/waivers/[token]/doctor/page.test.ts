@@ -120,7 +120,7 @@ describe("the doctor's page", () => {
     expect(html).toContain('name="doctorForm"');
     if (shop.contactEmail) {
       expect(html).toContain(
-        `Can’t send it here? Email a photo to <a href="mailto:${shop.contactEmail}"`,
+        `<span class="print:hidden">Can’t send it here?</span> Email a photo to <a href="mailto:${shop.contactEmail}"`,
       );
       expect(html.indexOf('name="doctorForm"')).toBeLessThan(html.indexOf("mailto:"));
     }
