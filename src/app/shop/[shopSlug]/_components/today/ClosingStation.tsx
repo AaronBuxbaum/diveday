@@ -210,8 +210,8 @@ export function ClosingStation({
             is the floor and nothing else — no chrome, its own ink — which is
             precisely what this row wants and what typing the ink by hand left
             out: 83.7 × **20px**, under WCAG 2.5.8's 24px minimum, which
-            `e2e/a11y.spec.ts`'s evening scan caught the moment this station
-            moved down the page. This file already spells it that way a few
+            the suite's evening axe scan caught the moment this station
+            moved down the page (the scan was removed on 2026-10-24). This file already spells it that way a few
             lines up. */}
         {canOpenLog ? (
           <Link

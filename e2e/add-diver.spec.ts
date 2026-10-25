@@ -151,11 +151,12 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   page,
 }) => {
   // A held send counts eight seconds down before it leaves (ADR
-  // 20260906-before-you-ask, decision 2); this test sends one, and the
-  // explicit budget covers the hold. No `test.slow()` beside it: the later
-  // `test.setTimeout` replaces whatever slow() set, so the two never composed
-  // (issue #1906).
-  test.setTimeout(30_000);
+  // 20260906-before-you-ask, decision 2), after a new trip filled by a walk-in
+  // and a wait-listed diver. Measured 2026-10-24 by trace: 8.1s of fixtures
+  // (sign-in storage and the per-test reset), 15s from the new trip to the
+  // wait list, then the 8s hold: 31s, past 30 every local run. Split, each
+  // half would build the same full trip.
+  test.setTimeout(45_000);
   await openNewTripWithWalkIn(page, "Wait-list Test Trip");
 
   // Trip is now full — the same section switches to wait-listing: the search
@@ -178,7 +179,11 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   // interest so a second staffer sees it is already handled. The send may fall back
   // to the mail composer (mailto:) which the test can't follow, so we only
   // assert the recorded state lands.
-  await page.getByRole("button", { name: "Offer Waitlist Wally a seat" }).click();
+  const offer = page.getByRole("button", { name: "Offer Waitlist Wally a seat" });
+  // A tap before React owns the form submits it natively and holds nothing, so
+  // no "offered" ever lands (the timeout CI recorded on this line).
+  await expect(offer.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
+  await offer.click();
   // The offer holds eight seconds with Undo first (ADR 20260906-before-you-ask,
   // decision 2), so the recorded state is allowed the hold before it shows.
   await expect(page.getByText(/offered /).filter({ visible: true })).toBeVisible({

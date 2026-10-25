@@ -29,14 +29,7 @@ import {
   sourceFileForPath,
 } from "./findings.mjs";
 import { judgedProbeId } from "./judge.mjs";
-import {
-  AXE_PROBE,
-  DEAD_CAPABILITY_TOKENS,
-  PERSONAS,
-  PROBES,
-  probeFor,
-  walkPlan,
-} from "./personas.mjs";
+import { DEAD_CAPABILITY_TOKENS, PERSONAS, PROBES, probeFor, walkPlan } from "./personas.mjs";
 
 const finding = (probe, path, extra = {}) => ({
   probe,
@@ -77,19 +70,19 @@ describe("classify", () => {
 
   it("ranks by impact first, then by how many surfaces the class reaches", () => {
     const classes = classify([
-      finding("axe:region", "/a", { impact: "moderate" }),
-      finding("axe:region", "/b", { impact: "moderate" }),
-      finding("axe:region", "/c", { impact: "moderate" }),
-      finding("axe:color-contrast", "/a", { impact: "serious" }),
+      finding("probe-region", "/a", { impact: "moderate" }),
+      finding("probe-region", "/b", { impact: "moderate" }),
+      finding("probe-region", "/c", { impact: "moderate" }),
+      finding("probe-color-contrast", "/a", { impact: "serious" }),
     ]);
 
-    expect(classes.map((entry) => entry.probe)).toEqual(["axe:color-contrast", "axe:region"]);
+    expect(classes.map((entry) => entry.probe)).toEqual(["probe-color-contrast", "probe-region"]);
   });
 
   it("keeps the worst impact a class was seen at", () => {
     const [only] = classify([
-      finding("axe:label", "/a", { impact: "minor" }),
-      finding("axe:label", "/b", { impact: "critical" }),
+      finding("probe-label", "/a", { impact: "minor" }),
+      finding("probe-label", "/b", { impact: "critical" }),
     ]);
 
     expect(only.impact).toBe("critical");
@@ -105,11 +98,11 @@ describe("classify", () => {
       judgedFinding("nadia", "/a", "a claim"),
       judgedFinding("nadia", "/b", "a claim"),
       judgedFinding("nadia", "/c", "a claim"),
-      finding("axe:label", "/a", { impact: "minor" }),
+      finding("probe-label", "/a", { impact: "minor" }),
     ]);
 
     expect(classes[classes.length - 1].impact).toBe("judged");
-    expect(classes[0].probe).toBe("axe:label");
+    expect(classes[0].probe).toBe("probe-label");
   });
 
   it("orders identically whatever order the walk reported findings in", () => {
@@ -122,7 +115,7 @@ describe("classify", () => {
 
 describe("the volume policy", () => {
   const manyClasses = classify(
-    Array.from({ length: 12 }, (_, index) => finding(`axe:rule-${index}`, "/a")),
+    Array.from({ length: 12 }, (_, index) => finding(`probe-rule-${index}`, "/a")),
   );
 
   it("never files more than the weekly ceiling, however much the walk found", () => {
@@ -246,7 +239,7 @@ describe("the volume policy", () => {
     it("is deferred when the measurements have already filled the run", () => {
       const classes = classify([
         ...Array.from({ length: NEW_ISSUES_PER_RUN }, (_, index) =>
-          finding(`axe:rule-${index}`, "/a", { impact: "serious" }),
+          finding(`probe-rule-${index}`, "/a", { impact: "serious" }),
         ),
         judged,
       ]);
@@ -277,7 +270,7 @@ describe("the volume policy", () => {
   it("bounds the comments too, so a wide run cannot become a wide notification", () => {
     const classes = classify(
       Array.from({ length: COMMENTS_PER_RUN + 3 }, (_, index) =>
-        finding(`axe:rule-${index}`, "/a"),
+        finding(`probe-rule-${index}`, "/a"),
       ),
     );
     const openIssues = classes.map((entry, index) => issueFor(index, entry.probe));
@@ -301,8 +294,8 @@ describe("the issues it files", () => {
     screenshots: { "/s/blue-mantis": "s-blue-mantis-light-1280.png" },
   };
 
-  /** Every probe the registry can report, plus one axe rule for the templated half. */
-  const everyProbe = [...Object.keys(PROBES), "axe:color-contrast"];
+  /** Every probe the registry can report. */
+  const everyProbe = Object.keys(PROBES);
 
   it.each(everyProbe)("renders %s as an issue check:follow-ups accepts", (probe) => {
     const entry = classify([
@@ -417,7 +410,7 @@ describe("the run summary", () => {
   it("says what it did not file and why, not only what it did", () => {
     const classes = classify(
       Array.from({ length: NEW_ISSUES_PER_RUN + 2 }, (_, index) =>
-        finding(`axe:rule-${index}`, "/a"),
+        finding(`probe-rule-${index}`, "/a"),
       ),
     );
     const plan = planRun({ classes, closedIssues: [] });
@@ -589,12 +582,11 @@ describe("the persona registry", () => {
     for (const [id, probe] of Object.entries(PROBES)) {
       expect(probe.impact, id).not.toBe("judged");
     }
-    expect(AXE_PROBE.impact).not.toBe("judged");
   });
 
-  it("knows every probe it can report, axe rules included", () => {
+  it("knows every probe it can report, and no other", () => {
     for (const probe of Object.keys(PROBES)) expect(probeFor(probe)).not.toBeNull();
-    expect(probeFor("axe:anything-at-all")).not.toBeNull();
+    expect(probeFor("probe-anything-at-all")).toBeNull();
     expect(probeFor("not-a-probe")).toBeNull();
   });
 });

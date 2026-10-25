@@ -392,8 +392,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   const firstLine = firstGroup.locator("li").first();
   await expect(firstLine).toBeHidden();
   // Opened with the keyboard, because that is the half a disclosure can lose:
-  // `<summary>` is focusable and Enter toggles it natively, and `e2e/a11y.spec.ts`
-  // scans this page.
+  // `<summary>` is focusable and Enter toggles it natively.
   await firstGroup.locator("summary").focus();
   await page.keyboard.press("Enter");
   await expect(firstLine).toBeVisible();

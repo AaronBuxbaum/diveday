@@ -364,7 +364,8 @@ export function SectionCard({
   // cannot; but this card minted `${useId()}-title` too, and the trip's own
   // Overview has both a `Field name="title"` (DetailsSection) and several of
   // these. Same string, two namespaces, duplicate id — caught by the
-  // duplicate-id net in e2e/a11y.spec.ts on the departure-tabs scan.
+  // duplicate-id net in the suite's axe scan (removed 2026-10-24) on the
+  // departure-tabs scan.
   //
   // A different *suffix* would only move the coincidence: a control may legally
   // be named anything, so no suffix is provably unreachable. A prefix is.
@@ -378,8 +379,8 @@ export function SectionCard({
   // control's `name`: a stable, content-derived discriminator that both passes
   // compute identically. Its residue is the one that comment names too — two
   // cards sharing *both* a counter value and a heading would still collide,
-  // which is why the duplicate-id net in e2e/a11y.spec.ts stays the backstop
-  // rather than the belt.
+  // and since the suite's duplicate-id net went with its axe scan on
+  // 2026-10-24, nothing automated would notice.
   const headingId = title != null ? `card-${generatedId}-${titleSlug(title)}` : undefined;
   const resolvedAriaLabel = ariaLabelProp ?? ariaLabel;
   return (
