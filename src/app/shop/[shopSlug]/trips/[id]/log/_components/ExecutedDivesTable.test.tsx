@@ -86,4 +86,43 @@ describe("ExecutedDivesTable", () => {
     expect(row?.textContent).not.toContain("Not recorded First dive");
     expect(row?.textContent?.match(/Oct\s14/g)).toHaveLength(1);
   });
+
+  it("says every field as a labeled card below md, and keeps the table for md and paper", () => {
+    const { container } = render(
+      <ExecutedDivesTable
+        dives={[
+          {
+            diveNumber: 2,
+            actualSiteName: "French Reef",
+            enteredAt: "2026-10-14T11:20:00.000Z",
+            exitedAt: "2026-10-14T12:05:00.000Z",
+            maxDepthMeters: null,
+            observedConditions: null,
+            notRecorded: [],
+            recordedByName: null,
+            surfaceIntervalMinutes: 50,
+          },
+        ]}
+        locale="en-US"
+        timeZone={ZONE}
+        t={t}
+      />,
+    );
+    const card = container.querySelector("[data-dive-cards] li");
+    expect(card?.className).not.toContain("print:block");
+    expect(container.querySelector("[data-dive-cards]")?.className).toContain("md:hidden");
+    const labels = [...(card?.querySelectorAll("dt") ?? [])].map((dt) => dt.textContent);
+    expect(labels).toEqual([
+      "Actual site",
+      "Water times",
+      "Maximum depth",
+      "Observed conditions",
+      "Surface interval",
+      "Recorded by",
+    ]);
+    // An absent fact is said, never dropped, in the card as in the table.
+    expect(card?.textContent).toContain("Maximum depthNot recorded");
+    expect(card?.textContent).toContain("Recorded byNot on file");
+    expect(container.querySelector("tbody tr")?.textContent).toContain("50 min");
+  });
 });

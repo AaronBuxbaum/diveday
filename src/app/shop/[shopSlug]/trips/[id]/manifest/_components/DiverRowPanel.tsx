@@ -56,8 +56,11 @@ export function DiverRowPanel({
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
+  // No box round the whole panel any more (visual review 2026-10-24, B08):
+  // the emergency contact alone sits in the card, and the one roll-call step
+  // stands at the sheet's foot, outside it.
   return (
-    <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+    <div>
       {/* Blockers, and their one fix, at the dock only. After a
         dive readiness gates nothing — the diver is already
         aboard — so a red list here would be worrying about a
@@ -155,6 +158,7 @@ export function DiverRowPanel({
         locale={locale}
         timezone={timezone}
         columns={1}
+        contactClassName={ROW_DISCLOSURE_PANEL_CLASS}
         waiverHref={(record) =>
           shopPath(shopSlug, "divers", record.personId, "waivers", record.recordId)
         }
@@ -178,20 +182,18 @@ export function DiverRowPanel({
             <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
           </li>
         ) : null}
-        {/* The age, and — when something louder took the row's
-          one capsule — **the minor flag with it**. A blocked
-          diver and a split team are exactly the cases where a
-          13-year-old is most likely to be on the row that lost
-          it, and the captain reading the boarding list has no
-          other way to know a booked diver is 12 (H-21). Gated
-          on which capsule the row actually rendered, never on
-          `minor` itself (dive-domain review, slice 5a). */}
-        {diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
+        {/* **The minor flag**, when something louder took the row's one
+          capsule. A blocked diver and a split team are exactly the cases
+          where a 13-year-old is most likely to be on the row that lost it,
+          and the captain reading the boarding list has no other way to know
+          a booked diver is 12 (H-21). Gated on which capsule the row
+          actually rendered, never on `minor` itself (dive-domain review,
+          slice 5a). An adult's age is in the subtitle, so the lone "Age 27"
+          chip is gone (B08). */}
+        {diver.minor && diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
           <li>
-            <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
-              {diver.minor
-                ? t("manifest.minorAge", { age: diver.age })
-                : t("manifest.age", { age: diver.age })}
+            <Badge tone="warning" tabularNums>
+              {t("manifest.minorAge", { age: diver.age })}
             </Badge>
           </li>
         ) : null}

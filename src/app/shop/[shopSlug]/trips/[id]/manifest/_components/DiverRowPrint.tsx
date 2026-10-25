@@ -46,7 +46,7 @@ export function DiverRowPrint({
 }) {
   const { rc, ready, diverStatus, impliedNotBoarded, capsuleKind, medicalDays } = state;
   return (
-    <div className="hidden px-4 pb-4 print:block">
+    <div data-print-only className="hidden px-4 pb-4 print:block">
       <p className="flex flex-wrap items-center gap-2">
         <span
           className={

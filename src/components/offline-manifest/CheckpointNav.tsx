@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BOAT_SEGMENT_TRACK_CLASS, boatSegmentClass } from "@/components/boat-segments";
 import { checkpointGapLine } from "@/components/checkpoint-gap-words";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import {
   type RollCallCheckpoint,
   rollCallCheckpointOrdinal,
@@ -50,28 +51,28 @@ export function OfflineCheckpointNav({
 
   return (
     <>
-      {/* `max-sm:[&>*]:grow`, the rule `ShopPageHeader` gives its doors: on
-          a phone each wrapped row of checkpoints fills as one band, rather
-          than leaving "After dive 2" alone and short on a row of its own. */}
+      {/* The live manifest's control (`boat-segments.ts`, visual review
+          2026-10-24, B06): one track of three segments that never wraps, the
+          short word below `sm` and the full name as the accessible name. */}
       <nav
-        className="mt-6 flex flex-wrap items-center gap-3 pb-1 max-sm:[&>*]:grow"
+        className={`mt-6 ${BOAT_SEGMENT_TRACK_CLASS}`}
         aria-label={t("shared.offlineManifest.single.checkpointNavAria")}
       >
         {rollCallCheckpoints(manifest.trip.plannedDives).map((value) => (
           <button
             key={value}
             type="button"
+            aria-pressed={value === checkpoint}
             onClick={() => {
               if (value !== checkpoint && previousGaps.has(value)) setAsking(value);
               else setCheckpoint(value);
             }}
-            className={buttonClass({
-              variant: value === checkpoint ? "primary" : "secondary",
-              size: "boat",
-              className: "shrink-0",
-            })}
+            className={boatSegmentClass(value === checkpoint)}
           >
-            {rollCallCheckpointText(t, value)}
+            <span aria-hidden="true" className="sm:hidden">
+              {rollCallCheckpointShortText(t, value)}
+            </span>
+            <span className="max-sm:sr-only">{rollCallCheckpointText(t, value)}</span>
           </button>
         ))}
       </nav>

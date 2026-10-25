@@ -10,14 +10,13 @@ import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   formatDateTimeTz,
   formatShortDate,
   formatTimeRangeTz,
   formatTimeZoneName,
 } from "@/lib/format";
-import type { IncidentWaiverStatus } from "@/lib/incident-export";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import { requireShopSurface } from "@/lib/session";
@@ -36,7 +35,9 @@ import {
   rollCallCheckpointPrintClass,
   rollCallTableMinWidth,
 } from "./_components/roll-call-columns";
-import { NoRollCallNote, RosterIntro, TimelineEntryText } from "./_components/TimelineEntryText";
+import { NoRollCallNote, RosterIntro, TimelineGroups } from "./_components/TimelineEntryText";
+import { WaiverLine, waiverHeaderText } from "./_components/WaiverLine";
+import { matchesWaiverHeader, sharedWaiverHeader } from "./_components/waiver-evidence";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — the claim
 // every trips/[id] sibling makes (ADR 20260804-instant-navigation): arriving from the home, the
@@ -113,6 +114,9 @@ export default async function IncidentExportPage({
     t(AGENCY_KEYS[agency as keyof typeof AGENCY_KEYS] ?? AGENCY_KEYS.other);
 
   const summary = incidentSummaryRows(t, doc.departureSummary);
+  const waiverHeader = sharedWaiverHeader(
+    doc.roster.map((diver) => (diver.identityWithheld ? null : diver.waiver)),
+  );
 
   // Section rhythm is the wrapper's, one `space-y-10`, and no section hangs a
   // margin of its own (docs/design/forms-and-controls.md): they used to step
@@ -151,15 +155,14 @@ export default async function IncidentExportPage({
             <PrintButton label={t("shared.printButton.label")} />
           </div>
         </div>
-        <p className="mt-3 max-w-prose text-sm text-muted">{t("incidentExport.description")}</p>
-        <p className="mt-2 max-w-prose text-sm font-semibold">{t("incidentExport.factsOnly")}</p>
-        <p className="mt-2 text-sm text-muted">
-          {t("incidentExport.generatedLine", {
+        {/* **One paragraph about the document itself** (visual review
+            2026-10-24, B52): what it is, that it states facts and judges none,
+            who generated it and when, and the zone every time on it is in. It
+            was four, with the disclaimer in bold, before the first fact. */}
+        <p className="mt-3 max-w-prose text-sm text-muted">
+          {t("incidentExport.preamble", {
             date: dateTime(doc.meta.generatedAt),
             name: doc.meta.generatedByName,
-          })}
-          {"\u00a0"}·{" "}
-          {t("incidentExport.shopTimeLabel", {
             timezone: formatTimeZoneName(locale, doc.meta.timezone),
           })}
         </p>
@@ -297,6 +300,13 @@ export default async function IncidentExportPage({
         <p className="mt-1 max-w-prose text-sm text-muted">
           {t("incidentExport.evidenceDescription")}
         </p>
+        {/* The release most of the boat signed, said once; a diver whose
+            waiver differs keeps their whole sentence below (`waiver-evidence`). */}
+        {waiverHeader ? (
+          <p className="mt-2 max-w-prose text-sm font-medium">
+            {waiverHeaderText(t, waiverHeader)}
+          </p>
+        ) : null}
         <ul
           className={sectionCardClass({
             padding: "none",
@@ -313,7 +323,12 @@ export default async function IncidentExportPage({
                 <p className="mt-1 text-sm text-muted">{t("incidentExport.identityWithheld")}</p>
               ) : (
                 <p className="mt-1 text-sm">
-                  <WaiverLine t={t} waiver={diver.waiver} dateTime={dateTime} />
+                  <WaiverLine
+                    t={t}
+                    waiver={diver.waiver}
+                    dateTime={dateTime}
+                    underHeader={matchesWaiverHeader(diver.waiver, waiverHeader)}
+                  />
                 </p>
               )}
               {diver.identityWithheld ? null : diver.certifications.length === 0 ? (
@@ -370,32 +385,16 @@ export default async function IncidentExportPage({
         </p>
         <NoRollCallNote timeline={doc.timeline} t={t} />
         {doc.timeline.length === 0 ? null : (
-          <ol
+          <TimelineGroups
+            timeline={doc.timeline}
+            t={t}
+            memberList={memberList}
+            dateTime={dateTime}
             className={sectionCardClass({
               padding: "none",
-              className: "mt-3 divide-y divide-border sm:grid sm:grid-cols-[auto_minmax(0,1fr)]",
+              className: "mt-3 divide-y divide-border",
             })}
-          >
-            {doc.timeline.map((entry, index) => (
-              <li
-                // Append-only history has no natural key; index order is the record.
-                // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
-                key={index}
-                // Two columns from `sm`: the time, then every other part
-                // wrapping inside a column of its own, so a part that wraps
-                // hangs under the text and never falls back under the time
-                // (it did, at x = 169 on one row and 720 on the next). The
-                // columns are the list's, via `subgrid`, so the time column is
-                // the widest timestamp's. On a phone the parts go under the time.
-                className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:px-5"
-              >
-                <span className="font-mono text-xs text-muted tabular-nums">
-                  {dateTime(entry.occurredAt)}
-                </span>
-                <TimelineEntryText entry={entry} t={t} memberList={memberList} />
-              </li>
-            ))}
-          </ol>
+          />
         )}
       </section>
 
@@ -418,118 +417,4 @@ export default async function IncidentExportPage({
       </footer>
     </div>
   );
-}
-
-/** The waiver *status* line — state, date, template version. Never the answers. */
-function WaiverLine({
-  t,
-  waiver,
-  dateTime,
-}: {
-  t: StaffTranslator;
-  waiver: IncidentWaiverStatus;
-  dateTime: (isoString: string) => string;
-}) {
-  if (waiver.state === "complete" && waiver.signedAt) {
-    const method =
-      waiver.signatureMethod === "imported"
-        ? ` ${t("incidentExport.waiverCompleteImported")}`
-        : waiver.signatureMethod === "in_person_attested"
-          ? ` ${
-              waiver.recordedByName
-                ? t("incidentExport.waiverPaperMarkedBy", { name: waiver.recordedByName })
-                : t("incidentExport.waiverCompleteAttested")
-            }`
-          : "";
-    return (
-      <>
-        {t("incidentExport.waiverComplete", {
-          date: dateTime(waiver.signedAt),
-          title: waiver.templateTitle ?? "",
-          version: waiver.templateVersion ?? 0,
-        })}
-        {method}
-        {/* A referral a physician cleared is the only thing in this document
-            that lifts a hard readiness block, so it is stated on its own.
-            **As the shop's act, not as a clinical determination**: `{date}` is
-            when a staff member recorded it and `{name}` is that staff member,
-            so a sentence reading "a physician cleared this diver on {date}"
-            would claim, to an insurer, more than these records hold. The
-            physician's own date is stated separately, because it is the one a
-            claims reader asks for (issue #1252, `dive-domain-expert` review). */}
-        {waiver.medicalClearedAt && waiver.medicalClearanceEvaluatedOn ? (
-          <>
-            {" "}
-            {waiver.medicalClearedByName
-              ? t("incidentExport.medicalClearanceRecordedBy", {
-                  date: dateTime(waiver.medicalClearedAt),
-                  name: waiver.medicalClearedByName,
-                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
-                })
-              : t("incidentExport.medicalClearanceRecorded", {
-                  date: dateTime(waiver.medicalClearedAt),
-                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
-                })}
-            {waiver.medicalClearancePhysicianName
-              ? ` ${t("incidentExport.medicalClearancePhysician", {
-                  name: waiver.medicalClearancePhysicianName,
-                })}`
-              : ""}
-            {waiver.medicalClearanceDocumentOnFile
-              ? ` ${t("incidentExport.medicalClearanceOnFile")}`
-              : ""}
-          </>
-        ) : null}
-      </>
-    );
-  }
-  if (waiver.state === "medical_review") {
-    return <>{t("incidentExport.waiverMedicalReview")}</>;
-  }
-  {
-    /* The same act with the opposite answer, and stated the same careful way
-       (issue #1283): `{date}` is when a staff member recorded the outcome and
-       `{name}` is that staff member, never a sentence putting words in a
-       clinician's mouth. The physician's own evaluation date, their name and
-       whether the letter is on file follow, because a refusal earns that
-       evidence more than a clearance does — it is the record of why somebody
-       stayed ashore. */
-  }
-  if (waiver.state === "medical_not_cleared") {
-    return (
-      <>
-        {waiver.medicalClearanceDeclinedAt && waiver.medicalClearanceEvaluatedOn ? (
-          <>
-            {waiver.medicalClearanceDeclinedByName
-              ? t("incidentExport.medicalNotClearedRecordedBy", {
-                  date: dateTime(waiver.medicalClearanceDeclinedAt),
-                  name: waiver.medicalClearanceDeclinedByName,
-                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
-                })
-              : t("incidentExport.medicalNotClearedRecorded", {
-                  date: dateTime(waiver.medicalClearanceDeclinedAt),
-                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
-                })}
-            {waiver.medicalClearancePhysicianName
-              ? ` ${t("incidentExport.medicalClearancePhysician", {
-                  name: waiver.medicalClearancePhysicianName,
-                })}`
-              : ""}
-            {waiver.medicalClearanceDocumentOnFile
-              ? ` ${t("incidentExport.medicalClearanceOnFile")}`
-              : ""}
-          </>
-        ) : (
-          t("incidentExport.waiverMedicalReview")
-        )}
-      </>
-    );
-  }
-  if (waiver.state === "awaiting_signature") {
-    return <>{t("incidentExport.waiverPending")}</>;
-  }
-  if (waiver.state === "expired") {
-    return <>{t("incidentExport.waiverExpired")}</>;
-  }
-  return <>{t("incidentExport.waiverNotSigned")}</>;
 }

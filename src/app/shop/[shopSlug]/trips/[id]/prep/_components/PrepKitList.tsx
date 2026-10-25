@@ -9,11 +9,13 @@ import { rentalItemLabel } from "@/i18n/rental-labels";
 import { type PrepGrouping, prepLineKey } from "@/lib/dive-prep";
 import { scopedId } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
+import { foldFitAtCheckIn } from "./fit-at-check-in";
 import {
   diveRecencyLine,
   diverNames,
   KIT_PHONE_ROW_CLASS,
   kitCell,
+  noLongerRented,
   pieceSize,
   sizeCell,
 } from "./prep-lines";
@@ -37,6 +39,17 @@ export function PrepKitList({
     checklist.diversWithIncompleteFit.length > 0 ||
     checklist.diversNeedingStaffFit.length > 0 ||
     checklist.heldSeats.length > 0;
+  // "Fit at check-in" once per diver (B54): the by-item view's flagged
+  // pieces regroup under each diver, every piece kept.
+  const byItem = foldFitAtCheckIn(checklist.lines);
+  const fitPieces = (pieces: (typeof byItem.fits)[number]["lines"]) =>
+    pieces.map((piece, place) => (
+      <span key={piece.kind}>
+        {place > 0 ? ", " : null}
+        {rentalItemLabel(t, piece.kind)}
+        {piece.notOffered ? <> {noLongerRented(t)}</> : null}
+      </span>
+    ));
   return (
     <section aria-labelledby={scopedId(idPrefix, "kit-heading")}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -48,7 +61,7 @@ export function PrepKitList({
                   is something to pull — with nothing on the list both
                   groupings render the identical empty state, and a control
                   that changes nothing is worse than no control. */}
-        {checklist.lines.length > 0 ? (
+        {checklist.lines.length > 0 && !view.paper ? (
           <SegmentedControl
             ariaLabel={t("tripPrep.groupLabel")}
             items={[
@@ -127,7 +140,7 @@ export function PrepKitList({
               className: "mt-3 divide-y divide-border overflow-hidden sm:hidden print:hidden",
             })}
           >
-            {checklist.lines.map((line) => (
+            {byItem.lines.map((line) => (
               <li
                 key={`${line.kind}:${prepLineKey(line)}`}
                 data-kit-line=""
@@ -141,6 +154,19 @@ export function PrepKitList({
                 <p className="font-semibold tabular-nums">
                   <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
                   {line.count}
+                </p>
+              </li>
+            ))}
+            {byItem.fits.map((row) => (
+              <li key={`fit:${row.fullName}`} data-kit-line="" className={KIT_PHONE_ROW_CLASS}>
+                <p className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</p>
+                <p>
+                  <span className="font-semibold">{row.fullName}</span>{" "}
+                  <span className="text-muted">{fitPieces(row.lines)}</span>
+                </p>
+                <p className="font-semibold tabular-nums">
+                  <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
+                  {row.lines.length}
                 </p>
               </li>
             ))}
@@ -169,12 +195,23 @@ export function PrepKitList({
               <Th>{t("tripPrep.forColumn")}</Th>
             </THead>
             <TBody>
-              {checklist.lines.map((line) => (
+              {byItem.lines.map((line) => (
                 <tr key={`${line.kind}:${prepLineKey(line)}`}>
                   <Td className="font-medium">{rentalItemLabel(t, line.kind)}</Td>
                   <Td>{sizeCell(t, line)}</Td>
                   <Td numeric>{line.count}</Td>
                   <Td muted>{diverNames(line.divers)}</Td>
+                </tr>
+              ))}
+              {/* One row per diver fitted in person: their pieces, said once. */}
+              {byItem.fits.map((row) => (
+                <tr key={`fit:${row.fullName}`}>
+                  <Td className="font-medium">{fitPieces(row.lines)}</Td>
+                  <Td>
+                    <span className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</span>
+                  </Td>
+                  <Td numeric>{row.lines.length}</Td>
+                  <Td muted>{row.fullName}</Td>
                 </tr>
               ))}
             </TBody>
@@ -206,9 +243,9 @@ export function PrepKitList({
               >
                 <div className="min-w-0">
                   <p className="font-semibold">
-                    {/* The row's name: `nameLinkClass`'s floor, padding and
-                        handing back (44 − 20) / 2 of its own line, so a name
-                        that wraps keeps both. */}
+                    {/* The row's name: the 44px floor (`tapTargetLinkClass`),
+                        handing back (44 − 20) / 2 of its own line as padding
+                        and margin, so a name that wraps keeps both. */}
                     <Link
                       href={`/shop/${shopSlug}/divers/${line.personId}`}
                       className={`${tapTargetLinkClass} py-2.5 -my-2.5 hover:text-primary hover:underline`}

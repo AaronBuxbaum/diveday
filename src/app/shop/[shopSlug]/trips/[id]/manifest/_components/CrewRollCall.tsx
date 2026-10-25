@@ -24,8 +24,10 @@ import {
 import { MissingDiverControls, type MissingDiverRowActions } from "./missing-diver-controls";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
+import { personStatusTone } from "./person-status-tone";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
+  PAPER_ROW_CLASS,
   ROLL_CALL_ROW_CLASS,
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -108,6 +110,7 @@ export function CrewRollCall({
   missingDiver,
   rollCallClosed = false,
   buddyTeamLabel,
+  paper = false,
   t,
 }: {
   crew: TripManifest["crew"];
@@ -138,6 +141,11 @@ export function CrewRollCall({
   rollCallClosed?: boolean;
   /** A localized, list-formatted buddy-team sentence. */
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
+  /**
+   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): each row is
+   * its name line and its printed facts, and neither crew link renders.
+   */
+  paper?: boolean;
   t: StaffTranslator;
 }) {
   const crewAssigned = crew.length;
@@ -167,12 +175,14 @@ export function CrewRollCall({
         // own shape: a hand-rolled `p-4` with no step and no bed.
         <div className={`mt-3 ${TONE_PANEL_CLASS} border-warning/50 bg-warning/10`}>
           <p className="max-w-prose text-sm">{t("manifest.noCrew")}</p>
-          <Link
-            href={`/shop/${shopSlug}/trips/${tripId}?view=details#crew`}
-            className={buttonClass({ size: "boat", className: "mt-3 print:hidden" })}
-          >
-            {t("manifest.addCrewToTrip")}
-          </Link>
+          {paper ? null : (
+            <Link
+              href={`/shop/${shopSlug}/trips/${tripId}?view=details#crew`}
+              className={buttonClass({ size: "boat", className: "mt-3 print:hidden" })}
+            >
+              {t("manifest.addCrewToTrip")}
+            </Link>
+          )}
         </div>
       ) : (
         <>
@@ -197,7 +207,7 @@ export function CrewRollCall({
               boarded or missing one — where the diver list's reads `border`.
               Each row draws its own rule inside, off the diver list's helper
               (`rollCallRuleClass`). */}
-          {crewToConfirm > 0 ? (
+          {crewToConfirm > 0 && !paper ? (
             <p className="mt-2 max-w-prose text-base font-semibold text-warning-strong print:hidden">
               {t("manifest.crewClashConfirm", { count: crewToConfirm })}
             </p>
@@ -268,6 +278,33 @@ export function CrewRollCall({
                * the wrong direction from every angle.
                */
               const clashes = isDeparture && !rc ? (member.clashes ?? []) : [];
+              const crewTrigger = (
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className={`${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
+                      {member.fullName}
+                    </span>
+                    {/* The reader's own words, never the enum: this
+                        sheet goes ashore, and a role code with an
+                        underscore in it is a database value on a safety
+                        document (issue #1680, dive-domain review). */}
+                    <span className="text-sm text-muted">
+                      {staffJobWithRatings(t, member.roles, member.standingRatings)}
+                    </span>
+                    {capsule}
+                  </span>
+                  {clashes.length > 0 ? (
+                    <span className="mt-0.5 block text-sm text-warning-strong">
+                      {t("manifest.crewClashDetail", {
+                        departures: cachedListFormat(locale, {
+                          style: "long",
+                          type: "conjunction",
+                        }).format(clashes.map((clash) => clash.title)),
+                      })}
+                    </span>
+                  ) : null}
+                </span>
+              );
               return (
                 <li
                   key={member.id}
@@ -295,143 +332,113 @@ export function CrewRollCall({
                       firstOnPaper: index === 0,
                     })}
                   >
-                    <PersonSheet
-                      name={member.fullName}
-                      triggerLabel={t("manifest.openPersonDetails", { name: member.fullName })}
-                      subtitle={t("manifest.personSheetCrewSubtitle", {
-                        roles: staffJobWithRatings(t, member.roles, member.standingRatings),
-                      })}
-                      status={
-                        <Badge
-                          tone={
-                            rowState.notBackAboard
-                              ? "danger"
-                              : rowState.boarded
-                                ? "success"
-                                : rowState.recordedNotBoarded || rowState.impliedNotBoarded
-                                  ? "warning"
-                                  : "neutral"
-                          }
-                          size="sm"
-                        >
-                          {auditLabel}
-                        </Badge>
-                      }
-                      trail={personTrail}
-                      todayLabel={t("manifest.personSheetToday")}
-                      noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
-                      buddyLabel={t("manifest.personSheetBuddyTeam")}
-                      buddy={
-                        member.buddyTeams && member.buddyTeams.length > 0 ? (
-                          <PersonBuddyList
-                            teammates={member.buddyTeams.flatMap((team) => team.others)}
-                            divers={divers ?? []}
-                            crew={crew}
-                            checkpoint={checkpoint}
-                            t={t}
-                          />
-                        ) : null
-                      }
-                      closeLabel={t("manifest.closePersonDetails")}
-                      triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
-                      mark={
-                        rowState.notBackAboard ? (
-                          <RollCallMark state="notBack" />
-                        ) : rollCallClosed ? (
-                          <RollCallMark state={rollCallMarkState(rowState)} />
-                        ) : (
-                          <RollCallMarkButton
-                            kind="crew"
-                            subjectId={member.id}
-                            checkpoint={checkpoint}
-                            rollCall={rc}
-                            action={crewRollCallAction}
-                            copy={crewRollCallButtonCopy}
-                            markState={rollCallMarkState(rowState)}
-                            t={t}
-                          />
-                        )
-                      }
-                      trigger={
-                        <span className="min-w-0 flex-1">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className={`${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
-                              {member.fullName}
-                            </span>
-                            {/* The reader's own words, never the enum: this
-                                sheet goes ashore, and a role code with an
-                                underscore in it is a database value on a safety
-                                document (issue #1680, dive-domain review). */}
-                            <span className="text-sm text-muted">
-                              {staffJobWithRatings(t, member.roles, member.standingRatings)}
-                            </span>
-                            {capsule}
-                          </span>
-                          {clashes.length > 0 ? (
-                            <span className="mt-0.5 block text-sm text-warning-strong">
-                              {t("manifest.crewClashDetail", {
-                                departures: cachedListFormat(locale, {
-                                  style: "long",
-                                  type: "conjunction",
-                                }).format(clashes.map((clash) => clash.title)),
-                              })}
-                            </span>
-                          ) : null}
-                        </span>
-                      }
-                    >
-                      <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                        <CrewFacts member={member} labelled t={t} />
-                        {/* Both directions out of a stated "not back aboard",
+                    {paper ? (
+                      // The packet's paper (B03): the name line, no sheet or mark.
+                      <div data-print-content className={PAPER_ROW_CLASS}>
+                        {crewTrigger}
+                      </div>
+                    ) : (
+                      <PersonSheet
+                        name={member.fullName}
+                        triggerLabel={t("manifest.openPersonDetails", { name: member.fullName })}
+                        subtitle={t("manifest.personSheetCrewSubtitle", {
+                          roles: staffJobWithRatings(t, member.roles, member.standingRatings),
+                        })}
+                        status={{ text: auditLabel, tone: personStatusTone(rowState) }}
+                        trail={personTrail}
+                        todayLabel={t("manifest.personSheetToday")}
+                        noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
+                        buddyLabel={t("manifest.personSheetBuddyTeam")}
+                        buddy={
+                          member.buddyTeams && member.buddyTeams.length > 0 ? (
+                            <PersonBuddyList
+                              teammates={member.buddyTeams.flatMap((team) => team.others)}
+                              divers={divers ?? []}
+                              crew={crew}
+                              checkpoint={checkpoint}
+                              t={t}
+                            />
+                          ) : null
+                        }
+                        closeLabel={t("manifest.closePersonDetails")}
+                        triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                        mark={
+                          rowState.notBackAboard ? (
+                            <RollCallMark state="notBack" />
+                          ) : rollCallClosed ? (
+                            <RollCallMark state={rollCallMarkState(rowState)} />
+                          ) : (
+                            <RollCallMarkButton
+                              kind="crew"
+                              subjectId={member.id}
+                              checkpoint={checkpoint}
+                              rollCall={rc}
+                              action={crewRollCallAction}
+                              copy={crewRollCallButtonCopy}
+                              markState={rollCallMarkState(rowState)}
+                              t={t}
+                            />
+                          )
+                        }
+                        trigger={crewTrigger}
+                      >
+                        {/* The card holds the contact facts alone; the roll-call
+                          step stands at the sheet's foot, outside it (B08). */}
+                        <div>
+                          <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                            <CrewFacts member={member} labelled t={t} />
+                          </div>
+                          {/* Both directions out of a stated "not back aboard",
                             at the same cost and neither on the row — the same
                             terms as a diver's, because a divemaster who did not
                             surface is the same claim about the same kind of
                             body (ADR 20260815-offline-can-unsay-a-missing-diver
                             applies it to crew rows in as many words). */}
-                        {rowState.notBackAboard && !rollCallClosed ? (
-                          <RollCallBackAboardControl
-                            kind="crew"
-                            subjectId={member.id}
-                            checkpoint={checkpoint}
-                            subjectName={member.fullName}
-                            action={crewRollCallAction}
-                            copy={crewRollCallButtonCopy}
-                            t={t}
-                          />
-                        ) : null}
-                        {/* The report, from the row that raised it, on the
+                          {rowState.notBackAboard && !rollCallClosed ? (
+                            <RollCallBackAboardControl
+                              kind="crew"
+                              subjectId={member.id}
+                              checkpoint={checkpoint}
+                              subjectName={member.fullName}
+                              action={crewRollCallAction}
+                              copy={crewRollCallButtonCopy}
+                              t={t}
+                            />
+                          ) : null}
+                          {/* The report, from the row that raised it, on the
                             same terms as a diver's (domain review 2026-10-16):
                             the staffer is named in it as affected. */}
-                        <MissingDiverControls
-                          actions={missingDiver}
-                          notBackAboard={rowState.notBackAboard}
-                          subject={{ field: "personId", id: member.id }}
-                          name={member.fullName}
-                          checkpoint={checkpoint}
-                          t={t}
-                        />
-                        {/* The deliberate second step, on the same terms as a
-                            diver's. */}
-                        {rollCallClosed ? null : (
-                          <RollCallExceptionControl
-                            kind="crew"
-                            subjectId={member.id}
+                          <MissingDiverControls
+                            actions={missingDiver}
+                            notBackAboard={rowState.notBackAboard}
+                            subject={{ field: "personId", id: member.id }}
+                            name={member.fullName}
                             checkpoint={checkpoint}
-                            isDeparture={isDeparture}
-                            rollCall={rc}
-                            action={crewRollCallAction}
-                            copy={crewRollCallButtonCopy}
                             t={t}
                           />
-                        )}
-                      </div>
-                    </PersonSheet>
+                          {/* The deliberate second step, on the same terms as a
+                            diver's. */}
+                          {rollCallClosed ? null : (
+                            <RollCallExceptionControl
+                              kind="crew"
+                              subjectId={member.id}
+                              checkpoint={checkpoint}
+                              isDeparture={isDeparture}
+                              rollCall={rc}
+                              action={crewRollCallAction}
+                              copy={crewRollCallButtonCopy}
+                              t={t}
+                            />
+                          )}
+                        </div>
+                      </PersonSheet>
+                    )}
                   </div>
                   {/* Paper keeps what the sheet hides: the recorded state as a
                       word, the team, and the contact. The summary above prints
                       as it stands, so the name, role and who-and-when are
                       already on the sheet. */}
-                  <div className="hidden px-4 pb-4 print:block">
+                  <div data-print-only className="hidden px-4 pb-4 print:block">
                     <p className="flex flex-wrap items-center gap-2">
                       <span
                         className={
@@ -471,7 +478,7 @@ export function CrewRollCall({
         </>
       )}
 
-      {crewAssigned > 0 ? (
+      {crewAssigned > 0 && !paper ? (
         // Crew change on the morning — a hand calls in sick, a second
         // divemaster is added. The roll call names whoever the trip names
         // *now*, so the way to correct it is the trip's own crew list.

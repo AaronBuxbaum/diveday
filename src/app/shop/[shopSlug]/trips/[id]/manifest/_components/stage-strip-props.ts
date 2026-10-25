@@ -5,8 +5,22 @@ import { formatTime } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 import { shopPath } from "@/lib/staff-notices";
 import { boatStageOf, type MeetingWindow } from "@/lib/trip-phase";
-import { STAGE_WORD_KEYS, TRIP_STAGES, type TripStageReading } from "@/lib/trip-stages";
+import {
+  STAGE_WORD_KEYS,
+  TRIP_STAGES,
+  type TripStage,
+  type TripStageReading,
+} from "@/lib/trip-stages";
 import type { StageStripCopy } from "./StageStrip";
+
+/** The word each stage takes on a phone, where five full words do not fit one row (B06). */
+const STAGE_SHORT_WORD_KEYS = {
+  boarding: "manifest.stage.shortBoarding",
+  underway: "manifest.stage.shortUnderway",
+  surface: "manifest.stage.shortSurface",
+  heading_in: "manifest.stage.shortHeadingIn",
+  home: "manifest.stage.shortHome",
+} as const satisfies Record<TripStage, string>;
 
 type GapManifest = Pick<TripManifest, "trip" | "checkpoint" | "summary" | "crew">;
 
@@ -68,7 +82,11 @@ export function stageStripProps(
     copy: {
       legend: t("manifest.stage.legend"),
       errorRefusal: t("manifest.stage.errorRefusal"),
-      taps: TRIP_STAGES.map((value) => ({ stage: value, label: t(STAGE_WORD_KEYS[value]) })),
+      taps: TRIP_STAGES.map((value) => ({
+        stage: value,
+        label: t(STAGE_WORD_KEYS[value]),
+        shortLabel: t(STAGE_SHORT_WORD_KEYS[value]),
+      })),
       recordedLine: shown
         ? t("manifest.stage.recordedLine", {
             name: shown.recordedByName ?? "",

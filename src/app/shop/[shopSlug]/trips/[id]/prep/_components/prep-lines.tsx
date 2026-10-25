@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import { tapTargetLinkClass } from "@/components/ui/button";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { TripPrep } from "@/db/trips";
 import { gearStatusLabel } from "@/i18n/gear-labels";
@@ -200,7 +199,7 @@ export const pieceDetail = (t: StaffTranslator, piece: PrepPiece) => {
 export const pieceSize = (t: StaffTranslator, piece: PrepPiece) => {
   const detail = pieceDetail(t, piece);
   if (!piece.notOffered) return detail;
-  const dropped = <span className="font-medium text-warning">{t("tripPrep.noLongerRented")}</span>;
+  const dropped = noLongerRented(t);
   return detail ? (
     <>
       {detail} · {dropped}
@@ -209,6 +208,11 @@ export const pieceSize = (t: StaffTranslator, piece: PrepPiece) => {
     dropped
   );
 };
+/** "No longer rented": the catalog dropped a piece the diver's fit still asks for. */
+export const noLongerRented = (t: StaffTranslator) => (
+  <span className="font-medium text-warning">{t("tripPrep.noLongerRented")}</span>
+);
+
 /**
  * A rental line's divers, breakable between two names and inside one only
  * when it cannot fit whole. Joined as one string, a line could end inside a
@@ -267,23 +271,6 @@ export const KIT_PHONE_ROW_CLASS =
   "grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-2.5 text-sm";
 
 /**
- * **A diver's name that stands on a line of its own, as the way into their
- * record**: the 44px floor (`tapTargetLinkClass`, principles §2), with the
- * (44 − 20) / 2 it adds handed back above and below, so the target grows and
- * the 20px line the name sits on does not — the give-back `EntryShell`'s
- * footer links make. The never-asked run was 17px words
- * (pixel-craft class 7). A name inside a sentence (the bullet lines) stays
- * that sentence's link.
- *
- * The 12px is padding as well as the margin that hands it back, so the
- * margin box is always exactly the name's own lines. As a bare `min-h-11`
- * the give-back held for one line only: a name that wrapped outgrew the
- * floor, the margin still handed back 24px, and its second line hung 10px
- * below the line box, onto whatever came next.
- */
-export const nameLinkClass = `${tapTargetLinkClass} py-3 -my-3 font-medium hover:text-primary hover:underline`;
-
-/**
  * Years dry, beside the name, on exactly the terms the roster states it
  * (`RosterSection.tsx`) — only the two notable bands, warning tone, words
  * from `diveRecencyText`. This is the reader the answer is most use to: a
@@ -315,11 +302,30 @@ export const diveRecencyLine = (t: StaffTranslator, band: DiverLine["lastDivedBa
  * are kept apart here for the same reason they are kept apart everywhere
  * else — one is an answer, the other is an open question.
  */
-export const kitCell = (t: StaffTranslator, line: DiverLine) =>
-  line.items.length > 0 ? (
+export const kitCell = (t: StaffTranslator, line: DiverLine) => {
+  if (line.items.length === 0) {
+    return (
+      <span className="text-muted">
+        {line.state === "own_kit"
+          ? t("shared.rentalFit.ownKit")
+          : line.state === "identity_held"
+            ? t("tripPrep.heldSeatSizesWait")
+            : t("shared.rentalFit.notRecorded")}
+      </span>
+    );
+  }
+  // "Fit at check-in" once per diver, after their pieces, not beside each
+  // one (visual review 2026-10-24, B54). A flagged piece keeps what else it
+  // has to say: the catalog no longer offering it.
+  const fitInPerson = line.items.some((piece) => piece.fitAtCheckIn);
+  return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1">
       {line.items.map((piece) => {
-        const detail = pieceSize(t, piece);
+        const detail = piece.fitAtCheckIn
+          ? piece.notOffered
+            ? noLongerRented(t)
+            : null
+          : pieceSize(t, piece);
         return (
           // The piece and its detail as two boxes, so a detail that wraps
           // ("Drysuit: weight check in the water") hangs under itself, not
@@ -330,13 +336,9 @@ export const kitCell = (t: StaffTranslator, line: DiverLine) =>
           </li>
         );
       })}
+      {fitInPerson ? (
+        <li className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</li>
+      ) : null}
     </ul>
-  ) : (
-    <span className="text-muted">
-      {line.state === "own_kit"
-        ? t("shared.rentalFit.ownKit")
-        : line.state === "identity_held"
-          ? t("tripPrep.heldSeatSizesWait")
-          : t("shared.rentalFit.notRecorded")}
-    </span>
   );
+};

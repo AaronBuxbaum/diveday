@@ -244,8 +244,8 @@
   },
   "prep": {
     "heading": "Asignaciones de alquiler",
-    "cartLine": "{units, plural, one {# unidad} other {# unidades}} para {divers, plural, one {# buceador} other {# buceadores}}",
-    "cartStillToPick": "{count, plural, one {# pieza por elegir} other {# piezas por elegir}}",
+    "cartLine": "{assigned} de {needed, plural, one {# unidad asignada} other {# unidades asignadas}} · {missing} por elegir",
+    "cartLineAssigned": "{assigned} de {needed, plural, one {# unidad asignada} other {# unidades asignadas}}",
     "cartServiceFlagged": "{count, plural, one {# unidad necesita mantenimiento} other {# unidades necesitan mantenimiento}}",
     "handOver": "Entregar",
     "handingOver": "Entregando…",
@@ -278,7 +278,6 @@
     "pickUnit": "Elige una unidad…",
     "proposal": {
       "unit": "Propuesta: {unit}",
-      "assign": "Asignar",
       "change": "Cambiar",
       "assignAll": "Asignar {count, plural, one {la unidad propuesta} other {las # unidades propuestas}}",
       "someRefused": "Algunas no se pudieron asignar. Revisa las filas de abajo."
@@ -298,7 +297,9 @@
     "backUnit": "De vuelta",
     "backProblem": "De vuelta con un problema",
     "backNoteLabel": "¿Qué le pasa?",
-    "backNotePlaceholder": "El inflador se traba"
+    "backNotePlaceholder": "El inflador se traba",
+    "tanksLineAir": "{count, plural, one {# tanque} other {# tanques}}, aire",
+    "tanksLineMixed": "{count, plural, one {# tanque} other {# tanques}}: {air} aire, {nitrox} nitrox"
   },
   "ticket": {
     "eyebrow": "Alquiler",

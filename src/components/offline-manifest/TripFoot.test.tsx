@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { controls, view } from "./section-fixtures";
 import { offlineRollCallRowId } from "./shared";
-import { OfflineTripFoot } from "./TripFoot";
+import { OfflineTripFoot, stillToCallLine } from "./TripFoot";
 
 afterEach(cleanup);
 
@@ -19,18 +19,26 @@ describe("OfflineTripFoot", () => {
     );
   });
 
-  it("jumps a face still to call to the row the roll call above drew", () => {
-    const row = document.createElement("div");
-    row.id = offlineRollCallRowId("b-priya");
-    row.scrollIntoView = vi.fn();
-    document.body.append(row);
+  it("links one still-to-board line to the first uncalled diver's row (B02)", () => {
     render(<OfflineTripFoot view={view()} controls={controls()} tripId="trip-1" />);
-    const face = screen
-      .getAllByRole("button")
-      .find((button) => button.querySelector(`[title="Priya Shah"]`));
-    if (!face) throw new Error("a face for Priya expected");
-    fireEvent.click(face);
-    expect(row.scrollIntoView).toHaveBeenCalledTimes(1);
-    row.remove();
+    const line = screen.getByRole("link", { name: /^Still to board: \d+$/ });
+    expect(line.getAttribute("href")).toBe(`#${offlineRollCallRowId("b-priya")}`);
+  });
+});
+
+describe("stillToCallLine", () => {
+  it("says nothing when nobody is left to call, never '0'", () => {
+    expect(stillToCallLine([])).toBeNull();
+  });
+
+  it("counts everyone still to call and points at the first in roster order", () => {
+    expect(stillToCallLine([{ bookingId: "b-2" }, { bookingId: "b-1" }])).toEqual({
+      count: 2,
+      href: `#${offlineRollCallRowId("b-2")}`,
+    });
+  });
+
+  it("counts a soul with no name like any other", () => {
+    expect(stillToCallLine([{ bookingId: "b-nameless" }])?.count).toBe(1);
   });
 });

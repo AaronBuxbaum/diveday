@@ -215,6 +215,13 @@ export const ROLL_CALL_ROW_CLASS =
  * print root, adding pages to a day packet's roll call — the sheet whose page
  * count a captain checks for a missing one. `paper-day.spec.ts` measures it.
  */
+/**
+ * The name line of a row on the packet's paper (B03): the summary's own box
+ * and rhythm, with nothing about it that says "tap me", because nothing
+ * opens from it there.
+ */
+export const PAPER_ROW_CLASS =
+  "flex min-h-19 w-full flex-wrap items-center gap-2.5 py-3 ps-4 pe-2 text-start sm:flex-nowrap print:min-h-0 print:flex-nowrap print:py-1";
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
   "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset print:min-h-0 print:py-1 [&::-webkit-details-marker]:hidden";
 /**
@@ -420,7 +427,7 @@ export function RollCallExceptionControl({
   );
   const isCrew = kind === "crew";
   return (
-    <div className="mt-3 print:hidden">
+    <div className="mt-4 print:hidden">
       <RollCallButton
         // Same remount-on-checkpoint reasoning as the mark button above.
         key={isCrew ? `crew-not-aboard-${checkpoint}` : `not-boarded-${checkpoint}`}
@@ -485,6 +492,11 @@ export function RollCallExceptionControl({
             : undefined
         }
         pendingLabel={t("manifest.saving")}
+        // **The exception is never the filled action** (layer 4 review,
+        // dde-a F1): it is the deliberate second step, and a mis-tap on it
+        // takes a soul who is aboard out of every later count. Boat mode's
+        // action color belongs to the affirmative mark on the row; this
+        // control keeps the secondary look, settled or alarmed once recorded.
         className={`${BOAT_TARGET_CLASS} ${
           notBackAboard
             ? "border border-danger bg-danger-tint text-danger"

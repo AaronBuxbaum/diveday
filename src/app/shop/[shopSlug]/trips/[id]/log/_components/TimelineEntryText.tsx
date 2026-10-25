@@ -7,6 +7,7 @@ import {
   type IncidentTimelineEntry,
 } from "@/lib/incident-export";
 import type { RollCallCheckpoint } from "@/lib/manifests";
+import { groupTimeline, type RollCallTimelineEntry, type TimelineGroup } from "./timeline-groups";
 
 /**
  * What each act on a buddy team reads as in the timeline. Codes come from
@@ -77,22 +78,99 @@ export function TimelineEntryText({
       {entry.kind === "buddy_team" && entry.adultsConfirmed ? (
         <span className="text-muted">{t("incidentExport.timelineBuddyAdultsConfirmed")}</span>
       ) : null}
-      {(entry.kind === "diver" || entry.kind === "crew") && entry.source === "offline" ? (
+      {/* What the crew observed sits on its own line below the facts (ADR
+          20260828-a-missing-diver-gets-a-sentence), inside the content hash
+          like every other fact here. */}
+      {entry.kind === "diver" || entry.kind === "crew" ? (
+        <RollCallLineExtras entry={entry} t={t} />
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * **The timeline, one heading per run of marks at a checkpoint** (visual
+ * review 2026-10-24, B05): "Before departure · Oct 24, 5:30 AM EDT ·
+ * recorded by Sal Moretti", then a line per person. A line recorded by
+ * somebody else or at another minute says so on itself, so grouping hides no
+ * discrepancy; everything that is not a mark stands alone where it fell
+ * (`groupTimeline`). The data read is unchanged.
+ */
+export function TimelineGroups({
+  timeline,
+  t,
+  memberList,
+  dateTime,
+  className,
+}: {
+  timeline: readonly IncidentTimelineEntry[];
+  t: StaffTranslator;
+  memberList: Intl.ListFormat;
+  dateTime: (isoString: string) => string;
+  className: string;
+}) {
+  const groups: TimelineGroup[] = groupTimeline(timeline, dateTime);
+  return (
+    <ol className={className}>
+      {groups.map((group) =>
+        group.kind === "single" ? (
+          <li
+            key={group.order}
+            className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
+          >
+            <span className="font-mono text-xs text-muted tabular-nums">{group.stamp}</span>
+            <TimelineEntryText entry={group.entry} t={t} memberList={memberList} />
+          </li>
+        ) : (
+          <li key={group.order} className="px-4 py-3 text-sm sm:px-5">
+            <p className="break-after-avoid font-semibold">
+              {t("incidentExport.timelineGroupHeading", {
+                checkpoint: rollCallCheckpointText(t, group.checkpoint as RollCallCheckpoint),
+                time: group.stamp,
+                name: group.recordedByName,
+              })}
+            </p>
+            <ul className="mt-1 flex flex-col gap-1">
+              {group.lines.map((line) => (
+                <li
+                  key={line.order}
+                  className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1"
+                >
+                  <span>{rollCallActText(line.entry, t)}</span>
+                  {line.ownStamp || line.ownRecorder ? (
+                    <span className="text-muted">
+                      {[
+                        line.ownStamp,
+                        line.ownRecorder
+                          ? t("incidentExport.timelineLineRecordedBy", { name: line.ownRecorder })
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  ) : null}
+                  <RollCallLineExtras entry={line.entry} t={t} />
+                </li>
+              ))}
+            </ul>
+          </li>
+        ),
+      )}
+    </ol>
+  );
+}
+
+/** A mark's tag and observation, the same under a heading as on a lone line. */
+function RollCallLineExtras({ entry, t }: { entry: RollCallTimelineEntry; t: StaffTranslator }) {
+  return (
+    <>
+      {entry.source === "offline" ? (
         <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
           {t("incidentExport.timelineOfflineTag")}
         </span>
       ) : null}
-      {/* What the crew observed, on its own line below the facts, in their
-          column, rather than wrapped into them (ADR
-          20260828-a-missing-diver-gets-a-sentence). This is the half of the
-          record a mark alone cannot carry, and the reason an investigator
-          reading this page meets "surfaced 200 m north, picked up by Reef
-          Runner at 14:31" instead of an unexplained red entry. It is inside
-          the content hash, like every other fact here. */}
-      {(entry.kind === "diver" || entry.kind === "crew") && entry.note ? (
-        <span className="basis-full text-sm">{entry.note}</span>
-      ) : null}
-    </span>
+      {entry.note ? <span className="basis-full text-sm">{entry.note}</span> : null}
+    </>
   );
 }
 
@@ -135,25 +213,29 @@ function actText(entry: IncidentTimelineEntry, t: StaffTranslator): string {
         : entry.subjectName;
       return `${who} — ${t(ROSTER_CHANGE_KEYS[entry.action])}`;
     }
-    default: {
-      const who =
-        entry.kind === "crew"
-          ? `${entry.subjectName} (${t("incidentExport.crewTag")})`
-          : entry.subjectName;
-      const act =
-        entry.action === "cleared"
-          ? t("incidentExport.actionCleared")
-          : rollCallLabelText(
-              t,
-              entry.action === "boarded"
-                ? "boarded"
-                : entry.checkpoint === "departure"
-                  ? "not_boarded"
-                  : "not_back_aboard",
-            );
-      return `${who} — ${act}`;
-    }
+    default:
+      return rollCallActText(entry, t);
   }
+}
+
+/** "Sana Malik — Boarded", "Keiko Tanaka (crew) — Not back aboard": one mark's words. */
+export function rollCallActText(entry: RollCallTimelineEntry, t: StaffTranslator): string {
+  const who =
+    entry.kind === "crew"
+      ? `${entry.subjectName} (${t("incidentExport.crewTag")})`
+      : entry.subjectName;
+  const act =
+    entry.action === "cleared"
+      ? t("incidentExport.actionCleared")
+      : rollCallLabelText(
+          t,
+          entry.action === "boarded"
+            ? "boarded"
+            : entry.checkpoint === "departure"
+              ? "not_boarded"
+              : "not_back_aboard",
+        );
+  return `${who} — ${act}`;
 }
 
 /**

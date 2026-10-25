@@ -1,8 +1,6 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { rollCallRowTone } from "@/components/row-tones";
-import { Badge } from "@/components/ui/badge";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
-import { rentalFitLineText } from "@/i18n/rental-labels";
 import { diverRowId } from "@/lib/element-id";
 import { rollCallLabel, type TripManifest } from "@/lib/manifests";
 import { diverCapsule, diverTypeBadge } from "./DiverRowCapsule";
@@ -13,8 +11,10 @@ import type { DiverRollCallContext } from "./diver-roll-call-context";
 import { diverRowState } from "./diver-row-state";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet } from "./PersonSheet";
+import { personStatusTone } from "./person-status-tone";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
+  PAPER_ROW_CLASS,
   ROLL_CALL_ROW_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
   RollCallMarkButton,
@@ -110,6 +110,46 @@ export function DiverRollCallRow({
   const auditLabel = rollCallLabelText(t, rollCallLabel(checkpoint, rc));
   const bookingNotes = notesByBooking.get(diver.bookingId) ?? [];
   const teamLabel = buddyTeamLabel(diver.buddyTeam ? [diver.buddyTeam] : []);
+  const rowTrigger = (
+    <DiverRowTrigger
+      diver={diver}
+      index={index}
+      capsule={capsule}
+      typeBadge={typeBadge}
+      lateAt={state.lateAt}
+      checkedInAtDesk={state.checkedInAtDesk}
+      locale={locale}
+      timezone={timezone}
+      t={t}
+    />
+  );
+  const rowPrint = (
+    <DiverRowPrint
+      diver={diver}
+      printedAlert={context.printedMedicalAlerts?.texts.get(diver.bookingId)}
+      state={state}
+      checkpoint={checkpoint}
+      auditLabel={auditLabel}
+      teamLabel={teamLabel}
+      locale={locale}
+      timezone={timezone}
+      t={t}
+    />
+  );
+  // **The packet's paper** (B03): the name line and the printed facts, the
+  // same two parts the printed sheet has always carried, and no sheet or mark.
+  if (context.paper) {
+    return (
+      <li id={diverRowId(diver.bookingId)} className={rowClass}>
+        <div className={ruleClass}>
+          <div data-print-content className={PAPER_ROW_CLASS}>
+            {rowTrigger}
+          </div>
+          {rowPrint}
+        </div>
+      </li>
+    );
+  }
   return (
     <li id={diverRowId(diver.bookingId)} className={rowClass}>
       <div className={ruleClass}>
@@ -122,29 +162,17 @@ export function DiverRollCallRow({
         <PersonSheet
           name={diver.fullName}
           triggerLabel={t("manifest.openPersonDetails", { name: diver.fullName })}
+          // Role and age (B08): the rental fit is said once, lower down in
+          // the facts, and a held seat's age belongs to a person not yet
+          // confirmed aboard.
           subtitle={
             diver.identityWithheld
               ? t("manifest.personSheetHeldDiverSubtitle")
-              : t("manifest.personSheetDiverSubtitle", {
-                  rental: rentalFitLineText(t, locale, diver.rentalFit),
-                })
+              : diver.age !== null && diver.age !== undefined
+                ? t("manifest.personSheetDiverSubtitle", { age: diver.age })
+                : t("manifest.personSheetDiverSubtitleNoAge")
           }
-          status={
-            <Badge
-              tone={
-                rowState.notBackAboard
-                  ? "danger"
-                  : rowState.boarded
-                    ? "success"
-                    : rowState.recordedNotBoarded || rowState.impliedNotBoarded
-                      ? "warning"
-                      : "neutral"
-              }
-              size="sm"
-            >
-              {auditLabel}
-            </Badge>
-          }
+          status={{ text: auditLabel, tone: personStatusTone(rowState) }}
           trail={personTrail}
           todayLabel={t("manifest.personSheetToday")}
           noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
@@ -186,19 +214,7 @@ export function DiverRollCallRow({
               />
             )
           }
-          trigger={
-            <DiverRowTrigger
-              diver={diver}
-              index={index}
-              capsule={capsule}
-              typeBadge={typeBadge}
-              lateAt={state.lateAt}
-              checkedInAtDesk={state.checkedInAtDesk}
-              locale={locale}
-              timezone={timezone}
-              t={t}
-            />
-          }
+          trigger={rowTrigger}
         >
           <DiverRowPanel
             context={context}
@@ -216,17 +232,7 @@ export function DiverRollCallRow({
           depth advisory, and the contact block. The summary line above
           prints as it stands, so the name, the capsule and the
           who-and-when are already on the sheet and are not repeated. */}
-        <DiverRowPrint
-          diver={diver}
-          printedAlert={context.printedMedicalAlerts?.texts.get(diver.bookingId)}
-          state={state}
-          checkpoint={checkpoint}
-          auditLabel={auditLabel}
-          teamLabel={teamLabel}
-          locale={locale}
-          timezone={timezone}
-          t={t}
-        />
+        {rowPrint}
       </div>
     </li>
   );

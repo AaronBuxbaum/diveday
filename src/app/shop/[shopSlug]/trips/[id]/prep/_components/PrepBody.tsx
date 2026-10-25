@@ -6,7 +6,7 @@ import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { PrepGrouping } from "@/lib/dive-prep";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type NoticeTone, noticeCountParam, noticeFromParam } from "@/lib/staff-notices";
-import { PrepAssignments } from "./PrepAssignments";
+import { PrepAssignedPaper, PrepAssignments } from "./PrepAssignments";
 import { PrepBackFromBoat } from "./PrepBackFromBoat";
 import { PrepFitGaps } from "./PrepFitGaps";
 import { PrepKitList } from "./PrepKitList";
@@ -64,6 +64,7 @@ export function PrepBody({
   backFromBoat = [],
   emptyState = null,
   idPrefix,
+  paper = false,
   className,
 }: {
   prep: TripPrep;
@@ -138,6 +139,8 @@ export function PrepBody({
   emptyState?: ReactNode;
   /** See `src/lib/element-id.ts`: set on the paper day, absent on a route. */
   idPrefix?: string;
+  /** The trip packet's paper (`PAPER_PACKET`, B03): no notice, no controls. */
+  paper?: boolean;
   /**
    * **The gap between the list's sections, which is the page's to set** —
    * `space-y-10` from both callers. The list is a run of a page's sections, and
@@ -158,12 +161,15 @@ export function PrepBody({
     cancelled,
     sailed,
     home,
+    paper,
   };
   // A shop that has never offered nitrox can never have live nitrox data here
   // (setBookingNitrox fails closed), so this is purely cosmetic for that
   // common case — but a shop that *disabled* nitrox after a diver requested
   // it (with or without a verified card) must not have this trip's already-
   // real tank split or blocker silently disappear out from under the crew.
+  // On the packet's paper, the assigned lines alone (B03).
+  const Assignments = paper ? PrepAssignedPaper : PrepAssignments;
   const showNitrox =
     shopOffersNitrox(rentalItems) ||
     checklist.tanks.nitrox > 0 ||
@@ -173,11 +179,12 @@ export function PrepBody({
   const gearNotice = noticeFromParam(notice, GEAR_NOTICES);
   const gearBanner =
     gearNotice && (!gearNotice.counted || gearCount !== null) ? gearNotice : undefined;
-  const banner = gearBanner ? (
-    <StaffNoticeBanner tone={gearBanner.tone}>
-      {t(gearBanner.key, { count: gearCount ?? 0 })}
-    </StaffNoticeBanner>
-  ) : null;
+  const banner =
+    gearBanner && !paper ? (
+      <StaffNoticeBanner tone={gearBanner.tone}>
+        {t(gearBanner.key, { count: gearCount ?? 0 })}
+      </StaffNoticeBanner>
+    ) : null;
 
   return (
     <>
@@ -190,7 +197,7 @@ export function PrepBody({
           {/* Once home, the answer to a "Back" tap sits over the list it was
               tapped in, which leads the page. */}
           {home ? banner : null}
-          {home ? (
+          {home && !paper ? (
             <PrepBackFromBoat units={backFromBoat} tripId={tripId} t={t} idPrefix={idPrefix} />
           ) : null}
           {cancelled ? (
@@ -229,7 +236,7 @@ export function PrepBody({
               margin, so it sits 24px over the assignments it answers for —
               the space every notice keeps over what follows it. */}
           {home ? null : banner}
-          {gearFleetTotal > 0 && assignmentRows.length > 0 ? <PrepAssignments view={view} /> : null}
+          {gearFleetTotal > 0 && assignmentRows.length > 0 ? <Assignments view={view} /> : null}
         </div>
       )}
     </>

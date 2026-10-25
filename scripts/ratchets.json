@@ -220,7 +220,6 @@
     "e2e/date-requests.spec.ts": 2,
     "e2e/day-spine.spec.ts": 1,
     "e2e/departure-desk.spec.ts": 2,
-    "e2e/departure-log.spec.ts": 1,
     "e2e/desk-ping.spec.ts": 1,
     "e2e/dive-sites.spec.ts": 3,
     "e2e/export.spec.ts": 2,
@@ -600,8 +599,8 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 705,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 535,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 476,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 420,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 474,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 511
   },
   "tokens": {

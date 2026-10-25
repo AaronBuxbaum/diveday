@@ -34,7 +34,7 @@ describe("the manifest's emergency reference", () => {
    * numbers below", so it sits above the card it points at.
    */
   it("prints the missing-diver procedure above the numbers and the kit blanks below, on paper only", () => {
-    const printOnly = PAPER.indexOf('<div className="hidden print:block">');
+    const printOnly = PAPER.indexOf('<div data-print-only className="hidden print:block">');
     expect(printOnly).toBeGreaterThan(-1);
     const block = PAPER.slice(printOnly, PAPER.indexOf("</div>", printOnly));
     const procedure = block.indexOf("<PrintedMissingProcedure");

@@ -1118,6 +1118,27 @@ select:not([multiple]):not([size]):dir(rtl) {
   margin-top: 3rem;
 }
 
+/*
+ * **On screen, a packet is its paper** (visual review 2026-10-24, B03, B55).
+ * The manifest and prep sections compose their pages as paper
+ * (`PAPER_PACKET`), which renders no control at all, so the printed rows are
+ * the whole of them. Those rows are print-only on the live manifest
+ * (`hidden print:block`, marked `data-print-only`); inside a packet they are
+ * the content, so the screen shows them too, and what a captain reviews
+ * before printing is the sheet that comes out.
+ *
+ * **Only the two default packets** (`data-paper-screen`: the trip packet and
+ * the day packet). The medical-alerts packet keeps its print-only blocks off
+ * the screen (layer 4 security review, note 1): the alert's own words are
+ * for the sheet that goes in the crew's hands, never for a tablet left open
+ * on the tab after the print dialog closes.
+ */
+@media screen {
+  .trip-print-bundle[data-paper-screen] [data-print-only] {
+    display: block;
+  }
+}
+
 @media print {
   /**
    * **Nothing interactive reaches the trip packet's paper, by construction.**

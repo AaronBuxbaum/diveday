@@ -245,3 +245,63 @@ describe("DiverRollCallRow, drawn on its own", () => {
     expect(row.className).toContain("print:order-none");
   });
 });
+
+/**
+ * **The person sheet says role and age once, status as a line, and keeps one
+ * primary at its foot** (visual review 2026-10-24, B08). The contact card holds
+ * the contact alone; the minor flag stays where it was.
+ */
+describe("the person sheet's head and foot", () => {
+  const open = () =>
+    fireEvent.click(screen.getByRole("button", { name: /Open details for Meera Iyer/ }));
+
+  it("puts the age in the subtitle and drops the lone age chip", () => {
+    renderList({ checkpoint: "departure", divers: [diver({ age: 27, minor: false })] });
+    open();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Diver · age 27")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Age 27")).toBeNull();
+    // Status in words under the name, not a chip in the header's actions.
+    expect(dialog).toHaveAccessibleDescription(/Diver · age 27/);
+  });
+
+  it("keeps the minor flag for a minor whose row lost the capsule to a block", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          age: 12,
+          minor: true,
+          readiness: {
+            status: "blocked",
+            blockers: [{ code: "certification_missing" }],
+          } as TripManifest["divers"][number]["readiness"],
+        }),
+      ],
+    });
+    open();
+    expect(within(screen.getByRole("dialog")).getByText(/12/, { selector: "span" })).toBeVisible();
+  });
+
+  it("holds only the contact in its card, with the exception step outside it and never filled", () => {
+    renderList({ checkpoint: "departure", divers: [diver({ age: 27, minor: false })] });
+    open();
+    const dialog = screen.getByRole("dialog");
+    const contact = within(dialog)
+      .getByText(/Asha Iyer/)
+      .closest("p") as HTMLElement;
+    expect(contact).toHaveClass("rounded-inset");
+    const step = within(dialog).getByRole("button", { name: "Mark not boarded" });
+    expect(contact).not.toContainElement(step);
+    // dde-a F1: the exception is the deliberate second step. It must never
+    // wear the action color a crew taps for the act itself.
+    expect(step).not.toHaveClass("bg-primary");
+    expect(step).not.toHaveClass("text-primary-foreground");
+    expect(step).toHaveClass("bg-surface", "border-border-strong");
+    for (const button of within(dialog).getAllByRole("button")) {
+      if (/not boarded|not back aboard/i.test(button.textContent ?? "")) {
+        expect(button).not.toHaveClass("bg-primary");
+      }
+    }
+  });
+});

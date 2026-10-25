@@ -156,14 +156,12 @@ describe("the packing list's geometry", () => {
   });
 
   it("hands back only the height its own padding adds, so a name that wraps keeps its lines (K-146)", () => {
-    const byItem = renderPrep(everyPanelPrep()).container;
-    const neverAsked = within(
-      byText(byItem, t("tripPrep.missingSizesNobodyAskedLead")).nextElementSibling as HTMLElement,
-    ).getAllByRole("link");
+    // The never-asked names are links inside a sentence now (B54), so the
+    // by-diver rows' names are the ones standing on lines of their own.
     const byDiver = renderPrep(everyPanelPrep(), { grouping: "diver" }).container;
     const carmen = diverLinks(byDiver).filter((link) => link.textContent === "Carmen Ruiz");
     expect(carmen).toHaveLength(2);
-    for (const link of [...neverAsked, ...carmen]) {
+    for (const link of carmen) {
       // A 44px floor with a fixed give-back is right only for a name on one
       // line: wrapped, the box outgrows the floor, the margin still hands back
       // the same, and the second line hangs over the dive-recency note under

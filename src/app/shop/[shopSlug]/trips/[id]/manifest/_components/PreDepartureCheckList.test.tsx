@@ -24,6 +24,8 @@ const copy: PreDepartureCheckListCopy = {
   snagStillThere: "Still there",
   snagSaving: "Saving…",
   noteProblem: "Note a problem",
+  noteItemLabel: "Which item?",
+  noteItemPlaceholder: "Pick an item",
   noteLabel: "What’s wrong?",
   noteSave: "Save note",
   noteRefused: "Write what’s wrong, up to 280 characters.",
@@ -317,7 +319,9 @@ describe("the boat's snags (fifth-loop ideas, item 1)", () => {
     expect(screen.getByText(carried[0]?.printLine ?? "")).toBeInTheDocument();
   });
 
-  it("offers Note a problem under every line only where a snag can be written", () => {
+  it("offers Note a problem once for the list, with an item picker, only where a snag can be written", () => {
+    // B07 (visual review 2026-10-24): one action at the list's foot rather
+    // than one under every line; the picker names the line the note is on.
     const { rerender } = render(
       <PreDepartureCheckList
         action={vi.fn()}
@@ -327,10 +331,68 @@ describe("the boat's snags (fifth-loop ideas, item 1)", () => {
         snagActions={snagActions}
       />,
     );
-    expect(screen.getAllByText("Note a problem")).toHaveLength(items.length);
+    expect(screen.getAllByText("Note a problem")).toHaveLength(1);
+    const picker = screen.getByLabelText("Which item?") as HTMLSelectElement;
+    expect(picker.name).toBe("checklistItemId");
+    expect([...picker.options].map((option) => [option.value, option.text])).toEqual([
+      ["", "Pick an item"],
+      ["oxygen", "Emergency oxygen kit aboard"],
+      ["radio", "Radio check done"],
+    ]);
+    expect(screen.getByLabelText("What’s wrong?")).toHaveAttribute("name", "note");
     rerender(<PreDepartureCheckList action={vi.fn()} items={items} copy={copy} atDeparture />);
     expect(screen.queryByText("Note a problem")).toBeNull();
     expect(screen.queryByRole("region", { name: "Open on this boat" })).toBeNull();
+  });
+
+  it("sends the picked line with the note, and gates no check on it (H-51)", async () => {
+    const note = vi.fn(async (_prev: unknown, _form: FormData) => ({ ok: true }) as const);
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture
+        snagActions={{ note, answer: vi.fn(async () => null) }}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Note a problem"));
+    await user.selectOptions(screen.getByLabelText("Which item?"), "radio");
+    await user.type(screen.getByLabelText("What’s wrong?"), "VHF crackles on 16");
+    await user.click(screen.getByRole("button", { name: "Save note" }));
+    await waitFor(() => expect(note).toHaveBeenCalledTimes(1));
+    const form = note.mock.calls[0]?.[1] as FormData;
+    expect(form.get("checklistItemId")).toBe("radio");
+    expect(form.get("note")).toBe("VHF crackles on 16");
+    // Every check stays a tap away: the note disabled nothing.
+    for (const button of screen.getAllByRole("button", { pressed: false })) {
+      expect(button).not.toBeDisabled();
+    }
+  });
+
+  it("picks no line for the crew, and refuses a note saved without one (review dde-a F3)", async () => {
+    const note = vi.fn(async (_prev: unknown, _form: FormData) => ({ ok: true }) as const);
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture
+        snagActions={{ note, answer: vi.fn(async () => null) }}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Note a problem"));
+    const picker = screen.getByLabelText("Which item?") as HTMLSelectElement;
+    // Nothing chosen: the empty choice shows, and it is not itself a line.
+    expect(picker.value).toBe("");
+    expect(screen.getByRole("option", { name: "Pick an item" })).toBeDisabled();
+    expect(picker).toBeRequired();
+    expect(picker).toBeInvalid();
+    await user.type(screen.getByLabelText("What’s wrong?"), "VHF crackles on 16");
+    await user.click(screen.getByRole("button", { name: "Save note" }));
+    expect(note).not.toHaveBeenCalled();
   });
 
   it("keeps this crew's own note under its line with Fixed alone", () => {

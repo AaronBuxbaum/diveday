@@ -31,9 +31,11 @@ test("a snag noted on the boat check reaches that boat's next crew, who mark it 
   const radio = page
     .getByRole("listitem")
     .filter({ has: page.getByRole("button", { name: "VHF radio checked" }) });
-  await radio.getByText("Note a problem").click();
-  await radio.getByLabel("What’s wrong?").fill("VHF crackles on 16");
-  await radio.getByRole("button", { name: "Save note" }).click();
+  // One "Note a problem" for the list, with an item picker (B07).
+  await page.getByText("Note a problem").click();
+  await page.getByLabel("Which item?").selectOption({ label: "VHF radio checked" });
+  await page.getByLabel("What’s wrong?").fill("VHF crackles on 16");
+  await page.getByRole("button", { name: "Save note" }).click();
   await expect(radio.getByText("VHF crackles on 16")).toBeVisible();
 
   await page.goto("/shop/blue-mantis/schedule/board");

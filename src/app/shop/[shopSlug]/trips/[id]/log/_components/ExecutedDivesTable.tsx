@@ -1,3 +1,4 @@
+import { sectionCardClass } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -50,7 +51,61 @@ export function surfaceIntervalText(
       });
 }
 
-/** The departure log's executed dive records, one row per dive the crew logged. */
+/**
+ * One dive's facts as label and value, in the order both layouts read them:
+ * the card list below `md` and the table from `md` up say the same words.
+ */
+export function executedDiveFields(
+  dive: IncidentExecutedDive,
+  locale: string,
+  timeZone: string,
+  t: StaffTranslator,
+): { label: string; value: string }[] {
+  const notRecorded = t("incidentExport.executedDiveFieldNotRecorded");
+  const visibility = dive.observedConditions?.visibility;
+  const current = dive.observedConditions?.current;
+  return [
+    {
+      label: t("incidentExport.executedDiveSite"),
+      value: dive.actualSiteName ?? t("incidentExport.notOnFile"),
+    },
+    {
+      label: t("incidentExport.executedDiveTimes"),
+      value: waterTimes(dive, locale, timeZone, t("incidentExport.executedDiveTimesMissing")),
+    },
+    {
+      label: t("incidentExport.executedDiveDepth"),
+      value:
+        dive.maxDepthMeters == null
+          ? notRecorded
+          : `${depthInUnit(dive.maxDepthMeters, "meters")} m / ${depthInUnit(dive.maxDepthMeters, "feet")} ft`,
+    },
+    {
+      label: t("incidentExport.executedDiveConditions"),
+      value:
+        typeof visibility === "string" || typeof current === "string"
+          ? t("incidentExport.executedDiveConditionValue", {
+              visibility: typeof visibility === "string" ? visibility : notRecorded,
+              current: typeof current === "string" ? current : notRecorded,
+            })
+          : notRecorded,
+    },
+    { label: t("incidentExport.executedDiveSurfaceInterval"), value: surfaceIntervalText(dive, t) },
+    {
+      label: t("incidentExport.executedDiveRecordedBy"),
+      value: dive.recordedByName ?? t("incidentExport.notOnFile"),
+    },
+  ];
+}
+
+/**
+ * The departure log's executed dive records, one per dive the crew logged.
+ *
+ * **A labeled card per dive below `md`, the table from `md` up** (visual
+ * review 2026-10-24, B04). Seven columns at 390px truncated every header to
+ * "ACTU SITE" and broke "Sal Moret" mid-name. The card says each label in full
+ * beside its value; paper always takes the table, whatever the sheet's width.
+ */
 export function ExecutedDivesTable({
   dives,
   locale,
@@ -62,48 +117,50 @@ export function ExecutedDivesTable({
   timeZone: string;
   t: StaffTranslator;
 }) {
-  const notRecorded = t("incidentExport.executedDiveFieldNotRecorded");
+  const rows = dives.map((dive) => ({
+    dive,
+    fields: executedDiveFields(dive, locale, timeZone, t),
+  }));
   return (
-    <Table className="mt-3">
-      <THead>
-        <Th>{t("incidentExport.executedDiveNumber")}</Th>
-        <Th>{t("incidentExport.executedDiveSite")}</Th>
-        <Th>{t("incidentExport.executedDiveTimes")}</Th>
-        <Th>{t("incidentExport.executedDiveDepth")}</Th>
-        <Th>{t("incidentExport.executedDiveConditions")}</Th>
-        <Th>{t("incidentExport.executedDiveSurfaceInterval")}</Th>
-        <Th>{t("incidentExport.executedDiveRecordedBy")}</Th>
-      </THead>
-      <TBody>
-        {dives.map((dive) => {
-          const visibility = dive.observedConditions?.visibility;
-          const current = dive.observedConditions?.current;
-          return (
+    <>
+      <ul data-dive-cards="" className="mt-3 flex flex-col gap-3 md:hidden print:hidden">
+        {rows.map(({ dive, fields }) => (
+          <li
+            key={dive.diveNumber}
+            className={sectionCardClass({ className: "break-inside-avoid" })}
+          >
+            <h3 className="text-base font-semibold">
+              {t("incidentExport.executedDive", { number: dive.diveNumber })}
+            </h3>
+            <dl className="mt-2 grid gap-2 text-sm">
+              {fields.map((field) => (
+                <div key={field.label}>
+                  <dt className="text-muted">{field.label}</dt>
+                  <dd className="font-medium">{field.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <Table shellClassName="mt-3 hidden md:block print:block">
+        <THead>
+          <Th>{t("incidentExport.executedDiveNumber")}</Th>
+          {(rows[0]?.fields ?? []).map((field) => (
+            <Th key={field.label}>{field.label}</Th>
+          ))}
+        </THead>
+        <TBody>
+          {rows.map(({ dive, fields }) => (
             <tr key={dive.diveNumber}>
               <Th scope="row">{t("incidentExport.executedDive", { number: dive.diveNumber })}</Th>
-              <Td>{dive.actualSiteName ?? t("incidentExport.notOnFile")}</Td>
-              <Td>
-                {waterTimes(dive, locale, timeZone, t("incidentExport.executedDiveTimesMissing"))}
-              </Td>
-              <Td>
-                {dive.maxDepthMeters == null
-                  ? notRecorded
-                  : `${depthInUnit(dive.maxDepthMeters, "meters")} m / ${depthInUnit(dive.maxDepthMeters, "feet")} ft`}
-              </Td>
-              <Td>
-                {typeof visibility === "string" || typeof current === "string"
-                  ? t("incidentExport.executedDiveConditionValue", {
-                      visibility: typeof visibility === "string" ? visibility : notRecorded,
-                      current: typeof current === "string" ? current : notRecorded,
-                    })
-                  : notRecorded}
-              </Td>
-              <Td>{surfaceIntervalText(dive, t)}</Td>
-              <Td>{dive.recordedByName ?? t("incidentExport.notOnFile")}</Td>
+              {fields.map((field) => (
+                <Td key={field.label}>{field.value}</Td>
+              ))}
             </tr>
-          );
-        })}
-      </TBody>
-    </Table>
+          ))}
+        </TBody>
+      </Table>
+    </>
   );
 }

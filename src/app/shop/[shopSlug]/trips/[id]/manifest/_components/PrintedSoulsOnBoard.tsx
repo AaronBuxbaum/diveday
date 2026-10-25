@@ -32,7 +32,7 @@ export function PrintedSoulsOnBoard({
         **Static facts** only (divers carried, crew named), never a live
         count: "Boarded 6" printed at 07:12 is a lie by 07:20. A rehearsal
         says so first, so a practice sheet is never read as a real boat. */}
-      <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
+      <p data-print-only className="mt-4 hidden text-base font-semibold tabular-nums print:block">
         {manifest.trip.isRehearsal ? `${t("trips.rehearsal.label")} · ` : null}
         {vesselName ? `${vesselName} · ` : null}
         {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}

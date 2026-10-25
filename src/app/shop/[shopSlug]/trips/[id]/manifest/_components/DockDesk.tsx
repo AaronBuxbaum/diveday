@@ -26,6 +26,7 @@ export function DockDesk({
   trip,
   stage,
   seats,
+  paper = false,
 }: {
   t: StaffTranslator;
   /**
@@ -39,11 +40,16 @@ export function DockDesk({
   /** The crew's newest word, whatever its age (`latestTripStage`). */
   stage: { stage: TripStage; recordedAt: Date } | null;
   seats: readonly { bookingId: string; fullName: string }[];
+  /**
+   * The trip packet's paper (`ManifestPaper`): no rider form, and only what
+   * was found aboard, read-only (layer 4 review, dde-a N1).
+   */
+  paper?: boolean;
 }) {
   const now = nowDate();
   const cancelled = trip.cancelled === true;
   const sailed = hasSailed(trip.startsAt, now);
-  const atTheDock = dockRiderDoorOpen({ isDeparture, sailed, stage, cancelled });
+  const atTheDock = !paper && dockRiderDoorOpen({ isDeparture, sailed, stage, cancelled });
   return (
     <>
       {atTheDock ? (
@@ -87,6 +93,7 @@ export function DockDesk({
           tripId={tripId}
           open={leftAboardOpen({ ...trip, now, timeZone: shop.timezone, stage, cancelled })}
           seats={seats.map((seat) => ({ bookingId: seat.bookingId, name: seat.fullName }))}
+          paper={paper}
         />
       ) : null}
     </>

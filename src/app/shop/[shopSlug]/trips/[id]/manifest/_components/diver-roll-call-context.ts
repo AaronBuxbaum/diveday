@@ -77,5 +77,11 @@ export type DiverRollCallContext = {
    * (`PRINTED_MEDICAL_ALERTS`); absent on the screen and on every other print.
    */
   printedMedicalAlerts?: PrintedMedicalAlerts;
+  /**
+   * Composed as the trip packet's paper (`PAPER_PACKET`, B03): each row is
+   * its name line and its printed facts, with no sheet behind the name and no
+   * mark to tap. Absent on the live manifest.
+   */
+  paper?: boolean;
   t: StaffTranslator;
 };
