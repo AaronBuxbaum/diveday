@@ -23,7 +23,8 @@ import type { DbExecutor } from "./client";
  * milliseconds) and below a function's own ceiling, so only a stuck holder is
  * refused. `lock-bounds.test.ts` pins that every money and seat lock helper
  * applies it; `seat-locks.postgres.test.ts` shows a waiter refused on a real
- * server.
+ * server, and `roll-call.postgres.test.ts` the crew roll call's trip lock
+ * (#2983).
  */
 export const LOCK_WAIT_BOUND = "5s";
 
