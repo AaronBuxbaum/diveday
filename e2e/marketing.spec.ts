@@ -163,11 +163,11 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   // from the bundle, never an English literal in the component.
   await expect(stepsBand.getByRole("img")).toHaveCount(5);
   await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
-  // The roll call is drawn once on this page, in the hero (visual review
-  // 2026-10-24, B14), so the roll-call step shows its own feature's screen,
-  // the site briefing the crew reads out, rather than a second roll call.
-  await expect(stepsBand.getByRole("img", { name: /roll call/i })).toHaveCount(0);
-  await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toBeVisible();
+  // The roll-call step draws the roll call (the claim and its mockup are one
+  // screen), at the checkpoint the hero's phone does not: after the first
+  // dive, so the page shows the boat coming back as well as leaving.
+  await expect(stepsBand.getByRole("img", { name: /roll call after dive 1/i })).toBeVisible();
+  await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
 
   // Each step ends in its feature page, in the booking's order, and none of
   // them is a door into the demo: the page it links to opens the demo on that
