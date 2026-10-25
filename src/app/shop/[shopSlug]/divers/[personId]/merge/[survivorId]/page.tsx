@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AssistReadButton } from "@/components/assists/AssistReadButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { assistsAvailable } from "@/db/assists";
@@ -89,7 +90,7 @@ export default async function MergeDiverPage({
     (await readUnsurePair(db, shop.id, personId, survivorId)) !== null;
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <ShopPageHeader
         eyebrow={preview.source.fullName}
         eyebrowHref={shopPath(shop.slug, "divers", personId)}
@@ -114,6 +115,6 @@ export default async function MergeDiverPage({
           status={status}
         />
       </div>
-    </main>
+    </StaffPage>
   );
 }

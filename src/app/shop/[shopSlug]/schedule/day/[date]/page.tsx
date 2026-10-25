@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerGroup } from "@/components/ui/ledger";
@@ -95,7 +96,7 @@ export default async function PastDayPage({
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <ShopPageHeader
         eyebrow={t("shared.shopNavLinks.board")}
         eyebrowHref={shopPath(shopSlug, "schedule", "board")}
@@ -126,6 +127,6 @@ export default async function PastDayPage({
           </ol>
         </LedgerGroup>
       )}
-    </main>
+    </StaffPage>
   );
 }

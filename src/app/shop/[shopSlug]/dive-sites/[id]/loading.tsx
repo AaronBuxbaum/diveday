@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { EditorFormSkeleton } from "../_components/EditorFormSkeleton";
@@ -18,7 +19,7 @@ import {
  */
 export default function DiveSiteLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         {/* The header's eyebrow bar is the back link: the page draws one,
             as the header's own eyebrow. A second, standalone bar above it
@@ -61,6 +62,6 @@ export default function DiveSiteLoading() {
           />
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

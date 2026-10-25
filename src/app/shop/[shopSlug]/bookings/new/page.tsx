@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
@@ -274,7 +275,7 @@ export default async function NewBookingPage({
   }));
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       {/* The eyebrow is the way up, in the board's own word. It used to read
           "Bookings" — a nav group with no page behind it, which principle 10
           forbids — with a second back link to the board underneath it. */}
@@ -393,6 +394,6 @@ export default async function NewBookingPage({
           </FieldActions>
         </form>
       </AutoOpenDetails>
-    </main>
+    </StaffPage>
   );
 }

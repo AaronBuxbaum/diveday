@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -48,13 +49,11 @@ import {
   saveCrewPublicConsentAction,
 } from "./actions";
 
-// `instant = true` asserts that navigating *into* this page paints
-// immediately — this segment's `loading.tsx`, with no request read above it.
-// Since the staff shell became synchronous (issue 1446) that holds for a cold,
-// direct visit too: the shell's session, shop row and nav stream in beside the
-// page from `ShopChrome` rather than above it, so the route gets a static
-// shell and its own reads are the only ones the reader waits on. See ADR
-// 20260804-instant-navigation.
+// `instant = true` asserts that navigating *into* this page paints immediately — this segment's
+// `loading.tsx`, with no request read above it. Since the staff shell became synchronous (issue
+// 1446) that holds for a cold, direct visit too: the shell's session, shop row and nav stream in
+// beside the page from `ShopChrome` rather than above it, so the route gets a static shell and its
+// own reads are the only ones the reader waits on. See ADR 20260804-instant-navigation.
 export const instant = true;
 
 export const metadata: Metadata = { title: "Crew schedule — DiveDay" };
@@ -265,7 +264,7 @@ export default async function StaffingPage({
   const saveCrewConsent = saveCrewPublicConsentAction.bind(null, weekStart);
   const deleteAway = deleteAwayAction.bind(null, weekStart);
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       {/* `week` is a reading of the page and stays in the URL; the rest is
           one-shot chrome, including the retired `from`/`to` an old bookmark
           may still carry. */}
@@ -533,7 +532,7 @@ export default async function StaffingPage({
           </CompactDisclosureRow>
         </>
       )}
-    </main>
+    </StaffPage>
   );
 }
 

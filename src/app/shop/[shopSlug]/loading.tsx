@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
@@ -21,7 +22,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
  */
 export default function ShopSurfaceLoading() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-72 max-w-full" />
         {/* Three station-shaped panels (ADR 20260904-reef-all-the-way-down,
@@ -52,6 +53,6 @@ export default function ShopSurfaceLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

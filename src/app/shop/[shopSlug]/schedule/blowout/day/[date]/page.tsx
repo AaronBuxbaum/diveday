@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -143,7 +144,7 @@ export default async function DayBlowoutPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <FlashParams params={["notice", "count", "called", "skipped"]} />
       <ShopPageHeader
         eyebrow={t("shared.shopNavLinks.board")}
@@ -260,7 +261,7 @@ export default async function DayBlowoutPage({
           </form>
         )}
       </SectionCard>
-    </main>
+    </StaffPage>
   );
 }
 

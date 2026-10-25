@@ -55,7 +55,7 @@ export default async function EmbedSettingsPage({
   );
   if (!origin) {
     return (
-      <main className={settingsPaneClass("5xl")}>
+      <main className={settingsPaneClass()}>
         {header}
         <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {t("settings.embed.notConfigured", { email: SUPPORT_EMAIL })}
@@ -132,7 +132,7 @@ export default async function EmbedSettingsPage({
   };
   const scheduleUrl = `${origin}${publicSchedulePath(shop.slug)}`;
   return (
-    <main className={settingsPaneClass("5xl")}>
+    <main className={settingsPaneClass()}>
       {header}
       <EmbedGenerator
         origin={origin}

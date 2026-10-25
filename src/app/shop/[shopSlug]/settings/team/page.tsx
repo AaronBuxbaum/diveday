@@ -548,7 +548,7 @@ export default async function TeamSettingsPage({
   const credentialRows = credentialRowsFor(credentials, today, locale, t);
   const needReview = credentialRows.filter((row) => !row.reviewed).length;
   return (
-    <main className={settingsPaneClass("5xl")}>
+    <main className={settingsPaneClass()}>
       <FlashParams
         params={[
           "notice",

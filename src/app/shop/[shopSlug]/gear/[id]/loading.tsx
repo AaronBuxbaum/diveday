@@ -1,9 +1,10 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 
 export default function GearUnitLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         {/* The header skeleton's own eyebrow is the page's one "‹ Gear
             register" line. A second bar above it put the heading 32px low
@@ -15,6 +16,6 @@ export default function GearUnitLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

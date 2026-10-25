@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
@@ -23,10 +24,10 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
  */
 export default function DiversLoading() {
   return (
-    // max-w-5xl to match the page it stands in for — the ledger's measure, and
-    // the shop home's. A narrower skeleton made every navigation into the
+    // `full`, to match the page it stands in for: the ledger's width, and the
+    // shop home's. A narrower skeleton made every navigation into the
     // roster slide sideways when the real page landed.
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="full">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" description={false} eyebrow={false} />
         <div className="mt-8 flex gap-2 max-sm:overflow-hidden sm:flex-wrap">
@@ -59,6 +60,6 @@ export default function DiversLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

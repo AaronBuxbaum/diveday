@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { sectionCardClass } from "@/components/ui/card";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 
@@ -8,7 +9,7 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
  */
 export default function NewWorkOrderLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         <div className="h-4 w-24 rounded bg-surface-sunken" />
         <div
@@ -19,6 +20,6 @@ export default function NewWorkOrderLoading() {
           <div className="mt-4 h-12 w-full max-w-sm rounded-lg bg-surface-sunken" />
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }

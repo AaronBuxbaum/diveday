@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import type { EditorSectionRef } from "@/components/editor/EditorSection";
 import { FlashParams } from "@/components/FlashParams";
@@ -189,7 +190,7 @@ export default async function EditCoursePage({
   return (
     // The form's own measure: the jump rail that widened this page from `lg`
     // up is gone (visual review 2026-10-24, A11).
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       {/* One-shot, like every other staff notice: without this, `?notice=saved`
           stayed in the URL and replayed "Saved" on every refresh and every
           back-navigation, long after the save. `field` rides along because it
@@ -387,6 +388,6 @@ export default async function EditCoursePage({
           </form>
         ) : null}
       </div>
-    </main>
+    </StaffPage>
   );
 }

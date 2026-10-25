@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -81,7 +82,7 @@ export default async function DisputeSheetPage({
   const { order, waiver, checkIn } = sheet;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 space-y-10 px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading" className="space-y-10">
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -257,7 +258,7 @@ export default async function DisputeSheetPage({
           </ul>
         )}
       </section>
-    </main>
+    </StaffPage>
   );
 }
 

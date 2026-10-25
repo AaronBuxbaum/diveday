@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import {
   type BookingRequestCardItem,
@@ -130,7 +131,7 @@ export default async function NewBookingDiverPage({
     : await listBookableDivers(db, shop.id, trip.id, { query: searchQuery });
   const requestQuery = requestContext ? `?request=${encodeURIComponent(requestContext.id)}` : "";
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       {/* R9 put a second link under this header pointing back one step, to the
           departure picker, because pointing at the board stranded a staffer
           who had picked the wrong boat. `SelectedTripCard` below now carries
@@ -231,6 +232,6 @@ export default async function NewBookingDiverPage({
           confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />
-    </main>
+    </StaffPage>
   );
 }

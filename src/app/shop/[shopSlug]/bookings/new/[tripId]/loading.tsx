@@ -1,3 +1,4 @@
+import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 
@@ -7,7 +8,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function NewBookingForTripLoading() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+    <StaffPage width="reading">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-64 max-w-full" description={false} />
         <div className="mt-6 h-12 w-full max-w-sm rounded-lg bg-surface-sunken" />
@@ -22,6 +23,6 @@ export default function NewBookingForTripLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </StaffPage>
   );
 }
