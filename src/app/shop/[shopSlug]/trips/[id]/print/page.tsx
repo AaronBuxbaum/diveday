@@ -86,7 +86,7 @@ export default async function TripPrintPage({
   if (!packet) notFound();
 
   return (
-    <div className="trip-print-bundle">
+    <div className="trip-print-bundle" data-paper-screen>
       {/* The marker the packet itself renders. It used to wait on the Guests
           tab's `data-trip-guests-ready`, which this document has not composed
           since #814 — so every print sat out `AutoPrint`'s five-second
