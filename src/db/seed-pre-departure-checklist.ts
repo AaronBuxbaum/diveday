@@ -3,6 +3,14 @@
 // only so the shape reads on first look at the demo shop.
 import type { DbExecutor } from "./client";
 import { preDepartureChecklistItems } from "./schema";
+import { at } from "./seed-clock";
+
+/**
+ * The demo shop wrote its checklist long before any departure it seeds: the
+ * departure log reads the lines as they stood at each roll call (issue 2725),
+ * so lines stamped at seed time would be missing from every seeded past count.
+ */
+const CHECKLIST_WRITTEN_DAYS_AGO = 3650;
 
 /**
  * A realistic pre-departure line for a US day-boat operation — the set
@@ -20,7 +28,12 @@ export async function seedPreDepartureChecklist(db: DbExecutor, shopId: string):
     "Visual distress signals aboard and in date",
     "VHF radio checked",
   ];
-  await db
-    .insert(preDepartureChecklistItems)
-    .values(items.map((label, index) => ({ shopId, label, sortOrder: index })));
+  await db.insert(preDepartureChecklistItems).values(
+    items.map((label, index) => ({
+      shopId,
+      label,
+      sortOrder: index,
+      createdAt: at(-CHECKLIST_WRITTEN_DAYS_AGO, 9),
+    })),
+  );
 }

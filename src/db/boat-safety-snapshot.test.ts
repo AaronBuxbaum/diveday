@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { captureDepartureBoatSafety, departureBoatSafetySnapshot } from "./boat-safety";
+import {
+  captureDepartureBoatSafety,
+  departureBoatSafetySnapshot,
+  departureChecklistAnswer,
+} from "./boat-safety";
 import { createBoat } from "./boats";
 import type { AppDb } from "./client";
 import { createGearItem } from "./gear";
@@ -59,22 +63,30 @@ async function paperedBoat(db: AppDb, shopId: string) {
 }
 
 describe("captureDepartureBoatSafety", () => {
-  it("keeps the checklist answer as it stood at the same instant as the notices (#2725)", async () => {
+  it("reads the checklist answer as it stood at the snapshot's instant (issue 2725)", async () => {
     const { db, shop } = ctx;
     const boat = await paperedBoat(db, shop.id);
     const trip = await departure(db, shop.id, boat.id);
     const [actor] = await listStaff(db, shop.id);
     if (!actor) throw new Error("no staff");
+    const minutes = (n: number) => new Date(BEFORE.getTime() + n * 60_000);
+    const seeded = await departureChecklistAnswer(db, shop.id, trip.id, BEFORE);
     const items = await db
       .insert(preDepartureChecklistItems)
       .values(
-        ["#2725 oxygen aboard", "#2725 flares in date", "#2725 radio checked"].map(
-          (label, sortOrder) => ({ shopId: shop.id, label, sortOrder: 1000 + sortOrder }),
-        ),
+        [
+          { label: "#2725 oxygen aboard", createdAt: minutes(-120) },
+          { label: "#2725 flares in date", createdAt: minutes(-120) },
+          { label: "#2725 radio checked", createdAt: minutes(-120) },
+          // Added after the count: not on the list then.
+          { label: "#2725 added later", createdAt: minutes(30) },
+          // Deleted before the count, though checked first: not on the list then.
+          { label: "#2725 old wording", createdAt: minutes(-120), deletedAt: minutes(-20) },
+        ].map((item, sortOrder) => ({ ...item, shopId: shop.id, sortOrder: 1000 + sortOrder })),
       )
       .returning();
-    const [oxygen, flares, radio] = items;
-    if (!oxygen || !flares || !radio) throw new Error("items missing");
+    const [oxygen, flares, radio, , oldWording] = items;
+    if (!oxygen || !flares || !radio || !oldWording) throw new Error("items missing");
     const tap = (itemId: string, status: "checked" | "cleared", occurredAt: Date) => ({
       shopId: shop.id,
       tripId: trip.id,
@@ -84,21 +96,19 @@ describe("captureDepartureBoatSafety", () => {
       occurredAt,
     });
     await db.insert(preDepartureCheckEvents).values([
-      tap(oxygen.id, "checked", new Date(BEFORE.getTime() - 60_000)),
+      tap(oldWording.id, "checked", minutes(-30)),
+      tap(oxygen.id, "checked", minutes(-1)),
       // Checked, then taken back before the count: not checked then.
-      tap(radio.id, "checked", new Date(BEFORE.getTime() - 120_000)),
-      tap(radio.id, "cleared", new Date(BEFORE.getTime() - 30_000)),
+      tap(radio.id, "checked", minutes(-2)),
+      tap(radio.id, "cleared", minutes(-0.5)),
       // Checked after the count: the record says what the crew had done then.
-      tap(flares.id, "checked", new Date(BEFORE.getTime() + 60_000)),
+      tap(flares.id, "checked", minutes(1)),
     ]);
-    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE)).toBe("captured");
-
-    const snapshot = await departureBoatSafetySnapshot(db, shop.id, trip.id);
-    const ours = (snapshot?.checklist?.unchecked ?? []).filter((label) =>
-      label.startsWith("#2725"),
-    );
+    const answer = await departureChecklistAnswer(db, shop.id, trip.id, BEFORE);
+    const ours = answer.unchecked.filter((label) => label.startsWith("#2725"));
     expect(ours).toEqual(["#2725 flares in date", "#2725 radio checked"]);
-    expect(snapshot?.checklist?.itemCount).toBeGreaterThanOrEqual(3);
+    // Our three lines, never the late or the deleted one.
+    expect(answer.itemCount - seeded.itemCount).toBe(3);
   });
 
   it("keeps the papers verbatim and the notices judged on the departure's own day", async () => {

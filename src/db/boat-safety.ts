@@ -23,7 +23,7 @@ import { log } from "@/lib/log";
 import { hasSailed } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { latestServiceClocks } from "./gear";
-import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
+import { latestPreDepartureChecksForTrip, listChecklistItemsAsOf } from "./pre-departure-check";
 import { queryAll } from "./query-helpers";
 import { boats, departureBoatSafetySnapshots, gearItems, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -451,9 +451,6 @@ async function captureInTransaction(
     mmsi: boat.mmsi,
     workingChannel: boat.workingChannel,
   };
-  // The crew's answer at the same instant (#2725): the log sets it beside the
-  // notices, so it is kept here rather than read from today's checklist.
-  const checklist = await checklistAnswerAsOf(db, shopId, tripId, asOf);
   const row = {
     boatId: boat.id,
     boatName: boat.name,
@@ -462,7 +459,6 @@ async function captureInTransaction(
     papers,
     radio,
     notices,
-    checklist,
     capturedAt: asOf,
   };
   const written = await db
@@ -479,18 +475,21 @@ async function captureInTransaction(
 }
 
 /**
- * The departure's pre-departure checklist as it stood at `asOf` (#2725): the
- * lines the log prints for this departure (`listChecklistItemsForTrip`), and
- * the wording of each whose newest tap at or before `asOf` was not a check.
+ * The crew's pre-departure answer at the boat snapshot's instant (issue 2725):
+ * the checklist lines as they stood at `asOf` and the wording of each whose
+ * newest tap at or before `asOf` was not a check. Derived when the log is
+ * read, never stored: taps are append-only and keep the time they were made,
+ * so a tap synced from an offline tablet after the count (or a live tap that
+ * committed after the count's read) still counts as of when it happened.
  */
-async function checklistAnswerAsOf(
+export async function departureChecklistAnswer(
   db: DbExecutor,
   shopId: string,
   tripId: string,
   asOf: Date,
 ): Promise<BoatChecklistAnswer> {
   const [items, checks] = await queryAll(db, [
-    () => listChecklistItemsForTrip(db, shopId, tripId),
+    () => listChecklistItemsAsOf(db, shopId, asOf),
     () => latestPreDepartureChecksForTrip(db, shopId, tripId, asOf),
   ]);
   return {
@@ -545,7 +544,6 @@ export async function departureBoatSafetySnapshot(db: DbExecutor, shopId: string
       papers: departureBoatSafetySnapshots.papers,
       radio: departureBoatSafetySnapshots.radio,
       notices: departureBoatSafetySnapshots.notices,
-      checklist: departureBoatSafetySnapshots.checklist,
       capturedAt: departureBoatSafetySnapshots.capturedAt,
     })
     .from(departureBoatSafetySnapshots)

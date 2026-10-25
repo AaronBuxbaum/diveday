@@ -321,7 +321,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   dive_packages: "the shop’s price list of multi-dive packages",
   pre_departure_checklist_items: "the shop’s own checklist lines",
   departure_boat_safety_snapshots:
-    "a boat’s papers, kit notices and checklist lines as the boat left — the shop’s own hull, units and wording, nobody aboard",
+    "a boat’s papers and kit notices as the boat left — the shop’s own hull and units, nobody aboard",
   gear_items: "the shop’s own units: a serial number, a size, a service note about the unit",
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:

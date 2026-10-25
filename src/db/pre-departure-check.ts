@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -95,6 +95,38 @@ export async function listChecklistItemsForTrip(
                 ),
               ),
           ),
+        ),
+      ),
+    )
+    .orderBy(asc(preDepartureChecklistItems.sortOrder), asc(preDepartureChecklistItems.createdAt));
+}
+
+/**
+ * The shop's checklist lines as they stood at `asOf`: made by then and not yet
+ * deleted (issue 2725, the boat snapshot's answer). A line added after the
+ * departure count was not on the list then, and one deleted before it was
+ * not either; delete-then-recreate is the only edit path and live labels are
+ * unique, so no two lines here share a label.
+ */
+export async function listChecklistItemsAsOf(
+  db: DbExecutor,
+  shopId: string,
+  asOf: Date,
+): Promise<ChecklistItem[]> {
+  return db
+    .select({
+      id: preDepartureChecklistItems.id,
+      label: preDepartureChecklistItems.label,
+      sortOrder: preDepartureChecklistItems.sortOrder,
+    })
+    .from(preDepartureChecklistItems)
+    .where(
+      and(
+        eq(preDepartureChecklistItems.shopId, shopId),
+        lte(preDepartureChecklistItems.createdAt, asOf),
+        or(
+          isNull(preDepartureChecklistItems.deletedAt),
+          gt(preDepartureChecklistItems.deletedAt, asOf),
         ),
       ),
     )

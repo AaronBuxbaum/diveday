@@ -1,1 +1,0 @@
-ALTER TABLE "departure_boat_safety_snapshots" ADD COLUMN "checklist" jsonb;
