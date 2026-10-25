@@ -24,7 +24,6 @@ import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
-import { StatusMark } from "@/components/ui/StatusMark";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
@@ -45,6 +44,7 @@ import {
   type TodayAction,
   weekCrewAway,
 } from "@/lib/today";
+import { AllClearLine } from "./AllClearLine";
 import { ClosingStation } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
@@ -181,24 +181,6 @@ function rowControls(
  */
 const HORIZON_PANEL_CLASS =
   "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1 sm:inset-ring sm:inset-ring-transparent sm:[@media(hover:hover)]:has-[>summary:hover,>li:hover]:inset-ring-border-strong";
-
-/**
- * **Good news wears the good-news tone** (UX review 2026-10-10, item 3). The
- * morning all-clear wore the coral wash, which read as the amber of a warning
- * on a phone in the sun; amber is rationed for things that need a hand, and a
- * crew taught that amber can mean "all clear" stops reading amber.
- */
-function BoatsClearLine({ children }: { children: React.ReactNode }) {
-  return (
-    <p
-      role="status"
-      className="flex items-center gap-2 rounded-lg border border-success/30 bg-success-tint px-3 py-2 text-sm font-semibold text-success-strong"
-    >
-      <StatusMark variant="success" size="sm" />
-      {children}
-    </p>
-  );
-}
 
 /**
  * **A spine row's anatomy, owned once**: the glyph, one word of kind, the one
@@ -871,7 +853,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           16px under its edge with 40px to the first station. Unpulled, they
           sit the header's 32px under the band like every first block. */}
       {allHomeLine && evening ? (
-        <EarnedMomentLine tone="ink" className="-mt-4 tabular-nums">
+        <AllClearLine className="rise-in -mt-4 tabular-nums">
           {/* **Souls, not seats** (issue #1346). The one sentence in the
               product about who came home used to leave the crew out of both
               numbers — and they are the people most reliably still in the
@@ -881,10 +863,10 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             crew: evening.close.crew,
             back: evening.close.back,
           })}
-        </EarnedMomentLine>
+        </AllClearLine>
       ) : clearUnlessWindy ? (
         <UnlessWindy wind={highWind} show={(wind) => jobs + wind.length > 0 && !windOnToday(wind)}>
-          <BoatsClearLine>{t("today.todayQueue.boatsClear")}</BoatsClearLine>
+          <AllClearLine mark>{t("today.todayQueue.boatsClear")}</AllClearLine>
         </UnlessWindy>
       ) : null}
 

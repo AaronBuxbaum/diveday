@@ -465,6 +465,10 @@ describe("the evening reading", () => {
     const line = screen.getAllByText("All boats are home: 10 passengers and 2 crew out, 12 back.");
     expect(line).toHaveLength(1);
     expect(line[0]).toHaveAttribute("role", "status");
+    // The all-clear in the success wash the gear "All home" band uses, never
+    // coral or amber ink (visual review A07).
+    expect(line[0]).toHaveClass("bg-success-tint", "text-success-strong");
+    expect(line[0].className).not.toMatch(/accent|warning/);
   });
 
   it("keeps the accent unspent when a diver did not come back", () => {
