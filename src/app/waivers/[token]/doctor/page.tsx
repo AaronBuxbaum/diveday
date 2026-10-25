@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -28,6 +29,9 @@ export const instant = true;
 
 /** The published form the doctor completes: its examiner page, never a restyled copy. */
 const FORM = RSTC_QUESTIONNAIRE.published;
+
+/** The "Can't send it here?" lead-in: on paper there is no upload for it to answer. */
+const onlineOnly = (chunks: ReactNode) => <span className="print:hidden">{chunks}</span>;
 
 /**
  * **Take this to your doctor** (fifth-loop ideas, item 17; H-127 and ADR
@@ -176,8 +180,9 @@ export default async function DoctorReferralPage({
                             {chunks}
                           </a>
                         ),
+                        online: onlineOnly,
                       })
-                    : t("waiver.doctor.returnToShop")}
+                    : t.rich("waiver.doctor.returnToShop", { online: onlineOnly })}
                 </p>
               }
             />

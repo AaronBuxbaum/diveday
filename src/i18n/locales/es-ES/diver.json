@@ -1188,8 +1188,8 @@
       "formInvalid": "Envía una foto o un PDF de menos de {mb} MB.",
       "formRate": "Demasiados intentos. Espera unos minutos y vuelve a intentarlo.",
       "formUnavailable": "Ahora mismo no se puede enviar, así que usa una de las opciones de abajo.",
-      "returnWithEmail": "¿No puedes enviarlo aquí? Manda una foto a <email>{emailAddress}</email> antes del día de tu buceo, o tráelo al centro antes de bucear.",
-      "returnToShop": "¿No puedes enviarlo aquí? Trae el formulario firmado al centro antes de bucear."
+      "returnWithEmail": "<online>¿No puedes enviarlo aquí?</online> Manda una foto a <email>{emailAddress}</email> antes del día de tu buceo, o tráelo al centro antes de bucear.",
+      "returnToShop": "<online>¿No puedes enviarlo aquí?</online> Trae el formulario firmado al centro antes de bucear."
     },
     "signing": "Firmando…",
     "beforeDockTitle": "Un paso rápido antes del muelle",

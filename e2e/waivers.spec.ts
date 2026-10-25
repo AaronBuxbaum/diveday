@@ -276,9 +276,9 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await page.getByRole("button", { name: "Show my answers" }).click();
   await expect(page.getByText(/^That date doesn’t match the one/)).toBeVisible();
   await expect(page.getByText("Question 3")).toHaveCount(0);
-  await expect(
-    page.getByText(/^Send a photo of the signed form to front\.desk@mail\.example before/),
-  ).toBeVisible();
+  // The signed form comes back here, to the shop's staff only (#2797).
+  await expect(page.getByText(/^Send a photo or PDF of the signed form here/)).toBeVisible();
+  await expect(page.getByLabel(/signed form/i).first()).toBeAttached();
 
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
