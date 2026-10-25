@@ -207,7 +207,7 @@ test.describe("deck crew", () => {
     });
     // The action answers with this redirect. Wait for its query before checking
     // the result in the page, or the assertion can race the server action.
-    await expect(page).toHaveURL(/\\?notice=not-authorized-fit&form=fit/);
+    await expect(page).toHaveURL(/\?notice=not-authorized-fit&form=fit/);
 
     // The server refused an authorization boundary, so the nearby outcome is
     // assertive (`alert`), not an ambient confirmation (`status`).
