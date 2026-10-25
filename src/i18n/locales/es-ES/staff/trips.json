@@ -762,6 +762,7 @@
     "snagSaving": "Guardando…",
     "noteProblem": "Anotar un problema",
     "noteItemLabel": "¿En qué punto?",
+    "noteItemPlaceholder": "Elige un punto",
     "noteLabel": "¿Qué pasa?",
     "noteSave": "Guardar nota",
     "noteRefused": "Escribe qué pasa, hasta 280 caracteres.",

@@ -32,6 +32,8 @@ export type SnagCopy = {
   noteProblem: string;
   /** "Which item?", the picker over the list's lines. */
   noteItemLabel: string;
+  /** "Pick an item", the picker's empty first choice: nothing is preselected. */
+  noteItemPlaceholder: string;
   noteLabel: string;
   noteSave: string;
   noteRefused: string;
@@ -129,9 +131,16 @@ export function SnagNoteForm({
           id={itemFieldId}
           name="checklistItemId"
           required
-          defaultValue={items[0]?.id}
+          // **No line is picked for the crew** (layer 4 review, dde-a F3): a
+          // note saved without touching the picker would land on whichever
+          // line came first and misinform the next crew. The empty choice is
+          // refused by `required`, and the server refuses an empty id too.
+          defaultValue=""
           className={controlClass}
         >
+          <option value="" disabled>
+            {copy.noteItemPlaceholder}
+          </option>
           {items.map((item) => (
             <option key={item.id} value={item.id}>
               {item.label}

@@ -25,6 +25,7 @@ const copy: PreDepartureCheckListCopy = {
   snagSaving: "Saving…",
   noteProblem: "Note a problem",
   noteItemLabel: "Which item?",
+  noteItemPlaceholder: "Pick an item",
   noteLabel: "What’s wrong?",
   noteSave: "Save note",
   noteRefused: "Write what’s wrong, up to 280 characters.",
@@ -334,6 +335,7 @@ describe("the boat's snags (fifth-loop ideas, item 1)", () => {
     const picker = screen.getByLabelText("Which item?") as HTMLSelectElement;
     expect(picker.name).toBe("checklistItemId");
     expect([...picker.options].map((option) => [option.value, option.text])).toEqual([
+      ["", "Pick an item"],
       ["oxygen", "Emergency oxygen kit aboard"],
       ["radio", "Radio check done"],
     ]);
@@ -367,6 +369,30 @@ describe("the boat's snags (fifth-loop ideas, item 1)", () => {
     for (const button of screen.getAllByRole("button", { pressed: false })) {
       expect(button).not.toBeDisabled();
     }
+  });
+
+  it("picks no line for the crew, and refuses a note saved without one (review dde-a F3)", async () => {
+    const note = vi.fn(async (_prev: unknown, _form: FormData) => ({ ok: true }) as const);
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture
+        snagActions={{ note, answer: vi.fn(async () => null) }}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Note a problem"));
+    const picker = screen.getByLabelText("Which item?") as HTMLSelectElement;
+    // Nothing chosen: the empty choice shows, and it is not itself a line.
+    expect(picker.value).toBe("");
+    expect(screen.getByRole("option", { name: "Pick an item" })).toBeDisabled();
+    expect(picker).toBeRequired();
+    expect(picker).toBeInvalid();
+    await user.type(screen.getByLabelText("What’s wrong?"), "VHF crackles on 16");
+    await user.click(screen.getByRole("button", { name: "Save note" }));
+    expect(note).not.toHaveBeenCalled();
   });
 
   it("keeps this crew's own note under its line with Fixed alone", () => {
