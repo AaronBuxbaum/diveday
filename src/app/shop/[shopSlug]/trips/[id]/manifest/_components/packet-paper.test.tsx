@@ -94,6 +94,76 @@ describe("the manifest's divers on the packet's paper", () => {
     expect(row).toHaveClass("border-danger");
   });
 
+  /**
+   * **One quiet sheet** (visual review polish, B55): a boarded row says
+   * "Boarded" with who and when, so it wears no green wash; twelve boarded
+   * rows were the same fill twelve times. The alarms keep theirs.
+   */
+  it("paints no fill on a boarded or uncalled row, and keeps the alarm's on a blocked one", () => {
+    const { container } = renderPaper([
+      diver({ bookingId: "b-3", fullName: "Ana Ruiz", rollCall: boarded("Sal Moretti") }),
+      diver({ bookingId: "b-5", fullName: "Theo Lind" }),
+      diver({
+        bookingId: "b-4",
+        fullName: "Priya Sharma",
+        readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+      } as Partial<TripManifest["divers"][number]>),
+      diver({
+        bookingId: "b-6",
+        fullName: "Mia Chen",
+        rollCall: boarded("Sal Moretti"),
+        readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+      } as Partial<TripManifest["divers"][number]>),
+    ]);
+    for (const id of ["b-3", "b-5"]) {
+      const row = container.querySelector(`#diver-row-${id}`);
+      expect(row?.className).not.toMatch(/\bbg-[a-z-]+-tint\b|\bbg-surface-sunken\b/);
+      expect(row).toHaveClass("border-border-strong");
+    }
+    expect(container.querySelector("#diver-row-b-3")).toHaveTextContent("Boarded");
+    for (const id of ["b-4", "b-6"]) {
+      expect(container.querySelector(`#diver-row-${id}`)).toHaveClass(
+        "border-danger",
+        "bg-danger-tint",
+      );
+    }
+  });
+
+  /**
+   * **The chip row holds states only** (visual review polish, B03): an
+   * adult's age and a birthday are one muted line of words; a minor's age
+   * stays a warning chip.
+   */
+  it("says an adult's age and a birthday as one quiet line, and keeps a minor's chip", () => {
+    const { container } = renderPaper([
+      diver({
+        bookingId: "b-7",
+        fullName: "Sana Malik",
+        age: 27,
+        minor: false,
+        birthday: { status: "soon", inDays: 7 },
+        readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+      } as Partial<TripManifest["divers"][number]>),
+      diver({
+        bookingId: "b-8",
+        fullName: "Leo Park",
+        age: 15,
+        minor: true,
+        readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+      } as Partial<TripManifest["divers"][number]>),
+    ]);
+    const adult = container.querySelector("#diver-row-b-7");
+    const line = within(adult as HTMLElement).getByText(/^Age 27 · /);
+    expect(line.tagName).toBe("P");
+    expect(line).toHaveClass("text-muted");
+    expect(line.textContent).toMatch(/7 days/);
+    const minor = container.querySelector("#diver-row-b-8") as HTMLElement;
+    expect(within(minor).getAllByText(t("manifest.minorAge", { age: 15 })).length).toBeGreaterThan(
+      0,
+    );
+    expect(within(minor).queryByText(t("manifest.age", { age: 15 }))).toBeNull();
+  });
+
   it("carries the printed medical alert's words under the diver, and the note once", () => {
     const { container } = renderPaper([
       diver({ bookingId: "b-1", fullName: "Sana Malik", medicalAlert: true }),

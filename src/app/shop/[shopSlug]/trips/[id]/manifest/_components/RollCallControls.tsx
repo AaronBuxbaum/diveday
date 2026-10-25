@@ -220,6 +220,28 @@ export const ROLL_CALL_ROW_CLASS =
  * and rhythm, with nothing about it that says "tap me", because nothing
  * opens from it there.
  */
+/**
+ * **A paper row's tone** (visual review polish, B55): on the packet the
+ * recorded state is a word on every row ("Boarded", with who and when), so a
+ * boarded, left-ashore or uncalled row wears no fill, only the plain rule: a
+ * day of boarded rows was the same green wash twelve times over. The two
+ * alarms keep their tone on paper, because a blocked person and a person not
+ * back aboard must stay visibly so on every list: not back aboard, and
+ * blocked at the dock (aboard over a block included).
+ */
+export function paperRowTone(
+  recordedTone: RollCallRecordedTone | null,
+  blockedAtDock: boolean,
+): string {
+  if (recordedTone === "notBackAboard") return ROLL_CALL_ROW_TONE.notBackAboard;
+  // The same precedence as `rollCallRowTone`: a block paints an uncalled row
+  // and one boarded over it; a recorded "Not boarded" is said in words.
+  if (blockedAtDock && (recordedTone === null || recordedTone === "boarded")) {
+    return ROLL_CALL_ROW_TONE.blocked;
+  }
+  return "border-border-strong";
+}
+
 export const PAPER_ROW_CLASS =
   "flex min-h-19 w-full flex-wrap items-center gap-2.5 py-3 ps-4 pe-2 text-start sm:flex-nowrap print:min-h-0 print:flex-nowrap print:py-1";
 export const ROW_DISCLOSURE_SUMMARY_CLASS =

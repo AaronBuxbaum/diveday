@@ -28,6 +28,7 @@ import { personStatusTone } from "./person-status-tone";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
   PAPER_ROW_CLASS,
+  paperRowTone,
   ROLL_CALL_ROW_CLASS,
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -318,8 +319,14 @@ export function CrewRollCall({
                   // crew member's name split across a page boundary is a
                   // defect in the record rather than a layout nit
                   // (`ROLL_CALL_ROW_CLASS`, with the card's corner on paper).
+                  // On the packet's paper only the alarm keeps a fill
+                  // (`paperRowTone`, B55); the state is in words on the row.
                   className={`${ROLL_CALL_ROW_CLASS} ${rollCallScrollMargin(isDeparture)} ${
-                    recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
+                    paper
+                      ? paperRowTone(recordedTone, false)
+                      : recordedTone
+                        ? ROLL_CALL_ROW_TONE[recordedTone]
+                        : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
                   {/* The row's hairline sits on this box, in the rule colour and
