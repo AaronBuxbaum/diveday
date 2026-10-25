@@ -5,6 +5,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seatIsHeld } from "@/lib/no-show";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
+import { isLockWaitRefusal } from "./lock-bounds";
 import {
   departureRollCallForBooking,
   onTheWaterByRollCall,
@@ -502,5 +503,67 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
       duplicate: true,
     });
     expect(await rowsCarrying(pg.db, shared.clientEventId)).toBe(1);
+  });
+});
+
+/**
+ * **A crew tap behind a stuck trip lock gives up in five seconds** (issue
+ * #2983).
+ *
+ * The crew half of the head count takes the trip row `FOR NO KEY UPDATE`
+ * before anything else it locks. The diver half reaches the same row through
+ * `lockSeatDeparture`, which bounds its wait (`boundLockWaits`); the crew half
+ * did not, so a captain's tap queued behind a held trip waited until its own
+ * function was killed, and the crew screen showed a spinner instead of "busy,
+ * tap again".
+ *
+ * The holder here takes the trip row `FOR UPDATE` and never lets go in time.
+ * The assertion is the error and the clock, not the outcome alone: an
+ * unbounded wait shows as "still waiting" at nine seconds, and a refusal for
+ * any other reason shows as a different SQLSTATE. Nothing is written by the
+ * refused tap, so a retry once the holder commits records it normally.
+ */
+describePostgres("the crew's tap behind a held trip", () => {
+  it("gives up the trip lock after five seconds with the lock-timeout error", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, bookingId, staffId } = await crewMemberWithASeat(pg.db);
+    const gate = await holdRowLock(pg, sql`select id from trips where id = ${tripId} for update`);
+
+    const started = performance.now();
+    const tap = recordCrewRollCall(pg.connect(), {
+      shopId,
+      tripId,
+      personId: staffId,
+      recordedByPersonId: staffId,
+      status: "boarded",
+    }).then(
+      (outcome) => ({ settled: "resolved" as const, outcome }),
+      (error: unknown) => ({ settled: "rejected" as const, error }),
+    );
+    const stillWaiting = new Promise<{ settled: "waiting" }>((resolve) => {
+      setTimeout(() => resolve({ settled: "waiting" }), 9_000);
+    });
+    const result = await Promise.race([tap, stillWaiting]);
+    const elapsed = performance.now() - started;
+    await gate.release();
+    await tap;
+
+    expect(result.settled).toBe("rejected");
+    const failure = result.settled === "rejected" ? result.error : undefined;
+    expect(isLockWaitRefusal(failure)).toBe(true);
+    expect(elapsed).toBeGreaterThanOrEqual(4_500);
+    expect(elapsed).toBeLessThan(9_000);
+
+    // The refused tap wrote nothing; the retry, once the trip is free, does.
+    expect(await onTheWaterByRollCall(pg.db, shopId, tripId, bookingId)).not.toBe("boarded");
+    await expect(
+      recordCrewRollCall(pg.db, {
+        shopId,
+        tripId,
+        personId: staffId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
   });
 });
