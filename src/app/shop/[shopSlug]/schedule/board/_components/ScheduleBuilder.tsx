@@ -508,7 +508,7 @@ function CopyPanel({
  * day's is `w:add:<dateIso>`. One prefix covered both while the day stream
  * existed, because its own per-day keys were `add:<dateIso>`; deleting it
  * (#1923) left `startsWith("add:")` matching only the header's, so a day's
- * panel opened onto selects that said "Loading…" for the rest of the visit.
+ * panel opened onto selects that never filled for the rest of the visit.
  */
 const isAddKey = (key: string | null) => key === "add:top" || (key?.startsWith("w:add:") ?? false);
 
@@ -525,6 +525,11 @@ export type ScheduleBuilderContext = {
   loadTideWindow?: (input: BuilderTideWindowInput) => Promise<string | null>;
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
+  /**
+   * The same options, read with the page when it arrives with the add panel
+   * open (`?add=`), so its selects open filled rather than pulsing (A33).
+   */
+  initialOptions?: BuilderOptions | null;
   /** The move panel's impact preview, fetched per departure when one opens. */
   loadMovePreflight: (
     tripId: string,
@@ -566,6 +571,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
     loadTideWindow,
     loadMovePreflight,
     loadOptions,
+    initialOptions = null,
     price,
     actions,
     defaultDateIso,
@@ -666,9 +672,9 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   // The add panel's selects, fetched the first time any add panel opens and
   // kept for the rest of the visit — the catalogue does not change while a
   // staff member schedules a week. A failed fetch clears the guard so the next
-  // open tries again rather than leaving the selects saying "Loading…" forever.
-  const [options, setOptions] = useState<BuilderOptions | null>(null);
-  const optionsRequested = useRef(false);
+  // open tries again rather than leaving the selects empty forever.
+  const [options, setOptions] = useState<BuilderOptions | null>(initialOptions);
+  const optionsRequested = useRef(initialOptions !== null);
   useEffect(() => {
     if (!isAddKey(open) || optionsRequested.current) return;
     optionsRequested.current = true;

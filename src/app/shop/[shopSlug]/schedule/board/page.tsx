@@ -404,6 +404,8 @@ export default async function ScheduleBoardPage({
           loadPattern: loadWeekdayPatternAction,
           loadTideWindow: loadTideWindowAction,
           loadOptions: loadBuilderOptionsAction,
+          initialOptions:
+            addPanelState !== "closed" && canConfigure ? await loadBuilderOptionsAction() : null,
           loadMovePreflight: loadMovePreflightAction,
           price: priceInput,
           // Only a real `YYYY-MM-DD` from `?date=` is honoured; anything else

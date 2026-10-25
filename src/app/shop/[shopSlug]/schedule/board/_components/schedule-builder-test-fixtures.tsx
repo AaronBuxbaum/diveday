@@ -104,7 +104,6 @@ export const COPY: BuilderCopy = {
   diveSite: "Dive site",
   ordinaryTrip: "Fun dive",
   decideLater: "Decide later",
-  optionsLoading: "Loading…",
   adding: "Adding…",
   putOnBoard: "Put it on the board",
   newDate: "New date",
