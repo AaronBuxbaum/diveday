@@ -8,6 +8,7 @@ import {
   executedDives,
   gearItems,
   gearReservations,
+  people,
   rentalFitProfiles,
   rollCallCrewEvents,
   rollCallEvents,
@@ -463,6 +464,7 @@ async function returnOneUnitFitAdjusted(
   const [seat] = await db
     .select({ bookingId: bookings.id, personId: bookings.personId })
     .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
     .where(
       and(
         eq(bookings.shopId, shopId),
@@ -470,11 +472,12 @@ async function returnOneUnitFitAdjusted(
         ne(bookings.status, "cancelled"),
       ),
     )
-    // The earliest seat, named: without an order this is whichever row the
-    // heap returns first, which a fresh re-seed and a replayed reset
+    // The first seat by the diver's name: without an order this is whichever
+    // row the heap returns first, which a fresh re-seed and a replayed reset
     // (`src/db/demo-reset-snapshot.ts`) lay out differently, so the evening
-    // captures named two different divers for the same question.
-    .orderBy(asc(bookings.createdAt), asc(bookings.id))
+    // captures named two different divers for the same question. A name, not
+    // `created_at`: under the frozen clock every seat shares one instant.
+    .orderBy(asc(people.fullName), asc(bookings.id))
     .limit(1);
   if (!seat) return null;
 
