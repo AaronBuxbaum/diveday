@@ -95,7 +95,9 @@ export function RequestLedgerRow({
   request: DateInterestRow;
   /**
    * The day's one act, on each request it answers (visual review A23): the
-   * group header no longer carries it. Absent on the undated tail.
+   * group header no longer carries it. A text link at the row's quiet
+   * weight, not a button: eleven rows read as eleven buttons. Absent on the
+   * undated tail.
    */
   openDeparture?: { href: string; label: string };
   locale: string;
@@ -247,7 +249,12 @@ export function RequestLedgerRow({
           {openDeparture ? (
             <Link
               href={openDeparture.href}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+              className={buttonClass({
+                variant: "link",
+                size: "sm",
+                flush: true,
+                className: "mt-2",
+              })}
             >
               {openDeparture.label}
             </Link>
