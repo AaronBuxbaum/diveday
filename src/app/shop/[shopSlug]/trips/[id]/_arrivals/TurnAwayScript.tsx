@@ -37,7 +37,7 @@ const stateEvent = (bookingId: string) => `turn-away:state:${bookingId}`;
 export function TurnAwayDoor({ bookingId, label }: { bookingId: string; label: string }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    const onState = (event: Event) => setOpen((event as CustomEvent<boolean>).detail);
+    const onState = (event: Event) => setOpen(Boolean((event as CustomEvent).detail));
     window.addEventListener(stateEvent(bookingId), onState);
     return () => window.removeEventListener(stateEvent(bookingId), onState);
   }, [bookingId]);

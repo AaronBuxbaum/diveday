@@ -371,26 +371,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     {
       id: "about-crew",
       label: t("trips.about.boatAndCrew"),
-      // The Details form is the door that changes the boat, and it
-      // redirects here, so the hull's clash rides on this row as
-      // well as on the Divers tab's pulse.
-      value:
-        liveBoatClashes.length > 0 ? (
-          <>
-            {boatCrewSummary}
-            {liveBoatClashes.map((clash) => (
-              <Link
-                key={clash.otherTripId}
-                href={shopPath(shopSlug, "trips", clash.otherTripId)}
-                className="mt-0.5 block font-medium text-danger hover:underline"
-              >
-                {boatClashText(t, clash)}
-              </Link>
-            ))}
-          </>
-        ) : (
-          boatCrewSummary
-        ),
       // **A row with open work stays open** (principles.md §9's
       // "collapse the settled row", read the other way). A boat with
       // nobody on it, a clash, a course with no instructor, a shortfall
@@ -462,6 +442,26 @@ export function tripAboutRows(context: TripAboutRowsContext) {
           />
         </>
       ),
+      // The Details form is the door that changes the boat, and it
+      // redirects here, so the hull's clash rides on this row as
+      // well as on the Divers tab's pulse.
+      value:
+        liveBoatClashes.length === 0 ? (
+          boatCrewSummary
+        ) : (
+          <>
+            {boatCrewSummary}
+            {liveBoatClashes.map((clash) => (
+              <Link
+                key={clash.otherTripId}
+                href={shopPath(shopSlug, "trips", clash.otherTripId)}
+                className="mt-0.5 block font-medium text-danger hover:underline"
+              >
+                {boatClashText(t, clash)}
+              </Link>
+            ))}
+          </>
+        ),
     },
     {
       id: "series",

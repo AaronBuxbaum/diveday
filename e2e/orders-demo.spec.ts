@@ -260,7 +260,7 @@ test.describe("demo billing history", () => {
     await page.getByRole("button", { name: "More", exact: true }).click();
     await expect(page.getByRole("button", { name: "Refresh status" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Void order" })).toBeDisabled();
-    await expect(page.getByText("Demo orders can’t be refreshed or voided.")).toBeVisible();
+    await expect(page.getByText(staffCopy("orders.detail.demoActionHint"))).toBeVisible();
   });
 
   test("an exceptional status wears the row's one pill", { tag: READ_ONLY }, async ({ page }) => {
