@@ -231,11 +231,7 @@ function OfflineDiverRow({
             review, dde-b 2): the observation a crew wrote on an alarmed
             row sits under the status line, never behind "Contact & gear",
             so a crew member offshore reads it before writing it twice. */}
-          {state?.note ? (
-            <p className="mt-1 max-w-xl text-base break-words">
-              {state.note}
-            </p>
-          ) : null}
+          {state?.note ? <p className="mt-1 max-w-xl text-base break-words">{state.note}</p> : null}
           <details className="group/offlinefacts mt-2 max-w-xl">
             <summary className={OFFLINE_DISCLOSURE_SUMMARY_CLASS}>
               <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
