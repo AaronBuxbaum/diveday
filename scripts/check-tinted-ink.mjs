@@ -21,9 +21,10 @@ import process from "node:process";
  *
  * The fix is the opaque `--<hue>-tint` token, which resolves against
  * `--surface` once and is therefore the number the palette computed wherever
- * the element is mounted. This check is what keeps it that way on the surfaces
- * the axe scan never visits — `e2e/a11y.spec.ts` covers about thirty routes,
- * and the pill that started this was on none of them.
+ * the element is mounted. This check is what keeps it that way. The suite's axe
+ * scan covered about thirty routes and the pill that started this was on none
+ * of them; since that scan was removed on 2026-10-24, this check is the only
+ * automated net for tinted ink anywhere.
  *
  * One deliberate narrowing, because a guard that overreaches gets exempted
  * into uselessness:
@@ -31,7 +32,8 @@ import process from "node:process";
  * - **Same element only.** A parent's tint under a child's ink is the nastier
  *   version of this bug and no grep can see it; what a grep sees reliably is
  *   one class attribute naming both, which is how all but one of the real
- *   instances were written. The rest is the axe scan's job.
+ *   instances were written. The rest went to the axe scan until it was
+ *   removed on 2026-10-24, and has no automated net now.
  * It was `/10` only when it shipped, on the argument that the `/15` family
  * mostly rendered under `.boat-mode` and a grep could not tell. Measured
  * (issue #874), that turned out to be exactly right about the palette and
@@ -79,7 +81,8 @@ const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
  * The cost of the coarser grain, stated: a component added to one of these
  * folders that somehow renders *outside* boat-mode would be exempt without
  * anybody noticing. That has not been possible so far — the page owns the
- * wrapper — and the axe scan covers the manifest either way.
+ * wrapper. (The axe scan covered the manifest too until it was removed on
+ * 2026-10-24.)
  */
 const BOAT_MODE_FILES = new Set(
   [

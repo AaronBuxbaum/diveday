@@ -571,8 +571,9 @@ components still use `-strong`. Read off it:
   sun; its worst tinted-fill combination at 10% measures 5.40:1 in light and 6.16:1 in dark, so
   the roll-call fills that use the raw token there are compliant and stay as they are.
 
-Since 2026-08-23 this is enforced rather than remembered: `e2e/a11y.spec.ts` runs axe's
-`color-contrast` rule with no exclusion list, over every surface it scans.
+From 2026-08-23 to 2026-10-24 the suite's axe scan enforced this with `color-contrast` and no
+exclusion list. That scan is gone; `pnpm check:tinted-ink` holds the tinted-fill half, and the
+rest is remembered again.
 
 `FormStatus` uses `-strong` unconditionally for those two tones. It is mounted in whatever container
 its form is in — a card footer, a disclosed settings row, a sunken inset panel — and it is the

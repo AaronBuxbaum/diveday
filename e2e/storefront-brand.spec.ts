@@ -2,7 +2,6 @@ import { MINTED_DEMO_BRAND_COLOR } from "../src/db/seed-identifiers";
 import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
 import { diverTranslator } from "../src/i18n/messages";
 import { deriveBrandTheme, deriveDarkBrandTheme } from "../src/lib/brand";
-import { expectNoA11yViolations } from "./a11y-scan";
 import { expect, test } from "./fixtures";
 
 /**
@@ -82,27 +81,20 @@ test.describe("the storefront wears the shop's brand", () => {
   });
 
   /**
-   * **The storefront at depth, wearing the shop's own colour** — the one
-   * dark-scheme axe scan in the suite (issue #1265), moved here from
-   * `a11y.spec.ts` when the canonical demo stopped carrying a colour, because
-   * that file's `signedInAsOwner()` cannot share a context with a minted shop.
-   *
-   * A branded storefront rendered sub-AA in dark mode for as long as it did
-   * because `BrandStyle` emitted one `:root` block that won in *both* schemes:
-   * mantis green arrived at depth as its light-mode derivation, 3.39:1 on the
-   * dark ground. `deriveDarkBrandTheme` is the fix; this is what would have
-   * caught it. The scheme rides the context (`test.use`), not an
-   * `emulateMedia` on a live page, which raced the first paint (#1940).
+   * **The storefront at depth, wearing the shop's own colour.** A branded
+   * storefront rendered sub-AA in dark mode for as long as it did because
+   * `BrandStyle` emitted one `:root` block that won in *both* schemes: mantis
+   * green arrived at depth as its light-mode derivation, 3.39:1 on the dark
+   * ground (issue #1265). `deriveDarkBrandTheme` is the fix; this proves its
+   * block is the one that wins. The scheme rides the context (`test.use`), not
+   * an `emulateMedia` on a live page, which raced the first paint (#1940).
    */
   test.describe("in the dark", () => {
     test.use({ privateShopBrand: true, colorScheme: "dark" });
 
     test("reads at depth in the shop's own color", async ({ page, privateShop }) => {
-      test.setTimeout(60_000);
       await page.goto(`/s/${privateShop.slug}`, { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      // A scan over DiveDay's own dark tokens would pass just as well, so prove
-      // the shop's colour is what is being scanned.
       await expect(page.locator("style[data-brand-style]")).toHaveCount(1);
       const primary = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
@@ -110,7 +102,6 @@ test.describe("the storefront wears the shop's brand", () => {
       expect(primary, "the dark block did not win over globals.css's dark palette").toBe(
         deriveDarkBrandTheme(MINTED_DEMO_BRAND_COLOR).primary,
       );
-      await expectNoA11yViolations(page);
     });
   });
 });

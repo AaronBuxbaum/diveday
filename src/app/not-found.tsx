@@ -206,8 +206,8 @@ async function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: L
  * `PublicShopMainContent`, the `#public-shop-main-content` target their skip
  * link points at. That target is the half a move like this loses silently —
  * `PublicShopChrome` brings its own `SkipLink` but the landmark it names is
- * the layout's to render, and an axe scan of this page is what would find it
- * missing (`e2e/a11y.spec.ts`).
+ * the layout's to render. The suite's axe scan found that missing until it was
+ * removed on 2026-10-24; nothing automated does now.
  *
  * The body is `src/app/s/[shopSlug]/not-found.tsx`'s, word for word and class
  * for class, so the two paths a diver can reach a shop's 404 by — this one,

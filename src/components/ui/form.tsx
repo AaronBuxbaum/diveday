@@ -383,9 +383,9 @@ type ControlProps = {
  * two counters can produce — `_S_2_-maxDepthMeters` and `_S_2_-title` cannot
  * collide however the counters land. It is not a proof: two `Field`s that share
  * a `name` *and* land on the same counter value would still collide, and a
- * `Field` whose control has no `name` keeps the bare id. That residue is what
- * `expectNoA11yViolations` (e2e/a11y.spec.ts) is for — it fails on any
- * duplicate id, and it is what would have caught this years earlier.
+ * `Field` whose control has no `name` keeps the bare id. That residue was what
+ * the suite's axe scan caught, failing on any duplicate id; the scan was
+ * removed on 2026-10-24, so nothing automated catches it now.
  */
 function scopedFieldId(autoId: string, name: string | undefined): string {
   if (!name) return autoId;
@@ -427,9 +427,9 @@ const CONTROL_TAGS = new Set(["input", "select", "textarea"]);
  * screenshots and every existing assertion stay correct. It is real, and it
  * needs a **client-side navigation** to show up — a hard load of the same URL
  * is clean, which is why a sweep of 229 hard-loaded renders found nothing.
- * `scopedFieldId` below is the fix and carries the measurement;
- * `expectNoA11yViolations` in e2e/a11y.spec.ts is the net under it, failing on
- * any duplicate DOM id. axe cannot do that itself: it dropped
+ * `scopedFieldId` below is the fix and carries the measurement. The suite's
+ * axe scan, which failed on any duplicate DOM id, was the net under it until it
+ * was removed on 2026-10-24; there is none now. axe could not do that itself: it dropped
  * `duplicate-id`/`duplicate-id-active` in 4.9 and the surviving
  * `duplicate-id-aria` never fires on a plain `<label for>`.
  *

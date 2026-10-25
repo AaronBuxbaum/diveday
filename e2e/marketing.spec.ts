@@ -1,6 +1,7 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
+import { ONBOARDING_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -163,11 +164,11 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   // from the bundle, never an English literal in the component.
   await expect(stepsBand.getByRole("img")).toHaveCount(5);
   await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
-  // The roll call is drawn once on this page, in the hero (visual review
-  // 2026-10-24, B14), so the roll-call step shows its own feature's screen,
-  // the site briefing the crew reads out, rather than a second roll call.
-  await expect(stepsBand.getByRole("img", { name: /roll call/i })).toHaveCount(0);
-  await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toBeVisible();
+  // The roll-call step draws the roll call (the claim and its mockup are one
+  // screen), at the checkpoint the hero's phone does not: after the first
+  // dive, so the page shows the boat coming back as well as leaving.
+  await expect(stepsBand.getByRole("img", { name: /roll call after dive 1/i })).toBeVisible();
+  await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
 
   // Each step ends in its feature page, in the booking's order, and none of
   // them is a door into the demo: the page it links to opens the demo on that
@@ -391,8 +392,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   const firstLine = firstGroup.locator("li").first();
   await expect(firstLine).toBeHidden();
   // Opened with the keyboard, because that is the half a disclosure can lose:
-  // `<summary>` is focusable and Enter toggles it natively, and `e2e/a11y.spec.ts`
-  // scans this page.
+  // `<summary>` is focusable and Enter toggles it natively.
   await firstGroup.locator("summary").focus();
   await page.keyboard.press("Enter");
   await expect(firstLine).toBeVisible();
@@ -435,10 +435,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // weeks, no card, and the soft expiry that src/lib/trial.ts actually
   // implements. The FAQ's trial row went with the visual review of 2026-10-24
   // (B11: the FAQ keeps only what the table and notes do not answer), and card
-  // fees are the invoice's own row, nowhere else.
-  const trialTerms = page.getByText(diverTranslator("en-US")("marketing.pricing.trialNote"), {
-    exact: true,
-  });
+  // fees are the invoice's own row, nowhere else. The note also says how a
+  // trial becomes paid, through the upgrade inbox (docs/product/marketing.md).
+  const trialTerms = page.getByText(
+    diverTranslator("en-US")("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
+    { exact: true },
+  );
   await expect(trialTerms).toHaveCount(1);
   await expect(page.getByText("3 weeks, no card", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Stripe’s fee, paid to Stripe", { exact: true })).toHaveCount(1);

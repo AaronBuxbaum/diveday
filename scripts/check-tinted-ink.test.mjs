@@ -33,7 +33,7 @@ describe("what the tinted-ink check flags", () => {
    * A fill of one hue under ink of another is the *nastier* version of this
    * bug — a `bg-primary/10` badge on a green row was the worst ratio in the app
    * — but it is not same-element, so this check does not claim it. The axe scan
-   * is what covers that.
+   * covered that until it was removed on 2026-10-24; nothing does now.
    */
   it("does not claim a mismatched pair it cannot reason about", () => {
     expect(flags("primary", "bg-primary/10 text-success")).toBe(false);
