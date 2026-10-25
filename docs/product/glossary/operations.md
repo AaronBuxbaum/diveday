@@ -844,6 +844,9 @@
   was before sailing. Later time edits and hull changes cannot reopen sailed evidence. An older
   tap never overwrites a newer record. Judged on the departure's own
   local day; a deleted hull supplies no fresh evidence and does not remove kept history.
+  It also keeps the pre-departure checklist's answer as of the same tap (its line count and each
+  line not checked then, issue 2725), which the log prints beside the notices; a record kept
+  before that says the answer was not kept.
   Head-count lines are left out because the roll call records them. The log says when
   nothing was kept or the departure names no boat, and when the departure has moved to another
   boat since.

@@ -1,0 +1,48 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2c26b529-bd9e-4ac4-bc5a-846b877ee275",
+  "prevIds": [
+    "2f56d75e-23ae-4020-99a2-a6f652051ae4",
+    "68c57662-7434-4e72-940b-e799d45d89b2"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "departure_boat_safety_snapshots",
+        "checklist"
+      ],
+      "writes": [
+        "s|col|public.departure_boat_safety_snapshots.checklist",
+        "n|col|public.departure_boat_safety_snapshots.checklist",
+        "e|col|public.departure_boat_safety_snapshots.checklist"
+      ],
+      "reads": [
+        "n|tbl|public.departure_boat_safety_snapshots",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "departure_boat_safety_snapshots",
+        "name": "checklist",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

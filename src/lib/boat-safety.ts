@@ -159,6 +159,19 @@ export type BoatPaperRecord = BoatPaperDates & {
  * papers at the departure checkpoint so what the card said can be read back.
  * Null is "not recorded".
  */
+/**
+ * **The pre-departure checklist as it stood at the boat snapshot** (#2725):
+ * how many lines the shop's checklist had for this departure and the wording
+ * of each line not checked at that instant, kept in the same record as the
+ * kit notices so the log can set the crew's answer beside what the gear
+ * register showed and the two describe one moment. `itemCount` 0 means the
+ * shop kept no checklist then.
+ */
+export type BoatChecklistAnswer = {
+  itemCount: number;
+  unchecked: string[];
+};
+
 export type BoatRadioRecord = {
   callSign: string | null;
   mmsi: string | null;

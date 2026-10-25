@@ -7,7 +7,15 @@ import { createBoat } from "./boats";
 import type { AppDb } from "./client";
 import { createGearItem } from "./gear";
 import { recordCrewRollCall } from "./manifests";
-import { boats, departureBoatSafetySnapshots, shops, tripAssignments, trips } from "./schema";
+import {
+  boats,
+  departureBoatSafetySnapshots,
+  preDepartureCheckEvents,
+  preDepartureChecklistItems,
+  shops,
+  tripAssignments,
+  trips,
+} from "./schema";
 import { listStaff } from "./trips";
 
 /**
@@ -51,6 +59,48 @@ async function paperedBoat(db: AppDb, shopId: string) {
 }
 
 describe("captureDepartureBoatSafety", () => {
+  it("keeps the checklist answer as it stood at the same instant as the notices (#2725)", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const trip = await departure(db, shop.id, boat.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!actor) throw new Error("no staff");
+    const items = await db
+      .insert(preDepartureChecklistItems)
+      .values(
+        ["#2725 oxygen aboard", "#2725 flares in date", "#2725 radio checked"].map(
+          (label, sortOrder) => ({ shopId: shop.id, label, sortOrder: 1000 + sortOrder }),
+        ),
+      )
+      .returning();
+    const [oxygen, flares, radio] = items;
+    if (!oxygen || !flares || !radio) throw new Error("items missing");
+    const tap = (itemId: string, status: "checked" | "cleared", occurredAt: Date) => ({
+      shopId: shop.id,
+      tripId: trip.id,
+      checklistItemId: itemId,
+      recordedByPersonId: actor.person.id,
+      status,
+      occurredAt,
+    });
+    await db.insert(preDepartureCheckEvents).values([
+      tap(oxygen.id, "checked", new Date(BEFORE.getTime() - 60_000)),
+      // Checked, then taken back before the count: not checked then.
+      tap(radio.id, "checked", new Date(BEFORE.getTime() - 120_000)),
+      tap(radio.id, "cleared", new Date(BEFORE.getTime() - 30_000)),
+      // Checked after the count: the record says what the crew had done then.
+      tap(flares.id, "checked", new Date(BEFORE.getTime() + 60_000)),
+    ]);
+    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE)).toBe("captured");
+
+    const snapshot = await departureBoatSafetySnapshot(db, shop.id, trip.id);
+    const ours = (snapshot?.checklist?.unchecked ?? []).filter((label) =>
+      label.startsWith("#2725"),
+    );
+    expect(ours).toEqual(["#2725 flares in date", "#2725 radio checked"]);
+    expect(snapshot?.checklist?.itemCount).toBeGreaterThanOrEqual(3);
+  });
+
   it("keeps the papers verbatim and the notices judged on the departure's own day", async () => {
     const { db, shop } = ctx;
     const boat = await paperedBoat(db, shop.id);

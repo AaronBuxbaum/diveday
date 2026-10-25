@@ -1754,6 +1754,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "papers",
       "radio",
       "notices",
+      "checklist",
       "captured_at",
     ],
     rows: ({ boatSafetySnapshotRows }) =>
@@ -1767,6 +1768,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(row.papers),
         JSON.stringify(row.radio),
         JSON.stringify(row.notices),
+        row.checklist === null ? null : JSON.stringify(row.checklist),
         row.capturedAt,
       ]),
     note: EXPORT_FILE_NOTES["departure_boat_safety_snapshots.csv"],

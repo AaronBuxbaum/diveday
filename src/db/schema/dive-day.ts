@@ -14,7 +14,12 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { BoatPaperRecord, BoatRadioRecord, BoatSafetyNotice } from "@/lib/boat-safety";
+import type {
+  BoatChecklistAnswer,
+  BoatPaperRecord,
+  BoatRadioRecord,
+  BoatSafetyNotice,
+} from "@/lib/boat-safety";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
@@ -810,6 +815,13 @@ export const departureBoatSafetySnapshots = pgTable(
       .notNull()
       .default({ callSign: null, mmsi: null, workingChannel: null }),
     notices: jsonb("notices").$type<BoatSafetyNotice[]>().notNull(),
+    /**
+     * The pre-departure checklist at `capturedAt` (#2725): its line count and
+     * the lines not checked then, written by the same capture as `notices` so
+     * the log sets the two side by side without their disagreeing. Null on a
+     * record kept before it existed, which the log states as not kept.
+     */
+    checklist: jsonb("checklist").$type<BoatChecklistAnswer>(),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
   },
   (table) => [

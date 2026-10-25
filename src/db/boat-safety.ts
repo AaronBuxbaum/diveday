@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 import {
+  type BoatChecklistAnswer,
   type BoatPaperRecord,
   type BoatRadioRecord,
   type BoatSafetyNotice,
@@ -22,6 +23,8 @@ import { log } from "@/lib/log";
 import { hasSailed } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { latestServiceClocks } from "./gear";
+import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
+import { queryAll } from "./query-helpers";
 import { boats, departureBoatSafetySnapshots, gearItems, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -448,6 +451,9 @@ async function captureInTransaction(
     mmsi: boat.mmsi,
     workingChannel: boat.workingChannel,
   };
+  // The crew's answer at the same instant (#2725): the log sets it beside the
+  // notices, so it is kept here rather than read from today's checklist.
+  const checklist = await checklistAnswerAsOf(db, shopId, tripId, asOf);
   const row = {
     boatId: boat.id,
     boatName: boat.name,
@@ -456,6 +462,7 @@ async function captureInTransaction(
     papers,
     radio,
     notices,
+    checklist,
     capturedAt: asOf,
   };
   const written = await db
@@ -469,6 +476,27 @@ async function captureInTransaction(
     })
     .returning({ id: departureBoatSafetySnapshots.id });
   return written.length > 0 ? "captured" : "kept_newer";
+}
+
+/**
+ * The departure's pre-departure checklist as it stood at `asOf` (#2725): the
+ * lines the log prints for this departure (`listChecklistItemsForTrip`), and
+ * the wording of each whose newest tap at or before `asOf` was not a check.
+ */
+async function checklistAnswerAsOf(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  asOf: Date,
+): Promise<BoatChecklistAnswer> {
+  const [items, checks] = await queryAll(db, [
+    () => listChecklistItemsForTrip(db, shopId, tripId),
+    () => latestPreDepartureChecksForTrip(db, shopId, tripId, asOf),
+  ]);
+  return {
+    itemCount: items.length,
+    unchecked: items.filter((item) => !checks.has(item.id)).map((item) => item.label),
+  };
 }
 
 /**
@@ -517,6 +545,7 @@ export async function departureBoatSafetySnapshot(db: DbExecutor, shopId: string
       papers: departureBoatSafetySnapshots.papers,
       radio: departureBoatSafetySnapshots.radio,
       notices: departureBoatSafetySnapshots.notices,
+      checklist: departureBoatSafetySnapshots.checklist,
       capturedAt: departureBoatSafetySnapshots.capturedAt,
     })
     .from(departureBoatSafetySnapshots)

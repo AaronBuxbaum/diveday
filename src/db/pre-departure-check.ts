@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, isNull, lte, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -206,19 +206,25 @@ export type PreDepartureCheckState = {
  * the departure log alike, exactly the role `listLatestRollCallByBooking`
  * plays for roll call. A `cleared` newest event collapses to no entry, the
  * same reduction `latestPreDepartureCheck` performs for a single item's
- * history.
+ * history. With `asOf`, only taps made at or before that instant count: the
+ * answer as it stood then (the boat snapshot's, #2725).
  */
 export async function latestPreDepartureChecksForTrip(
   db: DbExecutor,
   shopId: string,
   tripId: string,
+  asOf?: Date,
 ): Promise<Map<string, PreDepartureCheckState>> {
   const rows = await db
     .select({ event: preDepartureCheckEvents, recorder: people })
     .from(preDepartureCheckEvents)
     .innerJoin(people, eq(people.id, preDepartureCheckEvents.recordedByPersonId))
     .where(
-      and(eq(preDepartureCheckEvents.shopId, shopId), eq(preDepartureCheckEvents.tripId, tripId)),
+      and(
+        eq(preDepartureCheckEvents.shopId, shopId),
+        eq(preDepartureCheckEvents.tripId, tripId),
+        asOf ? lte(preDepartureCheckEvents.occurredAt, asOf) : undefined,
+      ),
     )
     .orderBy(
       asc(preDepartureCheckEvents.occurredAt),
