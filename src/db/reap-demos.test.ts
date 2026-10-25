@@ -187,11 +187,16 @@ describe("createDemoShop", () => {
         .update(shops)
         .set({ createdAt: new Date(nowMs() - HOUR_MS) })
         .where(eq(shops.slug, a.slug));
+      const aId = (await requireShop(db, a.slug)).id;
       const c = await createDemoShop(db, { history: false });
 
       // Cap is 2, so minting c evicts the oldest minted demo (a); b and c stay,
-      // and the canonical demo is never a candidate.
-      expect(await findShop(db, a.slug)).toBeUndefined();
+      // and the canonical demo is never a candidate. By id, not slug: a demo
+      // name carries no random suffix (src/lib/demo-identity.ts), so c can
+      // draw the very name a's eviction just freed, and a slug lookup would
+      // then find c (the flake seen in full unit runs).
+      const [stillA] = await db.select().from(shops).where(eq(shops.id, aId)).limit(1);
+      expect(stillA).toBeUndefined();
       expect(await findShop(db, b.slug)).toBeDefined();
       expect(await findShop(db, c.slug)).toBeDefined();
       expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();

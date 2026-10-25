@@ -58,8 +58,9 @@ export async function announceSetupRequest(request: SetupRequest): Promise<void>
       source: request.source,
       requestLocale: request.locale,
       ...(link ? { setupUrl: link.url, setupUrlExpiresAt: link.expiresAt } : {}),
-      // Reply goes straight to the shop that asked.
-      sender: { replyTo: request.email },
+      // No Reply-To (issue 2834): the address was typed into a public form and
+      // nothing has proved who owns it, and this mail carries a setup link. The
+      // founder writes to it from the body, a new mail without the link.
     });
     if (delivery.status === "sent") await markSetupRequestNotified(await getDb(), request.id);
     // A workstation has no mail to read, so the link is printed for the

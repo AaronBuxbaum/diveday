@@ -107,6 +107,40 @@ for (const locale of ["en-US", "es-ES"] as const) {
       }
     });
 
+    it("sets the checklist answer kept with the snapshot beside the notices (issue 2725)", () => {
+      draw({ ...SNAPSHOT, checklist: { itemCount: 3, unchecked: ["Flares in date"] } });
+      const notices = screen.getByText(t("incidentExport.boatNoticesLabel")).parentElement;
+      const answer = screen.getByText(t("incidentExport.boatChecklistLabel")).parentElement;
+      expect(answer?.parentElement).toBe(notices?.parentElement);
+      expect(answer).toHaveTextContent(
+        t("incidentExport.boatChecklistCount", { checked: 2, total: 3 }),
+      );
+      expect(
+        screen.getByRole("list", { name: t("incidentExport.boatChecklistUnchecked") }),
+      ).toHaveTextContent("Flares in date");
+    });
+
+    it("says every line was checked when none was left", () => {
+      draw({ ...SNAPSHOT, checklist: { itemCount: 2, unchecked: [] } });
+      expect(
+        screen.getByText(t("incidentExport.boatChecklistCount", { checked: 2, total: 2 })),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("list", { name: t("incidentExport.boatChecklistUnchecked") }),
+      ).toBeNull();
+    });
+
+    it("says the shop kept no checklist when it had none", () => {
+      draw({ ...SNAPSHOT, checklist: { itemCount: 0, unchecked: [] } });
+      expect(screen.getByText(t("incidentExport.boatChecklistNone"))).toBeInTheDocument();
+    });
+
+    it("says a snapshot kept before the answer existed did not record it", () => {
+      draw(SNAPSHOT);
+      expect(screen.getByText(t("incidentExport.boatChecklistLabel"))).toBeInTheDocument();
+      expect(screen.getByText(t("incidentExport.boatChecklistNotKept"))).toBeInTheDocument();
+    });
+
     it("says the boat carried no notice when it carried none", () => {
       draw({ ...SNAPSHOT, notices: [] });
       expect(screen.getByText(t("incidentExport.boatNoNotices"))).toBeInTheDocument();

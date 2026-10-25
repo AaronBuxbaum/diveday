@@ -78,8 +78,9 @@ not alert him (`/api/demo/quiet?setup=<key>`).
 
 - Every set-up request mints a link, including spam the honeypot and rate limits missed. Each
   exists only as a hash and in the founder's inbox, and a spam requester never receives it unless
-  the founder replies quoting it. The mail's Reply-To is the requester, whose address nothing has
-  verified, so the mail says to send the link only to someone the founder has spoken to.
+  the founder sends it. The mail sets no Reply-To (issue 2834): the requester's address, which
+  nothing has verified, is in the body only, and the mail says to send the link only to someone
+  the founder has spoken to.
 - A link that expires before the shop uses it is replaced by a fresh request, not extended.
 - The production deployment needs `DEMO_QUIET_KEY` set for the quiet browser to work, and
   `ONBOARD_SETUP_KEY` can be removed from it; a browser marked under the old key is unmarked.

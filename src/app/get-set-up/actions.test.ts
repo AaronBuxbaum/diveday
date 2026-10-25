@@ -125,8 +125,19 @@ describe("submitSetupRequestAction", () => {
       to: ONBOARDING_EMAIL,
       contactEmail: "ana@reefline.example",
       source: "pricing-close",
-      sender: { replyTo: "ana@reefline.example" },
     });
+  });
+
+  // Issue 2834: the address is typed into a public form and nothing has proved
+  // who owns it, so the mail carrying the setup link never sets it as
+  // Reply-To. The founder writes to it from the body, on purpose.
+  it("sets no Reply-To from the unverified requester address", async () => {
+    await submit(setUpForm());
+    const alert = vi
+      .mocked(notify)
+      .mock.calls.find(([message]) => message.kind === "operator_alert")?.[0];
+    expect(alert).toMatchObject({ contactEmail: "ana@reefline.example" });
+    expect(alert).not.toHaveProperty("sender.replyTo");
   });
 
   it("records no pricing arm while the test is off", async () => {

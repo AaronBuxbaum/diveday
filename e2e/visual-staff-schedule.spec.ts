@@ -747,6 +747,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Call the blow-out" }).click();
         await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
         await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        // The call's toast leaves on a real 4-second timer, so whether the
+        // first width caught it depended on how long the capture took: two
+        // one-worker runs of one tree disagreed at vw-390. The record is the
+        // subject; photograph it once the toast has gone.
+        const called = page
+          .getByRole("status")
+          .filter({ hasText: staffCopy("blowout.notices.called") });
+        await expect(called).toBeVisible();
+        await expect(called).toBeHidden();
         await capture(page, "blowout-cascade", scheme);
       });
     });
