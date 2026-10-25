@@ -652,6 +652,7 @@
       "submitting": "Adding…",
       "delete": "Delete",
       "deleting": "Deleting…",
+      "rowMenu": "More for {name}",
       "owed": "Dives owed on packages: {dives, number} ({value})",
       "createTitle": "Add a package",
       "empty": "No packages for sale yet"
