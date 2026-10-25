@@ -177,4 +177,49 @@ describe("CertificationEntries", () => {
     const [cardSave] = screen.getAllByRole("button", { name: t("ready.certSubmit") });
     expect(cardSave).toHaveClass("bg-primary");
   });
+
+  // B26 review (dde-a F2): a card on file but too low is the shop's to talk
+  // through, and re-typing it reads "Nothing more to do", so the form does not
+  // lead the step there; nor after "not yet", where the form is for a card
+  // found in a drawer.
+  it("keeps the card form quiet when a card is on file, or after 'not yet'", () => {
+    const { container, unmount } = render(
+      <CertificationEntries
+        token="tok"
+        item={item([{ code: "certification_insufficient" }])}
+        offerNitrox={false}
+        notYet={null}
+        t={t}
+      />,
+    );
+    const [insufficient] = [...container.querySelectorAll("summary")];
+    expect(insufficient).toHaveTextContent(t("ready.certHeading"));
+    expect(insufficient).not.toHaveClass("bg-primary");
+    unmount();
+    const notYet = render(
+      <CertificationEntries
+        token="tok"
+        item={item([])}
+        offerNitrox={false}
+        notYet={{ introCourse: null }}
+        t={t}
+      />,
+    );
+    const [found] = [...notYet.container.querySelectorAll("summary")];
+    expect(found).not.toHaveClass("bg-primary");
+  });
+
+  it("leads with the card form for a self-declared card too", () => {
+    const { container } = render(
+      <CertificationEntries
+        token="tok"
+        item={item([{ code: "certification_self_declared" }])}
+        offerNitrox={false}
+        notYet={null}
+        t={t}
+      />,
+    );
+    const [card] = [...container.querySelectorAll("summary")];
+    expect(card).toHaveClass("bg-primary");
+  });
 });

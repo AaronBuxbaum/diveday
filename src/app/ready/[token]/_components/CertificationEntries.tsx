@@ -188,7 +188,18 @@ export function CertificationEntries({
   for (const blocker of item.actionable) forms.push(...entriesFor(blocker));
   function entriesFor(blocker: DiverChecklistItem["actionable"][number]): React.ReactNode[] {
     if (CERT_ENTRY_CODES.has(blocker.code)) {
-      const entries = [<CertificationEntry key={blocker.code} token={token} t={t} />];
+      // The filled primary only where the shop holds nothing (B26 review,
+      // dde-a F2): on `insufficient` a card is on file, re-typing it reads
+      // "Nothing more to do", and the step's own line sends the diver to the
+      // shop, so the form stays the quiet disclosure it was.
+      const entries = [
+        <CertificationEntry
+          key={blocker.code}
+          token={token}
+          lead={NOT_YET_OFFER_CODES.has(blocker.code)}
+          t={t}
+        />,
+      ];
       if (NOT_YET_OFFER_CODES.has(blocker.code)) {
         entries.push(<NotYetAnswer key="not-yet" token={token} t={t} />);
       }
@@ -232,9 +243,18 @@ export function CertificationEntries({
  * offered no way to answer it, so the card arrived as a photo in a reply-to
  * email or not until the dock (2026-08-06 review).
  */
-function CertificationEntry({ token, t }: { token: string; t: DiverTranslator }) {
+function CertificationEntry({
+  token,
+  lead = false,
+  t,
+}: {
+  token: string;
+  /** The step's resting action, a filled primary (B26); quiet otherwise. */
+  lead?: boolean;
+  t: DiverTranslator;
+}) {
   return (
-    <CertificationDisclosure summary={t("ready.certHeading")} lead>
+    <CertificationDisclosure summary={t("ready.certHeading")} lead={lead}>
       <form action={saveCertificationFromReady.bind(null, token)} className="flex flex-col gap-3">
         <p className="text-sm text-muted">{t("ready.certBody")}</p>
         <FieldGrid columns={2}>

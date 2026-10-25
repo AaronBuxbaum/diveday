@@ -169,7 +169,7 @@
     "arrivalAtShop": "Lugar de encuentro",
     "arrivalAddress": "Dirección",
     "arrivalLandmark": "Referencia",
-    "arrivalSites": "Sitios",
+    "arrivalSites": "Sitios previstos",
     "arrivalSiteRun": "{site}, {count, plural, =2 {dos inmersiones} =3 {tres inmersiones} one {# inmersión} other {# inmersiones}}",
     "arrivalSiteRunInList": "{site} ({count, plural, =2 {dos inmersiones} =3 {tres inmersiones} one {# inmersión} other {# inmersiones}})",
     "arrivalParking": "Estacionamiento",

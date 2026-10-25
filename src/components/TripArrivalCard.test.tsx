@@ -108,7 +108,7 @@ describe("the Sites row", () => {
         sites={["Molasses Reef", "French Reef"]}
       />,
     );
-    expect(screen.getByText("Sites")).toBeInTheDocument();
+    expect(screen.getByText("Planned sites")).toBeInTheDocument();
     // The order is the day's, never alphabetical.
     expect(screen.getByText("Molasses Reef, French Reef")).toBeInTheDocument();
     expect(screen.queryByText("Plan")).not.toBeInTheDocument();
@@ -142,11 +142,11 @@ describe("the Sites row", () => {
 
   it("renders nothing at all when the caller names no sites", () => {
     const { rerender } = render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
-    expect(screen.queryByText("Sites")).not.toBeInTheDocument();
+    expect(screen.queryByText("Planned sites")).not.toBeInTheDocument();
     expect(screen.queryByText("Plan")).not.toBeInTheDocument();
 
     rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" sites={[]} />);
-    expect(screen.queryByText("Sites")).not.toBeInTheDocument();
+    expect(screen.queryByText("Planned sites")).not.toBeInTheDocument();
   });
 });
 

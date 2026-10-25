@@ -169,7 +169,7 @@
     "arrivalAtShop": "Meet here",
     "arrivalAddress": "Address",
     "arrivalLandmark": "Landmark",
-    "arrivalSites": "Sites",
+    "arrivalSites": "Planned sites",
     "arrivalSiteRun": "{site}, {count, plural, =2 {two dives} =3 {three dives} one {# dive} other {# dives}}",
     "arrivalSiteRunInList": "{site} ({count, plural, =2 {two dives} =3 {three dives} one {# dive} other {# dives}})",
     "arrivalParking": "Parking",

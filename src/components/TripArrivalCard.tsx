@@ -210,9 +210,10 @@ export function TripArrivalCard({
         <dl className="grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
           {sites && sites.length > 0 ? (
             <div>
-              {/* No source chip: the card is the shop's plan by its own
-                  heading, and the "● Plan" stamp is the idiom B21 took off
-                  the change ledger (visual review 2026-10-24). */}
+              {/* The source in words, not a chip (visual review 2026-10-24,
+                  B21): "Planned sites". A site change is not a change-ledger
+                  kind, so nothing below would say the plan moved; the label
+                  is the one word that says it can. */}
               <dt className="text-sm font-semibold">{t("trip.arrivalSites")}</dt>
               <dd className="mt-1 text-sm text-muted">{siteRunsLine(sites, locale, t)}</dd>
             </div>
