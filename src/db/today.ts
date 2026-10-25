@@ -65,10 +65,7 @@ import {
   listGearServiceDue,
   listOverdueGearReservations,
 } from "./gear";
-import {
-  type HandledHelpRequest,
-  listTodayHelpWork,
-} from "./help-requests";
+import { type HandledHelpRequest, listTodayHelpWork } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
 import { countWaitingDateInterests } from "./interest-dates";
