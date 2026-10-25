@@ -73,7 +73,7 @@ export function TripAboutLinks({
         flush
       />
       <div className="hidden md:contents">{rest}</div>
-      <MoreMenu label={t("trips.about.more")} size="sm" className="md:hidden">
+      <MoreMenu label={t("trips.about.moreDoors")} size="sm" className="md:hidden">
         <div className="flex flex-col px-2 [&_a]:w-full [&_a]:justify-start [&_button]:w-full [&_button]:justify-start">
           {rest}
         </div>
