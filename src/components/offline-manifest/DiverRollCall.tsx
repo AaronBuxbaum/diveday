@@ -1,6 +1,6 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { RollCallMarkTap, rollCallMarkState } from "@/components/RollCallMarkTap";
-import { rollCallRowTone } from "@/components/row-tones";
+import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
@@ -15,7 +15,12 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
 import { isHeldSeat } from "@/lib/held-seat";
-import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
+import {
+  type RollCallRecordedTone,
+  rollCallLabel,
+  rollCallRecordedTone,
+  rollCallRowState,
+} from "@/lib/manifests";
 import { latestOfflineArrival, offlineArrivalEvents } from "@/lib/offline-manifests";
 import { joinedDiving, leftDiving } from "@/lib/participant-types";
 import { runningLateOnManifest } from "@/lib/running-late";
@@ -156,10 +161,13 @@ function OfflineDiverRow({
       // checkpoint panel, which this page does not have: nothing
       // on this surface is sticky or fixed (the grid's own note
       // below turns on the same fact).
-      className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${rollCallRowTone(
-        recordedTone,
-        blockedAtDock,
-      )}`}
+      //
+      // A blocked row wears its danger in the status line's ink only, on the
+      // tone of what was recorded (visual review polish, B01), as the "At the
+      // counter" block does: no pink wash and red rule on top of red words.
+      // Aboard over a block is never the calm boarded green (review of
+      // #1840), so it takes the awaiting slate; the words still say Blocked.
+      className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${offlineRowTone(recordedTone, blockedAtDock)}`}
     >
       {/* **A name and a mark** at rest, as on the live roll call: the
         circle on the trailing edge is the row's one tap (#1840), and the
@@ -469,4 +477,17 @@ function participantWord(
   if (diver.participantType === "snorkeler") return t("manifest.participantType.snorkeler");
   if (diver.participantType === "rider") return t("manifest.participantType.rider");
   return null;
+}
+
+/**
+ * **A saved row's fill**: the recorded tone, except that a block never paints
+ * the row (visual review polish, B01). The status line carries the block in
+ * danger ink and the mark draws the held ring, so the fill only says what was
+ * recorded; aboard over a block takes the awaiting slate rather than the
+ * boarded green, which would tell the captain the opposite of the words.
+ * "Did not come back" keeps its own fill and ring: that is a recorded state.
+ */
+function offlineRowTone(recordedTone: RollCallRecordedTone | null, blockedAtDock: boolean): string {
+  if (recordedTone === "boarded" && blockedAtDock) return ROLL_CALL_ROW_TONE.awaiting;
+  return recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting;
 }
