@@ -46,6 +46,16 @@ describe("the bookkeeper's status line (issue #2798)", () => {
     });
   });
 
+  it("ends who set it with a full stop, so a warning after it is a sentence of its own", () => {
+    // It read "Set by Olivia Owner, Oct 1, 2026 The last month-end files…" (check 2026-10-25).
+    for (const locale of ["en-US", "es-ES"]) {
+      expect(line({ bouncedAt: new Date() }, locale).text).toMatch(/\d{4}\. \p{Lu}/u);
+      expect(line({ confirmedAt: null }, locale).text).toMatch(/\d{4}\. \p{Lu}/u);
+      expect(line({ setByName: null, bouncedAt: new Date() }, locale).text).toMatch(/\. \p{Lu}/u);
+      expect(line({}, locale).text).toMatch(/\d{4}\.$/);
+    }
+  });
+
   it("leads with a lapsed setter, which holds every send, over a bounce", () => {
     const t = staffTranslator("en-US");
     const status = line({ bouncedAt: new Date() }, "en-US", false);
