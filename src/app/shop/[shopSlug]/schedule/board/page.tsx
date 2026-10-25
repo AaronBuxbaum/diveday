@@ -3,8 +3,11 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { EmptyState } from "@/components/EmptyState";
+import { MoreMenu, MoreMenuPrint } from "@/components/MoreMenu";
+import { PrintButton } from "@/components/PrintButton";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { menuRowClass } from "@/components/ui/menu";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { readFormDraft } from "@/db/form-drafts";
@@ -274,32 +277,14 @@ export default async function ScheduleBoardPage({
         actions={
           hasUpcoming ? (
             <>
-              {/* **The rare door, at the weight of a rare door** (principle 8:
-                collapse the rare path). Three buttons stood here — two of them
-                filled — and this is the only one that is not an operational
-                act: a shop looks at its own public page occasionally, and
-                `/shop/[shopSlug]` and the embed settings page both carry the
-                same link. At `link` weight it keeps its label at every width,
-                which retires the icon-only phone twin issue #954 needed when
-                all three were buttons: what did not fit at 390px in either
-                locale was three *filled* controls, and there are two now. It
-                does not move into `ShopIdentityMenu` — that menu holds the
-                reader's own session and never a place in the shop
-                (`.claude/rules/surfaces.md`). */}
-              <Link
-                href={publicSchedulePath(shopSlug)}
-                className={buttonClass({ variant: "link" })}
-              >
-                {st("schedule.viewPublicPage")}
-              </Link>
-              {/* **One primary, the board's own act** (UX audit 2026-10-07,
-                item 30): "Add a departure" leads for a role that can make one,
-                and "Add a booking" sits beside it at secondary weight. A role
-                that cannot configure trips (issue #1831's gate) sees no
-                departure door, so its booking door keeps the primary.
-                A link to `?add=1`, not a button: the open-the-panel state
-                lives in ScheduleBuilder. `data-board-add` is how the panel's
-                Cancel hands focus back here. */}
+              {/* **One primary, the board's own act; its peers at one weight**
+                (visual review A17). "Add a departure" leads for a role that can
+                make one (issue #1831's gate); a role that cannot sees "Add a
+                booking" lead instead. The rest are equal secondary buttons
+                from `md`, and one "More" menu below it, so a phone shows the
+                primary alone beside it. A link to `?add=1`, not a button: the
+                open-the-panel state lives in ScheduleBuilder; `data-board-add`
+                is how the panel's Cancel hands focus back here. */}
               {canConfigure ? (
                 <Link
                   href={`/shop/${shopSlug}/schedule/board?add=1`}
@@ -309,13 +294,45 @@ export default async function ScheduleBoardPage({
                 >
                   {st("schedule.builder.addDeparture")}
                 </Link>
-              ) : null}
-              <Link
-                href={`/shop/${shopSlug}/bookings/new`}
-                className={buttonClass({ variant: canConfigure ? "secondary" : "primary" })}
-              >
-                {st("schedule.addBooking")}
-              </Link>
+              ) : (
+                <Link href={`/shop/${shopSlug}/bookings/new`} className={buttonClass()}>
+                  {st("schedule.addBooking")}
+                </Link>
+              )}
+              <div className="flex gap-3 max-md:hidden">
+                {canConfigure ? (
+                  <Link
+                    href={`/shop/${shopSlug}/bookings/new`}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {st("schedule.addBooking")}
+                  </Link>
+                ) : null}
+                <PrintButton label={st("print.sheet.door")} />
+                <Link
+                  href={publicSchedulePath(shopSlug)}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {st("schedule.viewPublicPage")}
+                </Link>
+              </div>
+              <MoreMenu label={st("schedule.more")} className="md:hidden">
+                {canConfigure ? (
+                  <Link
+                    href={`/shop/${shopSlug}/bookings/new`}
+                    className={menuRowClass("quiet", { gutter: false })}
+                  >
+                    {st("schedule.addBooking")}
+                  </Link>
+                ) : null}
+                <MoreMenuPrint label={st("print.sheet.door")} />
+                <Link
+                  href={publicSchedulePath(shopSlug)}
+                  className={menuRowClass("quiet", { gutter: false })}
+                >
+                  {st("schedule.viewPublicPage")}
+                </Link>
+              </MoreMenu>
             </>
           ) : undefined
         }
