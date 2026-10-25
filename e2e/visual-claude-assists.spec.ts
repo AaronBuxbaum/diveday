@@ -5,6 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { demoEmail } from "../src/lib/simulator-email";
 import { expect, test } from "./fixtures";
 import {
@@ -32,6 +33,8 @@ import {
  */
 // i18n-exempt: seed data, a diver's name
 const WAITING_REVIEW_DIVER = "Carmen Ruiz";
+
+const staff = staffTranslator("en-US");
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
@@ -138,6 +141,14 @@ test.describe("light mode — Claude's assists, lit", () => {
       await page.getByRole("button", { name: "Save", exact: true }).click();
       await page.waitForURL(/notice=feature-saved/);
       await expect(box).toHaveValue(typed);
+      // The save's "Saved" toast leaves on its own timer; the capture is of
+      // the notes at rest, so it waits for the toast to show and then to go,
+      // never for whichever side of the timer the shot happened to land on.
+      const saved = page
+        .getByRole("status")
+        .filter({ hasText: staff("settings.main.features.saved") });
+      await expect(saved).toBeVisible();
+      await expect(saved).toBeHidden();
       await page.locator("li#replyNotes").scrollIntoViewIfNeeded();
       await page.mouse.move(0, 0);
       await capture(page, "assist-reply-notes", "light");
