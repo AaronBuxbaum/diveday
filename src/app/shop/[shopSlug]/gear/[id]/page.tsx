@@ -36,8 +36,9 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { GearItemNotes } from "./_components/GearItemNotes";
+import { GearItemNotes, NoteDoor } from "./_components/GearItemNotes";
 import { aboardText, gearUnitHull } from "./_components/KindFacts";
+import { DeleteUnitFoot } from "./_components/UnitStatus";
 import { UnitSummary } from "./_components/UnitSummary";
 import {
   checkOutGearReservationFromUnitAction,
@@ -173,6 +174,8 @@ export default async function GearUnitPage({
   const editing = !deletedAt && (edit === "details" || DETAILS_REFUSALS.has(notice ?? ""));
   const hasService = clocks.length > 0 || serviceHistory.length > 0;
   const hasRentals = settled.length > 0 || priorAssignments.length > 0;
+  /** No service, no notes, not deleted: the note door rides the empty line. */
+  const notesOnLine = !hasService && !deletedAt && notes.length === 0;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -303,7 +306,6 @@ export default async function GearUnitPage({
         <UnitSummary
           detail={detail}
           hull={hull}
-          held={held}
           editing={editing}
           unitPath={unitPath}
           t={t}
@@ -312,8 +314,10 @@ export default async function GearUnitPage({
         />
 
         {/* Service and history render only when they hold rows. A unit with
-            neither says so in one line, and the log door stands under it,
-            since logging the first service is how the card comes to exist. */}
+            neither says so in one line, and the log door stands on it, since
+            logging the first service is how the card comes to exist. With no
+            notes either, "Add a note" joins that line instead of an empty
+            Notes card (visual review A19); an opened door takes the full row. */}
         {hasService ? (
           <ServiceCard
             item={item}
@@ -327,7 +331,10 @@ export default async function GearUnitPage({
             formOpen={SERVICE_NOTICES.has(notice ?? "")}
           />
         ) : deletedAt ? null : (
-          <section aria-label={t("gear.unit.service.title")} className="space-y-2">
+          <section
+            aria-label={t("gear.unit.service.title")}
+            className="flex flex-wrap items-baseline gap-x-3 gap-y-2 sm:gap-x-4"
+          >
             {hasRentals ? null : (
               <p className="text-sm text-muted">{t("gear.unit.noServiceOrHistory")}</p>
             )}
@@ -337,6 +344,15 @@ export default async function GearUnitPage({
               todayLocal={todayLocal}
               formOpen={SERVICE_NOTICES.has(notice ?? "")}
             />
+            {notesOnLine ? (
+              <NoteDoor
+                gearItemId={item.id}
+                todayLocal={todayLocal}
+                t={t}
+                formOpen={notice === "service-logged"}
+                className="open:basis-full"
+              />
+            ) : null}
           </section>
         )}
 
@@ -411,8 +427,9 @@ export default async function GearUnitPage({
         ) : null}
 
         {/* A deleted unit with no notes ever written has an empty card and no
-            form to fill it, so it gets no card at all. */}
-        {deletedAt && notes.length === 0 ? null : (
+            form to fill it, so it gets no card at all; a live one with none
+            carries its door on the empty line above. */}
+        {(deletedAt && notes.length === 0) || notesOnLine ? null : (
           <GearItemNotes
             gearItemId={item.id}
             notes={notes}
@@ -423,6 +440,8 @@ export default async function GearUnitPage({
             formOpen={notice === "service-logged"}
           />
         )}
+
+        {deletedAt ? null : <DeleteUnitFoot item={item} held={held} t={t} />}
       </div>
     </main>
   );
@@ -597,7 +616,7 @@ function ServiceLogDoor({
   formOpen: boolean;
 }) {
   return (
-    <details className="group" open={formOpen || undefined}>
+    <details className="group open:basis-full" open={formOpen || undefined}>
       <summary
         className={buttonClass({
           variant: "link",
