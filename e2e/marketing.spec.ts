@@ -1,6 +1,7 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
+import { ONBOARDING_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -435,10 +436,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // weeks, no card, and the soft expiry that src/lib/trial.ts actually
   // implements. The FAQ's trial row went with the visual review of 2026-10-24
   // (B11: the FAQ keeps only what the table and notes do not answer), and card
-  // fees are the invoice's own row, nowhere else.
-  const trialTerms = page.getByText(diverTranslator("en-US")("marketing.pricing.trialNote"), {
-    exact: true,
-  });
+  // fees are the invoice's own row, nowhere else. The note also says how a
+  // trial becomes paid, through the upgrade inbox (docs/product/marketing.md).
+  const trialTerms = page.getByText(
+    diverTranslator("en-US")("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
+    { exact: true },
+  );
   await expect(trialTerms).toHaveCount(1);
   await expect(page.getByText("3 weeks, no card", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Stripe’s fee, paid to Stripe", { exact: true })).toHaveCount(1);
