@@ -24,18 +24,19 @@ import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
  * takes focus once the page has moved.
  */
 export function TripAddBookingLink({
-  href,
+  tripHref,
   label,
   ariaLabel,
 }: {
-  href: string;
+  /** The trip page; the band is on its Divers tab, so from Details the anchor loads it there. */
+  tripHref: string;
   label: string;
   /** Distinguishes the masthead jump from the inline add form for assistive tech. */
   ariaLabel?: string;
 }) {
   return (
     <a
-      href={href}
+      href={`${tripHref}#${ADD_A_BOOKING_ID}`}
       aria-label={ariaLabel}
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

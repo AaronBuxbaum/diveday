@@ -24,7 +24,6 @@ import { shopPath } from "@/lib/staff-notices";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
-import { ADD_A_BOOKING_ID } from "./_components/add-a-booking-id";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { detailsReadRows } from "./_components/details-rows";
@@ -315,15 +314,12 @@ export default async function ManageTripPage({
           }
           price={tripHeaderPrice(trip, shop.currency, locale, t)}
           daySpan={tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t)}
-          // Only while the boat can take a seat: full, sailed, held or
-          // cancelled, and the header offers nothing (owner, 2026-10-06). A
-          // full boat's wait list stays in the roster's own Add band.
+          // Only while the boat can take a seat (owner, 2026-10-06); a full
+          // boat's wait list stays in the roster's own Add band.
           actions={
             !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
               <TripAddBookingLink
-                // The roster's own band, on the Divers tab: from Details the
-                // anchor is not on the page, so the link loads it there.
-                href={`${shopPath(shopSlug, "trips", tripId)}#${ADD_A_BOOKING_ID}`}
+                tripHref={shopPath(shopSlug, "trips", tripId)}
                 label={t("trips.addDiver.heading")}
                 ariaLabel={t("trips.about.addDiverJump")}
               />
@@ -344,9 +340,8 @@ export default async function ManageTripPage({
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
 
         {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
-          // A card in a tone: the card's radius, bed and inset, so its words
-          // start where the cards around it do; only the border and fill are its
-          // own (pixel-craft classes 3 and 12).
+          // A card in a tone: the card's radius, bed and inset, so its words start
+          // where the cards around it do; only border and fill differ (pixel-craft 3, 12).
           <section className={`${TONE_PANEL_CLASS} border-danger/40 bg-danger/10`}>
             <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
               {lifecycleStatus?.text}
@@ -458,8 +453,6 @@ export default async function ManageTripPage({
             <PulseFacts
               facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
               foldLabel={(count) => t("trips.pulse.needsYou", { count })}
-              kindCount={(kind, count) => t("trips.pulse.kindCount", { kind, count })}
-              rosterHref={`${shopPath(shopSlug, "trips", tripId)}#roster`}
             />
 
             <TripRosterContent

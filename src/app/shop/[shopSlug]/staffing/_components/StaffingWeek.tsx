@@ -1,13 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PrintButton } from "@/components/PrintButton";
-import { RowMenu } from "@/components/RowMenu";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import { LedgerRow, ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
-import { menuRowClass } from "@/components/ui/menu";
 import { WeekPager } from "@/components/ui/week-pager";
 import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
@@ -22,6 +20,7 @@ import {
   type StaffWeek,
   type WeekShift,
 } from "@/lib/staffing-week";
+import { ShiftRemoveMenu } from "./ShiftRemoveMenu";
 import { windowOnThisDay } from "./window-on-this-day";
 
 /**
@@ -362,9 +361,6 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
-      {/* The time always whole, the title one truncated line (visual
-          review A40): two wrapped lines of title made the week's columns
-          uneven. The full title is the door's own name and the trip's. */}
       <span className="block truncate font-medium" title={trip.title}>
         {trip.title}
       </span>
@@ -961,26 +957,13 @@ export function StaffingWeek({
                             timeZone={timeZone}
                             isPast={day.isPast}
                           />
-                          {/* Remove waits in the shift's own "⋯" (visual review
-                              A40), not a column of Remove buttons down the
-                              phone's right edge. */}
                           {canManage ? (
-                            <RowMenu
-                              label={fill(words.shiftAria, {
-                                person: person.name,
-                                day: day.label,
-                              })}
-                            >
-                              <form action={deleteShiftAction}>
-                                <input type="hidden" name="shiftId" value={shift.id} />
-                                <SubmitButton
-                                  pendingLabel={words.removing}
-                                  className={menuRowClass("danger", { gutter: false })}
-                                >
-                                  {words.remove}
-                                </SubmitButton>
-                              </form>
-                            </RowMenu>
+                            <ShiftRemoveMenu
+                              label={fill(words.shiftAria, { person: person.name, day: day.label })}
+                              shiftId={shift.id}
+                              words={words}
+                              action={deleteShiftAction}
+                            />
                           ) : null}
                         </div>
                       ))}

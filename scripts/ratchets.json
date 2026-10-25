@@ -436,9 +436,9 @@
     "src/app/api/webhooks/stripe/route.ts": 923,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1052,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1266,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1201,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1065,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1060,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 923,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 919,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1034,
@@ -542,8 +542,8 @@
     "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": 305,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
-    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 329,
+    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 305,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 326,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 367,
@@ -599,32 +599,22 @@
   },
   "page-length": {
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
-    "//absorbed": [
-      {
-        "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 513"
-        }
-      }
-    ],
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 491,
     "src/app/ready/[token]/page.tsx": 649,
     "src/app/s/[shopSlug]/page.tsx": 841,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 504,
-    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 671,
-    "src/app/shop/[shopSlug]/gear/page.tsx": 415,
+    "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 590,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,
     "src/app/shop/[shopSlug]/page.tsx": 666,
     "src/app/shop/[shopSlug]/promos/page.tsx": 565,
-    "src/app/shop/[shopSlug]/reports/page.tsx": 499,
+    "src/app/shop/[shopSlug]/reports/page.tsx": 493,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
-    "src/app/shop/[shopSlug]/schedule/board/page.tsx": 415,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 705,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 535,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 476,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 514
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 511
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

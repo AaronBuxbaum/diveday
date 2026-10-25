@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { MoreMenu, MoreMenuPrint } from "@/components/MoreMenu";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -10,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
-import { menuRowClass } from "@/components/ui/menu";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { getOrderBookingContext } from "@/db/order-booking";
@@ -32,7 +29,8 @@ import {
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputes, OrderMeta } from "./_components/OrderMeta";
-import { refreshAction, refundAction, voidAction } from "./actions";
+import { OrderMoreMenu } from "./_components/OrderMoreMenu";
+import { refundAction } from "./actions";
 import { KIND_KEYS, NOTICES, STATUS_KEYS } from "./order-detail-keys";
 import { loadOrderHeader } from "./order-header";
 
@@ -106,7 +104,6 @@ export default async function OrderDetailPage({
     order.order.amountPaidCents > 0;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const demoActionHint = t("orders.detail.demoActionHint");
   // An open Stripe invoice: the one state with Record payment, Refresh and Void.
   const stripeOpen = order.order.status === "open" && counterCollection === null;
   const banner = noticeFromParam(notice, NOTICES);
@@ -123,61 +120,14 @@ export default async function OrderDetailPage({
         // then the dispute sheet, then the Stripe acts on an open invoice.
         // Record payment stays in the receipt card as the one row of work.
         actions={
-          <MoreMenu label={t("orders.detail.more")}>
-            <MoreMenuPrint label={t("print.sheet.door")} />
-            {canDisputeSheet ? (
-              <Link
-                href={shopPath(shopSlug, "orders", order.order.id, "print", "dispute")}
-                // Opening the sheet writes a trail line, so a viewport prefetch must not open it.
-                prefetch={false}
-                className={menuRowClass("quiet", { gutter: false })}
-              >
-                {t("disputeSheet.door")}
-              </Link>
-            ) : null}
-            {stripeOpen ? (
-              demo ? (
-                <>
-                  <button
-                    type="button"
-                    disabled
-                    className={menuRowClass("quiet", { gutter: false })}
-                  >
-                    {t("orders.detail.refreshStatus")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className={menuRowClass("danger", { gutter: false })}
-                  >
-                    {t("orders.detail.voidOrder")}
-                  </button>
-                  <p className="px-3 py-2 text-xs text-muted">{demoActionHint}</p>
-                </>
-              ) : (
-                <>
-                  <form action={refreshAction}>
-                    <input type="hidden" name="orderId" value={order.order.id} />
-                    <SubmitButton
-                      pendingLabel={t("orders.detail.refreshing")}
-                      className={menuRowClass("quiet", { gutter: false })}
-                    >
-                      {t("orders.detail.refreshStatus")}
-                    </SubmitButton>
-                  </form>
-                  <form action={voidAction}>
-                    <input type="hidden" name="orderId" value={order.order.id} />
-                    <SubmitButton
-                      pendingLabel={t("orders.detail.voiding")}
-                      className={menuRowClass("danger", { gutter: false })}
-                    >
-                      {t("orders.detail.voidOrder")}
-                    </SubmitButton>
-                  </form>
-                </>
-              )
-            ) : null}
-          </MoreMenu>
+          <OrderMoreMenu
+            t={t}
+            shopSlug={shopSlug}
+            orderId={order.order.id}
+            canDisputeSheet={canDisputeSheet}
+            stripeOpen={stripeOpen}
+            demo={demo}
+          />
         }
         meta={
           <OrderMeta

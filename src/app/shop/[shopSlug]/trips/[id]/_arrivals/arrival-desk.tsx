@@ -249,17 +249,7 @@ export async function buildArrivalDesk({
       } else {
         // A diver who arrived and has since gone blocked can still be sent
         // home, until the boat leaves with them.
-        const turnAway = turnAwayFor(row);
-        if (turnAway) {
-          controls.set(
-            row.bookingId,
-            <>
-              {turnAway.door}
-              {controls.get(row.bookingId)}
-            </>,
-          );
-          below.set(row.bookingId, turnAway.panel);
-        }
+        placeTurnAway(turnAwayFor(row), row.bookingId, { controls, below });
       }
       continue;
     }
@@ -281,10 +271,7 @@ export async function buildArrivalDesk({
     }
     // The door beside the Blocked pill, its confirm at the row's foot (A08).
     const turnAway = ready ? null : turnAwayFor(row);
-    if (turnAway) {
-      controls.set(row.bookingId, turnAway.door);
-      below.set(row.bookingId, turnAway.panel);
-    }
+    placeTurnAway(turnAway, row.bookingId, { controls, below });
     const turnAwayDoor = turnAway?.panel ?? null;
     const claim = noShowClaimFor(row);
     if (claim) {
@@ -544,4 +531,30 @@ function turnAwayDoor({
     />
   );
   return { door, panel };
+}
+
+/**
+ * The turn-away door leads the row's controls (beside the Blocked pill, A08)
+ * and its confirm sits at the row's foot. Whatever the row already holds in
+ * its control slot stays, after the door.
+ */
+function placeTurnAway(
+  turnAway: { door: ReactNode; panel: ReactNode } | null,
+  bookingId: string,
+  slots: { controls: Map<string, ReactNode>; below: Map<string, ReactNode> },
+) {
+  if (!turnAway) return;
+  const held = slots.controls.get(bookingId);
+  slots.controls.set(
+    bookingId,
+    held ? (
+      <>
+        {turnAway.door}
+        {held}
+      </>
+    ) : (
+      turnAway.door
+    ),
+  );
+  slots.below.set(bookingId, turnAway.panel);
 }

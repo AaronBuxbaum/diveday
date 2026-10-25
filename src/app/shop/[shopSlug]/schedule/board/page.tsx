@@ -3,11 +3,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { EmptyState } from "@/components/EmptyState";
-import { MoreMenu, MoreMenuPrint } from "@/components/MoreMenu";
-import { PrintButton } from "@/components/PrintButton";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { menuRowClass } from "@/components/ui/menu";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { readFormDraft } from "@/db/form-drafts";
@@ -19,7 +16,6 @@ import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { toShopCurrency } from "@/lib/money";
-import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { noticeRole } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -27,6 +23,7 @@ import { resolveWeekStart, weekDates } from "@/lib/week-board";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { RescheduleNotice } from "../../_components/RescheduleNotice";
 import { ScheduleViews } from "../_components/ScheduleViews";
+import { BoardHeaderActions } from "./_components/BoardHeaderActions";
 import { requestedCourseAndSite, weekAroundRead } from "./_components/board-reads";
 import type { BoardSearchParams } from "./_components/board-search-params";
 import { boardWeekView } from "./_components/board-week-view";
@@ -276,64 +273,7 @@ export default async function ScheduleBoardPage({
         // while its list is empty rather than doubling the empty state's.
         actions={
           hasUpcoming ? (
-            <>
-              {/* **One primary, the board's own act; its peers at one weight**
-                (visual review A17). "Add a departure" leads for a role that can
-                make one (issue #1831's gate); a role that cannot sees "Add a
-                booking" lead instead. The rest are equal secondary buttons
-                from `md`, and one "More" menu below it, so a phone shows the
-                primary alone beside it. A link to `?add=1`, not a button: the
-                open-the-panel state lives in ScheduleBuilder; `data-board-add`
-                is how the panel's Cancel hands focus back here. */}
-              {canConfigure ? (
-                <Link
-                  href={`/shop/${shopSlug}/schedule/board?add=1`}
-                  data-board-add
-                  scroll={false}
-                  className={buttonClass()}
-                >
-                  {st("schedule.builder.addDeparture")}
-                </Link>
-              ) : (
-                <Link href={`/shop/${shopSlug}/bookings/new`} className={buttonClass()}>
-                  {st("schedule.addBooking")}
-                </Link>
-              )}
-              <div className="flex gap-3 max-md:hidden">
-                {canConfigure ? (
-                  <Link
-                    href={`/shop/${shopSlug}/bookings/new`}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {st("schedule.addBooking")}
-                  </Link>
-                ) : null}
-                <PrintButton label={st("print.sheet.door")} />
-                <Link
-                  href={publicSchedulePath(shopSlug)}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {st("schedule.viewPublicPage")}
-                </Link>
-              </div>
-              <MoreMenu label={st("schedule.more")} className="md:hidden">
-                {canConfigure ? (
-                  <Link
-                    href={`/shop/${shopSlug}/bookings/new`}
-                    className={menuRowClass("quiet", { gutter: false })}
-                  >
-                    {st("schedule.addBooking")}
-                  </Link>
-                ) : null}
-                <MoreMenuPrint label={st("print.sheet.door")} />
-                <Link
-                  href={publicSchedulePath(shopSlug)}
-                  className={menuRowClass("quiet", { gutter: false })}
-                >
-                  {st("schedule.viewPublicPage")}
-                </Link>
-              </MoreMenu>
-            </>
+            <BoardHeaderActions st={st} shopSlug={shopSlug} canConfigure={canConfigure} />
           ) : undefined
         }
       />

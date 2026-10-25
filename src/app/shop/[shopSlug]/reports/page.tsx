@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import { MoreMenu } from "@/components/MoreMenu";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { menuRowClass } from "@/components/ui/menu";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getMonthDeparturesWithEmptySeats } from "@/db/open-seats";
 import { getMonthMoneyDetail } from "@/db/report-lines";
@@ -41,7 +39,6 @@ import {
   summarizeMonth,
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
 import { sameMomentYearBefore, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
@@ -59,6 +56,7 @@ import {
 } from "./_components/MonthMoneyDetail";
 import { LeadTimes, readMonthOwner, WeatherLine } from "./_components/MonthOwnerLines";
 import { monthFigureBasis, monthFigureList } from "./_components/month-figure-list";
+import { ReportExportMenu } from "./_components/ReportExportMenu";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearView } from "./_components/YearView";
 
@@ -345,26 +343,7 @@ export default async function ReportsPage({
         // The month's three files, one menu (visual review A06).
         actions={
           hasMonthlyActivity ? (
-            <MoreMenu label={t("reports.export")}>
-              <a
-                href={`${shopPath(shopSlug, "reports", "download")}?month=${currentMonthKey}`}
-                className={menuRowClass("quiet", { gutter: false })}
-              >
-                {t("reports.downloadCsv")}
-              </a>
-              <a
-                href={`${shopPath(shopSlug, "settings", "export", "crew-sheet")}?month=${currentMonthKey}`}
-                className={menuRowClass("quiet", { gutter: false })}
-              >
-                {t("reports.downloadCrewSheet")}
-              </a>
-              <a
-                href={`${shopPath(shopSlug, "reports", "download", "month-end")}?month=${currentMonthKey}`}
-                className={menuRowClass("quiet", { gutter: false })}
-              >
-                {t("reports.downloadMonthEnd")}
-              </a>
-            </MoreMenu>
+            <ReportExportMenu t={t} shopSlug={shopSlug} month={currentMonthKey} />
           ) : undefined
         }
       />
