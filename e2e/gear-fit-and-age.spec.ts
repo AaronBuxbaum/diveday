@@ -198,19 +198,16 @@ test.describe("deck crew", () => {
     // this would silently put the diver back on the list at a size the shop
     // already said it was short of, with the attribution wiped in the same
     // statement so nothing recorded that it happened.
-    const recordPath = new URL(page.url()).pathname;
+    const recordUrl = new URL(page.url());
     // Observe this action's refusal response: FlashParams deliberately removes
     // the redirect's notice query before an eventual URL assertion can see it.
-    await Promise.all([
+    // Hydrated actions use x-action-redirect; a native form POST uses Location.
+    const [response] = await Promise.all([
       page.waitForResponse(
-        (response) =>
-          response.request().method() === "POST" &&
-          new URL(response.url()).pathname === recordPath &&
-          response
-            .headers()
-            ["x-action-redirect"]?.startsWith(
-              `${recordPath}?notice=not-authorized-fit&form=fit#gear;`,
-            ) === true,
+        (candidate) =>
+          candidate.request().method() === "POST" &&
+          new URL(candidate.url()).origin === recordUrl.origin &&
+          new URL(candidate.url()).pathname === recordUrl.pathname,
       ),
       page.evaluate(() => {
         const form = Array.from(document.querySelectorAll("form")).find((candidate) =>
@@ -220,6 +217,17 @@ test.describe("deck crew", () => {
         form.requestSubmit();
       }),
     ]);
+    const headers = response.headers();
+    const actionRedirect = headers["x-action-redirect"];
+    expect(response.status()).toBe(actionRedirect ? 200 : 303);
+    const redirect = actionRedirect?.replace(/;(?:push|replace)$/, "") ?? headers.location;
+    expect(redirect).toBeTruthy();
+    const target = new URL(redirect ?? "", response.url());
+    expect(target.origin).toBe(recordUrl.origin);
+    expect(target.pathname).toBe(recordUrl.pathname);
+    expect(target.searchParams.get("notice")).toBe("not-authorized-fit");
+    expect(target.searchParams.get("form")).toBe("fit");
+    expect(target.hash).toBe("#gear");
 
     // The server refused an authorization boundary, so the nearby outcome is
     // assertive (`alert`), not an ambient confirmation (`status`).
