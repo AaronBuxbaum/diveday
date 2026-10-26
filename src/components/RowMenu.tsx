@@ -40,7 +40,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 export function RowMenu({
   label,
   panelClassName = "w-48",
-  initialOpen = false,
+  open: controlledOpen,
+  onOpenChange,
   onClosed,
   children,
 }: {
@@ -48,13 +49,21 @@ export function RowMenu({
   label: string;
   /** The panel's width; a list of acts is `w-48`, a form inside it wider. */
   panelClassName?: string;
-  /** A refused row edit reopens its own panel after the action redirect. */
-  initialOpen?: boolean;
+  /** An owning row editor may reopen the panel when a refused action returns. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   /** Called whenever the list shuts, however it shut — to reset a panel's view. */
   onClosed?: () => void;
   children: ReactNode | ((close: () => void) => ReactNode);
 }) {
-  const [open, setOpen] = useState(initialOpen);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
+  const setOpen = useCallback((next: boolean) => {
+    setInternalOpen(next);
+    onOpenChangeRef.current?.(next);
+  }, []);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
@@ -63,7 +72,7 @@ export function RowMenu({
   const close = useCallback(() => {
     setOpen(false);
     onClosedRef.current?.();
-  }, []);
+  }, [setOpen]);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   const panelRef = useRef<HTMLDivElement>(null);
   const [upward, setUpward] = useState(false);

@@ -129,3 +129,22 @@ it("keeps a refused attempt made after a previous success and clears only its la
   expect(window.sessionStorage.getItem(keptTypedKey("work-order-edit-line", scope))).toBeNull();
   expect(screen.queryByLabelText("Price each")).toBeNull();
 });
+
+it("reopens a preserved closed menu when its redirect brings a validated refusal", () => {
+  const view = render(menu());
+  view.rerender(menu("invalid-amount"));
+  expect(screen.getByLabelText("Price each")).toBeVisible();
+  expect(screen.getByText("Check the price.")).toBeVisible();
+});
+
+it("keeps an explicit close until a new same-code refusal reopens that line", () => {
+  const result = menu("invalid-amount");
+  const view = render(result);
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByLabelText("Price each")).toBeNull();
+  expect(screen.getByRole("button", { name: "Change Old seal" })).toHaveFocus();
+  view.rerender(result);
+  expect(screen.queryByLabelText("Price each")).toBeNull();
+  view.rerender(menu("invalid-amount"));
+  expect(screen.getByLabelText("Price each")).toBeVisible();
+});

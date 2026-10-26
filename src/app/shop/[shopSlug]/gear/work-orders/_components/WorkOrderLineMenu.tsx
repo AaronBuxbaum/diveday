@@ -61,6 +61,13 @@ export function WorkOrderLineMenu({
   refusal?: { field: "description" | "quantity" | "unitAmount"; message: string };
 }) {
   const [editing, setEditing] = useState(Boolean(refusal));
+  const [open, setOpen] = useState(Boolean(refusal));
+  useEffect(() => {
+    if (refusal) {
+      setEditing(true);
+      setOpen(true);
+    }
+  }, [refusal]);
   useEffect(() => {
     if (notice === "line-saved") forgetKeptTyped("work-order-edit-line", scope);
   }, [notice, scope]);
@@ -68,7 +75,8 @@ export function WorkOrderLineMenu({
   return (
     <RowMenu
       label={label}
-      initialOpen={Boolean(refusal)}
+      open={open}
+      onOpenChange={setOpen}
       panelClassName={editing ? "w-80" : "w-48"}
       onClosed={() => setEditing(false)}
     >
