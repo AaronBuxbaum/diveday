@@ -37,6 +37,7 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       await service.getByLabel("Note").fill("Second stage rebuilt on the bench");
       await service.getByRole("button", { name: "Log it" }).click();
       await expect(page.getByRole("status").filter({ hasText: "Logged" })).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: "Logged" })).toBeHidden();
       await service.locator("summary").filter({ hasText: "History" }).click();
       await service.getByText("Second stage rebuilt on the bench", { exact: true }).waitFor();
       await capture(page, "gear-service-history-open", "light");
