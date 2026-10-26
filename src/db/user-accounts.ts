@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { accountSessions, people, shops, userAccounts } from "./schema";
+import { accountSessions, accountSignInChallenges, people, shops, userAccounts } from "./schema";
 
 export type AccountContact = {
   id: string;
@@ -95,8 +95,13 @@ export async function setAccountPassword(
   userAccountId: string,
   hashedPassword: string,
 ): Promise<void> {
-  await db.update(userAccounts).set({ hashedPassword }).where(eq(userAccounts.id, userAccountId));
-  await db.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
+  await db.transaction(async (tx) => {
+    await tx.update(userAccounts).set({ hashedPassword }).where(eq(userAccounts.id, userAccountId));
+    await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
+    await tx
+      .delete(accountSignInChallenges)
+      .where(eq(accountSignInChallenges.userAccountId, userAccountId));
+  });
 }
 
 /**
@@ -113,15 +118,20 @@ export async function activateStaffAccount(
   hashedPassword: string,
   now: Date = nowDate(),
 ): Promise<void> {
-  await db
-    .update(userAccounts)
-    .set({ hashedPassword, status: "active", emailVerifiedAt: now, emailVerified: true })
-    .where(eq(userAccounts.id, userAccountId));
-  // An `invited` account can never have signed in (verifyCredentials refuses
-  // anything but `active`), so there is nothing to revoke in practice today —
-  // kept for the same reason setAccountPassword now does it: consistent with
-  // every other place this account's credentials change.
-  await db.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(userAccounts)
+      .set({ hashedPassword, status: "active", emailVerifiedAt: now, emailVerified: true })
+      .where(eq(userAccounts.id, userAccountId));
+    // An `invited` account can never have signed in (verifyCredentials refuses
+    // anything but `active`), so there is nothing to revoke in practice today —
+    // kept for the same reason setAccountPassword now does it: consistent with
+    // every other place this account's credentials change.
+    await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
+    await tx
+      .delete(accountSignInChallenges)
+      .where(eq(accountSignInChallenges.userAccountId, userAccountId));
+  });
 }
 
 /**

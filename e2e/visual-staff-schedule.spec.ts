@@ -4,7 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
-import type { Page } from "@playwright/test";
+import type { Page, Request, Route } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { weekStartOf } from "../src/lib/week-board";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -36,6 +36,69 @@ installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
 
+/** Force the cookie-writing action refresh that previously erased Undo's result. */
+async function undoWithSessionRefresh(page: Page) {
+  const url = new URL(page.url());
+  const heldId = url.searchParams.get("held");
+  if (!heldId) throw new Error("The reschedule page has no held notice");
+  const isUndo = (request: Request) =>
+    request.method() === "POST" &&
+    Boolean(request.headers()["next-action"]) &&
+    new URL(request.url()).pathname === url.pathname &&
+    Boolean(request.postData()?.includes(heldId));
+  const scope = (requestUrl: URL) => requestUrl.pathname === url.pathname;
+  let delivered!: (proof: { cookieRefresh: boolean; revalidated: boolean }) => void;
+  let failed!: (error: unknown) => void;
+  const completion = new Promise<{ cookieRefresh: boolean; revalidated: boolean }>(
+    (resolve, reject) => {
+      delivered = resolve;
+      failed = reject;
+    },
+  );
+  const omitCache = async (route: Route) => {
+    if (!isUndo(route.request())) return route.continue();
+    const headers = await route.request().allHeaders();
+    // Target this action alone: concurrent preflight reads may refresh the
+    // browser cookie, but must not consume this regression's cache miss.
+    headers.cookie = (headers.cookie ?? "")
+      .split(";")
+      .filter((part) => part.trim().split("=")[0] !== "better-auth.session_data")
+      .join(";");
+    // Browser continue cannot override Cookie; the request API can. Fulfill
+    // with the real action response so its cookie and RSC refresh reach React.
+    try {
+      const response = await route.fetch({
+        headers,
+        timeout: VISUAL_STEP_BOUNDS.actionTimeout,
+        maxRedirects: 0,
+      });
+      const returned = response.headers();
+      const proof = {
+        cookieRefresh: Boolean(returned["set-cookie"]?.includes("session_data=")),
+        revalidated: Boolean(returned["x-action-revalidated"]),
+      };
+      await route.fulfill({ response });
+      delivered(proof);
+    } catch (error) {
+      failed(error);
+      await route.abort();
+    }
+  };
+  await page.route(scope, omitCache);
+  try {
+    await test.step(
+      "Undo refreshes its session cookie",
+      async () => {
+        await page.getByRole("button", { name: "Undo", exact: true }).click();
+        expect(await completion).toEqual({ cookieRefresh: true, revalidated: true });
+      },
+      { timeout: VISUAL_STEP_BOUNDS.actionTimeout },
+    );
+  } finally {
+    await page.unroute(scope, omitCache);
+  }
+}
+
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
@@ -60,7 +123,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
         await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
-        await page.getByRole("button", { name: "Undo" }).click();
+        await undoWithSessionRefresh(page);
         await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
         await capture(page, "trip-reschedule-hold", scheme);
       });
@@ -111,7 +174,7 @@ for (const scheme of ["light", "dark"] as const) {
         await date.fill(next.toISOString().slice(0, 10));
         await page.getByRole("button", { name: "Move it" }).click();
         await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
-        await page.getByRole("button", { name: "Undo" }).click();
+        await undoWithSessionRefresh(page);
         await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
         await capture(page, "schedule-builder-reschedule-hold", scheme);
       });

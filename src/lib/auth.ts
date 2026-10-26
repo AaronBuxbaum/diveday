@@ -1,27 +1,37 @@
-import { type BetterAuthPlugin, betterAuth } from "better-auth";
+import { type BetterAuthPlugin, betterAuth, type Session, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthEndpoint } from "better-auth/api";
-import { setSessionCookie } from "better-auth/cookies";
+import { deleteSessionCookie, setSessionCookie } from "better-auth/cookies";
 import { nextCookies } from "better-auth/next-js";
 import { io } from "next/cache";
 import { headers as nextHeaders } from "next/headers";
 import { cache } from "react";
 import { z } from "zod";
-import { getAccountSecurity, verifyAccountSecondFactor } from "@/db/account-security";
-import { type AppDb, getDb } from "@/db/client";
+import { type DbExecutor, getDb } from "@/db/client";
 import {
   accountSessions,
   authProviderAccounts,
   authVerifications,
   userAccounts,
 } from "@/db/schema";
+import {
+  cancelPendingSignIn,
+  completePendingSignIn,
+  startCredentialSignIn,
+} from "@/db/sign-in-challenges";
 import { trackEvent } from "@/lib/analytics";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
-import { verifyCredentials } from "@/lib/credentials";
+import type { VerifiedUser } from "@/lib/credentials";
 import { log } from "@/lib/log";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
+import {
+  pendingCookie,
+  readPendingHandle,
+  signInOrigins,
+  trustedSignInOrigin,
+} from "@/lib/pending-sign-in";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { readSessionCookieCache } from "@/lib/session-cookie-cache";
@@ -54,21 +64,18 @@ import { withHashedSessionTokens } from "@/lib/session-token-hash";
  * problems. A burst is credential stuffing and the alarm is on rate, not
  * presence.
  */
-function diveDayCredentialsPlugin() {
+function diveDayCredentialsPlugin(db: DbExecutor) {
+  const origins = signInOrigins(publicAppUrl() ?? APP_ORIGIN, process.env);
+  const cookie = pendingCookie(origins[0], process.env.DIVEDAY_E2E === "1");
   return {
     id: "diveday-credentials",
     endpoints: {
       signInDiveDayCredentials: createAuthEndpoint(
         "/sign-in/diveday-credentials",
-        {
-          method: "POST",
-          body: z.object({
-            email: z.email(),
-            password: z.string().min(1),
-            totpCode: z.string().trim().min(6).max(32).optional(),
-          }),
-        },
+        { method: "POST", body: z.object({ email: z.email(), password: z.string().min(1) }) },
         async (ctx) => {
+          if (!trustedSignInOrigin(ctx.headers, Boolean(ctx.request), origins))
+            throw new APIError("FORBIDDEN", { message: "invalid_origin" });
           const ip = await clientIp(ctx.headers ?? null);
           const [byIp, byEmail] = await Promise.all([
             checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp),
@@ -78,97 +85,123 @@ function diveDayCredentialsPlugin() {
             ),
           ]);
           if (!byIp.allowed || !byEmail.allowed) {
-            // Fire-and-forget: telemetry must never add latency to the
-            // sign-in chokepoint, and trackEvent already swallows its own
-            // errors.
             void trackEvent({ name: "sign_in_attempted", outcome: "rate_limited" });
             log("auth.sign_in_refused", "warn", { code: "rate_limited" });
             throw new APIError("UNAUTHORIZED", { message: "rate_limited" });
           }
-
-          const db = await getDb();
-          const verified = await verifyCredentials(db, ctx.body.email, ctx.body.password);
+          const result = await startCredentialSignIn(
+            db,
+            { ...ctx.body, previousHandle: readPendingHandle(ctx.headers, cookie.name) },
+            createProviderSession,
+          );
           void trackEvent({
             name: "sign_in_attempted",
-            outcome: verified ? "success" : "invalid_credentials",
+            outcome: result.status === "invalid" ? "invalid_credentials" : "success",
           });
-          if (!verified) {
-            // No address, no IP, no password — AGENTS.md forbids PII in logs,
-            // and this line is written on a path anyone on the internet can
-            // reach.
+          ctx.setCookie(cookie.name, "", { ...cookie.attributes, maxAge: 0 });
+          if (result.status === "invalid") {
             log("auth.sign_in_refused", "warn", { code: "invalid_credentials" });
             throw new APIError("UNAUTHORIZED", { message: "invalid_credentials" });
           }
-
-          const security = await getAccountSecurity(db, verified.id);
-          if (security?.totpEnabledAt) {
-            const secondFactor = ctx.body.totpCode;
-            if (!secondFactor) {
-              throw new APIError("UNAUTHORIZED", { message: "two_factor_required" });
-            }
-            const accepted = await verifyAccountSecondFactor(db, verified.id, secondFactor);
-            if (!accepted) {
-              throw new APIError("UNAUTHORIZED", { message: "invalid_two_factor" });
-            }
+          if (result.status === "pending") {
+            // A pending account must not inherit another account’s browser session.
+            deleteSessionCookie(ctx);
+            ctx.setCookie(cookie.name, result.handle, cookie.attributes);
+            return ctx.json({ pending: true as const, user: null, shopSlug: null });
           }
-
-          // Snapshotted once, at sign-in — exactly what next-auth's `jwt()`
-          // callback used to do (ADR-0006). A role change takes effect on
-          // next sign-in, not instantly; every privileged mutation re-reads
-          // live roles via `loadActiveStaffRoles` (src/db/authz.ts) and never
-          // trusts this snapshot.
-          const session = await ctx.context.internalAdapter.createSession(verified.id, false, {
-            personId: verified.personId,
-            shopId: verified.shopId,
-            shopSlug: verified.shopSlug,
-            roles: verified.roles,
-            name: verified.name,
-          });
-          if (!session) {
-            log("auth.error", "error", {
-              type: "session_create_failed",
-              message: null,
-              cause: null,
-            });
-            throw new APIError("INTERNAL_SERVER_ERROR", { message: "session_create_failed" });
+          try {
+            await setSessionCookie(ctx, result.value);
+          } catch (error) {
+            await ctx.context.internalAdapter
+              .deleteSession(result.value.session.token)
+              .catch(() => undefined);
+            throw error;
           }
-
-          const user = await ctx.context.internalAdapter.findUserById(verified.id);
-          if (!user) {
-            log("auth.error", "error", {
-              type: "session_user_missing",
-              message: null,
-              cause: null,
-            });
-            throw new APIError("INTERNAL_SERVER_ERROR", { message: "session_user_missing" });
+          return ctx.json(signedInResponse(result.value));
+        },
+      ),
+      completeDiveDaySignIn: createAuthEndpoint(
+        "/sign-in/diveday-second-factor",
+        { method: "POST", body: z.object({ totpCode: z.string() }) },
+        async (ctx) => {
+          if (!trustedSignInOrigin(ctx.headers, Boolean(ctx.request), origins))
+            throw new APIError("FORBIDDEN", { message: "invalid_origin" });
+          const ip = await clientIp(ctx.headers ?? null);
+          if (
+            !(await checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp)).allowed
+          )
+            return ctx.json({ status: "rate_limited" as const });
+          const result = await completePendingSignIn(
+            db,
+            readPendingHandle(ctx.headers, cookie.name),
+            ctx.body.totpCode.trim(),
+            async (email) =>
+              (
+                await checkRateLimit(
+                  rateLimitKey("sign-in-email", email),
+                  RATE_LIMITS.signInByEmail,
+                )
+              ).allowed,
+            createProviderSession,
+          );
+          if (result.status === "restart" || result.status === "signed_in")
+            ctx.setCookie(cookie.name, "", { ...cookie.attributes, maxAge: 0 });
+          if (result.status !== "signed_in") return ctx.json({ status: result.status });
+          try {
+            await setSessionCookie(ctx, result.value);
+          } catch (error) {
+            await ctx.context.internalAdapter
+              .deleteSession(result.value.session.token)
+              .catch(() => undefined);
+            throw error;
           }
-
-          await setSessionCookie(ctx, { session, user });
-          // Never spread the adapter's row into the response. `findUserById`
-          // selects the whole `user_accounts` row and the adapter rebuilds it
-          // from better-auth's own `user` model, which drops columns that
-          // model has never heard of — `hashed_password` among them — but that
-          // is the adapter's behaviour, not a promise this endpoint can make.
-          // Nothing reads this response body today (no route mounts the
-          // better-auth handler, and no call site inspects the return value of
-          // signInDiveDayCredentials()), but the day one does — the standard
-          // better-auth quickstart, a client SDK, OAuth — an explicit three
-          // fields is what keeps a staff member's bcrypt hash out of a login
-          // response (security review finding).
-          //
-          // `shopSlug` is beside the user, not in it: the one place sign-in
-          // lands (`src/app/sign-in/actions.ts`) goes straight to the staffer's
-          // own shop instead of bouncing through `/shop`. Only a staff session
-          // names one, the same condition the edge's `/shop` redirect asks
-          // (`src/proxy.ts`).
-          return ctx.json({
-            user: { id: user.id, email: user.email, name: verified.name },
-            shopSlug: isStaff(verified.roles) && verified.shopSlug ? verified.shopSlug : null,
-          });
+          return ctx.json({ status: "signed_in" as const, ...signedInResponse(result.value) });
+        },
+      ),
+      cancelDiveDaySignIn: createAuthEndpoint(
+        "/sign-in/diveday-cancel",
+        { method: "POST" },
+        async (ctx) => {
+          if (!trustedSignInOrigin(ctx.headers, Boolean(ctx.request), origins))
+            throw new APIError("FORBIDDEN", { message: "invalid_origin" });
+          await cancelPendingSignIn(db, readPendingHandle(ctx.headers, cookie.name));
+          ctx.setCookie(cookie.name, "", { ...cookie.attributes, maxAge: 0 });
+          return ctx.json({ cancelled: true });
         },
       ),
     },
   } satisfies BetterAuthPlugin;
+}
+
+/** Both sign-in stages use the configured provider, including token hashing, over their transaction. */
+type ProviderSession = { session: Session; user: User; verified: VerifiedUser };
+
+async function createProviderSession(
+  db: DbExecutor,
+  verified: VerifiedUser,
+): Promise<ProviderSession> {
+  const context = await createAuth(db).$context;
+  const session = await context.internalAdapter.createSession(verified.id, false, {
+    personId: verified.personId,
+    shopId: verified.shopId,
+    shopSlug: verified.shopSlug,
+    roles: verified.roles,
+    name: verified.name,
+  });
+  if (!session) throw new APIError("INTERNAL_SERVER_ERROR", { message: "session_create_failed" });
+  const user = await context.internalAdapter.findUserById(verified.id);
+  if (!user) throw new APIError("INTERNAL_SERVER_ERROR", { message: "session_user_missing" });
+  return { session, user, verified };
+}
+
+/** Adapter rows never cross the response boundary. */
+function signedInResponse(value: ProviderSession) {
+  return {
+    pending: false as const,
+    user: { id: value.user.id, email: value.user.email, name: value.verified.name },
+    shopSlug:
+      isStaff(value.verified.roles) && value.verified.shopSlug ? value.verified.shopSlug : null,
+  };
 }
 
 /**
@@ -199,7 +232,7 @@ function hashedSessionAdapter<O, A extends object>(factory: (options: O) => A) {
  * request and refuses to serve *any* request while the two disagree (issue
  * #1588), so a guard that re-declares the options would guard nothing.
  */
-export function createAuth(db: AppDb) {
+export function createAuth(db: DbExecutor) {
   return betterAuth({
     secret: authSecret,
     // Keep callbacks and redirects on DiveDay's server-owned origin. The
@@ -273,7 +306,7 @@ export function createAuth(db: AppDb) {
     },
     emailAndPassword: { enabled: false },
     disabledPaths: [...DIGEST_BLIND_SESSION_PATHS],
-    plugins: [diveDayCredentialsPlugin(), nextCookies()],
+    plugins: [diveDayCredentialsPlugin(db), nextCookies()],
   });
 }
 

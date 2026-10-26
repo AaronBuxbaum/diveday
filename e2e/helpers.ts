@@ -40,8 +40,8 @@ export async function signOut(page: Page) {
   const identityMenu = page.locator("[data-identity-menu]");
   await expect(identityMenu).toHaveAttribute("data-hydrated", "true");
   await identityMenu.click();
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await page.getByRole("button", { name: "Sign out? Confirm" }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await page.getByRole("button", { name: "Sign out? Confirm", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   invalidateStaffStorageState();
 }

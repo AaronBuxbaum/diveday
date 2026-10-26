@@ -279,18 +279,21 @@ export async function onboardAction(formData: FormData) {
   }
 
   // 3. Sign in the new owner and redirect to dashboard
+  let pendingSignIn = false;
   try {
     const auth = await getAuth();
-    await auth.api.signInDiveDayCredentials({
+    const signedIn = await auth.api.signInDiveDayCredentials({
       body: { email: ownerEmail.toLowerCase(), password: ownerPassword },
       headers: await headers(),
     });
+    pendingSignIn = signedIn.pending;
   } catch (error) {
     if (error instanceof APIError) {
       return await backToForm("signin_failed");
     }
     throw error;
   }
+  if (pendingSignIn) redirect("/sign-in?error=two-factor");
   // The link is spent; a bounce cookie still holding it has nothing left to open.
   (await cookies()).delete(SETUP_LINK_COOKIE);
   redirect(`/shop/${shopSlug}`);

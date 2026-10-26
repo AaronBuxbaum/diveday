@@ -60,7 +60,8 @@ const guardedRoot = "src/app";
  */
 export const SKELETON_EXEMPT = {
   ".": "The marketing home renders its own nav and footer fallbacks; no ancestor boundary exists above it.",
-  "sign-in": "A single centred card with nothing streamed into it.",
+  "sign-in":
+    "Complete native auth-form HTML, without a streaming skeleton (ADR 20261026-pending-sign-in-challenge).",
   switching: "Static competitor index, prerendered; no ancestor boundary above it.",
   "switching/[competitor]":
     "Static per-competitor guide, prerendered; no ancestor boundary above it.",

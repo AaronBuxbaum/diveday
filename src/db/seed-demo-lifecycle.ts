@@ -6,6 +6,7 @@ import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import {
   accountSecurity,
   accountSessions,
+  accountSignInChallenges,
   accountStepUps,
   accountTokens,
   activityEvents,
@@ -392,6 +393,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // References user_accounts/people/shops, all of which go below — a live
   // sign-in session for this shop's own staff must not survive the shop it
   // belonged to.
+  await db.delete(accountSignInChallenges).where(eq(accountSignInChallenges.shopId, shopId));
   await db.delete(accountSessions).where(eq(accountSessions.shopId, shopId));
 
   if (personIds.length > 0) {

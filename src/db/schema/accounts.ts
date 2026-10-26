@@ -3,6 +3,7 @@ import {
   bigint,
   check,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -23,6 +24,30 @@ export const accountTokenPurpose = pgEnum("account_token_purpose", [
   "password_reset",
   "invite",
 ]);
+
+/** Pending password proof, never an authenticated session. Machinery, hard deleted. */
+export const accountSignInChallenges = pgTable(
+  "account_sign_in_challenges",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    userAccountId: uuid("user_account_id")
+      .notNull()
+      .references(() => userAccounts.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    attemptsRemaining: integer("attempts_remaining").notNull().default(5),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    check("account_sign_in_challenges_attempts", sql`${table.attemptsRemaining} between 0 and 5`),
+    check("account_sign_in_challenges_expiry", sql`${table.expiresAt} > ${table.createdAt}`),
+    index("account_sign_in_challenges_expiry_idx").on(table.expiresAt),
+    index("account_sign_in_challenges_account_idx").on(table.userAccountId),
+  ],
+);
 
 /**
  * A hashed, expiring, one-time bearer token proving control of a user

@@ -16,7 +16,13 @@ import {
   recoveryCodeHashes,
 } from "@/lib/totp";
 import type { DbExecutor } from "./client";
-import { accountSecurity, accountSessions, accountStepUps } from "./schema";
+import {
+  accountSecurity,
+  accountSessions,
+  accountSignInChallenges,
+  accountStepUps,
+  userAccounts,
+} from "./schema";
 
 const STEP_UP_TTL_MS = 15 * 60 * 1000;
 
@@ -268,25 +274,46 @@ export async function revokeAccountSession(
 }
 
 export async function disableTotp(db: DbExecutor, userAccountId: string): Promise<boolean> {
-  const [row] = await db
-    .update(accountSecurity)
-    .set({
-      totpEnabledAt: null,
-      totpSecretSealed: null,
-      recoveryCodeHashes: [],
-      lastTotpStep: null,
-      updatedAt: nowDate(),
-    })
-    .where(eq(accountSecurity.userAccountId, userAccountId))
-    .returning({ userAccountId: accountSecurity.userAccountId });
-  return Boolean(row);
+  return db.transaction(async (tx) => {
+    await tx
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, userAccountId))
+      .for("update");
+    const [row] = await tx
+      .update(accountSecurity)
+      .set({
+        totpEnabledAt: null,
+        totpSecretSealed: null,
+        recoveryCodeHashes: [],
+        lastTotpStep: null,
+        updatedAt: nowDate(),
+      })
+      .where(eq(accountSecurity.userAccountId, userAccountId))
+      .returning({ userAccountId: accountSecurity.userAccountId });
+
+    await tx
+      .delete(accountSignInChallenges)
+      .where(eq(accountSignInChallenges.userAccountId, userAccountId));
+    return Boolean(row);
+  });
 }
 
 export async function revokeAllAccountSessions(
   db: DbExecutor,
   userAccountId: string,
 ): Promise<void> {
-  await db.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
+  return db.transaction(async (tx) => {
+    await tx
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, userAccountId))
+      .for("update");
+    await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
+    await tx
+      .delete(accountSignInChallenges)
+      .where(eq(accountSignInChallenges.userAccountId, userAccountId));
+  });
 }
 
 export async function grantStepUp(

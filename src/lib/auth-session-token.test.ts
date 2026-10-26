@@ -72,6 +72,45 @@ async function harness() {
 }
 
 describe("a session token at rest", () => {
+  it("uses the supplied transaction for provider session creation and user lookup", async () => {
+    const db = ctx.db;
+    const [account] = await db.select().from(userAccounts).limit(1);
+    if (!account) throw new Error("seed has no account");
+    const [person] = await db.select().from(people).where(eq(people.id, account.personId));
+    const [shop] = await db.select().from(shops).where(eq(shops.id, person.shopId));
+    let sessionId = "";
+    const rollback = new Error("prove provider rollback");
+
+    await expect(
+      db.transaction(async (tx) => {
+        const provider = createAuth(tx);
+        const context = await provider.$context;
+        const session = await context.internalAdapter.createSession(account.id, false, {
+          personId: person.id,
+          shopId: shop.id,
+          shopSlug: shop.slug,
+          roles: ["owner"],
+          name: person.fullName,
+        });
+        if (!session) throw new Error("provider did not create session");
+        sessionId = session.id;
+        expect((await context.internalAdapter.findUserById(account.id))?.id).toBe(account.id);
+        const [stored] = await tx
+          .select()
+          .from(accountSessions)
+          .where(eq(accountSessions.id, session.id));
+        expect(stored.token).toBe(sha256(session.token));
+        expect(stored.token).not.toBe(session.token);
+        throw rollback;
+      }),
+    ).rejects.toBe(rollback);
+
+    expect(sessionId).not.toBe("");
+    expect(
+      await db.select().from(accountSessions).where(eq(accountSessions.id, sessionId)),
+    ).toEqual([]);
+  });
+
   it("is stored as its SHA-256, while better-auth hands back the raw token", async () => {
     const { session, storedToken } = await harness();
 

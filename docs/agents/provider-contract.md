@@ -7,6 +7,12 @@ provenance. The agent guard checks real paths, frontmatter and referenced files 
 
 ## Start and resume
 
+Install with `pnpm install --frozen-lockfile` before the first bootstrap. The manifest’s
+`devEngines.runtime` selects Node 24.22.0 locally, matching CI, without changing global Node.
+Older Node releases can misresolve pnpm package symlinks after a pipe stat (Node #65113); the
+dev supervisor refuses them before starting a child. Bootstrap and doctor report the full runtime
+and an actionable mismatch, rather than treating every Node 24 release as equivalent.
+
 Run `pnpm agent:bootstrap --provider codex`, `claude`, or `other`. This read-only, offline command
 reports branch, immutable HEAD, dirty paths, Node pin, dependency presence and durable task state.
 It does not install dependencies, fetch, change branches or execute the next command. Investigate

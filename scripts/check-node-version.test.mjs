@@ -1,12 +1,21 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 // Hoisted deliberately (`publicHoistPattern` in pnpm-workspace.yaml), and the
 // right tool here: hand-rolling `||`/`^`/`>=` range logic to check a version
 // range would be a subtler bug than the one this test exists to catch.
-import { compare as compareVersions, satisfies, validRange } from "semver";
+import { satisfies, validRange } from "semver";
 import { describe, expect, it } from "vitest";
-
 import {
   CI_NODE_VERSION,
   ES_LIB,
@@ -14,7 +23,9 @@ import {
   LAMBDA_NODE_MAJOR,
   NODE_FLOOR,
   NODE_MAJOR,
+  nodeRuntimeProblem,
 } from "./check-node-version.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -85,13 +96,23 @@ describe("findNodeVersionDrift", () => {
     expect(findNodeVersionDrift(readerFor(repoFiles()))).toEqual([]);
   });
 
-  it("catches an engines floor that drifts from the one dependencies impose", () => {
+  it("catches an engines floor that drifts from the supported runtime", () => {
     // The original bug: `>=24.0.0` looks right and admits Node 24.0-24.14,
     // which jsdom refuses.
     const files = repoFiles();
     files.set("package.json", files.get("package.json").replace(`^${NODE_FLOOR}`, ">=24.0.0"));
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
       `package.json (engines.node) says >=24.0.0, and every other declaration says ^${NODE_FLOOR}.`,
+    ]);
+  });
+
+  it("catches a project-local runtime pin that drifts from CI", () => {
+    const files = repoFiles();
+    const manifest = JSON.parse(files.get("package.json"));
+    manifest.devEngines.runtime.version = "24.18.0";
+    files.set("package.json", JSON.stringify(manifest));
+    expect(findNodeVersionDrift(readerFor(files))).toEqual([
+      `package.json (devEngines.runtime) says node@24.18.0:download, and every other declaration says node@${CI_NODE_VERSION}:download.`,
     ]);
   });
 
@@ -245,8 +266,8 @@ describe("findNodeVersionDrift", () => {
     const files = repoFiles();
     files.set("package.json", "{ not json");
     const drift = findNodeVersionDrift(readerFor(files));
-    expect(drift).toHaveLength(2);
-    expect(drift[0]).toMatch(/^package\.json could not be read for engines\.node: /);
+    expect(drift).toHaveLength(3);
+    expect(drift[0]).toMatch(/^package\.json could not be read for devEngines\.runtime: /);
   });
 });
 
@@ -257,31 +278,57 @@ describe("the numbers themselves", () => {
     expect(satisfies(CI_NODE_VERSION, `^${NODE_FLOOR}`)).toBe(true);
   });
 
-  it("is the lowest version on this major that every installed dependency accepts", () => {
-    // Derived from the whole graph, not from the one package that happens to
-    // set it today: reading `jsdom` alone would stay green while some other
-    // dependency raised the bar underneath it, which is the invariant this
-    // test's name claims and the reason `engines` was wrong to begin with.
-    // 733 of 1169 installed manifests declare a range; the scan costs ~0.15s.
-    const ranges = installedNodeRanges();
-    const offenders = [...ranges].filter(([, range]) => !satisfies(NODE_FLOOR, range));
+  it("supports every installed dependency at the runtime correctness floor", () => {
+    const offenders = [...installedNodeRanges()].filter(
+      ([, range]) => !satisfies(NODE_FLOOR, range),
+    );
     expect(offenders.map(([name, range]) => `${name} wants ${range}`)).toEqual([]);
+    // Dependency ranges alone admitted the broken realpath implementation (#3083).
+    expect(NODE_FLOOR).toBe(CI_NODE_VERSION);
+  });
 
-    // And not needlessly high: nothing below the floor would do. Candidates
-    // are every version on this major that any range names, since a range can
-    // only change its answer at a boundary it mentions.
-    const candidates = [`${NODE_MAJOR}.0.0`];
-    for (const range of ranges.values()) {
-      for (const version of range.match(
-        new RegExp(`\\b${NODE_MAJOR}\\.\\d+(?:\\.\\d+)?\\b`, "g"),
-      ) ?? []) {
-        candidates.push(version.split(".").length === 2 ? `${version}.0` : version);
-      }
+  it.each(["24.15.0", "24.18.0", "24.21.0", "22.22.2", "25.0.0", "26.0.0", "24.22.0-rc.1"])(
+    "refuses unsupported direct runtime %s with a project-local repair",
+    (version) => {
+      expect(nodeRuntimeProblem(version)).toContain(`Node ${version} is unsupported`);
+      expect(nodeRuntimeProblem(version)).toContain("pnpm install --frozen-lockfile");
+    },
+  );
+
+  it.each(["24.22.0", "24.22.1", "24.23.0"])("accepts supported runtime %s", (version) => {
+    expect(nodeRuntimeProblem(version)).toBeNull();
+  });
+
+  it("resolves symlinks after an unrelated pipe stat in a fresh Node process", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "diveday-realpath-"));
+    try {
+      mkdirSync(path.join(dir, "real"));
+      writeFileSync(path.join(dir, "warm.cjs"), "module.exports = true;");
+      writeFileSync(path.join(dir, "real", "target.cjs"), "module.exports = true;");
+      symlinkSync(path.join(dir, "real"), path.join(dir, "linked"), "junction");
+      // A subprocess with piped stdout reproduces Node#65113 without Next,
+      // pnpm, server processes, preloads, or private cache manipulation.
+      const code = `
+        const assert = require('node:assert/strict');
+        const fs = require('node:fs');
+        const { createRequire } = require('node:module');
+        const r = createRequire(process.argv[1] + '/entry.cjs');
+        r('./warm.cjs');
+        const expected = fs.realpathSync.native(process.argv[1] + '/linked/target.cjs');
+        const pipe = fs.fstatSync(1);
+        assert.ok(pipe.isFIFO() || pipe.isSocket(), 'stdout must be piped');
+        assert.equal(r.resolve('./linked/target.cjs'), expected);
+      `;
+      const result = runBounded(process.execPath, ["-e", code, dir], {
+        timeoutMs: SUBPROCESS_TIMEOUTS.nodeProbe,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      expect(result.stderr).toBe("");
+      expect(result.status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
-    const lowest = [...new Set(candidates)]
-      .sort(compareVersions)
-      .find((candidate) => [...ranges.values()].every((range) => satisfies(candidate, range)));
-    expect(lowest).toBe(NODE_FLOOR);
   });
 
   it("names a fixed ES edition rather than a moving one", () => {

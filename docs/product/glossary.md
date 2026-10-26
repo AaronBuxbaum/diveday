@@ -430,6 +430,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/security.md](glossary/security.md)
 
 - Address confirmation token
+- Pending sign-in challenge
 - Recovery code
 - Step-up
 

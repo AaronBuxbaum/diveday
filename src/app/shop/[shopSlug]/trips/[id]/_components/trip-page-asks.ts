@@ -31,15 +31,6 @@ export function tripPageNotices(
 }
 
 /**
- * The held retime notice a details save carries back (`?held=`), read only
- * beside that save's own notice: a plain save, or one whose fly-safe
- * corrections (#2927) did not all go.
- */
-export function savedHeld(notice: string | undefined, held: string | undefined) {
-  return notice === "saved" || notice?.startsWith("saved-fly-safe") ? held : undefined;
-}
-
-/**
  * **What a refused or half-done Paid mark carries back to the roster.**
  *
  * A refused Paid mark reopens the seat's sheet holding what was typed (issue

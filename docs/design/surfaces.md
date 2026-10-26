@@ -666,6 +666,8 @@ to the packing list, which is the mechanism, not the outcome).
 
 ### The doors — `/sign-in`, `/onboard`, and the token family
 
+**Pending sign-in, 2026-10-26:** a correct password opens a code-only second step for enrolled staff. The form arrives as complete HTML so native no-JavaScript submission works; only `/sign-in` waits for its locale/cookie/challenge lookup. One Verify action, an inline settled refusal, and Back; a retry hides the previous refusal while pending (ADR [20261026-pending-sign-in-challenge](../architecture/decisions/20261026-pending-sign-in-challenge.md)).
+
 **Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
 on a device that holds a passkey for the account, `/sign-in` is one primary and the device's own check, with the password as the link out; every other device gets the form as it ships. The door keeps its anatomy and its one primary; sign-out keeps its two taps. H-70 a decided yes, the step-up included.
 

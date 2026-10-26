@@ -9,6 +9,7 @@ import { LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
+import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
@@ -204,6 +205,108 @@ for (const scheme of ["light", "dark"] as const) {
         ).toHaveCount(LISTED_SHOP_SLUGS.length);
         await capture(page, "find-your-booking", scheme);
       });
+
+      for (const locale of ["en-US", SPANISH] as const) {
+        test.describe(`sign-in challenge ${locale}`, () => {
+          // The browser locale also sets Accept-Language. Keep only setup in
+          // English via the reader cookie, then switch it for the subject flow.
+          test.use({
+            locale,
+            storageState: {
+              cookies: [
+                {
+                  name: "diveday_locale",
+                  value: "en-US",
+                  domain: "127.0.0.1",
+                  path: "/",
+                  expires: -1,
+                  httpOnly: false,
+                  secure: false,
+                  sameSite: "Lax",
+                },
+              ],
+              origins: [],
+            },
+          });
+          test(`the code-only sign-in states render true to the design ${locale} (${scheme})`, async ({
+            page,
+            privateShop,
+          }) => {
+            test.setTimeout(FLOW_TIMEOUT_MS);
+            await enrollSignInChallenge(page, privateShop.slug);
+            if (locale === SPANISH)
+              await page
+                .context()
+                .addCookies([
+                  { name: "diveday_locale", value: SPANISH, url: new URL(page.url()).origin },
+                ]);
+            await startSignInChallenge(page, privateShop.ownerEmail, locale);
+            const words = diverTranslator(locale);
+            const captureOptions = locale === SPANISH ? { locale: SPANISH } : {};
+            await capture(page, "sign-in-second-factor", scheme, captureOptions);
+            await page
+              .getByRole("textbox", { name: words("account.signIn.twoFactorCode") })
+              .fill("AAAAAA");
+            await page
+              .getByRole("button", { name: words("account.signIn.verify"), exact: true })
+              .click();
+            await expect(page).toHaveURL(/\/sign-in\?error=invalid-code$/);
+            await expect(
+              page.getByRole("alert").filter({ hasText: words("account.signIn.invalidCode") }),
+            ).toBeVisible();
+            await capture(page, "sign-in-second-factor-invalid", scheme, captureOptions);
+            let release!: () => void;
+            let continued!: () => void;
+            const gate = new Promise<void>((resolve) => {
+              release = resolve;
+            });
+            const delivered = new Promise<void>((resolve) => {
+              continued = resolve;
+            });
+            await page.route("**/sign-in*", async (route) => {
+              if (route.request().method() === "POST") {
+                await gate;
+                await route.continue();
+                continued();
+              } else await route.continue();
+            });
+            try {
+              await page
+                .getByRole("textbox", { name: words("account.signIn.twoFactorCode") })
+                .fill("AAAAAA");
+              await page
+                .getByRole("button", { name: words("account.signIn.verify"), exact: true })
+                .click();
+              await expect(
+                page.getByRole("button", { name: words("account.signIn.signingIn"), exact: true }),
+              ).toBeDisabled();
+              await expect(
+                page.getByRole("alert").filter({ hasText: words("account.signIn.invalidCode") }),
+              ).toBeHidden();
+              await capture(page, "sign-in-second-factor-pending", scheme, captureOptions);
+            } finally {
+              release();
+              await delivered;
+              await page.unroute("**/sign-in*");
+            }
+            await expect(
+              page.getByRole("button", { name: words("account.signIn.verify"), exact: true }),
+            ).toBeEnabled();
+            expect(
+              (
+                await page.request.post(
+                  `/api/test/seed-trouble-states?authChallengeState=expired&shop=${privateShop.slug}`,
+                )
+              ).ok(),
+            ).toBe(true);
+            await page.reload();
+            await expect(
+              page.getByLabel(words("account.common.password"), { exact: true }),
+            ).toBeVisible();
+            await capture(page, "sign-in-second-factor-expired", scheme, captureOptions);
+          });
+        });
+      }
 
       test(`the sign-in page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/sign-in");

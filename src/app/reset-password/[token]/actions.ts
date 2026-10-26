@@ -74,17 +74,20 @@ export async function submitPasswordReset(token: string, formData: FormData) {
     }).catch(() => ({ status: "failed" as const }));
   });
 
+  let pendingSignIn = false;
   try {
     const auth = await getAuth();
-    await auth.api.signInDiveDayCredentials({
+    const signedIn = await auth.api.signInDiveDayCredentials({
       body: { email: account.email, password: parsed.data.password },
       headers: await headers(),
     });
+    pendingSignIn = signedIn.pending;
   } catch (error) {
     if (error instanceof APIError) {
       redirect("/sign-in");
     }
     throw error;
   }
+  if (pendingSignIn) redirect("/sign-in?error=two-factor");
   redirect(`/shop/${account.shopSlug}`);
 }

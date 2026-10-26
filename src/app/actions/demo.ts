@@ -189,16 +189,19 @@ export async function enterDemoAction(formData?: FormData) {
     targetEmail = (shop ? await demoRoleEmail(db, shop.id, role) : null) ?? ownerEmail;
   }
 
+  let pendingSignIn = false;
   try {
     const auth = await getAuth();
-    await auth.api.signInDiveDayCredentials({
+    const signedIn = await auth.api.signInDiveDayCredentials({
       body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
       headers: await headers(),
     });
+    pendingSignIn = signedIn.pending;
   } catch (error) {
     if (error instanceof APIError) redirect("/sign-in?error=1");
     throw error; // unexpected errors propagate
   }
+  if (pendingSignIn) redirect("/sign-in?error=two-factor");
   redirect(demoLandingPath(slug, role, landing));
 }
 
@@ -286,12 +289,14 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       redirect(`/shop/${shopSlug}`);
     }
 
+    let pendingSignIn = false;
     try {
       const auth = await getAuth();
-      await auth.api.signInDiveDayCredentials({
+      const signedIn = await auth.api.signInDiveDayCredentials({
         body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
         headers: await headers(),
       });
+      pendingSignIn = signedIn.pending;
     } catch (error) {
       // A refusal is thrown, not redirected: the banner's catch passes every
       // redirect through as the success it usually is, so a refusal sent to
@@ -301,6 +306,7 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       }
       throw error;
     }
+    if (pendingSignIn) redirect("/sign-in?error=two-factor");
     redirect(`/shop/${shopSlug}`);
   }
 }

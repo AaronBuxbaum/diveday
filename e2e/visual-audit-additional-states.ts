@@ -1,6 +1,7 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import type { AuditCapture } from "./visual-audit-capture";
 
@@ -13,12 +14,16 @@ export function registerAdditionalAuditCaptures(capture: AuditCapture) {
 
     test("sign-in renders its second-factor field beside the shop's schedule door", async ({
       page,
+      privateShop,
     }) => {
-      await page.goto("/sign-in?error=two-factor&callbackUrl=%2Fshop%2Fblue-mantis%2Fdivers");
+      await enrollSignInChallenge(page, privateShop.slug);
+      await startSignInChallenge(page, privateShop.ownerEmail);
+      const callbackUrl = encodeURIComponent(`/shop/${privateShop.slug}/divers`);
+      await page.goto(`/sign-in?error=two-factor&callbackUrl=${callbackUrl}`);
       await page.getByLabel(diver("account.signIn.twoFactorCode")).waitFor();
       await expect(
         page.getByRole("link", { name: diver("account.signIn.publicSchedule") }),
-      ).toHaveAttribute("href", "/s/blue-mantis");
+      ).toHaveAttribute("href", `/s/${privateShop.slug}`);
       await capture(page, "sign-in-second-factor", "light");
     });
 

@@ -43,7 +43,7 @@ import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows"
 import { tripCrewNotes } from "./_components/trip-crew-notes";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { DETAILS_FORMS } from "./_components/trip-notice-tabs";
-import { paymentAsks, savedHeld, tripPageNotices } from "./_components/trip-page-asks";
+import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
 import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
@@ -387,7 +387,7 @@ export default async function ManageTripPage({
                   shopLenses,
                   automatedForecast,
                   tideLines,
-                  held: savedHeld(notice, held),
+                  held,
                   tell,
                   refundsHeld: !mayWriteOffPayment,
                 }),

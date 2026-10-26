@@ -411,15 +411,13 @@
       {
         "why": "claude_call_content table (ADR 20261023-claude-call-content): its row in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1173 -> 1175",
-          "src/db/retention.test.ts": "1291 -> 1310"
+          "src/db/erasure-coverage.test.ts": "1173 -> 1175"
         }
       },
       {
         "why": "claude_call_content_erasures table (ADR 20261023-claude-call-content, security review): its row in each schema guard's classification list (retention, export exclusion, erasure closure and helper writes); none can live in a sibling",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1175 -> 1181",
-          "src/db/retention.test.ts": "1310 -> 1311"
+          "src/db/erasure-coverage.test.ts": "1175 -> 1181"
         }
       }
     ],
@@ -469,7 +467,7 @@
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1379,
-    "src/db/retention.test.ts": 1311,
+    "src/db/retention.test.ts": 1305,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,

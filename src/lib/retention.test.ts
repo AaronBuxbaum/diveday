@@ -34,11 +34,12 @@ describe("retention windows", () => {
     expect(retentionWindowsOutlastStripeRetries(1_000)).toBe(false);
   });
 
-  it("states a positive window for every retained table", () => {
+  it("keeps positive whole-day windows except pending proof with no post-expiry grace", () => {
     const tables = Object.keys(RETENTION_DAYS) as RetainedTable[];
     expect(tables.length).toBeGreaterThan(0);
     for (const table of tables) {
-      expect(RETENTION_DAYS[table]).toBeGreaterThan(0);
+      if (table === "account_sign_in_challenges") expect(RETENTION_DAYS[table]).toBe(0);
+      else expect(RETENTION_DAYS[table]).toBeGreaterThan(0);
       expect(Number.isInteger(RETENTION_DAYS[table])).toBe(true);
     }
   });
@@ -65,6 +66,11 @@ describe("retention windows", () => {
     const cutoff = retentionCutoff("account_tokens", NOW);
     const days = (NOW.getTime() - cutoff.getTime()) / (24 * 60 * 60 * 1000);
     expect(days).toBe(RETENTION_DAYS.account_tokens);
+  });
+
+  it("keeps the pending-proof cutoff at this exact instant without day rounding", () => {
+    const now = new Date("2026-08-03T12:34:56.789Z");
+    expect(retentionCutoff("account_sign_in_challenges", now).getTime()).toBe(now.getTime());
   });
 
   it("bounds one pass so a backlog converges instead of timing out", () => {

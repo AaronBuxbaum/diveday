@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "^24.15.0"
+    "node": "^24.22.0"
   },
   "packageManager": "pnpm@12.4.1",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.22.0",
+      "onFail": "download"
+    }
+  },
   "scripts": {
     "dev": "pnpm build:sw && node scripts/dev-server.mjs",
     "build": "pnpm build:sw && next build",
