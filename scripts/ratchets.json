@@ -432,7 +432,7 @@
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1060,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 923,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 916,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 915,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1176,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 923,

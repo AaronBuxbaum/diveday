@@ -43,7 +43,9 @@ export function UpcomingSiteTrips({
               <span className="font-medium">{trip.title}</span>
               <span className="text-muted">{formatShortDate(trip.startsAt, locale, timeZone)}</span>
               {tideLineByTrip.has(trip.tripId) ? (
-                <span className="basis-full text-sm text-muted">{tideLineByTrip.get(trip.tripId)}</span>
+                <span className="basis-full text-sm text-muted">
+                  {tideLineByTrip.get(trip.tripId)}
+                </span>
               ) : null}
             </Link>
           </li>
