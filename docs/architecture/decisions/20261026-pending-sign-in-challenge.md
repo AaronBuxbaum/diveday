@@ -6,17 +6,14 @@
 ## Context
 
 The owner approved [#3078](https://github.com/AaronBuxbaum/diveday/issues/3078), split from RP05:
-after a correct password, staff with two-factor enabled enter only an authenticator or recovery
-code. No password is retained across requests, and no authenticated session exists before the
-second factor succeeds. The custom credentials endpoint and existing enrollment, recovery,
-rate-limit and token-hashing contracts remain authoritative.
+after a correct password, staff with two-factor enter only an authenticator or recovery code. No password is retained across requests, and no authenticated session exists before the
+second factor succeeds. Existing custom credentials, enrollment, recovery, rate-limit and token-hashing contracts remain binding.
 
 ## Decision
 
 Use an explicit `account_sign_in_challenges` table beside account security. Each row contains
-only its id, shop/account ownership, a SHA-256 digest of a server-generated 256-bit random handle,
-absolute expiry, five-attempt budget and creation time. There is no password, password-derived
-value, factor secret, email, destination, device fingerprint or role snapshot in the row.
+its id, shop/account ownership, a SHA-256 digest of a random 256-bit handle,
+absolute expiry, five-attempt budget and creation time. No password-derived value, factor secret, email, destination, device fingerprint or role snapshot is stored.
 
 The handle travels in `__Host-diveday.pending_sign_in`: HttpOnly, Secure, SameSite=Strict,
 Path=/, no Domain, Max-Age=300. Only loopback e2e uses a distinct unprefixed insecure name.
@@ -24,7 +21,7 @@ Duplicate/malformed cookies fail closed. The code endpoint accepts no account id
 rejects mismatched origins against the configured server origin; missing Origin is allowed
 only for in-process server calls without browser fetch metadata. The isolated e2e fleet
 uses its server-configured loopback PORT for transport while printing a canonical example host.
-No request Host selects an accepted origin. Server Actions retain their
+Request Host never selects an origin. Server Actions retain their
 own POST/origin protections.
 
 Issuance checks the password before locking, keeping the exact compared hash only in request memory,
@@ -32,7 +29,7 @@ then rejects a changed hash or current identity under the account lock. Demo byp
 rechecked against the current shop. Rejected passwords never lock an account. Completion locks account, person,
 security and challenge, rechecks live eligibility and enabled two-factor, then consumes the
 factor and challenge and creates the Better Auth session inside one Drizzle transaction.
-The configured provider over that transaction retains the existing token-digest adapter.
+The transaction provider retains the existing token-digest adapter.
 Entering pending clears any browser session/cache cookies; it does not revoke that older session
 row. Back or failure leaves the browser signed out. Cookie delivery follows commit. A provider failure rolls back all consumption; cookie-write
 failure attempts to revoke the new session. IP, account-email and challenge budgets all apply;
@@ -52,7 +49,8 @@ job hard-delete expired rows; unused expired rows may remain until a sweep. They
 
 ## Consequences
 
-Two-factor sign-in works without retained passwords or JavaScript. Atomicity depends on the
+Only `/sign-in` waits for complete form HTML (`instant=false`, no Suspense); streaming leaves
+a skeleton without JavaScript. Other routes keep their rendering policy. Atomicity relies on the
 provider's public adapter accepting a Drizzle transaction; integration and real-Postgres tests
 guard that boundary. Revisit on a provider change that breaks it: replacing the pending store
-or provider adapter requires a new ADR and the same consumption/session proofs.
+or provider adapter requires an ADR and the same atomicity proofs.

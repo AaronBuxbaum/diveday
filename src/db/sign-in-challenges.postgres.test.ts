@@ -8,6 +8,7 @@ import { createPendingHandle, hashPendingHandle } from "@/lib/pending-sign-in";
 import { totpCode } from "@/lib/totp";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { beginTotpEnrollment, disableTotp, enableTotp } from "./account-security";
+import { anonymizeDiver } from "./anonymize";
 import type { AppDb, AppTransaction } from "./client";
 import {
   accountSecurity,
@@ -18,8 +19,9 @@ import {
   shops,
   userAccounts,
 } from "./schema";
+import { deleteDemoShopCascade } from "./seed";
 import { completePendingSignIn, startCredentialSignIn } from "./sign-in-challenges";
-import { setStaffAccountStatus } from "./staff-accounts";
+import { removeStaffMember, setStaffAccountStatus } from "./staff-accounts";
 import { setAccountPassword } from "./user-accounts";
 
 async function persist(tx: AppTransaction, verified: VerifiedUser) {
@@ -74,7 +76,121 @@ async function fixture() {
   return { pg, person, account, enrollment, issue, finish, sessions, gate };
 }
 
+/**
+ * A deterministic request boundary after the real candidate SELECT, before
+ * its real transaction starts. Every SQL operation/result still uses this
+ * independent Postgres backend; no query or domain method is mocked.
+ */
+function pauseTransactionEntry(db: AppDb) {
+  let entered!: () => void;
+  let resume!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  const connection = new Proxy(db, {
+    get(target, property) {
+      if (property === "transaction")
+        return async (callback: Parameters<AppDb["transaction"]>[0]) => {
+          entered();
+          await gate;
+          return target.transaction(callback);
+        };
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { connection, ready, resume };
+}
+
 describePostgres("pending sign-in across independent Postgres backends", () => {
+  it("serializes actual Remove and live-person erasure against an already-resolved completion", async () => {
+    const h = await fixture();
+    const [actor] = await h.pg.db
+      .insert(people)
+      .values({ shopId: h.person.shopId, fullName: "Erasure owner" })
+      .returning();
+    await h.pg.db.insert(userAccounts).values({ personId: actor.id, email: "eraser@example.com" });
+    await h.pg.db.insert(personRoles).values({ personId: actor.id, role: "owner" });
+    const handle = await h.issue();
+    const paused = pauseTransactionEntry(h.pg.connect());
+    const completion = completePendingSignIn(
+      paused.connection,
+      handle,
+      h.enrollment.recoveryCodes[0],
+      async () => true,
+      persist,
+    );
+    await paused.ready;
+    expect(
+      (
+        await removeStaffMember(h.pg.connect(), {
+          shopId: h.person.shopId,
+          personId: h.person.id,
+          userAccountId: h.account.id,
+        })
+      ).ok,
+    ).toBe(true);
+    // Remove really deleted the proof; only the in-flight request retains its earlier resolution.
+    expect(await h.pg.db.select().from(accountSignInChallenges)).toEqual([]);
+    const [live] = await h.pg.db.select().from(people).where(eq(people.id, h.person.id));
+    expect(live.deletedAt).toBeNull();
+    const personGate = await holdRowLock(
+      h.pg,
+      sql`select id from people where id = ${h.person.id} for no key update`,
+    );
+    const erasure = anonymizeDiver(h.pg.connect(), {
+      shopId: h.person.shopId,
+      personId: h.person.id,
+      actorPersonId: actor.id,
+    });
+    const outcomes = Promise.allSettled([erasure, completion]);
+    try {
+      await waitForLockWaiters(h.pg.db, 1);
+      paused.resume();
+      await waitForLockWaiters(h.pg.db, 2);
+    } finally {
+      paused.resume();
+      await personGate.release();
+    }
+    const [erased, completed] = await outcomes;
+    expect(erased.status).toBe("fulfilled");
+    expect(completed.status).toBe("fulfilled");
+    if (erased.status !== "fulfilled" || completed.status !== "fulfilled")
+      throw new Error("ordered writers aborted");
+    expect(erased.value.ok).toBe(true);
+    expect(completed.value.status).toBe("restart");
+    expect(await h.sessions()).toBe(0);
+    const [after] = await h.pg.db.select().from(people).where(eq(people.id, h.person.id));
+    expect(after.anonymizedAt).not.toBeNull();
+  });
+
+  it("refuses an already-resolved completion after the actual demo cascade", async () => {
+    const h = await fixture();
+    await h.pg.db.update(shops).set({ isDemo: true }).where(eq(shops.id, h.person.shopId));
+    const handle = await h.issue();
+    const paused = pauseTransactionEntry(h.pg.connect());
+    const completion = completePendingSignIn(
+      paused.connection,
+      handle,
+      h.enrollment.recoveryCodes[0],
+      async () => true,
+      persist,
+    );
+    await paused.ready;
+    try {
+      await h.pg.connect().transaction(async (tx) => deleteDemoShopCascade(tx, h.person.shopId));
+    } finally {
+      paused.resume();
+    }
+    expect((await completion).status).toBe("restart");
+    expect(await h.sessions()).toBe(0);
+    expect(await h.pg.db.select().from(accountSignInChallenges)).toEqual([]);
+    expect(await h.pg.db.select().from(shops)).toEqual([]);
+  });
+
   it("rejects a wrong password without acquiring a known account lock", async () => {
     const h = await fixture();
     const gate = await h.gate();

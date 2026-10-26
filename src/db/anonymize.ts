@@ -72,6 +72,7 @@ import { canPersonErasePersonalData } from "./authz";
 import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
 import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import { queueMediaDeletion } from "./media-deletions";
 import {
   attemptProcessorErasures,
@@ -474,6 +475,18 @@ export async function anonymizeDiver(
     if (roleRows.some((row) => STAFF_ROLES.includes(row.role))) {
       return { ok: false, reason: "staff_member" } as const;
     }
+
+    // Match sign-in completion's account -> person order. A request that
+    // resolved its challenge before Remove can still be entering its locks.
+    // Authorization and the staff/self refusals above remain unchanged.
+    await boundLockWaits(tx);
+    await tx
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .innerJoin(people, eq(people.id, userAccounts.personId))
+      // diveday:allow-deleted-people: erasure owns live and removed records, authorized above.
+      .where(and(eq(userAccounts.personId, person.id), eq(people.shopId, input.shopId)))
+      .for("update", { of: userAccounts });
 
     const result = await scrub(tx, {
       shopId: input.shopId,

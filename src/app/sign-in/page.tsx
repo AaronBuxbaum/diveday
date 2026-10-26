@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
-import { Suspense } from "react";
 import { EntryShell } from "@/components/account/EntryShell";
-import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
 import { ForgetThisDevice } from "@/components/ForgetThisDevice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -17,19 +15,12 @@ import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
 import { pendingCookie, readPendingHandle, signInOrigins } from "@/lib/pending-sign-in";
 import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
 import { authenticate, cancelSignIn, confirmSignIn } from "./actions";
+import { SignInStatus } from "./SignInStatus";
 
-// This page was instant before the rest of the app was (ADR
-// 20260804-instant-navigation) — `searchParams`/`requestLocale()` are read
-// inside `SignInForm` below, wrapped in its own `<Suspense>`, rather than
-// opted out of with `instant = false`. Not merely tidier: without a real
-// boundary the route still gets a Partial-Prerendered static shell, but with
-// an *implicit* dynamic hole around the unwrapped read — and a
-// `redirect("/sign-in?error=1")` fired from the wrong-password path raced that
-// hole's own pending fetch and got `net::ERR_ABORTED`, leaving the form stuck
-// on "Signing in…" forever (caught by e2e/auth.spec.ts). An explicit boundary
-// makes the dynamic part exactly what streams in on redirect, instead of
-// leaving Next to guess.
-export const instant = true;
+// Authentication forms must arrive as complete HTML: a streamed Suspense hole
+// remains a skeleton when JavaScript is disabled. This route alone waits for
+// locale/cookie/challenge reads (ADR 20261026-pending-sign-in-challenge).
+export const instant = false;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -43,27 +34,17 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 type SignInSearchParams = { error?: string; session?: string; callbackUrl?: string | string[] };
 
-export default function SignInPage({
+export default async function SignInPage({
   searchParams,
 }: {
   searchParams: Promise<SignInSearchParams>;
 }) {
+  const form = await SignInForm({ searchParams });
   return (
     <div className="flex flex-1 flex-col">
       {/* Every ended session lands here; the device keeps nothing of it. */}
       <ForgetThisDevice />
-      <Suspense
-        fallback={
-          <EntryShellSkeleton
-            wordmark
-            description={false}
-            trailingLink
-            fields={["email", "password"]}
-          />
-        }
-      >
-        <SignInForm searchParams={searchParams} />
-      </Suspense>
+      {form}
     </div>
   );
 }
@@ -205,19 +186,25 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
         {/* The refusal renders beside the control that earned it, not in a
             banner above the page (docs/design/forms-and-controls.md). */}
         {error && !secondFactorRequired ? (
-          <FormStatus tone="danger" className="justify-center">
-            {t(restart ? "account.signIn.restart" : "account.signIn.error")}
-          </FormStatus>
+          <SignInStatus>
+            <FormStatus tone="danger" className="justify-center">
+              {t(restart ? "account.signIn.restart" : "account.signIn.error")}
+            </FormStatus>
+          </SignInStatus>
         ) : null}
         {error === "invalid-code" && secondFactorRequired ? (
-          <FormStatus tone="danger" className="justify-center">
-            {t("account.signIn.invalidCode")}
-          </FormStatus>
+          <SignInStatus>
+            <FormStatus tone="danger" className="justify-center">
+              {t("account.signIn.invalidCode")}
+            </FormStatus>
+          </SignInStatus>
         ) : null}
         {error === "rate-limit" && secondFactorRequired ? (
-          <FormStatus tone="danger" className="justify-center">
-            {t("account.signIn.rateLimit")}
-          </FormStatus>
+          <SignInStatus>
+            <FormStatus tone="danger" className="justify-center">
+              {t("account.signIn.rateLimit")}
+            </FormStatus>
+          </SignInStatus>
         ) : null}
         {/* `?session=ended`: requireStaffSession() (src/lib/session.ts)
             forced this sign-out because a live database check found the
@@ -225,9 +212,11 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             its token was minted (issue #701) — worth saying, since the
             visitor did nothing wrong on this device. */}
         {!error && session === "ended" ? (
-          <FormStatus tone="warning" className="justify-center">
-            {t("account.signIn.sessionEnded")}
-          </FormStatus>
+          <SignInStatus>
+            <FormStatus tone="warning" className="justify-center">
+              {t("account.signIn.sessionEnded")}
+            </FormStatus>
+          </SignInStatus>
         ) : null}
       </form>
     </EntryShell>

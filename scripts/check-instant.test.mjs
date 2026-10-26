@@ -4,6 +4,17 @@ import { instantProblems, layoutProblems, pageProblems } from "./check-instant.m
 const INSTANT = "export const instant = true;\nexport default function Page() { return (<p />); }";
 
 describe("pageProblems", () => {
+  it("allows only sign-in to wait for complete native-form HTML", () => {
+    expect(pageProblems("sign-in/page.tsx", "export const instant = false;", false)).toEqual([]);
+    expect(
+      pageProblems("other/page.tsx", "export const instant = false;", false).length,
+    ).toBeGreaterThan(0);
+    expect(pageProblems("sign-in/page.tsx", INSTANT, true).length).toBeGreaterThan(0);
+    expect(
+      pageProblems("sign-in/page.tsx", "export const instant = false; <Suspense>", false).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("passes a page that claims instant under a loading.tsx", () => {
     expect(pageProblems("a/page.tsx", INSTANT, true)).toEqual([]);
   });

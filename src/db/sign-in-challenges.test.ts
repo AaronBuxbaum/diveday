@@ -13,6 +13,7 @@ import {
   enableTotp,
   revokeAllAccountSessions,
 } from "./account-security";
+import { anonymizeDiver } from "./anonymize";
 import type { AppTransaction } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
@@ -20,6 +21,7 @@ import {
   accountSessions,
   accountSignInChallenges,
   people,
+  personRoles,
   userAccounts,
 } from "./schema";
 import {
@@ -28,6 +30,7 @@ import {
   hasPendingSignIn,
   startCredentialSignIn,
 } from "./sign-in-challenges";
+import { removeStaffMember, setStaffAccountStatus } from "./staff-accounts";
 import { setAccountPassword } from "./user-accounts";
 
 const ctx = fileScopedShopContext();
@@ -41,12 +44,9 @@ async function persist(tx: AppTransaction, user: VerifiedUser) {
     throw new Error("session failed");
   return session;
 }
-async function fixture() {
+async function fixture(login = DEV_STAFF_LOGINS.owner) {
   const db = ctx.db;
-  const [account] = await db
-    .select()
-    .from(userAccounts)
-    .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email));
+  const [account] = await db.select().from(userAccounts).where(eq(userAccounts.email, login.email));
   const enrollment = await beginTotpEnrollment(db, account.id);
   if (!enrollment) throw new Error("enrollment unavailable");
   expect(await enableTotp(db, account.id, totpCode(enrollment.secret))).toBe(true);
@@ -55,7 +55,7 @@ async function fixture() {
     .set({ lastTotpStep: null })
     .where(eq(accountSecurity.userAccountId, account.id));
   const start = (previousHandle: string | null = null) =>
-    startCredentialSignIn(db, { ...DEV_STAFF_LOGINS.owner, previousHandle }, persist);
+    startCredentialSignIn(db, { ...login, previousHandle }, persist);
   const pending = await start();
   if (pending.status !== "pending") throw new Error("no pending sign-in");
   const finish = (code = totpCode(enrollment.secret), handle: string | null = pending.handle) =>
@@ -188,6 +188,49 @@ describe("pending second-factor sign-in", () => {
       expect(await h.sessions()).toBe(0);
     },
   );
+  it.each(["disable", "remove"])(
+    "the staff %s writer deletes pending proof in its transaction",
+    async (kind) => {
+      const h = await fixture(DEV_STAFF_LOGINS.captain);
+      const input = {
+        shopId: ctx.shop.id,
+        personId: h.account.personId,
+        userAccountId: h.account.id,
+      };
+      const result =
+        kind === "disable"
+          ? await setStaffAccountStatus(h.db, { ...input, status: "disabled" })
+          : await removeStaffMember(h.db, input);
+      expect(result.ok).toBe(true);
+      expect(await h.rows()).toEqual([]);
+      expect((await h.finish()).status).toBe("restart");
+    },
+  );
+
+  it("person erasure destroys the account's pending credential machinery", async () => {
+    const h = await fixture(DEV_STAFF_LOGINS.captain);
+    const [owner] = await h.db
+      .select()
+      .from(userAccounts)
+      .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email));
+    await h.db.delete(personRoles).where(eq(personRoles.personId, h.account.personId));
+    await h.db
+      .update(people)
+      .set({ deletedAt: (await h.rows())[0].createdAt })
+      .where(eq(people.id, h.account.personId));
+    expect(
+      (
+        await anonymizeDiver(h.db, {
+          shopId: ctx.shop.id,
+          personId: h.account.personId,
+          actorPersonId: owner.personId,
+        })
+      ).ok,
+    ).toBe(true);
+    expect(await h.rows()).toEqual([]);
+    expect((await h.finish()).status).toBe("restart");
+  });
+
   it("rolls back challenge consumption, recovery consumption and provider session on failure", async () => {
     const h = await fixture();
     const fail = new Error("session user lookup failed");

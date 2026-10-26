@@ -5,8 +5,8 @@ import { pathToFileURL } from "node:url";
 
 /**
  * The two invariants that keep navigation instant (ADR
- * 20260804-instant-navigation): every page claims `instant = true` and sits
- * under a Suspense boundary, and no layout is async unless it is a known
+ * 20260804-instant-navigation): pages claim `instant = true` under a Suspense
+ * boundary unless complete native auth HTML is required, and no layout is async unless it is a known
  * blocking shell that says `instant = false`.
  *
  * `next build` already enforces the important half of this — a route with no
@@ -21,6 +21,9 @@ import { pathToFileURL } from "node:url";
  */
 
 export const APP = "src/app";
+
+/** Complete authentication HTML is required without JavaScript (ADR 20261026-pending-sign-in-challenge). */
+export const BLOCKING_PAGES = new Set(["sign-in/page.tsx"]);
 
 /**
  * Layouts allowed to be async, each because something in them must resolve
@@ -49,6 +52,13 @@ export function pageProblems(where, source, boundaryAbove) {
   // A page that only redirects never paints, so it has nothing to be instant about.
   if (/\b(permanentRedirect|redirect)\(/.test(code) && !code.includes("return (")) return [];
   const problems = [];
+  if (BLOCKING_PAGES.has(where)) {
+    if (!/export const instant\s*=\s*false/.test(code))
+      problems.push(`${where}: complete-HTML page must declare instant = false`);
+    if (code.includes("<Suspense"))
+      problems.push(`${where}: streaming the sign-in form prevents native no-JavaScript use`);
+    return problems;
+  }
   if (!/export const instant\s*=\s*true/.test(code)) {
     problems.push(`${where}: no \`export const instant = true\` — see ADR 20260804`);
   }
@@ -122,7 +132,7 @@ async function main() {
     process.exit(1);
   }
   console.log(
-    `instant: ${pages} pages claim instant under a boundary; ${layouts} layouts stay synchronous`,
+    `instant: ${pages} pages follow their checked navigation policy (${BLOCKING_PAGES.size} complete-HTML exception); ${layouts} layouts stay synchronous`,
   );
 }
 
