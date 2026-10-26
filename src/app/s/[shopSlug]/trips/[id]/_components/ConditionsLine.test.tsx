@@ -159,6 +159,29 @@ describe("ConditionsLine — the crew's own prediction", () => {
     expect(screen.getByText("18 m visibility")).toBeInTheDocument();
   });
 
+  it("keeps a published crew overview when no measured readings or languages are recorded", () => {
+    render(
+      <ConditionsLine
+        shop={shop}
+        trip={
+          {
+            conditionsSummary: "Light current at first site.",
+            waterTemperatureC: null,
+            visibilityMeters: null,
+            surfaceConditions: null,
+            conditionsUpdatedAt: trip.conditionsUpdatedAt,
+          } as Trip
+        }
+        crewPrediction
+        automatedForecast={null}
+        crewLanguages={null}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText("Light current at first site.")).toBeInTheDocument();
+    expect(screen.getByText(/supplied by the crew/i)).toBeInTheDocument();
+  });
+
   it("adds the reader's unit after the shop's when theirs differs (ideas item 22)", () => {
     render(
       <ConditionsLine

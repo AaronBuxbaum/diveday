@@ -145,7 +145,7 @@ function ConditionsLineView({
     wind?.label ?? null,
     crewLanguages ? t("trip.conditionsLanguages", { languages: crewLanguages }) : null,
   ].filter((part): part is string => Boolean(part));
-  if (parts.length === 0) return null;
+  if (parts.length === 0 && !(crewPrediction && trip.conditionsSummary)) return null;
 
   return (
     // The ledger's room: its rule ends where the day's rows' rules end, and

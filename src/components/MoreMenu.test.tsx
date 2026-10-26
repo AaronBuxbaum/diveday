@@ -4,6 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MoreMenu } from "./MoreMenu";
 
+const route = vi.hoisted(() => ({ pathname: "/shop/blue-mantis" }));
+vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -38,6 +41,24 @@ function menu() {
 }
 
 describe("MoreMenu", () => {
+  it("closes the staff menu when the pathname changes", async () => {
+    route.pathname = "/shop/blue-mantis";
+    const view = render(
+      <MoreMenu label="More">
+        <a href="/print">Print</a>
+      </MoreMenu>,
+    );
+    await userEvent.setup().click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("link", { name: "Print" })).toBeVisible();
+    route.pathname = "/shop/blue-mantis/divers";
+    view.rerender(
+      <MoreMenu label="More">
+        <a href="/print">Print</a>
+      </MoreMenu>,
+    );
+    expect(screen.queryByRole("link", { name: "Print" })).toBeNull();
+  });
+
   it("opens on its trigger, first row focused, and closes on a second tap", async () => {
     const user = userEvent.setup();
     const trigger = menu();

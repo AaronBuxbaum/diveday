@@ -24,6 +24,7 @@ export function MarketingNavView({
   shopSlug,
   locale,
   compactMobile = false,
+  pending = false,
   demoAction,
 }: {
   /**
@@ -41,6 +42,8 @@ export function MarketingNavView({
    * `px-5` here put the wordmark 4px left of both (K-245).
    */
   compactMobile?: boolean;
+  /** Static navigation placeholder: the menu must wait for the resolved header. */
+  pending?: boolean;
   // i18n-exempt: type annotation, not copy.
   demoAction: (formData: FormData) => void | Promise<void>;
 }) {
@@ -65,6 +68,7 @@ export function MarketingNavView({
           links={shopSlug ? links : [...links, { href: "/sign-in", label: t("nav.signIn") }]}
           menuLabel={t("nav.menu")}
           compactMobile={compactMobile}
+          pending={pending}
         />
         {/* One CTA slot, two audiences. Somebody already signed in cannot try
             the demo or start a trial — they have a shop — so the slot becomes

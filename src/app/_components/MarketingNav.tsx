@@ -38,6 +38,7 @@ export function MarketingNavFallback({ compactMobile = false }: { compactMobile?
       shopSlug={null}
       locale={DEFAULT_DIVER_LOCALE}
       compactMobile={compactMobile}
+      pending
       demoAction={enterDemoAction}
     />
   );

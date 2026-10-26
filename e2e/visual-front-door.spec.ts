@@ -6,7 +6,6 @@
  */
 import type { Page } from "@playwright/test";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
-import { LOCALE_COOKIE } from "../src/i18n/locale-cookie";
 import { diverTranslator } from "../src/i18n/messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
@@ -34,37 +33,39 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
     test.describe("public", () => {
-      test(`the mobile marketing menu opens and returns focus (${scheme})`, async ({ page }) => {
-        for (const locale of ["en-US", SPANISH] as const) {
-          await page.setViewportSize({ width: 390, height: 844 });
-          await page.goto("/");
-          await page
-            .context()
-            .addCookies([{ name: LOCALE_COOKIE, value: locale, url: page.url() }]);
-          await page.reload();
-          const words = diverTranslator(locale);
-          const nav = page.getByRole("navigation", { name: words("nav.mainNavigation") });
-          const menu = nav.getByRole("button", { name: words("nav.menu"), exact: true });
-          await menu.click();
-          await expect(
-            nav.getByRole("link", { name: words("nav.product"), exact: true }),
-          ).toBeVisible();
-          await page.keyboard.press("Escape");
-          await expect(menu).toHaveAttribute("aria-expanded", "false");
-          await expect(menu).toBeFocused();
-          await capture(page, "marketing-menu-open", scheme, {
-            ...(locale === SPANISH ? { locale: SPANISH } : {}),
-            beforeShot: async () => {
-              if (await menu.isVisible()) {
-                if ((await menu.getAttribute("aria-expanded")) !== "true") await menu.click();
-                await expect(
-                  nav.getByRole("link", { name: words("nav.product"), exact: true }),
-                ).toBeVisible();
-              }
-            },
+      for (const locale of ["en-US", SPANISH] as const) {
+        test.describe(`marketing menu ${locale}`, () => {
+          test.use({ locale });
+          test(`the mobile marketing menu opens and returns focus (${scheme})`, async ({
+            page,
+          }) => {
+            await page.setViewportSize({ width: 390, height: 844 });
+            await page.goto("/");
+            const words = diverTranslator(locale);
+            const nav = page.getByRole("navigation", { name: words("nav.mainNavigation") });
+            const menu = nav.getByRole("button", { name: words("nav.menu"), exact: true });
+            await expect(menu).toHaveAttribute("data-hydrated", "true");
+            await menu.click();
+            await expect(
+              nav.getByRole("link", { name: words("nav.product"), exact: true }),
+            ).toBeVisible();
+            await page.keyboard.press("Escape");
+            await expect(menu).toHaveAttribute("aria-expanded", "false");
+            await expect(menu).toBeFocused();
+            await capture(page, "marketing-menu-open", scheme, {
+              ...(locale === SPANISH ? { locale: SPANISH } : {}),
+              beforeShot: async () => {
+                if (await menu.isVisible()) {
+                  if ((await menu.getAttribute("aria-expanded")) !== "true") await menu.click();
+                  await expect(
+                    nav.getByRole("link", { name: words("nav.product"), exact: true }),
+                  ).toBeVisible();
+                }
+              },
+            });
           });
-        }
-      });
+        });
+      }
 
       /**
        * **The counter's QR door** (issue #1236): the form a walk-in fills in

@@ -1796,6 +1796,7 @@ test("the mobile marketing menu keeps a demo door and returns keyboard focus", a
   const menu = nav.getByRole("button", { name: "Menu", exact: true });
   await expect(nav.getByRole("button", { name: "Try the live demo" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Product", exact: true })).toBeHidden();
+  await expect(menu).toHaveAttribute("data-hydrated", "true");
   await menu.focus();
   await page.keyboard.press("Enter");
   await expect(menu).toHaveAttribute("aria-expanded", "true");

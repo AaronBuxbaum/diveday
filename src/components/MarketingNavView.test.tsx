@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { MarketingNavView } from "./MarketingNavView";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => {
+    throw new Error("URL data is unavailable in the static navigation fallback");
+  },
+}));
 function renderNav(props: Partial<Parameters<typeof MarketingNavView>[0]> = {}) {
   return render(
     <MarketingNavView
@@ -18,6 +23,27 @@ function renderNav(props: Partial<Parameters<typeof MarketingNavView>[0]> = {}) 
 afterEach(cleanup);
 
 describe("MarketingNavView", () => {
+  it("keeps the server menu disabled until the resolved navigation hydrates", () => {
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(
+      <MarketingNavView shopSlug={null} locale={DEFAULT_DIVER_LOCALE} demoAction={() => {}} />,
+    );
+    expect(container.querySelector("button[aria-controls]")).toBeDisabled();
+    renderNav();
+    expect(screen.getByRole("button", { name: "Menu" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Menu" })).toHaveAttribute("data-hydrated", "true");
+  });
+
+  it("keeps a mounted placeholder menu disabled while preserving desktop destinations and demo", () => {
+    renderNav({ pending: true });
+    expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
+    expect(screen.getByRole("link", { name: "Product", hidden: true })).toHaveAttribute(
+      "href",
+      "/product",
+    );
+  });
+
   it("keeps demo access beside the mobile menu and discloses secondary links", () => {
     renderNav();
     expect(screen.getByRole("button", { name: "Try the live demo" })).toBeInTheDocument();

@@ -417,18 +417,8 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
             </div>
           </div>
 
-          {/* One door to the whole switching surface, closing the band rather
-            than belonging to either half: the hub fronts every incumbent guide,
-            so two stacked link CTAs here were one door pretending to be two.
-            The rule above it is load-bearing now that the arriving column ends
-            in a link of its own: the left column is the taller one (a mockup
-            against a four-row list), so without a full-width line between them
-            these two land at the same left margin a short gap apart and scan as
-            a stacked pair — the exact shape the 2026-08-13 redesign removed,
-            reached from a different direction. The rule says this one closes
-            both columns. Below `lg` the inventory stacks last and draws no
-            bottom rule of its own, so this is its end rather than a second
-            rule 48px under one (an empty fifth row, K-294). */}
+          {/* The full-width rule closes both portability columns before the
+              switching hub link, keeping it distinct from the spreadsheet link. */}
           <div className="mt-12 border-t border-border pt-6">
             <Link
               href={switchingHref("/switching", "home-records")}
