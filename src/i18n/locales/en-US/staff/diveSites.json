@@ -283,7 +283,7 @@
         "creatures": "Field guide"
       }
     },
-    "upcomingCount": "{count, plural, one {# upcoming dive here} other {# upcoming dives here}}"
+    "upcomingCount": "{count, plural, one {# upcoming departure here} other {# upcoming departures here}}"
   },
   "new": {
     "title": "Add a dive site",

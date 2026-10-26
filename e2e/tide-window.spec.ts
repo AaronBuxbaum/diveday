@@ -46,7 +46,7 @@ test.describe("the tide window", () => {
     await openIfClosed(
       page
         .locator("details")
-        .filter({ has: page.locator("summary").filter({ hasText: /upcoming dive/ }) }),
+        .filter({ has: page.locator("summary").filter({ hasText: /upcoming departure/ }) }),
     );
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
 
