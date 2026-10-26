@@ -73,8 +73,8 @@
       "sms": "mensaje de texto",
       "whatsapp": "WhatsApp"
     },
-    "returned": "Devuelto",
-    "discarded": "Descartado",
+    "returned": "Marcar como devuelto",
+    "discarded": "Descartar",
     "reopen": "Reabrir",
     "unclaimed": "Sin dueño",
     "statusReturned": "devuelto",

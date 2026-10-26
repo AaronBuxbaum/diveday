@@ -38,12 +38,12 @@ export function UpcomingSiteTrips({
           <li key={trip.tripId} className="last:rounded-b-panel">
             <Link
               href={`/shop/${shopSlug}/trips/${trip.tripId}`}
-              className="flex flex-col gap-1 rounded-[inherit] px-4 py-3 text-sm hover:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3 sm:px-5"
+              className="flex flex-col gap-1 rounded-[inherit] px-4 py-3 text-base hover:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3 sm:px-5"
             >
               <span className="font-medium">{trip.title}</span>
               <span className="text-muted">{formatShortDate(trip.startsAt, locale, timeZone)}</span>
               {tideLineByTrip.has(trip.tripId) ? (
-                <span className="basis-full text-muted">{tideLineByTrip.get(trip.tripId)}</span>
+                <span className="basis-full text-sm text-muted">{tideLineByTrip.get(trip.tripId)}</span>
               ) : null}
             </Link>
           </li>

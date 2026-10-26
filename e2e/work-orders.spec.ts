@@ -83,7 +83,22 @@ test.describe("staff", () => {
     // The table is for reading; a figure changes behind the line's own menu.
     await page.getByRole("button", { name: "Change Second-stage service kit" }).last().click();
     await page.getByRole("button", { name: "Edit", exact: true }).click();
-    await page.locator("[data-row-menu]").getByLabel("Price each").fill("45");
+    const price = page.locator("[data-row-menu]").getByLabel("Price each");
+    await price.fill("bad");
+    for (const refusedPrice of ["bad", "still bad"]) {
+      await price.fill(refusedPrice);
+      await page.locator("[data-row-menu]").getByRole("button", { name: "Save" }).click();
+      await expect(price).toHaveValue(refusedPrice);
+      await expect(
+        page
+          .locator("[data-row-menu]")
+          .getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toHaveCount(1);
+    }
+    await price.fill("45");
     await page.locator("[data-row-menu]").getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Line saved")).toBeVisible();
     await expect(page.getByRole("cell", { name: "$45.00" }).first()).toBeVisible();

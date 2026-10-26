@@ -40,6 +40,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 export function RowMenu({
   label,
   panelClassName = "w-48",
+  initialOpen = false,
   onClosed,
   children,
 }: {
@@ -47,11 +48,13 @@ export function RowMenu({
   label: string;
   /** The panel's width; a list of acts is `w-48`, a form inside it wider. */
   panelClassName?: string;
+  /** A refused row edit reopens its own panel after the action redirect. */
+  initialOpen?: boolean;
   /** Called whenever the list shuts, however it shut — to reset a panel's view. */
   onClosed?: () => void;
   children: ReactNode | ((close: () => void) => ReactNode);
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();

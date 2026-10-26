@@ -55,7 +55,7 @@ export function GearItemNotes({
                 className: "bg-surface-sunken shadow-none",
               })}
             >
-              <p className="whitespace-pre-wrap text-sm">{note.note}</p>
+              <p className="whitespace-pre-wrap text-base">{note.note}</p>
               <p className="mt-1 text-xs text-muted">
                 {note.recordedByName
                   ? t("gear.unit.notes.writtenBy", {

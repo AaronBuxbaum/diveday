@@ -37,6 +37,7 @@ import { WorkOrderLinesCard } from "../_components/WorkOrderLinesCard";
 import { WorkOrderStatusCard } from "../_components/WorkOrderStatusCard";
 import { WorkOrderWorkCard } from "../_components/WorkOrderWorkCard";
 import { isLineAddRefusal } from "../_lib/line-add-feedback";
+import { lineEditFeedback } from "../_lib/line-edit-feedback";
 import { deleteWorkOrderAction } from "../actions";
 
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
@@ -88,10 +89,10 @@ export default async function WorkOrderPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; workOrderId: string }>;
-  searchParams: Promise<{ notice?: string; form?: string }>;
+  searchParams: Promise<{ notice?: string; form?: string; line?: string }>;
 }) {
   const { shopSlug, workOrderId: rawId } = await params;
-  const { notice, form } = await searchParams;
+  const { notice, form, line } = await searchParams;
   // A caller-controlled uuid, narrowed before the read: an unparseable literal
   // raises in Postgres rather than missing.
   const workOrderId = uuidParam(rawId);
@@ -121,13 +122,17 @@ export default async function WorkOrderPage({
   const deleted = workOrder.deletedAt !== null;
   const outcome = workOrder.outcome as WorkOrderOutcome | null;
   const localLineRefusal = isLineAddRefusal(notice, form);
-  const banner = noticeFromParam(localLineRefusal ? undefined : notice, NOTICES);
+  const editFeedback = lineEditFeedback(notice, form, line, detail.lines);
+  const banner = noticeFromParam(
+    localLineRefusal || (editFeedback && editFeedback.notice !== "line-saved") ? undefined : notice,
+    NOTICES,
+  );
   const board = shopPath(shopSlug, "gear", "work-orders");
   const subject = detail.personName ?? detail.gearItemLabel ?? t("workOrders.title");
 
   return (
     <StaffPage width="reading">
-      <FlashParams params={["notice", "form"]} />
+      <FlashParams params={["notice", "form", "line"]} />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <EyebrowBackLink href={board}>{t("workOrders.title")}</EyebrowBackLink>
@@ -236,6 +241,7 @@ export default async function WorkOrderPage({
           scope={`${keptTypedScope(shopSlug, session.user.personId)}.${workOrder.id}`}
           notice={localLineRefusal || notice === "line-added" ? notice : undefined}
           lines={detail.lines}
+          editFeedback={editFeedback}
           totalCents={detail.totalCents}
           readOnly={deleted}
           currency={currency}

@@ -428,14 +428,26 @@ export async function updateWorkOrderLineAction(formData: FormData) {
   const landing = order(parsed.data.workOrderId);
   const quantityHundredths = parseWorkOrderQuantity(parsed.data.quantity);
   if (quantityHundredths === null) {
-    revalidateAndRedirect(landing, noticeUrl(landing, "invalid-quantity"));
+    revalidateAndRedirect(
+      landing,
+      noticeUrl(landing, "invalid-quantity", {
+        form: "line-edit",
+        line: parsed.data.workOrderLineId,
+      }),
+    );
   }
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) revalidateAndRedirect(landing, noticeUrl(landing, "invalid"));
   const unitAmountCents = parseAmountMinorUnits(parsed.data.unitAmount, shop.currency);
   if (unitAmountCents === null) {
-    revalidateAndRedirect(landing, noticeUrl(landing, "invalid-amount"));
+    revalidateAndRedirect(
+      landing,
+      noticeUrl(landing, "invalid-amount", {
+        form: "line-edit",
+        line: parsed.data.workOrderLineId,
+      }),
+    );
   }
 
   const outcome = await updateWorkOrderLine(db, {
@@ -446,7 +458,16 @@ export async function updateWorkOrderLineAction(formData: FormData) {
     quantityHundredths,
     unitAmountCents,
   });
-  revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "line-saved" : outcome.reason));
+  revalidateAndRedirect(
+    landing,
+    noticeUrl(
+      landing,
+      outcome.ok ? "line-saved" : outcome.reason,
+      outcome.ok || outcome.reason === "empty_description"
+        ? { form: "line-edit", line: parsed.data.workOrderLineId }
+        : undefined,
+    ),
+  );
 }
 
 export async function deleteWorkOrderLineAction(formData: FormData) {

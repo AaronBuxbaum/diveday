@@ -14,6 +14,7 @@ import {
   workOrderQuantityInput,
 } from "@/lib/work-orders";
 import { LINE_ADD_REFUSAL_KEYS } from "../_lib/line-add-feedback";
+import { LINE_EDIT_REFUSAL_FIELDS, type LineEditFeedback } from "../_lib/line-edit-feedback";
 import { WorkOrderAddLine } from "./WorkOrderAddLine";
 import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMenu";
 
@@ -37,6 +38,7 @@ export function WorkOrderLinesCard({
   workOrderId,
   scope,
   notice,
+  editFeedback,
   lines,
   totalCents,
   readOnly,
@@ -47,6 +49,7 @@ export function WorkOrderLinesCard({
   workOrderId: string;
   scope: string;
   notice?: string;
+  editFeedback?: LineEditFeedback;
   lines: WorkOrderLine[];
   totalCents: number;
   /** A deleted ticket: the figures stay readable, the forms go away. */
@@ -139,6 +142,16 @@ export function WorkOrderLinesCard({
                     <div className="flex justify-end">
                       <WorkOrderLineMenu
                         workOrderId={workOrderId}
+                        scope={`${scope}.${line.id}`}
+                        notice={editFeedback?.lineId === line.id ? editFeedback.notice : undefined}
+                        refusal={
+                          editFeedback?.lineId === line.id && editFeedback.notice !== "line-saved"
+                            ? {
+                                field: LINE_EDIT_REFUSAL_FIELDS[editFeedback.notice],
+                                message: t(LINE_ADD_REFUSAL_KEYS[editFeedback.notice]),
+                              }
+                            : undefined
+                        }
                         line={{
                           id: line.id,
                           kind: line.kind,
