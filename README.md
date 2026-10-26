@@ -11,8 +11,12 @@ agents that encode how work gets done here.
 
 ## Quickstart
 
-Requires Node 24 and pnpm 12.4.1 — the repository pins both, in `.nvmrc` and `packageManager`,
-and `pnpm check:node-version` keeps every other place that names a version agreeing with them.
+Requires Node 24 and pnpm 12.4.1 for package-manager bootstrap. The supported Node floor is
+24.22.0; older releases have a
+realpath-cache bug that can break pnpm package resolution during local development.
+`devEngines.runtime` pins the project-local Node to CI’s 24.22.0, and `packageManager` pins pnpm.
+`pnpm install` downloads the pinned runtime; scripts use it without changing global Node.
+`pnpm check:node-version` keeps the version declarations in agreement.
 
 ```bash
 pnpm install

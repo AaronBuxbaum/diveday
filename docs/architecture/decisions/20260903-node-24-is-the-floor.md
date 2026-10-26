@@ -1,6 +1,6 @@
 # 20260903-node-24-is-the-floor — DiveDay runs on Node 24, and one guard makes every declaration say so
 
-- **Status:** Accepted
+- **Status:** Superseded by 20261026-project-local-node-runtime
 - **Date:** 2026-09-03
 - **Alongside:** 20260903-the-dev-server-is-supervised and
   20260903-one-process-per-pglite-directory, the other two halves of the same afternoon's work on

@@ -38,25 +38,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const NODE_MAJOR = 24;
 
 /**
- * The floor inside that major, and it is **not** `24.0.0`.
- *
- * `jsdom@30`, the DOM environment the whole unit suite runs in, declares
- * `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"`. So Node 24.0 through
- * 24.14 satisfies a `>=24.0.0` field and violates a dependency we install on
- * every machine. A floor that admits versions the tree cannot actually install
- * on is the same false declaration this guard exists to stop, one level down.
- *
- * `engines.node` is therefore `^{NODE_FLOOR}` — a **closed** range — and the
- * caret is load bearing rather than stylistic. `>={NODE_FLOOR}` would also
- * advertise every Node 25 release, and jsdom's range excludes the whole odd
- * major: 25 satisfies neither `^24.15.0` nor `>=26.0.0`. Saying "Node 24" and
- * meaning it closes both ends.
- *
- * `check-node-version.test.mjs` derives this number from every installed
- * package's `engines.node` rather than trusting it, so a dependency bump that
- * raises the bar goes red here instead of silently.
+ * Node's realpath cache can preserve package symlinks after an unrelated pipe stat
+ * on older releases (nodejs/node#65113), duplicating Next's modules under pnpm.
+ * Match the fixed runtime verified in CI; dependency engines alone cannot prove
+ * this runtime correctness floor (issue #3083).
  */
-export const NODE_FLOOR = "24.15.0";
+export const NODE_FLOOR = "24.22.0";
 
 /**
  * Artifact producers and consumers need one exact runtime. A major-only
@@ -65,6 +52,20 @@ export const NODE_FLOOR = "24.15.0";
  * This CI pin is separate from the supported local runtime range above.
  */
 export const CI_NODE_VERSION = "24.22.0";
+
+/** Refuse unsupported direct launchers before they start children or touch dev state. */
+export function nodeRuntimeProblem(version = process.versions.node) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  const minimum = NODE_FLOOR.split(".").map(Number);
+  const actual = match?.slice(1).map(Number);
+  if (
+    actual?.[0] === NODE_MAJOR &&
+    (actual[1] > minimum[1] || (actual[1] === minimum[1] && actual[2] >= minimum[2]))
+  ) {
+    return null;
+  }
+  return `Node ${version} is unsupported; this checkout requires ^${NODE_FLOOR} and pins ${CI_NODE_VERSION}. Run pnpm install --frozen-lockfile, then pnpm dev to use its project-local runtime.`;
+}
 
 /**
  * The major AWS Lambda runs the handlers in `infra/` on, stated separately
@@ -97,6 +98,15 @@ export const ES_LIB = "es2024";
 
 /** Each file, what it must say, and the sentence that explains the drift. */
 const DECLARATIONS = [
+  {
+    file: "package.json",
+    find: (text) => {
+      const runtime = JSON.parse(text).devEngines?.runtime;
+      return `${runtime?.name}@${runtime?.version}:${runtime?.onFail}`;
+    },
+    want: `node@${CI_NODE_VERSION}:download`,
+    where: "devEngines.runtime",
+  },
   {
     file: "package.json",
     find: (text) => JSON.parse(text).engines?.node,
