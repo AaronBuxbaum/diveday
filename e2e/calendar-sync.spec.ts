@@ -125,7 +125,7 @@ test.describe("staff calendar subscriptions, on a shop of the test's own", () =>
     const panel = panelFor(page, MY_DEPARTURES);
     // A shop of the test's own has never subscribed, so there is no link on
     // screen to leak — and no normalisation step to perform first.
-    await expect(panel.getByText("Not subscribed yet")).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Create subscription link" })).toBeVisible();
 
     const url = await mintLink(panel);
     expect(url).toContain("/calendar/");

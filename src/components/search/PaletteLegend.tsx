@@ -21,7 +21,7 @@ export function PaletteLegend({
   return (
     <p
       aria-hidden="true"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-5 py-2.5 text-xs text-muted"
+      className="[@media(pointer:coarse)]:hidden flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-5 py-2.5 text-xs text-muted"
     >
       <span className="inline-flex items-center gap-1.5">
         <kbd className={hintKeyClass}>

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { EntryShell } from "@/components/account/EntryShell";
 import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
 import { ForgetThisDevice } from "@/components/ForgetThisDevice";
-import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
@@ -49,18 +47,17 @@ export default function SignInPage({
     <div className="flex flex-1 flex-col">
       {/* Every ended session lands here; the device keeps nothing of it. */}
       <ForgetThisDevice />
-      <Suspense fallback={<MarketingNavFallback />}>
-        <MarketingNav />
-      </Suspense>
       <Suspense
         fallback={
-          <EntryShellSkeleton description={false} trailingLink fields={["email", "password"]} />
+          <EntryShellSkeleton
+            wordmark
+            description={false}
+            trailingLink
+            fields={["email", "password"]}
+          />
         }
       >
         <SignInForm searchParams={searchParams} />
-      </Suspense>
-      <Suspense fallback={<MarketingFooterFallback />}>
-        <MarketingFooter />
       </Suspense>
     </div>
   );
@@ -69,7 +66,7 @@ export default function SignInPage({
 async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearchParams> }) {
   const { error, session, callbackUrl } = await searchParams;
   const t = diverTranslator(await requestLocale());
-  const secondFactorRequired = error === "two-factor";
+  const secondFactorRequired = error === "two-factor" || error === "invalid-code";
   // A diver who followed a `/shop/<slug>/…` link lands here with no way back to
   // the thing they wanted. `callbackUrl` names the shop; if it doesn't — no
   // parameter, a repeated one, or anything that isn't a `/shop/<slug>` path —
@@ -79,9 +76,24 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
 
   return (
     <EntryShell
-      title={t("account.signIn.title")}
+      wordmark
+      homeLink
+      title={t(secondFactorRequired ? "account.signIn.twoFactorTitle" : "account.signIn.title")}
       footer={
         <>
+          {secondFactorRequired ? (
+            <Link href="/sign-in" className="font-medium text-primary hover:underline">
+              {t("account.common.backToSignIn")}
+            </Link>
+          ) : null}
+          <p className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:underline">
+              {t("account.common.privacy")}
+            </Link>
+            <Link href="/terms" className="hover:underline">
+              {t("account.common.terms")}
+            </Link>
+          </p>
           {/* A diver who followed a staff link isn't lost — their shop's own
               schedule is the useful surface at this moment, so it leads. */}
           {publicShopSlug ? (
@@ -127,13 +139,17 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
           </Field>
           {secondFactorRequired ? (
             <Field
-              label={t("account.signIn.twoFactorCode")}
-              hint={t("account.signIn.twoFactorHint")}
+              label={<span className="text-base">{t("account.signIn.twoFactorCode")}</span>}
+              description={
+                <span className="block text-sm">{t("account.signIn.twoFactorHint")}</span>
+              }
               markRequired={false}
             >
               <input
                 name="totpCode"
-                inputMode="numeric"
+                inputMode="text"
+                // biome-ignore lint/a11y/noAutofocus: this requested sign-in challenge moves focus to its next required input.
+                autoFocus
                 autoComplete="one-time-code"
                 pattern="[0-9A-Za-z-]{6,32}"
                 maxLength={32}
@@ -166,9 +182,9 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             {t("account.signIn.error")}
           </FormStatus>
         ) : null}
-        {secondFactorRequired ? (
+        {error === "invalid-code" ? (
           <FormStatus tone="danger" className="justify-center">
-            {t("account.signIn.twoFactorRequired")}
+            {t("account.signIn.invalidCode")}
           </FormStatus>
         ) : null}
         {/* `?session=ended`: requireStaffSession() (src/lib/session.ts)

@@ -78,7 +78,6 @@ export default async function CalendarSubscriptionsPage({
     rotateWarning: t("calendar.warning.rotate"),
     sharedWarning: t("calendar.warning.shared"),
     denied: t("calendar.notice.denied"),
-    statusNone: t("calendar.status.none"),
     neverRead: t("calendar.status.neverRead"),
   };
 
@@ -121,16 +120,14 @@ export default async function CalendarSubscriptionsPage({
 
       <p className="mb-6 text-sm text-muted">{t("calendar.refreshNote")}</p>
 
-      <div className="grid gap-4">
+      <div className="border-t border-border">
         {views.map((view) => (
           <CalendarFeedPanel
             key={view.scope}
             view={view}
             copy={copy}
             subscribed={feeds.some((feed) => feed.scope === view.scope)}
-            createVariant={
-              feeds.length === 0 ? "secondary" : view.scope === "assignments" ? "primary" : "link"
-            }
+            createVariant="secondary"
           />
         ))}
       </div>

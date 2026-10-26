@@ -31,6 +31,7 @@ export function CertCheckTryPanel({ t, padiOn }: { t: StaffTranslator; padiOn: b
         samples: t("settings.certChecks.samples"),
         padi: t("settings.certChecks.padi"),
         report: t("settings.certChecks.report"),
+        viewReport: t("settings.certChecks.viewReport"),
         added: t.raw("settings.main.certCheck.added"),
         notAdded: t("settings.main.certCheck.notAdded"),
         outdated: t.raw("settings.main.certCheck.outdated"),

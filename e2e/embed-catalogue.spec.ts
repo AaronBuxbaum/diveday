@@ -219,6 +219,7 @@ test.describe("the generator", () => {
     // (the label) is what a pointer hits — clicking the input itself waits
     // forever on a 1px clipped box.
     const tile = (text: RegExp) => page.locator("label").filter({ hasText: text });
+    await page.getByText("More formats", { exact: true }).click();
     await tile(/^Grid/).click();
     await expect(snippet).toHaveValue(/data-diveday="grid"/);
     await tile(/^DiveDay$/).click();

@@ -20,6 +20,7 @@ import {
 import { forgetThisDevice } from "../forget-device";
 import { PaletteGlyph } from "./PaletteGlyph";
 import { hintKeyClass, PaletteLegend } from "./PaletteLegend";
+import { PaletteSearchField } from "./PaletteSearchField";
 import { PaletteSearchStatus, paletteSearchPresentation } from "./PaletteSearchStatus";
 import { useCommandKey, usePaletteRecents, useShopSearch } from "./palette-hooks";
 import { recentsStorageKey, rememberRecent, type StoredRecent } from "./palette-recents";
@@ -128,6 +129,7 @@ export type CommandPaletteCopy = {
   hintMove: string;
   hintOpen: string;
   hintClose: string;
+  close: string;
   /**
    * The same destination labels the nav renders (src/lib/staff-destinations.ts).
    * One record, so "Go to Board" here and "Board" in the header can never
@@ -696,35 +698,19 @@ export function CommandPalette({
                 <div aria-live="polite" className="sr-only">
                   {resultsAnnouncement}
                 </div>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  role="combobox"
-                  aria-expanded="true"
-                  aria-busy={status === "pending"}
-                  aria-controls={listId}
-                  aria-activedescendant={activeKey ? `${listId}-${activeKey}` : undefined}
-                  aria-label={copy.comboboxAriaLabel}
-                  autoComplete="off"
-                  placeholder={copy.placeholder}
-                  value={query}
-                  onChange={(event) => {
-                    setQuery(event.target.value);
+                <PaletteSearchField
+                  inputRef={inputRef}
+                  pending={status === "pending"}
+                  listId={listId}
+                  activeId={activeKey ? `${listId}-${activeKey}` : undefined}
+                  copy={copy}
+                  query={query}
+                  onQueryChange={(next) => {
+                    setQuery(next);
                     setActive(0);
                   }}
                   onKeyDown={onKeyDown}
-                  // **The ring is drawn inside the field.** Focus sits here
-                  // for as long as the palette is open — no option ever takes
-                  // it (`tabIndex={-1}`; the arrows move
-                  // `aria-activedescendant`) — and the field is flush with the
-                  // dialog's `overflow-hidden` on three sides, which cut the
-                  // outset global ring to a 3px bar under it. Inset, the ring
-                  // is whole; `rounded-t-panel` bends it with the dialog's
-                  // top corners (20px against the 19px the dialog's border
-                  // leaves inside it, so the clip's curve never reaches it).
-                  // The field paints no fill, so the radius shapes the ring
-                  // and nothing else.
-                  className="w-full rounded-t-panel border-b border-border bg-transparent px-5 py-4 text-base focus-visible:focus-ring-inset"
+                  onClose={() => setOpen(false)}
                 />
                 <PaletteSearchStatus
                   message={searchMessage}

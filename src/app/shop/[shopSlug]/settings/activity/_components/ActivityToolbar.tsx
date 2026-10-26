@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, DateField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
@@ -33,6 +34,8 @@ export type ActivityToolbarCopy = {
   clear: string;
   /** "84 entries" — the whole filtered set. */
   count: string;
+  filter: string;
+  activeRange: string;
 };
 
 const FIELD_CLASS = "min-w-36 flex-1 sm:w-44 sm:flex-none";
@@ -106,29 +109,35 @@ export function ActivityToolbar({
         </select>
       </div>
 
-      <div className={DATE_RANGE_CLASS}>
-        <label className="text-sm text-muted" htmlFor="activity-from">
-          {copy.fromLabel}
-        </label>
-        <DateField
-          id="activity-from"
-          name="from"
-          defaultValue={from}
-          onChange={submit}
-          wrapperClassName={DATE_BOX_CLASS}
-        />
-        <label className="text-sm text-muted sm:ms-1" htmlFor="activity-to">
-          {copy.toLabel}
-        </label>
-        <DateField
-          id="activity-to"
-          name="to"
-          defaultValue={to}
-          onChange={submit}
-          wrapperClassName={DATE_BOX_CLASS}
-        />
-      </div>
-
+      <details open={Boolean(from || to)} className="group/filter w-full sm:w-auto">
+        <summary className={buttonClass({ variant: "secondary", size: "sm" })}>
+          {copy.filter}
+          <SummaryCaret className="ms-2 size-3 group-open/filter:rotate-90" />
+        </summary>
+        <div className={`${DATE_RANGE_CLASS} mt-3`}>
+          <label className="text-sm text-muted" htmlFor="activity-from">
+            {copy.fromLabel}
+          </label>
+          <DateField
+            id="activity-from"
+            name="from"
+            defaultValue={from}
+            onChange={submit}
+            wrapperClassName={DATE_BOX_CLASS}
+          />
+          <label className="text-sm text-muted sm:ms-1" htmlFor="activity-to">
+            {copy.toLabel}
+          </label>
+          <DateField
+            id="activity-to"
+            name="to"
+            defaultValue={to}
+            onChange={submit}
+            wrapperClassName={DATE_BOX_CLASS}
+          />
+        </div>
+      </details>
+      {copy.activeRange ? <p className="text-sm text-muted">{copy.activeRange}</p> : null}
       {clearHref ? (
         <Link
           href={clearHref}

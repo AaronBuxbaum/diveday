@@ -306,6 +306,7 @@ function titleSlug(title: ReactNode): string {
 
 export function SectionCard({
   as: Tag = "section",
+  open,
   title,
   titleAs = "h2",
   description,
@@ -319,6 +320,8 @@ export function SectionCard({
 }: {
   /** The element this card *is*. A row in a list is an `li`; a disclosure is `details`. */
   as?: SectionCardElement;
+  /** Initial/open state for a native details card. Ignored for other elements. */
+  open?: boolean;
   /** The section heading. Rendered at the one size; never spell it at a call site. */
   title?: ReactNode;
   /** `h3` for a card nested under a group that already owns the `h2`. */
@@ -385,6 +388,7 @@ export function SectionCard({
   const resolvedAriaLabel = ariaLabelProp ?? ariaLabel;
   return (
     <Tag
+      {...(Tag === "details" ? { open } : {})}
       id={id}
       // Only when this element is a landmark a name means something on. An `li`
       // in a list of cards is named by its content, and labelling it would make

@@ -12,7 +12,6 @@
     }
   },
   "status": {
-    "none": "Not subscribed yet",
     "active": "Subscribed {issued}",
     "lastRead": "Your calendar last read it {when}.",
     "neverRead": "No calendar has read it yet. Paste the link into one to finish."

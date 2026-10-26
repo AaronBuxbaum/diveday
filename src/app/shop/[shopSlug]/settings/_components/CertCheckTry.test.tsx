@@ -25,6 +25,7 @@ const COPY: CertCheckTryCopy = {
   samples: "Sample lookups",
   padi: "PADI Pros’ Site",
   report: "Session report",
+  viewReport: "View report",
   added: "Added to this browser ({version})",
   notAdded: "Not added",
   outdated: "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
@@ -103,9 +104,17 @@ describe("CertCheckTry", () => {
     expect(vi.mocked(requestDryRun).mock.calls.map(([agency]) => agency)).toEqual(["ssi", "naui"]);
     expect(screen.getByText("Signed in")).toBeVisible();
 
-    const report = JSON.parse(
-      screen.getByText(/"report": "diveday-cert-check-try"/).textContent ?? "",
-    );
+    const raw = screen.getByText(/"report": "diveday-cert-check-try"/);
+    expect(raw).not.toBeVisible();
+    const writeText = vi.fn(async (_value: string) => {});
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: COPY.copy })));
+    expect(writeText).toHaveBeenCalledWith(raw.textContent);
+    const runsBeforeDisclosure = vi.mocked(requestDryRun).mock.calls.length;
+    fireEvent.click(screen.getByText(COPY.viewReport));
+    expect(raw).toBeVisible();
+    expect(vi.mocked(requestDryRun).mock.calls).toHaveLength(runsBeforeDisclosure);
+    const report = JSON.parse(raw.textContent ?? "");
     expect(Object.keys(report)).toEqual([
       "report",
       "at",
@@ -183,9 +192,17 @@ describe("CertCheckTry", () => {
       "href",
       "mailto:support@dive.day",
     );
-    const report = JSON.parse(
-      screen.getByText(/"report": "diveday-cert-check-try"/).textContent ?? "",
-    );
+    const raw = screen.getByText(/"report": "diveday-cert-check-try"/);
+    expect(raw).not.toBeVisible();
+    const writeText = vi.fn(async (_value: string) => {});
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: COPY.copy })));
+    expect(writeText).toHaveBeenCalledWith(raw.textContent);
+    const runsBeforeDisclosure = vi.mocked(requestDryRun).mock.calls.length;
+    fireEvent.click(screen.getByText(COPY.viewReport));
+    expect(raw).toBeVisible();
+    expect(vi.mocked(requestDryRun).mock.calls).toHaveLength(runsBeforeDisclosure);
+    const report = JSON.parse(raw.textContent ?? "");
     expect(report).toMatchObject({
       padi: "no_access",
       samples: { naui: { result: "failed", hostAccess: false }, ssi: { hostAccess: true } },

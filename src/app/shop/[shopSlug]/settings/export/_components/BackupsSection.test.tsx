@@ -119,20 +119,18 @@ const DESTINATION: ShopBackupDestination = {
 };
 
 describe("BackupsSection's destination summary", () => {
-  it("stands its second column on the form's second column", () => {
-    // The summary above the form is a two-column `dl`; its `gap-2` put its
-    // second column 4px left of the form's (x 792 against 796 at 1280, K-588).
+  it("keeps identifiers in closed destination details while showing last successful delivery", () => {
     const { container } = renderSection("en-US", [], DESTINATION);
-    const columnGap = (element: Element | null) =>
-      [...(element?.classList ?? [])].filter((name) => /^gap-(x-)?\d/.test(name));
-    const summary = container.querySelector("dl");
-    const form = container.querySelector("form.grid");
-    expect(summary).toHaveClass("sm:grid-cols-2");
-    expect(form).toHaveClass("sm:grid-cols-2");
-    expect(columnGap(summary)).not.toContain("gap-2");
-    expect(columnGap(summary).filter((name) => name.startsWith("gap-x-"))).toEqual(
-      columnGap(form).filter((name) => name.startsWith("gap-x-")),
-    );
+    const details = screen.getByText("Destination details").closest("details");
+    expect(details).not.toHaveAttribute("open");
+    expect(screen.getByText(/Last successful delivery/)).toBeVisible();
+    expect(container.querySelector('input[name="accessKeyId"]')?.closest("details")).toBe(details);
+    expect(container.querySelector('input[name="secretAccessKey"]')).toHaveValue("");
+  });
+
+  it("opens destination setup when no destination exists", () => {
+    renderSection("en-US");
+    expect(screen.getByText("Destination details").closest("details")).toHaveAttribute("open");
   });
 });
 

@@ -193,7 +193,8 @@
       "openDay": "Open {day} on the board",
       "addDeparture": "Add a departure",
       "departureSeats": "{booked} of {capacity} booked · {blocked, plural, =0 {everyone ready} one {# blocked} other {# blocked}}"
-    }
+    },
+    "close": "Close"
   },
   "tripAdmission": {
     "level": "This charter requires {level}. This diver’s highest certification on file is {held}. If they hold a {level} certification, add it to their record. Otherwise book them onto a trip at their level, or into the {level} course.",

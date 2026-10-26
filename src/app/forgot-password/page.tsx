@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MarketingNav } from "@/app/_components/MarketingNav";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
-import { MarketingFooter } from "@/components/MarketingFooter";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -32,11 +30,12 @@ export default async function ForgotPasswordPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav />
       {sent ? (
         // The send is the whole outcome — the page has nothing left to ask,
         // so it reads as a terminal state rather than a form with a banner.
         <EntryDone
+          wordmark
+          homeLink
           glyph="sent"
           title={t("account.forgotPassword.sentTitle")}
           text={t("account.forgotPassword.sent")}
@@ -48,6 +47,8 @@ export default async function ForgotPasswordPage({
         />
       ) : (
         <EntryShell
+          wordmark
+          homeLink
           title={t("account.forgotPassword.title")}
           description={t("account.forgotPassword.description")}
           footer={
@@ -79,7 +80,6 @@ export default async function ForgotPasswordPage({
           </form>
         </EntryShell>
       )}
-      <MarketingFooter />
     </div>
   );
 }

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { readAfterHoursPingChoice } from "@/db/desk-pings";
 import { readWeeklyDigestChoice } from "@/db/weekly-digest";
 import { requestLocale } from "@/i18n/request";
@@ -15,6 +14,7 @@ import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { setAfterHoursPingAction, setWeeklyDigestAction } from "./actions";
+import { EmailPreferenceSwitch } from "./EmailPreferenceSwitch";
 
 // `instant = true`: every request-scoped read below sits inside this segment's
 // `loading.tsx` boundary (ADR 20260804-instant-navigation).
@@ -61,55 +61,49 @@ export default async function EmailSettingsPage({
         title={t("emailSettings.title")}
       />
       <div className="space-y-10">
-        <SectionCard
-          title={t("emailSettings.digest.heading")}
-          description={t("emailSettings.digest.description", {
-            zone: formatTimeZoneName(locale, shop.timezone),
-          })}
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge tone={wanted ? "success" : "neutral"}>
-              {wanted ? t("emailSettings.digest.on") : t("emailSettings.digest.off")}
-            </Badge>
-            <form action={setWeeklyDigestAction.bind(null, shop.slug, !wanted)}>
-              <SubmitButton
-                pendingLabel={t("emailSettings.digest.saving")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {wanted ? t("emailSettings.digest.turnOff") : t("emailSettings.digest.turnOn")}
-              </SubmitButton>
-            </form>
-            <a
-              href={shopPath(shop.slug, "settings", "email", "preview")}
-              target="_blank"
-              rel="noopener"
-              className={buttonClass({ variant: "ghost" })}
-            >
-              {t("emailSettings.digest.preview")}
-            </a>
+        <SectionCard ariaLabel={t("emailSettings.digest.heading")}>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
+            <h2 className={SECTION_TITLE_CLASS}>{t("emailSettings.digest.heading")}</h2>
+            <EmailPreferenceSwitch
+              wanted={wanted}
+              label={t("emailSettings.digest.heading")}
+              saving={t("emailSettings.digest.saving")}
+              failed={t("emailSettings.saveFailed")}
+              save={setWeeklyDigestAction.bind(null, shop.slug)}
+            />
           </div>
+          <p className="mt-2 text-sm text-muted">
+            {t("emailSettings.digest.description", {
+              zone: formatTimeZoneName(locale, shop.timezone),
+            })}
+          </p>
+          <a
+            href={shopPath(shop.slug, "settings", "email", "preview")}
+            target="_blank"
+            rel="noopener"
+            className={buttonClass({ variant: "link", flush: true, className: "mt-3" })}
+          >
+            {t("emailSettings.digest.preview")}
+          </a>
         </SectionCard>
-        <SectionCard
-          title={t("emailSettings.afterHours.heading")}
-          description={t("emailSettings.afterHours.description", {
-            opens: deskTime(shop.deskOpensMinute),
-            closes: deskTime(shop.deskClosesMinute),
-            zone: formatTimeZoneName(locale, shop.timezone),
-          })}
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge tone={pinged ? "success" : "neutral"}>
-              {pinged ? t("emailSettings.digest.on") : t("emailSettings.digest.off")}
-            </Badge>
-            <form action={setAfterHoursPingAction.bind(null, shop.slug, !pinged)}>
-              <SubmitButton
-                pendingLabel={t("emailSettings.digest.saving")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {pinged ? t("emailSettings.digest.turnOff") : t("emailSettings.digest.turnOn")}
-              </SubmitButton>
-            </form>
+        <SectionCard ariaLabel={t("emailSettings.afterHours.heading")}>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
+            <h2 className={SECTION_TITLE_CLASS}>{t("emailSettings.afterHours.heading")}</h2>
+            <EmailPreferenceSwitch
+              wanted={pinged}
+              label={t("emailSettings.afterHours.heading")}
+              saving={t("emailSettings.digest.saving")}
+              failed={t("emailSettings.saveFailed")}
+              save={setAfterHoursPingAction.bind(null, shop.slug)}
+            />
           </div>
+          <p className="mt-2 text-sm text-muted">
+            {t("emailSettings.afterHours.description", {
+              opens: deskTime(shop.deskOpensMinute),
+              closes: deskTime(shop.deskClosesMinute),
+              zone: formatTimeZoneName(locale, shop.timezone),
+            })}
+          </p>
         </SectionCard>
       </div>
     </main>

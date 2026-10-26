@@ -3289,7 +3289,9 @@
         "tooLong": "La contraseña debe tener como máximo {max} caracteres.",
         "mismatch": "Las contraseñas no coinciden.",
         "invalid": "Datos no válidos"
-      }
+      },
+      "privacy": "Privacidad",
+      "terms": "Condiciones"
     },
     "forgotPassword": {
       "title": "Restablece tu contraseña",
@@ -3326,27 +3328,20 @@
       "metaTitle": "Iniciar sesión — DiveDay",
       "title": "Bienvenido de nuevo",
       "error": "Ese correo y contraseña no coinciden.",
-      "twoFactorCode": "Código de autenticación o recuperación",
-      "twoFactorHint": "Escribe el código de seis cifras de tu aplicación o un código de recuperación sin usar.",
-      "twoFactorRequired": "Esta cuenta necesita un segundo factor antes de iniciar sesión.",
+      "twoFactorCode": "Código de acceso",
+      "twoFactorHint": "Usa un código de tu aplicación de autenticación o uno de tus códigos de recuperación.",
       "sessionEnded": "Se cerró tu sesión porque esta cuenta ya no está activa. Contacta al propietario del centro si esto no era lo esperado.",
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",
       "needShop": "¿Necesitas un centro?",
-      "publicSchedule": "¿Buscas el calendario de buceo?"
+      "publicSchedule": "¿Buscas el calendario de buceo?",
+      "twoFactorTitle": "Introduce tu código de acceso",
+      "invalidCode": "Ese código no funcionó. Prueba con un código actual o uno de recuperación."
     },
     "onboard": {
       "eyebrow": "Empieza un centro",
       "title": "Abre tu centro",
-      "closed": {
-        "title": "Abrimos cada centro a mano",
-        "body": "Cuéntanos de tu centro y lo abrimos contigo."
-      },
-      "spentLink": {
-        "title": "Este enlace de configuración ya no sirve",
-        "body": "Un enlace de configuración abre un centro y dura dos semanas, así que pídenos uno nuevo."
-      },
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",

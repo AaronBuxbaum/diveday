@@ -48,7 +48,6 @@ export type CalendarFeedCopy = {
   rotateWarning: string;
   sharedWarning: string;
   denied: string;
-  statusNone: string;
   neverRead: string;
 };
 

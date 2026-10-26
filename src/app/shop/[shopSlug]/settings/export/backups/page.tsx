@@ -84,12 +84,13 @@ export default async function BackupsSettingsPage({
 
   const { notice, reason, page } = await searchParams;
 
-  const [destination, deliveries] = await Promise.all([
+  const [destination, deliveries, latest] = await Promise.all([
     getShopBackupDestination(db, session.user.shopId),
     listBackupDeliveries(db, session.user.shopId, {
       page: Number(page) || 1,
       pageSize: DELIVERY_PAGE_SIZE,
     }),
+    listBackupDeliveries(db, session.user.shopId, { page: 1, pageSize: 1 }),
   ]);
 
   const locale = await requestLocale(shop.defaultLocale);
@@ -113,7 +114,9 @@ export default async function BackupsSettingsPage({
           server redirect lands the reader back at the top. Same tone→role rule
           as `noticeRole` in src/lib/staff-notices.ts — a refused destination is
           a refusal and has to interrupt, not murmur as an ambient `status`. */}
-      {banner ? (
+      {/* Successful delivery and removal are shown from stored destination/history
+          state below, never asserted from a hand-editable notice query. */}
+      {banner && banner !== "test-delivered" && banner !== "disconnected" ? (
         <p
           className={`mb-6 rounded-lg border p-3 text-sm ${
             NOTICE_TONE[banner] === "success"
@@ -134,6 +137,10 @@ export default async function BackupsSettingsPage({
         timeZone={shop.timezone}
         destination={destination}
         deliveries={deliveries}
+        latestDelivery={latest.rows[0] ?? null}
+        expandDestination={Boolean(
+          banner && !["test-delivered", "test-failed", "disconnected"].includes(banner),
+        )}
         basePath={basePath}
       />
     </main>

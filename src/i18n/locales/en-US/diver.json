@@ -3289,7 +3289,9 @@
         "tooLong": "Password must be at most {max} characters.",
         "mismatch": "Passwords don’t match.",
         "invalid": "Invalid input"
-      }
+      },
+      "privacy": "Privacy",
+      "terms": "Terms"
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -3326,27 +3328,20 @@
       "metaTitle": "Sign in — DiveDay",
       "title": "Welcome back",
       "error": "That email and password don’t match.",
-      "twoFactorCode": "Authenticator or recovery code",
-      "twoFactorHint": "Enter the six-digit code from your app, or one unused recovery code.",
-      "twoFactorRequired": "This account needs a second factor before it can sign in.",
+      "twoFactorCode": "Sign-in code",
+      "twoFactorHint": "Use a code from your authenticator app or one of your recovery codes.",
       "sessionEnded": "You’ve been signed out because this account is no longer active. Contact your shop owner if that’s unexpected.",
       "forgotPassword": "Forgot password?",
       "signingIn": "Signing in…",
       "submit": "Sign in",
       "needShop": "Need a shop?",
-      "publicSchedule": "Looking for the dive schedule?"
+      "publicSchedule": "Looking for the dive schedule?",
+      "twoFactorTitle": "Enter your sign-in code",
+      "invalidCode": "That code didn’t work. Try a current code or a recovery code."
     },
     "onboard": {
       "eyebrow": "Start a shop",
       "title": "Open your shop",
-      "closed": {
-        "title": "We set up every shop by hand",
-        "body": "Tell us about your shop and we’ll open it with you."
-      },
-      "spentLink": {
-        "title": "This setup link no longer works",
-        "body": "A setup link opens one shop and lasts two weeks. Ask us for a new one."
-      },
       "shopSectionTitle": "Your shop",
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",

@@ -111,8 +111,11 @@ test.describe("backup settings", () => {
     await page.goto(BACKUP_SETTINGS);
 
     await expect(page.getByRole("heading", { name: "Backups are set up" })).toBeVisible();
-    await expect(page.getByText("https://backups.blue-mantis.example")).toBeVisible();
-    await expect(page.getByText("BMKEYIDDEMO0001")).toBeVisible();
+    await page.getByText("Destination details", { exact: true }).click();
+    await expect(page.locator('input[name="endpoint"]')).toHaveValue(
+      "https://backups.blue-mantis.example",
+    );
+    await expect(page.locator('input[name="accessKeyId"]')).toHaveValue("BMKEYIDDEMO0001");
 
     // The history table: successes with their object keys and sizes, and the
     // seeded bad week named by reason, not swallowed.
@@ -126,6 +129,7 @@ test.describe("backup settings", () => {
 
   test("refuses a destination pointing at a private address, with the reason", async ({ page }) => {
     await page.goto(BACKUP_SETTINGS);
+    await page.getByText("Destination details", { exact: true }).click();
     await page.getByRole("textbox", { name: "Endpoint" }).fill("https://169.254.169.254");
     await page.getByRole("textbox", { name: "Region" }).fill("auto");
     await page.getByRole("textbox", { name: "Bucket", exact: true }).fill("bucket");

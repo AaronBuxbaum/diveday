@@ -798,6 +798,7 @@ test("Try the checks runs every sample lookup in the extension, reads PADI's tab
   await expect(page.getByText("No PADI tab open")).toBeVisible();
   // No agency was searched: the samples are the extension's own pages.
   expect(agencyPages.requests).toEqual([]);
+  await row.getByText("View report", { exact: true }).click();
   const report = page.getByText(/"report": "diveday-cert-check-try"/);
   await expect(report).toContainText(`"extension": "${extensionVersion}"`);
   await expect(report).not.toContainText("Alex");

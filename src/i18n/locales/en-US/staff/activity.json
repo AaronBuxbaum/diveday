@@ -155,6 +155,9 @@
     "deletedDeparture": "{title} (deleted)",
     "order": "Order",
     "reviews": "Reviews",
-    "diverRecord": "Diver record"
+    "diverRecord": "Diver record",
+    "filter": "Filter",
+    "rangeFrom": "From {date}",
+    "rangeTo": "Through {date}"
   }
 }

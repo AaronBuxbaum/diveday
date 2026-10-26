@@ -45,6 +45,7 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
  */
 export function EntryShell({
   wordmark = false,
+  homeLink = false,
   eyebrow,
   title,
   description,
@@ -55,6 +56,7 @@ export function EntryShell({
 }: {
   /** Show the DiveDay mark above the title — for pages with no nav above. */
   wordmark?: boolean;
+  homeLink?: boolean;
   /** Small uppercase line above the title (a shop's name, "Founding shop"). */
   eyebrow?: string;
   title: string;
@@ -70,7 +72,9 @@ export function EntryShell({
   return (
     <main className={entryMainClass(width)}>
       <header className="text-center">
-        {wordmark ? <Wordmark className="mb-8 justify-center" /> : null}
+        {wordmark ? (
+          <Wordmark href={homeLink ? "/" : undefined} className="mb-8 justify-center" />
+        ) : null}
         {eyebrow ? <p className={`${EYEBROW_CLASS} mb-2`}>{eyebrow}</p> : null}
         {/* One size at both widths. The title used to step down to `text-2xl`
             on the `sm` doors, which made the question a diver was being asked
@@ -136,7 +140,7 @@ export function EntryShell({
  * {shop}.", and neither is this slot's to size.
  */
 const FOOTER_LINK_SLOT =
-  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:items-center [:where(&)_a]:-my-3";
+  "[:where(&)_a]:inline-flex [:where(&)_a]:min-h-11 [:where(&)_a]:min-w-11 [:where(&)_a]:items-center [:where(&)_a]:justify-center [:where(&)_a]:-my-3";
 const ACTION_LINK_SLOT =
   "[:where(&)>a]:inline-flex [:where(&)>a]:min-h-11 [:where(&)>a]:items-center [:where(&)>a]:-my-3";
 
@@ -244,6 +248,7 @@ const DOOR_GLYPH_MARKS: Record<DoorGlyphId, readonly string[]> = {
  */
 export function EntryDone({
   wordmark = false,
+  homeLink = false,
   glyph,
   title,
   text,
@@ -255,6 +260,7 @@ export function EntryDone({
    * #28). Never alongside a shop's name: that page is the shop's.
    */
   wordmark?: boolean;
+  homeLink?: boolean;
   /** Which situation this is — the component owns the drawing. */
   glyph: DoorGlyphId;
   title: string;
@@ -264,7 +270,9 @@ export function EntryDone({
 }) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:py-16">
-      {wordmark ? <Wordmark className="mb-8 justify-center" /> : null}
+      {wordmark ? (
+        <Wordmark href={homeLink ? "/" : undefined} className="mb-8 justify-center" />
+      ) : null}
       <div
         aria-hidden="true"
         className="grid size-14 place-items-center rounded-full bg-surface-sunken"

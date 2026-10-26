@@ -20,18 +20,15 @@
     "notConfiguredDescription": "Apunta DiveDay a un bucket compatible con S3 que sea tuyo (AWS S3, Cloudflare R2, Backblaze B2 y similares) y un paquete de exportación completo llegará allí cada semana.",
     "verified": "Entrega verificada",
     "unproven": "Sin verificar todavía",
-    "endpoint": "Endpoint",
-    "bucket": "Bucket",
-    "accessKeyId": "ID de clave de acceso",
-    "lastDelivered": "Última entrega",
-    "never": "Nunca"
+    "lastDelivered": "Última entrega correcta",
+    "never": "Nunca",
+    "latestResult": "Última entrega"
   },
   "test": {
     "submit": "Ejecutar una entrega de prueba ahora",
     "submitting": "Entregando…"
   },
   "form": {
-    "heading": "Destino",
     "description": "Usa una credencial que solo pueda escribir en este bucket: DiveDay nunca necesita leer, listar ni borrar nada.",
     "endpointLabel": "Endpoint",
     "endpointHint": "El origen de la API S3 de tu proveedor: HTTPS, sin bucket ni ruta.",
@@ -45,7 +42,8 @@
     "secretHint": "No vuelve a mostrarse nunca, ni siquiera a ti.",
     "secretKeepHint": "Déjala en blanco para conservar la clave actual.",
     "submit": "Guardar destino",
-    "submitting": "Guardando…"
+    "submitting": "Guardando…",
+    "details": "Detalles del destino"
   },
   "how": {
     "heading": "Cómo funciona",

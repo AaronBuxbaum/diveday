@@ -95,5 +95,6 @@ function commandPaletteCopy(t: ReturnType<typeof staffTranslator>): CommandPalet
     hintMove: t("shared.commandPalette.hintMove"),
     hintOpen: t("shared.commandPalette.hintOpen"),
     hintClose: t("shared.commandPalette.hintClose"),
+    close: t("shared.commandPalette.close"),
   };
 }

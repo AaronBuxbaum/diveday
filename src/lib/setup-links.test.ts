@@ -28,7 +28,7 @@ describe("a setup link's token (ADR 20261009-single-use-setup-links)", () => {
     }
   });
 
-  // `account.onboard.spentLink.body` tells a visitor a link lasts two weeks.
+  // Setup links expire after the settled two-week invitation window.
   it("lasts the two weeks the closed door says it does", () => {
     expect(SETUP_LINK_TTL_MS).toBe(14 * DAY_MS);
   });

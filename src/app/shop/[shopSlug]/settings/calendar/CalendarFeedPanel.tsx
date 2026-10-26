@@ -5,7 +5,6 @@ import { useFormStatus } from "react-dom";
 import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { calendarFeedAction } from "./actions";
 import {
@@ -83,12 +82,13 @@ export function CalendarFeedPanel({
   const live = scoped ? state.status === "issued" : subscribed;
 
   return (
-    <SectionCard
-      padding="lg"
-      title={view.name}
-      description={view.detail}
-      actions={
-        <>
+    <section className="border-b border-border py-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold">{view.name}</h2>
+          <p className="mt-1 text-sm text-muted">{view.detail}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <form action={formAction}>
             <input type="hidden" name="intent" value="issue" />
             <input type="hidden" name="scope" value={view.scope} />
@@ -124,22 +124,17 @@ export function CalendarFeedPanel({
               />
             </form>
           ) : null}
-        </>
-      }
-    >
+        </div>
+      </div>
       {/* Suppressed while the freshly-minted link is on screen: `view` was
           rendered before the action ran, so it would read "not subscribed yet"
           directly above the subscription it just created. */}
-      {issued ? null : (
-        <>
-          <p className="text-sm text-muted">
-            {live ? (view.subscribedLabel ?? copy.statusNone) : copy.statusNone}
-          </p>
-          {live ? (
-            <p className="mt-1 text-sm text-muted">{view.lastReadLabel ?? copy.neverRead}</p>
-          ) : null}
-        </>
-      )}
+      {live && !issued ? (
+        <div className="mt-3 text-sm text-muted">
+          <p>{view.subscribedLabel}</p>
+          <p className="mt-1">{view.lastReadLabel ?? copy.neverRead}</p>
+        </div>
+      ) : null}
 
       {denied ? (
         <ShopNotice tone="danger" role="alert" className="mt-4">
@@ -148,7 +143,7 @@ export function CalendarFeedPanel({
       ) : null}
 
       {issued ? (
-        <div className="rounded-inset border border-primary/25 bg-primary/5 p-4">
+        <div className="mt-4 rounded-inset border border-primary/25 bg-primary/5 p-4">
           <h3 className="text-sm font-semibold text-foreground">{copy.newLinkHeading}</h3>
           <p className="mt-1 text-sm text-foreground">{copy.shownOnce}</p>
           <div className="mt-3 grid gap-2">
@@ -173,6 +168,6 @@ export function CalendarFeedPanel({
           {issued.rotated ? <p className="mt-1 text-xs text-muted">{copy.rotateWarning}</p> : null}
         </div>
       ) : null}
-    </SectionCard>
+    </section>
   );
 }

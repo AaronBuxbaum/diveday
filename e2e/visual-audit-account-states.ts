@@ -271,7 +271,8 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
       await page.getByText("No orders yet", { exact: true }).waitFor();
       await capture(page, "orders-first-run-empty", "light");
       await page.goto(setup);
-      await page.getByRole("heading", { name: "This setup link no longer works" }).waitFor();
+      await expect(page).toHaveURL(/\/get-set-up\?from=onboard-closed$/);
+      await page.getByLabel("Shop name").waitFor();
       await capture(page, "onboard-consumed-link", "light");
     });
   });
