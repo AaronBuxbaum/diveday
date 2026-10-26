@@ -4,15 +4,15 @@ import { pendingHeldSend } from "@/db/held-sends";
 import { heldRescheduleIsPlaceOnly } from "@/db/trip-rescheduled";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";
-import { RescheduleHold } from "./RescheduleHold";
+import { RescheduleHold, type RescheduleNoticeSnapshot } from "./RescheduleHold";
 import { rescheduleHoldCopy } from "./reschedule-hold-copy";
 
 /**
  * The reschedule notice a move just held (ux review 2026-10-11, item 1), read
  * back from the `?held=` the move redirected with. Only a hold that is still
  * this shop's, still a reschedule notice and, on a trip page, for this trip
- * draws anything: an id from somebody else's link, or one that already left,
- * renders nothing.
+ * populates the initial client snapshot. A fresh absent/foreign hold renders
+ * nothing; the same mounted identity survives Undo's row-absent refresh.
  */
 export async function RescheduleNotice({
   shopId,
@@ -33,18 +33,23 @@ export async function RescheduleNotice({
   if (!id.success || !count.success) return null;
   const db = await getDb();
   const row = await pendingHeldSend(db, shopId, id.data);
-  if (row?.payload.kind !== "trip_rescheduled") return null;
-  if (tripId && row.payload.tripId !== tripId) return null;
-  const placeOnly = await heldRescheduleIsPlaceOnly(db, shopId, row.payload);
-  return (
-    <RescheduleHold
-      ticket={{
+  let initialNotice: RescheduleNoticeSnapshot | null = null;
+  if (row?.payload.kind === "trip_rescheduled" && (!tripId || row.payload.tripId === tripId)) {
+    const placeOnly = await heldRescheduleIsPlaceOnly(db, shopId, row.payload);
+    initialNotice = {
+      ticket: {
         id: row.id,
         runAt: row.runAt.getTime(),
         holdMs: Math.max(0, row.runAt.getTime() - nowMs()),
-      }}
-      tripId={row.payload.tripId}
-      copy={rescheduleHoldCopy(t, count.data, placeOnly)}
+      },
+      tripId: row.payload.tripId,
+      copy: rescheduleHoldCopy(t, count.data, placeOnly),
+    };
+  }
+  return (
+    <RescheduleHold
+      key={JSON.stringify([shopId, id.data, tripId ?? null])}
+      initialNotice={initialNotice}
     />
   );
 }

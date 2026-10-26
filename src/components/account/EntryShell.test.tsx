@@ -157,10 +157,11 @@ describe("a door renders one primary", () => {
     expect(primaries).toHaveLength(1);
   });
 
-  it("counts sign-in's forgot-password link as text, not as a second button", () => {
+  it("keeps forgot-password and challenge Back controls as text beside one primary", () => {
     const signIn = read("app/sign-in/page.tsx");
-    expect(signIn).toContain('variant: "link"');
-    expect(buttonCalls(signIn)).toHaveLength(2);
+    const secondary = buttonCalls(signIn).filter((options) => options.includes("variant:"));
+    expect(secondary).toHaveLength(2);
+    for (const options of secondary) expect(options).toContain('variant: "link"');
   });
 });
 

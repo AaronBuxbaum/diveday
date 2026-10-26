@@ -32,17 +32,24 @@ export type RescheduleHoldCopy = {
  * holds the same notice again. Neither the recipients nor the time the divers
  * were last told are on this form: the server reads both off the trip.
  */
-export function RescheduleHold({
-  ticket,
-  tripId,
-  copy,
-}: {
-  ticket: HeldTicket | null;
+export type RescheduleNoticeSnapshot = {
+  ticket: HeldTicket;
   tripId: string;
   copy: RescheduleHoldCopy;
+};
+
+export function RescheduleHold({
+  initialNotice,
+}: {
+  initialNotice: RescheduleNoticeSnapshot | null;
 }) {
+  // A successful Undo removes the row. Keep this browser's validated snapshot
+  // across the action refresh; the server key resets it for another identity.
+  const [notice] = useState(initialNotice);
   const [result, setResult] = useState<string | null>(null);
   const [gone, setGone] = useState(false);
+  if (!notice) return null;
+  const { ticket, tripId, copy } = notice;
   if (result) {
     return (
       <p role="status" className="text-sm">

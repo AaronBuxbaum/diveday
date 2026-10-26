@@ -36,6 +36,22 @@ installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
 
+/** Force the cookie-writing action refresh that previously erased Undo's result. */
+async function undoWithSessionRefresh(page: Page) {
+  await page.context().clearCookies({ name: "better-auth.session_data" });
+  const path = new URL(page.url()).pathname;
+  const response = page.waitForResponse(
+    (reply) =>
+      reply.request().method() === "POST" &&
+      Boolean(reply.request().headers()["next-action"]) &&
+      new URL(reply.url()).pathname === path,
+  );
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  const headers = await (await response).allHeaders();
+  expect(headers["set-cookie"]?.includes("session_data=")).toBe(true);
+  expect(Boolean(headers["x-action-revalidated"])).toBe(true);
+}
+
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
@@ -60,7 +76,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
         await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
-        await page.getByRole("button", { name: "Undo" }).click();
+        await undoWithSessionRefresh(page);
         await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
         await capture(page, "trip-reschedule-hold", scheme);
       });
@@ -111,7 +127,7 @@ for (const scheme of ["light", "dark"] as const) {
         await date.fill(next.toISOString().slice(0, 10));
         await page.getByRole("button", { name: "Move it" }).click();
         await page.getByText(/^Telling \d+ divers? the new time…$/).waitFor();
-        await page.getByRole("button", { name: "Undo" }).click();
+        await undoWithSessionRefresh(page);
         await page.getByText(staffTranslator("en-US")("shared.rescheduleHold.notTold")).waitFor();
         await capture(page, "schedule-builder-reschedule-hold", scheme);
       });
