@@ -80,7 +80,7 @@ test("booking through the embed keeps embed mode through the confirmation", asyn
   await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
 
   // The booking form is controlled, so wait for hydration before typing.
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Embed Diver");
   await page.getByLabel("Email", { exact: true }).fill(`embed-${e2eNow().getTime()}@example.com`);
   await acceptAgeAttestation(page);

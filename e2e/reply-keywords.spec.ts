@@ -60,7 +60,10 @@ test.describe("reply keywords", () => {
       .filter({ hasText: title })
       .getByRole("link")
       .click();
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
@@ -149,7 +152,10 @@ test.describe("reply keywords", () => {
       .filter({ hasText: title })
       .getByRole("link")
       .click();
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name").fill("Ivan Petrov");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();

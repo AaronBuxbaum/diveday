@@ -4,8 +4,9 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
 
 /**
  * The page's heading, and its tab's title: the confirm before the call, then
- * the record in its cause's words, since a run's cancellation is not weather
- * (review, 2026-10-12; #2460).
+ * historical record after it. A weather record survives reinstatement, so its
+ * title must not claim the departure is still canceled. A run's cancellation
+ * keeps its cause-specific wording (review, 2026-10-12; #2460).
  */
 export function blowoutTitleKey(blowout: TripBlowoutRecord | null): StaffMessageKey {
   if (!blowout) return "blowout.confirm.title";

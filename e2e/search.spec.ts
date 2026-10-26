@@ -203,7 +203,6 @@ test("the palette's trip results lead with the departure nearest to now", {
   // meaning the same thing when that instant moves — the shop's own zone,
   // because that is the zone the row renders in.
   const today = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
     month: "short",
     day: "numeric",
     timeZone: "America/New_York",

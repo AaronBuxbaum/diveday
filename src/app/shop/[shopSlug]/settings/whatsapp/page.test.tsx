@@ -70,18 +70,15 @@ async function statusCard() {
  * no number connected it was the card's body, behind `SectionCard`'s `mt-4`,
  * so it stood 28px under its title where the security and team cards' own
  * sentences stand 15px (`description`, `mt-1`). It is the card's description
- * now, and the disabled Connect button is the body without a `mt-5` of its own.
+ * now; unavailable signup has no inert action beneath it.
  */
 describe("the WhatsApp status card with no number connected", () => {
-  it("says it is coming in the card's description, and holds only the disabled button", async () => {
+  it("states availability without offering a disabled connection action", async () => {
     vi.stubEnv("META_APP_ID", "");
     const card = await statusCard();
     expect(card.props.description).toBe(STATUS.unavailableDescription);
     const body = [card.props.children].flat(Number.POSITIVE_INFINITY).filter(Boolean);
-    expect(body).toHaveLength(1);
-    const button = body[0] as ReactElement<{ disabled?: boolean }>;
-    expect(button.type).toBe("button");
-    expect(button.props.disabled).toBe(true);
+    expect(body).toEqual([]);
   });
 
   it("says reminders go out as SMS in the description, with nothing under it, once connecting is open", async () => {

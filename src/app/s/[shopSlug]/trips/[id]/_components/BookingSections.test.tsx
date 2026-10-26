@@ -199,7 +199,7 @@ describe("BookSpotSection — the money says itself once", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Grab a seat" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "1 diver" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "1 person" })).toBeChecked();
   });
 
   it("no longer quotes the per-diver price under its own heading", () => {
@@ -360,7 +360,7 @@ const pricedRentals: RentalPricing = {
 
 /**
  * **The card's groups are captioned one way** (docs/design/pixel-craft.md,
- * class 12): "Number of divers" and "Your details" were each spelled their
+ * class 12): "People" and "Your details" were each spelled their
  * own way — two spellings of one thing in one card.
  */
 describe("BookSpotSection — the group captions", () => {
@@ -381,7 +381,7 @@ describe("BookSpotSection — the group captions", () => {
         }}
       />,
     );
-    for (const caption of ["Number of divers", "Your details"]) {
+    for (const caption of ["People", "Your details"]) {
       const node = screen.getByText(caption);
       expect(node).toHaveClass("text-sm", "font-semibold");
       expect(node).not.toHaveClass("font-medium");
@@ -582,7 +582,7 @@ describe("TripFullSection — the shop's own better answer", () => {
   it("lets a party wait together, asking only the lead's details (fourth review, item 34)", () => {
     renderFull();
     // Up to the boat's eight seats, not the none that are left.
-    const size = screen.getByRole("combobox", { name: "Number of divers" });
+    const size = screen.getByRole("combobox", { name: "People" });
     expect(size.querySelectorAll("option")).toHaveLength(8);
     fireEvent.change(size, { target: { value: "2" } });
     expect(size).toHaveValue("2");

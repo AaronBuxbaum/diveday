@@ -192,7 +192,7 @@ export default async function ScheduleBoardPage({
   const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st });
 
   const builderNotice = builderNoticeFor({ builder, count, created, gear, series, st });
-  const builderCopy = scheduleBuilderCopy(st);
+  const builderCopy = scheduleBuilderCopy(st, shop.timezone);
 
   const builderMore = scheduleBuilderMore(st, locale);
 

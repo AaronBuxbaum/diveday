@@ -12,7 +12,7 @@
     "calling": "Cancelando…"
   },
   "record": {
-    "title": "Cascada de la cancelación",
+    "title": "Registro de cancelación",
     "titleRunEnded": "Cancelada con su serie",
     "calledBy": "Llamada por {name} · {when}",
     "notified": "Avisados",
@@ -72,7 +72,7 @@
     "underway": "En curso",
     "unsent": "Mensajes sin enviar",
     "resume": "Terminar de enviar",
-    "openRecord": "Abrir la cascada",
+    "openRecord": "Ver el registro de cancelación",
     "empty": "No hay salidas este día",
     "nothingToCall": "No queda nada que cancelar este día.",
     "instead": "¿Se cae todo el día? Cancela varias salidas a la vez",

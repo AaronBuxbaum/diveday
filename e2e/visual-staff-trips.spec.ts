@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
@@ -125,10 +126,15 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
-        await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await page.getByRole("button", { name: "Reinstate trip" }).waitFor();
-        await page.getByRole("link", { name: "View the blow-out cascade" }).waitFor();
+        await page
+          .getByRole("link", {
+            name: staffTranslator("en-US")("trips.detail.viewBlowout", { cause: "weather" }),
+            exact: true,
+          })
+          .waitFor();
         // Nobody can be offered a seat on a cancelled departure.
         await expect(page.getByRole("heading", { name: /Who wants in/ })).toHaveCount(0);
         await capture(page, "trip-cancelled", scheme);

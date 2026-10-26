@@ -54,8 +54,10 @@ test.describe("weather blow-out cascade", () => {
 
     await page.getByRole("button", { name: "Call the blow-out" }).click();
     await expect(page.getByRole("status")).toContainText("Blow-out called");
-    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
-    await expect(page).toHaveTitle("Blow-out cascade — DiveDay");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Cancellation record" }),
+    ).toBeVisible();
+    await expect(page).toHaveTitle("Cancellation record — DiveDay");
 
     // The cascade record: per-diver rows with message, money, offers, and
     // resolution state. With no provider configured every message reads
@@ -78,7 +80,9 @@ test.describe("weather blow-out cascade", () => {
     // unsent rows and lands back on the same record.
     await page.getByRole("button", { name: "Retry unsent messages" }).click();
     await expect(page.getByRole("status")).toContainText("Retried the unsent messages.");
-    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Cancellation record" }),
+    ).toBeVisible();
 
     // The trip record now reads cancelled and keeps the way back to the
     // cascade; the quiet per-trip cancel control is gone with it.
@@ -122,8 +126,10 @@ test.describe("weather blow-out cascade", () => {
       .getByRole("navigation", { name: "Departure" })
       .getByRole("link", { name: "Divers" })
       .click();
-    await page.getByRole("link", { name: "View the blow-out cascade" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await page.getByRole("link", { name: "View cancellation record" }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Cancellation record" }),
+    ).toBeVisible();
   });
 
   test("a departure with zero bookings blows out as a clean no-op cascade", async ({ page }) => {
@@ -153,7 +159,9 @@ test.describe("weather blow-out cascade", () => {
 
     await page.getByRole("button", { name: "Call the blow-out" }).click();
     await expect(page.getByRole("status")).toContainText("Blow-out called");
-    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Cancellation record" }),
+    ).toBeVisible();
     await expect(
       page.getByText("No divers were booked when the blow-out was called"),
     ).toBeVisible();
@@ -201,7 +209,9 @@ test.describe("weather blow-out cascade", () => {
     // — the click is a navigation, not an in-place toggle.
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     await page.getByRole("button", { name: "Call the blow-out" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Cancellation record" }),
+    ).toBeVisible();
 
     // The same link, unchanged, opened again.
     await page.goto(threadUrl);

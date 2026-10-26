@@ -324,7 +324,7 @@ test("a seat booked as under 18 asks for a parent on its release", async ({ page
     .filter({ hasText: title })
     .getByRole("link")
     .click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(diver);
   await page.getByLabel("Email", { exact: true }).fill(`teen-${stamp}@example.com`);
   await page.getByRole("checkbox", { name: /^Under 18/ }).check();

@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 const WHATSAPP_SETTINGS = "/shop/blue-mantis/settings/whatsapp";
@@ -9,7 +10,7 @@ const WHATSAPP_SETTINGS = "/shop/blue-mantis/settings/whatsapp";
  * Meta to have approved DiveDay's app — so on the e2e fleet, which configures no
  * `META_*` credentials, the page is in its coming-soon state. That is exactly
  * the state every shop sees today, and it is what these tests cover: one card
- * states it, the button is inert, and the surface is still owner/manager work.
+ * states it, no connection action is offered, and the surface is still owner/manager work.
  *
  * The signup exchange itself is covered by unit tests against an injected fetch
  * (`src/lib/notifications/whatsapp-signup.test.ts`); it cannot be exercised here
@@ -17,7 +18,7 @@ const WHATSAPP_SETTINGS = "/shop/blue-mantis/settings/whatsapp";
  *
  * READ_ONLY holds here — and matters more than usual: `shop_whatsapp_accounts` is
  * one of the four shop-scoped tables `/api/test/reset` does *not* restore. Nothing
- * in this file can write one. The Connect button is asserted disabled, there is no
+ * in this file can write one. The Connect button is asserted absent, there is no
  * credential field to fill, and the captain half is refusals.
  */
 
@@ -30,9 +31,11 @@ test.describe("WhatsApp settings", () => {
     await page.goto(WHATSAPP_SETTINGS);
 
     await expect(page.getByRole("heading", { name: "No WhatsApp number connected" })).toBeVisible();
-    // Present but inert: the shop can see what is coming, and cannot start a
-    // flow that Meta would reject.
-    await expect(page.getByRole("button", { name: "Connect WhatsApp" })).toBeDisabled();
+    const t = staffTranslator("en-US");
+    await expect(page.getByText(t("whatsapp.status.unavailableDescription"))).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: t("whatsapp.signup.connect"), exact: true }),
+    ).toHaveCount(0);
   });
 
   test("says courtesy messages keep going out as SMS meanwhile", { tag: READ_ONLY }, async ({
@@ -49,7 +52,7 @@ test.describe("WhatsApp settings", () => {
     await page.goto(WHATSAPP_SETTINGS);
 
     // The how-to renders once following it would get a shop somewhere; with no
-    // Meta app approved there is one card, one line, one inert button.
+    // Meta app approved there is one card and one state description.
     await expect(page.getByRole("heading", { name: "How connecting works" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Coming soon" })).toHaveCount(0);
     // The whole point of Embedded Signup over the previous flow: no token, no

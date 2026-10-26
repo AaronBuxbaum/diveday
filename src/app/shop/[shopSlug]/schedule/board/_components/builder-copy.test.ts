@@ -12,14 +12,21 @@ function strings(value: unknown): string[] {
 
 describe("scheduleBuilderCopy", () => {
   it.each(DIVER_LOCALES)("resolves every word the builder says in %s", (locale) => {
-    const copy = scheduleBuilderCopy(staffTranslator(locale));
+    const copy = scheduleBuilderCopy(staffTranslator(locale), "America/New_York");
     const words = strings(copy);
     expect(words.length).toBeGreaterThan(100);
     for (const word of words) expect(word.trim()).not.toBe("");
   });
 
+  it.each(DIVER_LOCALES)("names the shop timezone beside the move time in %s", (locale) => {
+    const copy = scheduleBuilderCopy(staffTranslator(locale), "Pacific/Honolulu");
+    expect(copy.newDepartureTime).toContain("Pacific/Honolulu");
+  });
+
   it("hands placeholders over raw, for the component to fill", () => {
-    expect(scheduleBuilderCopy(staffTranslator("en-US")).removeConfirm).toContain("{");
+    expect(
+      scheduleBuilderCopy(staffTranslator("en-US"), "America/New_York").removeConfirm,
+    ).toContain("{");
   });
 });
 

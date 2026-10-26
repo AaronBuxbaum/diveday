@@ -198,16 +198,36 @@ test.describe("deck crew", () => {
     // this would silently put the diver back on the list at a size the shop
     // already said it was short of, with the attribution wiped in the same
     // statement so nothing recorded that it happened.
-    await page.evaluate(() => {
-      const form = Array.from(document.querySelectorAll("form")).find((candidate) =>
-        candidate.textContent?.includes("Flagged for hands-on fitting"),
-      );
-      if (!form) throw new Error("the needs-staff-fit form is not on the page");
-      form.requestSubmit();
-    });
-    // The action answers with this redirect. Wait for its query before checking
-    // the result in the page, or the assertion can race the server action.
-    await expect(page).toHaveURL(/\?notice=not-authorized-fit&form=fit/);
+    const recordUrl = new URL(page.url());
+    // Observe this action's refusal response: FlashParams deliberately removes
+    // the redirect's notice query before an eventual URL assertion can see it.
+    // Hydrated actions use x-action-redirect; a native form POST uses Location.
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === "POST" &&
+          new URL(candidate.url()).origin === recordUrl.origin &&
+          new URL(candidate.url()).pathname === recordUrl.pathname,
+      ),
+      page.evaluate(() => {
+        const form = Array.from(document.querySelectorAll("form")).find((candidate) =>
+          candidate.textContent?.includes("Flagged for hands-on fitting"),
+        );
+        if (!form) throw new Error("the needs-staff-fit form is not on the page");
+        form.requestSubmit();
+      }),
+    ]);
+    const headers = response.headers();
+    const actionRedirect = headers["x-action-redirect"];
+    expect(response.status()).toBe(actionRedirect ? 200 : 303);
+    const redirect = actionRedirect?.replace(/;(?:push|replace)$/, "") ?? headers.location;
+    expect(redirect).toBeTruthy();
+    const target = new URL(redirect ?? "", response.url());
+    expect(target.origin).toBe(recordUrl.origin);
+    expect(target.pathname).toBe(recordUrl.pathname);
+    expect(target.searchParams.get("notice")).toBe("not-authorized-fit");
+    expect(target.searchParams.get("form")).toBe("fit");
+    expect(target.hash).toBe("#gear");
 
     // The server refused an authorization boundary, so the nearby outcome is
     // assertive (`alert`), not an ambient confirmation (`status`).
@@ -377,7 +397,10 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByRole("link", { name: "Book this date" }).last().click();
     // The booking form is controlled, so wait for hydration before typing —
     // otherwise a fill can land before React attaches and gets silently lost.
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name").fill(diverName);
     await page.getByLabel("Email").fill(`late-bloomer-${stamp}@example.com`);
     await acceptAgeAttestation(page);

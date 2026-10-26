@@ -151,7 +151,7 @@ export function BookingPartyFields({
           20260827-the-divers-thread, decision 2 — the party count as a segmented
           row up to six, falling back to the select). Both shapes carry the same
           accessible name and the same `data-hydrated` flag, so anything asking
-          for "Number of divers" finds one element either way. */}
+          for "People" finds one element either way. */}
       {limit <= SEGMENTED_PARTY_LIMIT ? (
         <div>
           <p id="party-size-label" className="text-sm font-semibold">
@@ -174,7 +174,7 @@ export function BookingPartyFields({
               track wrapped — and because each segment also grew to fill its
               row, the leftovers landed as one stretched pill centred under
               four siblings, which is what a shop reported as looking broken.
-              The group is captioned "Number of divers" directly above, so the
+              The group is captioned "People" directly above, so the
               numeral is the whole answer; the plural sentence stays as each
               radio's accessible name, which is both what a screen reader
               announces and what the specs match on. The radio is `sr-only`,
@@ -254,7 +254,7 @@ export function BookingPartyFields({
           // exactly where the step's own name sits.
           <div key={slot} className="rise-in border-t border-border pt-4">
             <fieldset>
-              {/* The card's one caption — "Number of divers" above, "Who is
+              {/* The card's one caption — "People" above, "Who is
                   diving" in the card — in foreground ink, with the same 8px to
                   what it captions that the count's track keeps (`mt-2`). It
                   was the muted one of three spellings, sitting on "Name". The

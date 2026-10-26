@@ -158,6 +158,56 @@ describe("searchShop", () => {
     expect(result.trips.map((t) => t.id)).toContain(trip.id);
   });
 
+  it.each(["en-US", "es-ES"])(
+    "distinguishes same-day departures with shop-local times and zone in %s",
+    async (locale) => {
+      const { db, shop } = ctx;
+      const departures = await db
+        .insert(trips)
+        .values([
+          {
+            shopId: shop.id,
+            title: "Twin twilight charter",
+            startsAt: new Date("2026-08-23T00:30:00Z"),
+            endsAt: new Date("2026-08-23T02:30:00Z"),
+            capacity: 8,
+          },
+          {
+            shopId: shop.id,
+            title: "Twin twilight charter",
+            startsAt: new Date("2026-08-23T01:30:00Z"),
+            endsAt: new Date("2026-08-23T03:30:00Z"),
+            capacity: 8,
+          },
+        ])
+        .returning();
+      const results = await searchShop(
+        db,
+        shop.id,
+        "Twin twilight charter",
+        "America/New_York",
+        locale,
+      );
+      expect(new Set(results.trips.map((trip) => trip.detail)).size).toBe(2);
+      for (const trip of results.trips) {
+        // UTC has crossed midnight; the shop is still on August 22.
+        expect(trip.detail).toContain("22");
+        expect(trip.detail).toMatch(/(?:EDT|GMT[−-]4)/);
+        expect(trip.detail).toContain(":30");
+      }
+      const recent = await resolveRecentRecords(
+        db,
+        shop.id,
+        departures.map(({ id }) => ({ kind: "trip" as const, id })),
+        "America/New_York",
+        locale,
+      );
+      expect(recent.trips.map((trip) => trip.detail).sort()).toEqual(
+        results.trips.map((trip) => trip.detail).sort(),
+      );
+    },
+  );
+
   /**
    * **The eight slots go to the nearest departures, not the furthest.** `trips`
    * is a forward-looking table, so ordering the search's trips group by

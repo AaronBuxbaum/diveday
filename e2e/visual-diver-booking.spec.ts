@@ -106,7 +106,10 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ hasText: EASING_BACK_TRIP })
           .getByRole("link", { name: EASING_BACK_TRIP })
           .click();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
         await page
           .getByLabel("Email", { exact: true })
@@ -343,7 +346,7 @@ for (const scheme of ["light", "dark"] as const) {
           const tripId = await seededTripId(staff, "blue-mantis", REEF_TRIP);
           await staff.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
           await staff.getByRole("button", { name: "Call the blow-out" }).click();
-          await staff.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+          await staff.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         } finally {
           await staffContext.close();
         }

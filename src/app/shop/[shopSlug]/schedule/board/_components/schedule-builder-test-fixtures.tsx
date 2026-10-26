@@ -108,7 +108,7 @@ export const COPY: BuilderCopy = {
   putOnBoard: "Put it on the board",
   newDate: "New date",
   multiDayNote: "All {count} days move together, keeping their gaps.",
-  newDepartureTime: "New departure time",
+  newDepartureTime: "New departure time (America/New_York)",
   moving: "Moving…",
   moveIt: "Move it",
   copyTo: "Copy to",

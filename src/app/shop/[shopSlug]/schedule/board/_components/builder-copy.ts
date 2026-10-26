@@ -13,7 +13,7 @@ import type { BuilderCopy, BuilderMoreOptions, BuilderPriceInput } from "./Sched
 import { weekDayCopy } from "./week-copy";
 
 /** Every word the departure builder says, resolved for the reader: a Client Component cannot translate itself. */
-export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
+export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): BuilderCopy {
   return {
     typedAs: st.raw("shared.forgiving.typedAs"),
     draftPickedUp: st.raw("shared.formDraft.pickedUp"),
@@ -78,7 +78,7 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     putOnBoard: st("schedule.builder.putOnBoard"),
     newDate: st("schedule.builder.newDate"),
     multiDayNote: st.raw("schedule.builder.multiDayNote"),
-    newDepartureTime: st("schedule.builder.newDepartureTime"),
+    newDepartureTime: st("schedule.builder.newDepartureTime", { timeZone }),
     moving: st("schedule.builder.moving"),
     moveIt: st("schedule.builder.moveIt"),
     impactTitle: st("schedule.builder.impactTitle"),

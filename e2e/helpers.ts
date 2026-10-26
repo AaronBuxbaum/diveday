@@ -72,13 +72,13 @@ export async function acceptAgeAttestation(page: Page) {
  * name, so the wait is shared; only the act differs.
  */
 export async function choosePartySize(page: Page, count: number) {
-  const control = page.getByLabel("Number of divers");
+  const control = page.getByLabel("People", { exact: true });
   await expect(control).toHaveAttribute("data-hydrated", "true");
   if ((await control.evaluate((node: Element) => node.tagName)) === "SELECT") {
     await control.selectOption(String(count));
     return;
   }
-  const label = count === 1 ? "1 diver" : `${count} divers`;
+  const label = count === 1 ? "1 person" : `${count} people`;
   // Click the **label**, which is what a diver's thumb lands on, then assert
   // the input took the value. `check()` on the radio itself cannot work here
   // and cannot fail fast either: the input is `sr-only`, a 1px box lying under
@@ -127,7 +127,7 @@ export async function saveDiveIntent(page: Page, label: string) {
  * therefore has to hold one.
  */
 export async function bookASeatAndOpenThread(page: Page, name: string, email?: string) {
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(name);
   await page
     .getByLabel("Email", { exact: true })
@@ -1206,7 +1206,7 @@ export async function bookOpenWaterSession(
 ): Promise<string> {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
   await page.getByRole("link", { name: "Book this date" }).last().click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(name);
   await page.getByLabel("Email", { exact: true }).fill(email);
   await acceptAgeAttestation(page);

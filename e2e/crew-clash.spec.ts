@@ -94,7 +94,7 @@ test.describe("a standing crew clash", () => {
     await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
     await chooseRowAction(page, "Move", twoTank);
     await page.getByLabel("New date").fill(day);
-    await page.getByLabel("New departure time").fill("09:00");
+    await page.getByLabel("New departure time (America/New_York)").fill("09:00");
     // The Move panel does say so — which is the whole of what the shop used to
     // be told, and it is about to close.
     await expect(

@@ -144,7 +144,7 @@ export default async function WhatsAppSettingsPage({
             there is nothing here to do, and the surface used to say so three
             times over — a "Coming soon" banner, this card, and a "How
             connecting works" card whose Connect button was inert. The state
-            line and the (disabled) act are the whole surface in that state;
+            line is the whole surface in that state;
             the how-to renders when following it would actually get a shop
             somewhere (principle 9). */}
         <SectionCard
@@ -190,14 +190,6 @@ export default async function WhatsAppSettingsPage({
                 <dd>{formatDateTimeTz(account.connectedAt, locale, shop.timezone)}</dd>
               </div>
             </dl>
-          ) : !canConnect ? (
-            // Inert on purpose, and the only control on the card: a shop can
-            // see what is coming and cannot start a flow Meta would refuse.
-            // The card's body, so it takes the card's `mt-4` and no margin of
-            // its own.
-            <button type="button" disabled className={buttonClass()}>
-              {t("whatsapp.signup.connect")}
-            </button>
           ) : null}
         </SectionCard>
 

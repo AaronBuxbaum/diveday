@@ -187,7 +187,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
     .click();
   await expect(page.getByRole("heading", { name: "Upcoming dates" })).toBeVisible();
   await page.getByRole("link", { name: "Book this date" }).first().click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill(diverName);
   await page.getByLabel("Email").fill(diverEmail);
   await acceptAgeAttestation(page);
@@ -384,7 +384,7 @@ test("a diver types their card in from the readiness page, and staff verify it t
     .filter({ hasText: title })
     .getByRole("link")
     .click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Nadia Okonkwo");
   await page
     .getByLabel("Email", { exact: true })
@@ -489,7 +489,7 @@ test("a diver with no card says so on the readiness page, and the desk sees why"
     .filter({ hasText: title })
     .getByRole("link")
     .click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(diver);
   await page.getByLabel("Email", { exact: true }).fill(`notyet-${stamp}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();

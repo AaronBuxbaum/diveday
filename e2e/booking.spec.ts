@@ -201,7 +201,7 @@ test.describe("staff", () => {
       page.getByRole("heading", { name: "This trip is on a conditions hold" }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: /Nothing to book here yet/ })).toBeVisible();
-    await expect(page.getByLabel("Number of divers")).toHaveCount(0);
+    await expect(page.getByLabel("People", { exact: true })).toHaveCount(0);
   });
 
   test("staff edits a trip and canceling removes it from the public schedule", async ({ page }) => {
@@ -424,7 +424,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await expect(page.getByRole("link", { name: "Join the last-minute list" })).toHaveCount(0);
 
   // The waitlist form is controlled, so wait for hydration before typing.
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Join the wait list" }).click();
@@ -489,7 +489,10 @@ test.describe("as owner", () => {
       .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
       .click();
     // The booking form is controlled, so wait for hydration before typing.
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
@@ -508,7 +511,10 @@ test.describe("as owner", () => {
       await page.getByRole("link", { name: "Show later departures" }).click();
     }
     await tripBItem.getByRole("link").click();
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
@@ -569,7 +575,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
     .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Casey Ford");
   await page.getByLabel("Email").fill(`casey-${e2eNow().getTime()}@example.com`);
   const tripUrl = page.url();
@@ -623,7 +629,10 @@ test.describe("the shopfront on a phone", () => {
     await first.getByRole("link").first().click();
 
     await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
   });
 });
 

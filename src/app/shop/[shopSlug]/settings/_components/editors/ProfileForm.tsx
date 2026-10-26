@@ -56,13 +56,13 @@ export function ProfileForm({
   return (
     <FieldGrid as="form" action={saveProfileAction} columns={1} className={className}>
       <Field label={t("settings.main.profile.tagline")}>
-        <input
+        <textarea
           name="tagline"
-          type="text"
+          rows={2}
           maxLength={120}
           defaultValue={shop.tagline ?? ""}
           placeholder={t("settings.main.profile.taglinePlaceholder")}
-          className={controlClass}
+          className={textareaClassFor(2)}
         />
       </Field>
       <Field label={t("settings.main.profile.descriptionLabel")}>

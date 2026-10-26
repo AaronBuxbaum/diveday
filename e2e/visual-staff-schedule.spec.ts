@@ -466,7 +466,7 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .click();
         await page.getByLabel("New date").fill(daysFromNow(7));
-        await page.getByLabel("New departure time").fill("11:30");
+        await page.getByLabel("New departure time (America/New_York)").fill("11:30");
         // One alert per person, because two clashing crew are two facts — and
         // the muted list is still under them, which is the stack worth a
         // baseline.
@@ -692,7 +692,10 @@ for (const scheme of ["light", "dark"] as const) {
         // "Runs every … · next …" (fourth UX review, item 35).
         await page.goto(publicTripUrl(page.url().split(/[?#]/)[0] ?? page.url()));
         await page.getByText(/^Runs every /).waitFor();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await capture(page, "public-trip-run-line", scheme);
       });
 
@@ -745,7 +748,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
-        await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         await page.getByRole("columnheader", { name: "Diver" }).waitFor();
         // The call's toast leaves on a real 4-second timer, so whether the
         // first width caught it depended on how long the capture took: two

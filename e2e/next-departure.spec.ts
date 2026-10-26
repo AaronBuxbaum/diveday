@@ -67,7 +67,7 @@ test.describe("a full boat ahead of the board", () => {
     await expect(book).toHaveAttribute("href", /^\/s\/blue-mantis\/trips\/[0-9a-f-]{36}#book$/);
     await book.click();
     await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}#book$/);
-    await expect(page.getByLabel("Number of divers")).toBeVisible();
+    await expect(page.getByLabel("People", { exact: true })).toBeVisible();
 
     // **A narrowed board says which question it answered** (issue #1391). The
     // early boat is a fun dive, so the fun-dive filter keeps it first and the
@@ -100,5 +100,5 @@ test("a week row is a link into its own departure", { tag: READ_ONLY }, async ({
 
   await link.click();
   await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
-  await expect(page.getByLabel("Number of divers")).toBeVisible();
+  await expect(page.getByLabel("People", { exact: true })).toBeVisible();
 });

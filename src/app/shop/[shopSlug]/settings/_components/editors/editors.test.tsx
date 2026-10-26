@@ -77,7 +77,6 @@ describe("the profile editor", () => {
     const form = await profileForm();
     const names = inputNamesIn(form);
     for (const name of [
-      "tagline",
       "logoFile",
       "brandHeroFile",
       "brandHeroImageAlt",
@@ -90,6 +89,16 @@ describe("the profile editor", () => {
     // The colour is a Client Component (picker + hex field), so it appears in
     // the server tree as an element rather than as an `<input name>`.
     expect(findElements(form, BrandColorField)).toHaveLength(1);
+  });
+
+  it("keeps the full tagline visible in a multiline field with its existing limit", async () => {
+    const form = await profileForm();
+    const [tagline] = findElements<{ name?: string; rows?: number; maxLength?: number }>(
+      form,
+      "textarea",
+    ).filter(({ props }) => props.name === "tagline");
+    expect(tagline?.props.rows).toBe(2);
+    expect(tagline?.props.maxLength).toBe(120);
   });
 
   it("ends in Save alone and keeps the brand preview; the storefront link is the header's (A30)", async () => {
@@ -164,6 +173,23 @@ describe("the dock-day editor", () => {
     });
     return { form, overridden };
   }
+
+  it.each(["en-US", "es-ES"])("names every numeric duration in minutes in %s", async (locale) => {
+    const { shop } = await demoShop();
+    const form = DockDayFields({
+      shop,
+      shopSlug: SHOP_SLUG,
+      t: staffTranslator(locale),
+      siteBottomTimeOverrides: [],
+    });
+    const fields = findElements<{ label?: string; children?: unknown }>(form, Field).filter(
+      ({ props }) => findElements(props.children, "input").length > 0,
+    );
+    expect(fields).toHaveLength(6);
+    for (const { props } of fields) {
+      expect(props.label).toContain(locale === "en-US" ? "minutes" : "minutos");
+    }
+  });
 
   /** One beat per line on a phone, the strip it was from `sm` up (K-585). */
   it("stacks the beats on a phone and runs them as a strip from sm up", async () => {
