@@ -283,7 +283,7 @@
         "creatures": "Guía de campo"
       }
     },
-    "upcomingCount": "{count, plural, one {# inmersión próxima aquí} other {# inmersiones próximas aquí}}"
+    "upcomingCount": "{count, plural, one {# salida próxima aquí} other {# salidas próximas aquí}}"
   },
   "new": {
     "title": "Agregar un sitio de buceo",
