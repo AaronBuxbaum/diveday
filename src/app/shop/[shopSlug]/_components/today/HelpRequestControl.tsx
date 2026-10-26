@@ -219,7 +219,7 @@ export function HelpRequestControl({
               closeEditor();
             }
           }}
-          className="w-full space-y-3 rounded-control border border-border-subtle bg-surface-sunken p-3"
+          className="w-full space-y-3 rounded-inset border border-border bg-surface-sunken p-3 sm:max-w-lg"
         >
           <input type="hidden" name="requestId" value={requestId} />
           <input type="hidden" name="expectedRevision" value={revision} />
@@ -313,7 +313,7 @@ export function HandledHelpRequests({
   const { run, copy } = useHelpRequest();
   if (rows.length === 0) return null;
   return (
-    <details className="rounded-control border border-border-subtle bg-surface-sunken px-3 py-2">
+    <details className="rounded-inset border border-border bg-surface-sunken px-3 py-2">
       <summary className="cursor-pointer text-sm font-medium">{summary}</summary>
       <ul className="mt-2 space-y-2">
         {rows.map((row) => (
