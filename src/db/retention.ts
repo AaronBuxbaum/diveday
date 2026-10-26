@@ -13,6 +13,7 @@ import type { AppDb } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import {
   accountSessions,
+  accountSignInChallenges,
   accountTokens,
   activityEvents,
   assistResults,
@@ -336,6 +337,11 @@ export const PRUNE_ARMS = {
   // Same clock as account_tokens. A session past its own `expires_at` is one the
   // auth layer already refuses; deleting it takes its IP address and user agent
   // with it, and its step-up grants cascade away.
+  account_sign_in_challenges: {
+    from: accountSignInChallenges,
+    id: accountSignInChallenges.id,
+    clock: accountSignInChallenges.expiresAt,
+  },
   account_sessions: {
     from: accountSessions,
     id: accountSessions.id,

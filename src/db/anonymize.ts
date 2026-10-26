@@ -82,6 +82,7 @@ import type { ProcessorErasureObligation } from "./schema";
 import {
   accountSecurity,
   accountSessions,
+  accountSignInChallenges,
   accountTokens,
   activityEvents,
   authProviderAccounts,
@@ -1072,6 +1073,9 @@ async function scrubDiverLogin(
     .where(eq(userAccounts.personId, personId))
     .limit(1);
   if (account) {
+    await tx
+      .delete(accountSignInChallenges)
+      .where(eq(accountSignInChallenges.userAccountId, account.id));
     await tx.delete(accountTokens).where(eq(accountTokens.userAccountId, account.id));
     await tx.delete(accountSecurity).where(eq(accountSecurity.userAccountId, account.id));
     // A provider login for this account, if one ever existed. Nothing writes

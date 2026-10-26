@@ -196,7 +196,6 @@ const EXPORTED_TABLES = [
   "shop_promo_codes",
   "courses",
 ];
-
 /** Tables whose data rides inside another file rather than its own CSV. */
 const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
@@ -311,6 +310,7 @@ const EXCLUDED_TABLES = [
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
   "account_tokens", // bearer credentials (email verify / password reset), never exported
+  "account_sign_in_challenges", // pending authentication capabilities, never exported
   "account_sessions", // a live sign-in session — more sensitive than a bearer token, never exported
   "account_security", // TOTP seeds and recovery-code hashes are credentials
   "account_step_ups", // short-lived second-factor grants are credentials

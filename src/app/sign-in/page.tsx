@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { EntryShell } from "@/components/account/EntryShell";
@@ -7,11 +8,15 @@ import { ForgetThisDevice } from "@/components/ForgetThisDevice";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { getDb } from "@/db/client";
+import { hasPendingSignIn } from "@/db/sign-in-challenges";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { setUpHref } from "@/lib/funnel";
+import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
+import { pendingCookie, readPendingHandle, signInOrigins } from "@/lib/pending-sign-in";
 import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
-import { authenticate } from "./actions";
+import { authenticate, cancelSignIn, confirmSignIn } from "./actions";
 
 // This page was instant before the rest of the app was (ADR
 // 20260804-instant-navigation) — `searchParams`/`requestLocale()` are read
@@ -66,7 +71,15 @@ export default function SignInPage({
 async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearchParams> }) {
   const { error, session, callbackUrl } = await searchParams;
   const t = diverTranslator(await requestLocale());
-  const secondFactorRequired = error === "two-factor" || error === "invalid-code";
+  const cookie = pendingCookie(
+    signInOrigins(publicAppUrl() ?? APP_ORIGIN, process.env)[0],
+    process.env.DIVEDAY_E2E === "1",
+  );
+  const handle = readPendingHandle(await headers(), cookie.name);
+  const secondFactorRequired = handle ? await hasPendingSignIn(await getDb(), handle) : false;
+  const restart =
+    error === "restart" ||
+    (!secondFactorRequired && ["two-factor", "invalid-code", "rate-limit"].includes(error ?? ""));
   // A diver who followed a `/shop/<slug>/…` link lands here with no way back to
   // the thing they wanted. `callbackUrl` names the shop; if it doesn't — no
   // parameter, a repeated one, or anything that isn't a `/shop/<slug>` path —
@@ -82,9 +95,14 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
       footer={
         <>
           {secondFactorRequired ? (
-            <Link href="/sign-in" className="font-medium text-primary hover:underline">
-              {t("account.common.backToSignIn")}
-            </Link>
+            <form action={cancelSignIn}>
+              <SubmitButton
+                pendingLabel={t("account.common.backToSignIn")}
+                className={buttonClass({ variant: "link" })}
+              >
+                {t("account.common.backToSignIn")}
+              </SubmitButton>
+            </form>
           ) : null}
           <p className="flex items-center gap-4">
             <Link href="/privacy" className="hover:underline">
@@ -115,28 +133,35 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
         </>
       }
     >
-      <form action={authenticate} className="flex flex-col gap-4">
+      <form
+        action={secondFactorRequired ? confirmSignIn : authenticate}
+        className="flex flex-col gap-4"
+      >
         <FieldGrid columns={1} className="gap-y-4">
           {/* Every field here is required, so no field carries the marker
               (visual review 2026-10-24, B46). */}
-          <Field label={t("account.common.email")} markRequired={false}>
-            <input
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("account.common.password")} markRequired={false}>
-            <input
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className={controlClass}
-            />
-          </Field>
+          {!secondFactorRequired ? (
+            <>
+              <Field label={t("account.common.email")} markRequired={false}>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("account.common.password")} markRequired={false}>
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  className={controlClass}
+                />
+              </Field>
+            </>
+          ) : null}
           {secondFactorRequired ? (
             <Field
               label={<span className="text-base">{t("account.signIn.twoFactorCode")}</span>}
@@ -162,29 +187,36 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
         {/* The link claims a full touch target (dock test); `-my-2` keeps the
             visual rhythm of the stack it sits in, and `flush` puts its end on
             the fields' edge. */}
-        <Link
-          href="/forgot-password"
-          className={buttonClass({
-            variant: "link",
-            flush: true,
-            className: "-my-2 self-end",
-          })}
-        >
-          {t("account.signIn.forgotPassword")}
-        </Link>
+        {!secondFactorRequired ? (
+          <Link
+            href="/forgot-password"
+            className={buttonClass({
+              variant: "link",
+              flush: true,
+              className: "-my-2 self-end",
+            })}
+          >
+            {t("account.signIn.forgotPassword")}
+          </Link>
+        ) : null}
         <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>
-          {t("account.signIn.submit")}
+          {t(secondFactorRequired ? "account.signIn.verify" : "account.signIn.submit")}
         </SubmitButton>
         {/* The refusal renders beside the control that earned it, not in a
             banner above the page (docs/design/forms-and-controls.md). */}
         {error && !secondFactorRequired ? (
           <FormStatus tone="danger" className="justify-center">
-            {t("account.signIn.error")}
+            {t(restart ? "account.signIn.restart" : "account.signIn.error")}
           </FormStatus>
         ) : null}
-        {error === "invalid-code" ? (
+        {error === "invalid-code" && secondFactorRequired ? (
           <FormStatus tone="danger" className="justify-center">
             {t("account.signIn.invalidCode")}
+          </FormStatus>
+        ) : null}
+        {error === "rate-limit" && secondFactorRequired ? (
+          <FormStatus tone="danger" className="justify-center">
+            {t("account.signIn.rateLimit")}
           </FormStatus>
         ) : null}
         {/* `?session=ended`: requireStaffSession() (src/lib/session.ts)

@@ -1,0 +1,375 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "61a7bb5c-0700-4077-b194-b91b8c217375",
+  "prevIds": [
+    "9fb16a26-6372-4381-8a54-4e025da0ad3f"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_sign_in_challenges"
+      ],
+      "writes": [
+        "s|tbl|public.account_sign_in_challenges",
+        "n|tbl|public.account_sign_in_challenges",
+        "e|tbl|public.account_sign_in_challenges",
+        "n|rel|public.account_sign_in_challenges",
+        "n|type|public.account_sign_in_challenges",
+        "n|rel|public.account_sign_in_challenges_pkey",
+        "n|rel|public.account_sign_in_challenges_token_hash_key"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "account_sign_in_challenges",
+        "account_sign_in_challenges_expiry_idx"
+      ],
+      "writes": [
+        "s|idx|public.account_sign_in_challenges_expiry_idx",
+        "n|idx|public.account_sign_in_challenges_expiry_idx",
+        "e|idx|public.account_sign_in_challenges_expiry_idx",
+        "n|rel|public.account_sign_in_challenges_expiry_idx"
+      ],
+      "reads": [
+        "n|tbl|public.account_sign_in_challenges",
+        "n|sch|public",
+        "n|col|public.account_sign_in_challenges.expires_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "account_sign_in_challenges",
+        "account_sign_in_challenges_account_idx"
+      ],
+      "writes": [
+        "s|idx|public.account_sign_in_challenges_account_idx",
+        "n|idx|public.account_sign_in_challenges_account_idx",
+        "e|idx|public.account_sign_in_challenges_account_idx",
+        "n|rel|public.account_sign_in_challenges_account_idx"
+      ],
+      "reads": [
+        "n|tbl|public.account_sign_in_challenges",
+        "n|sch|public",
+        "n|col|public.account_sign_in_challenges.user_account_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_sign_in_challenges"
+      ],
+      "writes": [
+        "s|fk|public.account_sign_in_challenges.account_sign_in_challenges_shop_id_shops_id_fkey",
+        "n|fk|public.account_sign_in_challenges.account_sign_in_challenges_shop_id_shops_id_fkey",
+        "e|fk|public.account_sign_in_challenges.account_sign_in_challenges_shop_id_shops_id_fkey",
+        "n|con|public.account_sign_in_challenges.account_sign_in_challenges_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_sign_in_challenges",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.account_sign_in_challenges.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_sign_in_challenges"
+      ],
+      "writes": [
+        "s|fk|public.account_sign_in_challenges.account_sign_in_challenges_daJGGk9AeHDX_fkey",
+        "n|fk|public.account_sign_in_challenges.account_sign_in_challenges_daJGGk9AeHDX_fkey",
+        "e|fk|public.account_sign_in_challenges.account_sign_in_challenges_daJGGk9AeHDX_fkey",
+        "n|con|public.account_sign_in_challenges.account_sign_in_challenges_daJGGk9AeHDX_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_sign_in_challenges",
+        "n|sch|public",
+        "n|tbl|public.user_accounts",
+        "n|sch|public",
+        "n|col|public.account_sign_in_challenges.user_account_id",
+        "n|col|public.user_accounts.id",
+        "e|uniqueness|public.user_accounts.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "account_sign_in_challenges",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "user_account_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "token_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "expires_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "attempts_remaining",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "5",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_expiry_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "expires_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_account_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_account_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_daJGGk9AeHDX_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_account_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user_accounts",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_token_hash_key",
+        "nameExplicit": false,
+        "columns": [
+          "token_hash"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_attempts",
+        "value": "\"attempts_remaining\" between 0 and 5",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sign_in_challenges",
+        "name": "account_sign_in_challenges_expiry",
+        "value": "\"expires_at\" > \"created_at\"",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

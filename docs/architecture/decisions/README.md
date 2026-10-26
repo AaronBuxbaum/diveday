@@ -417,5 +417,6 @@ script again.
 | 20261023-last-known-dive | A diver's last known dive… |
 | 20261024-diver-sent-doctors-form | A referred diver sends the… |
 | 20261024-e2e-reset-replays-a-snapshot | The e2e reset replays the… |
+| 20261026-pending-sign-in-challenge | Use a single-use pending second-factor… |
 
 <!-- adr-index:end -->

@@ -3337,7 +3337,10 @@
       "needShop": "Need a shop?",
       "publicSchedule": "Looking for the dive schedule?",
       "twoFactorTitle": "Enter your sign-in code",
-      "invalidCode": "That code didn’t work. Try a current code or a recovery code."
+      "invalidCode": "That code didn’t work. Try a current code or a recovery code.",
+      "verify": "Verify",
+      "restart": "Your sign-in expired. Enter your email and password again.",
+      "rateLimit": "Too many attempts. Wait a moment before trying again."
     },
     "onboard": {
       "eyebrow": "Start a shop",

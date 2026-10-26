@@ -3337,7 +3337,10 @@
       "needShop": "¿Necesitas un centro?",
       "publicSchedule": "¿Buscas el calendario de buceo?",
       "twoFactorTitle": "Introduce tu código de acceso",
-      "invalidCode": "Ese código no funcionó. Prueba con un código actual o uno de recuperación."
+      "invalidCode": "Ese código no funcionó. Prueba con un código actual o uno de recuperación.",
+      "verify": "Verificar",
+      "restart": "Tu inicio de sesión venció. Vuelve a ingresar tu correo y contraseña.",
+      "rateLimit": "Demasiados intentos. Espera un momento antes de volver a intentar."
     },
     "onboard": {
       "eyebrow": "Empieza un centro",

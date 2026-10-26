@@ -30,6 +30,7 @@ const READ = /\b(?:process\.)?env(?:\.([A-Z][A-Z0-9_]*)\b|\[["']([A-Z][A-Z0-9_]*
 const NOT_REGISTERED = {
   // The platform sets these; nobody supplies them.
   NODE_ENV: "set by Node and Next",
+  PORT: "set by Next to the bound server port; isolates loopback e2e auth transport",
   NEXT_RUNTIME: "set by Next",
   VERCEL_ENV: "set by Vercel",
   VERCEL_GIT_COMMIT_SHA: "set by Vercel",

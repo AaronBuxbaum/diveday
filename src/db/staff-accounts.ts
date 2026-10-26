@@ -8,8 +8,16 @@ import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
 import type { AppDb, DbExecutor } from "./client";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
+import { boundLockWaits } from "./lock-bounds";
 import { selectActivePersonByEmail } from "./people";
-import { accountSessions, people, personRoles, pushSubscriptions, userAccounts } from "./schema";
+import {
+  accountSessions,
+  accountSignInChallenges,
+  people,
+  personRoles,
+  pushSubscriptions,
+  userAccounts,
+} from "./schema";
 
 export type StaffMember = {
   personId: string;
@@ -274,6 +282,7 @@ async function staffAccountInShop(
   personId: string,
   userAccountId: string,
 ): Promise<boolean> {
+  await boundLockWaits(tx);
   const [row] = await tx
     .select({ id: userAccounts.id })
     .from(userAccounts)
@@ -286,7 +295,8 @@ async function staffAccountInShop(
         isNull(people.deletedAt),
       ),
     )
-    .limit(1);
+    .limit(1)
+    .for("update", { of: userAccounts });
   return Boolean(row);
 }
 
@@ -505,6 +515,9 @@ export async function setStaffAccountStatus(
       .update(userAccounts)
       .set({ status: input.status })
       .where(eq(userAccounts.id, input.userAccountId));
+    await tx
+      .delete(accountSignInChallenges)
+      .where(eq(accountSignInChallenges.userAccountId, input.userAccountId));
     // A disabled login stops following manifests too, as a removal does
     // (security review 20261014): the device keeps no subscription a push
     // about a boat could still reach. Re-enabling does not restore them; the
@@ -557,6 +570,9 @@ export async function removeStaffMember(
       .update(userAccounts)
       .set({ status: "disabled" })
       .where(eq(userAccounts.id, input.userAccountId));
+    await tx
+      .delete(accountSignInChallenges)
+      .where(eq(accountSignInChallenges.userAccountId, input.userAccountId));
     // Revoke any session issued before this instant, same reasoning as
     // setStaffAccountStatus above.
     await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, input.userAccountId));

@@ -3,6 +3,10 @@ import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, type RetainedTable, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  accountTokenForRetention,
+  pendingSignInForRetention,
+} from "@/test/retention-account-tokens";
 import { setupRequestForRetention } from "@/test/retention-setup-request";
 import { schemaTableNames } from "@/test/schema-tables";
 import { setBookingPayment } from "./payments";
@@ -634,18 +638,8 @@ const STALE_AND_FRESH = {
         .values({ shopId: shop.id, actorPersonId: people[0], code: token(), occurredAt: at })
         .returning({ id: schema.activityEvents.id }),
     ),
-  account_tokens: async ({ db, owner }, at) =>
-    idOf(
-      await db
-        .insert(schema.accountTokens)
-        .values({
-          userAccountId: owner?.id ?? "",
-          purpose: "password_reset",
-          tokenHash: token(),
-          expiresAt: at,
-        })
-        .returning({ id: schema.accountTokens.id }),
-    ),
+  account_sign_in_challenges: pendingSignInForRetention,
+  account_tokens: accountTokenForRetention,
   account_sessions: async ({ db, shop, owner, people }, at) =>
     idOf(
       await db

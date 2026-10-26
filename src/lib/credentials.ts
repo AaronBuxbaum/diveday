@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { compare } from "bcryptjs";
 import { and, eq, isNull } from "drizzle-orm";
-import type { AppDb } from "@/db/client";
+import type { DbExecutor } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { isStaff, type Role } from "@/lib/authz";
 import { demoBypassAccepted } from "@/lib/demo-bypass";
@@ -73,9 +73,10 @@ function decoyPasswordHash(): Promise<string> {
  * on top (`src/lib/auth.ts`).
  */
 export async function verifyCredentials(
-  db: AppDb,
+  db: DbExecutor,
   email: string,
   password: string,
+  observedCredential?: (proof: { hashedPassword: string | null; passwordMatches: boolean }) => void,
 ): Promise<VerifiedUser | null> {
   // Started, not awaited: warms the memoized decoy on the first attempt in
   // this process regardless of which branch that attempt takes.
@@ -124,6 +125,9 @@ export async function verifyCredentials(
   // Staff-only surface for now; customer sign-in arrives with the milestone
   // that needs it (ADR-0006).
   if (!isStaff(roles)) return null;
+
+  // Exact compared row, retained only by the issuing request for an under-lock recheck.
+  observedCredential?.({ hashedPassword: account.hashedPassword, passwordMatches });
 
   return {
     id: account.id,

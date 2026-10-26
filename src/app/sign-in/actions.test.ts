@@ -10,7 +10,13 @@ import { nextHeadersStub } from "@/test/next-headers";
  */
 
 const hoisted = vi.hoisted(() => ({
+  completeDiveDaySignIn: vi.fn(async (_input: unknown) => ({
+    status: "signed_in",
+    shopSlug: "blue-mantis",
+  })),
+  cancelDiveDaySignIn: vi.fn(async (_input: unknown) => ({ cancelled: true })),
   signInDiveDayCredentials: vi.fn(async (_input: unknown) => ({
+    pending: false,
     shopSlug: "blue-mantis" as string | null,
   })),
 }));
@@ -23,11 +29,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/headers", () => nextHeadersStub());
 vi.mock("@/lib/auth", () => ({
   getAuth: vi.fn(async () => ({
-    api: { signInDiveDayCredentials: hoisted.signInDiveDayCredentials },
+    api: hoisted,
   })),
 }));
 
-const { authenticate } = await import("./actions");
+const { authenticate, confirmSignIn, cancelSignIn } = await import("./actions");
 
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
@@ -47,7 +53,13 @@ async function landing(data: FormData): Promise<string> {
 }
 
 beforeEach(() => {
-  hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({ shopSlug: "blue-mantis" });
+  hoisted.completeDiveDaySignIn
+    .mockReset()
+    .mockResolvedValue({ status: "signed_in", shopSlug: "blue-mantis" });
+  hoisted.cancelDiveDaySignIn.mockClear();
+  hoisted.signInDiveDayCredentials
+    .mockReset()
+    .mockResolvedValue({ pending: false, shopSlug: "blue-mantis" });
 });
 
 describe("authenticate", () => {
@@ -57,13 +69,13 @@ describe("authenticate", () => {
     ).toBe("/shop/blue-mantis");
     expect(hoisted.signInDiveDayCredentials).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: { email: "owner@example.com", password: "pw", totpCode: "123456" },
+        body: { email: "owner@example.com", password: "pw" },
       }),
     );
   });
 
   it("falls back to /shop when the session names no shop", async () => {
-    hoisted.signInDiveDayCredentials.mockResolvedValueOnce({ shopSlug: null });
+    hoisted.signInDiveDayCredentials.mockResolvedValueOnce({ pending: false, shopSlug: null });
     expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe("/shop");
   });
 
@@ -80,11 +92,11 @@ describe("authenticate", () => {
     ).toBe("/shop/blue-mantis");
   });
 
-  it("sends a blank second factor as absent", async () => {
+  it("never sends a second factor with a password", async () => {
     await landing(form({ email: "owner@example.com", password: "pw", totpCode: "  " }));
     expect(hoisted.signInDiveDayCredentials).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: { email: "owner@example.com", password: "pw", totpCode: undefined },
+        body: { email: "owner@example.com", password: "pw" },
       }),
     );
   });
@@ -96,18 +108,32 @@ describe("authenticate", () => {
     );
   });
 
-  it("distinguishes a normal second-factor challenge from a refused code", async () => {
-    for (const [message, code] of [
-      ["two_factor_required", "two-factor"],
-      ["invalid_two_factor", "invalid-code"],
-    ]) {
-      hoisted.signInDiveDayCredentials.mockRejectedValueOnce(
-        new APIError("UNAUTHORIZED", { message }),
-      );
-      expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe(
-        `/sign-in?error=${code}`,
-      );
-    }
+  it("sends pending credentials to the code step without a dashboard redirect", async () => {
+    hoisted.signInDiveDayCredentials.mockResolvedValueOnce({ pending: true, shopSlug: null });
+    expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe(
+      "/sign-in?error=two-factor",
+    );
+  });
+
+  it.each([
+    ["invalid_code", "invalid-code"],
+    ["restart", "restart"],
+    ["rate_limited", "rate-limit"],
+  ])("routes the code result %s beside the correct form", async (status, error) => {
+    hoisted.completeDiveDaySignIn.mockResolvedValueOnce({ status, shopSlug: "" });
+    await expect(
+      confirmSignIn(
+        form({ totpCode: "123456", email: "forged@example.com", password: "never-forward" }),
+      ),
+    ).rejects.toThrow(`REDIRECT:/sign-in?error=${error}`);
+    expect(hoisted.completeDiveDaySignIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ body: { totpCode: "123456" } }),
+    );
+  });
+
+  it("Back cancels the pending sign-in before redirecting", async () => {
+    await expect(cancelSignIn()).rejects.toThrow("REDIRECT:/sign-in");
+    expect(hoisted.cancelDiveDaySignIn).toHaveBeenCalled();
   });
 
   it("refuses a form that is not three strings the same way, without trying", async () => {

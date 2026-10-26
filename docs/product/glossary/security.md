@@ -1,5 +1,12 @@
 # Security
 
+- **Pending sign-in challenge** — password proof awaiting a second factor, granting no staff
+  session. A random cookie handle resolves to a digest-only account/shop record, valid for five
+  minutes and five submitted codes. TOTP or recovery-code consumption, challenge consumption and
+  Better Auth session creation commit together. Back, restart and credential/security invalidation
+  revoke it; expired rows are cleanup machinery, never exported (ADR
+  [20261026-pending-sign-in-challenge](../../architecture/decisions/20261026-pending-sign-in-challenge.md)).
+
 - **Step-up** — a fresh second-factor check for one sensitive act, bound to one Better Auth
   session and expiring on its own (`account_step_ups`, ADR
   [20260826-account-security-step-up](../../architecture/decisions/20260826-account-security-step-up.md)).
