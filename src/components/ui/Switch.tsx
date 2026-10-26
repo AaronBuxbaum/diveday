@@ -42,11 +42,16 @@ import type { ReactNode } from "react";
  */
 export function Switch({
   checked,
+  disabled = false,
+  busy = false,
   onChange,
   label,
   className = "",
 }: {
   checked: boolean;
+  disabled?: boolean;
+  /** Refuse repeat interaction while preserving keyboard focus during a save. */
+  busy?: boolean;
   onChange: (checked: boolean) => void;
   /** The words beside the switch. They are its accessible name. */
   label: ReactNode;
@@ -60,12 +65,20 @@ export function Switch({
         type="checkbox"
         role="switch"
         checked={checked}
+        disabled={disabled}
+        aria-busy={busy || undefined}
+        aria-disabled={busy || disabled || undefined}
+        onClick={(event) => {
+          if (busy) event.preventDefault();
+        }}
         // Redundant to a browser — a checked checkbox with `role="switch"`
         // already exposes the switch state — and required by the lint rule
         // that cannot see the native mapping. Derived from the same prop as
         // `checked`, so the two cannot disagree.
         aria-checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
+        onChange={(event) => {
+          if (!busy) onChange(event.target.checked);
+        }}
         className="peer sr-only"
       />
       {/* Decorative: the input above carries the state and the label carries

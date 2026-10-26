@@ -811,3 +811,21 @@ while complete emergency-contact and nitrox statements retain their full stops.
 The authored phone/desktop captures cover the settled offline arrival, the open dock rider editor
 and the long credential summary. These recovered changes still require hosted screenshot review;
 source and component checks do not establish their rendered geometry.
+
+
+### Settings utility pages — task before reference
+
+**Chosen 2026-10-26**, issue #3070. The one idea is that each utility opens on its task or
+confirmed result: import, download, delivery, preference, subscription, history, or support.
+The arriving questions are “what can I do now?” and “what actually happened?”, answered next to
+that task without treating an ordinary second-factor challenge as a failure. We considered
+shortening the existing card stacks and instead chose rows for ledgers/scopes plus native
+disclosures for complete import/export references, destination editing and raw diagnostic reports.
+The controls that dissolved are email's separate On badge and toggle button, repeated calendar
+empty-state prose, nine competing embed choices and the extra closed-onboarding landing step.
+The removal boundary is the precise information that changes a decision: import provenance,
+export caveats, subscription lag and link secrecy, backup failure/delivery time, agency-specific
+sample outcomes and actual authorization/refusal states all remain. Generic sign-in/recovery use
+EntryShell with a home-linked wordmark and quiet escape/legal links; active authorized onboarding
+and token routes keep their existing flows. Device-grouped sessions remain unchanged pending
+fresh runtime verification rather than being restyled from a historical screenshot suggestion.

@@ -22,17 +22,18 @@ test.describe("the Monday email, on a shop of the test's own", () => {
     // The page holds a second toggle (the after-hours ping), so this one is
     // read inside its own card.
     const main = page.getByRole("region", { name: "Monday email" });
-    await expect(main.getByText("On", { exact: true })).toBeVisible();
+    await expect(main.getByRole("switch")).toBeChecked();
 
-    await main.getByRole("button", { name: "Turn off" }).click();
-    await expect(main.getByRole("button", { name: "Turn on" })).toBeVisible();
-    await expect(main.getByText("Off", { exact: true })).toBeVisible();
+    await main.getByRole("switch").click();
+    await expect(main.getByRole("switch")).not.toBeChecked();
 
     await page.reload();
-    await expect(main.getByText("Off", { exact: true })).toBeVisible();
-    await main.getByRole("button", { name: "Turn on" }).click();
-    await expect(main.getByRole("button", { name: "Turn off" })).toBeVisible();
-    await expect(main.getByText("On", { exact: true })).toBeVisible();
+    await expect(main.getByRole("switch")).not.toBeChecked();
+    const control = main.getByRole("switch");
+    await control.focus();
+    await control.press("Space");
+    await expect(control).toBeChecked();
+    await expect(control).toBeFocused();
   });
 });
 
@@ -78,8 +79,7 @@ test.describe("the Monday email for a staffer who is not an owner", () => {
     await page.goto(emailSettingsFor("blue-mantis"));
     const main = page.getByRole("region", { name: "Monday email" });
     await expect(main.getByRole("heading", { name: "Monday email" })).toBeVisible();
-    await expect(main.getByText("Off", { exact: true })).toBeVisible();
-    await expect(main.getByRole("button", { name: "Turn on" })).toBeVisible();
+    await expect(main.getByRole("switch")).not.toBeChecked();
   });
 
   test("previews a week with no money in it", async ({ page }) => {

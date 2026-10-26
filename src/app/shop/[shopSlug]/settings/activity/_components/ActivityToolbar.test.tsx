@@ -28,6 +28,8 @@ function renderToolbar() {
         toLabel: "To",
         clear: "Clear",
         count: "84 entries",
+        filter: "Filter",
+        activeRange: "",
       }}
     />,
   );

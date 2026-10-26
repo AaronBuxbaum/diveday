@@ -155,6 +155,9 @@
     "deletedDeparture": "{title} (eliminada)",
     "order": "Pedido",
     "reviews": "Reseñas",
-    "diverRecord": "Ficha del buceador"
+    "diverRecord": "Ficha del buceador",
+    "filter": "Filtrar",
+    "rangeFrom": "Desde el {date}",
+    "rangeTo": "Hasta el {date}"
   }
 }

@@ -96,13 +96,16 @@ describe("authenticate", () => {
     );
   });
 
-  it("asks for the second factor when it is missing or wrong", async () => {
-    for (const message of ["two_factor_required", "invalid_two_factor"]) {
+  it("distinguishes a normal second-factor challenge from a refused code", async () => {
+    for (const [message, code] of [
+      ["two_factor_required", "two-factor"],
+      ["invalid_two_factor", "invalid-code"],
+    ]) {
       hoisted.signInDiveDayCredentials.mockRejectedValueOnce(
         new APIError("UNAUTHORIZED", { message }),
       );
       expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe(
-        "/sign-in?error=two-factor",
+        `/sign-in?error=${code}`,
       );
     }
   });

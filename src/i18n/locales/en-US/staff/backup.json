@@ -20,18 +20,15 @@
     "notConfiguredDescription": "Point DiveDay at an S3-compatible bucket you own (AWS S3, Cloudflare R2, Backblaze B2, and friends) and a full export bundle lands there every week.",
     "verified": "Delivery proven",
     "unproven": "Not proven yet",
-    "endpoint": "Endpoint",
-    "bucket": "Bucket",
-    "accessKeyId": "Access key ID",
-    "lastDelivered": "Last delivery",
-    "never": "Never"
+    "lastDelivered": "Last successful delivery",
+    "never": "Never",
+    "latestResult": "Latest delivery"
   },
   "test": {
     "submit": "Run a test delivery now",
     "submitting": "Delivering…"
   },
   "form": {
-    "heading": "Destination",
     "description": "Use a credential that can only write to this bucket. DiveDay never needs to read, list, or delete anything in it.",
     "endpointLabel": "Endpoint",
     "endpointHint": "Your provider’s S3 API origin: HTTPS, with no bucket or path in it.",
@@ -45,7 +42,8 @@
     "secretHint": "Never shown again, not even to you.",
     "secretKeepHint": "Leave blank to keep the current key.",
     "submit": "Save destination",
-    "submitting": "Saving…"
+    "submitting": "Saving…",
+    "details": "Destination details"
   },
   "how": {
     "heading": "How it works",

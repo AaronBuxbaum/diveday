@@ -150,6 +150,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/onboard");
+        await expect(page).toHaveURL(/\/get-set-up\?from=onboard-closed$/);
         await page.locator("h1").first().waitFor();
         await capture(page, "onboard-closed", scheme);
       });

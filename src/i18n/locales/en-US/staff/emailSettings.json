@@ -3,15 +3,12 @@
   "digest": {
     "heading": "Monday email",
     "description": "Last week’s bookings and seat fill, this week’s departures, and what is waiting on you. Sent Monday morning, {zone}.",
-    "on": "On",
-    "off": "Off",
-    "turnOn": "Turn on",
-    "turnOff": "Turn off",
     "saving": "Saving…",
     "preview": "Preview this week’s email"
   },
   "afterHours": {
     "heading": "After-hours messages",
     "description": "An email when divers write in outside desk hours, {opens} to {closes} {zone}. One every half hour at most. A missed one can arrive within the hour."
-  }
+  },
+  "saveFailed": "Not saved. Try again."
 }

@@ -55,7 +55,7 @@ import { tripReservationWindow } from "@/lib/gear";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
 import { boatAndMergeStates } from "./merge-candidates-state";
-import { operationalStateResponse } from "./operational-states";
+import { troubleVariantResponse } from "./variant-response";
 
 /**
  * Puts the seeded demo shop into the trouble states that only render when
@@ -92,8 +92,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
   const db = await getDb();
-  const operational = await operationalStateResponse(request, db);
-  if (operational) return operational;
+  const variant = await troubleVariantResponse(request, db);
+  if (variant) return variant;
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
 

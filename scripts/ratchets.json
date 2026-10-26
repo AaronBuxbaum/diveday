@@ -438,7 +438,7 @@
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1034,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1176,
     "src/components/MarketingFeatureScreens.tsx": 1064,
-    "src/components/search/CommandPalette.tsx": 937,
+    "src/components/search/CommandPalette.tsx": 923,
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1203,
@@ -585,7 +585,6 @@
   },
   "page-length": {
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
-    "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 440,
     "src/app/ready/[token]/page.tsx": 649,
     "src/app/s/[shopSlug]/page.tsx": 794,

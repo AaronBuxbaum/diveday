@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { proseLinkClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { cardSummaryClass, SectionCard } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { canPersonImportShopData } from "@/db/import";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -216,7 +217,7 @@ function switchingGuide(guide: string) {
 }
 
 /**
- * The Divers tab: what comes across, then the wizard. Called, not rendered as
+ * The Divers tab: import first, then the complete source/provenance reference. Called, not rendered as
  * a component, so the page's tree carries its rows directly (`page.test.tsx`
  * walks it).
  */
@@ -255,40 +256,7 @@ function diversTab({
           `space-y-10` here, and no `mt-*` on any card
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
-        <SectionCard padding="lg" title={t("settings.import.comesAcross.heading")}>
-          <ul className="space-y-2">
-            {IMPORT_HONESTY_TABLE.map((row) => (
-              <li
-                key={row.id}
-                className="grid gap-1 rounded-inset bg-surface-sunken px-4 py-3 sm:grid-cols-[10rem_7rem_1fr] sm:items-baseline sm:gap-3"
-              >
-                <span className="font-medium text-foreground">
-                  {t(SCOPE_ROW_KEYS[row.id].what)}
-                </span>
-                {/* The chip's cell renders only on a row that has the chip,
-                    and the detail names its own column from `sm` up, so it
-                    keeps its start edge down the whole list either way. The
-                    cell used to stay even when empty, to hold that edge, and on
-                    a phone, where the row is one column, the empty cell took a
-                    4px gap of its own (the pixel probe: 8px between a row's
-                    name and its detail where the chip rows sit 4px apart). */}
-                {row.scope === "stays-behind" ? (
-                  <span>
-                    <span
-                      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${staysBehind.className}`}
-                    >
-                      {staysBehind.label}
-                    </span>
-                  </span>
-                ) : null}
-                <span className="text-sm text-muted sm:col-start-3">
-                  {t(SCOPE_ROW_KEYS[row.id].detail)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-
+        <p className="text-sm text-muted">{t("settings.import.importantExclusions")}</p>
         <ImportWizard
           diversHref={`/shop/${shopSlug}/divers`}
           intro={t.rich("settings.import.wizard.intro", {
@@ -299,6 +267,47 @@ function diversTab({
           timeZone={timeZone}
           assist={assist}
         />
+        <SectionCard as="details" padding="none" className="group/reference">
+          <summary
+            className={cardSummaryClass({ className: "min-h-11 justify-between p-5 sm:p-6" })}
+          >
+            {t("settings.import.comesAcross.heading")}
+            <SummaryCaret className="size-4 text-muted group-open/reference:rotate-90" />
+          </summary>
+          <div className="border-t border-border p-5 sm:p-6">
+            <ul className="space-y-2">
+              {IMPORT_HONESTY_TABLE.map((row) => (
+                <li
+                  key={row.id}
+                  className="grid gap-1 rounded-inset bg-surface-sunken px-4 py-3 sm:grid-cols-[10rem_7rem_1fr] sm:items-baseline sm:gap-3"
+                >
+                  <span className="font-medium text-foreground">
+                    {t(SCOPE_ROW_KEYS[row.id].what)}
+                  </span>
+                  {/* The chip's cell renders only on a row that has the chip,
+                    and the detail names its own column from `sm` up, so it
+                    keeps its start edge down the whole list either way. The
+                    cell used to stay even when empty, to hold that edge, and on
+                    a phone, where the row is one column, the empty cell took a
+                    4px gap of its own (the pixel probe: 8px between a row's
+                    name and its detail where the chip rows sit 4px apart). */}
+                  {row.scope === "stays-behind" ? (
+                    <span>
+                      <span
+                        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${staysBehind.className}`}
+                      >
+                        {staysBehind.label}
+                      </span>
+                    </span>
+                  ) : null}
+                  <span className="text-sm text-muted sm:col-start-3">
+                    {t(SCOPE_ROW_KEYS[row.id].detail)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </SectionCard>
       </div>
     </>
   );

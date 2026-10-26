@@ -98,6 +98,8 @@ export default async function EmbedSettingsPage({
   ) as Record<Platform, string>;
   const copy: EmbedGeneratorCopy = {
     what: t("settings.embed.what"),
+    moreFormats: t("settings.embed.moreFormats"),
+    sharingFormats: t("settings.embed.sharingFormats"),
     showRequired: t("settings.embed.showRequired"),
     kinds,
     kindHints,

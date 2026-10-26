@@ -15,6 +15,7 @@ import { utcToWallTime } from "@/lib/zoned";
 import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { DownloadExportButton } from "./DownloadExportButton";
+import { EXPORT_PURPOSE_KEYS } from "./file-index";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -131,24 +132,28 @@ export default async function DataOutSettingsPage({
             <p className="max-w-2xl text-sm text-muted">
               {t("settings.export.bundle.description")}
             </p>
-            {/* `items-start`: these notes range from one line to fifteen, and grid's
-              default stretch made every short card as tall as the essay beside it
-              — `shop.csv`, a single sentence, rendered as a 300px box of empty
-              grey. Let each card be its own height and put the slack between the
-              rows instead. */}
-            <ul className="mt-4 grid items-start gap-2 sm:grid-cols-2">
+            {/* Every file remains in the index, including zero rows. Its complete
+                canonical README note stays copyable inside its own disclosure. */}
+            <ul className="mt-4 divide-y divide-border">
               {(families ?? []).map((family) => (
-                <li
-                  key={family.file}
-                  className="flex items-baseline justify-between gap-3 rounded-inset bg-surface-sunken px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-mono text-sm break-all text-foreground">{family.file}</p>
-                    <p className="mt-0.5 text-xs text-muted">{family.note}</p>
-                  </div>
-                  <span className="shrink-0 text-xs font-medium text-muted tabular-nums">
-                    {t("settings.export.rowCount", { count: family.count })}
-                  </span>
+                <li key={family.file}>
+                  <details className="group/file">
+                    <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-3 py-3 focus-visible:focus-ring-inset">
+                      <span className="min-w-0">
+                        <span className="block font-mono text-base wrap-anywhere">
+                          {family.file}
+                        </span>
+                        <span className="mt-1 block text-sm text-muted">
+                          {t(EXPORT_PURPOSE_KEYS[family.file as keyof typeof EXPORT_PURPOSE_KEYS])}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-sm text-muted tabular-nums">
+                        {t("settings.export.rowCount", { count: family.count })}
+                        <SummaryCaret className="ms-2 inline size-3 group-open/file:rotate-90" />
+                      </span>
+                    </summary>
+                    <p className="pb-4 text-sm text-muted">{family.note}</p>
+                  </details>
                 </li>
               ))}
             </ul>

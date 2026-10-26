@@ -170,6 +170,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the cert-check extension's try-it disclosure renders true to the design (${scheme})`, async ({
         page,
       }) => {
+        // Extension handshake plus two distinct result/report captures.
+        test.setTimeout(FLOW_TIMEOUT_MS);
         await page.addInitScript(() => {
           Object.defineProperty(navigator, "userAgent", { get: () => "Chromium (visual capture)" });
           const announce = () => {
@@ -223,6 +225,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Copy report" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "settings-cert-checks", scheme);
+        await page.getByText(staffCopy("settings.certChecks.viewReport"), { exact: true }).click();
+        await page.getByText(/"report": "diveday-cert-check-try"/).waitFor();
+        await capture(page, "settings-cert-checks-report", scheme);
       });
 
       /**
@@ -460,7 +465,7 @@ for (const scheme of ["light", "dark"] as const) {
       // come across, before any file is chosen.
       test(`the data-import page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/import");
-        await page.getByRole("heading", { name: "What comes across" }).waitFor();
+        await page.getByText("What comes across", { exact: true }).waitFor();
         await capture(page, "settings-import", scheme);
       });
 
@@ -689,7 +694,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/email");
         await page
           .getByRole("region", { name: "After-hours messages" })
-          .getByRole("button", { name: "Turn off" })
+          .getByRole("switch")
           .waitFor();
         await capture(page, "settings-email", scheme);
       });

@@ -30,7 +30,7 @@ import { SectionCard } from "@/components/ui/card";
 
 <SectionCard
   padding="lg"
-  title={t("backup.form.heading")}
+  title={t("backup.form.details")}
   description={t("backup.form.description")}
   actions={<Badge tone="success">{t("backup.status.verified")}</Badge>}
 >

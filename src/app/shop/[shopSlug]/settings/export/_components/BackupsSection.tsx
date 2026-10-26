@@ -3,14 +3,9 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
-import {
-  controlClass,
-  FIELD_GRID_COLUMN_GAP,
-  Field,
-  FieldActions,
-  FieldGrid,
-} from "@/components/ui/form";
+import { cardSummaryClass, SectionCard } from "@/components/ui/card";
+import { SummaryCaret } from "@/components/ui/disclosure";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ShopBackupDelivery } from "@/db/schema";
@@ -79,6 +74,8 @@ export function BackupsSection({
   timeZone,
   destination,
   deliveries,
+  latestDelivery = null,
+  expandDestination = false,
   basePath,
 }: {
   t: StaffTranslator;
@@ -86,6 +83,8 @@ export function BackupsSection({
   timeZone: string;
   destination: BackupDestination;
   deliveries: BackupDeliveries;
+  latestDelivery?: ShopBackupDelivery | null;
+  expandDestination?: boolean;
   basePath: string;
 }) {
   return (
@@ -119,34 +118,28 @@ export function BackupsSection({
           }
         >
           {destination ? (
-            // The form below's column gutter, so the two second columns
-            // stand on one x (K-588); rows keep the list's tighter 8px.
-            <dl className={`grid ${FIELD_GRID_COLUMN_GAP} gap-y-2 text-sm sm:grid-cols-2`}>
-              <div>
-                <dt className="text-muted">{t("backup.status.endpoint")}</dt>
-                <dd className="break-all">{destination.endpoint}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">{t("backup.status.bucket")}</dt>
-                <dd className="break-all">
-                  {destination.prefix
-                    ? `${destination.bucket}/${destination.prefix}`
-                    : destination.bucket}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted">{t("backup.status.accessKeyId")}</dt>
-                <dd className="break-all">{destination.accessKeyId}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">{t("backup.status.lastDelivered")}</dt>
-                <dd>
-                  {destination.verifiedAt
-                    ? formatDateTimeTz(destination.verifiedAt, locale, timeZone)
-                    : t("backup.status.never")}
-                </dd>
-              </div>
-            </dl>
+            <div className="space-y-2 text-sm">
+              <p className="font-medium wrap-anywhere">
+                {destination.prefix
+                  ? `${destination.bucket}/${destination.prefix}`
+                  : destination.bucket}
+              </p>
+              <p>
+                {t("backup.status.lastDelivered")}:{" "}
+                {destination.verifiedAt
+                  ? formatDateTimeTz(destination.verifiedAt, locale, timeZone)
+                  : t("backup.status.never")}
+              </p>
+              {latestDelivery ? (
+                <p>
+                  {t("backup.status.latestResult")}: {statusText(t, latestDelivery.status)} ·{" "}
+                  {formatDateTimeTz(latestDelivery.startedAt, locale, timeZone)}
+                </p>
+              ) : null}
+              {latestDelivery?.status === "failed" ? (
+                <p className="text-danger">{deliveryErrorText(t, latestDelivery.errorCode)}</p>
+              ) : null}
+            </div>
           ) : (
             <p className="text-sm text-muted">{t("backup.status.notConfiguredDescription")}</p>
           )}
@@ -164,98 +157,107 @@ export function BackupsSection({
         </SectionCard>
 
         <SectionCard
-          padding="lg"
-          titleAs="h3"
-          title={t("backup.form.heading")}
-          description={t("backup.form.description")}
+          as="details"
+          padding="none"
+          open={!destination || expandDestination}
+          className="group/destination"
         >
-          <FieldGrid as="form" action={saveBackupDestinationAction} columns={2}>
-            <Field
-              label={t("backup.form.endpointLabel")}
-              description={t("backup.form.endpointHint")}
-              className="sm:col-span-2"
-            >
-              <input
-                name="endpoint"
-                type="url"
-                required
-                maxLength={500}
-                defaultValue={destination?.endpoint ?? ""}
-                placeholder="https://accountid.r2.cloudflarestorage.com"
-                className={controlClass}
-              />
-            </Field>
-            <Field
-              label={t("backup.form.regionLabel")}
-              // The code is wrapped rather than spelled with non-breaking
-              // hyphens: a staffer copies it into the field below, and a
-              // U+2011 would paste as a different character.
-              description={t.rich("backup.form.regionHint", {
-                nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
-              })}
-            >
-              <input
-                name="region"
-                required
-                maxLength={100}
-                defaultValue={destination?.region ?? ""}
-                placeholder="auto"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("backup.form.bucketLabel")}>
-              <input
-                name="bucket"
-                required
-                maxLength={200}
-                defaultValue={destination?.bucket ?? ""}
-                placeholder="dive-shop-backups"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("backup.form.prefixLabel")} hint={t("backup.form.optionalHint")}>
-              <input
-                name="prefix"
-                maxLength={200}
-                defaultValue={destination?.prefix ?? ""}
-                placeholder="diveday"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("backup.form.accessKeyIdLabel")}>
-              <input
-                name="accessKeyId"
-                required
-                maxLength={200}
-                autoComplete="off"
-                defaultValue={destination?.accessKeyId ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            {/* Write-only, deliberately: no defaultValue, ever. The stored secret
+          <summary
+            className={cardSummaryClass({ className: "min-h-11 justify-between p-5 sm:p-6" })}
+          >
+            {t("backup.form.details")}
+            <SummaryCaret className="size-4 text-muted group-open/destination:rotate-90" />
+          </summary>
+          <div className="border-t border-border p-5 sm:p-6">
+            <p className="mb-4 text-sm text-muted">{t("backup.form.description")}</p>
+            <FieldGrid as="form" action={saveBackupDestinationAction} columns={2}>
+              <Field
+                label={t("backup.form.endpointLabel")}
+                description={t("backup.form.endpointHint")}
+                className="sm:col-span-2"
+              >
+                <input
+                  name="endpoint"
+                  type="url"
+                  required
+                  maxLength={500}
+                  defaultValue={destination?.endpoint ?? ""}
+                  placeholder="https://accountid.r2.cloudflarestorage.com"
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("backup.form.regionLabel")}
+                // The code is wrapped rather than spelled with non-breaking
+                // hyphens: a staffer copies it into the field below, and a
+                // U+2011 would paste as a different character.
+                description={t.rich("backup.form.regionHint", {
+                  nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
+                })}
+              >
+                <input
+                  name="region"
+                  required
+                  maxLength={100}
+                  defaultValue={destination?.region ?? ""}
+                  placeholder="auto"
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("backup.form.bucketLabel")}>
+                <input
+                  name="bucket"
+                  required
+                  maxLength={200}
+                  defaultValue={destination?.bucket ?? ""}
+                  placeholder="dive-shop-backups"
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("backup.form.prefixLabel")} hint={t("backup.form.optionalHint")}>
+                <input
+                  name="prefix"
+                  maxLength={200}
+                  defaultValue={destination?.prefix ?? ""}
+                  placeholder="diveday"
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("backup.form.accessKeyIdLabel")}>
+                <input
+                  name="accessKeyId"
+                  required
+                  maxLength={200}
+                  autoComplete="off"
+                  defaultValue={destination?.accessKeyId ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              {/* Write-only, deliberately: no defaultValue, ever. The stored secret
               is sealed and there is no code path that could put it back into
               this page — blank on an update means "keep what is stored". */}
-            <Field
-              label={t("backup.form.secretLabel")}
-              description={
-                destination ? t("backup.form.secretKeepHint") : t("backup.form.secretHint")
-              }
-              className="sm:col-span-2"
-            >
-              <input
-                name="secretAccessKey"
-                type="password"
-                maxLength={500}
-                autoComplete="new-password"
-                className={controlClass}
-              />
-            </Field>
-            <FieldActions>
-              <SubmitButton pendingLabel={t("backup.form.submitting")} className={buttonClass()}>
-                {t("backup.form.submit")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
+              <Field
+                label={t("backup.form.secretLabel")}
+                description={
+                  destination ? t("backup.form.secretKeepHint") : t("backup.form.secretHint")
+                }
+                className="sm:col-span-2"
+              >
+                <input
+                  name="secretAccessKey"
+                  type="password"
+                  maxLength={500}
+                  autoComplete="new-password"
+                  className={controlClass}
+                />
+              </Field>
+              <FieldActions>
+                <SubmitButton pendingLabel={t("backup.form.submitting")} className={buttonClass()}>
+                  {t("backup.form.submit")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+          </div>
         </SectionCard>
 
         <SectionCard padding="lg" titleAs="h3" title={t("backup.how.heading")}>

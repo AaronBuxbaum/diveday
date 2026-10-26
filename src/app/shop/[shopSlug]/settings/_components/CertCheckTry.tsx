@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Copyable } from "@/components/Copyable";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import {
   requestDryRun,
   requestExtensionHello,
@@ -28,6 +29,7 @@ export type CertCheckTryCopy = {
   samples: string;
   padi: string;
   report: string;
+  viewReport: string;
   /** A template: `{version}`. */
   added: string;
   notAdded: string;
@@ -274,10 +276,20 @@ export function CertCheckTry({
             <>
               <Copyable
                 value={certCheckTryReport(session, installed)}
+                layout="inline"
                 copyLabel={copy.copy}
                 copiedLabel={copy.copied}
                 failedLabel={copy.copyFailed}
               />
+              <details className="group/report mt-2">
+                <summary className="flex min-h-11 cursor-pointer items-center font-medium text-primary">
+                  {copy.viewReport}
+                  <SummaryCaret className="ms-2 size-3 group-open/report:rotate-90" />
+                </summary>
+                <pre className="mt-2 whitespace-pre-wrap wrap-anywhere rounded-inset bg-surface-sunken p-3 text-xs">
+                  {certCheckTryReport(session, installed)}
+                </pre>
+              </details>
               <p className="mt-2 text-muted">{copy.reportHint}</p>
               <a
                 href={`mailto:${supportEmail}`}

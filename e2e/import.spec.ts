@@ -43,8 +43,8 @@ test.describe("contact import", () => {
       "true",
     );
 
-    // The published honesty table is on the page before any file is chosen.
-    await expect(page.getByRole("heading", { name: "What comes across" })).toBeVisible();
+    // The full reference stays available before choosing a file.
+    await page.getByText("What comes across", { exact: true }).click();
     await expect(page.getByText("Signed waivers & medical clearance")).toBeVisible();
 
     await page.setInputFiles('input[type="file"]', {
@@ -255,7 +255,8 @@ test.describe("contact import — prior visits", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings/import");
-    // The honesty table says past visits come across, and says what they aren't.
+    // The disclosed reference keeps the full meaning of imported visits.
+    await page.getByText("What comes across", { exact: true }).click();
     await expect(page.getByText("Past visits (what they booked, when)")).toBeVisible();
     await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
       "data-hydrated",
@@ -270,7 +271,7 @@ test.describe("contact import — prior visits", () => {
 
     // Three booking rows, one diver: the preview says so before anything is written.
     await expect(page.getByText(/3 rows record a past visit/)).toBeVisible();
-    await expect(page.getByText(/See .What comes across. above/)).toBeVisible();
+    await expect(page.getByText(/See .What comes across. below/)).toBeVisible();
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
     await expect(page.getByText(/3 past visits added to divers’ shop history/)).toBeVisible();

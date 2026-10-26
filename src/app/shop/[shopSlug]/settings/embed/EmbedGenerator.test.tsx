@@ -13,6 +13,8 @@ vi.mock("qrcode", () => ({ toDataURL: vi.fn(async () => "data:image/png;base64,Q
 
 const copy: EmbedGeneratorCopy = {
   what: "What to embed",
+  moreFormats: "More formats",
+  sharingFormats: "Sharing formats",
   showRequired: "Pick the departure this card is for.",
   kinds: Object.fromEntries(
     EMBED_KINDS.map((k) => [k, `kind ${k}`]),
@@ -54,8 +56,11 @@ const copy: EmbedGeneratorCopy = {
   copyFailed: "Failed",
 };
 
-function renderGenerator(props: { kinds?: readonly (typeof EMBED_KINDS)[number][] } = {}) {
-  return render(
+function renderGenerator(
+  props: { kinds?: readonly (typeof EMBED_KINDS)[number][] } = {},
+  expand = true,
+) {
+  const rendered = render(
     <EmbedGenerator
       origin="https://diveday.example"
       shopSlug="blue-mantis"
@@ -67,6 +72,8 @@ function renderGenerator(props: { kinds?: readonly (typeof EMBED_KINDS)[number][
       copy={copy}
     />,
   );
+  if (expand) fireEvent.click(screen.getByText(copy.moreFormats));
+  return rendered;
 }
 
 afterEach(cleanup);
@@ -339,4 +346,36 @@ it("exports only components from the client module", async () => {
   for (const [name, value] of Object.entries(exported)) {
     expect(typeof value, name).toBe("function");
   }
+});
+
+it("leads with Calendar and Button while every other allowed format remains reachable", async () => {
+  renderGenerator({}, false);
+  const secondaryFormats = screen.getByText(copy.moreFormats).closest("details");
+  expect(secondaryFormats).not.toHaveAttribute("open");
+  expect(screen.getByRole("radio", { name: /kind calendar/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /kind button/ }).closest("details")).toBeNull();
+  expect(screen.getByRole("radio", { name: /kind courses/ }).closest("details")).toBe(
+    secondaryFormats,
+  );
+  await userEvent.click(screen.getByRole("radio", { name: /kind button/ }));
+  expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).toContain(
+    'data-diveday="button"',
+  );
+  await userEvent.click(screen.getByText(copy.moreFormats));
+  expect(screen.getAllByRole("radio", { name: /kind / })).toHaveLength(EMBED_KINDS.length);
+});
+
+it("offers code to copy only after a required departure is selected", async () => {
+  renderGenerator();
+  await userEvent.click(screen.getByRole("radio", { name: /kind departure/ }));
+  const select = screen.getByLabelText(copy.shows);
+  expect(screen.queryByLabelText(copy.code)).toBeNull();
+  expect(screen.queryByRole("button", { name: copy.copy })).toBeNull();
+  expect(screen.getAllByText(copy.showRequired)).toHaveLength(1);
+  expect(select).not.toHaveAttribute("aria-invalid", "true");
+  await userEvent.selectOptions(select, "t1");
+  expect((screen.getByLabelText(copy.code) as HTMLTextAreaElement).value).toContain(
+    'data-show="t1"',
+  );
+  expect(screen.getByRole("button", { name: copy.copy })).toBeEnabled();
 });

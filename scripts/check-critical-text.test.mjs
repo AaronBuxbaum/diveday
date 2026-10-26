@@ -6,7 +6,7 @@ import { runGuard } from "./guard-fixture.mjs";
 const surfaces = () => ({
   "docs/design/principles.md":
     "2. Critical text is any text a person reads to make a decision or to identify a record.\n",
-  "src/components/search/CommandPalette.tsx":
+  "src/components/search/PaletteSearchField.tsx":
     '<input className="w-full px-5 py-4 text-base outline-none focus-ring-inset" />\n',
   "src/components/PublicShopNav.tsx": 'const linkClass =\n  "rounded px-3 py-2 text-base";\n',
   "src/app/shop/[shopSlug]/orders/_components/OrdersLedger.tsx": [
@@ -40,7 +40,7 @@ describe("check-critical-text", () => {
 
   it("refuses a search field that dropped to 14px", () => {
     const result = run({
-      "src/components/search/CommandPalette.tsx":
+      "src/components/search/PaletteSearchField.tsx":
         '<input className="w-full px-5 py-4 text-sm outline-none focus-ring-inset" />\n',
     });
     expect(result.stderr).toContain("the search field must remain 16px");

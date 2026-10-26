@@ -39,7 +39,8 @@ export async function authenticate(formData: FormData) {
     shopSlug = signedIn.shopSlug;
   } catch (error) {
     if (error instanceof APIError) {
-      if (error.message === "two_factor_required" || error.message === "invalid_two_factor") {
+      if (error.message === "invalid_two_factor") redirect("/sign-in?error=invalid-code");
+      if (error.message === "two_factor_required") {
         redirect("/sign-in?error=two-factor");
       }
       redirect("/sign-in?error=1");

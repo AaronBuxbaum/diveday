@@ -22,20 +22,19 @@ test.describe("the after-hours ping, on a shop of the test's own", () => {
     await page.goto(`${settingsFor(privateShop.slug)}/email`);
     const card = page.getByRole("region", { name: "After-hours messages" });
     await expect(card.getByText(/outside desk hours, 8:00\s?AM to 6:00\s?PM/)).toBeVisible();
-    await expect(card.getByText("On", { exact: true })).toBeVisible();
+    await expect(card.getByRole("switch")).toBeChecked();
 
-    await card.getByRole("button", { name: "Turn off" }).click();
-    await expect(card.getByRole("button", { name: "Turn on" })).toBeVisible();
-    await expect(card.getByText("Off", { exact: true })).toBeVisible();
+    await card.getByRole("switch").click();
+    await expect(card.getByRole("switch")).not.toBeChecked();
     // The Monday email beside it is its own answer, untouched.
     await expect(
-      page.getByRole("region", { name: "Monday email" }).getByText("On", { exact: true }),
-    ).toBeVisible();
+      page.getByRole("region", { name: "Monday email" }).getByRole("switch"),
+    ).toBeChecked();
 
     await page.reload();
-    await expect(card.getByText("Off", { exact: true })).toBeVisible();
-    await card.getByRole("button", { name: "Turn on" }).click();
-    await expect(card.getByText("On", { exact: true })).toBeVisible();
+    await expect(card.getByRole("switch")).not.toBeChecked();
+    await card.getByRole("switch").click();
+    await expect(card.getByRole("switch")).toBeChecked();
   });
 
   test("the shop sets its desk hours, and a closing before the opening is refused", async ({
@@ -72,7 +71,6 @@ test.describe("the after-hours ping for a staffer who is not an owner", () => {
   test("is off by default", async ({ page }) => {
     await page.goto(`${settingsFor("blue-mantis")}/email`);
     const card = page.getByRole("region", { name: "After-hours messages" });
-    await expect(card.getByText("Off", { exact: true })).toBeVisible();
-    await expect(card.getByRole("button", { name: "Turn on" })).toBeVisible();
+    await expect(card.getByRole("switch")).not.toBeChecked();
   });
 });

@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
 import { E2E_APP_HOST } from "./servers";
@@ -314,12 +315,12 @@ test("a setup link opens the form once, and says it no longer works after", asyn
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 
   await page.goto(link);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "This setup link no longer works",
-  );
+  await expect(page).toHaveURL(/\/get-set-up\?from=onboard-closed$/);
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
-  await expect(page.getByRole("main").getByRole("link", { name: "Get set up" })).toHaveAttribute(
-    "href",
-    "/get-set-up?from=onboard-closed",
-  );
+  await expect(
+    page.getByRole("button", {
+      name: diverTranslator("en-US")("marketing.setUp.submit"),
+      exact: true,
+    }),
+  ).toBeVisible();
 });

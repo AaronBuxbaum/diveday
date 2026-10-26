@@ -17,10 +17,13 @@ import {
   type Platform,
   partnerLinkUrl,
 } from "@/lib/embed-snippets";
+import { EmbedKindChoices } from "./EmbedKindChoices";
 import { SnippetField } from "./SnippetField";
 
 export type EmbedGeneratorCopy = {
   what: string;
+  moreFormats: string;
+  sharingFormats: string;
   showRequired: string;
   kinds: Record<EmbedKind, string>;
   kindHints: Record<EmbedKind, string>;
@@ -148,7 +151,7 @@ export function EmbedGenerator({
   const frameKey = `${kind}-${show}-${lang}-${look}`;
   const frameLoaded = loadedFrame === frameKey;
   // Every other preview is drawn at once; a framed widget waits for its load.
-  const previewDrawn = !FRAMED.has(kind) || showMissing || frameLoaded;
+  const previewDrawn = !FRAMED.has(kind) || frameLoaded;
 
   useEffect(() => {
     if (kind !== "qr") return;
@@ -162,16 +165,6 @@ export function EmbedGenerator({
     };
   }, [kind, target]);
 
-  // `justify-start`: the grid stretches both tiles in a row to the taller
-  // one, and centring then pushed the shorter tile's title down, 9px at 1280
-  // (K-442). Titles start at the top, so a row's titles share a line.
-  const tile = (active: boolean) =>
-    `flex min-h-11 flex-col items-start justify-start rounded-lg border px-3 py-2 text-start text-sm transition-colors ${
-      active
-        ? "border-primary bg-primary-tint text-foreground"
-        : "border-border bg-surface text-foreground hover:bg-surface-sunken"
-    }`;
-
   return (
     <div className="space-y-10">
       <SectionCard padding="lg" title={copy.what}>
@@ -183,48 +176,25 @@ export function EmbedGenerator({
         <div className="@container">
           <div className="grid gap-6 @4xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
             <div className="space-y-5">
-              <fieldset>
-                <legend id={ids.kind} className="sr-only">
-                  {copy.what}
-                </legend>
-                <div className="grid grid-cols-2 gap-2">
-                  {kinds.map((k) => (
-                    <label
-                      key={k}
-                      className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:focus-ring`}
-                    >
-                      <input
-                        type="radio"
-                        name={`${ids.kind}-kind`}
-                        value={k}
-                        checked={kind === k}
-                        onChange={() => {
-                          // `show` holds a trip id for every kind but one, and a
-                          // course slug for `courses`. Crossing that line has to
-                          // clear it or the courses widget is framed with a UUID
-                          // and answers 404; staying on the same side keeps a
-                          // choice the shop already made, so picking "QR code"
-                          // after "One departure" still points at that boat.
-                          if ((k === "courses") !== (kind === "courses")) setShow("");
-                          setKind(k);
-                        }}
-                        className="sr-only"
-                      />
-                      <span className="font-semibold">{copy.kinds[k]}</span>
-                      <span className="text-xs text-muted">{copy.kindHints[k]}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              <EmbedKindChoices
+                kind={kind}
+                kinds={kinds}
+                name={ids.kind}
+                copy={copy}
+                onChange={(next) => {
+                  // Trip ids and course slugs share a selector; crossing the boundary clears it.
+                  if ((next === "courses") !== (kind === "courses")) setShow("");
+                  setKind(next);
+                }}
+              />
 
               {needsShow ? (
-                <Field label={copy.shows} error={showMissing ? copy.showRequired : undefined}>
+                <Field label={copy.shows} description={showMissing ? copy.showRequired : undefined}>
                   <select
                     value={show}
                     onChange={(event) => setShow(event.target.value)}
                     className={controlClass}
                     required={kind === "departure"}
-                    aria-invalid={showMissing || undefined}
                   >
                     <option value="">
                       {kind === "departure"
@@ -313,69 +283,69 @@ export function EmbedGenerator({
               ) : null}
             </div>
 
-            <div className="@container">
-              <p className={`mb-2 text-sm font-medium ${previewDrawn ? "" : "sr-only"}`}>
-                {copy.preview}
-              </p>
-              <div
-                className={
-                  previewDrawn ? "rounded-panel border border-border bg-surface-sunken p-3" : ""
-                }
-              >
-                {FRAMED.has(kind) && showMissing ? (
-                  <p className="py-8 text-center text-sm text-muted">{copy.showRequired}</p>
-                ) : FRAMED.has(kind) ? (
-                  // Under 28rem (a phone) the widget is not drawn small: it
-                  // opens at full size in a tab of its own instead.
-                  <>
-                    <iframe
-                      key={frameKey}
-                      title={copy.preview}
-                      src={frameUrl ?? undefined}
-                      onLoad={() => setLoadedFrame(frameKey)}
-                      className={`hidden w-full rounded-lg border-0 bg-surface @md:block ${
-                        frameLoaded ? "h-[480px]" : "pointer-events-none h-0 opacity-0"
-                      }`}
-                    />
-                    <div className="flex items-center justify-center py-8 @md:hidden">
-                      <a
-                        href={frameUrl ?? undefined}
-                        target="_blank"
-                        rel="noopener"
-                        className={buttonClass({ variant: "secondary" })}
-                      >
-                        {copy.openPreview}
-                      </a>
-                    </div>
-                  </>
-                ) : kind === "qr" ? (
-                  <div className="flex flex-col items-center gap-3 py-4">
-                    {qr ? (
-                      <>
-                        {/* biome-ignore lint/performance/noImgElement: a data URL drawn in the browser */}
-                        <img src={qr} alt={copy.qrAlt} width={240} height={240} />
+            {!showMissing ? (
+              <div className="@container">
+                <p className={`mb-2 text-sm font-medium ${previewDrawn ? "" : "sr-only"}`}>
+                  {copy.preview}
+                </p>
+                <div
+                  className={
+                    previewDrawn ? "rounded-panel border border-border bg-surface-sunken p-3" : ""
+                  }
+                >
+                  {FRAMED.has(kind) ? (
+                    // Under 28rem (a phone) the widget is not drawn small: it
+                    // opens at full size in a tab of its own instead.
+                    <>
+                      <iframe
+                        key={frameKey}
+                        title={copy.preview}
+                        src={frameUrl ?? undefined}
+                        onLoad={() => setLoadedFrame(frameKey)}
+                        className={`hidden w-full rounded-lg border-0 bg-surface @md:block ${
+                          frameLoaded ? "h-[480px]" : "pointer-events-none h-0 opacity-0"
+                        }`}
+                      />
+                      <div className="flex items-center justify-center py-8 @md:hidden">
                         <a
-                          href={qr}
-                          download={`diveday-${shopSlug}.png`}
+                          href={frameUrl ?? undefined}
+                          target="_blank"
+                          rel="noopener"
                           className={buttonClass({ variant: "secondary" })}
                         >
-                          {copy.qrDownload}
+                          {copy.openPreview}
                         </a>
-                      </>
-                    ) : null}
-                    <p className="break-all text-center text-xs text-muted">{target}</p>
-                  </div>
-                ) : kind === "partner" ? (
-                  <p className="break-all py-4 text-sm">{partnerUrl}</p>
-                ) : (
-                  <div className="flex items-center justify-center py-8">
-                    <a href={target} target="_blank" rel="noopener" className={buttonClass()}>
-                      {copy.buttonText}
-                    </a>
-                  </div>
-                )}
+                      </div>
+                    </>
+                  ) : kind === "qr" ? (
+                    <div className="flex flex-col items-center gap-3 py-4">
+                      {qr ? (
+                        <>
+                          {/* biome-ignore lint/performance/noImgElement: a data URL drawn in the browser */}
+                          <img src={qr} alt={copy.qrAlt} width={240} height={240} />
+                          <a
+                            href={qr}
+                            download={`diveday-${shopSlug}.png`}
+                            className={buttonClass({ variant: "secondary" })}
+                          >
+                            {copy.qrDownload}
+                          </a>
+                        </>
+                      ) : null}
+                      <p className="break-all text-center text-xs text-muted">{target}</p>
+                    </div>
+                  ) : kind === "partner" ? (
+                    <p className="break-all py-4 text-sm">{partnerUrl}</p>
+                  ) : (
+                    <div className="flex items-center justify-center py-8">
+                      <a href={target} target="_blank" rel="noopener" className={buttonClass()}>
+                        {copy.buttonText}
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
       </SectionCard>
@@ -391,7 +361,7 @@ export function EmbedGenerator({
             failedLabel={copy.copyFailed}
           />
         </SectionCard>
-      ) : kind === "qr" ? null : (
+      ) : !snippet ? null : (
         <SectionCard padding="lg" title={copy.snippet}>
           {/* Each chip is its radio's tap target, so it takes the 44px floor
               the kind tiles and Look segments take; it was `min-h-9`, 36px,
@@ -420,7 +390,7 @@ export function EmbedGenerator({
           <SnippetField
             label={copy.code}
             rows={3}
-            snippet={snippet ?? copy.showRequired}
+            snippet={snippet}
             copyLabel={copy.copy}
             copiedLabel={copy.copied}
             failedLabel={copy.copyFailed}

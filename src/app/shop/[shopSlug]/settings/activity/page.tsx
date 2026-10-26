@@ -4,7 +4,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
-import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { FactLine } from "@/components/ui/FactLine";
 import { canPersonViewShopActivity } from "@/db/authz";
 import {
@@ -15,7 +14,7 @@ import {
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "@/i18n/activity-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatDateWithYear, formatTimeZoneName } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import {
   isShopActivityKind,
@@ -124,6 +123,14 @@ export default async function ShopActivityPage({
     return search ? `${basePath}?${search}` : basePath;
   };
   const count = t("activity.log.count", { count: log.total });
+  // Page-local day headings preserve server ordering and the pager's exact scope.
+  const days = new Map<string, ShopActivityLine[]>();
+  for (const line of log.rows) {
+    const day = formatDateWithYear(line.occurredAt, locale, shop.timezone);
+    const rows = days.get(day) ?? [];
+    rows.push(line);
+    days.set(day, rows);
+  }
 
   return (
     <main className={settingsPaneClass()}>
@@ -154,6 +161,29 @@ export default async function ShopActivityPage({
               toLabel: t("activity.log.toLabel"),
               clear: t("activity.log.clear"),
               count,
+              filter: t("activity.log.filter"),
+              activeRange:
+                fromDay || toDay
+                  ? [
+                      from
+                        ? t("activity.log.rangeFrom", {
+                            date: formatDateWithYear(from, locale, shop.timezone),
+                          })
+                        : null,
+                      toDay
+                        ? t("activity.log.rangeTo", {
+                            date: formatDateWithYear(
+                              wallTimeToUtc({ ...toDay, hour: 0, minute: 0 }, shop.timezone),
+                              locale,
+                              shop.timezone,
+                            ),
+                          })
+                        : null,
+                      formatTimeZoneName(locale, shop.timezone),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : "",
             }}
           />
           {log.total === 0 ? (
@@ -161,27 +191,31 @@ export default async function ShopActivityPage({
               title={filtered ? t("activity.log.emptyFiltered") : t("activity.log.empty")}
             />
           ) : (
-            <ol className="grid gap-2" data-testid="shop-activity">
-              {log.rows.map((line) => (
-                <li
-                  key={line.key}
-                  className={`flex flex-col gap-y-0.5 ${INSET_NOTE_BOX} bg-surface-sunken`}
-                >
-                  <span className="min-w-0">{shopActivityLineText(t, line)}</span>
-                  <span className="text-muted">
-                    <FactLine
-                      facts={[
-                        lineObject(t, shopSlug, line),
-                        {
-                          value: formatDateTimeTz(line.occurredAt, locale, shop.timezone),
-                          className: "tabular-nums",
-                        },
-                      ]}
-                    />
-                  </span>
-                </li>
+            <div className="space-y-6" data-testid="shop-activity">
+              {[...days].map(([day, lines]) => (
+                <section key={day}>
+                  <h2 className="mb-2 text-sm font-medium text-muted">{day}</h2>
+                  <ol className="divide-y divide-border">
+                    {lines.map((line) => (
+                      <li key={line.key} className="flex flex-col gap-y-0.5 py-3">
+                        <span className="min-w-0">{shopActivityLineText(t, line)}</span>
+                        <span className="text-muted">
+                          <FactLine
+                            facts={[
+                              lineObject(t, shopSlug, line),
+                              {
+                                value: formatDateTimeTz(line.occurredAt, locale, shop.timezone),
+                                className: "tabular-nums",
+                              },
+                            ]}
+                          />
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
               ))}
-            </ol>
+            </div>
           )}
           <Pager
             page={log.page}

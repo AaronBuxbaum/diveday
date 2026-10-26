@@ -25,7 +25,7 @@ includes(
 // also what keeps iOS from zooming the page when the field takes focus, which
 // on a search a staffer opens one-handed is the difference between finding a
 // diver and losing your place.
-const palette = read("src/components/search/CommandPalette.tsx");
+const palette = read("src/components/search/PaletteSearchField.tsx");
 // Matched on the field's own class string rather than through `<input`: a JSX
 // attribute may carry a `>` inside an arrow function, so a tag-bounded regex
 // finds nothing and passes for the wrong reason. The string is the one with

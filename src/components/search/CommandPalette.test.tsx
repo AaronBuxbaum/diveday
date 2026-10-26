@@ -41,6 +41,7 @@ const COPY: CommandPaletteCopy = {
   hintMove: "to move",
   hintOpen: "to open",
   hintClose: "to close",
+  close: "Close",
   destinationLabels: labels,
   destinationTitles: {},
   goToBoarding: "Boarding",
@@ -221,7 +222,7 @@ describe("CommandPalette search field focus", () => {
 
     const field = screen.getByRole("combobox");
     await waitFor(() => expect(field).toHaveFocus());
-    expect(field).toHaveClass("focus-visible:focus-ring-inset", "rounded-t-panel");
+    expect(field).toHaveClass("focus-visible:focus-ring-inset", "rounded-ss-panel");
     expect(field.className).not.toMatch(/(^|[\s:])outline-(none|hidden|0)(\s|$)/);
     expect(screen.getByRole("dialog")).toHaveClass("overflow-hidden", "rounded-panel");
   });
@@ -646,4 +647,15 @@ describe("CommandPalette search request lifecycle", () => {
     expect(screen.queryByRole("option", { name: ANSWER.title })).toBeNull();
     expect(screen.queryByRole("option", { name: "Grace Mensah" })).toBeNull();
   });
+});
+
+// An explicit dismissal must use the same focus/cancellation path as Escape.
+it("closes with its explicit control and returns focus to its opener", async () => {
+  const user = userEvent.setup();
+  renderPalette();
+  const opener = screen.getByRole("button", { name: COPY.search });
+  await user.click(opener);
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  expect(opener).toHaveFocus();
 });
