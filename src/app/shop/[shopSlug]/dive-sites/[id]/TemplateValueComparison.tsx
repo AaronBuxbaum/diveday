@@ -51,7 +51,7 @@ export function TemplateValueComparison({
                     src={landmark.photoUrl}
                     alt={landmark.name}
                     className="mt-2 aspect-video rounded-lg"
-                    sizes="(max-width: 640px) 90vw, 320px"
+                    sizes="(max-width: 640px) 90vw, 336px"
                   />
                 ) : null}
               </li>

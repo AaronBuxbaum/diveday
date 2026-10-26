@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 /**
  * A `<details>` that opens itself when the page lands on an anchor inside it.
@@ -49,9 +49,19 @@ export function AutoOpenDetails({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
+  const hydrationKey = useId();
   // The attribute React renders is the first one it saw, so it never has a
   // reason to patch `open` away; a later `true` opens it imperatively below.
-  const [initialOpen] = useState(open);
+  const [initialOpen] = useState(() => {
+    // A hard fragment reveal or a tap can change the native state before
+    // hydration. Adopt this instance's DOM state so React expects that state
+    // too; the marker cannot match another Activity tree with the same id.
+    if (typeof document === "undefined") return open;
+    const native = document.querySelector<HTMLDetailsElement>(
+      `details[data-auto-open-details="${hydrationKey}"]`,
+    );
+    return native?.open ?? open;
+  });
 
   // Only a later `true` opens it: the first render already drew the attribute,
   // and re-asserting it on mount would undo a tap made before hydration. In a
@@ -104,6 +114,7 @@ export function AutoOpenDetails({
   return (
     <details
       ref={ref}
+      data-auto-open-details={hydrationKey}
       id={id}
       name={name}
       open={initialOpen}

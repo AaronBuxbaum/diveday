@@ -94,3 +94,55 @@ test.describe("course forms", () => {
     ).toHaveCount(0);
   });
 });
+
+test.describe("course-form disclosure anchors", () => {
+  signedInAsOwner();
+
+  test("native and repeated client entries reveal the definitions, including a refused form", async ({
+    page,
+  }) => {
+    const path = "/shop/blue-mantis/waivers#course-form-new";
+    const parent = page.locator("details#course-forms").filter({ visible: true });
+    const form = page.locator("details#course-form-new").filter({ visible: true });
+    await page.goto(path);
+    await expect(parent).toHaveAttribute("open", "");
+    await expect(form).toHaveAttribute("open", "");
+    const clientGo = async (url: string) => {
+      const arrived = page.waitForURL(
+        (candidate) => `${candidate.pathname}${candidate.hash}` === url,
+      );
+      await page.evaluate((destination) => {
+        const router = (
+          window as unknown as { next?: { router?: { push: (url: string) => void } } }
+        ).next?.router;
+        if (!router) throw new Error("installed Next App Router debugger facade unavailable");
+        router.push(destination);
+      }, url);
+      await arrived;
+    };
+    for (let index = 0; index < 2; index++) {
+      await parent.locator(":scope > summary").click();
+      await expect(parent).not.toHaveAttribute("open", "");
+      await clientGo("/shop/blue-mantis/courses/open-water-diver/edit");
+      await clientGo(path);
+      await expect(parent).toHaveAttribute("open", "");
+      await expect(form).toHaveAttribute("open", "");
+    }
+    await page.locator("#course-form-title-new").fill("A form awaiting full wording");
+    await page.locator("#course-form-body-new").fill("Short");
+    // Exercise the server's refusal as a crafted client can; ordinary native
+    // minlength still prevents this submission without that deliberate override.
+    await form.locator("form").evaluate((node) => {
+      if (!(node instanceof HTMLFormElement)) throw new Error("course form is not a form");
+      node.noValidate = true;
+    });
+    const refused = page.waitForURL(/notice=course-form-invalid/);
+    await form.getByRole("button", { name: "Add form", exact: true }).click();
+    await refused;
+    await expect(parent).toHaveAttribute("open", "");
+    await expect(form).toHaveAttribute("open", "");
+    await expect(
+      form.getByText(staffCopy("waiversStaff.courseForms.notice.invalid"), { exact: true }),
+    ).toBeVisible();
+  });
+});
