@@ -56,6 +56,15 @@ declare const self: ServiceWorkerGlobalScope;
 const CACHE_NAME = "diveday-offline-manifest-shell-v2";
 const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
 const OFFLINE_SHELL = "/offline-manifest";
+
+/** Dev chunk names can be reused after an edit; only production assets promise immutability. */
+function immutableAsset(response: Response): boolean {
+  const directives = (response.headers.get("cache-control") ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((directive) => directive.trim());
+  return directives.includes("immutable") && !directives.includes("no-store");
+}
 // Matches the live, authenticated roll-call page this shell backs up —
 // never any other /shop route — so a captain who reloads mid-departure with
 // no signal lands on their saved device copy instead of the browser's own
@@ -808,9 +817,23 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
       caches.match(event.request).then(async (cached) => {
-        if (cached) return cached;
+        if (cached && immutableAsset(cached)) return cached;
+        // Older workers cached mutable development chunks. Ignore and remove
+        // those copies so a dependency update cannot mix two runtimes.
+        if (cached) {
+          await caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.delete(event.request))
+            .catch(() => {});
+        }
         const response = await fetch(event.request);
-        if (response.ok) (await caches.open(CACHE_NAME)).put(event.request, response.clone());
+        if (response.ok && immutableAsset(response)) {
+          // Cache storage is best effort: quota must not break an online page.
+          await caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.put(event.request, response.clone()))
+            .catch(() => {});
+        }
         return response;
       }),
     );
