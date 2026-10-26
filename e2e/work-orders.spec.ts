@@ -8,7 +8,7 @@ const staffCopy = staffTranslator("en-US");
 /** Same-code refusals need this action's redirect, then the queued reset restoration. */
 async function finishLineAction(page: Page, submit: Locator, notice: string) {
   const path = new URL(page.url()).pathname;
-  const [response] = await Promise.all([
+  await Promise.all([
     page.waitForResponse(
       (candidate) =>
         candidate.request().method() === "POST" &&
@@ -17,7 +17,8 @@ async function finishLineAction(page: Page, submit: Locator, notice: string) {
     ),
     submit.click(),
   ]);
-  await response.finished();
+  // FlashParams consumes notice query params immediately; the action's own
+  // pending state marks the committed result even when its URL is already clean.
   await expect(page.locator('button[aria-busy="true"]')).toHaveCount(0);
   // KeepTypedOnRefusal restores after React's reset on the next animation frame.
   await page.evaluate(
