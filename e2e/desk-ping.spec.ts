@@ -24,7 +24,8 @@ test.describe("the after-hours ping, on a shop of the test's own", () => {
     await expect(card.getByText(/outside desk hours, 8:00\s?AM to 6:00\s?PM/)).toBeVisible();
     await expect(card.getByRole("switch")).toBeChecked();
 
-    await card.getByRole("switch").click();
+    // The whole label is the pointer target; the native input is visually clipped.
+    await card.getByRole("switch").locator("..").filter({ visible: true }).click();
     await expect(card.getByRole("switch")).not.toBeChecked();
     // The Monday email beside it is its own answer, untouched.
     await expect(
@@ -33,7 +34,7 @@ test.describe("the after-hours ping, on a shop of the test's own", () => {
 
     await page.reload();
     await expect(card.getByRole("switch")).not.toBeChecked();
-    await card.getByRole("switch").click();
+    await card.getByRole("switch").locator("..").filter({ visible: true }).click();
     await expect(card.getByRole("switch")).toBeChecked();
   });
 

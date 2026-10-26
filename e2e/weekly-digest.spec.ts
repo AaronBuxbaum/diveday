@@ -24,7 +24,8 @@ test.describe("the Monday email, on a shop of the test's own", () => {
     const main = page.getByRole("region", { name: "Monday email" });
     await expect(main.getByRole("switch")).toBeChecked();
 
-    await main.getByRole("switch").click();
+    // Exercise the real pointer target, then the native keyboard target below.
+    await main.getByRole("switch").locator("..").filter({ visible: true }).click();
     await expect(main.getByRole("switch")).not.toBeChecked();
 
     await page.reload();

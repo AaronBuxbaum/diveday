@@ -55,11 +55,15 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
   await expect(
     page.getByRole("main").getByRole("button", { name: "Try the live demo" }),
   ).toBeVisible();
+  // The demo journey moved here with the actual sent request, rather than
+  // remaining on the removed intermediate closed-onboarding page.
+  await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("setup-sent");
+  await page.getByRole("main").getByRole("button", { name: "Try the live demo" }).click();
+  await expect(page).toHaveURL(/\/shop\//);
 });
 
 test("every closed door to a trial now opens the set-up form", async ({ page }) => {
   await page.goto("/onboard");
-  await page.getByRole("main").getByRole("link", { name: "Get set up" }).click();
   await expect(page).toHaveURL(/\/get-set-up\?from=onboard-closed$/);
   await expect(page.getByLabel("Shop name")).toBeVisible();
 });

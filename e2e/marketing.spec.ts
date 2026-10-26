@@ -645,33 +645,28 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
     page.getByRole("main").getByRole("link", { name: "Get set up" }).first(),
   ).toHaveAttribute("href", "/get-set-up?from=pricing");
 
-  // And the old address, from a bookmark or a search result, is a closed door
-  // that sends them to the set-up form — with no sign-up form of its own.
+  // A bookmarked old address goes straight to the same request form, without
+  // forwarding an untrusted source or showing a second registration form.
   await page.goto("/onboard?from=pricing");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("We set up every shop by hand");
-  await expect(page.getByRole("main").getByRole("link", { name: "Get set up" })).toHaveAttribute(
-    "href",
-    "/get-set-up?from=onboard-closed",
+  await expect(page).toHaveURL(/\/get-set-up\?from=onboard-closed$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    diverTranslator("en-US")("marketing.setUp.title"),
   );
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
-  // The one form left on the closed door is the demo, at link weight under the
-  // set-up link that is the page's primary, with its own funnel tag (issue #1956). It
-  // linked to `/` until 2026-10-06, sending a reader to find the demo again.
   const mainForms = page.getByRole("main").locator("form");
   await expect(mainForms).toHaveCount(1);
-  const demoDoor = page.getByRole("main").getByRole("button", { name: "Try the live demo" });
-  await expect(demoDoor).toBeVisible();
-  await expect(demoDoor).not.toHaveClass(/bg-primary/);
-  await expect(mainForms.locator('input[name="source"]')).toHaveValue("onboard-demo");
-  // A link that opens nothing says so, and offers the same door.
+  await expect(mainForms.locator('input[name="source"]')).toHaveValue("onboard-closed");
+  await expect(
+    page.getByRole("main").getByRole("button", {
+      name: diverTranslator("en-US")("marketing.setUp.submit"),
+      exact: true,
+    }),
+  ).toBeVisible();
+  // An invalid setup key takes the same path and never enters the destination URL.
   await page.goto("/onboard?setup=not-the-key-not-the-key-not-the-key");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "This setup link no longer works",
-  );
+  await expect(page).toHaveURL(/\/get-set-up\?from=onboard-closed$/);
+  await expect(page.getByLabel("Shop name")).toBeVisible();
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
-  // And the demo door opens the demo, not the homepage.
-  await page.getByRole("main").getByRole("button", { name: "Try the live demo" }).click();
-  await expect(page).toHaveURL(/\/shop\//);
 });
 
 test("the setup link opens the form, which answers the hesitation it creates", async ({ page }) => {

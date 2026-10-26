@@ -140,7 +140,8 @@ test.describe("contact import — specialty cards", () => {
     // budget even though no individual step is stuck.
     test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/settings/import");
-    // The honesty table now says specialty cards come across.
+    // The full provenance reference remains reachable below the upload workflow.
+    await page.getByText("What comes across", { exact: true }).click();
     await expect(
       page.getByText("Specialty certifications (deep, wreck, night, drysuit)"),
     ).toBeVisible();
