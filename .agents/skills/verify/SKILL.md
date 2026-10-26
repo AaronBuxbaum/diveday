@@ -27,31 +27,19 @@ Before every commit:
 
 Before every push:
 
-6. **`pnpm verify:push --quick`**, the default before a push (Aaron, 2026-10-16: batch work into
-   large stacked PRs, don't wait on the full validation, fix forward when CI fails): `pnpm regen`
-   and a clean tree, lint, typecheck, `check:repo`, the `guards` project and `vitest related` over
-   the diff. Minutes, no browser. Push when it is green, open or update the PR, and work CI's
-   answer: a red job is the next commit on the same layer, not a reason to have waited.
-   **`pnpm verify:push`** (no flag) is the full run, worth its hour only when you want the
-   browser's answer before CI's: the whole unit suite in CI's four shards and every Playwright
-   spec the diff reaches (`pnpm e2e:affected` prints them and why). Either run ends with what it
-   did not run: say "verify:push --quick green" or "verify:push green", never "all tests pass
-   locally". Independent static checks finish together and report every failure. Dependent later stages stop after a failed prerequisite; their omission is explicit. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
-   (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
-   layer below's CI first: on a red base the full run re-runs the files CI names and stamps only
-   when they pass here (a red job naming no file needs `--base-red <file…>`); `--quick` names them
-   in a warning and stamps, and the base's owner fixes them. A merge-only push (nothing of the
-   branch's own since its last push) runs static checks without the unit suite. It also replays what this branch's own last red CI run
-   names (unit files, specs, captures), so a fix is checked here, not by CI's next round. A red
-   **Visual capture** shard is a functional failure, not a pixel diff. The reasons
-   and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
-7. **One validated push per round.** Commit as often as you like; push once, when
-   `verify:push --quick` is green for the round's work, because each push cancels the CI run of the one
-   before it (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
-   A push without a green run is right only when the `unpushed-work` hook is saving work before
-   a turn ends, or when you push to learn what only CI can answer; write the reason in front of
-   the command (`DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`) and in the PR. "Red on main" or
-   "not mine" is never one: the guard refuses it, since that push is red on every layer above.
+6. **Push; CI is the gate** (Aaron, 2026-10-25: "remove the push guard and the verify:push
+   requirement"). Nothing refuses a `git push`. Push once the round's work is committed, open or
+   update the PR, and work CI's answer: a red job is the next commit on the same layer, fixed
+   forward. **`pnpm verify:push --quick`** is optional when you want a local answer first: regen
+   and a clean tree, lint, typecheck, `check:repo`, the `guards` project, `vitest related` over the
+   diff, and a replay of what this branch's last red CI run named. **`pnpm verify:push`** (no
+   flag) adds the whole unit suite and every Playwright spec the diff reaches. Either ends with
+   what it did not run: say "verify:push --quick green", never "all tests pass locally". A red
+   **Visual capture** shard is a functional failure, not a pixel diff. Background:
+   [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
+7. **One push per round.** Commit as often as you like; push once per round, because each push
+   cancels the CI run of the one before it (the measurement is in
+   [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
 8. **A PR body** names its reviews in the template's `## Reviews launched` section, one line per
    reviewer with its answer on the same line; `scripts/guard-pr-body.mjs` runs CI's check over
    the body before `create_pull_request` or `update_pull_request` sends it.

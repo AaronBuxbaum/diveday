@@ -33,7 +33,7 @@ a guard that goes green. "Looks right" is not one.
 
 ## Verification
 The exact commands to run, focused (`pnpm test <file> --reporter=dot`,
-`pnpm e2e <spec> --reporter=line`, `node scripts/check-<name>.mjs`), then `pnpm verify:push --quick`.
+`pnpm e2e <spec> --reporter=line`, `node scripts/check-<name>.mjs`); then push, and CI is the gate.
 
 ## Hand back
 Write the full result to <path>, then hand back that path plus at most ten lines: the commit

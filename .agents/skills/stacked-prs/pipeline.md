@@ -28,9 +28,7 @@ Three things to know, and none of them is a step:
   bottom-up and atomically, so a guessed order is first noticed as the wrong pull request having
   landed. If a chain of yours has not become a stack, that log says why. A **fork** is the one
   refusal that also speaks: the registrar posts a single comment on the refused layer naming both
-  tips, so the owning thread's PR-activity subscription wakes it, and `scripts/guard-push.mjs`
-  refuses the push that would make the fork, naming the current top and the `git rebase --onto`
-  that moves the branch onto it (#2587).
+  tips, so the owning thread's PR-activity subscription wakes it (#2587).
 - **Nothing here dissolves one.** `POST /repos/{owner}/{repo}/stacks/{n}/unstack` is a human's call
   and leaves ordinary chained-base pull requests behind.
 

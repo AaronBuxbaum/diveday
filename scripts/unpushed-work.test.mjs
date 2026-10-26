@@ -54,7 +54,7 @@ describe("the reason", () => {
 
   it("is one command to run, so the extra turn a block costs is a single tool call", () => {
     const reason = reasonFor({ unpushed: 2, branch: "claude/feature" });
-    expect(reason).toContain("`pnpm verify:push && git push -u origin claude/feature`");
+    expect(reason).toContain("`git push -u origin claude/feature`");
     expect(reason.split("\n").length).toBeLessThanOrEqual(3);
     expect(reason.length).toBeLessThan(500);
   });

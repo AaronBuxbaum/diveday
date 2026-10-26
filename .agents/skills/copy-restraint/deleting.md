@@ -12,7 +12,7 @@ three ship together:
 3. Delete the same key from `src/i18n/locales/es-ES/…` — `pnpm check:locale` fails on a key that
    exists in one locale and not the other, in **either** direction.
 
-Then `pnpm verify:push`, which runs every spec still quoting a sentence you deleted — and, because a
+Then `pnpm e2e:affected`, which names every spec still quoting a sentence you deleted — and, because a
 deleted paragraph changes a layout, look at the surface in light ([verify](../verify/SKILL.md)).
 
 Deleting copy usually **lowers** the `check:copy` / `check:domain-strings` counts, which is fine:

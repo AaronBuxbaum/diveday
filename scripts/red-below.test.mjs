@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { branchOf, pushWarning, redBelowMessage, unansweredRed } from "./red-below.mjs";
+import { branchOf, redBelowMessage, unansweredRed } from "./red-below.mjs";
 
 const red = (over = {}) => ({
   red: ["Playwright shard 2/6", "Unit tests shard 1/4"],
@@ -76,65 +76,5 @@ describe("the message", () => {
     expect(branchOf("origin/claude/x")).toBe("claude/x");
     expect(branchOf("main")).toBe("main");
     expect(branchOf(undefined)).toBe("");
-  });
-});
-
-describe("the warning at push time", () => {
-  const git =
-    (answers = {}) =>
-    (args) => {
-      const key = args.join(" ");
-      if (key in answers) return answers[key];
-      if (key === "rev-parse --abbrev-ref HEAD") return "claude/thread-2-reader";
-      if (key === "rev-parse --verify --quiet origin/claude/thread-1-schema") return "b".repeat(40);
-      if (key === "diff --name-only origin/claude/thread-1-schema...HEAD") return "src/a.ts";
-      return null;
-    };
-  const pulls = () => [
-    { number: 2932, headRefName: "claude/thread-1-schema", baseRefName: "main" },
-    { number: 2936, headRefName: "claude/thread-2-reader", baseRefName: "claude/thread-1-schema" },
-  ];
-
-  it("reads the pull request's base and that layer's CI, at the base's own sha", () => {
-    const asked = [];
-    const text = pushWarning({
-      git: git(),
-      pulls,
-      readVerdict: (sha) => {
-        asked.push(sha);
-        return red();
-      },
-      stamp: { base: "origin/claude/thread-1-schema", baseCi: { red: [], ran: [] } },
-    });
-    expect(asked).toEqual(["b".repeat(40)]);
-    expect(text).toContain("`claude/thread-1-schema` (#2932)");
-  });
-
-  it("stays quiet when the stamp replayed the base's red files", () => {
-    const stamp = {
-      baseCi: { red: red().red, ran: ["src/lib/clock.test.ts", "e2e/booking.spec.ts"] },
-    };
-    expect(pushWarning({ git: git(), pulls, readVerdict: () => red(), stamp })).toBeNull();
-  });
-
-  it("falls back to the stamp's base, then main, without a pull request", () => {
-    const asked = [];
-    const readVerdict = (sha) => {
-      asked.push(sha);
-      return red({ red: [], files: [], specs: [] });
-    };
-    pushWarning({
-      git: git({ "rev-parse --verify --quiet origin/main": "m".repeat(40) }),
-      pulls: () => [],
-      readVerdict,
-    });
-    expect(asked).toEqual(["m".repeat(40)]);
-  });
-
-  it("is null off a branch, or when the base is not fetched", () => {
-    const detached = git({ "rev-parse --abbrev-ref HEAD": "HEAD" });
-    expect(pushWarning({ git: detached, pulls, readVerdict: () => red() })).toBeNull();
-    const unfetched = git({ "rev-parse --verify --quiet origin/claude/thread-1-schema": null });
-    expect(pushWarning({ git: unfetched, pulls, readVerdict: () => red() })).toBeNull();
   });
 });

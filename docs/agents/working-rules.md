@@ -162,7 +162,7 @@ runs. Pass args directly. The shell guard refuses the bare form.
   ([docs/agents/verifying.md](verifying.md)).
 - **Verify before commit, and let CI run anything whole.** The checklist is the **verify** skill,
   and nowhere else; the line between what you run and what CI runs, and why, is
-  [docs/agents/verifying.md](verifying.md). `pnpm verify:push --quick` runs before every push (`scripts/guard-push.mjs` holds it; the full run, with every affected browser spec, is optional since Aaron's 2026-10-16 call to batch into large stacked PRs and fix forward), and reads the layer below's CI: a push on a red base is a red run on every layer above, so it is stamped only when this layer makes the base's red tests pass here. Push once per round, when the checklist is green: each
+  [docs/agents/verifying.md](verifying.md). Nothing gates a push: a plain `git push` works, CI is the gate, and a red run is fixed forward (Aaron, 2026-10-25: "remove the push guard and the verify:push requirement"). `pnpm verify:push --quick` is an optional local run when you want an answer before CI's. Push once per round: each
   push cancels the CI run of the one before. Open the PR before it is green when that is the
   fastest way to learn what is broken, say in the body what you ran and what you did not, and work
   what comes back — a red PR you are driving is fine, a red PR you have stopped driving is not.

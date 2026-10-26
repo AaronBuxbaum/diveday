@@ -12,7 +12,6 @@ import {
   papercutLine,
   parseLog,
   readLog,
-  recordOverride,
   recordRefusal,
   refusalLine,
   repeatedRefusal,
@@ -59,7 +58,6 @@ describe("the previous session's tally", () => {
       session: "prev",
       count: 3,
       byHook: { "guard-bash": 2, "guard-read": 1 },
-      overrides: 0,
     });
   });
 
@@ -115,38 +113,5 @@ describe("asking for a papercut", () => {
     expect(repeatedRefusal([tail("a", 0), tail("b", 1)], { now })).toBeNull();
     expect(repeatedRefusal([tail("a", 0), tail("b", 1), tail("c", 8)], { now })).toBeNull();
     expect(papercutLine(null)).toBe("");
-  });
-});
-
-describe("an escape hatch someone used", () => {
-  it("is logged with its reason, apart from the refusals", () => {
-    const root = mkdtempSync(path.join(os.tmpdir(), "hook-log-"));
-    mkdirSync(path.join(root, ".claude"));
-    recordOverride("guard-push", "saving work before the container is reclaimed", {
-      session: "s1",
-      root,
-      detail: "abc123",
-    });
-    expect(readLog({ root })).toEqual([
-      expect.objectContaining({
-        session: "s1",
-        hook: "guard-push",
-        kind: "override",
-        reason: "saving work before the container is reclaimed",
-        detail: "abc123",
-      }),
-    ]);
-  });
-
-  it("is counted in the previous session's line, even in a session nothing refused", () => {
-    const entries = [{ session: "prev", hook: "guard-push", kind: "override", reason: "r" }];
-    const summary = lastSessionRefusals(entries, "now");
-    expect(summary).toEqual({ session: "prev", count: 0, byHook: {}, overrides: 1 });
-    expect(refusalLine(summary)).toBe(
-      "1 push past verify:push last session (DIVEDAY_PUSH_UNVERIFIED): say why in the PR",
-    );
-    expect(refusalLine({ count: 2, byHook: { "guard-bash": 2 }, overrides: 2 })).toBe(
-      "2 hook refusals last session (guard-bash 2): if one fought you, add a papercut (docs/agents/papercuts.md); 2 pushes past verify:push (DIVEDAY_PUSH_UNVERIFIED): say why in the PR",
-    );
   });
 });

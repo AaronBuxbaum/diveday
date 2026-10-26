@@ -135,11 +135,10 @@ function fetchAtStart(cwd, git, source) {
  *
  * It runs on every prompt too (`source: "prompt"`), without a fetch of its own: the clone's
  * `origin/main` moves whenever any session in it fetches. Startup alone was not enough. A
- * coordinator or a long thread never restarts, and the push guard every session runs is
- * `$CLAUDE_PROJECT_DIR/scripts/guard-push.mjs`, read from this checkout on each call. On
- * 2026-10-14 the checkout sat at 81245edd0, before #2584, for hours after #2584 merged, so
- * threads whose own branch had the fixed guard were still refused and asked Aaron to say
- * "push it".
+ * coordinator or a long thread never restarts, and every hook a session runs is read from
+ * `$CLAUDE_PROJECT_DIR`, this checkout, on each call. On 2026-10-14 the checkout sat at
+ * 81245edd0, before #2584, for hours after #2584 merged, so threads whose own branch had a fixed
+ * hook were still refused by the old one.
  *
  * `DIVEDAY_SESSION_FASTFORWARD=0` opts out. `git` and `exists` are injectable for the tests.
  */
@@ -549,7 +548,7 @@ export function sessionBlock(
       "",
       "After compaction, the rules a summary drops:",
       "- Re-read TaskList; the task list is the queue, a sentence in a message is not.",
-      "- Before you commit: the guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`; before you push, `pnpm verify:push`. The whole suite belongs to CI.",
+      "- Before you commit: the guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`; then push. CI is the gate: fix a red run forward.",
       '- A bug, safety gap or decision you are not acting on becomes a `needs-triage` issue; anything else, a "Notes" comment on the PR. Never a closing remark.',
       "- A turn ends done, filed, or handed over in as many words. Never on an intention.",
       "- Read a large file by range after a Grep, never whole; the hooks refuse the whole-file form.",

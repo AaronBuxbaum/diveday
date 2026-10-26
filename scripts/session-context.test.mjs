@@ -177,7 +177,7 @@ describe("the session-start block", () => {
   it("adds the post-compaction reminders only after a compaction", () => {
     const block = sessionBlock(checkoutState(tracked), { source: "compact" });
     expect(block).toContain("After compaction");
-    expect(block).toContain("verify:push");
+    expect(block).toContain("CI is the gate");
     expect(block).toContain("needs-triage");
   });
 

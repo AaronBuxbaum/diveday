@@ -11,8 +11,8 @@
 //   pnpm stack:sync --chain    the same for every layer, bottom first, in local worktrees only
 //   pnpm stack:sync --plan     print the chain and what would merge, change nothing
 //
-// It merges and never pushes: a push goes through `pnpm verify:push` and its stamp
-// (scripts/guard-push.mjs), one layer's CI at a time (the stacked-prs skill). It never rebases,
+// It merges and never pushes: a push is the thread's own, one layer's CI at a time (the
+// stacked-prs skill). It never rebases,
 // never force-pushes, never switches a checkout's branch and never stashes. It stops on a
 // conflict with the merge left open and the files named, and refuses a worktree with
 // uncommitted changes, a merge already in progress, or a branch behind its own remote.
@@ -161,9 +161,9 @@ export function syncLayer({ git, dir, branch, target, plan = false }) {
   };
 }
 
-/** What a synced layer does next, never run from here: regen, the gate, then the push. */
+/** What a synced layer does next, never run from here: regen, then the push. */
 export function nextSteps(dir) {
-  return `cd ${dir} && pnpm regen (commit what it changed) && pnpm verify:push --quick && git push`;
+  return `cd ${dir} && pnpm regen (commit what it changed) && git push`;
 }
 
 /**

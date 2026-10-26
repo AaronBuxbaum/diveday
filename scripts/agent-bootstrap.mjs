@@ -18,7 +18,7 @@ export function capabilities(provider) {
         ? "host automatic loading must be verified"
         : "read matching rules explicitly",
     formatting: "pnpm exec biome check --write <owned-files>",
-    verification: "pnpm verify:push --quick",
+    verification: "pnpm lint && pnpm typecheck; CI is the gate",
     resume: "pnpm task:state",
     limits: "Does not observe global prompts, plugin tokens, host hooks, or cached model input.",
   };

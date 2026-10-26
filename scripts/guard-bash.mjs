@@ -315,7 +315,7 @@ function wholeSuiteViolation(segment, scripts) {
   if (!isUnfocused(args)) return null;
 
   const focused = {
-    test: "`pnpm test <file> --reporter=dot` for the test you are iterating on and `pnpm verify:push` before you push",
+    test: "`pnpm test <file> --reporter=dot` for the test you are iterating on; CI runs the whole suite",
     e2e: "`pnpm e2e <spec> --reporter=line` (or `pnpm e2e:run <spec>` after one `pnpm e2e:build`)",
     "e2e:run": "`pnpm e2e:run <spec> --reporter=line`",
     check:
