@@ -692,7 +692,10 @@ for (const scheme of ["light", "dark"] as const) {
         // "Runs every … · next …" (fourth UX review, item 35).
         await page.goto(publicTripUrl(page.url().split(/[?#]/)[0] ?? page.url()));
         await page.getByText(/^Runs every /).waitFor();
-        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await capture(page, "public-trip-run-line", scheme);
       });
 

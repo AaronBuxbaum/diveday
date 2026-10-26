@@ -66,7 +66,10 @@ test.describe("staff-prepared trip", () => {
       .filter({ hasText: title })
       .getByRole("link")
       .click();
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name", { exact: true }).fill("Wren Halloway");
     await page.getByLabel("Email", { exact: true }).fill(`fare-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book/ }).click();
@@ -124,7 +127,10 @@ test.describe("staff-prepared trip", () => {
       .getByRole("link")
       .click();
     // The booking form is controlled, so wait for hydration before typing.
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name", { exact: true }).fill("Nemo Quinn");
     // Same frozen-clock suffix convention as the trip title above.
     await page.getByLabel("Email", { exact: true }).fill(`nemo-${e2eNow().getTime()}@example.com`);
@@ -325,7 +331,7 @@ test("a booked diver's thread carries the packing list, and no briefing deck", a
     .getByRole("link")
     .first()
     .click();
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Ada Marlowe");
   await page.getByLabel("Email", { exact: true }).fill(`ada-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
@@ -366,7 +372,7 @@ test("a link into one step of the thread opens that step", async ({ page }) => {
     .getByRole("link")
     .first()
     .click();
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Deep Linker");
   await page.getByLabel("Email", { exact: true }).fill(`deep-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
@@ -413,7 +419,7 @@ test("a returning diver is asked once, and answering one fact leaves the others 
     .getByRole("link")
     .first()
     .click();
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Rosa Delgado");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: /^Book/ }).click();

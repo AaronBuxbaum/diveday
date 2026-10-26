@@ -397,7 +397,10 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByRole("link", { name: "Book this date" }).last().click();
     // The booking form is controlled, so wait for hydration before typing —
     // otherwise a fill can land before React attaches and gets silently lost.
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name").fill(diverName);
     await page.getByLabel("Email").fill(`late-bloomer-${stamp}@example.com`);
     await acceptAgeAttestation(page);

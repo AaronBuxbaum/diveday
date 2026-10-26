@@ -106,7 +106,10 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ hasText: EASING_BACK_TRIP })
           .getByRole("link", { name: EASING_BACK_TRIP })
           .click();
-        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
         await page
           .getByLabel("Email", { exact: true })

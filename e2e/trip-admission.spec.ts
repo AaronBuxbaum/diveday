@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
@@ -80,7 +81,7 @@ test.describe("as owner", () => {
     // And the way through, beside it: a level is not a refusal (issue #1866).
     await expect(requirement).toContainText("Not yet at that level? Ask the shop.");
     await expect(page.getByRole("heading", { name: "Who this trip is for" })).toHaveCount(0);
-    const partySize = page.getByLabel("People");
+    const partySize = page.getByLabel("People", { exact: true });
     await expect(partySize).toHaveAttribute("data-hydrated", "true");
     const noteBox = await requirement.boundingBox();
     const formBox = await partySize.boundingBox();
@@ -118,7 +119,10 @@ test.describe("as owner", () => {
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);
     await page.context().clearCookies();
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
 
     // The requirement is still disclosed in the form — a property of the
     // trip, and the half a deciding diver needs.
@@ -408,7 +412,9 @@ test.describe("with Accept-Language: es", () => {
     // `useTranslations` — these labels only exist if a `DiverIntlProvider` sits
     // above it with the diver namespaces loaded.
     await expect(page.getByRole("heading", { name: "Reserva tu plaza" })).toBeVisible();
-    const partySize = page.getByLabel("Número de buceadores");
+    const partySize = page.getByLabel(diverTranslator("es-ES")("party.numberOfDivers"), {
+      exact: true,
+    });
     await expect(partySize).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Nombre", { exact: true }).fill("Nora Quinn");
     await page

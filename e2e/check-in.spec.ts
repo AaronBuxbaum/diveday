@@ -622,7 +622,10 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
     // The boat is full, said by the page a diver reads — which is what makes
     // the wait list the form on offer rather than the booking one.
     await expect(visitor.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
-    await expect(visitor.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(visitor.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await visitor.getByLabel("Name").fill("Nora Quinn");
     await visitor.getByLabel("Email").fill(`waitlist-${e2eNow().getTime()}@example.com`);
     await visitor.getByRole("button", { name: "Join the wait list" }).click();

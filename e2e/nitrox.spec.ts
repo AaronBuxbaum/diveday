@@ -111,7 +111,10 @@ test.describe("a shop that stops filling nitrox", () => {
       .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
       .click();
     // The booking form is controlled, so wait for hydration before typing.
-    await expect(anon.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(anon.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     // Read off the trip page itself, before booking: a booked diver lands on
     // `/ready/<token>`, which names no trip (ADR 20260820-one-page-after-booking).
     // Reused below instead of clicking back through the schedule as staff.
@@ -285,7 +288,7 @@ test("the nitrox request is hidden until the diver files a nitrox card, then app
     .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   // Unique email for this spec's own diver; the e2eNow() suffix keeps every
   // test-side timestamp anchored to the frozen clock (helpers.ts). Isolation
@@ -355,7 +358,7 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   await page.goto("/s/blue-mantis/courses/open-water-diver");
   await page.getByRole("link", { name: "Book this date" }).first().click();
   await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Owen Reid");
   await page.getByLabel("Email").fill(`owen+${e2eNow().getTime()}@example.com`);
   // The course carries the agency's minimum age, so this booking form asks

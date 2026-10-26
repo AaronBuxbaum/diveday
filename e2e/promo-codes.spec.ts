@@ -313,7 +313,10 @@ test.describe("as owner", () => {
     await page.context().clearCookies();
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
     // The booking form is controlled, so wait for hydration before typing.
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
   }
 
   test("a diver on a payable trip gets the promo box, and the shop's live code is accepted", async ({

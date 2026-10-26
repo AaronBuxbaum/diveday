@@ -44,7 +44,7 @@ test("touch navigation reaches the course catalog and returns to the schedule", 
 test("touch booking and guardian signing stay complete after reload", async ({ page }) => {
   await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Book this boat" }).tap();
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Mobile Minor");
   await page.getByLabel("Email", { exact: true }).fill("mobile-minor@example.com");
   await page.getByRole("checkbox", { name: /^Under 18/ }).tap();

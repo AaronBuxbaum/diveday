@@ -79,7 +79,10 @@ test.describe("refunds", () => {
       .getByRole("link")
       .click();
     // The booking form is controlled, so wait for hydration before typing.
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();

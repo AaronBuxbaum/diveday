@@ -80,7 +80,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   expect(await calendar.text()).toContain("BEGIN:VCALENDAR");
 
   // The booking form is controlled, so wait for hydration before typing.
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
   await acceptAgeAttestation(page);
@@ -127,7 +127,7 @@ test("a gear-included course session quotes no rental at booking", async ({
     .first()
     .click();
   await expect(page).toHaveURL(/\/trips\/[0-9a-f-]{36}/);
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await expect(page.getByLabel(diver("bookingGear.needGear"))).toBeVisible();
 
   await page.goto(`/s/${SHOP}`);
@@ -136,7 +136,7 @@ test("a gear-included course session quotes no rental at booking", async ({
     .first()
     .click();
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
-  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   // Pay at booking is on here too: the button says so.
   await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
   await expect(page.getByLabel(diver("bookingGear.needGear"))).toHaveCount(0);
@@ -634,7 +634,10 @@ test.describe("staff", () => {
     await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
 
     // The booking form is controlled, so wait for hydration before typing.
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     const diver = `Ravi ${e2eNow().getTime()}`;
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
@@ -716,7 +719,10 @@ test.describe("staff", () => {
     // The 9th diver hits the ratio, not capacity.
     await page.goto(publicTripUrl(tripUrl));
     // The booking form is controlled, so wait for hydration before typing.
-    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
     await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
     await acceptAgeAttestation(page);
@@ -1344,7 +1350,10 @@ test("a course's learning materials reach the student's thread, and staff tick t
   const diverPage = makeActivitySafe(await diverContext.newPage());
   await diverPage.goto(`/s/${slug}/courses/open-water-diver`);
   await diverPage.getByRole("link", { name: "Book this date" }).first().click();
-  await expect(diverPage.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(diverPage.getByLabel("People", { exact: true })).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   const diver = `Mira ${e2eNow().getTime()}`;
   await diverPage.getByLabel("Name").fill(diver);
   await diverPage.getByLabel("Email").fill(`mira-${e2eNow().getTime()}@example.com`);
@@ -1407,7 +1416,10 @@ test("a course that includes its gear asks the student for sizes, not money", as
   const diverPage = makeActivitySafe(await diverContext.newPage());
   await diverPage.goto(`/s/${slug}/courses/open-water-diver`);
   await diverPage.getByRole("link", { name: "Book this date" }).first().click();
-  await expect(diverPage.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
+  await expect(diverPage.getByLabel("People", { exact: true })).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   await diverPage.getByLabel("Name").fill(`Tove ${e2eNow().getTime()}`);
   await diverPage.getByLabel("Email").fill(`tove-${e2eNow().getTime()}@example.com`);
   await acceptAgeAttestation(diverPage);
