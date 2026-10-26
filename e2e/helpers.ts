@@ -1136,8 +1136,9 @@ export async function openPaperWaiverForm(scope: Page | Locator) {
  * fields render once its summary is clicked, with no hydration to wait on.
  */
 export async function writeCourseForm(page: Page, title: string, body: string): Promise<void> {
-  await page.goto("/shop/blue-mantis/waivers");
-  await page.locator("#course-form-new > summary").click();
+  await page.goto("/shop/blue-mantis/waivers#course-form-new");
+  await openIfClosed(page.locator("#course-forms"));
+  await openIfClosed(page.locator("#course-form-new"));
   await page.locator("#course-form-title-new").fill(title);
   await page.locator("#course-form-body-new").fill(body);
   await page.getByRole("button", { name: "Add form" }).click();

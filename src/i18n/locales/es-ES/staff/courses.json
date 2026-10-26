@@ -95,7 +95,6 @@
     "materialsDescription": "Cada alumno lo recibe con su reserva y otra vez una semana antes del día 1.",
     "dayByDayLegend": "Día a día",
     "faqLegend": "Preguntas de los buceadores",
-    "spanishLegend": "Español",
     "save": "Guardar",
     "scheduleSession": "Programar una sesión",
     "saving": "Guardando…",
@@ -154,8 +153,10 @@
       "pasteWording": "Pega el texto de la agencia",
       "awaitingText": "Ningún estudiante lo firma hasta que tenga su texto.",
       "addImpact": "Un formulario agregado ahora pide firmarlo a {students, plural, one {# estudiante} other {# estudiantes}} de {sessions, plural, one {# sesión próxima} other {# sesiones próximas}}.",
-      "removeNotSaved": "No se guardó."
-    }
+      "removeNotSaved": "No se guardó.",
+      "displayOrder": "Orden de presentación"
+    },
+    "summarySpanishLabel": "Resumen del curso en español"
   },
   "dayByDay": {
     "dayLabel": "Día {number}",

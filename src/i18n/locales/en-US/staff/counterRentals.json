@@ -94,7 +94,8 @@
       "seen": "Card seen",
       "record": "Record card",
       "recording": "Recording…"
-    }
+    },
+    "review": "Review rental"
   },
   "invoiceLine": "{label} rental, {days, plural, one {# day} other {# days}}",
   "ticket": {

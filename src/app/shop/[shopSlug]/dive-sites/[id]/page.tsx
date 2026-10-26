@@ -55,7 +55,7 @@ import {
   saveDiveSiteAction,
   undoDiveSiteTemplateAction,
 } from "./actions";
-import { TEMPLATE_FIELD_KEYS } from "./template-field-keys";
+import { TemplateValueComparison } from "./TemplateValueComparison";
 
 export const instant = true;
 
@@ -310,21 +310,14 @@ export default async function EditDiveSitePage({
               })}
             </p>
             {templateUpdate.diff.length > 0 ? (
-              <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-                {templateUpdate.diff.map((change) => (
-                  <li
-                    key={change.field}
-                    className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2"
-                  >
-                    <span>{t(TEMPLATE_FIELD_KEYS[change.field])}</span>
-                    <span className="shrink-0 text-xs font-medium text-muted">
-                      {change.shopChanged
-                        ? t("diveSites.edit.templateUpdates.shopEdit")
-                        : t("diveSites.edit.templateUpdates.templateChange")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <TemplateValueComparison
+                changes={templateUpdate.diff}
+                fieldGuideOn={shop.fieldGuideEnabled}
+                depthUnit={depthUnit}
+                locale={locale}
+                t={t}
+                diverT={diverT}
+              />
             ) : (
               <p className="mt-4 text-sm text-muted">
                 {t("diveSites.edit.templateUpdates.noFieldChanges")}

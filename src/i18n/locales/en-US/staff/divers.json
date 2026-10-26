@@ -344,7 +344,8 @@
     "acknowledge": "I confirmed with the diver (or their ID) that these records are one person.",
     "submit": "Merge into {name}",
     "pending": "Merging…",
-    "confirm": "Merge {source} into {kept}? {source}’s record is deleted and everything on it moves to {kept}."
+    "confirm": "Merge {source} into {kept}? {source}’s record is deleted and everything on it moves to {kept}.",
+    "noContact": "No contact details on file"
   },
   "erase": {
     "heading": "Erase personal data",

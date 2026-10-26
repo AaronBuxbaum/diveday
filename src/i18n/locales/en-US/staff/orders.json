@@ -27,12 +27,9 @@
     "country": "Country code",
     "countryPlaceholder": "US",
     "lineItemsLegend": "Line items",
-    "lineItemKindAria": "Line item {number} kind",
     "lineItemDescriptionPlaceholder": "Description",
-    "lineItemDescriptionAria": "Line item {number} description",
     "quantityLabel": "Quantity",
-    "unitPriceLabel": "Unit price (USD)",
-    "unitPricePlaceholder": "$0.00",
+    "unitPriceLabel": "Unit price ({currency})",
     "sending": "Sending…",
     "submit": "Create and send invoice",
     "kind": {
@@ -44,7 +41,14 @@
       "deposit": "Deposit",
       "merchandise": "Merchandise",
       "other": "Other"
-    }
+    },
+    "lineItemGroup": "Item {number}",
+    "lineItemKindLabel": "Kind",
+    "lineItemDescriptionLabel": "Description",
+    "addItem": "Add another item",
+    "removeItem": "Remove item",
+    "removeItemAria": "Remove item {number}",
+    "subtotal": "Subtotal"
   },
   "collection": {
     "cash": "Cash",

@@ -16,7 +16,12 @@ import type { InvoiceCustomerAddress } from "@/lib/payments/invoicing";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { LINE_ITEM_ROWS } from "./order-form";
+import {
+  invoiceAttemptFromForm,
+  invoiceRowIsBlank,
+  invoiceTargetFromKey,
+  orderRowsFromForm,
+} from "./order-form";
 
 // Bounds match the house convention for a bounded dollar-to-cents amount
 // (courses edit action: .max(100_000)) and an explicit integer quantity
@@ -76,12 +81,20 @@ export async function createOrderAction(formData: FormData) {
     redirect(stepUpChallengeUrl(session.user.shopSlug, "money", newOrder));
   }
 
+  // Refusals keep the actual route target, using only bounded UUID prefills.
+  // These fields restore display context; the person/booking billing gates remain below.
+  const target = invoiceTargetFromKey(formData.get("invoiceTarget"));
+  const refusedOrder = (reason: string) =>
+    noticeUrl(newOrder, reason, {
+      bookingId: target?.bookingId ?? undefined,
+      personId: target?.personId ?? undefined,
+    });
   const form = readForm(orderForm, formData);
   const parsedPersonId = personIdSchema.safeParse(form.personId);
   const parsedBookingId = bookingIdSchema.safeParse(form.bookingId || null);
   const parsedDescription = orderDescriptionSchema.safeParse(form.description);
   if (!parsedPersonId.success || !parsedBookingId.success || !parsedDescription.success) {
-    redirect(noticeUrl(newOrder, "invalid"));
+    redirect(refusedOrder("invalid"));
   }
   const personId = parsedPersonId.data;
   const bookingId = parsedBookingId.data;
@@ -106,18 +119,21 @@ export async function createOrderAction(formData: FormData) {
     : undefined;
 
   const lineItems: NewOrderLineItem[] = [];
-  for (let i = 0; i < LINE_ITEM_ROWS; i++) {
-    const rawDescription = String(form[`description-${i}`] ?? "").trim();
-    if (!rawDescription) continue;
-    const itemDescription = lineDescriptionSchema.safeParse(rawDescription);
-    const kind = lineItemKindSchema.safeParse(form[`kind-${i}`] ?? null);
-    const quantity = quantitySchema.safeParse(form[`quantity-${i}`] ?? "1");
-    const dollars = dollarsSchema.safeParse(form[`unitAmount-${i}`] ?? null);
+  const rows = orderRowsFromForm(formData);
+  if (!rows) redirect(refusedOrder("invalid"));
+  for (const row of rows) {
+    if (invoiceRowIsBlank(row)) continue;
+    const itemDescription = lineDescriptionSchema.safeParse(row.description);
+    const kind = lineItemKindSchema.safeParse(row.kind);
+    const quantity = quantitySchema.safeParse(row.quantity);
+    const dollars = dollarsSchema.safeParse(
+      row.unitAmount.trim() === "" ? Number.NaN : row.unitAmount,
+    );
     // A filled-in row with an out-of-bounds value fails the whole submission
     // rather than silently dropping the row — a staff member who typed four
     // line items should never end up with a three-line invoice unexplained.
     if (!itemDescription.success || !kind.success || !quantity.success || !dollars.success) {
-      redirect(noticeUrl(newOrder, "invalid"));
+      redirect(refusedOrder("invalid"));
     }
     lineItems.push({
       kind: kind.data,
@@ -128,7 +144,7 @@ export async function createOrderAction(formData: FormData) {
   }
 
   if (!personId || lineItems.length === 0) {
-    redirect(noticeUrl(newOrder, "invalid"));
+    redirect(refusedOrder("invalid"));
   }
 
   const result = await createOrder(db, {
@@ -152,7 +168,7 @@ export async function createOrderAction(formData: FormData) {
     // `not_connected`, `stripe_failed`); `noticeUrl` normalises that to the one
     // kebab spelling the page's `NOTICE_KEYS` holds, so this passes the reason
     // straight through rather than hand-translating it.
-    redirect(noticeUrl(newOrder, result.reason));
+    redirect(refusedOrder(result.reason));
   }
   // `createOrder` enqueued an `order.created` event for every connected
   // integration. Drain it after this response rather than waiting for the
@@ -160,5 +176,9 @@ export async function createOrderAction(formData: FormData) {
   // `after` still runs when the redirect below throws, which is how a Server
   // Function ends.
   dispatchIntegrationsAfterResponse();
-  revalidateAndRedirect(orders, `${orders}/${result.order.id}`);
+  const completedAttempt = invoiceAttemptFromForm(formData);
+  const completion = completedAttempt
+    ? `?invoiceCreated=${encodeURIComponent(completedAttempt)}`
+    : "";
+  revalidateAndRedirect(orders, `${orders}/${result.order.id}${completion}`);
 }

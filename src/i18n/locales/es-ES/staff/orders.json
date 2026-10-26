@@ -27,12 +27,9 @@
     "country": "Código de país",
     "countryPlaceholder": "US",
     "lineItemsLegend": "Líneas del pedido",
-    "lineItemKindAria": "Tipo de la línea {number}",
     "lineItemDescriptionPlaceholder": "Descripción",
-    "lineItemDescriptionAria": "Descripción de la línea {number}",
     "quantityLabel": "Cantidad",
-    "unitPriceLabel": "Precio unitario (USD)",
-    "unitPricePlaceholder": "$0.00",
+    "unitPriceLabel": "Precio unitario ({currency})",
     "sending": "Enviando…",
     "submit": "Crear y enviar factura",
     "kind": {
@@ -44,7 +41,14 @@
       "deposit": "Depósito",
       "merchandise": "Merchandising",
       "other": "Otro"
-    }
+    },
+    "lineItemGroup": "Artículo {number}",
+    "lineItemKindLabel": "Tipo",
+    "lineItemDescriptionLabel": "Descripción",
+    "addItem": "Agregar otro artículo",
+    "removeItem": "Eliminar artículo",
+    "removeItemAria": "Eliminar artículo {number}",
+    "subtotal": "Total sin impuestos"
   },
   "collection": {
     "cash": "Efectivo",

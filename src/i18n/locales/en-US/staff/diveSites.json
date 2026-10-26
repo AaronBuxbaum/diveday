@@ -245,7 +245,7 @@
       "keepEdits": "Apply changes, keep my edits",
       "keepEditsHint": "Only fields still matching the old template change, so your edits stay.",
       "replaceCopy": "Apply template copy",
-      "replaceCopyHint": "Use every field from the new template, while keeping your name, photos, and routes.",
+      "replaceCopyHint": "Your name, photos, routes, and fields marked Kept unchanged stay as they are.",
       "replaceConfirm": "Replace this site’s template-managed copy with the latest published version?",
       "applying": "Pulling update…",
       "replacing": "Replacing copy…",
@@ -262,7 +262,6 @@
       "fields": {
         "description": "Description",
         "locationName": "Location",
-        "coordinates": "GPS point",
         "marineLife": "Marine life",
         "marineLifeDescription": "Marine-life note",
         "difficultyLevel": "Difficulty",
@@ -281,7 +280,12 @@
         "requiredSpecialties": "Required specialties",
         "requiresNitrox": "Nitrox requirement",
         "creatures": "Field guide"
-      }
+      },
+      "current": "Current",
+      "template": "Template",
+      "empty": "Not set",
+      "kept": "Kept unchanged",
+      "minutes": "{count, plural, one {# minute} other {# minutes}}"
     },
     "upcomingCount": "{count, plural, one {# upcoming departure here} other {# upcoming departures here}}"
   },

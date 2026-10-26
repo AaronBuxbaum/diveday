@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -67,6 +68,7 @@ export function StaffCardCredentials({
     credential.renewal === "overdue" || !credential.reviewed;
   const atRest = credentials.filter(needsSomeone);
   const folded = credentials.filter((credential) => !needsSomeone(credential));
+  const dueSoon = credentials.filter((credential) => credential.renewal === "due-soon");
   const row = (credential: CardCredential) => (
     <CredentialRow
       key={credential.id}
@@ -90,22 +92,38 @@ export function StaffCardCredentials({
         id={`credentials-${personId}`}
         label={t("staffing.credentials.heading")}
         value={
-          credentials.length === 0
-            ? t("staffing.credentials.noneOnFile")
-            : missing.length > 0
-              ? missing.join(" · ")
-              : cachedListFormat(locale).format(credentials.map((credential) => credential.name))
+          credentials.length === 0 ? (
+            t("staffing.credentials.noneOnFile")
+          ) : (
+            <span className="flex flex-wrap gap-x-2 gap-y-1">
+              <span>{t("staffing.credentials.onFileCount", { count: credentials.length })}</span>
+              {missing.map((warning) => (
+                <span key={warning} className="text-base font-medium">
+                  {warning}
+                </span>
+              ))}
+              {dueSoon.length > 0 ? (
+                <span className="text-base">
+                  {t("staffing.credentials.dueSoonSummary", {
+                    names: cachedListFormat(locale).format(
+                      dueSoon.map((credential) => credential.name),
+                    ),
+                  })}
+                </span>
+              ) : null}
+            </span>
+          )
         }
       >
         {folded.length > 0 ? (
           <ul className="flex flex-col gap-2 text-sm">{folded.map(row)}</ul>
         ) : null}
-        <a
-          href="#add-credential"
+        <Link
+          href={`?credentialFor=${encodeURIComponent(personId)}#add-credential`}
           className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
         >
           {t("staffing.credentials.add")}
-        </a>
+        </Link>
       </CompactDisclosureRow>
     </div>
   );

@@ -12,7 +12,6 @@ import {
   FormStatus,
   textareaClassFor,
 } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/group-label";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusInView } from "@/components/ui/StatusInView";
 import type { CourseFormImpact, CourseFormSummary } from "@/db/course-forms";
@@ -68,14 +67,20 @@ export function CourseFormsSection({
     ) : null;
 
   return (
-    <section
-      className="mt-10 scroll-mt-24"
+    <AutoOpenDetails
+      className="group/forms mt-10 scroll-mt-24"
       id="course-forms"
-      aria-labelledby="course-forms-heading"
+      openOnHash={[
+        "course-forms",
+        "course-form-new",
+        ...forms.map((form) => `course-form-${form.id}`),
+      ]}
+      open={Boolean(notice)}
     >
-      <GroupLabel as="h2" id="course-forms-heading">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+        <DisclosureCaret className="group-open/forms:rotate-90" />
         {t("waiversStaff.courseForms.heading")}
-      </GroupLabel>
+      </summary>
       <p className="mt-2 text-sm text-muted">{t("waiversStaff.courseForms.intro")}</p>
       {statusFor("list")}
       <ul className="mt-4 flex flex-col gap-3">
@@ -174,7 +179,7 @@ export function CourseFormsSection({
           </form>
         </SectionCard>
       </AutoOpenDetails>
-    </section>
+    </AutoOpenDetails>
   );
 }
 

@@ -1,6 +1,14 @@
 "use client";
 
-import { type ReactNode, useEffect, useEffectEvent, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -82,6 +90,7 @@ export type CartWords = {
   items: { one: string; other: string };
   submit: string;
   submitting: string;
+  review: string;
   /** A tank's gas (#2257): the menu's visible label, its choices, and the card rule. */
   fillLabel: string;
   fillOptions: { value: string; label: string }[];
@@ -139,7 +148,7 @@ type CounterRentalCartProps = {
  * like nothing happened (Aaron, 2026-10-09). So a pick now answers where the
  * finger is. The kinds are a row of chips, the free units of the chosen kind
  * are tiles, and a tapped tile turns into a ticked one in place, tapped again
- * to put it back. The bill above the filtered grid keeps every pick with its price, and the
+ * to put it back. The bill below the filtered grid keeps every pick with its price, and the
  * sticky bar at the foot says how many and how much the whole time.
  *
  * **What it costs and how it is paid sit on the screen, always** (same day:
@@ -171,6 +180,8 @@ export function CounterRentalCart({
   restoreKept = null,
 }: CounterRentalCartProps) {
   const billId = useId();
+  const reviewRef = useRef<HTMLDivElement>(null);
+  const [invoiceAddressInvalid, setInvoiceAddressInvalid] = useState(false);
   const keptAnchor = useRef<HTMLInputElement>(null);
   const [pickedIds, setPickedIds] = useState<readonly string[]>([]);
   const [prices, setPrices] = useState<Record<string, string>>({});
@@ -242,6 +253,38 @@ export function CounterRentalCart({
   // Separate price fields let each raw price keep its own value-length budget.
   const keptPicked = picked.slice(0, KEPT_CART_UNITS_MAX);
   const rowError = (unit: PickerUnit) => counterRentalRowError(unit, refusal, fillOf(unit));
+  const updateInvoiceAddress = useCallback(() => {
+    setInvoiceAddressInvalid(
+      Boolean(reviewRef.current?.querySelector('input[name^="customerAddress"]:invalid')),
+    );
+  }, []);
+  useEffect(() => {
+    if (payment === "invoice") updateInvoiceAddress();
+    else setInvoiceAddressInvalid(false);
+  }, [payment, updateInvoiceAddress]);
+  const needsPrice = (raw: string) =>
+    raw.trim() === "" || !Number.isFinite(Number(raw)) || Number(raw) < 0 || Number(raw) > 100_000;
+  const needsReview =
+    picked.length > 0 &&
+    (!payment ||
+      (payment !== "none" &&
+        ((asSet && needsPrice(setFigure)) ||
+          picked.some(
+            (unit) => !(asSet && coreKinds.includes(unit.kind)) && needsPrice(priceOf(unit)),
+          ))) ||
+      picked.some(
+        (unit) =>
+          (unit.fillAria && !fillOf(unit)) || (unit.confirmLabel && !confirmed.includes(unit.id)),
+      ) ||
+      (payment === "invoice" && invoiceAddressInvalid));
+  const goToReview = () => {
+    const target =
+      reviewRef.current?.querySelector<HTMLElement>(
+        "input:invalid, select:invalid, textarea:invalid",
+      ) ?? reviewRef.current;
+    target?.scrollIntoView?.({ block: "center" });
+    target?.focus();
+  };
 
   return (
     <>
@@ -278,165 +321,92 @@ export function CounterRentalCart({
           value={priceOf(unit)}
         />
       ))}
-      <SectionCard title={words.billHeading}>
-        {picked.length === 0 ? (
-          <p className="text-sm text-muted">{words.billEmpty}</p>
-        ) : (
-          <div className="flex flex-col gap-6">
-            <ul aria-label={words.billHeading} id={billId} className="divide-y divide-border">
-              {asSet ? (
-                <li className="flex min-h-14 items-center gap-3 py-2">
-                  <p className="min-w-0 flex-1 text-sm font-medium">{words.setLabel}</p>
-                  <input
-                    type="number"
-                    name={SET_PRICE_FIELD}
-                    min={0}
-                    step={step}
-                    value={setFigure}
-                    onChange={(event) => setSetFigure(event.currentTarget.value)}
-                    aria-label={words.setLabel}
-                    placeholder={symbol}
-                    className={PRICE_BOX_CLASS}
+      <CounterRentalPicker groups={groups} pickedIds={pickedIds} toggle={toggle} words={words} />
+
+      <div
+        ref={reviewRef}
+        id={`${billId}-review`}
+        tabIndex={-1}
+        className="scroll-mb-32 scroll-mt-24"
+        onInput={(event) => {
+          if (
+            event.target instanceof HTMLInputElement &&
+            event.target.name.startsWith("customerAddress")
+          )
+            updateInvoiceAddress();
+        }}
+      >
+        <SectionCard title={words.billHeading}>
+          {picked.length === 0 ? (
+            <p className="text-sm text-muted">{words.billEmpty}</p>
+          ) : (
+            <div className="flex flex-col gap-6">
+              <ul aria-label={words.billHeading} id={billId} className="divide-y divide-border">
+                {asSet ? (
+                  <li className="flex min-h-14 items-center gap-3 py-2">
+                    <p className="min-w-0 flex-1 text-sm font-medium">{words.setLabel}</p>
+                    <input
+                      type="number"
+                      name={SET_PRICE_FIELD}
+                      required={payment !== null && payment !== "none"}
+                      max={payment === "none" ? undefined : 100_000}
+                      min={0}
+                      step={step}
+                      value={setFigure}
+                      onChange={(event) => setSetFigure(event.currentTarget.value)}
+                      aria-label={words.setLabel}
+                      placeholder={symbol}
+                      className={PRICE_BOX_CLASS}
+                    />
+                    <span aria-hidden="true" className="size-11 shrink-0" />
+                  </li>
+                ) : null}
+                {picked.map((unit) => (
+                  <CounterRentalPickedItem
+                    key={unit.id}
+                    unit={unit}
+                    inSet={asSet && coreKinds.includes(unit.kind)}
+                    price={priceOf(unit)}
+                    fill={fillOf(unit)}
+                    confirmed={confirmed.includes(unit.id)}
+                    hintId={`${billId}-fill-hint`}
+                    {...{ payment, symbol, step, words, nitroxFillMethod }}
+                    error={rowError(unit)}
+                    onPrice={(value) =>
+                      setPrices((previous) => ({ ...previous, [unit.id]: value }))
+                    }
+                    onFill={(value) =>
+                      setFills((previous) =>
+                        previous[unit.id] === value ? previous : { ...previous, [unit.id]: value },
+                      )
+                    }
+                    onConfirm={(checked) =>
+                      setConfirmed((previous) =>
+                        checked ? [...previous, unit.id] : previous.filter((id) => id !== unit.id),
+                      )
+                    }
+                    onRemove={() => toggle(unit.id)}
                   />
+                ))}
+                {picked.some((unit) => unit.fillAria !== null) && (
+                  <li id={`${billId}-fill-hint`} className="py-2 text-base text-muted">
+                    {words.fillHint}
+                  </li>
+                )}
+                <li className="flex min-h-12 items-center gap-3 pt-3">
+                  <p className="flex-1 font-medium">{words.total}</p>
+                  <p className={FIGURE_INLINE_CLASS}>{total}</p>
                   <span aria-hidden="true" className="size-11 shrink-0" />
                 </li>
-              ) : null}
-              {picked.map((unit) => {
-                const inSet = asSet && coreKinds.includes(unit.kind);
-                return (
-                  <li key={unit.id} className="flex flex-col gap-1 py-2">
-                    <input type="hidden" name={UNIT_FIELD} value={unit.id} />
-                    <div className="flex min-h-11 items-center gap-3">
-                      <p className="min-w-0 flex-1 text-base">
-                        <span className="font-medium">{unit.label}</span>
-                        {unit.size ? <span className="text-muted"> · {unit.size}</span> : null}
-                      </p>
-                      {inSet ? (
-                        <span className="w-28 shrink-0 text-end text-sm text-muted">
-                          {words.inSet}
-                        </span>
-                      ) : (
-                        <input
-                          type="number"
-                          name={`${PRICE_FIELD_PREFIX}${unit.id}`}
-                          min={0}
-                          step={step}
-                          value={priceOf(unit)}
-                          onChange={(event) => {
-                            const value = event.currentTarget.value;
-                            setPrices((previous) => ({ ...previous, [unit.id]: value }));
-                          }}
-                          aria-label={unit.priceAria}
-                          placeholder={symbol}
-                          className={PRICE_BOX_CLASS}
-                        />
-                      )}
-                      <button
-                        type="button"
-                        aria-label={unit.removeAria}
-                        onClick={() => toggle(unit.id)}
-                        className={buttonClass({ variant: "ghost", size: "icon" })}
-                      >
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          className="size-4"
-                        >
-                          <path d="M6 6l12 12M18 6L6 18" />
-                        </svg>
-                      </button>
-                    </div>
-                    {unit.blocked ? (
-                      <FormStatus tone="danger">
-                        <span className="text-base">{unit.blocked}</span>
-                      </FormStatus>
-                    ) : null}
-                    {!unit.fillAria && rowError(unit) ? (
-                      <FormStatus tone="danger">
-                        <span className="text-base">{rowError(unit)}</span>
-                      </FormStatus>
-                    ) : null}
-                    {unit.fillAria ? (
-                      <TankFillField
-                        unit={unit}
-                        aria={unit.fillAria}
-                        hintId={`${billId}-fill-hint`}
-                        words={words}
-                        nitroxFillMethod={nitroxFillMethod}
-                        value={fillOf(unit)}
-                        onChange={(value) =>
-                          setFills((previous) => ({ ...previous, [unit.id]: value }))
-                        }
-                        error={rowError(unit)}
-                      />
-                    ) : null}
-                    {unit.confirmLabel ? (
-                      <ChoiceRow
-                        type="checkbox"
-                        name={`${CONFIRM_FIELD_PREFIX}${unit.id}`}
-                        className="text-sm"
-                        checked={confirmed.includes(unit.id)}
-                        onChange={(event) => {
-                          const checked = event.currentTarget.checked;
-                          setConfirmed((previous) =>
-                            checked
-                              ? [...previous, unit.id]
-                              : previous.filter((id) => id !== unit.id),
-                          );
-                        }}
-                      >
-                        <span className="text-base">{unit.confirmLabel}</span>
-                      </ChoiceRow>
-                    ) : null}
-                  </li>
-                );
-              })}
-              {picked.some((unit) => unit.fillAria !== null) && (
-                <li id={`${billId}-fill-hint`} className="py-2 text-base text-muted">
-                  {words.fillHint}
-                </li>
-              )}
-              <li className="flex min-h-12 items-center gap-3 pt-3">
-                <p className="flex-1 font-medium">{words.total}</p>
-                <p className={FIGURE_INLINE_CLASS}>{total}</p>
-                <span aria-hidden="true" className="size-11 shrink-0" />
-              </li>
-            </ul>
+              </ul>
 
-            <div>
-              <ChoiceFieldset
-                legend={words.payHeading}
-                required
-                className="min-w-0"
-                bodyClassName="grid grid-cols-1 gap-2 sm:grid-cols-2"
-              >
-                {payments.map((choice) => (
-                  <ChoicePill
-                    key={choice.value}
-                    type="radio"
-                    name={PAYMENT_FIELD}
-                    value={choice.value}
-                    required
-                    checked={payment === choice.value}
-                    onChange={() => setPayment(choice.value)}
-                  >
-                    <span className="block font-medium">{choice.label}</span>
-                    {choice.hint ? <span className="block text-muted">{choice.hint}</span> : null}
-                  </ChoicePill>
-                ))}
-              </ChoiceFieldset>
-              {paymentNote ? <p className="mt-3 text-sm text-muted">{paymentNote}</p> : null}
+              <CounterRentalPayment
+                {...{ payment, payments, setPayment, paymentNote, invoiceExtras, words }}
+              />
             </div>
-            {payment === "invoice" ? invoiceExtras : null}
-          </div>
-        )}
-      </SectionCard>
-
-      <CounterRentalPicker groups={groups} pickedIds={pickedIds} toggle={toggle} words={words} />
+          )}
+        </SectionCard>
+      </div>
 
       <StickyFormActions>
         <p className="me-auto text-base" aria-live="polite">
@@ -444,13 +414,24 @@ export function CounterRentalCart({
           {picked.length > 0 ? <span className="tabular-nums text-muted"> · {total}</span> : null}
         </p>
         {notice}
-        <SubmitButton
-          pendingLabel={words.submitting}
-          disabled={picked.length === 0 || picked.some((unit) => unit.blocked !== null)}
-          className={buttonClass()}
-        >
-          {words.submit}
-        </SubmitButton>
+        {needsReview ? (
+          <button
+            type="button"
+            disabled={picked.length === 0 || picked.some((unit) => unit.blocked !== null)}
+            className={buttonClass()}
+            onClick={goToReview}
+          >
+            {words.review}
+          </button>
+        ) : (
+          <SubmitButton
+            pendingLabel={words.submitting}
+            disabled={picked.length === 0 || picked.some((unit) => unit.blocked !== null)}
+            className={buttonClass()}
+          >
+            {words.submit}
+          </SubmitButton>
+        )}
       </StickyFormActions>
     </>
   );
@@ -536,5 +517,169 @@ function TankFillField({
         nitroxFillMethod={nitroxFillMethod}
       />
     </>
+  );
+}
+
+function CounterRentalPayment({
+  payment,
+  payments,
+  setPayment,
+  paymentNote,
+  invoiceExtras,
+  words,
+}: {
+  payment: RentalPayment | null;
+  payments: PaymentChoice[];
+  setPayment: (payment: RentalPayment) => void;
+  paymentNote: ReactNode;
+  invoiceExtras: ReactNode;
+  words: CartWords;
+}) {
+  return (
+    <>
+      {" "}
+      <div>
+        <ChoiceFieldset
+          legend={words.payHeading}
+          required
+          className="min-w-0"
+          bodyClassName="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
+          {payments.map((choice) => (
+            <ChoicePill
+              key={choice.value}
+              type="radio"
+              name={PAYMENT_FIELD}
+              value={choice.value}
+              required
+              checked={payment === choice.value}
+              onChange={() => setPayment(choice.value)}
+            >
+              <span className="block font-medium">{choice.label}</span>
+              {choice.hint ? <span className="block text-muted">{choice.hint}</span> : null}
+            </ChoicePill>
+          ))}
+        </ChoiceFieldset>
+        {paymentNote ? <p className="mt-3 text-sm text-muted">{paymentNote}</p> : null}
+      </div>
+      {payment === "invoice" ? invoiceExtras : null}
+    </>
+  );
+}
+
+function CounterRentalPickedItem({
+  unit,
+  inSet,
+  price,
+  fill,
+  confirmed,
+  hintId,
+  payment,
+  symbol,
+  step,
+  words,
+  nitroxFillMethod,
+  error,
+  onPrice,
+  onFill,
+  onConfirm,
+  onRemove,
+}: {
+  unit: PickerUnit;
+  inSet: boolean;
+  price: string;
+  fill: string;
+  confirmed: boolean;
+  hintId: string;
+  payment: RentalPayment | null;
+  symbol: string;
+  step: string;
+  words: CartWords;
+  nitroxFillMethod: NitroxFillMethod;
+  error?: string;
+  onPrice: (value: string) => void;
+  onFill: (value: string) => void;
+  onConfirm: (checked: boolean) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <li className="flex flex-col gap-1 py-2">
+      <input type="hidden" name={UNIT_FIELD} value={unit.id} />
+      <div className="flex min-h-11 items-center gap-3">
+        <p className="min-w-0 flex-1 text-base">
+          <span className="font-medium">{unit.label}</span>
+          {unit.size ? <span className="text-muted"> · {unit.size}</span> : null}
+        </p>
+        {inSet ? (
+          <span className="w-28 shrink-0 text-end text-sm text-muted">{words.inSet}</span>
+        ) : (
+          <input
+            type="number"
+            name={`${PRICE_FIELD_PREFIX}${unit.id}`}
+            required={payment !== null && payment !== "none"}
+            max={payment === "none" ? undefined : 100_000}
+            min={0}
+            step={step}
+            value={price}
+            onChange={(event) => onPrice(event.currentTarget.value)}
+            aria-label={unit.priceAria}
+            placeholder={symbol}
+            className={PRICE_BOX_CLASS}
+          />
+        )}
+        <button
+          type="button"
+          aria-label={unit.removeAria}
+          onClick={onRemove}
+          className={buttonClass({ variant: "ghost", size: "icon" })}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            className="size-4"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      {unit.blocked ? (
+        <FormStatus tone="danger">
+          <span className="text-base">{unit.blocked}</span>
+        </FormStatus>
+      ) : null}
+      {!unit.fillAria && error ? (
+        <FormStatus tone="danger">
+          <span className="text-base">{error}</span>
+        </FormStatus>
+      ) : null}
+      {unit.fillAria ? (
+        <TankFillField
+          unit={unit}
+          aria={unit.fillAria}
+          hintId={hintId}
+          words={words}
+          nitroxFillMethod={nitroxFillMethod}
+          value={fill}
+          onChange={onFill}
+          error={error}
+        />
+      ) : null}
+      {unit.confirmLabel ? (
+        <ChoiceRow
+          type="checkbox"
+          required
+          name={`${CONFIRM_FIELD_PREFIX}${unit.id}`}
+          className="text-sm"
+          checked={confirmed}
+          onChange={(event) => onConfirm(event.currentTarget.checked)}
+        >
+          <span className="text-base">{unit.confirmLabel}</span>
+        </ChoiceRow>
+      ) : null}
+    </li>
   );
 }

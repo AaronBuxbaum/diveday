@@ -1,14 +1,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { ChoiceFieldset } from "@/components/ui/form";
 import type { AppDb } from "@/db/client";
 import { bookings, trips } from "@/db/schema";
-import { getShopBySlug, setShopTaxEnabled } from "@/db/shops";
+import { getShopBySlug, setShopCurrency, setShopTaxEnabled } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
-import { findElements, hiddenInputNamesIn, inputNamesIn } from "@/test/jsx-inspect";
+import { findElements, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 
 const ctx = fileScopedShopContext();
@@ -28,6 +27,9 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
+const { OrderEditor } = await import("./OrderEditor");
+const { InvoiceForm } = await import("./InvoiceForm");
+const { invoiceTargetKey } = await import("./order-form");
 const NewOrderPage = (await import("./page")).default;
 const { InvoiceAddressFields } = await import("../_components/InvoiceAddressFields");
 
@@ -107,13 +109,24 @@ describe("the prefill ids", () => {
     // The booking rides the form as a hidden field, which is the visible proof
     // the lookup ran — so the malformed case below is an observable difference
     // rather than "nothing happened either way".
-    expect(hiddenInputNamesIn(await renderWith({ bookingId }))).toContain("bookingId");
+    const tree = await renderWith({ bookingId });
+    const editor = findElements<Parameters<typeof OrderEditor>[0]>(tree, OrderEditor)[0];
+    const targetForm = findElements<Parameters<typeof InvoiceForm>[0]>(tree, InvoiceForm)[0];
+    expect(targetForm?.props.identity.endsWith(invoiceTargetKey(bookingId, null))).toBe(true);
+    expect(editor?.props.target).toBe(invoiceTargetKey(bookingId, null));
+    expect(editor?.props.bookingId).toBe(bookingId);
+    expect(editor?.props.defaults.length).toBeGreaterThan(0);
   });
 
   it("treats a malformed booking id as no prefill at all", async () => {
     await shopThatCanBill();
     // The blank order form a staffer can still use — never a thrown query.
-    expect(hiddenInputNamesIn(await renderWith({ bookingId: "nope" }))).not.toContain("bookingId");
+    const editor = findElements<Parameters<typeof OrderEditor>[0]>(
+      await renderWith({ bookingId: "nope" }),
+      OrderEditor,
+    )[0];
+    expect(editor?.props.bookingId).toBeNull();
+    expect(editor?.props.defaults).toEqual([]);
   });
 });
 
@@ -165,48 +178,37 @@ describe("the tax location form", () => {
   });
 });
 
-describe("the line items", () => {
-  /**
-   * A `<legend>` is not a flex item, so the fieldset's `gap-3` never reached
-   * it: "Line items" sat 5px over its first box where every caption on the
-   * form sits 8px over its control (K-570). `ChoiceFieldset` captions a group
-   * the way `Field` captions a control, its body 4px under the legend.
-   */
-  it("caption their boxes the way every field on the form is captioned", async () => {
-    const { db, shop } = await shopThatCanBill();
-    await setShopTaxEnabled(db, shop.id, false);
-    const tree = await renderWith();
-
-    const groups = findElements<{ legend?: unknown }>(tree, ChoiceFieldset);
-    expect(groups.map((group) => group.props.legend)).toEqual(["Line items"]);
-    // No hand-set legend left to carry a gap of its own.
-    expect(findElements(tree, "legend")).toHaveLength(0);
+describe("the invoice editor", () => {
+  it("receives the shop currency, scoped refusal context and no empty extra defaults", async () => {
+    await shopThatCanBill();
+    const editor = findElements<Parameters<typeof OrderEditor>[0]>(
+      await renderWith(),
+      OrderEditor,
+    )[0];
+    expect(editor?.props.defaults).toEqual([]);
+    expect(editor?.props.currency).toBe("usd");
+    expect(editor?.props.scope).toMatch(/^blue-mantis\./);
+    expect(editor?.props.restore).toBe(false);
   });
 
-  /**
-   * Two bordered boxes in one card, the billing address at `p-4` and each line
-   * item at `p-3`, so the line items' controls started 4px left of the
-   * address's (318 against 322 at 1280) and ended 3px right of them (K-571).
-   */
-  it("inset their controls as far as the billing address box does", async () => {
+  it("names the shop currency in the unit-price field for a JPY invoice", async () => {
+    const { db, shop } = await shopThatCanBill();
+    await setShopCurrency(db, shop.id, "jpy");
+    const editor = findElements<Parameters<typeof OrderEditor>[0]>(
+      await renderWith(),
+      OrderEditor,
+    )[0];
+    expect(editor?.props.words.unitPrice).toContain("JPY");
+    expect(editor?.props.words.unitPrice).not.toContain("USD");
+    expect(editor?.props.words).not.toHaveProperty("unitPricePlaceholder");
+  });
+
+  it("restores a refused invoice while retaining the billing-location controls", async () => {
     const { db, shop } = await shopThatCanBill();
     await setShopTaxEnabled(db, shop.id, true);
-    const tree = await renderWith();
-
-    const boxes = [
-      ...findElements<{ className?: string }>(tree, "fieldset"),
-      ...findElements<{ className?: string }>(tree, "div"),
-    ].filter((element) => /\bborder\b/.test(element.props.className ?? ""));
-    // The address box, and one per line item.
-    expect(boxes.length).toBeGreaterThan(1);
-    const insets = new Set(
-      boxes.map((box) =>
-        (box.props.className ?? "")
-          .split(" ")
-          .filter((token) => /^p-/.test(token))
-          .join(" "),
-      ),
-    );
-    expect([...insets]).toEqual(["p-4"]);
+    const tree = await renderWithAddress({ notice: "stripe-failed" });
+    const editor = findElements<Parameters<typeof OrderEditor>[0]>(tree, OrderEditor)[0];
+    expect(editor?.props.restore).toBe(true);
+    expect(inputNamesIn(tree)).toContain("customerAddressLine1");
   });
 });

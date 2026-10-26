@@ -668,6 +668,18 @@ describe("the agency check on a nitrox or specialty card", () => {
     expect(screen.queryByRole("button", { name: /Check .* with SSI/ })).toBeNull();
   });
 
+  it("states an unsighted nitrox declaration once and retains its sighting action", () => {
+    renderGroup(
+      diver({
+        nitroxCertifications: [nitroxCard({ selfDeclaredAt: new Date("2026-10-01T00:00:00Z") })],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(
+      screen.getAllByText(t("divers.certifications.selfDeclaredLabel"), { exact: true }),
+    ).toHaveLength(1);
+    expect(screen.getByText(t("divers.certifications.sightCard"))).toBeInTheDocument();
+  });
+
   it("offers no button on a card a sighting must confirm, or on a settled one", () => {
     withExtension(() => {
       renderGroup(

@@ -17,6 +17,7 @@ import { courseIdsEverOnBoard, getCourseBySlug, getCourseTemplateUpdate } from "
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { translationBoxId } from "@/lib/assists/shop-translate";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
@@ -38,7 +39,6 @@ import {
 import { CoursePhotosSection } from "./_components/CoursePhotosSection";
 import { CoursePitchPricingSections } from "./_components/CoursePitchPricingSections";
 import { CourseDayByDaySection, CourseFaqSection } from "./_components/CourseScheduleFaqSections";
-import { CourseSection } from "./_components/CourseSection";
 import { CourseTemplateUpdatesPanel } from "./_components/CourseTemplateUpdatesPanel";
 import { courseEditNotices, refusedSectionId } from "./_components/edit-notices";
 import { LearningMaterialsSection } from "./_components/LearningMaterialsSection";
@@ -259,7 +259,13 @@ export default async function EditCoursePage({
       ) : null}
       {/* Only when a save was refused — the shared component's no-`field`
           fallback (first aria-invalid control) must not fire on a clean load. */}
-      {error ? <FieldErrorFocus field={field} /> : null}
+      {error ? (
+        <FieldErrorFocus
+          field={
+            error.startsWith("spanish-") ? translationBoxId("course", course.id, "summary") : field
+          }
+        />
+      ) : null}
 
       <div className="mt-6">
         <UnsavedChangesGuard storageKey={`course-draft:${course.id}`}>
@@ -290,6 +296,20 @@ export default async function EditCoursePage({
                 currency={currency}
                 locale={locale}
                 t={t}
+                summaryTranslation={
+                  summaryTranslation ? (
+                    <div id="course-spanish" className="scroll-mt-24">
+                      <SpanishBox
+                        shopSlug={shopSlug}
+                        box={summaryTranslation}
+                        canAssist={canAssist}
+                        t={t}
+                        label={t("courses.edit.summarySpanishLabel")}
+                        maxLength={200}
+                      />
+                    </div>
+                  ) : undefined
+                }
                 summaryAssist={
                   canAssist ? (
                     <AssistFillButton
@@ -315,22 +335,6 @@ export default async function EditCoursePage({
                   t={t}
                 />
                 <CourseFaqSection course={course} faq={faq} t={t} />
-                {summaryTranslation ? (
-                  <CourseSection
-                    id="course-spanish"
-                    label={t("courses.edit.spanishLegend")}
-                    closed
-                    open={Boolean(error?.startsWith("spanish-"))}
-                  >
-                    <SpanishBox
-                      shopSlug={shopSlug}
-                      box={summaryTranslation}
-                      canAssist={canAssist}
-                      t={t}
-                      maxLength={200}
-                    />
-                  </CourseSection>
-                ) : null}
                 {formsPanel ? (
                   <CourseFormsRequirement
                     {...formsPanel}

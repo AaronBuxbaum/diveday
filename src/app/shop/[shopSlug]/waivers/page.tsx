@@ -259,6 +259,18 @@ export default async function WaiversPage({
         }
       />
 
+      <SignedRecordsSection
+        auditPage={auditPage}
+        pinned={highlighted}
+        query={query}
+        view={view}
+        record={record}
+        shopSlug={shopSlug}
+        locale={locale}
+        timezone={shop.timezone}
+        t={t}
+      />
+
       {/* **The ledger leads; the editor is a door.** A full-height textarea of
           the legal text, a materiality radio pair and a Publish stood at the
           top of a page holding 519 signed records. Editing the release happens
@@ -352,18 +364,6 @@ export default async function WaiversPage({
         forms={courseForms}
         resign={resign}
         notice={courseFormNotice}
-        locale={locale}
-        timezone={shop.timezone}
-        t={t}
-      />
-
-      <SignedRecordsSection
-        auditPage={auditPage}
-        pinned={highlighted}
-        query={query}
-        view={view}
-        record={record}
-        shopSlug={shopSlug}
         locale={locale}
         timezone={shop.timezone}
         t={t}

@@ -3,11 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ChoiceFieldset, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -22,7 +22,9 @@ import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { InvoiceAddressFields } from "../_components/InvoiceAddressFields";
 import { createOrderAction } from "./actions";
-import { LINE_ITEM_ROWS } from "./order-form";
+import { InvoiceForm } from "./InvoiceForm";
+import { OrderEditor } from "./OrderEditor";
+import { invoiceTargetKey } from "./order-form";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -48,13 +50,7 @@ const LINE_ITEM_KINDS = [
 
 type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
 
-/**
- * **The form's two kinds of box inside its card** — the billing address and
- * each line item — spelled once, so their controls start on one x and end on
- * one. The address took `p-4` and the line items `p-3`, and the line items'
- * controls sat 4px outside the address's on the left and 3px on the right
- * (318 against 322, 961 against 958 at 1280; K-571).
- */
+/** Billing location uses the same inset as the editable invoice rows. */
 const INSET_BOX_CLASS = "rounded-lg border border-border p-4";
 
 // A notice query param maps to a message key, never to a sentence — the words
@@ -86,6 +82,7 @@ export default async function NewOrderPage({
   // gets the blank order form they can still use.
   const prefillPersonId = uuidParam(personId);
   const prefillBookingId = uuidParam(bookingId);
+  const target = invoiceTargetKey(prefillBookingId, prefillPersonId);
   // Billing a diver is owner/manager work (H-14, ADR 20260724-role-authorization),
   // like the refund on the order it becomes and the discount codes that set what
   // a trip costs. The whole page is that one concern, so for anyone else it isn't
@@ -96,6 +93,8 @@ export default async function NewOrderPage({
     allow: canPersonManageOrders,
     refusal: { notice: "not-authorized", landing: ["orders"] },
   });
+
+  const invoiceScope = keptTypedScope(shopSlug, session.user.personId);
 
   // The gate, not a courtesy: the entry links hide themselves when the shop
   // can't accept payments, but this page refuses regardless of how it was
@@ -160,6 +159,7 @@ export default async function NewOrderPage({
         : t(line.kind === "course_fee" ? "orderLine.instruction" : "orderLine.eLearning", {
             courseTitle: line.courseTitle,
           }),
+    quantity: "1",
     unitAmount:
       line.amountCents === null
         ? ""
@@ -206,11 +206,12 @@ export default async function NewOrderPage({
       ) : null}
 
       <SectionCard padding="lg" className="mt-8">
-        <form action={createOrderAction} className="flex flex-col gap-6">
-          {prefillBookingId ? (
-            <input type="hidden" name="bookingId" value={prefillBookingId} />
-          ) : null}
-
+        <InvoiceForm
+          identity={`${invoiceScope}:${target}`}
+          aria-label={t("orders.new.title")}
+          action={createOrderAction}
+          className="flex flex-col gap-6"
+        >
           <FieldGrid columns={1} className="gap-y-6">
             <Field label={t("orders.new.customerLabel")}>
               <select
@@ -245,83 +246,36 @@ export default async function NewOrderPage({
             <InvoiceAddressFields t={t} demoAddress={demoAddress} className={INSET_BOX_CLASS} />
           ) : null}
 
-          {/* `ChoiceFieldset` captions the rows as `Field` captions a control,
-              the body 4px under the legend. A hand-set `<legend>` took no gap
-              at all: it is not a flex item, so the fieldset's `gap-3` never
-              reached it, and "Line items" sat 5px over its first box where
-              every other caption here sits 8px over its control (K-570). */}
-          <ChoiceFieldset
-            legend={t("orders.new.lineItemsLegend")}
-            bodyClassName="flex flex-col gap-3"
-          >
-            {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
-              const rowDefault = lineDefaults[i] ?? null;
-              return (
-                <div
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered
-                  key={i}
-                  className={`grid grid-cols-1 gap-2 ${INSET_BOX_CLASS} sm:grid-cols-[7rem_1fr_5rem_6rem]`}
-                >
-                  <select
-                    name={`kind-${i}`}
-                    defaultValue={rowDefault?.kind ?? "other"}
-                    // The `<legend>` names the fieldset, not this row's control,
-                    // so each picker states which line it belongs to — four
-                    // identically-labelled "Kind" selects would be no more use to
-                    // a screen reader than none at all (WCAG 4.1.2).
-                    aria-label={t("orders.new.lineItemKindAria", { number: i + 1 })}
-                    className={controlClass}
-                  >
-                    {LINE_ITEM_KINDS.map((kind) => (
-                      <option key={kind.value} value={kind.value}>
-                        {t(kind.key)}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    name={`description-${i}`}
-                    defaultValue={rowDefault?.description}
-                    aria-label={t("orders.new.lineItemDescriptionAria", { number: i + 1 })}
-                    placeholder={t("orders.new.lineItemDescriptionPlaceholder")}
-                    maxLength={200}
-                    className={controlClass}
-                  />
-                  <input
-                    type="number"
-                    name={`quantity-${i}`}
-                    defaultValue={1}
-                    min={1}
-                    aria-label={t("orders.new.quantityLabel")}
-                    className={controlClass}
-                  />
-                  <input
-                    type="number"
-                    name={`unitAmount-${i}`}
-                    step={unitAmountStep}
-                    min={0}
-                    defaultValue={rowDefault?.unitAmount}
-                    aria-label={t("orders.new.unitPriceLabel")}
-                    placeholder={t("orders.new.unitPricePlaceholder")}
-                    className={controlClass}
-                  />
-                </div>
-              );
-            })}
-          </ChoiceFieldset>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <SubmitButton pendingLabel={t("orders.new.sending")} className={buttonClass()}>
-              {t("orders.new.submit")}
-            </SubmitButton>
-            {/* Why the order was refused, beside the button that tried to send
-              it — the invoice form is long enough that a banner under the
-              heading is off screen by the time anyone presses Send. */}
-            <FormStatus tone="danger">
-              {notice ? (noticeKey ? t(noticeKey) : t("orders.new.notice.fallback")) : undefined}
-            </FormStatus>
-          </div>
-        </form>
+          <OrderEditor
+            defaults={lineDefaults}
+            bookingId={prefillBookingId ?? null}
+            target={target}
+            kinds={LINE_ITEM_KINDS.map((kind) => ({ value: kind.value, label: t(kind.key) }))}
+            currency={currency}
+            locale={locale}
+            step={unitAmountStep}
+            scope={invoiceScope}
+            restore={Boolean(notice)}
+            notice={
+              notice ? (noticeKey ? t(noticeKey) : t("orders.new.notice.fallback")) : undefined
+            }
+            words={{
+              legend: t("orders.new.lineItemsLegend"),
+              item: t("orders.new.lineItemGroup", { number: "#" }),
+              kind: t("orders.new.lineItemKindLabel"),
+              description: t("orders.new.lineItemDescriptionLabel"),
+              descriptionPlaceholder: t("orders.new.lineItemDescriptionPlaceholder"),
+              quantity: t("orders.new.quantityLabel"),
+              unitPrice: t("orders.new.unitPriceLabel", { currency: currency.toUpperCase() }),
+              add: t("orders.new.addItem"),
+              remove: t("orders.new.removeItem"),
+              removeAria: t("orders.new.removeItemAria", { number: "#" }),
+              subtotal: t("orders.new.subtotal"),
+              submit: t("orders.new.submit"),
+              sending: t("orders.new.sending"),
+            }}
+          />
+        </InvoiceForm>
       </SectionCard>
     </StaffPage>
   );

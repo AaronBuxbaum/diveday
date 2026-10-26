@@ -26,6 +26,42 @@ const openSection = (page: Page, id: string) => openIfClosed(section(page, id));
 test.describe("staff", () => {
   signedInAsOwner();
 
+  test("template replacement shows current values before applying and preserves the one-time Undo", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+    const current = await page
+      .locator('textarea[name="description"]')
+      .filter({ visible: true })
+      .inputValue();
+    const comparison = page.locator("details#briefing-template").filter({ visible: true });
+    await openIfClosed(comparison);
+    await expect(
+      comparison
+        .getByText(staffCopy("diveSites.edit.templateUpdates.current"), { exact: true })
+        .first(),
+    ).toBeVisible();
+    await expect(comparison.getByText(current, { exact: true }).first()).toBeVisible();
+    page.once("dialog", (dialog) => dialog.accept());
+    const replacement = page.waitForURL(/notice=template-replaced/);
+    await comparison
+      .getByRole("button", {
+        name: staffCopy("diveSites.edit.templateUpdates.replaceCopy"),
+        exact: true,
+      })
+      .click();
+    await replacement;
+    const undo = page.waitForURL(/notice=template-undone/);
+    await page
+      .getByRole("button", { name: staffCopy("diveSites.edit.templateUpdates.undo"), exact: true })
+      .click();
+    await undo;
+    await expect(
+      page.locator('textarea[name="description"]').filter({ visible: true }),
+    ).toHaveValue(current);
+  });
+
   test("staff reuses a dive-site briefing on a trip that divers can explore", async ({
     page: staff,
     browser,

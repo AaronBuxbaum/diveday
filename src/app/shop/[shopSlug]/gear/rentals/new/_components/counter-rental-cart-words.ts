@@ -21,6 +21,7 @@ export function counterRentalCartWords(t: StaffTranslator, days: number): CartWo
     },
     submit: t("counterRentals.new.submit"),
     submitting: t("counterRentals.new.submitting"),
+    review: t("counterRentals.new.review"),
     fillLabel: t("counterRentals.new.fillLabel"),
     fillOptions: tankFillOptions(t, t("counterRentals.new.fillChoose")),
     fillHint: t("counterRentals.new.fillHint"),

@@ -106,7 +106,7 @@ export function SignedRecordsSection({
   ];
 
   return (
-    <section className="mt-10" aria-labelledby="signed-records-heading">
+    <section className="mt-6" aria-labelledby="signed-records-heading">
       <GroupLabel as="h2" id="signed-records-heading" className="scroll-mt-24">
         {t("waiversStaff.signatures.heading")}
       </GroupLabel>

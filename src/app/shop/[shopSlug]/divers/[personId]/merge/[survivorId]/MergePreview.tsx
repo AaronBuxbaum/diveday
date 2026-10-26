@@ -506,6 +506,9 @@ export function MergePreview({
             </ChoiceRow>
           </div>
         ) : null}
+        {!preview.refusal ? (
+          <SurvivorSummary survivor={survivor} detailText={detail(survivor)} t={t} />
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           {preview.refusal ? null : (
             <SubmitButton
@@ -523,5 +526,33 @@ export function MergePreview({
         </div>
       </section>
     </form>
+  );
+}
+
+function SurvivorSummary({
+  survivor,
+  detailText,
+  t,
+}: {
+  survivor: DiverMergeSide;
+  detailText: string;
+  t: StaffTranslator;
+}) {
+  return (
+    <section aria-label={t("divers.mergePreview.kept")} className="space-y-1 text-base">
+      <p className="font-semibold">
+        {t("divers.mergePreview.kept")}: {survivor.fullName}
+      </p>
+      <p className="[overflow-wrap:anywhere]">
+        {survivor.email ? (
+          <EmailCell value={survivor.email} />
+        ) : survivor.phone ? (
+          displayStoredPhoneWhole(survivor.phone)
+        ) : (
+          t("divers.mergePreview.noContact")
+        )}
+      </p>
+      <p className="text-muted">{detailText}</p>
+    </section>
   );
 }

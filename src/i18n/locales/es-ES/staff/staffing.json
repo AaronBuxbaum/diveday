@@ -60,7 +60,9 @@
       "oxygen_provider": "Proveedor de oxígeno",
       "captains_licence": "Licencia de patrón",
       "other": "Otra"
-    }
+    },
+    "onFileCount": "{count, plural, one {# registrada} other {# registradas}}",
+    "dueSoonSummary": "Por vencer: {names}"
   },
   "notice": {
     "awayDeleted": "Quitado",

@@ -20,6 +20,7 @@ import { nowDate } from "@/lib/clock";
 import { packageOnSale } from "@/lib/dive-packages";
 import { log } from "@/lib/log";
 import { majorToMinor } from "@/lib/money";
+import { MAX_LINE_ITEMS_PER_ORDER } from "@/lib/order-limits";
 import {
   type InvoiceCustomerAddress,
   type InvoicingProvider,
@@ -131,7 +132,7 @@ const MAX_LINE_ITEM_QUANTITY = 100;
 /** In *major* units, so the ceiling means the same thing in every currency. */
 export const MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR = 100_000;
 const MAX_LINE_ITEM_DESCRIPTION_LENGTH = 200;
-const MAX_LINE_ITEMS_PER_ORDER = 20;
+
 // Same bound the action's zod schema enforces; the two layers must agree
 // (CR-016 pattern, like the per-line description bound below).
 const MAX_ORDER_DESCRIPTION_LENGTH = 200;

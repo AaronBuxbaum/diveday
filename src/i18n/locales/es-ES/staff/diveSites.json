@@ -245,7 +245,7 @@
       "keepEdits": "Aplicar cambios y conservar los míos",
       "keepEditsHint": "Solo cambian los campos que aún coinciden con la plantilla anterior.",
       "replaceCopy": "Aplicar texto de la plantilla",
-      "replaceCopyHint": "Usa todos los campos de la plantilla nueva, pero conserva tu nombre, fotos y rutas.",
+      "replaceCopyHint": "Tu nombre, fotos, rutas y los campos marcados Se conserva sin cambios se mantienen.",
       "replaceConfirm": "¿Reemplazar el texto gestionado por la plantilla con la última versión publicada?",
       "applying": "Incorporando actualización…",
       "replacing": "Reemplazando texto…",
@@ -262,7 +262,6 @@
       "fields": {
         "description": "Descripción",
         "locationName": "Ubicación",
-        "coordinates": "Punto GPS",
         "marineLife": "Vida marina",
         "marineLifeDescription": "Nota sobre vida marina",
         "difficultyLevel": "Dificultad",
@@ -281,7 +280,12 @@
         "requiredSpecialties": "Especialidades requeridas",
         "requiresNitrox": "Requisito de nitrox",
         "creatures": "Guía de campo"
-      }
+      },
+      "current": "Actual",
+      "template": "Plantilla",
+      "empty": "Sin contenido",
+      "kept": "Se conserva sin cambios",
+      "minutes": "{count, plural, one {# minuto} other {# minutos}}"
     },
     "upcomingCount": "{count, plural, one {# salida próxima aquí} other {# salidas próximas aquí}}"
   },

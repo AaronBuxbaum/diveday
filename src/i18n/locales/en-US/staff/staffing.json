@@ -60,7 +60,9 @@
       "oxygen_provider": "Oxygen provider",
       "captains_licence": "Captain’s license",
       "other": "Other"
-    }
+    },
+    "onFileCount": "{count, plural, one {# on file} other {# on file}}",
+    "dueSoonSummary": "Due soon: {names}"
   },
   "notice": {
     "awayDeleted": "Removed",

@@ -155,7 +155,7 @@ export function CourseFormsRequirement({
           {ordered.map((form) => {
             const at = position.get(form.id);
             return (
-              <li key={form.id} className="flex items-start justify-between gap-3">
+              <li key={form.id} className="flex flex-col gap-2">
                 <div className="min-w-0 flex-1">
                   {at !== undefined && !canWriteForms ? (
                     <>
@@ -192,11 +192,27 @@ export function CourseFormsRequirement({
                       {t("courses.edit.forms.awaitingText")}
                     </p>
                   ) : null}
+                </div>
+                <div className="flex flex-wrap items-start gap-4 ps-7">
+                  <label className="flex flex-col gap-1 text-sm text-muted">
+                    {t("courses.edit.forms.displayOrder")}
+                    <span className="w-20">
+                      <input
+                        type="number"
+                        name={`order-${form.id}`}
+                        min={1}
+                        max={forms.length}
+                        defaultValue={at === undefined ? "" : at + 1}
+                        aria-label={t("courses.edit.forms.orderLabel", { form: form.title })}
+                        className={controlClass}
+                      />
+                    </span>
+                  </label>
                   {/* A medical statement is every student's: no age (G3). */}
                   {form.medicalScreening ? null : (
-                    <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+                    <label className="flex flex-col gap-1 text-sm text-muted">
                       {t("courses.edit.forms.maxAgeLabel")}
-                      <span className="w-20 shrink-0">
+                      <span className="w-20">
                         <input
                           type="number"
                           name={`maxAge-${form.id}`}
@@ -209,18 +225,6 @@ export function CourseFormsRequirement({
                       </span>
                     </label>
                   )}
-                </div>
-                {/* Sized by its wrapper: `controlClass` is full width. */}
-                <div className="w-20 shrink-0">
-                  <input
-                    type="number"
-                    name={`order-${form.id}`}
-                    min={1}
-                    max={forms.length}
-                    defaultValue={at === undefined ? "" : at + 1}
-                    aria-label={t("courses.edit.forms.orderLabel", { form: form.title })}
-                    className={controlClass}
-                  />
                 </div>
               </li>
             );

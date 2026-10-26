@@ -145,6 +145,7 @@ export function registerRemainingExpandedAuditCaptures(
       page,
     }) => {
       await page.goto("/shop/blue-mantis/waivers");
+      await openIfClosed(page.locator("#course-forms"));
       const editor = page
         .locator('#course-forms details[id^="course-form-"]:not(#course-form-new)')
         .first();
@@ -155,6 +156,7 @@ export function registerRemainingExpandedAuditCaptures(
 
     test("adding a course form opens its blank wording and medical choice", async ({ page }) => {
       await page.goto("/shop/blue-mantis/waivers");
+      await openIfClosed(page.locator("#course-forms"));
       const editor = page.locator("#course-form-new");
       await openIfClosed(editor);
       await editor.locator('input[name="title"]').fill("Boat orientation acknowledgement");

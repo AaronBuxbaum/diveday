@@ -4,6 +4,7 @@ import {
   capture,
   installVisualBuildGuard,
   SURFACE_TIMEOUT_MS,
+  staffCopy,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
@@ -44,6 +45,18 @@ for (const scheme of ["light", "dark"] as const) {
         // to this reef, so no distance warning belongs in this frame.
         await page.getByText("8723583 · Carysfort Reef, FL").waitFor({ state: "attached" });
         await capture(page, "dive-site-edit", scheme);
+        await openIfClosed(page.locator("details#briefing-template").filter({ visible: true }));
+        await expect(
+          page
+            .getByText(staffCopy("diveSites.edit.templateUpdates.current"), { exact: true })
+            .first(),
+        ).toBeVisible();
+        await expect(
+          page
+            .getByText(staffCopy("diveSites.edit.templateUpdates.template"), { exact: true })
+            .first(),
+        ).toBeVisible();
+        await capture(page, "dive-site-template-values", scheme);
       });
 
       /**

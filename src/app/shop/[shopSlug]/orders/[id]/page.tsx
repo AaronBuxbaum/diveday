@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { FlashParams } from "@/components/FlashParams";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -34,6 +34,7 @@ import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputes, OrderMeta } from "./_components/OrderMeta";
 import { OrderMoreMenu } from "./_components/OrderMoreMenu";
+import { OrderPageFlash } from "./_components/OrderPageFlash";
 import { refundAction } from "./actions";
 import { KIND_KEYS, NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
 import { loadOrderHeader } from "./order-header";
@@ -54,14 +55,14 @@ export default async function OrderDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; invoiceCreated?: string }>;
 }) {
   const { shopSlug, id } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
-  const { notice } = await searchParams;
+  const { notice, invoiceCreated } = await searchParams;
   // One shop read for both the demo guard and the timezone the order's date is
   // written in — a money screen should say "3 Aug" in the shop's own day, not
   // the server's.
@@ -126,7 +127,10 @@ export default async function OrderDetailPage({
 
   return (
     <StaffPage width="reading">
-      <FlashParams params={["notice"]} />
+      <OrderPageFlash
+        scope={keptTypedScope(shopSlug, session.user.personId)}
+        receipt={invoiceCreated}
+      />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
         eyebrowHref={shopPath(shopSlug, "orders")}

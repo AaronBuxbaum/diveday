@@ -29,6 +29,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
+const { AddCredentialDisclosure } = await import("./_components/AddCredentialDisclosure");
 const TeamSettingsPage = (await import("./page")).default;
 
 type StaffRowProps = { member: StaffMember; [prop: string]: unknown };
@@ -196,5 +197,28 @@ describe("a staff card's account row", () => {
     expect(disable).toContain("focus-visible:focus-ring-inset");
     const enable = toggle("disabled");
     expect(enable).not.toContain("focus-visible:focus-ring-inset");
+  });
+});
+
+describe("the person-specific Add credential door", () => {
+  it("preselects only a person on this shop's current staff list", async () => {
+    const tree = await renderTeam();
+    const personId = staffRows(tree)[0]?.props.member.personId;
+    if (!personId) throw new Error("seed has no staff");
+    const credentialSelect = async (credentialFor: string) => {
+      const section = findElements<Parameters<typeof AddCredentialDisclosure>[0]>(
+        await renderTeam({ credentialFor }),
+        AddCredentialDisclosure,
+      )[0];
+      if (!section) throw new Error("Add credential section missing");
+      return findElements<{ name?: string; defaultValue?: string }>(
+        AddCredentialDisclosure(section.props),
+        "select",
+      ).find((element) => element.props.name === "personId");
+    };
+    expect((await credentialSelect(personId))?.props.defaultValue).toBe(personId);
+    expect(
+      (await credentialSelect("ffffffff-ffff-4fff-8fff-ffffffffffff"))?.props.defaultValue,
+    ).toBe("");
   });
 });

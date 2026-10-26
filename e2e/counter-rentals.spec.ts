@@ -196,7 +196,9 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Rent out", exact: true })).toBeDisabled();
     await expect(page.getByText(CUSTOMER).first()).toBeVisible();
     await pickUnit(page, "Mask", "Mask #2");
-    await expect(page.getByRole("button", { name: "Rent out", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Review rental", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "Review rental", exact: true }).click();
+    await expect(page.getByRole("radio", { name: /^Cash/ })).toBeFocused();
   });
 
   test("releases a rental nobody came back for", async ({ page }) => {
