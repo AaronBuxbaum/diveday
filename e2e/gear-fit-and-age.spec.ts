@@ -198,16 +198,28 @@ test.describe("deck crew", () => {
     // this would silently put the diver back on the list at a size the shop
     // already said it was short of, with the attribution wiped in the same
     // statement so nothing recorded that it happened.
-    await page.evaluate(() => {
-      const form = Array.from(document.querySelectorAll("form")).find((candidate) =>
-        candidate.textContent?.includes("Flagged for hands-on fitting"),
-      );
-      if (!form) throw new Error("the needs-staff-fit form is not on the page");
-      form.requestSubmit();
-    });
-    // The action answers with this redirect. Wait for its query before checking
-    // the result in the page, or the assertion can race the server action.
-    await expect(page).toHaveURL(/\?notice=not-authorized-fit&form=fit/);
+    const recordPath = new URL(page.url()).pathname;
+    // Observe this action's refusal response: FlashParams deliberately removes
+    // the redirect's notice query before an eventual URL assertion can see it.
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === recordPath &&
+          response
+            .headers()
+            ["x-action-redirect"]?.startsWith(
+              `${recordPath}?notice=not-authorized-fit&form=fit#gear;`,
+            ) === true,
+      ),
+      page.evaluate(() => {
+        const form = Array.from(document.querySelectorAll("form")).find((candidate) =>
+          candidate.textContent?.includes("Flagged for hands-on fitting"),
+        );
+        if (!form) throw new Error("the needs-staff-fit form is not on the page");
+        form.requestSubmit();
+      }),
+    ]);
 
     // The server refused an authorization boundary, so the nearby outcome is
     // assertive (`alert`), not an ambient confirmation (`status`).
