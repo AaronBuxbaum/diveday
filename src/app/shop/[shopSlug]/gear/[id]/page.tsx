@@ -213,7 +213,7 @@ export default async function GearUnitPage({
         {deletedAt ? null : openReservations.length === 0 ? (
           <p className="text-sm text-muted">{t("gear.unit.where.inShop")}</p>
         ) : (
-          <SectionCard title={t("gear.unit.where.title")}>
+          <SectionCard padding="lg" title={t("gear.unit.where.title")}>
             <ul className="flex flex-col gap-3">
               {openReservations.map((reservation) => {
                 const phase = reservationPhase(reservation, todayLocal);

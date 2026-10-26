@@ -1,8 +1,32 @@
+import type { Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup } from "./helpers";
 
 const staffCopy = staffTranslator("en-US");
+
+/** Same-code refusals need this action's redirect, then the queued reset restoration. */
+async function finishLineAction(page: Page, submit: Locator, notice: string) {
+  const path = new URL(page.url()).pathname;
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === "POST" &&
+        new URL(candidate.url()).pathname === path &&
+        candidate.headers()["x-action-redirect"]?.includes(`notice=${notice}`) === true,
+    ),
+    submit.click(),
+  ]);
+  await response.finished();
+  await expect(page.locator('button[aria-busy="true"]')).toHaveCount(0);
+  // KeepTypedOnRefusal restores after React's reset on the next animation frame.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+}
 
 /**
  * The bench (ADR 20261008-gear-work-orders): opening a ticket on a diver's own
@@ -87,7 +111,11 @@ test.describe("staff", () => {
     await price.fill("bad");
     for (const refusedPrice of ["bad", "still bad"]) {
       await price.fill(refusedPrice);
-      await page.locator("[data-row-menu]").getByRole("button", { name: "Save" }).click();
+      await finishLineAction(
+        page,
+        page.locator("[data-row-menu]").getByRole("button", { name: "Save" }),
+        "invalid-amount",
+      );
       await expect(price).toHaveValue(refusedPrice);
       await expect(
         page
@@ -99,7 +127,11 @@ test.describe("staff", () => {
       ).toHaveCount(1);
     }
     await price.fill("45");
-    await page.locator("[data-row-menu]").getByRole("button", { name: "Save" }).click();
+    await finishLineAction(
+      page,
+      page.locator("[data-row-menu]").getByRole("button", { name: "Save" }),
+      "line-saved",
+    );
     await expect(page.getByText("Line saved")).toBeVisible();
     await expect(page.getByRole("cell", { name: "$45.00" }).first()).toBeVisible();
   });
@@ -120,7 +152,11 @@ test.describe("staff", () => {
     await amount.fill("bad");
     for (const refusedPart of ["First refused kit", "Second refused kit"]) {
       await description.fill(refusedPart);
-      await form.getByRole("button", { name: "Add", exact: true }).click();
+      await finishLineAction(
+        page,
+        form.getByRole("button", { name: "Add", exact: true }),
+        "invalid-amount",
+      );
       await expect(
         page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
       ).toBeVisible();
@@ -137,7 +173,11 @@ test.describe("staff", () => {
       if (!(await form.isVisible())) await door.click();
       await description.fill(part);
       await amount.fill("12");
-      await form.getByRole("button", { name: "Add", exact: true }).click();
+      await finishLineAction(
+        page,
+        form.getByRole("button", { name: "Add", exact: true }),
+        "line-added",
+      );
       await expect(
         page.getByText(staffCopy("workOrders.notice.lineAdded"), { exact: true }),
       ).toBeVisible();
@@ -312,6 +352,9 @@ test.describe("staff", () => {
     const card = page.getByRole("region", { name: "Bill and pickup" });
     await expect(card.getByText("Goes to the customer when this ticket is ready.")).toBeVisible();
 
+    await page
+      .getByRole("button", { name: staffCopy("workOrders.detail.otherMoves"), exact: true })
+      .click();
     await page.getByRole("button", { name: "Ready for pickup" }).click();
     await expect(page.getByText("Status saved")).toBeVisible();
     await expect(card.getByText("Not sent: messages aren’t set up")).toBeVisible();

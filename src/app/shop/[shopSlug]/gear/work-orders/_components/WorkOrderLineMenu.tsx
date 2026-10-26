@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import { menuRowClass } from "@/components/ui/menu";
 import { deleteWorkOrderLineAction, updateWorkOrderLineAction } from "../actions";
+import { WorkOrderLineFields } from "./WorkOrderLineFields";
 
 /** Every word the menu renders, translated on the server ahead of it. */
 export type WorkOrderLineMenuCopy = {
@@ -82,74 +83,81 @@ export function WorkOrderLineMenu({
     >
       {(close) =>
         editing ? (
-          <form action={updateWorkOrderLineAction} className="flex flex-col gap-3 p-3">
+          <form action={updateWorkOrderLineAction} className="p-3">
             <input type="hidden" name="workOrderId" value={workOrderId} />
             <input type="hidden" name="workOrderLineId" value={line.id} />
-            <Field label={copy.kind} htmlFor={id("kind")}>
-              <select id={id("kind")} name="kind" defaultValue={line.kind} className={controlClass}>
-                <option value="part">{copy.part}</option>
-                <option value="labor">{copy.labor}</option>
-              </select>
-            </Field>
-            <Field
-              label={copy.description}
-              htmlFor={id("description")}
-              required
-              error={refusal?.field === "description" ? refusal.message : undefined}
-            >
-              <input
-                id={id("description")}
-                name="description"
-                required
-                defaultValue={line.description}
-                maxLength={maxDescription}
-                className={controlClass}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-x-4">
-              <Field
-                label={copy.quantity}
-                htmlFor={id("quantity")}
-                required
-                error={refusal?.field === "quantity" ? refusal.message : undefined}
-              >
-                <input
-                  id={id("quantity")}
-                  name="quantity"
-                  required
-                  inputMode="decimal"
-                  defaultValue={line.quantity}
-                  className={`${controlClass} tabular-nums`}
-                />
+            <WorkOrderLineFields label={label} className="flex flex-col gap-3">
+              <Field label={copy.kind} htmlFor={id("kind")}>
+                <select
+                  id={id("kind")}
+                  name="kind"
+                  defaultValue={line.kind}
+                  className={controlClass}
+                >
+                  <option value="part">{copy.part}</option>
+                  <option value="labor">{copy.labor}</option>
+                </select>
               </Field>
               <Field
-                label={copy.unitAmount}
-                htmlFor={id("amount")}
+                label={copy.description}
+                htmlFor={id("description")}
                 required
-                error={refusal?.field === "unitAmount" ? refusal.message : undefined}
+                error={refusal?.field === "description" ? refusal.message : undefined}
               >
                 <input
-                  id={id("amount")}
-                  name="unitAmount"
+                  id={id("description")}
+                  name="description"
                   required
-                  inputMode="decimal"
-                  defaultValue={line.unitAmount}
-                  className={`${controlClass} tabular-nums`}
+                  defaultValue={line.description}
+                  maxLength={maxDescription}
+                  className={controlClass}
                 />
               </Field>
-            </div>
+              <div className="grid grid-cols-2 gap-x-4">
+                <Field
+                  label={copy.quantity}
+                  htmlFor={id("quantity")}
+                  required
+                  error={refusal?.field === "quantity" ? refusal.message : undefined}
+                >
+                  <input
+                    id={id("quantity")}
+                    name="quantity"
+                    required
+                    inputMode="decimal"
+                    defaultValue={line.quantity}
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </Field>
+                <Field
+                  label={copy.unitAmount}
+                  htmlFor={id("amount")}
+                  required
+                  error={refusal?.field === "unitAmount" ? refusal.message : undefined}
+                >
+                  <input
+                    id={id("amount")}
+                    name="unitAmount"
+                    required
+                    inputMode="decimal"
+                    defaultValue={line.unitAmount}
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </Field>
+              </div>
+              <SubmitButton
+                pendingLabel={copy.saving}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {copy.save}
+              </SubmitButton>
+            </WorkOrderLineFields>
             <KeepTypedOnRefusal
               form="work-order-edit-line"
               scope={scope}
               restore={Boolean(refusal)}
             />
             <EditLineOutcome notice={notice} scope={scope} close={close} />
-            <SubmitButton
-              pendingLabel={copy.saving}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {copy.save}
-            </SubmitButton>
           </form>
         ) : (
           <>

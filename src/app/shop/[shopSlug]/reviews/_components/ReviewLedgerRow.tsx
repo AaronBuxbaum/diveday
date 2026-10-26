@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { StarRating } from "@/components/StarRating";
 import { Badge } from "@/components/ui/badge";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { ReviewModerationReason, StaffReview } from "@/db/reviews";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -133,7 +134,7 @@ export function ReviewLedgerRow({
           <p className="text-base font-medium">
             <Link
               href={`/shop/${shopSlug}/divers/${review.personId}`}
-              className="text-primary hover:underline"
+              className={`${tapTargetLinkClass} text-primary hover:underline`}
             >
               {review.diverName}
             </Link>

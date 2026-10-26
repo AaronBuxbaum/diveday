@@ -51,7 +51,7 @@ export function DayHeader({
               className={buttonClass({
                 variant: "link",
                 flush: true,
-                className: "text-start font-normal",
+                className: "text-start",
               })}
             >
               {summary}

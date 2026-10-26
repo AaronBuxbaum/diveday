@@ -42,7 +42,12 @@ test.describe("the tide window", () => {
     // The demo's Key Largo reef reads Carysfort Reef's table (seed-tides.ts).
     await expect(page.getByLabel("NOAA tide station")).toHaveValue("8723583");
     await expect(page.getByLabel("Dives best")).toHaveValue("any");
-    // Upcoming departures that dive here each carry the line.
+    // Upcoming use opens on demand; the form's station stays visible above it.
+    await openIfClosed(
+      page
+        .locator("details")
+        .filter({ has: page.locator("summary").filter({ hasText: /upcoming dive/ }) }),
+    );
     await expect(page.getByText(STAFF_LINE).first()).toBeVisible();
 
     // The departure page carries it beside the crew's own read of the water,

@@ -565,7 +565,9 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "Reg #1", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Reg #1" })).toBeVisible();
 
-    const notes = page.getByRole("region", { name: "Notes" });
+    const notes = page
+      .locator("details")
+      .filter({ has: page.locator("summary").filter({ hasText: "Add a note" }) });
     // The box opens on request too — the door carries the act's own words, so
     // the textarea inside wears them as its label.
     await notes.locator("summary").filter({ hasText: "Add a note" }).click();

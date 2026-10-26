@@ -7,6 +7,7 @@ import { forgetKeptTyped, KeepTypedOnRefusal } from "@/components/KeepTypedOnRef
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { addWorkOrderLineAction } from "../actions";
+import { WorkOrderLineFields } from "./WorkOrderLineFields";
 
 const REFUSALS = new Set(["invalid-quantity", "invalid-amount", "empty-description", "invalid"]);
 
@@ -39,8 +40,10 @@ export function WorkOrderAddLine({
         {label}
         <DisclosureCaret direction="down" className="group-open:rotate-180" />
       </summary>
-      <form action={addWorkOrderLineAction} className="mt-3 grid gap-4 sm:grid-cols-2">
-        {children}
+      <form action={addWorkOrderLineAction} className="mt-3">
+        <WorkOrderLineFields label={label} className="grid gap-4 sm:grid-cols-2">
+          {children}
+        </WorkOrderLineFields>
         <KeepTypedOnRefusal
           form="work-order-add-line"
           scope={scope}

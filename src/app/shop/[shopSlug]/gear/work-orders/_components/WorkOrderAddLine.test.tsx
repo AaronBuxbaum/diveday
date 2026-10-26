@@ -139,3 +139,28 @@ describe("the existing add-line form's local door", () => {
     }
   });
 });
+
+it("holds submitted fields while pending, then reenables the retained refused attempt", async () => {
+  let finish!: () => void;
+  addLine.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const view = render(editor());
+  view.container.querySelector("details")?.setAttribute("open", "");
+  fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Held seal" } });
+  fireEvent.change(screen.getByLabelText("Price each"), { target: { value: "bad" } });
+  fireEvent.submit(renderedForm(view.container));
+  expect(screen.getByLabelText("Description")).toBeDisabled();
+  expect(screen.getByLabelText("Price each")).toBeDisabled();
+  view.rerender(editor("invalid-amount"));
+  await act(async () => {
+    finish();
+  });
+  await act(() => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))));
+  expect(screen.getByLabelText("Description")).toBeEnabled();
+  expect(screen.getByLabelText("Description")).toHaveValue("Held seal");
+  expect(screen.getByLabelText("Price each")).toHaveValue("bad");
+});

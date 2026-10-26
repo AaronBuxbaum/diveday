@@ -47,7 +47,9 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       await page.goto("/shop/blue-mantis/gear");
       await page.getByRole("link", { name: "Reg #1", exact: true }).click();
       await page.getByRole("heading", { level: 1, name: "Reg #1" }).waitFor();
-      const notes = page.getByRole("region", { name: "Notes", exact: true });
+      const notes = page
+        .locator("details")
+        .filter({ has: page.locator("summary").filter({ hasText: "Add a note" }) });
       await notes.locator("summary").filter({ hasText: "Add a note" }).click();
       await notes.getByLabel("Add a note").fill("Mouthpiece needs replacing");
       await capture(page, "gear-add-note-editor", "light");

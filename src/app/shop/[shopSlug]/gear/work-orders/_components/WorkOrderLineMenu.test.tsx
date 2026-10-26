@@ -148,3 +148,28 @@ it("keeps an explicit close until a new same-code refusal reopens that line", ()
   view.rerender(menu("invalid-amount"));
   expect(screen.getByLabelText("Price each")).toBeVisible();
 });
+
+it("holds edit controls during its action and restores the refused values before reuse", async () => {
+  let finish!: () => void;
+  updateLine.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const view = render(menu());
+  fireEvent.click(screen.getByRole("button", { name: "Change Old seal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Price each"), { target: { value: "bad" } });
+  const form = view.container.querySelector("form");
+  if (!form) throw new Error("Missing editor");
+  fireEvent.submit(form);
+  expect(screen.getByLabelText("Price each")).toBeDisabled();
+  view.rerender(menu("invalid-amount"));
+  await act(async () => {
+    finish();
+  });
+  await act(() => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))));
+  expect(screen.getByLabelText("Price each")).toBeEnabled();
+  expect(screen.getByLabelText("Price each")).toHaveValue("bad");
+});

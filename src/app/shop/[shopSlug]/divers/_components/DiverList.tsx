@@ -320,7 +320,7 @@ export function DiverList({
     <section className="mt-8">
       {/* Search and Add share one line; the filters narrow the records below. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full max-w-full items-center gap-2 sm:w-auto">
+        <div className="flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
           <SearchField
             ref={searchRef}
             id="diver-search"
@@ -329,7 +329,7 @@ export function DiverList({
             onChange={(event) => search(event.target.value)}
             onKeyDown={submitSearch}
             placeholder={copy.searchPlaceholder}
-            className="min-w-0 flex-1 sm:w-80 sm:flex-none"
+            className="min-w-0 grow basis-48 sm:w-80 sm:flex-none"
           />
           {/* One offer, two doors, and deliberately the same words on both so
               the swap on the first keystroke is invisible. With something

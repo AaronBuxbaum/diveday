@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
@@ -53,7 +54,7 @@ export function NeedsYouGroups({
             label={
               <Link
                 href={shopPath(shopSlug, "trips", group.departure.tripId)}
-                className="hover:underline"
+                className={`${tapTargetLinkClass} hover:underline`}
               >
                 {group.departure.label}
               </Link>
