@@ -191,34 +191,28 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   await expect(stepsBand.locator('input[name="source"]')).toHaveCount(0);
 });
 
-test("the homepage lists every feature page, filed by when its job falls", async ({ page }) => {
+test("the homepage leads to every feature page through the Product catalogue", async ({ page }) => {
   await page.goto("/");
+  const catalogue = page.getByRole("main").getByRole("link", {
+    name: diverTranslator("en-US")("marketing.home.featuresLink"),
+    exact: true,
+  });
+  await expect(catalogue).toHaveAttribute("href", "/product#full-list");
+  await catalogue.click();
+  await expect(page).toHaveURL(/\/product#full-list$/);
 
-  // The page's answer to "does it do X?": every feature page, under the part
-  // of a shop's year it serves, read off the registry, so a page added there
-  // is listed here without this page naming it.
-  const directory = page
-    .getByRole("main")
-    .locator("section")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "What the whiteboard, the clipboard and the three apps did, in one plan",
-      }),
-    });
-  await expect(directory.getByRole("heading", { level: 3 })).toHaveText([
+  // The complete catalogue lives on Product; the homepage's quiet door lands on it.
+  const directory = page.locator("#full-list");
+  await expect(directory.getByRole("heading", { level: 2 })).toHaveText([
     "Before the dive day",
     "On the day",
     "Across the season",
+    "Also in the plan",
   ]);
   const listed = await directory
-    .getByRole("link")
+    .locator('a[href^="/product/"]')
     .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
-  // …and it ends on the hub's full list, landing on the rows that hold every
-  // page's lines rather than on the hub's hero above the same directory.
-  expect(listed).toEqual([
-    ...FEATURE_PAGE_SLUGS.map((slug) => featurePagePath(slug)),
-    "/product#full-list",
-  ]);
+  expect(listed).toEqual(FEATURE_PAGE_SLUGS.map((slug) => featurePagePath(slug)));
 
   await directory.getByRole("link", { name: /^Rental gear/ }).click();
   await expect(page).toHaveURL(/\/product\/rental-gear$/);

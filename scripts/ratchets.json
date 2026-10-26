@@ -210,7 +210,6 @@
     "e2e/agency-check.spec.ts": 1,
     "e2e/backup.spec.ts": 6,
     "e2e/blowout.spec.ts": 2,
-    "e2e/boat-loop.spec.ts": 1,
     "e2e/booking.spec.ts": 2,
     "e2e/buddy-pairs.spec.ts": 1,
     "e2e/certifications.spec.ts": 4,
