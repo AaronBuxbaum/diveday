@@ -8,6 +8,7 @@ import {
   type HandledHelpRow,
   HelpRequestControl,
   HelpRequestProvider,
+  type HelpRequestRowFace,
 } from "./HelpRequestControl";
 import { helpRequestCopy } from "./help-request-copy";
 
@@ -19,11 +20,13 @@ export function helpRequestControl(
   request: NonNullable<TodayAction["helpRequest"]>,
   label: string,
   t: StaffTranslator,
+  row?: HelpRequestRowFace,
 ) {
   const { meetingInstructions, ...rest } = request;
   return (
     <HelpRequestControl
       {...rest}
+      row={row}
       label={label}
       meetingLine={meetingInstructions ? helpRequestMeetingText(t, meetingInstructions) : null}
     />

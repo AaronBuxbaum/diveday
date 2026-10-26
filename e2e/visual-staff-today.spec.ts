@@ -71,6 +71,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today", scheme);
       });
 
+      test(`the help editor opens beneath its person summary (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis");
+        await page
+          .getByRole("button", { name: staffCopy("today.helpRequest.arrangeHelp"), exact: true })
+          .click();
+        await expect(page.locator('select[name="helperPersonId"]')).toBeVisible();
+        await capture(page, "today-help-request-editor", scheme);
+        await page.locator('select[name="helperPersonId"]').press("Escape");
+        await expect(
+          page.getByRole("button", {
+            name: staffCopy("today.helpRequest.arrangeHelp"),
+            exact: true,
+          }),
+        ).toBeFocused();
+      });
+
       // **Which boat is this diver on?** Today's arrival lookup with a match:
       // the desk's first question, answered as one row per booking that opens
       // that boat's Divers tab at the diver's own row.

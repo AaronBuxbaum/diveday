@@ -55,6 +55,16 @@ function renderControl(status: "requested" | "acknowledged" = "requested", helpe
 }
 
 describe("HelpRequestControl", () => {
+  it("closes the editor with Escape and returns focus to its action", () => {
+    renderControl();
+    const action = screen.getByRole("button", { name: "Arrange help" });
+    fireEvent.click(action);
+    const selector = screen.getByLabelText("Crew member");
+    selector.focus();
+    fireEvent.keyDown(selector, { key: "Escape" });
+    expect(screen.queryByLabelText("Crew member")).toBeNull();
+    expect(screen.getByRole("button", { name: "Arrange help" })).toHaveFocus();
+  });
   it("opens a read-only inline form with the crew choice and departure instructions", () => {
     renderControl();
     fireEvent.click(screen.getByRole("button", { name: "Arrange help" }));

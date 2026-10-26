@@ -23,7 +23,7 @@ import {
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
+import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
@@ -56,8 +56,9 @@ import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
-import { quietIcon, RowGlyph, type RowIconName } from "./row-glyph";
+import { quietIcon, RowGlyph } from "./row-glyph";
 import { rowKey } from "./row-key";
+import { SpineRow } from "./SpineRow";
 import { rowLine, spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
@@ -193,61 +194,6 @@ const HORIZON_PANEL_CLASS =
  * sentence starts at 289, and read as that row's continuation (pixel-craft
  * K-317).
  */
-function SpineRow({
-  tone,
-  icon,
-  kind,
-  trailing,
-  closed = true,
-  door,
-  children,
-}: {
-  tone: LedgerRowKindTone;
-  /** A quiet row's category drawing; ignored on a row that is wrong. */
-  icon?: RowIconName;
-  /** One word of kind, in the row's own type. */
-  kind: string;
-  /** The row's fix when it performs one — a real control beside the words. */
-  trailing?: React.ReactNode;
-  /** `false` inside a station's panel, whose own edge closes the list. */
-  closed?: boolean;
-  /**
-   * Where the row's own tap goes, and its name for a screen reader. One object,
-   * not two props: `LedgerRow`'s door is a union, so a link never reaches a
-   * reader without an accessible name. Absent on a row that performs its fix.
-   */
-  door?: { href: string; linkLabel: string };
-  /** The sentence's words. */
-  children: React.ReactNode;
-}) {
-  // Both halves or neither, as one value: the union `LedgerRow` takes.
-  const doorProps: { href: string; linkLabel: string } | { href?: never; linkLabel?: never } =
-    door ?? {};
-  return (
-    <LedgerRow
-      // Stacked below `sm`: the kind and the fix share the first line and the
-      // sentence takes the width beneath them, which is the phone artboard's
-      // reading and the only one where a full sentence has room to be read.
-      stacked
-      // The row's glyph — the first of the anatomy's four parts (glyph, one
-      // word of kind, one sentence, one fix), drawn from the shipped status
-      // family and never from the illustration hand: a status glyph is a
-      // status, and the ADR keeps drawings out of that job. The kind word
-      // beside it carries the meaning; the glyph is what a scan reads first.
-      leading={<RowGlyph tone={tone} icon={icon} />}
-      kind={{ word: kind, tone }}
-      trailing={trailing}
-      closed={closed}
-      {...doorProps}
-    >
-      {/* One line per row (ADR 20260904-reef-all-the-way-down, slice 16a):
-          the sentence at reading size — a subject over a detail at 14px was
-          the rail's grammar, and a panel reads as one sentence. */}
-      <p className="min-w-0 text-base leading-snug">{children}</p>
-    </LedgerRow>
-  );
-}
-
 /**
  * One job, as a ledger row: its kind as a word in the row's own type, the one
  * sentence saying what is wrong, and the one fix beside it.
@@ -313,6 +259,15 @@ function StationRow({
       ) : null}
     </>
   );
+  if (action.helpRequest) {
+    return helpRequestControl(action.helpRequest, action.actionLabel, t, {
+      leading: <RowGlyph tone={tone} icon={quietIcon(action.kind)} />,
+      kind: t(ACTION_KIND_KEYS[action.kind]),
+      tone,
+      sentence: <p className="min-w-0 text-base leading-snug">{sentence}</p>,
+      closed,
+    });
+  }
   const control = action.waiver ? (
     <WaiverSendControl
       surface="today"
@@ -359,8 +314,6 @@ function StationRow({
       hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
       copy={controls.paymentCopy}
     />
-  ) : action.helpRequest ? (
-    helpRequestControl(action.helpRequest, action.actionLabel, t)
   ) : action.agencyCheck && action.agencyCheck.cards.length > 0 ? (
     // **"Check with SSI" beside a card still waiting for its check** (H-105):
     // drawn only with the browser extension, and then the same check the
