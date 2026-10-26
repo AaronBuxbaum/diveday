@@ -18,3 +18,10 @@ it("attributes only a validated existing ticket line's refusal or successful cor
   expect(lineEditFeedback("not-authorized", "line-edit", own, [{ id: own }])).toBeUndefined();
   expect(lineEditFeedback("invalid-amount", "line-add", own, [{ id: own }])).toBeUndefined();
 });
+
+it("keeps a valid line marker global when the deleted record has no editor", () => {
+  expect(lineEditFeedback("invalid-amount", "line-edit", own, [{ id: own }], true)).toBeUndefined();
+  expect(
+    lineEditFeedback("invalid-quantity", "line-edit", own, [{ id: own }], true),
+  ).toBeUndefined();
+});

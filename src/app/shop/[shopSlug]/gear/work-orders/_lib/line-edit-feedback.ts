@@ -14,9 +14,11 @@ export function lineEditFeedback(
   form: string | undefined,
   rawLineId: string | undefined,
   lines: readonly { id: string }[],
+  readOnly = false,
 ): LineEditFeedback | undefined {
   const lineId = uuidParam(rawLineId);
-  if (form !== "line-edit" || !lineId || !lines.some((line) => line.id === lineId)) return;
+  if (readOnly || form !== "line-edit" || !lineId || !lines.some((line) => line.id === lineId))
+    return;
   if (notice === "line-saved") return { lineId, notice };
   if (notice && Object.hasOwn(LINE_EDIT_REFUSAL_FIELDS, notice))
     return { lineId, notice: notice as keyof typeof LINE_EDIT_REFUSAL_FIELDS };

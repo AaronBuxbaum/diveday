@@ -7,8 +7,15 @@ export const LINE_ADD_REFUSAL_KEYS = {
 } as const satisfies Record<string, StaffMessageKey>;
 
 /** Only a validated add-line refusal belongs to the add form; edits and gates stay global. */
-export function isLineAddRefusal(notice: string | undefined, form: string | undefined) {
+export function isLineAddRefusal(
+  notice: string | undefined,
+  form: string | undefined,
+  readOnly = false,
+) {
   return (
-    form === "line-add" && notice !== undefined && Object.hasOwn(LINE_ADD_REFUSAL_KEYS, notice)
+    !readOnly &&
+    form === "line-add" &&
+    notice !== undefined &&
+    Object.hasOwn(LINE_ADD_REFUSAL_KEYS, notice)
   );
 }

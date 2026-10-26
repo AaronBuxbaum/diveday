@@ -29,3 +29,22 @@ it("answers an add-line price refusal beside the retained add form", () => {
   expect(refusal.closest("form")).toContainElement(screen.getByLabelText("Price each"));
   expect(screen.getByLabelText("Price each")).toHaveAttribute("aria-invalid", "true");
 });
+
+it("keeps a deleted ticket readable without a destination editor for validation feedback", () => {
+  render(
+    <WorkOrderLinesCard
+      workOrderId="ticket-1"
+      scope="shop.staff.ticket-1"
+      notice="invalid-amount"
+      lines={[]}
+      totalCents={0}
+      readOnly={true}
+      currency={toShopCurrency("USD")}
+      locale="en-US"
+      t={staffTranslator("en-US")}
+    />,
+  );
+  expect(screen.getByRole("heading", { name: "Parts and labor" })).toBeVisible();
+  expect(screen.queryByLabelText("Price each")).toBeNull();
+  expect(screen.queryByText("Check the price.")).toBeNull();
+});

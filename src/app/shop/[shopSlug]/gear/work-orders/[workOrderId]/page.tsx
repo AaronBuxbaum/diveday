@@ -121,8 +121,8 @@ export default async function WorkOrderPage({
     : [];
   const deleted = workOrder.deletedAt !== null;
   const outcome = workOrder.outcome as WorkOrderOutcome | null;
-  const localLineRefusal = isLineAddRefusal(notice, form);
-  const editFeedback = lineEditFeedback(notice, form, line, detail.lines);
+  const localLineRefusal = isLineAddRefusal(notice, form, deleted);
+  const editFeedback = lineEditFeedback(notice, form, line, detail.lines, deleted);
   const banner = noticeFromParam(
     localLineRefusal || (editFeedback && editFeedback.notice !== "line-saved") ? undefined : notice,
     NOTICES,

@@ -21,3 +21,8 @@ describe("add-line refusal attribution", () => {
     }
   });
 });
+
+it("keeps an add validation refusal global after the ticket was deleted", () => {
+  expect(isLineAddRefusal("invalid-amount", "line-add", true)).toBe(false);
+  expect(isLineAddRefusal("invalid-quantity", "line-add", true)).toBe(false);
+});
