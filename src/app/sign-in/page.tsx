@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { connection } from "next/server";
 import { EntryShell } from "@/components/account/EntryShell";
 import { ForgetThisDevice } from "@/components/ForgetThisDevice";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -39,6 +40,9 @@ export default async function SignInPage({
 }: {
   searchParams: Promise<SignInSearchParams>;
 }) {
+  // Keep complete native-form rendering outside prerendering. This auth route
+  // always waits for the actual request.
+  await connection();
   const form = await SignInForm({ searchParams });
   return (
     <div className="flex flex-1 flex-col">

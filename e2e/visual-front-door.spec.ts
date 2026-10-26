@@ -11,7 +11,7 @@ import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages"
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
 import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { E2E_FROZEN_CLOCK, E2E_TEST_ROUTE_SECRET } from "./servers";
+import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 import {
   capture,
@@ -208,13 +208,24 @@ for (const scheme of ["light", "dark"] as const) {
 
       for (const locale of ["en-US", SPANISH] as const) {
         test.describe(`sign-in challenge ${locale}`, () => {
-          // Keep the private-shop sign-in and enrollment helpers in English;
-          // the locale cookie below switches the photographed flow to Spanish.
+          // The browser locale also sets Accept-Language. Keep only setup in
+          // English via the reader cookie, then switch it for the subject flow.
           test.use({
             locale,
-            extraHTTPHeaders: {
-              authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}`,
-              "Accept-Language": "en-US",
+            storageState: {
+              cookies: [
+                {
+                  name: "diveday_locale",
+                  value: "en-US",
+                  domain: "127.0.0.1",
+                  path: "/",
+                  expires: -1,
+                  httpOnly: false,
+                  secure: false,
+                  sameSite: "Lax",
+                },
+              ],
+              origins: [],
             },
           });
           test(`the code-only sign-in states render true to the design ${locale} (${scheme})`, async ({

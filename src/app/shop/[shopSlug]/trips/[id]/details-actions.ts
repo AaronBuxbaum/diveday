@@ -335,6 +335,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   revalidateAndRedirect(
     back,
     noticeUrl(back, savedNotice, {
+      view: "details",
       ...(notice ? { held: notice.id, tell: notice.told } : {}),
       ...(savedNotice === "saved-fly-safe-unreached" && flySafe && flySafe !== "failed"
         ? { count: flySafe.unreached.length }
