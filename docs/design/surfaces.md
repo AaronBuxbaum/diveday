@@ -87,6 +87,12 @@ carries the green turtle; the two horizons are two tideline panels side by side.
   the rest of the week one link to the board. A departure's facts are said once, at its station,
   instead of once per card.
 
+**Amended 2026-10-26** (staff polish #3071). The header's outstanding-work summary opens and
+focuses the existing nonempty Needs you queue. Arrange help opens beneath the person's full row,
+with a 512px editor cap on desktop; assignment folds it, Change helper reopens the saved valid
+choice, and refusals retain the attempted choice. Completion keeps Undo and the handled-request
+disclosure reachable.
+
 Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
 `DaySpine.test.tsx` pins the composition (including its silences and, since 2026-09-17, the door
 rule), `FirstRunChecklist.test.tsx` pins the same rule on the first-morning ledger, and
@@ -584,6 +590,14 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 - **Composition:** one grouped ledger because reservation state is the register's whole subject,
   and three renderings of it were two too many.
 
+**Amended 2026-10-26** (staff polish #3071). A unit's due fact sits beside its identity; a unit
+without notes offers Add a note without an empty Notes card. Work-order rows lead with the
+promise and technician before the complaint. A ticket keeps its ordinary next move visible and
+puts alternate moves behind Other moves. A collected ticket reads its job as facts, with Edit
+job and Record payment as separate disclosures; pickup remains independent of payment. Parts
+and labor opens on demand, keeps a refused attempt through its redirect, answers beside the
+invalid field, and returns focus to the updated total after success.
+
 ### Staffing — `/shop/[shopSlug]/staffing`
 
 **Built 2026-08-29** — same ADR and canvas.
@@ -599,8 +613,11 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 - **Remove first:** nothing — the week grid is already the minimum that shows coverage. The
   Credentials group no longer renders a heading over an orphan door: with nothing on file the door
   is the group and names itself.
-- **Composition:** people × days, because coverage is a grid question; the gap carries its act in
-  the day it lives (H-59 keeps credentials inform-only).
+- **Composition:** people × days on desktop. Below `lg`, each day groups a departure and its crew
+  once per trip and session window, followed by a quiet Shifts and days away group when needed.
+  Each person's clash and away facts remain attached to that person; a gap keeps its existing
+  assignment or request action (H-59 keeps credentials inform-only). Critical names, times,
+  departure titles and status words use body-size type at both widths.
 
 ### Reports — `/shop/[shopSlug]/reports`
 

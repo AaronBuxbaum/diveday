@@ -23,7 +23,7 @@ export function StaffingDepartureCrew({
         <li key={person.personId}>
           <Link
             href={href}
-            className="flex min-h-11 flex-col justify-center py-1 text-sm hover:underline"
+            className="flex min-h-11 flex-col justify-center py-1 text-base hover:underline"
           >
             <span className="font-medium">{person.name}</span>
             {ownTrip.clashes.map((clash) => (

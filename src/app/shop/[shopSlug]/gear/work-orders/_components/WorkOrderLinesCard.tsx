@@ -13,6 +13,7 @@ import {
   workOrderLineTotalCents,
   workOrderQuantityInput,
 } from "@/lib/work-orders";
+import { LINE_ADD_REFUSAL_KEYS } from "../_lib/line-add-feedback";
 import { WorkOrderAddLine } from "./WorkOrderAddLine";
 import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMenu";
 
@@ -34,6 +35,7 @@ import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMe
  */
 export function WorkOrderLinesCard({
   workOrderId,
+  scope,
   notice,
   lines,
   totalCents,
@@ -43,6 +45,7 @@ export function WorkOrderLinesCard({
   t,
 }: {
   workOrderId: string;
+  scope: string;
   notice?: string;
   lines: WorkOrderLine[];
   totalCents: number;
@@ -87,7 +90,7 @@ export function WorkOrderLinesCard({
         // Pulled out by the cells' own inset, so a row's first word sits on
         // the card title's edge at every width (`CELL_EDGE` steps out at sm).
         <table
-          className="-mx-4 w-[calc(100%+2rem)] text-sm sm:-mx-5 sm:w-[calc(100%+2.5rem)]"
+          className="-mx-4 w-[calc(100%+2rem)] text-base sm:-mx-5 sm:w-[calc(100%+2.5rem)]"
           style={{ tableLayout: "fixed" }}
         >
           <THead>
@@ -159,6 +162,7 @@ export function WorkOrderLinesCard({
       {readOnly ? null : (
         <WorkOrderAddLine
           key={workOrderId}
+          scope={scope}
           notice={notice}
           label={t("workOrders.detail.addPartOrLabor")}
         >
@@ -169,7 +173,12 @@ export function WorkOrderLinesCard({
               <option value="labor">{workOrderLineKindLabel(t, "labor")}</option>
             </select>
           </Field>
-          <Field label={t("workOrders.form.description")} htmlFor="new-line-description" required>
+          <Field
+            label={t("workOrders.form.description")}
+            htmlFor="new-line-description"
+            required
+            error={notice === "empty-description" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+          >
             <input
               id="new-line-description"
               name="description"
@@ -179,7 +188,12 @@ export function WorkOrderLinesCard({
               className={controlClass}
             />
           </Field>
-          <Field label={t("workOrders.form.quantity")} htmlFor="new-line-quantity" required>
+          <Field
+            label={t("workOrders.form.quantity")}
+            htmlFor="new-line-quantity"
+            required
+            error={notice === "invalid-quantity" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+          >
             <input
               id="new-line-quantity"
               name="quantity"
@@ -189,7 +203,12 @@ export function WorkOrderLinesCard({
               className={`${controlClass} tabular-nums`}
             />
           </Field>
-          <Field label={t("workOrders.form.unitAmount")} htmlFor="new-line-amount" required>
+          <Field
+            label={t("workOrders.form.unitAmount")}
+            htmlFor="new-line-amount"
+            required
+            error={notice === "invalid-amount" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+          >
             <input
               id="new-line-amount"
               name="unitAmount"

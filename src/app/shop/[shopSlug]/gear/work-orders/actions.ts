@@ -390,14 +390,14 @@ export async function addWorkOrderLineAction(formData: FormData) {
   const landing = order(parsed.data.workOrderId);
   const quantityHundredths = parseWorkOrderQuantity(parsed.data.quantity);
   if (quantityHundredths === null) {
-    revalidateAndRedirect(landing, noticeUrl(landing, "invalid-quantity"));
+    revalidateAndRedirect(landing, noticeUrl(landing, "invalid-quantity", { form: "line-add" }));
   }
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) revalidateAndRedirect(landing, noticeUrl(landing, "invalid"));
   const unitAmountCents = parseAmountMinorUnits(parsed.data.unitAmount, shop.currency);
   if (unitAmountCents === null) {
-    revalidateAndRedirect(landing, noticeUrl(landing, "invalid-amount"));
+    revalidateAndRedirect(landing, noticeUrl(landing, "invalid-amount", { form: "line-add" }));
   }
 
   const outcome = await addWorkOrderLine(db, {
@@ -408,7 +408,14 @@ export async function addWorkOrderLineAction(formData: FormData) {
     quantityHundredths,
     unitAmountCents,
   });
-  revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "line-added" : outcome.reason));
+  revalidateAndRedirect(
+    landing,
+    noticeUrl(
+      landing,
+      outcome.ok ? "line-added" : outcome.reason,
+      !outcome.ok && outcome.reason === "empty_description" ? { form: "line-add" } : undefined,
+    ),
+  );
 }
 
 export async function updateWorkOrderLineAction(formData: FormData) {

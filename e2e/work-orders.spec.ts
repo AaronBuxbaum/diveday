@@ -89,6 +89,71 @@ test.describe("staff", () => {
     await expect(page.getByRole("cell", { name: "$45.00" }).first()).toBeVisible();
   });
 
+  test("a refused add keeps its figures across redirects and repeated additions return to the total", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Breathes wet at depth/ })
+      .first()
+      .click();
+    const door = page.getByText(staffCopy("workOrders.detail.addPartOrLabor"), { exact: true });
+    await door.click();
+    const form = page.locator("form").filter({ has: page.locator("#new-line-description") });
+    const description = form.getByLabel("Description", { exact: true });
+    const amount = form.getByLabel("Price each", { exact: true });
+    await amount.fill("bad");
+    for (const refusedPart of ["First refused kit", "Second refused kit"]) {
+      await description.fill(refusedPart);
+      await form.getByRole("button", { name: "Add", exact: true }).click();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toBeVisible();
+      await expect(
+        form.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toHaveCount(1);
+      await expect(description).toHaveValue(refusedPart);
+      await expect(amount).toHaveValue("bad");
+    }
+    for (const part of ["First counter kit", "Second counter kit"]) {
+      if (!(await form.isVisible())) await door.click();
+      await description.fill(part);
+      await amount.fill("12");
+      await form.getByRole("button", { name: "Add", exact: true }).click();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.lineAdded"), { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("cell", { name: part, exact: true })).toBeVisible();
+      await expect(form).not.toBeVisible();
+      await expect(page.locator("#work-order-total")).toBeFocused();
+    }
+  });
+
+  test("alternate moves remain inside a ticket resized to phone width", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 844 });
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Breathes wet at depth/ })
+      .first()
+      .click();
+    const trigger = page.getByRole("button", {
+      name: staffCopy("workOrders.detail.otherMoves"),
+      exact: true,
+    });
+    await trigger.click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panel = page.locator("[data-more-menu-panel]");
+    await expect.poll(async () => (await panel.boundingBox())?.x ?? -1).toBeGreaterThanOrEqual(0);
+    const bounds = await panel.boundingBox();
+    if (!bounds) throw new Error("Alternate moves menu is missing");
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
+  });
+
   test("records the work done, then hands the gear back", async ({ page }) => {
     await page.goto("/shop/blue-mantis/gear/work-orders");
     await page

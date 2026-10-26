@@ -68,6 +68,16 @@ describe("the phone staffing day", () => {
     }
   });
 
+  it("distinguishes shifts and days away from the departure crew list", () => {
+    const { list } = renderPhoneDay({ canManage: true });
+    const heading = within(list).getByRole("heading", { name: "Shifts and days away" });
+    const person = within(list)
+      .getAllByText("Keiko Tanaka")
+      .find((node) => node.tagName === "P");
+    if (!person) throw new Error("Missing shift owner");
+    expect(heading.compareDocumentPosition(person) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("names the person's full away dates under their own departure", () => {
     const { list } = renderPhoneDay({ canManage: true });
     const warning = within(list).getByText(/^Away Thu/);

@@ -57,7 +57,7 @@ export function WorkOrderBoard({
                   })}
                   trailing={
                     row.totalCents > 0 ? (
-                      <span className="tabular-nums text-muted text-sm">
+                      <span className="tabular-nums text-muted text-base">
                         {formatMoneyCents(row.totalCents, currency, locale)}
                       </span>
                     ) : null

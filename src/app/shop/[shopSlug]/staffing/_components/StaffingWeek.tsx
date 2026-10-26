@@ -10,7 +10,7 @@ import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
-import { formatDayParts, formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
+import { formatDayParts, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
   GAP_TONE,
   type PlacedGap,
@@ -19,9 +19,10 @@ import {
   type StaffWeek,
   type WeekShift,
 } from "@/lib/staffing-week";
-import { ShiftRemoveMenu } from "./ShiftRemoveMenu";
 import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
+import { StaffingPersonalRows } from "./StaffingPersonalRows";
 import { mobileDepartureGroups } from "./staffing-mobile-groups";
+import { ShiftFace } from "./staffing-shift-face";
 import { WarningLine } from "./staffing-warning-line";
 import { windowOnThisDay } from "./window-on-this-day";
 
@@ -73,6 +74,7 @@ export type StaffingWeekWords = {
   person: string;
   /** The gap row's own label. */
   needsCrew: string;
+  shiftsAndAway: string;
   /** "Assign", the gap's one act. */
   assign: string;
   /** "Assign crew to {trip}" — what that link is called out of context. */
@@ -166,40 +168,13 @@ function gapAct(gap: PlacedGap, canManage: boolean): "assign" | "request" | "non
 }
 
 /**
- * A shift at rest: the range, and the note if there is one. `text-muted` on a
- * day already behind the shop sets the past down without dimming the fill
- * underneath it — an `opacity` on the whole cell would take the warning ink in
- * the gap row below AA with it.
- */
-function ShiftFace({
-  shift,
-  locale,
-  timeZone,
-  isPast,
-}: {
-  shift: WeekShift;
-  locale: string;
-  timeZone: string;
-  isPast: boolean;
-}) {
-  return (
-    <span className={`flex flex-col ${isPast ? "text-muted" : ""}`}>
-      <span className="font-medium tabular-nums">
-        {formatTimeRange(shift.startsAt, shift.endsAt, locale, timeZone)}
-      </span>
-      {shift.note ? <span className="font-medium text-muted">{shift.note}</span> : null}
-    </span>
-  );
-}
-
-/**
  * **Every chip's box: one shape, one inset and one 1px border, on all four
  * kinds** (K-498). The crew and away chips drew a border and the shift and gap
  * chips none, so in one day column the chips' words started 1px apart and a
  * bordered chip stood 2px taller for the same lines. Every kind reserves the
  * pixel; a kind only colours it (`CHIP_KIND`), transparent where it draws none.
  */
-const CHIP_BOX = "flex w-full flex-col rounded-lg border px-2 py-1.5 text-start text-xs";
+const CHIP_BOX = "flex w-full flex-col rounded-lg border px-2 py-1.5 text-start text-base";
 
 const CHIP_KIND = {
   shift: "gap-px border-transparent",
@@ -276,14 +251,14 @@ function ShiftChip({
           chip's own, a transparent 1px edge and then 8px, so the range and
           the flush Remove start on the chip's words, not 1px short (K-498). */}
       <div className="mt-1 flex flex-col items-start gap-1 border-s border-transparent ps-2">
-        <span className="text-xs text-muted tabular-nums">
+        <span className="text-base text-muted tabular-nums">
           {formatTimeRangeTz(shift.startsAt, shift.endsAt, locale, timeZone)}
         </span>
         <form action={deleteShiftAction}>
           <input type="hidden" name="shiftId" value={shift.id} />
           <SubmitButton
             pendingLabel={words.removing}
-            className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+            className={buttonClass({ variant: "ghost", size: "md", flush: true })}
           >
             {words.remove}
           </SubmitButton>
@@ -499,7 +474,7 @@ function GapChip({
               aria-label={fill(words.assignAria, { trip: gap.title })}
               className={buttonClass({
                 variant: "link",
-                size: "sm",
+                size: "md",
                 flush: true,
                 className: "print:hidden",
               })}
@@ -515,7 +490,7 @@ function GapChip({
               <SubmitButton
                 pendingLabel={words.requesting}
                 ariaLabel={fill(words.requestAria, { trip: gap.title })}
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                className={buttonClass({ variant: "link", size: "md", flush: true })}
               >
                 {words.request}
               </SubmitButton>
@@ -569,7 +544,7 @@ export function PersonFace({
 }) {
   return (
     <>
-      <p className="text-sm font-semibold">{person.name}</p>
+      <p className="text-base font-semibold">{person.name}</p>
       {person.roles.length > 0 ? (
         <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
       ) : null}
@@ -801,7 +776,7 @@ export function StaffingWeek({
                           aria-label={fill(words.assignAria, { trip: gap.title })}
                           className={buttonClass({
                             variant: "link",
-                            size: "sm",
+                            size: "md",
                             className: "print:hidden",
                           })}
                         >
@@ -812,7 +787,7 @@ export function StaffingWeek({
                   >
                     <Link
                       href={tripHref(shopSlug, trip.tripId)}
-                      className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
+                      className="flex min-h-11 flex-col justify-center text-base font-medium text-primary hover:underline"
                     >
                       <span className="sr-only">{words.crewing}: </span>
                       <span className="tabular-nums">
@@ -823,7 +798,7 @@ export function StaffingWeek({
                     {gap ? (
                       <>
                         <p
-                          className={`text-sm font-medium ${
+                          className={`text-base font-medium ${
                             GAP_TONE[gap.gap] === "warning" ? "text-warning-strong" : "text-muted"
                           }`}
                         >
@@ -831,7 +806,7 @@ export function StaffingWeek({
                         </p>
                         {gap.ratingLapsed ? (
                           <p
-                            className={`text-sm ${
+                            className={`text-base ${
                               GAP_TONE[gap.gap] === "warning" ? "text-warning-strong" : "text-muted"
                             }`}
                           >
@@ -843,7 +818,7 @@ export function StaffingWeek({
                         {/* A <div>, not a <p>: the parser closes a paragraph at its
                         first <form>, and the markup would no longer hydrate. */}
                         {gap.requests.map((request) => (
-                          <div key={request.id} className="mt-1 text-sm text-muted">
+                          <div key={request.id} className="mt-1 text-base text-muted">
                             {request.state === "pending"
                               ? fill(words.requested, { person: request.personName })
                               : `${request.personName} · ${
@@ -899,7 +874,7 @@ export function StaffingWeek({
                         {/* Under the ask rather than beside it, which is the only
                         difference from the grid's copy of this (issue #1339). */}
                         {gap.viewerAskWontClose ? (
-                          <p className="mt-1 text-sm text-warning-strong">{words.askWontClose}</p>
+                          <p className="mt-1 text-base text-warning-strong">{words.askWontClose}</p>
                         ) : null}
                       </>
                     ) : null}
@@ -911,54 +886,15 @@ export function StaffingWeek({
                     />
                   </LedgerRow>
                 ))}
-                {rows
-                  .filter(({ cell }) => cell.shifts.length > 0 || cell.away.length > 0)
-                  .map(({ person, cell }) => (
-                    <LedgerRow key={person.personId} stacked>
-                      <p className="text-sm font-semibold">{person.name}</p>
-                      {/* **One pitch: every entry is a 44px line, and they abut**
-                        (K-213). A crewed departure is a door, and it was one
-                        line of text 4px from the next — 358×20, a thumb aimed
-                        at one landing on its neighbour. A manager's shift was
-                        already 44px beside its Remove; the rest now match it,
-                        so the day reads at one rhythm whoever is reading. */}
-                      <div className="mt-1 flex flex-col">
-                        {cell?.shifts.map((shift) => (
-                          <div
-                            key={shift.id}
-                            className="flex min-h-11 items-center justify-between gap-2 text-sm"
-                          >
-                            <ShiftFace
-                              shift={shift}
-                              locale={locale}
-                              timeZone={timeZone}
-                              isPast={day.isPast}
-                            />
-                            {canManage ? (
-                              <ShiftRemoveMenu
-                                label={fill(words.shiftAria, {
-                                  person: person.name,
-                                  day: day.label,
-                                })}
-                                shiftId={shift.id}
-                                words={words}
-                                action={deleteShiftAction}
-                              />
-                            ) : null}
-                          </div>
-                        ))}
-                        {cell?.away.map((block) => (
-                          <p
-                            key={block.id}
-                            className="flex min-h-11 items-center text-sm text-muted"
-                          >
-                            {words.away}
-                            {block.note ? ` · ${block.note}` : ""}
-                          </p>
-                        ))}
-                      </div>
-                    </LedgerRow>
-                  ))}
+                <StaffingPersonalRows
+                  rows={rows}
+                  day={day}
+                  words={words}
+                  canManage={canManage}
+                  locale={locale}
+                  timeZone={timeZone}
+                  deleteShiftAction={deleteShiftAction}
+                />
               </ul>
             </div>
           );
@@ -970,7 +906,7 @@ export function StaffingWeek({
             (K-195). */}
         {listDays.length === 0 ? (
           <LedgerRow as="div">
-            <p className="text-sm text-muted">{words.empty}</p>
+            <p className="text-base text-muted">{words.empty}</p>
           </LedgerRow>
         ) : null}
       </div>

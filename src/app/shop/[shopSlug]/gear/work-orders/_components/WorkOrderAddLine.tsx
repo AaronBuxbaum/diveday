@@ -3,6 +3,7 @@
 
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { forgetKeptTyped, KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { addWorkOrderLineAction } from "../actions";
@@ -13,15 +14,15 @@ const REFUSALS = new Set(["invalid-quantity", "invalid-amount", "empty-descripti
 export function WorkOrderAddLine({
   notice,
   label,
+  scope,
   children,
 }: {
   notice?: string;
   label: string;
+  scope: string;
   children: ReactNode;
 }) {
   const door = useRef<HTMLDetailsElement>(null);
-  const form = useRef<HTMLFormElement>(null);
-  const attempted = useRef<FormData | null>(null);
   return (
     <details
       ref={door}
@@ -38,16 +39,14 @@ export function WorkOrderAddLine({
         {label}
         <DisclosureCaret direction="down" className="group-open:rotate-180" />
       </summary>
-      <form
-        ref={form}
-        action={addWorkOrderLineAction}
-        onSubmit={(event) => {
-          attempted.current = new FormData(event.currentTarget);
-        }}
-        className="mt-3 grid gap-4 sm:grid-cols-2"
-      >
+      <form action={addWorkOrderLineAction} className="mt-3 grid gap-4 sm:grid-cols-2">
         {children}
-        <LineOutcome notice={notice} door={door} form={form} attempted={attempted} />
+        <KeepTypedOnRefusal
+          form="work-order-add-line"
+          scope={scope}
+          restore={Boolean(notice && REFUSALS.has(notice))}
+        />
+        <LineOutcome notice={notice} door={door} scope={scope} />
       </form>
     </details>
   );
@@ -57,29 +56,20 @@ export function WorkOrderAddLine({
 function LineOutcome({
   notice,
   door,
-  form,
-  attempted,
+  scope,
 }: {
   notice?: string;
   door: RefObject<HTMLDetailsElement | null>;
-  form: RefObject<HTMLFormElement | null>;
-  attempted: RefObject<FormData | null>;
+  scope: string;
 }) {
   const { pending } = useFormStatus();
   useEffect(() => {
     if (pending) return;
     if (notice === "line-added") {
-      attempted.current = null;
+      forgetKeptTyped("work-order-add-line", scope);
       if (door.current) door.current.open = false;
       document.getElementById("work-order-total")?.focus({ preventScroll: true });
-    } else if (notice && REFUSALS.has(notice) && form.current) {
-      if (door.current) door.current.open = true;
-      for (const field of Array.from(form.current.elements)) {
-        if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement)) continue;
-        const value = attempted.current?.get(field.name);
-        if (typeof value === "string") field.value = value;
-      }
     }
-  }, [notice, pending, door, form, attempted]);
+  }, [notice, pending, door, scope]);
   return null;
 }

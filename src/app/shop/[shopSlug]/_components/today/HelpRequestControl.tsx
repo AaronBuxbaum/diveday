@@ -147,6 +147,12 @@ export function HelpRequestControl({
       ? (helperPersonId ?? "")
       : "";
   const ownResult = result?.requestId === requestId ? result : null;
+  useEffect(() => {
+    if (ownResult?.ok && ownResult.effect === "assigned") {
+      setOpen(false);
+      trigger.current?.focus({ preventScroll: true });
+    }
+  }, [ownResult]);
   const success = ownResult?.ok
     ? ownResult.effect === "assigned"
       ? copy.assigned
@@ -213,6 +219,7 @@ export function HelpRequestControl({
         <form
           id={editorId}
           action={run}
+          onReset={(event) => event.preventDefault()}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();

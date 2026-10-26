@@ -100,6 +100,59 @@ describe("HelpRequestControl", () => {
     expect(screen.queryByRole("button", { name: "Help completed" })).toBeNull();
   });
 
+  it("folds a successful assignment, returns focus, and reopens on the saved helper", async () => {
+    const { rerender } = renderControl();
+    helpRequestAction.mockResolvedValueOnce({
+      ok: true,
+      requestId: "request-1",
+      effect: "assigned",
+      helperPersonId: "person-1",
+      revision: 8,
+    } satisfies HelpRequestActionResult);
+    fireEvent.click(screen.getByRole("button", { name: "Arrange help" }));
+    fireEvent.change(screen.getByLabelText("Crew member"), { target: { value: "person-1" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Confirm helper" }));
+    });
+    expect(screen.queryByLabelText("Crew member")).toBeNull();
+    expect(screen.getByRole("button", { name: "Arrange help" })).toHaveFocus();
+    rerender(
+      <HelpRequestProvider copy={copy}>
+        <HelpRequestControl
+          requestId="request-1"
+          revision={8}
+          status="acknowledged"
+          helperPersonId="person-1"
+          helperPersonName="Sam Rivera"
+          label="Change helper"
+          crew={[{ personId: "person-1", fullName: "Sam Rivera" }]}
+          meetingLine={null}
+        />
+      </HelpRequestProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Change helper" }));
+    expect(screen.getByLabelText("Crew member")).toHaveValue("person-1");
+  });
+  it("keeps the attempted helper visible after a refused action and form reset", async () => {
+    renderControl();
+    helpRequestAction.mockResolvedValueOnce({
+      ok: false,
+      requestId: "request-1",
+      intent: "assign",
+      reason: "stale",
+    } satisfies HelpRequestActionResult);
+    fireEvent.click(screen.getByRole("button", { name: "Arrange help" }));
+    fireEvent.change(screen.getByLabelText("Crew member"), { target: { value: "person-1" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Confirm helper" }));
+    });
+    const select = screen.getByLabelText("Crew member");
+    const form = select.closest("form");
+    if (!form) throw new Error("Missing helper form");
+    form.reset();
+    expect(select).toHaveValue("person-1");
+    expect(screen.getByRole("alert")).toHaveTextContent(copy.stale);
+  });
   it("does not preselect another crew member when the saved helper is gone", () => {
     render(
       <HelpRequestProvider copy={copy}>

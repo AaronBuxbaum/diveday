@@ -119,7 +119,8 @@
     "requesting": "Asking…",
     "shiftAria": "Shift for {person} on {day}",
     "thisWeek": "This week",
-    "today": "Today"
+    "today": "Today",
+    "shiftsAndAway": "Shifts and days away"
   },
   "working": {
     "remove": "Remove",
