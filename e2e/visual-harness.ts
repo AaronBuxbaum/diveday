@@ -2186,7 +2186,7 @@ export async function tripIdWithoutSigningIn(
 export async function bookAVisualRegressionSeat(page: Page, scheme: "light" | "dark") {
   await page.goto("/s/blue-mantis");
   await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
   await page.getByLabel("Email", { exact: true }).fill(`visual-regression-${scheme}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();

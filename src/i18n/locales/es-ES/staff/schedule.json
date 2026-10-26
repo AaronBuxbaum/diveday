@@ -87,7 +87,7 @@
     "putOnBoard": "Ponerla en el calendario",
     "newDate": "Nueva fecha",
     "multiDayNote": "Los {count} días se mueven juntos, conservando sus intervalos.",
-    "newDepartureTime": "Nueva hora de salida",
+    "newDepartureTime": "Nueva hora de salida ({timeZone})",
     "moving": "Moviendo…",
     "moveIt": "Moverla",
     "impactTitle": "Si la mueves",

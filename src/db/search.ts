@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { PaletteAnswerView } from "@/lib/palette-answer";
 import type { RecentRef } from "@/lib/recent-refs";
 import type { AppDb } from "./client";
@@ -254,7 +254,7 @@ function toResults(
       detail: row.email ?? row.phone ?? null,
     })),
     trips: tripRows.map((row) => {
-      const date = formatShortDate(row.startsAt, locale, timeZone);
+      const date = formatDateTimeTz(row.startsAt, locale, timeZone);
       return {
         id: row.id,
         title: row.title,

@@ -354,7 +354,7 @@ describe("ScheduleBuilder week board", () => {
     expect(screen.getByLabelText("New date")).toHaveValue("2026-08-27");
     // The time box settles to what it reads and a hidden control submits the
     // HH:MM the server expects (ADR 20260906-before-you-ask, decision 3).
-    expect(screen.getByLabelText("New departure time")).toHaveValue("7:00 AM");
+    expect(screen.getByLabelText("New departure time (America/New_York)")).toHaveValue("7:00 AM");
     expect(document.querySelector('input[type="hidden"][name="startTime"]')).toHaveValue("07:00");
   });
 
@@ -490,7 +490,7 @@ describe("ScheduleBuilder week board", () => {
     );
     await user.click(screen.getByRole("button", { name: /^Move Open Water Diver/ }));
     expect(screen.getByLabelText("New date")).toHaveValue("2026-08-28");
-    expect(screen.getByLabelText("New departure time")).toHaveValue("8:00 AM");
+    expect(screen.getByLabelText("New departure time (America/New_York)")).toHaveValue("8:00 AM");
     expect(document.querySelector('input[type="hidden"][name="startTime"]')).toHaveValue("08:00");
     // Three days move together, and the form says so — the same note the
     // stream's own move panel carries for a course.

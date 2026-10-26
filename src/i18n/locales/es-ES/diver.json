@@ -1393,10 +1393,10 @@
     "estimatedRentalFullSet": "Alquiler estimado: {price} por persona, precio del equipo completo."
   },
   "party": {
-    "numberOfDivers": "Número de buceadores",
+    "numberOfDivers": "Personas",
     "yourDetails": "Tus datos",
     "diverN": "Buceador {number}",
-    "diverCountOption": "{count, plural, one {# buceador} other {# buceadores}}",
+    "diverCountOption": "{count, plural, one {# persona} other {# personas}}",
     "diverCountShort": "{count, number}",
     "nameLabel": "Nombre",
     "diverNameLabel": "Nombre del buceador {number}",

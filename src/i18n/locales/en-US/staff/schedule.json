@@ -87,7 +87,7 @@
     "putOnBoard": "Put it on the board",
     "newDate": "New date",
     "multiDayNote": "All {count} days move together, keeping their gaps.",
-    "newDepartureTime": "New departure time",
+    "newDepartureTime": "New departure time ({timeZone})",
     "moving": "Moving…",
     "moveIt": "Move it",
     "impactTitle": "If you move it",

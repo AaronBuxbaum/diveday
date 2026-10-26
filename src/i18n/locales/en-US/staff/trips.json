@@ -244,7 +244,7 @@
     "cancelConfirm": "Yes, cancel this departure",
     "weatherBlowout": "Weather blow-out…",
     "dayBlowout": "Weather blow-out for the whole day…",
-    "viewBlowout": "{cause, select, run_ended {See who was told} other {View the blow-out cascade}}"
+    "viewBlowout": "{cause, select, run_ended {See who was told} other {View cancellation record}}"
   },
   "details": {
     "titleLabel": "Title",

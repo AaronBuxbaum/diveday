@@ -12,7 +12,7 @@
     "calling": "Calling…"
   },
   "record": {
-    "title": "Blow-out cascade",
+    "title": "Cancellation record",
     "titleRunEnded": "Canceled with its run",
     "calledBy": "Called by {name} · {when}",
     "notified": "Notified",
@@ -72,7 +72,7 @@
     "underway": "Underway",
     "unsent": "Messages unsent",
     "resume": "Finish sending",
-    "openRecord": "Open the cascade",
+    "openRecord": "View cancellation record",
     "empty": "No departures on this day",
     "nothingToCall": "Nothing left to call on this day",
     "instead": "Calling the whole day? Call several departures at once",

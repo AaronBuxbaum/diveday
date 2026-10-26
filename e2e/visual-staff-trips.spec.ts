@@ -125,7 +125,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
-        await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await page.getByRole("button", { name: "Reinstate trip" }).waitFor();
         await page.getByRole("link", { name: "View the blow-out cascade" }).waitFor();

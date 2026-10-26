@@ -20,7 +20,7 @@ describe("BookingPartyFields", () => {
   it("scopes name/email autofill per diver rather than turning it off (task 22)", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2 people" }));
     fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
     expect(screen.getByRole("textbox", { name: "Name" })).toHaveAttribute("autocomplete", "name");
     expect(screen.getByRole("textbox", { name: "Diver 2 name" })).toHaveAttribute(
@@ -36,7 +36,7 @@ describe("BookingPartyFields", () => {
 
   it("uses the main contact's email for a non-lead diver until it is unticked (task 21)", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
-    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2 people" }));
 
     const box = screen.getByRole("checkbox", { name: /use the main contact’s email/i });
     expect(box).toBeChecked();
@@ -51,7 +51,7 @@ describe("BookingPartyFields", () => {
 
   it("asks each member 'Under 18', posts it per seat and says what it means once ticked", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
-    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2 people" }));
     const boxes = screen.getAllByRole("checkbox", { name: /^Under 18/ });
     expect(boxes.map((box) => box.getAttribute("name"))).toEqual(["minor-0", "minor-1"]);
     expect(screen.queryByText("A parent or guardian signs the waiver too.")).toBeNull();
@@ -64,7 +64,7 @@ describe("BookingPartyFields", () => {
 
   it("asks 'Under 18' last in each diver's block, after the email box", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
-    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2 people" }));
     const under18 = screen.getAllByRole("checkbox", { name: /^Under 18/ })[1] as HTMLElement;
     const leadEmail = screen.getByRole("checkbox", { name: /use the main contact’s email/i });
     expect(
@@ -78,7 +78,7 @@ describe("BookingPartyFields", () => {
     // (ADR 20260820-attested-at-booking-verified-at-boarding, amended). The
     // party editor collects names, addresses and one phone number.
     renderDiver(<BookingPartyFields maxPartySize={3} />);
-    fireEvent.click(screen.getByRole("radio", { name: "3 divers" }));
+    fireEvent.click(screen.getByRole("radio", { name: "3 people" }));
     expect(document.querySelector('select[name^="certificationLevel"]')).toBeNull();
     expect(document.querySelector('[name^="certificationAgency"]')).toBeNull();
     expect(document.querySelector('[name^="certificationNumber"]')).toBeNull();
@@ -109,7 +109,7 @@ describe("BookingPartyFields", () => {
     // not exist. Asserted at the cap, since that is where a fixed-length list
     // would fail.
     renderDiver(<BookingPartyFields maxPartySize={MAX_PUBLIC_PARTY_SIZE} />);
-    fireEvent.change(screen.getByRole("combobox", { name: /number of divers/i }), {
+    fireEvent.change(screen.getByRole("combobox", { name: /people/i }), {
       target: { value: String(MAX_PUBLIC_PARTY_SIZE) },
     });
     expect(document.querySelectorAll('input[name^="fullName-"]')).toHaveLength(
@@ -142,7 +142,7 @@ describe("BookingPartyFields", () => {
 describe("BookingPartyFields — the group captions", () => {
   it("captions the lead's details exactly as it captions the party count, 8px above the fields", () => {
     renderDiver(<BookingPartyFields maxPartySize={4} />);
-    const countCaption = screen.getByText("Number of divers");
+    const countCaption = screen.getByText("People");
     const detailsCaption = screen.getByText("Your details");
     expect(detailsCaption.tagName).toBe("LEGEND");
     expect(detailsCaption.className.split(" ").sort()).toEqual(
@@ -184,7 +184,7 @@ describe("BookingPartyFields — the group captions", () => {
 describe("BookingPartyFields — a diver's boxes", () => {
   it("gives every box its own row, so a long address is never cut", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} leadPhone />);
-    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2 people" }));
     fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
     for (const name of ["Email", "Diver 2 email"]) {
       const grid = screen.getByRole("textbox", { name }).closest(".grid-cols-1");
@@ -204,19 +204,19 @@ describe("BookingPartyFields — a diver's boxes", () => {
  *
  * Both shapes answer to one accessible name and carry one hydration flag,
  * which is what lets anything reading this form — a spec included — ask for
- * "Number of divers" without first working out how many seats are left.
+ * "People" without first working out how many seats are left.
  */
 describe("BookingPartyFields — the party-count control", () => {
   it("renders a segmented row of radios, and no select, for a party of six or fewer", () => {
     renderDiver(<BookingPartyFields maxPartySize={6} />);
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(6);
-    expect(screen.getByRole("radio", { name: "1 diver" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "1 person" })).toBeChecked();
   });
 
   it("submits the chosen count under the name the booking action parses", () => {
     renderDiver(<BookingPartyFields maxPartySize={4} />);
-    const three = screen.getByRole("radio", { name: "3 divers" });
+    const three = screen.getByRole("radio", { name: "3 people" });
     expect(three).toHaveAttribute("name", "partySize");
     fireEvent.click(three);
     expect(three).toBeChecked();
@@ -226,15 +226,15 @@ describe("BookingPartyFields — the party-count control", () => {
   it("falls back to the select once the boat has room for more than six", () => {
     renderDiver(<BookingPartyFields maxPartySize={7} />);
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
-    expect(screen.getByRole("combobox", { name: /number of divers/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /people/i })).toBeInTheDocument();
   });
 
   it("names itself and reports hydration in both shapes", () => {
     const { unmount } = renderDiver(<BookingPartyFields maxPartySize={5} />);
-    expect(screen.getByLabelText("Number of divers")).toHaveAttribute("data-hydrated");
+    expect(screen.getByLabelText("People")).toHaveAttribute("data-hydrated");
     unmount();
     renderDiver(<BookingPartyFields maxPartySize={MAX_PUBLIC_PARTY_SIZE} />);
-    expect(screen.getByLabelText("Number of divers")).toHaveAttribute("data-hydrated");
+    expect(screen.getByLabelText("People")).toHaveAttribute("data-hydrated");
   });
 
   /**
@@ -245,7 +245,7 @@ describe("BookingPartyFields — the party-count control", () => {
    */
   it("draws its track and segments from the segmented recipe, nested in its corner", () => {
     renderDiver(<BookingPartyFields maxPartySize={4} />);
-    const group = screen.getByRole("radiogroup", { name: "Number of divers" });
+    const group = screen.getByRole("radiogroup", { name: "People" });
     for (const token of segmentedTrackClass.split(" ")) expect(group).toHaveClass(token);
     for (const radio of screen.getAllByRole("radio")) {
       const segment = radio.closest("label");

@@ -148,7 +148,7 @@ test.describe("schedule builder", () => {
     // Where the other boat sits, in the fields' own values.
     await chooseRowAction(page, "Move", host as string);
     const landingDate = await page.getByLabel("New date").inputValue();
-    const landingTime = await page.getByLabel("New departure time").inputValue();
+    const landingTime = await page.getByLabel("New departure time (America/New_York)").inputValue();
     await page.getByRole("button", { name: "Cancel" }).click();
 
     await chooseRowAction(page, "Move", mover as string);
@@ -156,7 +156,7 @@ test.describe("schedule builder", () => {
     await expect(page.getByText(/is already rostered on .+ at that time\./)).toHaveCount(0);
 
     await page.getByLabel("New date").fill(landingDate);
-    await page.getByLabel("New departure time").fill(landingTime);
+    await page.getByLabel("New departure time (America/New_York)").fill(landingTime);
 
     // The demo shop puts the same two or three people on nearly everything, so
     // landing one boat on top of another is a clash by construction. Matched
@@ -278,7 +278,7 @@ test.describe("schedule builder", () => {
     // Move — the departure slides to another day, keeping its length.
     await chooseRowAction(page, "Move", title);
     await page.getByLabel("New date").fill(moveDay);
-    await page.getByLabel("New departure time").fill("07:15");
+    await page.getByLabel("New departure time (America/New_York)").fill("07:15");
     await page.getByRole("button", { name: "Move it" }).click();
     await expect(page.getByRole("status")).toContainText("Moved");
     // 07:15 + the same four hours it was created with.
@@ -712,7 +712,7 @@ test.describe("schedule builder", () => {
     // went with the stream (#1923).
     await chooseRowAction(page, "Move", title);
     await page.getByLabel("New date").fill(moveDay);
-    await page.getByLabel("New departure time").fill("06:45");
+    await page.getByLabel("New departure time (America/New_York)").fill("06:45");
     await page.getByRole("button", { name: "Move it" }).click();
     await expect(page.getByRole("status")).toContainText("Moved");
 

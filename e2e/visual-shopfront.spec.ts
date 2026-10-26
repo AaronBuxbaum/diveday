@@ -245,7 +245,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await page.goto("/s/blue-mantis?embed=1");
         await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
         // Fixed per scheme, like `bookAVisualRegressionSeat`: the name renders,
         // so a random one would be a permanent diff rather than a regression.
         await page.getByLabel("Name", { exact: true }).fill("Embed Regression Diver");
@@ -278,7 +278,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The form is the last section and a Client Component; waiting on it
         // hydrating is what makes this the settled page rather than a shot of
         // the form mounting.
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
         await page.getByLabel("Email", { exact: true }).fill("avery@gmial.com");
         await page.getByLabel("Email", { exact: true }).press("Tab");
@@ -310,7 +310,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "Wreck Trip — Spiegel Grove" })
           .click();
         await page.getByRole("heading", { name: "Join the wait list" }).waitFor();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "public-trip-full", scheme);
       });
 
@@ -329,7 +329,7 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .click();
         await page.getByTestId("trip-course-plan").getByText("Gear is included.").waitFor();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "public-trip-course-session", scheme);
       });
 
@@ -339,7 +339,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "The rest of the briefing" }).click();
         // Wait on something only the opened door renders, never a timing guess.
         await expect(page.getByRole("heading", { name: "Look for" })).toBeVisible();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "booking-pitch-open", scheme);
       });
 
@@ -379,7 +379,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText(/^This charter is for divers with/).waitFor();
         // The booking form is a Client Component below the note; wait for it to
         // hydrate so the shot is of the settled page, not of the form mounting.
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing-requirements", scheme);
       });
 
@@ -399,7 +399,7 @@ for (const scheme of ["light", "dark"] as const) {
         const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
         if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
         await page.goto(`/s/blue-mantis/trips/${mixedBoat.tripId}`);
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
         await expect(page.getByLabel("Joining as")).toBeVisible();
         await capture(page, "public-trip-participant-types", scheme);
       });

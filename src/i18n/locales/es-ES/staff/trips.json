@@ -244,7 +244,7 @@
     "cancelConfirm": "Sí, cancelar esta salida",
     "weatherBlowout": "Cancelación por mal tiempo…",
     "dayBlowout": "Cancelar el día entero por mal tiempo…",
-    "viewBlowout": "{cause, select, run_ended {Ver a quién se avisó} other {Ver la cascada de la cancelación}}"
+    "viewBlowout": "{cause, select, run_ended {Ver a quién se avisó} other {Ver el registro de cancelación}}"
   },
   "details": {
     "titleLabel": "Título",

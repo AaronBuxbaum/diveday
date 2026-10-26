@@ -95,11 +95,13 @@ test.describe("the day's weather call", () => {
     await expect(row(afternoon)).toContainText("Already called");
     await expect(row(morning)).toContainText("Already called");
     // The record is a link away: "Finish sending" while a message is still
-    // unsent (a test server sends no mail), "Open the cascade" once all went.
+    // unsent (a test server sends no mail), "View cancellation record" once all went.
     await row(morning)
-      .getByRole("link", { name: /^(Finish sending|Open the cascade)$/ })
+      .getByRole("link", { name: /^(Finish sending|View cancellation record)$/ })
       .click();
-    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Cancellation record" }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: "Harbour Closed" })).toBeVisible();
     // The afternoon boat, cancelled by the same call, is offered to nobody.
     const offers = (await page.locator("tbody td:nth-child(4)").allTextContents()).join(" · ");

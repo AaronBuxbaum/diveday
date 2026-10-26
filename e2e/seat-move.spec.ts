@@ -25,7 +25,7 @@ signedInAsOwner();
 
 async function joinWaitlist(page: Page, tripId: string, name: string) {
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill(name);
   await page
     .getByLabel("Email")

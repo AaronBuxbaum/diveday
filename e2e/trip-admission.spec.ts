@@ -80,7 +80,7 @@ test.describe("as owner", () => {
     // And the way through, beside it: a level is not a refusal (issue #1866).
     await expect(requirement).toContainText("Not yet at that level? Ask the shop.");
     await expect(page.getByRole("heading", { name: "Who this trip is for" })).toHaveCount(0);
-    const partySize = page.getByLabel("Number of divers");
+    const partySize = page.getByLabel("People");
     await expect(partySize).toHaveAttribute("data-hydrated", "true");
     const noteBox = await requirement.boundingBox();
     const formBox = await partySize.boundingBox();
@@ -118,7 +118,7 @@ test.describe("as owner", () => {
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);
     await page.context().clearCookies();
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
 
     // The requirement is still disclosed in the form — a property of the
     // trip, and the half a deciding diver needs.

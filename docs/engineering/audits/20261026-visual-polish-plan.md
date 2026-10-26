@@ -14,12 +14,32 @@ current behavior (M04, D06, D07). All eight additional owner approvals are recor
 no new Product hero scene; RGS04 adds no filename search. No owner questions remain pending. Any
 browser review Skip and notes retain precedence; browser-only choices were not read.
 
-Current execution: [issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) tracks C01,
-C06, C13, C14, D05, B05, RB09 and RGS01. Its prerequisite is [issue
-#3065](https://github.com/AaronBuxbaum/diveday/issues/3065), implemented for review in [PR
+Current execution targets cover all 75 residual proposals (71 ready and 4 requiring verification).
+Issue #3066 is in progress; the six later batches are queued. The 7 already-done and 3
+owner-retained proposals have no new execution target.
+
+| Execution issue | Proposal IDs | State |
+| --- | --- | --- |
+| [#3066](https://github.com/AaronBuxbaum/diveday/issues/3066) | C01, C06, C13, C14, D05, B05, RB09, RGS01 | In progress |
+| [#3069](https://github.com/AaronBuxbaum/diveday/issues/3069) | M01, M02, M03, M05, M06, M09, D01, D02, D03, D04, RP01, RP08, D08 | Queued |
+| [#3070](https://github.com/AaronBuxbaum/diveday/issues/3070) | M07, M08, RP05, C03, C05, C07, C08, C09, C11, C12, RGS02, RGS04, RGS09 | Queued |
+| [#3071](https://github.com/AaronBuxbaum/diveday/issues/3071) | S01, S02, S03, S04, S05, S06, S07, S08, S09, RR03, RR04, RR05, RR08 | Queued |
+| [#3072](https://github.com/AaronBuxbaum/diveday/issues/3072) | C04, C10, RGS03, RGS06, RGS07, RGS08, RR02, RR06, RR07, RR09 | Queued |
+| [#3073](https://github.com/AaronBuxbaum/diveday/issues/3073) | B01, B02, B03, B04, B07, B08, RB02, RB03, RB04, RB05, RB06, RB08, RP09 | Queued |
+| [#3074](https://github.com/AaronBuxbaum/diveday/issues/3074) | R01, RP02, RP03, RP04, RP06 | Queued |
+
+Prerequisite [issue #3065](https://github.com/AaronBuxbaum/diveday/issues/3065) is tracked in [PR
 #3067](https://github.com/AaronBuxbaum/diveday/pull/3067), on `codex/visual-polish-01-feedback`
-after [PR #3054](https://github.com/AaronBuxbaum/diveday/pull/3054). These references do not claim
-passing CI, merge or deployment.
+after [PR #3054](https://github.com/AaronBuxbaum/diveday/pull/3054). The implementing chat reports
+the local quick gate passed; hosted CI remains pending. Comparison with the actual intended base
+shows four files; the stale registered PR base pin remains under investigation. These statuses do
+not claim merge or deployment.
+
+The latest portable mapping is prepared on `codex/visual-polish-02-clear-controls`. [Open this
+branch’s portable
+record](https://github.com/AaronBuxbaum/diveday/blob/codex/visual-polish-02-clear-controls/docs/engineering/audits/20261026-visual-polish-plan.md).
+Proposal links in the local artifact point to these lowercase GitHub headings; the update becomes
+available after this branch is pushed.
 
 Local interactive artifact ID: `01a16de7-0368-77e2-b15c-7d6e84a71f38`. Its folder contains
 `index.html`, `review-data.json`, `execution-ledger.json` and `implementation-plan.md`. Local links
@@ -107,8 +127,11 @@ dock check-in scene (H-94).
 
 **Source:** src/app/page.tsx; src/app/product/; marketing components and bundles
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes M01; queued for implementation or required verification.
 
 - Historical/context: [PR #2109](https://github.com/AaronBuxbaum/diveday/pull/2109) — closed,
 partial. Earlier homepage journey redesign; refined editorial reduction remains.
@@ -154,8 +177,11 @@ legible product scene close to the promise. Keep detailed supporting proof below
 
 **Source:** src/app/page.tsx; src/app/product/
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes M02; queued for implementation or required verification.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 related. Marketing consistency cleanup, not short hero/product-scene composition.
@@ -193,8 +219,11 @@ destinations in an accessible menu. Retain visible Sign in for returning staff w
 
 **Source:** Marketing header/navigation components
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes M03; queued for implementation or required verification.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 related. Shared marketing cleanup, not accessible compact mobile navigation.
@@ -269,8 +298,11 @@ behind and how to start; retain the specific guides and honest migration limitat
 
 **Source:** src/app/switching/page.tsx and marketing bundle
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes M05; queued for implementation or required verification.
 
 - Historical/context: [PR #3059](https://github.com/AaronBuxbaum/diveday/pull/3059) — closed,
 partial. Merged duplicate switching close; headline still separate scope.
@@ -307,8 +339,11 @@ concrete safety/operational promises in supporting text.
 
 **Source:** src/app/product/[feature]/ and feature copy
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes M06; queued for implementation or required verification.
 
 - Historical/context: [PR #2103](https://github.com/AaronBuxbaum/diveday/pull/2103) — closed,
 related. Introduced feature page copy; no refined headline split acceptance criteria.
@@ -344,8 +379,11 @@ sign-in/forgot-password wrappers, not every auth route.
 
 **Source:** src/app/sign-in/; src/app/forgot-password/; auth layout
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes M07; queued for implementation or required verification.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 partial. Tidied sign-in/dead links; noisy generic wrappers remain in audit.
@@ -379,11 +417,14 @@ its required inputs.
 
 **Source:** src/app/onboard/; src/app/get-set-up/
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #1961](https://github.com/AaronBuxbaum/diveday/issues/1961) — closed,
 related. Setup-invite policy and token security, not uninvited/consumed entry simplification.
+
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes M08; queued for implementation or required verification.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 related. Setup-success and token page cleanup.
@@ -423,11 +464,14 @@ requirements.
 
 **Source:** src/app/get-set-up/
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2834](https://github.com/AaronBuxbaum/diveday/issues/2834) — closed,
 related. Setup-mail security; not minimum setup-request form scope.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes M09; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/get-set-up-light-vw-390.png`,
 `current/get-set-up-light-vw-1280.png`
@@ -466,8 +510,11 @@ story.
 
 **Source:** src/app/s/[shopSlug]/page.tsx and shopfront components
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes D01; queued for implementation or required verification.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 partial. Logo and filter consolidation implemented; earlier full schedule access remains.
@@ -503,11 +550,14 @@ retaining the existing recovery flow and privacy behavior.
 
 **Source:** src/app/s/[shopSlug]/; src/app/find-your-booking/
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2690](https://github.com/AaronBuxbaum/diveday/issues/2690) — closed,
 related. Find-your-booking capture determinism, not a public navigation door.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes D02; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/find-my-booking-composer-light-vw-390.png`,
 `current/find-my-booking-composer-light-vw-1280.png`
@@ -543,8 +593,11 @@ indiscriminately.
 
 **Source:** src/app/s/[shopSlug]/trips/[id]/page.tsx and composition
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes D03; queued for implementation or required verification.
 
 - Historical/context: [PR #2048](https://github.com/AaronBuxbaum/diveday/pull/2048) — closed,
 partial. Desktop form beside selected day; refined phone alternatives order remains.
@@ -580,11 +633,11 @@ action and a secondary board link only if necessary.
 
 **Source:** Public trip staff-preview components
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes D04; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/public-trip-run-line-light-vw-390.png`,
 `current/public-trip-run-line-light-vw-1280.png`
@@ -617,15 +670,14 @@ choice. Make per-person role assumptions explicit for mixed parties if the form 
 
 **Source:** Public trip BookingForm and diver locale bundle
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2251](https://github.com/AaronBuxbaum/diveday/issues/2251) — closed,
 related. People terminology for every-seat operational counts; not booking-party input label.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes D05; implementation is in progress, not verified complete.
 
 **Evidence references in local artifact:** `current/public-trip-participant-types-light-vw-390.png`,
 `current/public-trip-participant-types-light-vw-1280.png`
@@ -742,8 +794,11 @@ tank-accounting repetition; change only repetition still present.
 
 **Source:** src/app/s/[shopSlug]/packages/
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes D08; queued for implementation or required verification.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 partial. Shared package width/disclosure cleanup; remaining multi-option repetition needs fresh
@@ -781,8 +836,11 @@ by family rather than bespoke CSS patches.
 
 **Source:** src/app/shop/[shopSlug]/divers/page.tsx:246
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S01; queued for implementation or required verification.
 
 - Historical/context: [PR #2886](https://github.com/AaronBuxbaum/diveday/pull/2886) — closed,
 partial. Unified collections; does not establish the refined mobile header for every family.
@@ -817,8 +875,11 @@ into a large wall.
 
 **Source:** src/components/ui/FilterChips.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S02; queued for implementation or required verification.
 
 - Historical/context: [PR #2886](https://github.com/AaronBuxbaum/diveday/pull/2886) — closed,
 related. Collection patterns do not explicitly cover discoverable clipped filter overflow.
@@ -852,8 +913,11 @@ issue.
 
 **Source:** src/app/shop/[shopSlug]/_components/today/DaySpine.tsx:1006
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S03; queued for implementation or required verification.
 
 - Historical/context: [PR #3037](https://github.com/AaronBuxbaum/diveday/pull/3037) — closed,
 partial. Needs-you rows rank by impact; no top outstanding-count jump.
@@ -888,11 +952,14 @@ that settled decision.
 
 **Source:** src/app/shop/[shopSlug]/_components/today/HelpRequestControl.tsx:143
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2939](https://github.com/AaronBuxbaum/diveday/issues/2939) — closed,
 related. Reopening handled requests; no resolution-form row-width hierarchy.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S04; queued for implementation or required verification.
 
 **Evidence references in local artifact:**
 
@@ -920,8 +987,11 @@ overdue line; put the detailed complaint beneath or inside the row.
 
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/page.tsx:96
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S05; queued for implementation or required verification.
 
 - Historical/context: [PR #2270](https://github.com/AaronBuxbaum/diveday/pull/2270) — closed,
 related. Introduced work orders; not promise-date scanning.
@@ -953,8 +1023,11 @@ transitions in an overflow menu while retaining the ordinary forward move inline
 
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/_components/WorkOrderStatusCard.tsx:74
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S06; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Current state now a static badge; alternate transitions still equal-weight buttons.
@@ -985,8 +1058,11 @@ discard an overflow action with its existing consequence/confirmation.
 
 **Source:** src/components/lost-found/LostItemRow.tsx:60
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S07; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 related. Removed lost-found explanatory sentence, not return/contact/discard action hierarchy.
@@ -1019,8 +1095,11 @@ uses into a count/disclosure so editable identity/fields appear first.
 
 **Source:** src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx:241
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S08; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Template moved below one-form editor; upcoming-uses disclosure remains.
@@ -1054,8 +1133,11 @@ person-oriented view only where it helps schedule staff across departures.
 
 **Source:** src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx:973
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes S09; queued for implementation or required verification.
 
 - Historical/context: [PR #3037](https://github.com/AaronBuxbaum/diveday/pull/3037) — closed,
 partial. Staffing time/action layout fixed; departure grouping remains.
@@ -1093,8 +1175,11 @@ clearance; two differently framed domain reviews.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/RosterRow.tsx
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes B01; queued for implementation or required verification.
 
 - Historical/context: [PR #3037](https://github.com/AaronBuxbaum/diveday/pull/3037) — closed,
 partial. Turn away moved beside Blocked; reason-specific remedy remains.
@@ -1128,8 +1213,11 @@ gate.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/roster-row-outstanding.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes B02; queued for implementation or required verification.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 related. One explicit manifest status line; not boarding blockers vs information distinction.
@@ -1160,8 +1248,11 @@ Booking actions disclosure. Auto-open only the section relevant to a visible exc
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/roster-row-reference.tsx
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes B03; queued for implementation or required verification.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Person sheet facts consolidated; booking-action disclosure still separate proposal.
@@ -1196,11 +1287,14 @@ history.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/seat-move.ts
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2141](https://github.com/AaronBuxbaum/diveday/issues/2141) — closed,
 related. Move panel turnaround warnings; not date-first deliberate destination choice.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes B04; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/trip-roster-move-seat-light-vw-390.png`
 
@@ -1231,12 +1325,11 @@ validation and clearly handle ambiguous daylight-saving values.
 
 **Source:** src/app/shop/[shopSlug]/schedule/board/
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes B05; implementation is in progress, not verified complete.
 
 **Evidence references in local artifact:** `current/schedule-builder-move-blocked-light-vw-390.png`
 
@@ -1308,8 +1401,11 @@ at departure.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/log/page.tsx:161
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes B07; queued for implementation or required verification.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Compressed departure-log preamble implemented; optional screen-only disclosure remains
@@ -1344,11 +1440,14 @@ legally valid.
 
 **Source:** src/i18n/locales/en-US/staff/waiversStaff.json:46
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #3002](https://github.com/AaronBuxbaum/diveday/issues/3002) — closed,
 related. Historic waiver cutoff provenance; not plain-language paper-release verification copy.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes B08; queued for implementation or required verification.
 
 **Evidence references in local artifact:**
 
@@ -1377,12 +1476,11 @@ preserve the existing bounds.
 
 **Source:** src/app/shop/[shopSlug]/settings/_components/editors/BoatsSitesEditors.tsx:374
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes C01; implementation is in progress, not verified complete.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 related. Dock-day form consolidated; visible minutes units are separate residual.
@@ -1450,11 +1548,11 @@ preview-before-commit.
 
 **Source:** src/app/shop/[shopSlug]/settings/import/page.tsx:258
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes C03; queued for implementation or required verification.
 
 **Evidence references in local artifact:**
 
@@ -1486,8 +1584,11 @@ existing C04 rather than duplicate it
 
 **Source:** src/app/shop/[shopSlug]/courses/[slug]/edit/_components/CourseFormsRequirement.tsx:210
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes C04; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 related. Course editor unified save; labelled order fields remain a separate layout proposal.
@@ -1526,8 +1627,11 @@ scope.
 
 **Source:** settings/security/_components/AccountSessionsList.tsx
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes C05; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Device-grouped active sessions implemented; fresh rendered verification remains.
@@ -1556,12 +1660,11 @@ reauthentication and recovery-code warnings.
 
 **Source:** settings/security/page.tsx and settings.security bundle
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes C06; implementation is in progress, not verified complete.
 
 **Evidence references in local artifact:**
 
@@ -1592,8 +1695,11 @@ formats choice. Group QR and partner links as sharing formats. Choose common for
 
 **Source:** settings/embed/EmbedGenerator.tsx:180
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes C07; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Embed preview/load/code controls cleaned; nine formats remain separate scope.
@@ -1627,11 +1733,11 @@ identifiers and editing behind Destination details; expand setup automatically w
 
 **Source:** settings/export/_components/BackupsSection.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes C08; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/settings-backups-light-vw-1280.png`
 
@@ -1662,11 +1768,11 @@ actions.
 
 **Source:** settings/email/page.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes C09; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/settings-email-light-vw-1280.png`,
 `current/settings-email-light-vw-390.png`
@@ -1697,8 +1803,11 @@ and renewals inside the section; never collapse a role-critical deficiency into 
 
 **Source:** settings/team/_components/StaffCardCredentials.tsx
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes C10; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Exceptions shown on staff cards; long collapsed credential summaries remain.
@@ -1729,11 +1838,14 @@ common filters compact and put unused date range behind Filter; show active rang
 
 **Source:** settings/activity/page.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2314](https://github.com/AaronBuxbaum/diveday/issues/2314) — closed,
 related. Visible From/To labels, not date-grouped ledger and filter disclosure.
+
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes C11; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/settings-activity-light-vw-1280.png`
 
@@ -1761,8 +1873,11 @@ controls and revoke. Keep the synchronization-lag warning visible.
 
 **Source:** settings/calendar/page.tsx
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes C12; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Create weight changed.
@@ -1796,16 +1911,15 @@ reassurance that existing SMS continues. Only show Connect when the integration 
 
 **Source:** settings/whatsapp/page.tsx:145
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2958](https://github.com/AaronBuxbaum/diveday/issues/2958) — open,
 related. Human-owned Meta approval/deployment needed to enable WhatsApp; unavailable Connect UI can
 be fixed independently.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes C13; implementation is in progress, not verified complete.
 
 **Evidence references in local artifact:**
 
@@ -1832,12 +1946,11 @@ validation. Avoid duplicating the same prose in a preview unless necessary.
 
 **Source:** settings/_components/editors/ profile/branding fields
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes C14; implementation is in progress, not verified complete.
 
 **Evidence references in local artifact:** `current/settings-profile-light-vw-1280.png`,
 `current/settings-profile-light-vw-390.png`
@@ -1912,11 +2025,14 @@ a move is confirmed.
 
 **Source:** src/app/ready/[token]/_components/ThreadSections.tsx:194; MoveAsk.tsx:61
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2666](https://github.com/AaronBuxbaum/diveday/issues/2666) — closed,
 related. Captures ask-to-move state; not Change plans door beside date.
+
+- Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
+Execution issue #3074 explicitly includes R01; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/ready-asked-to-move-light-vw-390.png`,
 `current/ready-asked-to-move-light-vw-1280.png`
@@ -1990,8 +2106,11 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/components/offline-manifest/TripScreen.tsx:46
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes RB02; queued for implementation or required verification.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Still-to-board jump added; direct touch route from saved status to roll call remains.
@@ -2026,8 +2145,11 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/prep/_components/prep-lines.tsx:271
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes RB03; queued for implementation or required verification.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 related. Prep fit and tank composition changed; packing table phone text/readability remains.
@@ -2064,11 +2186,14 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/schedule/blowout/[tripId]/page.tsx:339
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2460](https://github.com/AaronBuxbaum/diveday/issues/2460) — closed,
 related. Blow-out title metadata; not mobile recovery facts.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes RB04; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/blowout-cascade-light-vw-390.png`,
 `current/blowout-cascade-light-vw-1280.png`
@@ -2101,11 +2226,11 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/schedule/blowout/[tripId]/page.tsx:280
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes RB05; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/blowout-cascade-light-vw-390.png`
 
@@ -2139,8 +2264,11 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DockDesk.tsx:52
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes RB06; queued for implementation or required verification.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Packets suppress rider controls; live manifest print disclosure still leaks.
@@ -2211,8 +2339,11 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/prep/_components/PrepBody.tsx
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes RB08; queued for implementation or required verification.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Prep counts now coherent; assignment-section navigation remains.
@@ -2245,15 +2376,15 @@ blow-out cascade” link.
 
 **Source:** src/i18n/locales/en-US/staff/blowout.json:15
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2460](https://github.com/AaronBuxbaum/diveday/issues/2460) — closed,
 related. Cause-aware browser title only; operational visible heading and inbound label remain.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes RB09; implementation is in progress, not verified
+complete.
 
 **Evidence references in local artifact:** `current/blowout-cascade-light-vw-390.png`
 
@@ -2321,11 +2452,11 @@ explicit send action.
 
 **Source:** src/app/shop/[shopSlug]/orders/new/page.tsx:256; order-form.ts:10
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RR02; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/orders-new-light-vw-1280.png`,
 `current/orders-new-light-vw-390.png`
@@ -2359,8 +2490,11 @@ rental holds.
 
 **Source:** src/app/shop/[shopSlug]/gear/[id]/page.tsx:308,406,505,548
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes RR03; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Combined status/details panel.
@@ -2402,8 +2536,11 @@ notes.
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/[workOrderId]/page.tsx:182,229;
 _components/WorkOrderJobCard.tsx:38; WorkOrderLinesCard.tsx:47
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes RR04; queued for implementation or required verification.
 
 - Historical/context: [PR #2276](https://github.com/AaronBuxbaum/diveday/pull/2276) — closed,
 related. Work-order billing/ready notification feature, not finished-record composition.
@@ -2438,11 +2575,11 @@ successful add, return to the updated line and total.
 
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/_components/WorkOrderLinesCard.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes RR05; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/work-order-ticket-collected-light-vw-1280.png`,
 `current/work-order-ticket-collected-light-vw-390.png`
@@ -2476,11 +2613,14 @@ self-declaration.
 
 **Source:** src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx:604–612
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2592](https://github.com/AaronBuxbaum/diveday/issues/2592) — closed,
 related. Agency-check action on specialty/nitrox cards; duplicate unsighted wording remains.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RR06; queued for implementation or required verification.
 
 **Evidence references in local artifact:**
 `current/diver-level-card-sighting-open-light-vw-390.png`,
@@ -2516,8 +2656,11 @@ checks. This is a presentation improvement, not a new confirmation step.
 **Source:**
 src/app/shop/[shopSlug]/divers/[personId]/merge/[survivorId]/MergePreview.tsx:269,386,442
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RR07; queued for implementation or required verification.
 
 - Historical/context: [PR #3059](https://github.com/AaronBuxbaum/diveday/pull/3059) — closed,
 partial. Merge email wrapping fixed.
@@ -2557,11 +2700,14 @@ publication/moderation history.
 
 **Source:** src/app/shop/[shopSlug]/reviews/_components/ReviewLedgerRow.tsx:75–95,134
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2931](https://github.com/AaronBuxbaum/diveday/issues/2931) — open,
 related. Synthetic review capture stability, not rating-only card hierarchy.
+
+- Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
+Execution issue #3071 explicitly includes RR08; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/staff-reviews-light-vw-1280.png`,
 `current/staff-reviews-light-vw-390.png`
@@ -2596,11 +2742,14 @@ payment semantics.
 **Source:** src/app/shop/[shopSlug]/gear/rentals/new/page.tsx; _components/CounterRentalPicker.tsx;
 CounterRentalCart.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2257](https://github.com/AaronBuxbaum/diveday/issues/2257) — closed,
 related. Counter tank gas/nitrox behavior; not Who/When/Gear/payment ordering.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RR09; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/counter-rental-form-light-vw-1280.png`,
 `current/counter-rental-form-light-vw-390.png`
@@ -2630,15 +2779,15 @@ followed by site only when useful. Preserve nearest-to-now ranking.
 
 **Source:** src/db/search.ts:256; src/components/search/palette-start-rows.tsx:92
 
-**GitHub match:** exact-existing. Execution issue #3066 now explicitly tracks this approved scope.
-Other linked items are historical/partial context; do not close them automatically.
+**GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2366](https://github.com/AaronBuxbaum/diveday/issues/2366) — closed,
 related. Palette hydration capture, not localized departure time/zone.
 
 - Execution: [Issue #3066](https://github.com/AaronBuxbaum/diveday/issues/3066) — open, exact.
-Current execution ticket explicitly covers this proposal as one of eight small clarity improvements.
-Implementation is not yet recorded as verified.
+Execution issue #3066 explicitly includes RGS01; implementation is in progress, not verified
+complete.
 
 **Evidence references in local artifact:**
 
@@ -2668,11 +2817,14 @@ exists
 
 **Source:** src/components/search/CommandPalette.tsx:674; src/components/search/PaletteLegend.tsx:26
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2366](https://github.com/AaronBuxbaum/diveday/issues/2366) — closed,
 related. Palette capture reliability; not phone close control.
+
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes RGS02; queued for implementation or required verification.
 
 **Evidence references in local artifact:**
 
@@ -2707,8 +2859,11 @@ reviews for depth/admission-related wording
 
 **Source:** src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx:242
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RGS03; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Template replacement moved below editor disclosure; current/incoming comparison remains.
@@ -2747,11 +2902,11 @@ them. Never drop the portability/legal caveats
 
 **Source:** src/app/shop/[shopSlug]/settings/export/page.tsx:135
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes RGS04; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/settings-export-file-grid-light-vw-1280.png`,
 `current/settings-export-file-grid-light-vw-390.png`
@@ -2787,8 +2942,11 @@ translation
 src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx:327;
 src/components/assists/TranslationEditor.tsx:80
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RGS06; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Unified translation save; source-field naming/placement remains.
@@ -2827,8 +2985,11 @@ trail. Coordinate with C10 but distinct scope: ledger vs collapsed summaries
 **Source:** src/app/shop/[shopSlug]/settings/team/_components/StaffCredentials.tsx:81;
 src/app/shop/[shopSlug]/settings/team/page.tsx:633
 
-**GitHub match:** partial-existing. Historical overlap covers only part of refined proposal; no
-equivalent open ticket found.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RGS07; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Flat credential ledger replaced with staff cards; person preselection/correction parity
@@ -2865,8 +3026,11 @@ document titles and material-change warnings
 
 **Source:** src/app/shop/[shopSlug]/waivers/page.tsx:350
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
+
+- Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
+Execution issue #3072 explicitly includes RGS08; queued for implementation or required verification.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 related. Waiver definition columns aligned, not signed-record-first composition.
@@ -2901,11 +3065,11 @@ disclosure and exact support payload
 
 **Source:** src/app/shop/[shopSlug]/settings/_components/CertCheckTry.tsx:272
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes RGS09; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/settings-cert-checks-light-vw-390.png`,
 `current/settings-cert-checks-light-vw-1280.png`
@@ -2939,11 +3103,14 @@ date zone.
 **Source:** src/app/s/[shopSlug]/trips/[id]/page.tsx; _components/EmbedBookedNotice.tsx;
 _components/BookingSections.tsx
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2432](https://github.com/AaronBuxbaum/diveday/issues/2432) — closed,
 related. Embed confirmation fallback name, not confirmation-first composition.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes RP01; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/booking-confirmed-embed-light-vw-390.png`,
 `current/booking-confirmed-embed-light-vw-1280.png`
@@ -2979,8 +3146,8 @@ private-answer access changes.
 
 **Source:** src/app/waivers/[token]/doctor/page.tsx; src/i18n/locales/en-US/diver.json:1176
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2793](https://github.com/AaronBuxbaum/diveday/issues/2793) — closed,
 related. Official examiner form/transcription policy; reviewed closed issue does not require direct
@@ -2988,6 +3155,9 @@ PDF primary action.
 
 - Historical/context: [Issue #2797](https://github.com/AaronBuxbaum/diveday/issues/2797) — closed,
 related. Private return upload; not official-form action and print-instructions labels.
+
+- Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
+Execution issue #3074 explicitly includes RP02; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/waiver-doctor-light-vw-390.png`,
 `current/waiver-doctor-light-vw-1280.png`
@@ -3023,14 +3193,17 @@ or boarding rules; two domain reviews.
 
 **Source:** src/app/waivers/[token] success state; diver waiver copy bundle
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2065](https://github.com/AaronBuxbaum/diveday/issues/2065) — closed,
 related. Staff readiness wording about medical referral, not post-signing next-action hierarchy.
 
 - Historical/context: [Issue #2797](https://github.com/AaronBuxbaum/diveday/issues/2797) — closed,
 related. Private signed-form return; retain distinctions between referral and shop review.
+
+- Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
+Execution issue #3074 explicitly includes RP03; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/waiver-medical-held-light-vw-390.png`,
 `current/waiver-medical-held-light-vw-1280.png`
@@ -3063,11 +3236,14 @@ clearance; domain review.
 
 **Source:** src/app/s/[shopSlug]/register/RegisterForm.tsx:119
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2130](https://github.com/AaronBuxbaum/diveday/issues/2130) — closed,
 related. Supported agencies in registration; not conditional uncertified fields.
+
+- Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
+Execution issue #3074 explicitly includes RP04; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/shopfront-register-light-vw-390.png`,
 `current/shopfront-register-light-vw-1280.png`
@@ -3100,11 +3276,11 @@ security review for any auth-state changes.
 
 **Source:** src/app/sign-in/page.tsx; src/i18n/locales/en-US/diver.json:3344
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
+Execution issue #3070 explicitly includes RP05; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/sign-in-second-factor-light-vw-390.png`,
 `current/sign-in-second-factor-light-vw-1280.png`
@@ -3139,11 +3315,11 @@ privacy, guardian flows and payment ownership.
 
 **Source:** src/app/ready/[token]/_components/PartySection.tsx; ready page composition
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
-No equivalent issue or PR was found within the search boundary. This is not proof that older closed
-records contain no overlap.
+- Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
+Execution issue #3074 explicitly includes RP06; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/party-organizer-confirmation-light-vw-390.png`,
 `current/party-organizer-confirmation-light-vw-1280.png`
@@ -3216,11 +3392,14 @@ data imports.
 
 **Source:** src/app/switching and shared switching guide components
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2200](https://github.com/AaronBuxbaum/diveday/issues/2200) — closed,
 related. Corrected migration wording; not short guidance and expandable field reference.
+
+- Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
+Execution issue #3069 explicitly includes RP08; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/switching-spreadsheet-light-vw-390.png`,
 `current/switching-spreadsheet-light-vw-1280.png`
@@ -3252,11 +3431,14 @@ existing alerting and safety processes, domain review.
 
 **Source:** src/lib/notifications/weekly-digest-email.ts
 
-**GitHub match:** missing-equivalent. No exact equivalent in all open records or recently updated
-closed records; related items are context only.
+**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
+partial references below remain context and are not automatic closure targets.
 
 - Historical/context: [Issue #2489](https://github.com/AaronBuxbaum/diveday/issues/2489) — closed,
 related. Digest unused forecast cleanup; not unresolved operational-work summary.
+
+- Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
+Execution issue #3073 explicitly includes RP09; queued for implementation or required verification.
 
 **Evidence references in local artifact:** `current/weekly-digest-email-light-vw-390.png`,
 `current/weekly-digest-email-light-vw-1280.png`

@@ -1393,10 +1393,10 @@
     "estimatedRentalFullSet": "Estimated rental: {price} per person, the full-set price."
   },
   "party": {
-    "numberOfDivers": "Number of divers",
+    "numberOfDivers": "People",
     "yourDetails": "Your details",
     "diverN": "Diver {number}",
-    "diverCountOption": "{count, plural, one {# diver} other {# divers}}",
+    "diverCountOption": "{count, plural, one {# person} other {# people}}",
     "diverCountShort": "{count, number}",
     "nameLabel": "Name",
     "diverNameLabel": "Diver {number} name",

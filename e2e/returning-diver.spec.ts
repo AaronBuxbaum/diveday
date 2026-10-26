@@ -11,7 +11,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
     .filter({ hasText: "Discover Scuba — Pool & Reef" })
     .getByRole("link", { name: "Discover Scuba — Pool & Reef" })
     .click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Marco Reyes");
   await page.getByLabel("Email").fill("marco@example.com");
   await acceptAgeAttestation(page);
@@ -26,7 +26,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
   await expect(page.getByLabel("Name")).toHaveValue("Marco Reyes");
   await expect(page.getByLabel("Email")).toHaveValue("marco@example.com");
   await expect(page.getByText("Booking as", { exact: false })).toBeVisible();
@@ -45,7 +45,7 @@ test("the embed widget never prefills or remembers a booker", async ({ page }) =
   // it, through the widget's own link to the full schedule and back into the
   // frame. The subject is still what the *embed's* booking form remembers.
   await openTripInEmbed(page, "Discover Scuba — Pool & Reef");
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByLabel("People")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Sal Moretti");
   await page.getByLabel("Email").fill("sal@example.com");
   await acceptAgeAttestation(page);
