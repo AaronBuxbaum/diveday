@@ -329,7 +329,7 @@ script again.
 | 20260902-crew-requests-and-blackouts | The crew get a voice… |
 | 20260902-sender-standards-for-ses | Every email meets the standards… |
 | 20260902-the-maker-is-the-proof | Put the founder's background back… (proposed) |
-| 20260903-node-24-is-the-floor | ~~DiveDay runs on Node 24,…~~ → 20261026-project-local-node-runtime |
+| 20260903-node-24-is-the-floor | DiveDay runs on Node 24,… |
 | 20260903-one-process-per-pglite-directory | A file-backed PGlite directory admits… |
 | 20260903-the-dev-server-is-supervised | `pnpm dev` runs under a… |
 | 20260904-reef-all-the-way-down | Take Reef to the bottom… |
@@ -418,6 +418,5 @@ script again.
 | 20261024-diver-sent-doctors-form | A referred diver sends the… |
 | 20261024-e2e-reset-replays-a-snapshot | The e2e reset replays the… |
 | 20261026-pending-sign-in-challenge | Use a single-use pending second-factor… |
-| 20261026-project-local-node-runtime | Pin the fixed Node runtime… |
 
 <!-- adr-index:end -->

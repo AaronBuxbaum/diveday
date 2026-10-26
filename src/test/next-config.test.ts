@@ -187,22 +187,22 @@ describe("next.config.ts outputFileTracingExcludes", () => {
 });
 
 /**
- * **The in-build type check stays on** (issue #1377).
- *
- * It duplicates CI's `typecheck` job on the same commit, and the duplication is
- * the point: it is the last gate between a merge that somehow bypassed CI and
- * production. The tempting edit is `typescript: { ignoreBuildErrors: true }` —
- * it makes a red build green for the price of the only refusal left, and it
- * takes the check off a developer's local `pnpm build` as well. The reasoning
- * is in the comment above `experimental` in next.config.ts; this is the half a
- * later edit cannot walk past.
+ * The Vercel build keeps the refusal gate decided in #1377, but runs it after
+ * route type generation as a separate preflight so it does not overlap the
+ * compiled app's retained memory. Local `pnpm build` and CI keep their current
+ * in-build/typecheck behavior.
  */
 describe("next.config.ts typescript", () => {
-  it("never ignores build errors, since the in-build check is the last gate", async () => {
-    const config = await loadConfig(CONFIGURED);
+  it("keeps Next's in-build type check for local builds", async () => {
+    const config = await loadConfig({ ...CONFIGURED, VERCEL: "" });
     expect(
       config.typescript?.ignoreBuildErrors,
-      "ignoreBuildErrors disables Next's in-build type check for CI, Vercel and every local `pnpm build`. See the comment above `experimental` in next.config.ts (#1377).",
+      "local `pnpm build` must retain Next's type check",
     ).toBeUndefined();
+  });
+
+  it("lets Vercel use the separate typecheck preflight", async () => {
+    const config = await loadConfig({ ...CONFIGURED, VERCEL: "1" });
+    expect(config.typescript?.ignoreBuildErrors).toBe(true);
   });
 });

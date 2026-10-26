@@ -307,19 +307,13 @@ const nextConfig: NextConfig = {
   // compiler API Next used for its in-build type check. Next drives it through
   // the TS CLI instead (tsgo), which this flag enables.
   //
-  // Yes, this re-runs the check CI's `typecheck` job already ran on the same
-  // commit, and the duplication is deliberate (#1377, decided 2026-09-10: keep
-  // it). It is the last gate between a merge that somehow bypassed CI and
-  // production. A type error does not change what gets deployed — Turbopack
-  // transpiles without checking, so the artifact is byte-identical either way;
-  // what the second run buys is the refusal. The cost is a fraction of a ~70s
-  // cold compile, the smallest of this build's three levers. What would reopen
-  // it: `main` acquiring a branch-protection rule that requires the `typecheck`
-  // job, at which point the gate has a second holder and this one is genuinely
-  // redundant. What is not wanted either way is
-  // `typescript: { ignoreBuildErrors: true }`, which drops the check from a
-  // developer's local `pnpm build` too — src/test/next-config.test.ts pins its
-  // absence.
+  // Keep the refusal gate decided in #1377, but don't overlap the checker with
+  // Turbopack's retained compile memory on Vercel's 8 GB builder. The Vercel
+  // build script runs `next typegen` and `pnpm typecheck` in separate processes
+  // before migrations and the production build; only that build skips Next's
+  // duplicate pass.
+  // Local `pnpm build` and CI keep their existing checks.
+  ...(process.env.VERCEL === "1" ? { typescript: { ignoreBuildErrors: true } } : {}),
   experimental: {
     useTypeScriptCli: true,
     // Static-generation workers only need to be serialized when they'd share

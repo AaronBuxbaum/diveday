@@ -97,8 +97,6 @@ export const SUBPROCESS_TIMEOUTS = {
   ghHookRead: 6_000,
   /** A sibling script in this repo that only reads and writes files. */
   nodeScript: 120_000,
-  /** One dependency-free Node runtime contract probe; normally under 100 ms. */
-  nodeProbe: 10_000,
   /**
    * A sibling script the post-deploy wizard hands a whole step to, each of
    * which makes its own series of *already bounded* network calls -- pushing

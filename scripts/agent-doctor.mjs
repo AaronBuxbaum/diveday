@@ -20,7 +20,6 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { NODE_FLOOR, nodeRuntimeProblem } from "./check-node-version.mjs";
 import { lastSessionRefusals, readLog, refusalLine } from "./hook-log.mjs";
 import {
   readScheduledRuns,
@@ -156,7 +155,6 @@ export function gatherFacts(
     // SessionStart's own driver install, when it ran just before this: its failure is the
     // session block's line already.
     mergeDriversInstall,
-    nodeVersion: process.versions.node,
     nodeMajor: Number(process.versions.node.split(".")[0]),
     pinnedMajor: (readers.pinnedMajor ?? pinnedNodeMajor)(root),
     gh: (readers.commandWorks ?? commandWorks)("gh", ["--version"]),
@@ -191,12 +189,14 @@ export function gatherFacts(
  */
 export function checks(facts) {
   const rows = [];
-  const runtimeProblem = nodeRuntimeProblem(facts.nodeVersion ?? `${facts.nodeMajor}.0.0`);
+  const nodeOk = facts.pinnedMajor === null || facts.nodeMajor === facts.pinnedMajor;
   rows.push({
     name: "node",
-    status: runtimeProblem ? "warn" : "ok",
-    detail: `Node ${facts.nodeVersion ?? facts.nodeMajor} (requires ^${NODE_FLOOR}; .nvmrc pins ${facts.pinnedMajor ?? "nothing readable"})`,
-    fix: runtimeProblem ?? "",
+    status: facts.pinnedMajor === null ? "unknown" : nodeOk ? "ok" : "info",
+    detail: `Node ${facts.nodeMajor} (.nvmrc pins ${facts.pinnedMajor ?? "nothing readable"})`,
+    fix: nodeOk
+      ? ""
+      : "Every pnpm command prints an engine warning; when a test disagrees with CI, reinstall (`pnpm install --frozen-lockfile`) before believing it. Only the environment's setup can change the Node (issue #2247).",
   });
   rows.push({
     name: "gh",

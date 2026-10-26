@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inspectState, readState } from "./agent-task-state.mjs";
-import { nodeRuntimeProblem } from "./check-node-version.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 export function capabilities(provider) {
@@ -48,7 +47,6 @@ export function bootstrap(
       omitted: Math.max(0, dirtyPaths.length - 10),
     },
     node: process.versions.node,
-    runtimeProblem: nodeRuntimeProblem(),
     requiredNode: readFileSync(path.join(root, ".nvmrc"), "utf8").trim(),
     dependenciesPresent: existsSync(path.join(root, "node_modules")),
     taskState: state
