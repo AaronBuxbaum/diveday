@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FormStatus } from "@/components/ui/form";
 import type { DbExecutor } from "@/db/client";
 import type { CustomerGearNotice, WorkOrder } from "@/db/schema";
@@ -154,32 +155,36 @@ export async function BillAndPickupCard({
   return (
     <SectionCard title={t("benchFollowUp.card.title")} padding="lg">
       <div className="space-y-8">
-        <section aria-labelledby="ready-message-heading">
-          <h3 id="ready-message-heading" className="font-semibold">
-            {t("benchFollowUp.ready.heading")}
-          </h3>
-          <p
-            className={`mt-1 text-sm ${ready?.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
-          >
-            {ready
-              ? ready.text
-              : isReady
-                ? t("benchFollowUp.ready.notSent")
-                : t("benchFollowUp.ready.pending")}
-          </p>
-          {isReady ? (
-            <form action={resendReadyNoticeAction} className="mt-3">
-              <input type="hidden" name="workOrderId" value={workOrder.id} />
-              <SubmitButton
-                pendingLabel={t("benchFollowUp.ready.sending")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {readyNotice ? t("benchFollowUp.ready.resend") : t("benchFollowUp.ready.send")}
-              </SubmitButton>
-            </form>
-          ) : null}
-          {say("ready")}
-        </section>
+        {ready || workOrder.status !== "picked_up" ? (
+          <section aria-labelledby="ready-message-heading">
+            <h3 id="ready-message-heading" className="font-semibold">
+              {t("benchFollowUp.ready.heading")}
+            </h3>
+            <p
+              className={`mt-1 text-sm ${ready?.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
+            >
+              {ready
+                ? ready.text
+                : isReady
+                  ? t("benchFollowUp.ready.notSent")
+                  : t("benchFollowUp.ready.pending")}
+            </p>
+            {isReady ? (
+              <form action={resendReadyNoticeAction} className="mt-3">
+                <input type="hidden" name="workOrderId" value={workOrder.id} />
+                <SubmitButton
+                  pendingLabel={t("benchFollowUp.ready.sending")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {readyNotice ? t("benchFollowUp.ready.resend") : t("benchFollowUp.ready.send")}
+                </SubmitButton>
+              </form>
+            ) : null}
+            {say("ready")}
+          </section>
+        ) : (
+          say("ready")
+        )}
 
         {showBill ? (
           <section aria-labelledby="bill-heading">
@@ -215,21 +220,26 @@ export async function BillAndPickupCard({
                 Paid here and reaches Reports' Gear bench line. Any staff, with
                 or without Stripe; the line that stood here said "Collected at
                 the counter." on an unpaid ticket, which read as paid. */}
-            {!mayBillAgain || lineCount === 0 ? null : (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{t("benchFollowUp.bill.paidAtPickup")}</span>
-                {(["cash", "card_machine"] as const).map((collection) => (
-                  <form key={collection} action={recordBenchPaymentAction}>
-                    <input type="hidden" name="workOrderId" value={workOrder.id} />
-                    <input type="hidden" name="collection" value={collection} />
-                    <SubmitButton
-                      pendingLabel={t("benchFollowUp.bill.recording")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t(ORDER_COLLECTION_KEYS[collection])}
-                    </SubmitButton>
-                  </form>
-                ))}
+            {!mayBillAgain || lineCount === 0 ? null : workOrder.status === "picked_up" ? (
+              <details className="group mt-3" open={outcome?.form === "bill" || undefined}>
+                <summary
+                  className={buttonClass({
+                    variant: "link",
+                    size: "sm",
+                    flush: true,
+                    className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                  })}
+                >
+                  {t("workOrders.detail.recordPayment")}
+                  <DisclosureCaret direction="down" className="group-open:rotate-180" />
+                </summary>
+                <div className="mt-2">
+                  <CounterPaymentControls workOrderId={workOrder.id} t={t} />
+                </div>
+              </details>
+            ) : (
+              <div className="mt-3">
+                <CounterPaymentControls workOrderId={workOrder.id} t={t} />
               </div>
             )}
             {!mayBillAgain || lineCount === 0 || !connected ? null : !canBill ? (
@@ -252,5 +262,25 @@ export async function BillAndPickupCard({
         ) : null}
       </div>
     </SectionCard>
+  );
+}
+
+function CounterPaymentControls({ workOrderId, t }: { workOrderId: string; t: StaffTranslator }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm font-medium">{t("benchFollowUp.bill.paidAtPickup")}</span>
+      {(["cash", "card_machine"] as const).map((collection) => (
+        <form key={collection} action={recordBenchPaymentAction}>
+          <input type="hidden" name="workOrderId" value={workOrderId} />
+          <input type="hidden" name="collection" value={collection} />
+          <SubmitButton
+            pendingLabel={t("benchFollowUp.bill.recording")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t(ORDER_COLLECTION_KEYS[collection])}
+          </SubmitButton>
+        </form>
+      ))}
+    </div>
   );
 }

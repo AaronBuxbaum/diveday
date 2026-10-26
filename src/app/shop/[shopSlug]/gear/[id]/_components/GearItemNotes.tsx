@@ -38,6 +38,11 @@ export function GearItemNotes({
   /** A note just landed and the page came back — bring the box back standing. */
   formOpen: boolean;
 }) {
+  if (notes.length === 0) {
+    return readOnly ? null : (
+      <NoteDoor gearItemId={gearItemId} todayLocal={todayLocal} t={t} formOpen={formOpen} />
+    );
+  }
   return (
     <SectionCard padding="lg" title={t("gear.unit.notes.title")}>
       {notes.length > 0 ? (

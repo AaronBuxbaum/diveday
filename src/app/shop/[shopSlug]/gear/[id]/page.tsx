@@ -182,6 +182,12 @@ export default async function GearUnitPage({
               // Restore where the Delete was. A live unit's status is the
               // summary panel's first line, so it does not also render here.
               <Badge tone="warning">{t("gear.unit.deleted.badge")}</Badge>
+            ) : state.state === "due_soon" || state.state === "overdue" ? (
+              <span
+                className={`text-sm font-medium ${state.state === "overdue" ? "text-warning-strong" : "text-muted"}`}
+              >
+                {gearServiceStateText(t, state, formatCalendarDate(state.nextDueOn, locale))}
+              </span>
             ) : undefined
           }
           actions={
@@ -312,7 +318,6 @@ export default async function GearUnitPage({
           <ServiceCard
             item={item}
             clocks={clocks}
-            state={state}
             history={serviceHistory}
             t={t}
             locale={locale}
@@ -444,7 +449,6 @@ export default async function GearUnitPage({
 function ServiceCard({
   item,
   clocks,
-  state,
   history,
   t,
   locale,
@@ -454,7 +458,6 @@ function ServiceCard({
 }: {
   item: GearItemDetail["item"];
   clocks: GearItemDetail["clocks"];
-  state: ReturnType<typeof gearServiceState>;
   history: GearItemDetail["history"];
   t: StaffTranslator;
   locale: string;
@@ -468,24 +471,8 @@ function ServiceCard({
   /** A save or a refusal from this form landed back here — bring it back standing. */
   formOpen: boolean;
 }) {
-  const serviceText =
-    !readOnly && (state.state === "due_soon" || state.state === "overdue")
-      ? gearServiceStateText(t, state, formatCalendarDate(state.nextDueOn, locale))
-      : null;
   return (
     <SectionCard id="service" padding="lg" title={t("gear.unit.service.title")}>
-      {/* The urgent clock keeps its urgency on the page where you act on it —
-          the register paints this same fact in warning ink, and it must not
-          read quieter here. */}
-      {serviceText ? (
-        <p
-          className={`mb-4 text-sm font-medium ${
-            state.state === "overdue" ? "text-warning-strong" : "text-muted"
-          }`}
-        >
-          {serviceText}
-        </p>
-      ) : null}
       {clocks.length > 0 ? (
         <ul className="mb-6 flex flex-col gap-1.5">
           {clocks.map((clock) => (

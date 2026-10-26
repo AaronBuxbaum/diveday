@@ -74,6 +74,7 @@ test.describe("staff", () => {
       .click();
     await page.getByRole("heading", { level: 2, name: "Parts and labor" }).waitFor();
 
+    await page.getByText(staffCopy("workOrders.detail.addPartOrLabor"), { exact: true }).click();
     await page.getByLabel("Description").last().fill("Second-stage service kit");
     await page.getByLabel("Price each").last().fill("42");
     await page.getByRole("button", { name: "Add", exact: true }).click();

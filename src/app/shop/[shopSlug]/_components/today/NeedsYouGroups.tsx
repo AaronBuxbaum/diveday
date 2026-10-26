@@ -2,8 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
-import { foldBoatRows, groupByDeparture, type TodayAction } from "@/lib/today";
+import {
+  foldBoatRows,
+  groupByDeparture,
+  type NeedsYouReading,
+  type TodayAction,
+} from "@/lib/today";
 import { rankBoatRows } from "./spine-reading";
 
 /**
@@ -92,5 +98,101 @@ function BoatRows({
         </LedgerGroup>
       ) : null}
     </>
+  );
+}
+
+/**
+ * **The list says how long it is** (UX audit 2026-10-07, item 1): the summary
+ * under the date counts what is due before the next boat and the badge counts
+ * blocked divers, so the list carries its own total rather than leaving the
+ * reader to reconcile three numbers.
+ *
+ * **And says how much of it is the next boat's** (#2413) when that is not all
+ * of it, so the sentence's smaller number over this one reads as a part of it
+ * rather than a contradiction.
+ */
+function needsYouMeta(
+  t: StaffTranslator,
+  reading: NeedsYouReading,
+  locale: string,
+  timeZone: string,
+): string {
+  const { count, next, dueBeforeNext } = reading;
+  if (next == null || dueBeforeNext === count) {
+    return t("shopHome.spine.needsYouCount", { count });
+  }
+  return t("shopHome.spine.needsYouCountBeforeNext", {
+    count,
+    before: dueBeforeNext,
+    time: formatTime(next.startsAt, locale, timeZone),
+  });
+}
+
+/** Existing queue order and crew lens, with a focusable in-page destination. */
+export function NeedsYouQueue({
+  reading,
+  row,
+  shopSlug,
+  t,
+  locale,
+  timeZone,
+  drafts,
+  payments,
+}: {
+  reading: NeedsYouReading;
+  row: (action: TodayAction, grouped: boolean) => ReactNode;
+  shopSlug: string;
+  t: StaffTranslator;
+  locale: string;
+  timeZone: string;
+  drafts: ReactNode;
+  payments: ReactNode;
+}) {
+  const { lead, folded } = reading;
+  if (lead.length + (folded?.length ?? 0) === 0 && !drafts && !payments) return null;
+  return (
+    <section
+      id="needs-you"
+      tabIndex={-1}
+      aria-label={t("shopHome.spine.needsYouLabel")}
+      className="scroll-mt-24 rounded-lg focus-visible:focus-ring"
+    >
+      <LedgerGroup
+        as="h2"
+        label={t("shopHome.spine.needsYouLabel")}
+        meta={needsYouMeta(t, reading, locale, timeZone)}
+      >
+        <NeedsYouGroups
+          rows={lead}
+          row={row}
+          shopSlug={shopSlug}
+          t={t}
+          desk={
+            drafts || (!folded && payments) ? (
+              <>
+                {drafts}
+                {folded ? null : payments}
+              </>
+            ) : undefined
+          }
+        />
+        {folded ? (
+          <LedgerGroup
+            as="h3"
+            folded
+            className="mt-4"
+            label={t("shopHome.spine.deskFoldLabel", { count: folded.length + (payments ? 1 : 0) })}
+          >
+            <NeedsYouGroups
+              rows={folded}
+              row={row}
+              shopSlug={shopSlug}
+              t={t}
+              desk={payments ?? undefined}
+            />
+          </LedgerGroup>
+        ) : null}
+      </LedgerGroup>
+    </section>
   );
 }

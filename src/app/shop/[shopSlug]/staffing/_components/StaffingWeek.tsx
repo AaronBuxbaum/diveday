@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -21,6 +20,9 @@ import {
   type WeekShift,
 } from "@/lib/staffing-week";
 import { ShiftRemoveMenu } from "./ShiftRemoveMenu";
+import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
+import { mobileDepartureGroups } from "./staffing-mobile-groups";
+import { WarningLine } from "./staffing-warning-line";
 import { windowOnThisDay } from "./window-on-this-day";
 
 /**
@@ -47,7 +49,7 @@ import { windowOnThisDay } from "./window-on-this-day";
  *   gap here (the count reads recorded ratings), and the chip then says so
  *   (`PlacedGap.ratingLapsed`); it still disables nothing.
  * - **The grid is not the phone.** Below `lg` the same week renders as a day
- *   list, people under each day: seven columns of time ranges have no honest
+ *   list, departures under each day: seven columns of time ranges have no honest
  *   390px form (the same call H-63 made for the schedule board). Both
  *   renderings carry the same acts, so nothing is lost by being on a phone.
  *
@@ -288,48 +290,6 @@ function ShiftChip({
         </form>
       </div>
     </details>
-  );
-}
-
-/**
- * The glyph and the gap beside it, per type size: the chips' `text-xs`, the
- * phone list's `text-sm`. The glyph is its type's own size; the gap is 4px
- * beside 12px type and 6px beside 14px, as `FormStatus` sets its mark.
- */
-const WARNING_LINE_SIZE = {
-  xs: { gap: "gap-1", glyph: "size-3" },
-  sm: { gap: "gap-1.5", glyph: "size-3.5" },
-} as const;
-
-/**
- * **The week's one warning line** (K-241): the glyph, then the words, in the
- * warning ink. The crew chip drew the glyph at 10px beside a 4px gap, the gap
- * chip at 12px beside 6px, and both nudged it down `mt-0.5`, which set it
- * 1–1.5px below its line's capitals. Here it sits centred in a box one line
- * of its own text tall (`h-lh`), at the top of a line that may wrap — the
- * middle of a line box is where its capitals are centred, at any type size —
- * so no nudge is needed, and each type size draws it one way.
- */
-function WarningLine({
-  size,
-  className = "",
-  children,
-}: {
-  size: keyof typeof WARNING_LINE_SIZE;
-  /** The line's place among its siblings (a margin), never its geometry. */
-  className?: string;
-  children: ReactNode;
-}) {
-  const { gap, glyph } = WARNING_LINE_SIZE[size];
-  return (
-    <span
-      className={`flex items-start ${gap} font-semibold text-warning-strong ${className}`.trim()}
-    >
-      <span className="flex h-lh shrink-0 items-center">
-        <DiveDayIcon name="warning" className={glyph} />
-      </span>
-      <span>{children}</span>
-    </span>
   );
 }
 
@@ -689,6 +649,7 @@ export function StaffingWeek({
             cell && (cell.shifts.length > 0 || cell.crewing.length > 0 || cell.away.length > 0),
         ),
       gaps: week.gapDays[index]?.gaps ?? [],
+      departures: mobileDepartureGroups(week.people, index, week.gapDays[index]?.gaps ?? []),
     }))
     .filter(({ rows, gaps }) => rows.length > 0 || gaps.length > 0);
 
@@ -815,7 +776,7 @@ export function StaffingWeek({
           drew a day away only beside a shift or a boat, so a week of days
           away drew no list at all, and no rule over the doors (K-195). */}
       <div className="mt-4 lg:hidden">
-        {listDays.map(({ day, rows, gaps }) => {
+        {listDays.map(({ day, rows, departures }) => {
           return (
             <div key={day.date} className="mt-6 first:mt-0">
               {/* `h2` for the same reason the grid's day headers are: the
@@ -825,16 +786,16 @@ export function StaffingWeek({
                 {day.isToday ? ` · ${words.today}` : ""}
               </GroupLabel>
               <ul className="mt-2">
-                {gaps.map((gap) => (
+                {departures.map(({ key, trip, gap, crew }) => (
                   <LedgerRow
-                    key={gap.tripId}
-                    kind={{ word: words.needsCrew, tone: GAP_TONE[gap.gap] }}
+                    key={key}
+                    kind={gap ? { word: words.needsCrew, tone: GAP_TONE[gap.gap] } : undefined}
                     stacked
                     // The same one act the grid draws (`gapAct`): the phone
                     // loses the columns, never the work — and never gains a
                     // second door the grid does not have either.
                     trailing={
-                      gapAct(gap, canManage) === "assign" ? (
+                      gap && gapAct(gap, canManage) === "assign" ? (
                         <Link
                           href={tripHref(shopSlug, gap.tripId)}
                           aria-label={fill(words.assignAria, { trip: gap.title })}
@@ -849,171 +810,155 @@ export function StaffingWeek({
                       ) : null
                     }
                   >
-                    <p className="text-sm">
-                      <span className="tabular-nums">
-                        {windowOnThisDay(gap, words, locale, timeZone, "start")}
-                      </span>{" "}
-                      <span className="font-medium">{gap.title}</span>
-                    </p>
-                    <p
-                      className={`text-sm font-medium ${
-                        GAP_TONE[gap.gap] === "warning" ? "text-warning-strong" : "text-muted"
-                      }`}
+                    <Link
+                      href={tripHref(shopSlug, trip.tripId)}
+                      className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
                     >
-                      {gapWords[gap.gap]}
-                    </p>
-                    {gap.ratingLapsed ? (
-                      <p
-                        className={`text-sm ${
-                          GAP_TONE[gap.gap] === "warning" ? "text-warning-strong" : "text-muted"
-                        }`}
-                      >
-                        {words.ratingLapsed}
-                      </p>
-                    ) : null}
-                    {/* The same acts the grid carries: the phone loses the
-                        columns, never the work (`GRID_CLASS`'s note above). */}
-                    {/* A <div>, not a <p>: the parser closes a paragraph at its
-                        first <form>, and the markup would no longer hydrate. */}
-                    {gap.requests.map((request) => (
-                      <div key={request.id} className="mt-1 text-sm text-muted">
-                        {request.state === "pending"
-                          ? fill(words.requested, { person: request.personName })
-                          : `${request.personName} · ${
-                              request.state === "approved"
-                                ? words.requestApproved
-                                : words.requestDeclined
-                            }`}
-                        {/* The grid's own line, wrapped as a block so the two
-                            buttons still get a row of their own (#1339). */}
-                        {canDecide && request.askWontClose ? (
-                          <span className="block text-warning-strong">
-                            {words.requestWontClose}
-                          </span>
-                        ) : null}
-                        {canDecide && request.state === "pending" ? (
-                          <span className="ms-2 inline-flex gap-2">
-                            <form action={decideRequestAction} className="inline">
-                              <input type="hidden" name="requestId" value={request.id} />
-                              <input type="hidden" name="decision" value="approved" />
-                              <SubmitButton
-                                pendingLabel={words.deciding}
-                                className={buttonClass({ variant: "link", size: "sm" })}
-                              >
-                                {words.approve}
-                              </SubmitButton>
-                            </form>
-                            <form action={decideRequestAction} className="inline">
-                              <input type="hidden" name="requestId" value={request.id} />
-                              <input type="hidden" name="decision" value="declined" />
-                              <SubmitButton
-                                pendingLabel={words.deciding}
-                                className={buttonClass({ variant: "link", size: "sm" })}
-                              >
-                                {words.decline}
-                              </SubmitButton>
-                            </form>
-                          </span>
-                        ) : null}
-                      </div>
-                    ))}
-                    {gapAct(gap, canManage) === "request" ? (
-                      <form action={requestAction} className="mt-1">
-                        <input type="hidden" name="tripId" value={gap.tripId} />
-                        <SubmitButton
-                          pendingLabel={words.requesting}
-                          ariaLabel={fill(words.requestAria, { trip: gap.title })}
-                          className={buttonClass({ variant: "link", size: "sm" })}
+                      <span className="sr-only">{words.crewing}: </span>
+                      <span className="tabular-nums">
+                        {windowOnThisDay(trip, words, locale, timeZone, "range")}{" "}
+                      </span>
+                      <span>{trip.title}</span>
+                    </Link>
+                    {gap ? (
+                      <>
+                        <p
+                          className={`text-sm font-medium ${
+                            GAP_TONE[gap.gap] === "warning" ? "text-warning-strong" : "text-muted"
+                          }`}
                         >
-                          {words.request}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
-                    {/* Under the ask rather than beside it, which is the only
+                          {gapWords[gap.gap]}
+                        </p>
+                        {gap.ratingLapsed ? (
+                          <p
+                            className={`text-sm ${
+                              GAP_TONE[gap.gap] === "warning" ? "text-warning-strong" : "text-muted"
+                            }`}
+                          >
+                            {words.ratingLapsed}
+                          </p>
+                        ) : null}
+                        {/* The same acts the grid carries: the phone loses the
+                        columns, never the work (`GRID_CLASS`'s note above). */}
+                        {/* A <div>, not a <p>: the parser closes a paragraph at its
+                        first <form>, and the markup would no longer hydrate. */}
+                        {gap.requests.map((request) => (
+                          <div key={request.id} className="mt-1 text-sm text-muted">
+                            {request.state === "pending"
+                              ? fill(words.requested, { person: request.personName })
+                              : `${request.personName} · ${
+                                  request.state === "approved"
+                                    ? words.requestApproved
+                                    : words.requestDeclined
+                                }`}
+                            {/* The grid's own line, wrapped as a block so the two
+                            buttons still get a row of their own (#1339). */}
+                            {canDecide && request.askWontClose ? (
+                              <span className="block text-warning-strong">
+                                {words.requestWontClose}
+                              </span>
+                            ) : null}
+                            {canDecide && request.state === "pending" ? (
+                              <span className="ms-2 inline-flex gap-2">
+                                <form action={decideRequestAction} className="inline">
+                                  <input type="hidden" name="requestId" value={request.id} />
+                                  <input type="hidden" name="decision" value="approved" />
+                                  <SubmitButton
+                                    pendingLabel={words.deciding}
+                                    className={buttonClass({ variant: "link", size: "sm" })}
+                                  >
+                                    {words.approve}
+                                  </SubmitButton>
+                                </form>
+                                <form action={decideRequestAction} className="inline">
+                                  <input type="hidden" name="requestId" value={request.id} />
+                                  <input type="hidden" name="decision" value="declined" />
+                                  <SubmitButton
+                                    pendingLabel={words.deciding}
+                                    className={buttonClass({ variant: "link", size: "sm" })}
+                                  >
+                                    {words.decline}
+                                  </SubmitButton>
+                                </form>
+                              </span>
+                            ) : null}
+                          </div>
+                        ))}
+                        {gapAct(gap, canManage) === "request" ? (
+                          <form action={requestAction} className="mt-1">
+                            <input type="hidden" name="tripId" value={gap.tripId} />
+                            <SubmitButton
+                              pendingLabel={words.requesting}
+                              ariaLabel={fill(words.requestAria, { trip: gap.title })}
+                              className={buttonClass({ variant: "link", size: "sm" })}
+                            >
+                              {words.request}
+                            </SubmitButton>
+                          </form>
+                        ) : null}
+                        {/* Under the ask rather than beside it, which is the only
                         difference from the grid's copy of this (issue #1339). */}
-                    {gap.viewerAskWontClose ? (
-                      <p className="mt-1 text-sm text-warning-strong">{words.askWontClose}</p>
+                        {gap.viewerAskWontClose ? (
+                          <p className="mt-1 text-sm text-warning-strong">{words.askWontClose}</p>
+                        ) : null}
+                      </>
                     ) : null}
+                    <StaffingDepartureCrew
+                      crew={crew}
+                      href={tripHref(shopSlug, trip.tripId)}
+                      words={words}
+                      locale={locale}
+                    />
                   </LedgerRow>
                 ))}
-                {rows.map(({ person, cell }) => (
-                  <LedgerRow key={person.personId} stacked>
-                    <p className="text-sm font-semibold">{person.name}</p>
-                    {/* **One pitch: every entry is a 44px line, and they abut**
+                {rows
+                  .filter(({ cell }) => cell.shifts.length > 0 || cell.away.length > 0)
+                  .map(({ person, cell }) => (
+                    <LedgerRow key={person.personId} stacked>
+                      <p className="text-sm font-semibold">{person.name}</p>
+                      {/* **One pitch: every entry is a 44px line, and they abut**
                         (K-213). A crewed departure is a door, and it was one
                         line of text 4px from the next — 358×20, a thumb aimed
                         at one landing on its neighbour. A manager's shift was
                         already 44px beside its Remove; the rest now match it,
                         so the day reads at one rhythm whoever is reading. */}
-                    <div className="mt-1 flex flex-col">
-                      {cell?.shifts.map((shift) => (
-                        <div
-                          key={shift.id}
-                          className="flex min-h-11 items-center justify-between gap-2 text-sm"
-                        >
-                          <ShiftFace
-                            shift={shift}
-                            locale={locale}
-                            timeZone={timeZone}
-                            isPast={day.isPast}
-                          />
-                          {canManage ? (
-                            <ShiftRemoveMenu
-                              label={fill(words.shiftAria, { person: person.name, day: day.label })}
-                              shiftId={shift.id}
-                              words={words}
-                              action={deleteShiftAction}
+                      <div className="mt-1 flex flex-col">
+                        {cell?.shifts.map((shift) => (
+                          <div
+                            key={shift.id}
+                            className="flex min-h-11 items-center justify-between gap-2 text-sm"
+                          >
+                            <ShiftFace
+                              shift={shift}
+                              locale={locale}
+                              timeZone={timeZone}
+                              isPast={day.isPast}
                             />
-                          ) : null}
-                        </div>
-                      ))}
-                      {cell?.crewing.map((trip) => (
-                        <Link
-                          key={trip.tripId}
-                          href={tripHref(shopSlug, trip.tripId)}
-                          className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
-                        >
-                          <span className="flex min-w-0 items-baseline gap-1.5">
-                            <span className="sr-only">{words.crewing}: </span>
-                            <span className="shrink-0 tabular-nums">
-                              {windowOnThisDay(trip, words, locale, timeZone, "range")}{" "}
-                            </span>
-                            <span className="min-w-0 truncate">{trip.title}</span>
-                            {/* Whole: the space after the dot broke, and left
-                                "Away" alone on a line under it (K-489). */}
-                            {trip.awayBlocks.length > 0 ? (
-                              <span className="ms-1 font-semibold whitespace-nowrap text-warning-strong">
-                                · {words.away}
-                              </span>
+                            {canManage ? (
+                              <ShiftRemoveMenu
+                                label={fill(words.shiftAria, {
+                                  person: person.name,
+                                  day: day.label,
+                                })}
+                                shiftId={shift.id}
+                                words={words}
+                                action={deleteShiftAction}
+                              />
                             ) : null}
-                          </span>
-                          {/* **The louder warning, on the width a counter runs
-                              on** (dive-domain-expert review, 2026-09-12). This
-                              list is the whole week below `lg` — a phone and
-                              the portrait tablet on the desk — and it carried
-                              the blackout's `· Away` marker while saying
-                              nothing at all about a clash, which is the
-                              ranking the grid above argues for exactly
-                              inverted. Same words as the chip, one line per
-                              clashing departure, and inside the link so the
-                              sentence joins its accessible name rather than
-                              needing a live region of its own. */}
-                          {trip.clashes.map((clash) => (
-                            <WarningLine key={clash.tripId} size="sm">
-                              {fill(words.crewClash, { departure: clash.title })}
-                            </WarningLine>
-                          ))}
-                        </Link>
-                      ))}
-                      {cell?.away.map((block) => (
-                        <p key={block.id} className="flex min-h-11 items-center text-sm text-muted">
-                          {words.away}
-                          {block.note ? ` · ${block.note}` : ""}
-                        </p>
-                      ))}
-                    </div>
-                  </LedgerRow>
-                ))}
+                          </div>
+                        ))}
+                        {cell?.away.map((block) => (
+                          <p
+                            key={block.id}
+                            className="flex min-h-11 items-center text-sm text-muted"
+                          >
+                            {words.away}
+                            {block.note ? ` · ${block.note}` : ""}
+                          </p>
+                        ))}
+                      </div>
+                    </LedgerRow>
+                  ))}
               </ul>
             </div>
           );

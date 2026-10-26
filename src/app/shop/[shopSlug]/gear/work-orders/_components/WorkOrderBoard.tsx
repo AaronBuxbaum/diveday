@@ -84,8 +84,7 @@ export function WorkOrderBoard({
                         </Badge>
                       ) : null}
                     </div>
-                    <span className="min-w-0 text-muted text-sm">{row.reportedProblem}</span>
-                    <span className="text-muted text-xs">
+                    <span className="text-muted text-sm">
                       {[
                         row.gearItemId
                           ? t("workOrders.board.ownUnit")
@@ -102,6 +101,7 @@ export function WorkOrderBoard({
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
+                    <span className="min-w-0 text-muted text-sm">{row.reportedProblem}</span>
                   </div>
                 </LedgerRow>
               ))}

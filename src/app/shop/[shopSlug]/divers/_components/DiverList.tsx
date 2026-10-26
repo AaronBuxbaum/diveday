@@ -318,34 +318,9 @@ export function DiverList({
 
   return (
     <section className="mt-8">
-      {/* Hidden over a day-one empty roster (see `showViews` above); kept
-          whenever a search or chip narrowed the list, so the way back out
-          stays on screen. */}
-      {showViews ? (
-        <FilterChips
-          label={copy.viewsAriaLabel}
-          className="mb-5"
-          // Dropped before the URL changes: a keystroke that has not reached
-          // the URL yet was scheduled against the view being left, and letting
-          // it land would replace the URL with that stale view (see
-          // `cancelPendingSearch`).
-          onNavigate={cancelPendingSearch}
-          chips={VIEWS.map((view) => ({
-            key: view.filter,
-            // `typed`, not `query`: the chip carries what is in the box right
-            // now, not the last search that reached the URL. Built from `query`
-            // it re-applied a search the staffer had just cleared but whose
-            // debounce had not landed yet.
-            href: hrefFor(typed, view.filter),
-            active: filter === view.filter,
-            label: view.label,
-          }))}
-        />
-      ) : null}
-      {/* Phone: button under a full-width box, the count beneath both. Desktop:
-          the artboard's one line. The button is there from first paint (#781). */}
+      {/* Search and Add share one line; the filters narrow the records below. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
+        <div className="flex w-full max-w-full items-center gap-2 sm:w-auto">
           <SearchField
             ref={searchRef}
             id="diver-search"
@@ -354,7 +329,7 @@ export function DiverList({
             onChange={(event) => search(event.target.value)}
             onKeyDown={submitSearch}
             placeholder={copy.searchPlaceholder}
-            className="w-full min-w-0 sm:w-80"
+            className="min-w-0 flex-1 sm:w-80 sm:flex-none"
           />
           {/* One offer, two doors, and deliberately the same words on both so
               the swap on the first keystroke is invisible. With something
@@ -387,7 +362,7 @@ export function DiverList({
                 onClick={cancelPendingSearch}
                 className={buttonClass({
                   variant: "primary",
-                  className: "whitespace-nowrap max-sm:w-full",
+                  className: "whitespace-nowrap",
                 })}
               >
                 {copy.addDiverLabel}
@@ -405,6 +380,30 @@ export function DiverList({
           {filter === "removed" ? copy.removedNote : copy.countLabel}
         </p>
       </div>
+      {/* Hidden over a day-one empty roster (see `showViews` above); kept
+          whenever a search or chip narrowed the list, so the way back out
+          stays on screen. */}
+      {showViews ? (
+        <FilterChips
+          label={copy.viewsAriaLabel}
+          className="mt-3"
+          // Dropped before the URL changes: a keystroke that has not reached
+          // the URL yet was scheduled against the view being left, and letting
+          // it land would replace the URL with that stale view (see
+          // `cancelPendingSearch`).
+          onNavigate={cancelPendingSearch}
+          chips={VIEWS.map((view) => ({
+            key: view.filter,
+            // `typed`, not `query`: the chip carries what is in the box right
+            // now, not the last search that reached the URL. Built from `query`
+            // it re-applied a search the staffer had just cleared but whose
+            // debounce had not landed yet.
+            href: hrefFor(typed, view.filter),
+            active: filter === view.filter,
+            label: view.label,
+          }))}
+        />
+      ) : null}
       {/* Bare and class-less on purpose: the ledger's `mt-8` and the pager's
           own offset keep the exact gaps they had as direct section children.
           The empty card takes the ledger's `mt-8` too, so narrowing the view

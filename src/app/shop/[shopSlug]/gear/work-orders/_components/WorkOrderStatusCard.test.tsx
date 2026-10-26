@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buttonClass } from "@/components/ui/button";
 import type { WorkOrder } from "@/db/schema";
 import { staffTranslator } from "@/i18n/staff-messages";
 
@@ -38,8 +37,13 @@ describe("WorkOrderStatusCard", () => {
     render(<WorkOrderStatusCard workOrder={received} subject="customer" readOnly={false} t={t} />);
     const group = screen.getByRole("group", { name: "Move to" });
     expect(within(group).getByText("Received").closest("button")).toBeNull();
-    for (const button of within(group).getAllByRole("button")) {
-      expect(button.className).toBe(buttonClass({ variant: "secondary" }));
-    }
+    expect(within(group).getByRole("button", { name: "In progress" })).toBeVisible();
+    expect(within(group).queryByRole("button", { name: "Waiting on parts" })).toBeNull();
+    fireEvent.click(within(group).getByRole("button", { name: "Other moves" }));
+    const move = within(group).getByRole("button", { name: "Waiting on parts" });
+    expect(move.closest("form")).toHaveFormValues({
+      workOrderId: "wo-1",
+      status: "waiting_on_parts",
+    });
   });
 });

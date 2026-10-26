@@ -186,6 +186,7 @@ export default async function WorkOrderPage({
           staff={staff}
           technicianName={detail.technicianName}
           readOnly={deleted}
+          formOpen={["empty-problem", "invalid-date", "unknown-technician"].includes(notice ?? "")}
           locale={locale}
           t={t}
           draftNote={
@@ -229,6 +230,7 @@ export default async function WorkOrderPage({
 
         <WorkOrderLinesCard
           workOrderId={workOrder.id}
+          notice={notice}
           lines={detail.lines}
           totalCents={detail.totalCents}
           readOnly={deleted}

@@ -116,7 +116,11 @@
     "lineMenu": "Change {description}",
     "lineTotal": "Line total",
     "lineActions": "Actions",
-    "lineFold": "{kind} · {quantity} × {price}"
+    "lineFold": "{kind} · {quantity} × {price}",
+    "otherMoves": "Other moves",
+    "editJob": "Edit job",
+    "addPartOrLabor": "Add part or labor",
+    "recordPayment": "Record payment"
   },
   "work": {
     "heading": "Work done",

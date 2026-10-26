@@ -49,7 +49,7 @@ import { ClosingStation } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
 import { HelpRequestSection, helpRequestControl } from "./help-request-row";
-import { NeedsYouGroups } from "./NeedsYouGroups";
+import { NeedsYouQueue } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
@@ -745,33 +745,6 @@ export type DaySpineContext = {
   now: Date;
 };
 
-/**
- * **The list says how long it is** (UX audit 2026-10-07, item 1): the summary
- * under the date counts what is due before the next boat and the badge counts
- * blocked divers, so the list carries its own total rather than leaving the
- * reader to reconcile three numbers.
- *
- * **And says how much of it is the next boat's** (#2413) when that is not all
- * of it, so the sentence's smaller number over this one reads as a part of it
- * rather than a contradiction.
- */
-function needsYouMeta(
-  t: StaffTranslator,
-  reading: NeedsYouReading,
-  locale: string,
-  timeZone: string,
-): string {
-  const { count, next, dueBeforeNext } = reading;
-  if (next == null || dueBeforeNext === count) {
-    return t("shopHome.spine.needsYouCount", { count });
-  }
-  return t("shopHome.spine.needsYouCountBeforeNext", {
-    count,
-    before: dueBeforeNext,
-    time: formatTime(next.startsAt, locale, timeZone),
-  });
-}
-
 export function DaySpine({ context }: { context: DaySpineContext }) {
   const {
     spine,
@@ -828,8 +801,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     wind.some((row) => row.departure != null && liveTripIds.has(row.departure.tripId));
   const closing = evening?.close.closing === true;
   // **One "Needs you" list**, read once (`readNeedsYou`) with the header's sentence.
-  const { lead, folded: deskFold } = needsYouReading;
-  const paymentsRows = showPaymentsRow ? 1 : 0;
   const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
   const spineBody = (
@@ -1000,48 +971,16 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </LedgerGroup>
       ) : null}
 
-      {lead.length + (deskFold?.length ?? 0) > 0 || showPaymentsRow || drafts.length > 0 ? (
-        <LedgerGroup
-          as="h2"
-          label={t("shopHome.spine.needsYouLabel")}
-          meta={needsYouMeta(t, needsYouReading, locale, timeZone)}
-        >
-          <NeedsYouGroups
-            rows={lead}
-            row={stationRowFor(controls)}
-            shopSlug={shopSlug}
-            t={t}
-            desk={
-              drafts.length > 0 || (!deskFold && paymentsRow) ? (
-                <>
-                  <DraftRows drafts={drafts} t={t} />
-                  {deskFold ? null : paymentsRow}
-                </>
-              ) : undefined
-            }
-          />
-          {/* **The desk's rows, folded, for a reader who crews a boat** (UX
-              audit 2026-10-07, item 7). A captain's "what now" is the boats
-              they are on; the front desk's twenty jobs are one line they can
-              open, never gone. */}
-          {deskFold ? (
-            <LedgerGroup
-              as="h3"
-              folded
-              className="mt-4"
-              label={t("shopHome.spine.deskFoldLabel", { count: deskFold.length + paymentsRows })}
-            >
-              <NeedsYouGroups
-                rows={deskFold}
-                row={stationRowFor(controls)}
-                shopSlug={shopSlug}
-                t={t}
-                desk={paymentsRow ?? undefined}
-              />
-            </LedgerGroup>
-          ) : null}
-        </LedgerGroup>
-      ) : null}
+      <NeedsYouQueue
+        reading={needsYouReading}
+        row={stationRowFor(controls)}
+        shopSlug={shopSlug}
+        t={t}
+        locale={locale}
+        timeZone={timeZone}
+        drafts={drafts.length > 0 ? <DraftRows drafts={drafts} t={t} /> : null}
+        payments={paymentsRow}
+      />
       {/* The other cards an agency check's page listed (layer 3), under the
           list: the row they came from leaves it once its card is certified. */}
       <AgencyListedOffersSlot shopSlug={shopSlug} />

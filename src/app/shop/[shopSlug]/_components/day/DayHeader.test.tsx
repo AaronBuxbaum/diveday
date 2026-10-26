@@ -13,6 +13,13 @@ const BASE = {
 };
 
 describe("DayHeader", () => {
+  it("turns the existing day summary into a queue jump only when supplied", () => {
+    const { rerender } = render(<DayHeader {...BASE} summaryHref="#needs-you" />);
+    expect(screen.getByRole("link", { name: BASE.summary })).toHaveAttribute("href", "#needs-you");
+    rerender(<DayHeader {...BASE} />);
+    expect(screen.queryByRole("link", { name: BASE.summary })).toBeNull();
+    expect(screen.getByText(BASE.summary)).toBeVisible();
+  });
   /**
    * The date is what the page is called. The greeting that once stood here —
    * "Good morning, Dana" — said nothing the bar above it does not.

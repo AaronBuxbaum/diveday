@@ -86,5 +86,6 @@
     "low": "3 estrellas o menos",
     "comment": "Con comentario",
     "none": "Ninguna reseña coincide con esta vista."
-  }
+  },
+  "reviewTripMeta": "<trip>{tripTitle}</trip> · {date}"
 }

@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldActions } from "@/components/ui/form";
 import { TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import type { WorkOrderLine } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -13,7 +13,7 @@ import {
   workOrderLineTotalCents,
   workOrderQuantityInput,
 } from "@/lib/work-orders";
-import { addWorkOrderLineAction } from "../actions";
+import { WorkOrderAddLine } from "./WorkOrderAddLine";
 import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMenu";
 
 /**
@@ -34,6 +34,7 @@ import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMe
  */
 export function WorkOrderLinesCard({
   workOrderId,
+  notice,
   lines,
   totalCents,
   readOnly,
@@ -42,6 +43,7 @@ export function WorkOrderLinesCard({
   t,
 }: {
   workOrderId: string;
+  notice?: string;
   lines: WorkOrderLine[];
   totalCents: number;
   /** A deleted ticket: the figures stay readable, the forms go away. */
@@ -70,7 +72,11 @@ export function WorkOrderLinesCard({
       title={t("workOrders.detail.linesHeading")}
       padding="lg"
       actions={
-        <span className="font-medium tabular-nums">
+        <span
+          id="work-order-total"
+          tabIndex={-1}
+          className="scroll-mt-24 rounded-lg font-medium tabular-nums focus-visible:focus-ring"
+        >
           {t("workOrders.detail.total")}: {money(totalCents)}
         </span>
       }
@@ -151,11 +157,10 @@ export function WorkOrderLinesCard({
       )}
 
       {readOnly ? null : (
-        <FieldGrid
-          as="form"
-          action={addWorkOrderLineAction}
-          columns={4}
-          className="mt-6 border-border border-t pt-6"
+        <WorkOrderAddLine
+          key={workOrderId}
+          notice={notice}
+          label={t("workOrders.detail.addPartOrLabor")}
         >
           <input type="hidden" name="workOrderId" value={workOrderId} />
           <Field label={t("workOrders.form.kind")} htmlFor="new-line-kind">
@@ -201,7 +206,7 @@ export function WorkOrderLinesCard({
               {t("workOrders.detail.addLine")}
             </SubmitButton>
           </FieldActions>
-        </FieldGrid>
+        </WorkOrderAddLine>
       )}
     </SectionCard>
   );

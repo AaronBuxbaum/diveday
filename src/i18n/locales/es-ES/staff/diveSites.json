@@ -227,7 +227,6 @@
   },
   "edit": {
     "description": "Los cambios llegan a cada próxima inmersión que visite este sitio.",
-    "upcomingHeading": "Próximas inmersiones aquí",
     "copying": "Copiando…",
     "deleteSite": "Eliminar sitio",
     "deleteConfirmTitle": "¿Eliminar este sitio de buceo?",
@@ -283,7 +282,8 @@
         "requiresNitrox": "Requisito de nitrox",
         "creatures": "Guía de campo"
       }
-    }
+    },
+    "upcomingCount": "{count, plural, one {# inmersión próxima aquí} other {# inmersiones próximas aquí}}"
   },
   "new": {
     "title": "Agregar un sitio de buceo",

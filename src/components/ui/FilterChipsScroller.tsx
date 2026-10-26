@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useLayoutEffect, useRef } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /**
  * **FilterChips' row, which brings the current chip on screen when it
@@ -35,13 +36,22 @@ export function FilterChipsScroller({
   children: ReactNode;
 }) {
   const row = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `activeKey` is the trigger — the chip it names is found in the DOM, not read from the value.
   useLayoutEffect(() => {
     const el = row.current;
     if (!el) return;
     bringCurrentChipOnScreen(el);
-    if (typeof ResizeObserver === "undefined") return;
+    const updateMore = () => {
+      const rtl = getComputedStyle(el).direction === "rtl";
+      const remaining = el.scrollWidth - el.clientWidth - Math.abs(el.scrollLeft);
+      setMore(remaining > 2 && !rtl);
+    };
+    updateMore();
+    el.addEventListener("scroll", updateMore, { passive: true });
+    if (typeof ResizeObserver === "undefined")
+      return () => el.removeEventListener("scroll", updateMore);
     // A row laid out wide and narrowed later (a rotated tablet, a window
     // dragged narrower) only starts to scroll after the pass above found
     // nothing to do. It scrolls once, as it starts to overflow — never on
@@ -51,14 +61,28 @@ export function FilterChipsScroller({
       const overflows = el.scrollWidth > el.clientWidth;
       if (overflows && !overflowed) bringCurrentChipOnScreen(el);
       overflowed = overflows;
+      updateMore();
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", updateMore);
+    };
   }, [activeKey]);
 
   return (
-    <div ref={row} className={className}>
-      {children}
+    <div className="relative min-w-0">
+      <div ref={row} className={className}>
+        {children}
+      </div>
+      {more ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -end-4 inset-y-0 flex w-6 items-center justify-end bg-background pe-1 text-muted sm:hidden"
+        >
+          <DisclosureCaret direction="right" />
+        </span>
+      ) : null}
     </div>
   );
 }

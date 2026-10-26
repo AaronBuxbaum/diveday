@@ -72,26 +72,24 @@ export function ReviewLedgerRow({
   flags?: readonly string[];
 }) {
   const waiting = group === "waiting";
-  return (
-    <LedgerRow
-      as="li"
-      stacked
-      pad="lg"
-      trailing={
-        <ReviewRowActions
-          reviewId={review.id}
-          isPublished={review.isPublished}
-          isHidden={review.isHidden}
-          isStandout={review.isStandout}
-          /* A bare rating has no words to feature, so there is nothing to
+  const ratingOnly =
+    group === "published" && !review.comment && flags.length === 0 && !review.isHidden;
+  const actions = (
+    <ReviewRowActions
+      reviewId={review.id}
+      isPublished={review.isPublished}
+      isHidden={review.isHidden}
+      isStandout={review.isStandout}
+      /* A bare rating has no words to feature, so there is nothing to
              mark — the same condition this bar has always carried. */
-          canStandout={review.isPublished && Boolean(review.comment)}
-          reasons={reasons}
-          copy={copy}
-          moreLabel={t("reviews.rowMoreSrLabel", { name: review.diverName })}
-        />
-      }
-    >
+      canStandout={review.isPublished && Boolean(review.comment)}
+      reasons={reasons}
+      copy={copy}
+      moreLabel={t("reviews.rowMoreSrLabel", { name: review.diverName })}
+    />
+  );
+  return (
+    <LedgerRow as="li" stacked pad="lg" trailing={ratingOnly ? undefined : actions}>
       <div id={`review-${review.id}`} className="min-w-0 scroll-mt-24">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <StarRating
@@ -99,6 +97,7 @@ export function ReviewLedgerRow({
             label={t("reviews.rating", { rating: review.rating })}
             className="shrink-0"
           />
+          {ratingOnly ? <div className="ms-auto">{actions}</div> : null}
           {review.isStandout && review.isPublished ? (
             <Badge tone="primary" size="sm" className="shrink-0">
               {t("reviews.standout")}
@@ -130,8 +129,18 @@ export function ReviewLedgerRow({
             ))}
           </ul>
         ) : null}
-        <p className="mt-1 text-xs text-muted">
-          {t.rich("reviews.reviewMeta", {
+        {ratingOnly ? (
+          <p className="text-base font-medium">
+            <Link
+              href={`/shop/${shopSlug}/divers/${review.personId}`}
+              className="text-primary hover:underline"
+            >
+              {review.diverName}
+            </Link>
+          </p>
+        ) : null}
+        <p className={ratingOnly ? "mt-1 text-sm text-muted" : "mt-1 text-xs text-muted"}>
+          {t.rich(ratingOnly ? "reviews.reviewTripMeta" : "reviews.reviewMeta", {
             diverName: review.diverName,
             tripTitle: review.tripTitle,
             date: formatShortDate(review.divedAt, locale, timezone),
