@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openOnThisPhone, openTripAbout } from "./helpers";
 
@@ -98,10 +99,16 @@ test("staff can view or copy a trip's public booking page from its overview", as
   ]);
   await publicPage.waitForLoadState("domcontentloaded");
   await expect(publicPage).toHaveURL(/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/);
+  const preview = publicPage.getByRole("status").filter({
+    has: publicPage.getByRole("link", { name: "Manage this trip", exact: true }),
+  });
+  await expect(preview).toHaveCount(1);
   await expect(
-    publicPage.getByText("You’re looking at the diver’s view of this departure."),
+    preview.getByText(staffTranslator("en-US")("shared.publicPreview.youWorkHere"), {
+      exact: true,
+    }),
   ).toBeVisible();
-  await publicPage.getByRole("link", { name: "Manage this trip" }).click();
+  await preview.getByRole("link", { name: "Manage this trip", exact: true }).click();
   await expect(publicPage).toHaveURL(/\/shop\/blue-mantis\/trips\/[a-f0-9-]+$/);
   await publicPage.close();
 

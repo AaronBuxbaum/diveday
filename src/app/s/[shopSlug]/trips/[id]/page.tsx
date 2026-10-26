@@ -43,11 +43,10 @@ import { crewLanguagesSentence } from "./_components/crew-languages";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
-import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHero } from "./_components/TripHero";
-import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
+import { pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
@@ -188,7 +187,6 @@ export default async function TripDetailPage({
   const session = auth();
   const now = nowDate();
   const {
-    staffPreview,
     trip,
     tripDives,
     meetingDays,
@@ -218,9 +216,6 @@ export default async function TripDetailPage({
     now,
   });
   if (!trip || trip.isRehearsal) notFound();
-  const staffPreviewBar = staffPreview ? (
-    <StaffPreviewBar locale={locale} shopSlug={shopSlug} tripId={tripId} />
-  ) : null;
   // A cancelled trip gets its own soft landing (task 13) rather than the same
   // bare `notFound()` as a typo'd URL — a diver who followed a saved or
   // shared link into a since-cancelled departure gets told what happened and
@@ -235,7 +230,7 @@ export default async function TripDetailPage({
         isEmbed={isEmbed}
         shopSlug={shopSlug}
         contactEmail={shop.contactEmail}
-        staffPreviewBar={staffPreviewBar}
+        staffPreviewBar={null}
         t={t}
       />
     );
@@ -278,7 +273,7 @@ export default async function TripDetailPage({
 
   const inPast = hasSailed(trip.startsAt, now);
   const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };
-  const hasDoor = pitchHasDoor(diveBriefings, publicCrew, !!logEntry);
+
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`
@@ -303,6 +298,18 @@ export default async function TripDetailPage({
     ? null
     : departureJsonLd(shop, trip, perDiverPriceCents, reviewAggregate);
 
+  const conditionsLine = (
+    <ConditionsLine
+      shop={shop}
+      trip={trip}
+      crewPrediction={crewPrediction}
+      automatedForecast={automatedForecast}
+      crewLanguages={crewLanguagesLine}
+      locale={locale}
+      readerUnits={readerUnits}
+    />
+  );
+
   return (
     <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={TRIP_PAGE_NAMESPACES}>
       <main
@@ -314,7 +321,6 @@ export default async function TripDetailPage({
       >
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
-        {staffPreviewBar}
         {/* **Two columns from `lg` up.** At 1280 the column was 528px wide and
             the form stood 1,500px down, the last thing a diver reached. From
             `lg` the form and the contact line take a 25rem right-hand column
@@ -323,8 +329,7 @@ export default async function TripDetailPage({
             tiles, their `sizes`) changes width. The section stack below joins
             this grid as `contents`; its last row is `1fr`, so a form taller
             than the reading stretches that row rather than the gaps between
-            sections. A phone keeps the one column and the form terminal, as
-            the source order does (ADR 20260827-the-divers-thread, decision 2
+            sections. A phone keeps one column with its booking action before the briefing (ADR 20260827-the-divers-thread, decision 2
             and its 2026-10-03 amendment). */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
@@ -339,6 +344,85 @@ export default async function TripDetailPage({
             run={run}
             t={t}
           />
+          {/* The selected departure’s next action, before the supporting briefing. */}
+          <div
+            id={confirmed || waitlistConfirmation ? undefined : "book"}
+            className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
+          >
+            {confirmed ? null : conditionsLine}
+            {confirmed && bookingToken ? (
+              <EmbedBookedNotice
+                shop={shop}
+                shopSlug={shopSlug}
+                locale={locale}
+                trip={trip}
+                confirmed={confirmed}
+                readinessLink={readinessDoorPath(shopSlug, tripId, bookingToken)}
+                mailState={mailState}
+                payNotice={pay}
+                paymentUrl={paymentUrl}
+              />
+            ) : waitlistConfirmation ? (
+              <WaitlistConfirmation
+                firstName={(waitlistConfirmation.person?.fullName ?? "").split(" ")[0]}
+                shopSlug={shopSlug}
+                embed={isEmbed}
+              />
+            ) : inPast ? (
+              <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
+            ) : trip.conditionsHold ? (
+              <ConditionsHoldSection />
+            ) : full ? (
+              <TripFullSection
+                shopSlug={shopSlug}
+                trip={bookingFormTrip(trip)}
+                tripRef={tripRef}
+                withAnchor={false}
+                errorMessage={errorMessage}
+                alternatives={alternatives}
+                offerWaitlist={shop.waitlistEnabled}
+                requirement={requirementSentence}
+                terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
+              />
+            ) : (
+              <BookSpotSection
+                context={{
+                  trip: bookingFormTrip(trip),
+                  withAnchor: false,
+                  tripRef,
+                  remaining,
+                  errorMessage,
+                  payAtBooking: payAtBooking && checkoutMode(stripeAccount),
+                  offerCodeField,
+                  perDiverPriceCents,
+                  currency: shopCurrency,
+                  locale,
+                  timeZone: shop.timezone,
+                  rentalItems: shop.rentalItems,
+                  rentalPricing: shop.rentalPricing,
+                  passThroughFee: parsePassThroughFee(shop.passThroughFee),
+                  taxEnabled: shop.taxEnabled,
+                  deskPayment: shop.deskPayment,
+                  courseFeeCents,
+                  eLearningFeeCents,
+                  ...checkoutSeatTerms(trip, trip.course),
+                  balanceDueAt: trip.startsAt,
+                  terms: <BookingFinePrint shop={shop} trip={trip} locale={locale} />,
+                  knownDiver: knownDiverPanel,
+                  requirement: requirementSentence,
+                  offerHandoff: offerHandoff.bind(null, tripRef),
+                }}
+              />
+            )}
+            {/* The last line on the page: how to reach a human. Renders nothing at
+                  all when the shop has published neither a phone nor an address. */}
+            {shop.contactPhone || shop.contactEmail ? (
+              <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
+                {t("trip.questionsContact")}
+                <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
+              </p>
+            ) : null}
+          </div>
           {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
               forms-and-controls.md's section rhythm): every section from the
               day's run to the shop's contact line stands 40px from the next, on
@@ -346,15 +430,6 @@ export default async function TripDetailPage({
               to spell its own — `mt-6`, `mt-8`, `mt-10` — and the page's
               sections stood 24, 32 and 40px apart. */}
           <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
-            {/* **The pitch, then the ask.** Everything that answers "is this my
-                day?" runs above the form, and nothing runs below it but the fine
-                print it owns and the shop's own contact line. It read the other way
-                round until 2026-08-28 — the form sat directly under the hero and
-                roughly a thousand pixels of forecast, packing and briefings
-                followed it — which put the page's one act in the middle of its own
-                scroll (ADR 20260827-the-divers-thread, decision 2). Packing left
-                for the thread entirely: what to bring is preparation, and
-                preparation is for a diver who has a seat. */}
             {/* The shape of the day as well as its sites: how long each dive runs,
                 how long the boat sits between two of them, and — once a reader
                 names a card — which of the day's sites go deeper than that card
@@ -382,7 +457,7 @@ export default async function TripDetailPage({
                 close rather than a second rule a gap below it; with no door the
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
-            <div className={hasDoor ? undefined : "space-y-10"}>
+            <div>
               <TripPitch
                 briefings={diveBriefings}
                 crew={publicCrew}
@@ -391,16 +466,8 @@ export default async function TripDetailPage({
                 logEntry={logEntry}
                 embed={isEmbed}
               />
-              <ConditionsLine
-                shop={shop}
-                trip={trip}
-                crewPrediction={crewPrediction}
-                automatedForecast={automatedForecast}
-                crewLanguages={crewLanguagesLine}
-                locale={locale}
-                readerUnits={readerUnits}
-              />
             </div>
+            {confirmed ? conditionsLine : null}
             <TripChangeLedger
               events={changeEvents}
               locale={locale}
@@ -415,81 +482,6 @@ export default async function TripDetailPage({
               <ConditionsChangedNotice locale={locale} />
             ) : null}
             <TripAlternatives alternatives={worthALookRows} locale={locale} />
-
-            {/* The form, terminal — or whichever state stands in its place —
-                and the contact line under it: the right-hand column from `lg`. */}
-            <div className="space-y-10 lg:col-start-2 lg:row-span-6 lg:row-start-1">
-              {confirmed && bookingToken ? (
-                <EmbedBookedNotice
-                  shop={shop}
-                  shopSlug={shopSlug}
-                  locale={locale}
-                  trip={trip}
-                  confirmed={confirmed}
-                  readinessLink={readinessDoorPath(shopSlug, tripId, bookingToken)}
-                  mailState={mailState}
-                  payNotice={pay}
-                  paymentUrl={paymentUrl}
-                />
-              ) : waitlistConfirmation ? (
-                <WaitlistConfirmation
-                  firstName={(waitlistConfirmation.person?.fullName ?? "").split(" ")[0]}
-                  shopSlug={shopSlug}
-                  embed={isEmbed}
-                />
-              ) : inPast ? (
-                <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
-              ) : trip.conditionsHold ? (
-                <ConditionsHoldSection />
-              ) : full ? (
-                <TripFullSection
-                  shopSlug={shopSlug}
-                  trip={bookingFormTrip(trip)}
-                  tripRef={tripRef}
-                  errorMessage={errorMessage}
-                  alternatives={alternatives}
-                  offerWaitlist={shop.waitlistEnabled}
-                  requirement={requirementSentence}
-                  terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
-                />
-              ) : (
-                <BookSpotSection
-                  context={{
-                    trip: bookingFormTrip(trip),
-                    tripRef,
-                    remaining,
-                    errorMessage,
-                    payAtBooking: payAtBooking && checkoutMode(stripeAccount),
-                    offerCodeField,
-                    perDiverPriceCents,
-                    currency: shopCurrency,
-                    locale,
-                    timeZone: shop.timezone,
-                    rentalItems: shop.rentalItems,
-                    rentalPricing: shop.rentalPricing,
-                    passThroughFee: parsePassThroughFee(shop.passThroughFee),
-                    taxEnabled: shop.taxEnabled,
-                    deskPayment: shop.deskPayment,
-                    courseFeeCents,
-                    eLearningFeeCents,
-                    ...checkoutSeatTerms(trip, trip.course),
-                    balanceDueAt: trip.startsAt,
-                    terms: <BookingFinePrint shop={shop} trip={trip} locale={locale} />,
-                    knownDiver: knownDiverPanel,
-                    requirement: requirementSentence,
-                    offerHandoff: offerHandoff.bind(null, tripRef),
-                  }}
-                />
-              )}
-              {/* The last line on the page: how to reach a human. Renders nothing at
-                  all when the shop has published neither a phone nor an address. */}
-              {shop.contactPhone || shop.contactEmail ? (
-                <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-                  {t("trip.questionsContact")}
-                  <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
-                </p>
-              ) : null}
-            </div>
           </div>
         </div>
         {/* Full keeps the same sticky CTA rather than hiding it — a diver who

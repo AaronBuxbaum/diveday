@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoicePill, controlClass, Field, FormStatus } from "@/components/ui/form";
@@ -18,7 +18,7 @@ export type PackageOffer = {
    * long the card lasts (visual review 2026-10-24, B39).
    */
   facts: readonly string[];
-  /** H-123's sentence, which stays on the card where the price is decided. */
+  /** H-123 tank accounting, shared only when every option says the same. */
   tankNote: string;
 };
 
@@ -35,11 +35,18 @@ const INITIAL_STATE: PackagePurchaseState = {};
 export function PackagePurchaseForm({
   shopSlug,
   offers,
+  scopeDescriptionId,
 }: {
   shopSlug: string;
   offers: readonly PackageOffer[];
+  scopeDescriptionId?: string;
 }) {
   const t = useTranslations();
+  const tankNoteId = useId();
+  const sharedTankNote =
+    offers.length > 0 && offers.every((offer) => offer.tankNote === offers[0]?.tankNote)
+      ? offers[0]?.tankNote
+      : undefined;
   const [state, formAction] = useActionState(buyPackageAction.bind(null, shopSlug), INITIAL_STATE);
   const [selectedId, setSelectedId] = useState(offers[0]?.id ?? "");
   // After a refusal React resets the form; the pick follows what was posted.
@@ -61,7 +68,12 @@ export function PackagePurchaseForm({
       className="flex flex-col gap-6"
       data-hydrated={hydrated ? "true" : "false"}
     >
-      <fieldset>
+      <fieldset
+        aria-describedby={
+          [scopeDescriptionId, sharedTankNote ? tankNoteId : undefined].filter(Boolean).join(" ") ||
+          undefined
+        }
+      >
         <legend className="sr-only">{t("packages.title")}</legend>
         <div className="flex flex-col gap-2">
           {offers.map((offer) => (
@@ -78,17 +90,24 @@ export function PackagePurchaseForm({
               <span className="block font-semibold">{offer.name}</span>
               {/* Phrasing content only inside the pill's `<label>`, so the
                   short list is one span per fact, a line each. */}
-              <span className="mt-1 block text-sm text-muted">
+              <span className="mt-1 block text-base text-muted">
                 {offer.facts.map((fact) => (
                   <span key={fact} className="block">
                     {fact}
                   </span>
                 ))}
               </span>
-              <span className="mt-1 block text-sm text-muted">{offer.tankNote}</span>
+              {sharedTankNote ? null : (
+                <span className="mt-1 block text-sm text-muted">{offer.tankNote}</span>
+              )}
             </ChoicePill>
           ))}
         </div>
+        {sharedTankNote ? (
+          <p id={tankNoteId} className="mt-3 text-sm text-muted">
+            {sharedTankNote}
+          </p>
+        ) : null}
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">

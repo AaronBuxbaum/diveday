@@ -31,10 +31,10 @@ const TITLE_LINES = [
  * numbers are read off the hero in src/app/page.tsx and move with its copy;
  * the 2026-10-05 rewrite (H-93) shortened the title and lengthened the lede:
  *   - the eyebrow, `MARKETING_EYEBROW_CLASS`: one 20px `text-sm` line;
- *   - the title, `mt-5`: `TITLE_LINES` above;
- *   - the description, `mt-6`, `leading-8`: five 32px lines on a phone, four
+ *   - the title, `mt-4`: `TITLE_LINES` above;
+ *   - the description, `mt-4`, `leading-8`: three 32px lines on a phone, two
  *     from `sm` in its `max-w-xl`;
- *   - the doors, `mt-8`: two 48px buttons, stacked below `sm`;
+ *   - the doors, `mt-6`: a 48px demo button and a 44px setup link on one wrapping row;
  *   - the demo note (`mt-3`) and the price line (`mt-2`): 20px lines, two each
  *     on a phone and one from `sm`;
  *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
@@ -59,10 +59,10 @@ export function HomeBodySkeleton() {
   return (
     <main className="flex-1 animate-pulse">
       <section className="border-b border-border">
-        <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-12 lg:py-16">
           <div className="max-w-2xl">
             <div className="h-5 w-40 rounded bg-surface-sunken" />
-            <div className="mt-5">
+            <div className="mt-4">
               {TITLE_LINES.map(([line, only]) =>
                 line === "one" ? (
                   <div
@@ -76,12 +76,12 @@ export function HomeBodySkeleton() {
                 ),
               )}
             </div>
-            <div className="mt-6">
-              <SkeletonLineBars lines={{ base: 5, sm: 4 }} height="h-8" width="w-full max-w-xl" />
+            <div className="mt-4">
+              <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-8" width="w-full max-w-xl" />
             </div>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
-              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+              <div className="h-12 w-44 rounded-lg bg-surface-sunken" />
+              <div className="h-11 w-24 rounded-lg bg-surface-sunken" />
             </div>
             <div className="mt-3">
               <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-72 max-w-full" />

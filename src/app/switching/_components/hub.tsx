@@ -8,7 +8,7 @@ import { HubGuideRowSkeleton } from "./HubGuideRow";
  * {@link SwitchHubBodySkeleton}, so the skeleton cannot draw a different box
  * from the one that replaces it.
  */
-export const HUB_HERO_CLASS = "mx-auto max-w-4xl px-6 pt-16 pb-10 lg:pt-24 lg:pb-14";
+export const HUB_HERO_CLASS = "mx-auto max-w-4xl px-6 pt-10 pb-8 lg:pt-16 lg:pb-10";
 export const HUB_LIST_SECTION_CLASS = "mx-auto max-w-4xl px-6 pb-16 lg:pb-24";
 /** The "not listed here" row that closes the list, its words beside the doors from `lg`. */
 export const HUB_CLOSING_ROW_CLASS =

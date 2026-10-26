@@ -65,6 +65,12 @@ function renderNotice(
 afterEach(cleanup);
 
 describe("EmbedBookedNotice", () => {
+  it("announces the booked seat with its selected trip identity", () => {
+    renderNotice();
+    expect(screen.getByRole("status")).toHaveTextContent("You’ve got a seat, Ingrid");
+    expect(screen.getByRole("status")).toHaveTextContent("Palancar Reef Two-Tank");
+  });
+
   it("greets the diver by their first name", () => {
     renderNotice();
     expect(screen.getByRole("heading", { name: /You’ve got a seat, Ingrid/ })).toBeVisible();

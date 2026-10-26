@@ -114,23 +114,29 @@ export default async function PublicPackagesPage({
           does Courses. */}
       {/* What a package is, said once above the first card: the sentence
           lived only in the meta description (third UX review, item 28). */}
-      <ShopPageHeader
-        title={t("packages.title")}
-        description={
-          sharedScope
-            ? t("packages.introWithScope", {
-                intro: t("packages.intro"),
-                scope: scopeText(sharedScope),
-              })
-            : t("packages.intro")
-        }
-      />
+      <div id="package-introduction">
+        <ShopPageHeader
+          title={t("packages.title")}
+          description={
+            sharedScope
+              ? t("packages.introWithScope", {
+                  intro: t("packages.intro"),
+                  scope: scopeText(sharedScope),
+                })
+              : t("packages.intro")
+          }
+        />
+      </div>
       <DiverIntlProvider
         locale={locale}
         timeZone={shop.timezone ?? "UTC"}
         namespaces={["packages", "common"]}
       >
-        <PackagePurchaseForm shopSlug={shop.slug} offers={offers} />
+        <PackagePurchaseForm
+          shopSlug={shop.slug}
+          offers={offers}
+          scopeDescriptionId={sharedScope ? "package-introduction" : undefined}
+        />
       </DiverIntlProvider>
     </main>
   );

@@ -331,6 +331,14 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Composition, 2026-10-26 (#3069).** One idea: choose a date before reading the shop’s story.
+The compact shop name, conditional next departure and schedule/date choices lead; courses remain
+available for course-only shops. The authored introduction, photograph, badges and gallery follow
+those choices. Empty and off-season states retain their own next action. Find my booking is a
+quiet shared-header utility door into the existing recovery flow. The former identity-band layout
+below is historical.
+
+
 **Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/lib/off-season.ts`).
 
 **Widened 2026-10-03.** From `lg` up the next boat with space (and any other band panel) stands in a 20rem column beside the photograph, as ADR 20260827-clearwater-surface-language decision 8 drew it. Stacked, the photograph, its name band and the card filled the first screen at 1280×900 and the schedule started 1,220px down; now it starts on the first screen. A shop with no panel keeps the full-width photograph, and a phone keeps the stack.
@@ -366,6 +374,15 @@ routes took the display-scale h1 only.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
 
+**Composition, 2026-10-26 (#3069).** One idea: act on the selected departure after its essential
+facts. On a phone the single booking form or unavailable state now precedes the supporting
+briefing and alternatives; desktop keeps the form beside the facts. Requirements, prices and
+terms remain with the decision. Embedded success leads with the booked seat, trip identity and
+zoned date, then the payment/readiness door before the briefing. Full-page success still opens
+Ready. One server-authorized staff preview strip chooses Manage this trip on a trip and the board
+elsewhere. The former terminal-form source order below is historical.
+
+
 **Two columns from `lg`, 2026-10-03.** At 1280 the page was a 576px column and the booking form stood about 1,500px down. From `lg` the column widens to `max-w-5xl`: the reading (the day, the pitch, the conditions line, the other boats and the requirement) runs down the left, and the form with the contact line under it takes a 25rem column on the right, level with the title, so the whole form is on the first screen at 1280×900. The left column keeps the 528px it always had, so nothing in it changes width. The source order, a phone and a screen reader still meet the form last (ADR 20260827-the-divers-thread, decision 2). The cancelled landing keeps `max-w-xl`.
 
 **Tidied 2026-09-17** (the "as rendered" sweep, slice F1). "What the crew logged, and when. It says what was seen, not what you will see." closed every "Seen here this month" block, so a two-tank day printed it twice, twelve lines apart. It is the **day's** sentence now — once, under the plan, whenever any site in the day has a month to show. And the embed's booking confirmation stopped offering three link-blue lines at one weight: the readiness page is the button, the way back into the widget is quiet text (and the readiness door demotes to `secondary` when there is a balance to pay, which is then the section's one primary).
@@ -396,6 +413,14 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   conditions reading so practical wayfinding never competes with the pitch.
 
 ### The product page — `/product`
+
+**Composition, 2026-10-26 (#3069).** The twelve-feature catalogue lives here, reached by the
+homepage’s quiet full-list door. The existing hero starts sooner; no new hero scene is added.
+The homepage retains all five essential journey scenes, including dock check-in, with compact
+migration reassurance and plan-driven price/demo actions. Mobile marketing navigation is one row
+with secondary destinations in Menu. Switching references disclose detail beneath the decision,
+with direct fragment links and the complete import truth retained.
+
 
 **The hub, 2026-10-05** (H-93) — conversion surface, governed by
 [marketing.md](../product/marketing.md)'s claims and control budget. Supersedes the tour described

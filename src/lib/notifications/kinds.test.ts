@@ -273,6 +273,11 @@ describe("operator_alert setup_request", () => {
     requestLocale: "en-US",
   };
 
+  it("accepts an unanswered optional current tool and refuses a forged nonempty one", () => {
+    expect(notificationSchema.safeParse({ ...alert, currentSystem: undefined }).success).toBe(true);
+    expect(notificationSchema.safeParse({ ...alert, currentSystem: "abacus" }).success).toBe(false);
+  });
+
   it("takes a request the form accepted", () => {
     expect(notificationSchema.safeParse(alert).success).toBe(true);
   });

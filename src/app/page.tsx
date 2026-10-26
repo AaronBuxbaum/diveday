@@ -17,13 +17,7 @@ import {
   FrontDeskReadinessFallback,
   RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
-import {
-  CaptainPhoneFrame,
-  FeatureDirectory,
-  MarginNotes,
-  MarketingMockup,
-} from "@/components/MarketingSections";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { CaptainPhoneFrame, MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
@@ -246,31 +240,27 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
   const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
-  // What a shop gets back on the way out, listed rather than described — the
-  // inventory is the reassurance, so it reads as a manifest, not a paragraph.
-  // Keyed by message key, never by the rendered sentence: two locales edit
-  // these independently, and a duplicated line would silently collide.
-  const exportInventory = [
-    "marketing.home.exportItem1",
-    "marketing.home.exportItem2",
-    "marketing.home.exportItem3",
-    "marketing.home.exportItem4",
-  ] as const;
 
   return (
     <main className="flex-1">
       <section className="relative overflow-hidden border-b border-border">
-        <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:py-24">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-12 lg:py-16">
           <div className="max-w-2xl">
             <Eyebrow>{t("marketing.home.eyebrow")}</Eyebrow>
-            <h1 className="mt-5 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
+            <h1 className="mt-4 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
               {t("marketing.home.heroTitle")}
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
+            <p className="mt-4 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
             {/* The terms stand under this pair and no later one (B09). */}
-            <FunnelCtas locale={locale} source="home-hero" footnotes={{ offer }} className="mt-8" />
+            <FunnelCtas
+              locale={locale}
+              source="home-hero"
+              hero
+              footnotes={{ offer }}
+              className="mt-6"
+            />
             <DiverDoor t={t} />
           </div>
           <MarketingHeroMotion>
@@ -301,7 +291,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
           {/* 96px between steps at every width, against 20px inside one below
               `lg`, so a phone reads each step as one unit rather than a
               drawing floating between two (design review, 2026-10-05). */}
-          <ol className="mt-14 space-y-24 lg:mt-20">
+          <ol className="mt-12 space-y-16 lg:mt-16 lg:space-y-20">
             {STEPS.map((step, index) => {
               const page = getFeaturePage(step.feature);
               if (!page) return null;
@@ -366,30 +356,11 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
           the page's answer to "does it do X?", and the one place it links to
           all of them. The heading says they are all in the one plan, which
           is the price question a list of features raises. */}
-      <MarketingReveal>
-        <section className="border-y border-border bg-surface">
-          <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-            <h2 className={`max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.home.featuresTitle")}
-            </h2>
-            <div className="mt-12">
-              <FeatureDirectory locale={locale} />
-            </div>
-            {/* No rule of its own: the directory's last row ends in one, and a
-                second 40px under it read as an empty row (K-294). The link
-                lands on the hub's list of what each page holds, not on its
-                hero above the same directory. */}
-            <div className="mt-8">
-              <Link
-                href="/product#full-list"
-                className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
-              >
-                {t("marketing.home.featuresLink")}
-              </Link>
-            </div>
-          </div>
-        </section>
-      </MarketingReveal>
+      <div className="mx-auto w-full max-w-7xl px-6 pb-12">
+        <Link href="/product#full-list" className={buttonClass({ variant: "link", flush: true })}>
+          {t("marketing.home.featuresLink")}
+        </Link>
+      </div>
 
       {/* The portability band, and the one section whose geometry *is* its
           argument: records come in clean and leave the same way, so the two
@@ -438,37 +409,16 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
             <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
               <SectionMarker as="h3">{t("marketing.home.leavingLabel")}</SectionMarker>
               <p className="leading-7 text-muted">
-                {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
+                {t("marketing.home.exportDescription2", {
+                  claim: t(fullShopExport.claimKey),
+                  terms: t(fullShopExport.termsKey),
+                })}
               </p>
-              {/* A manifest, not a card: hairline rows echoing the marker rule
-                above them. The bordered card this replaced put a second
-                rounded box beside the import mockup and read as its twin,
-                when the two halves are a picture and an inventory. Its bottom
-                rule is `lg`-only: below `lg` the list stacks last, and the
-                band's closing rule 48px under it is its end (K-294). */}
-              <ul className="divide-y divide-border border-t border-border leading-6 text-muted lg:border-b">
-                {exportInventory.map((itemKey) => (
-                  <li key={itemKey} className="flex gap-3 py-4">
-                    <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
-                    <span>{t(itemKey)}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
 
-          {/* One door to the whole switching surface, closing the band rather
-            than belonging to either half: the hub fronts every incumbent guide,
-            so two stacked link CTAs here were one door pretending to be two.
-            The rule above it is load-bearing now that the arriving column ends
-            in a link of its own: the left column is the taller one (a mockup
-            against a four-row list), so without a full-width line between them
-            these two land at the same left margin a short gap apart and scan as
-            a stacked pair — the exact shape the 2026-08-13 redesign removed,
-            reached from a different direction. The rule says this one closes
-            both columns. Below `lg` the inventory stacks last and draws no
-            bottom rule of its own, so this is its end rather than a second
-            rule 48px under one (an empty fifth row, K-294). */}
+          {/* The full-width rule closes both portability columns before the
+              switching hub link, keeping it distinct from the spreadsheet link. */}
           <div className="mt-12 border-t border-border pt-6">
             <Link
               href={switchingHref("/switching", "home-records")}

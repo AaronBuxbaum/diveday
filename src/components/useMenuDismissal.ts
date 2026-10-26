@@ -17,15 +17,11 @@ import { useEffect, useRef } from "react";
  * - Escape closes and hands focus back to `returnFocus`, matching every other
  *   dismissible menu.
  *
- * Always: any (re)navigation closes, so an Activity-preserved re-show can
- * never resurface an open menu over the new page. The first run is skipped —
- * mounting on the page that disclosed you is not a navigation.
- *
  * Listeners exist only while open. `close` must be referentially stable (a
  * `useState` setter call wrapped in `useCallback`, or the setter itself),
  * because the effects list it as a dependency.
  */
-export function useMenuDismissal({
+export function useMenuDismissalEvents({
   open,
   close,
   inside,
@@ -65,7 +61,12 @@ export function useMenuDismissal({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, close, returnFocus]);
+}
 
+/** Staff menus also close on navigation so Activity cannot restore an open menu. */
+export function useMenuDismissal(options: Parameters<typeof useMenuDismissalEvents>[0]) {
+  useMenuDismissalEvents(options);
+  const { close } = options;
   const pathname = usePathname();
   const pathnameEffectRan = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the menu, which is the point.

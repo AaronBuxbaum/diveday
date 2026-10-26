@@ -166,6 +166,7 @@ export function TripFullSection({
   terms,
   offerWaitlist = true,
   requirement = null,
+  withAnchor = true,
 }: {
   shopSlug: string;
   trip: BookingFormTrip;
@@ -187,6 +188,8 @@ export function TripFullSection({
    * …"), or null. One unboxed line inside the form it governs (UX audit #25).
    */
   requirement?: string | null;
+  /** False when the page anchors the conditions and this section together. */
+  withAnchor?: boolean;
   /**
    * Up to two departures worth offering instead (issue #1166, D06), already
    * chosen by `similarDepartures` and dated in the shop's own zone. Empty
@@ -220,7 +223,10 @@ export function TripFullSection({
     // when the open form moved onto the shared card, the four states that
     // replace it were briefly a size louder — "This trip is full" shouting
     // over "Grab a spot".
-    <section id="book" className="scroll-mt-4 rounded-panel bg-surface-sunken p-5 sm:p-6">
+    <section
+      id={withAnchor ? "book" : undefined}
+      className="scroll-mt-4 rounded-panel bg-surface-sunken p-5 sm:p-6"
+    >
       {/* The panel leads with the fact, then the alternatives, then the
           wait list (visual review 2026-10-24, B57). */}
       <h2 className={SECTION_TITLE_CLASS}>{t("fullHeading")}</h2>
@@ -325,6 +331,8 @@ export type BookSpotSectionContext = {
   trip: BookingFormTrip;
   tripRef: TripRef;
   remaining: number;
+  /** False when the page anchors the conditions and this section together. */
+  withAnchor?: boolean;
   /**
    * The snorkeler and rider seats this departure sells publicly, each at its
    * own price and deposit, resolved server-side (ADR
@@ -441,6 +449,7 @@ export type BookSpotSectionContext = {
 export function BookSpotSection({ context }: { context: BookSpotSectionContext }) {
   const {
     trip,
+    withAnchor = true,
     tripRef,
     remaining,
     errorMessage,
@@ -552,7 +561,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     // never beside this card: a conditions hold replaces it, and conditions
     // changed is shown only to a diver already booked.
     <SectionCard
-      id="book"
+      id={withAnchor ? "book" : undefined}
       // `padding="lg"` is `p-5 sm:p-6` — the exact spelling this card already
       // carried by hand, so the one raised card on the page keeps its geometry
       // and only its heading steps to the shared size.

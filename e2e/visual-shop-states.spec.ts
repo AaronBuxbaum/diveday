@@ -274,6 +274,52 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "public-packages-empty", scheme);
     });
 
+    test(`public package choices preserve shared and different terms (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      const addPackage = async (
+        name: string,
+        dives: number,
+        price: string,
+        scope: "all" | "fun_dives",
+        validUntil?: string,
+      ) => {
+        await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+        const create = page.locator("#package-new");
+        await expect(create.locator("summary")).toBeVisible();
+        if ((await create.getAttribute("open")) === null) await create.locator("summary").click();
+        await page.getByLabel("What you call it").fill(name);
+        await page.getByLabel("Dives included").fill(String(dives));
+        await page.getByLabel("Price", { exact: true }).fill(price);
+        await page.getByLabel("Covers", { exact: true }).selectOption(scope);
+        if (validUntil) await page.getByLabel("Usable through", { exact: true }).fill(validUntil);
+        await page.getByRole("button", { name: "Add package", exact: true }).click();
+        await expect(page.getByText(name, { exact: true })).toBeVisible();
+        await expect(page.getByText("Package added", { exact: true })).toBeVisible();
+      };
+      await addPackage("Five-dive card", 5, "200", "fun_dives");
+      await addPackage("Ten-dive card", 10, "375", "fun_dives");
+      await page.goto(`/s/${privateShop.slug}/packages`);
+      await expect(page.getByRole("radio")).toHaveCount(2);
+      await expect(page.getByText("Courses not included", { exact: false })).toHaveCount(1);
+      await expect(page.getByRole("group", { name: "Dive packages" })).toHaveAccessibleDescription(
+        /One dive is one tank/,
+      );
+      await capture(page, "public-packages-shared-terms", scheme);
+
+      await addPackage("Course-and-dive card", 6, "270", "all", "2026-12-31");
+      await page.goto(`/s/${privateShop.slug}/packages`);
+      await expect(page.getByRole("radio")).toHaveCount(3);
+      await expect(page.getByText("Courses included", { exact: true })).toBeVisible();
+      await expect(page.getByText("Courses not included", { exact: true })).toHaveCount(2);
+      await expect(page.getByText(/Use by Dec\s31,\s2026/)).toBeVisible();
+      await expect(page.getByRole("group", { name: "Dive packages" })).toHaveAccessibleDescription(
+        /One dive is one tank/,
+      );
+      await capture(page, "public-packages-mixed-scope", scheme);
+    });
+
     /**
      * **The packages a diver can buy online** (owner decision 2026-10-09).
      * Its own shop: a package is shop configuration, which `/api/test/reset`

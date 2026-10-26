@@ -58,22 +58,23 @@ and listed the rest in a closed index on `/product`.
   checklist is its group, whole.
 - **The homepage follows one booking** (`src/app/page.tsx`). The title says what the shop gets
   ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
-  jobs it does, in one app, for a dive shop. Then five steps in the order a diver meets the shop:
+  journey from online booking to dock readiness. Then five steps in the order a diver meets the shop:
   book, sign the release and medical form, the morning check, the roll call, and the recap. Each is
   a screen, two builder's notes and a link that names the feature page. Check-in at the counter was
   a sixth step until review the same day: its screen read as the morning check's twin, and its one
-  claim was the only one on the page a rival makes. Its page is still in the directory below. The
+  claim was the only one on the page a rival makes. Its page is still in the Product directory. The
   roll-call step draws the dock check-in screen, read by key from the check-in page, because the
   hero already draws the roll-call phone (visual review B14, decided 2026-10-25 under H-94); its
   notes keep the no-signal roll-call claim with its condition.
   A step ends in its feature page rather than in a door into the demo, because that page's own door
   opens the demo on the same screen as the role that uses it. The page keeps its two demo doors,
   hero and close.
-- **Every feature page is linked from `/` and from `/product` by one component**,
+- **Every feature page is linked from `/product` by one component**,
   `FeatureDirectory` (`src/components/MarketingSections.tsx`): the pages filed under the part of a
   shop's year they serve (`FEATURE_PHASES` in the registry: before the dive day, on the day, across
   the season), each row the page's name and one-sentence summary, the whole row the link. The rows
-  come off the registry, so a page added there is listed on both without either page naming it.
+  come off the registry, so a page added there is listed without hand-maintained page links. The
+  homepage keeps the essential journey scenes and one quiet door to that complete directory.
 - **`/product` is the hub**: the hero, one list, what DiveDay doesn't do, and the close. The list
   is the directory with the full inventory folded into it: under each feature page's row, a closed
   disclosure counts and holds that page's checklist, and the three groups no page owns (the diver
@@ -83,15 +84,24 @@ and listed the rest in a closed index on `/product`.
 - **What did not change:** the claims policy, the two doors and their order, the demo note once per
   page, the price stated where the question arises, and `/about`'s company voice (H-99).
 
-## The homepage breadth band (decided 2026-08-20, replaced 2026-10-05)
+## The homepage journey and Product catalogue (owner decision, 2026-10-26)
 
-From 2026-08-20 the homepage argued breadth with four numbered cards, one summary paragraph each,
-on the reasoning that four screens say "DiveDay has four screens" while four assertions say
-"DiveDay covers the whole day", which is what a buyer comparing products looks for at that point
-(FU-20260813, closed). The reasoning still holds and the directory above keeps it: it says the same
-thing with every feature page by name, and each name is a link to the page that proves it, where a
-card's paragraph linked nowhere. `FeatureGroupsGrid`, `productFeatureGroups` and the
-`marketing.features.*` keys were deleted with the cards (H-93).
+The homepage follows the essential booking-to-boat scenes, including dock check-in (H-94),
+then answers how records arrive and leave. Its compact Product link opens `/product#full-list`;
+the repeated twelve-feature catalogue lives on Product alone. Home and Product heroes keep a
+content-sized demo beside a quiet 44px setup link. Hero, migration and closing copy retain the
+price, demo door and accurate migration qualifications. Product keeps its existing
+material and gains no new hero scene.
+
+The mobile marketing header keeps the brand, demo or staff return, and Menu on one row.
+Secondary destinations, including Sign in, are disclosed with keyboard focus and Escape return.
+Setup remains human-assisted. Contact and shop details come first on `/get-set-up`; Current tool
+is optional and an unanswered tool is recorded without inventing a paper or other-tool answer.
+
+Switching guides carry in-page contents. Detailed spreadsheet columns and the full import field
+reference expand in place, with direct fragment links that open the reference. Included and
+excluded record categories remain visible before expansion; the complete mapping, exclusions,
+source links and CSV download remain available. This changes composition, not import scope.
 
 ## The positioning spine
 
@@ -420,7 +430,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   clipboard, the three apps and a spreadsheet.
 - **Show the screen before describing it, and never inventory the same thing twice.** The feature
   claims exist at exactly two densities, and each has one home: the summary is a feature page's one
-  sentence (`marketing.featurePages.<page>.summary`), which `FeatureDirectory` lists on `/` and on
+  sentence (`marketing.featurePages.<page>.summary`), which `FeatureDirectory` lists on
   `/product` with the page itself one tap away; the full inventory is `productCapabilityIndex`,
   each feature page's checklist its own group, and all of it rendered on
   `/product` inside the directory: a closed `<details>` under each page's row, counting that

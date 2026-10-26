@@ -67,11 +67,11 @@ describe("the landing's skeleton", () => {
     expect(shownAt(lines)).toEqual([4, 3, 3]);
   });
 
-  it("draws the description's five lines on a phone and four from sm", () => {
+  it("draws the compact description’s three lines on a phone and two from sm", () => {
     const { container } = render(<HomeBodySkeleton />);
     const lines = [...heroColumns(container).claim.querySelectorAll(".h-8")];
-    expect(lines).toHaveLength(5);
-    expect(shownAt(lines)).toEqual([5, 4, 4]);
+    expect(lines).toHaveLength(3);
+    expect(shownAt(lines)).toEqual([3, 2, 2]);
   });
 
   it("draws the dock card's detail as three lines in a phone's column and two from sm", () => {

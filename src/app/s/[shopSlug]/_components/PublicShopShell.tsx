@@ -22,7 +22,6 @@
  */
 
 import { headers } from "next/headers";
-import Link from "next/link";
 import { switchDemoRoleAction } from "@/app/actions/demo";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { BrandStyle } from "@/components/BrandStyle";
@@ -32,7 +31,6 @@ import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import type { PublicShopNavItem } from "@/components/PublicShopNav";
 import { SkipLink } from "@/components/SkipLink";
-import { tapTargetLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
@@ -60,8 +58,16 @@ import {
 } from "@/lib/embed-routes";
 import { formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { publicCoursesPath, publicPackagesPath, publicSchedulePath } from "@/lib/public-routes";
+import {
+  FIND_YOUR_BOOKING_PATH,
+  publicCoursesPath,
+  publicFindMyBookingPath,
+  publicPackagesPath,
+  publicSchedulePath,
+} from "@/lib/public-routes";
 import { isLiveShopStaff } from "@/lib/session";
+import { PublicStaffPreviewBar } from "./PublicStaffPreviewBar";
+import { everHadDepartureRead } from "./schedule-reads";
 
 /**
  * Everything above the page: the negotiated skip link, the demo banner and its
@@ -95,27 +101,35 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
   // nav probes and the session each need only the shop, so none waits on
   // another; the live staff check rides its session read. They used to be five
   // waves one after another under this band's `<Suspense>`.
-  const [languageFallback, present, [teaches, packagesOnSale], { session, showStaffBar }] =
-    await Promise.all([
-      isEmbed ? null : requestLanguageFallback(locale),
-      showBanner && shop ? listShopRolesPresent(db, shop.id) : null,
-      // The nav's two existence probes (below), skipped for an embed, which
-      // drops the header anyway.
-      !isEmbed && shop
-        ? Promise.all([hasActiveCourses(db, shop.id), listPackagesOnSale(db, shop.id)])
-        : ([false, []] as const),
-      // Staff are no longer redirected off their own shop's public pages — this
-      // is the page divers buy from, and staff need to be able to look at it. A
-      // slim bar says "you work here" and points back at the operations board,
-      // so nobody is stranded on a diver surface with no staff chrome (task
-      // 153). Live-checked (issue #966): it discloses nothing sensitive, but
-      // the same stale-JWT gap the other public surfaces had is worth closing
-      // uniformly.
-      auth().then(async (session) => ({
-        session,
-        showStaffBar: !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session)),
-      })),
-    ]);
+  const [
+    languageFallback,
+    present,
+    [teaches, packagesOnSale, everHadDeparture],
+    { session, showStaffBar },
+  ] = await Promise.all([
+    isEmbed ? null : requestLanguageFallback(locale),
+    showBanner && shop ? listShopRolesPresent(db, shop.id) : null,
+    // The nav's two existence probes (below), skipped for an embed, which
+    // drops the header anyway.
+    !isEmbed && shop
+      ? Promise.all([
+          hasActiveCourses(db, shop.id),
+          listPackagesOnSale(db, shop.id),
+          everHadDepartureRead(db, shop.id, false),
+        ])
+      : ([false, [], false] as const),
+    // Staff are no longer redirected off their own shop's public pages — this
+    // is the page divers buy from, and staff need to be able to look at it. A
+    // slim bar says "you work here" and points back at the operations board,
+    // so nobody is stranded on a diver surface with no staff chrome (task
+    // 153). Live-checked (issue #966): it discloses nothing sensitive, but
+    // the same stale-JWT gap the other public surfaces had is worth closing
+    // uniformly.
+    auth().then(async (session) => ({
+      session,
+      showStaffBar: !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session)),
+    })),
+  ]);
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/
   // captain only appear when this shop actually seeded someone in that role.
@@ -209,38 +223,25 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
         />
       ) : null}
       {showStaffBar && shop ? (
-        <div className="border-b border-border bg-surface-sunken">
-          {/* From `sm` one 56px row, the chrome bar's own height: the link
-              is a 44px target (it was a 20px word), and the 6px above and
-              below it hold its focus ring, 5px outside the box. For a staffer
-              on their own live shop this bar is the first thing on the page,
-              so a bar that was only the box ran the ring's top off it and its
-              bottom across the border. On a phone the sentence is its own
-              20px line and the link wraps under it: the row gap keeps the
-              ring off the sentence there, and the column gap does where the
-              two share a row. */}
-          {/* On a phone the bar is one row too: its sentence is the short
-              spelling, the link beside it, so the strip costs a line rather
-              than three above the diver's page. */}
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-x-4 gap-y-1.5 px-4 py-1.5 text-sm sm:flex-wrap sm:px-6">
-            <p className="flex min-w-0 items-center text-muted sm:min-h-11">
-              <span className="sm:hidden">{staffT("shared.publicPreview.divesSee")}</span>
-              <span className="max-sm:hidden">{staffT("shared.publicPreview.youWorkHere")}</span>
-            </p>
-            <Link
-              href={`/shop/${shop.slug}/schedule/board`}
-              className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
-            >
-              {staffT("shared.publicPreview.openTheBoard")}
-            </Link>
-          </div>
-        </div>
+        <PublicStaffPreviewBar
+          shopSlug={shop.slug}
+          words={{
+            short: staffT("shared.publicPreview.divesSee"),
+            long: staffT("shared.publicPreview.youWorkHere"),
+            board: staffT("shared.publicPreview.openTheBoard"),
+            manage: staffT("trips.publicPreview.manage"),
+          }}
+        />
       ) : null}
       {!isEmbed && shop ? (
         <PublicShopHeader
           shop={shop}
           navAriaLabel={t("shopChrome.navAriaLabel")}
           navItems={navItems}
+          recoveryLabel={t("findMyBooking.link")}
+          recoveryHref={
+            everHadDeparture ? publicFindMyBookingPath(shop.slug) : FIND_YOUR_BOOKING_PATH
+          }
           locale={locale}
           localeLabel={localeEndonym(locale)}
           languages={languages}

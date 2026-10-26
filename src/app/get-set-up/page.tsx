@@ -50,6 +50,7 @@ export default async function GetSetUpPage({
     yes: t("marketing.setUp.yes"),
     no: t("marketing.setUp.no"),
     currentSystem: t("marketing.setUp.currentSystem"),
+    notSpecified: t("marketing.setUp.notSpecified"),
     current: Object.fromEntries(
       SETUP_CURRENT_SYSTEMS.map((system) => [system, t(SETUP_CURRENT_SYSTEM_KEYS[system])]),
     ) as SetupRequestFormWords["current"],

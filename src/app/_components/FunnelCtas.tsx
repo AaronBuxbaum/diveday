@@ -3,7 +3,7 @@ import { type ClosingCtaMeasure, closingCtaBoxClass } from "@/app/_components/Cl
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -34,6 +34,9 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
  * a reader who had just read the whole price page was warmest. Nothing was
  * wrong on any one page, which is exactly why nothing caught it.
  *
+ * Home and Product heroes use a content-sized demo and quiet setup link (owner decision
+ * 2026-10-26), keeping both doors on one wrapping row.
+ *
  * So order, weight, labels, the pending label and the funnel tag are decided
  * here and are not props. A page chooses only where the pair sits and how big
  * it is — the same move `src/lib/staff-destinations.ts` made for the staff nav,
@@ -46,7 +49,7 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
  * the reader lands, never how the pair looks or what it says, and a page that
  * passes nothing opens Today as the owner, as every door did before.
  *
- * Both buttons are `w-full sm:w-auto`. Without it the primary (inside a form,
+ * Outside Home and Product heroes, both buttons are `w-full sm:w-auto`. Without it the primary (inside a form,
  * hugging its label) rendered *narrower* than a stretched secondary link on
  * phones, making the demoted action the biggest target on first paint; and a
  * full-width button is the better wet-thumb target regardless.
@@ -72,6 +75,7 @@ export function FunnelCtas({
   source,
   demo,
   footnotes = false,
+  hero = false,
   className,
 }: {
   locale: DiverLocale;
@@ -84,15 +88,17 @@ export function FunnelCtas({
    * `false` everywhere else.
    */
   footnotes?: false | { offer: PlanTerms };
+  /** Home and Product heroes keep the secondary setup door at quiet link weight. */
+  hero?: boolean;
   /** Placement only — margins, `justify-*`, `shrink-0`. Never colour or weight. */
   className?: string;
 }) {
   const t = diverTranslator(locale);
-  const width = "w-full sm:w-auto";
+  const width = hero ? "w-auto" : "w-full sm:w-auto";
   return (
     <>
       <div
-        className={`flex ${width} flex-col gap-3 sm:flex-row${className ? ` ${className}` : ""}`}
+        className={`flex ${width} ${hero ? "flex-wrap items-center gap-x-6 gap-y-2" : "flex-col gap-3 sm:flex-row"}${className ? ` ${className}` : ""}`}
       >
         <form action={enterDemoAction} className="contents">
           <FunnelTag source={source} />
@@ -107,7 +113,11 @@ export function FunnelCtas({
         </form>
         <Link
           href={setUpHref(source)}
-          className={buttonClass({ variant: "outline", className: width })}
+          className={
+            hero
+              ? `${tapTargetLinkClass} font-medium text-primary hover:underline`
+              : buttonClass({ variant: "outline", className: width })
+          }
         >
           {t("marketing.common.getSetUp")}
         </Link>

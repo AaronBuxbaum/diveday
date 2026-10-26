@@ -18,6 +18,12 @@ describe("setupRequestAlertEmail names the system", () => {
     requestLocale: "en-US",
   };
 
+  it("keeps an unanswered current tool explicit without calling it paper or another system", () => {
+    const message = setupRequestAlertEmail({ ...request, currentSystem: undefined });
+    expect(message.text).toContain("Uses today: Not provided");
+    expect(message.html).toContain("Not provided");
+  });
+
   it("after the answer, when one was named", () => {
     expect(setupRequestAlertEmail({ ...request, currentSystemGuide: "fareharbor" }).text).toContain(
       "Uses today: a booking system, FareHarbor",

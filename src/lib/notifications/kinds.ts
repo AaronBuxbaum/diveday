@@ -973,7 +973,7 @@ const setupRequestAlertSchema = z.object({
   shopName: setupAnswerSchema(SETUP_TEXT_MAX),
   region: setupAnswerSchema(SETUP_TEXT_MAX),
   runsBoat: z.boolean(),
-  currentSystem: z.enum(SETUP_CURRENT_SYSTEMS),
+  currentSystem: z.enum(SETUP_CURRENT_SYSTEMS).optional(),
   /** Which system, as a switching guide's slug, when the requester named one. */
   currentSystemGuide: z
     .string()

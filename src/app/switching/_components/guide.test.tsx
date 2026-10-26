@@ -358,3 +358,33 @@ describe("the guide body's skeleton", () => {
     expect(band?.firstElementChild?.children).toHaveLength(2);
   });
 });
+
+describe("guide contents and import reference", () => {
+  it("offers direct destinations for the guide's mechanics", async () => {
+    const { GuideContents } = await import("./guide");
+    render(<GuideContents locale="en-US" />);
+    const contents = screen.getByRole("navigation", { name: "On this page" });
+    expect(contents.querySelectorAll("a")).toHaveLength(4);
+    expect(screen.getByRole("link", { name: "Export your file" })).toHaveAttribute(
+      "href",
+      "#export",
+    );
+    expect(screen.getByRole("link", { name: "Make the move" })).toHaveAttribute("href", "#cutover");
+  });
+
+  it("keeps import categories visible and preserves every detail in the expandable reference", async () => {
+    const { ScopePhase } = await import("./guide");
+    const { container } = render(
+      <ol>
+        <ScopePhase locale="en-US" number={2} />
+      </ol>,
+    );
+    const reference = container.querySelector("details#import-reference");
+    expect(reference).not.toHaveAttribute("open");
+    expect(reference?.textContent).toContain("Comes across");
+    expect(reference?.textContent).toContain("Stays behind");
+    // Every row remains in the detailed reference, from the importer-owned registry.
+    const { IMPORT_HONESTY_TABLE } = await import("@/lib/import");
+    expect(reference?.querySelectorAll("li")).toHaveLength(IMPORT_HONESTY_TABLE.length);
+  });
+});

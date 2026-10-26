@@ -122,7 +122,11 @@ describe("the public packages page with a package on sale", () => {
     ]);
     expect(screen.getByText("10 dives")).toBeInTheDocument();
     expect(document.body.textContent?.match(/Courses not included/g)).toHaveLength(1);
-    expect(document.body.textContent?.match(/One dive is one tank/g)).toHaveLength(2);
+    expect(document.body.textContent?.match(/One dive is one tank/g)).toHaveLength(1);
+    const group = screen.getByRole("group", { name: "Dive packages" });
+    expect(group).toHaveAccessibleDescription(
+      /Courses not included.*One dive is one tank, so a two-tank trip uses two/,
+    );
   });
 
   it("keeps the scope on each card when the cards differ", async () => {

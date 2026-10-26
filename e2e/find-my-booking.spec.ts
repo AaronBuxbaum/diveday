@@ -86,3 +86,21 @@ test("a diver on DiveDay's home page finds their way to a shop's find-my-booking
   await page.waitForURL(/\/s\/reef-line-divers#find-my-booking$/);
   await expect(page.locator("#find-my-booking").getByLabel("Email")).toBeVisible();
 });
+
+test("the shop header reveals the existing recovery form when its link is clicked", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/s/blue-mantis");
+  const recovery = page.locator("details#find-my-booking");
+  await expect(recovery).not.toHaveAttribute("open");
+  await page.getByRole("link", { name: "Find my booking", exact: true }).click();
+  await expect(page).toHaveURL(/\/s\/blue-mantis#find-my-booking$/);
+  await expect(recovery).toHaveAttribute("open", "");
+  await expect(recovery.getByRole("textbox", { name: "Email" })).toBeVisible();
+  await recovery.locator("summary").click();
+  await expect(recovery).not.toHaveAttribute("open");
+  await page.getByRole("link", { name: "Find my booking", exact: true }).click();
+  await expect(recovery).toHaveAttribute("open", "");
+  await expect(recovery.getByRole("textbox", { name: "Email" })).toBeInViewport();
+});

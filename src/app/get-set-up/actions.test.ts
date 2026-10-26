@@ -98,6 +98,17 @@ beforeEach(async () => {
 });
 
 describe("submitSetupRequestAction", () => {
+  it("accepts a missing current tool and names the absence in the internal alert", async () => {
+    const form = setUpForm();
+    form.delete("currentSystem");
+    form.set("currentSystemGuide", "eve");
+    expect(await submit(form)).toEqual({ redirect: "/get-set-up/sent" });
+    const [saved] = await db.select().from(setupRequests);
+    expect(saved?.currentSystem).toBe("");
+    expect(saved?.currentSystemGuide).toBeNull();
+    expect(vi.mocked(notify).mock.calls[0]?.[0]).toMatchObject({ currentSystem: undefined });
+  });
+
   it("stores the request, mails onboarding, counts it, and lands on the thank-you page", async () => {
     expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
 

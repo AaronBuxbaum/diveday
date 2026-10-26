@@ -24,6 +24,15 @@ function request(overrides: { email?: string; phone?: string | null; at?: Date }
   };
 }
 
+describe("optional setup routing", () => {
+  it("stores an unanswered tool without inventing a system", async () => {
+    const db = await unseededTestDb();
+    const row = await recordSetupRequest(db, { ...request(), currentSystem: undefined });
+    expect(row.currentSystem).toBe("");
+    expect(row.currentSystemGuide).toBeNull();
+  });
+});
+
 describe("countSetupRequestsSince", () => {
   it("counts the requests at or after the instant and none before it", async () => {
     const db = await unseededTestDb();

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { buttonClass } from "@/components/ui/button";
+import { StatusInView } from "@/components/ui/StatusInView";
 import type { BookingMailState } from "@/db/notifications";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -84,19 +85,23 @@ export function EmbedBookedNotice({
     // page sets its distance from the section above (pixel-craft class 4,
     // K-162), and its own lines keep their rhythm inside it.
     <div>
-      <EarnedMoment
-        title={t("booking.confirmedHeading", {
-          name: firstNameOf(confirmed.person.fullName, t("ready.namelessFallback")),
-        })}
-      >
-        <p>
-          {t("booking.confirmedDockCall", {
-            date: formatShortDate(trip.startsAt, locale, shop.timezone),
-            time: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
-            minutes: shop.dockCallMinutes,
+      <div role="status" aria-live="polite" aria-atomic="true">
+        <EarnedMoment
+          title={t("booking.confirmedHeading", {
+            name: firstNameOf(confirmed.person.fullName, t("ready.namelessFallback")),
           })}
-        </p>
-      </EarnedMoment>
+        >
+          <p className="mb-2 font-medium">{trip.title}</p>
+          <p>
+            {t("booking.confirmedDockCall", {
+              date: formatShortDate(trip.startsAt, locale, shop.timezone),
+              time: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
+              minutes: shop.dockCallMinutes,
+            })}
+          </p>
+        </EarnedMoment>
+      </div>
+      <StatusInView />
 
       {/* Where to look next. Claimed only when the mail actually left the
           building, and the waiver named only when the confirmation carried

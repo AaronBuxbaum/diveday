@@ -516,6 +516,7 @@
     }
   },
   "findMyBooking": {
+    "link": "Buscar mi reserva",
     "heading": "¿No encuentras tu enlace?",
     "body": "Si reservaste con nosotros, escribe el correo que usaste y te lo enviamos de nuevo.",
     "submit": "Enviar mi enlace",
@@ -3444,6 +3445,17 @@
           "value": "El mismo botón de exportar, desde el primer día."
         }
       },
+      "contents": "En esta página",
+      "fieldReference": "Referencia de columnas de la hoja",
+      "importReference": "Referencia completa de campos de importación",
+      "exportFile": "Exporta tu archivo",
+      "cutoverLink": "Haz el cambio",
+      "fieldGroups": {
+        "identity": "Identidad y contacto",
+        "certifications": "Certificaciones",
+        "kit": "Equipo",
+        "history": "Historial y registros"
+      },
       "moveTitle": "Cómo funciona el cambio",
       "moveIntro": "Cada paso lo llevas tú, a tu ritmo. Si prefieres delegarlo, envíanos el archivo y una persona trae a tus buceadores contigo, gratis.",
       "scopeTableTitle": "Qué se traslada, y qué no",
@@ -3468,8 +3480,8 @@
     },
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
-      "title": "Todas las guías terminan en la misma pantalla de importación",
-      "description": "Elige lo que usas hoy. Cada guía saca tu archivo de ahí, y la pantalla al final de esta página es donde cae el archivo.",
+      "title": "Trae tu centro contigo",
+      "description": "Elige lo que usas hoy para ver qué se traslada, qué se queda y cómo empezar.",
       "spreadsheetTitle": "Vienes de una hoja de cálculo",
       "spreadsheetDescription": "La hoja que ya llevas es el archivo. Esta guía es la lista de columnas que lee, y después los cuatro trabajos que una lista nunca hizo.",
       "switchingFrom": "Cambiando desde {competitor}",
@@ -3613,7 +3625,9 @@
     "tagline": "Una forma más tranquila de llevar un día de buceo.",
     "sayHello": "Escríbenos",
     "gettingReady": "Preparando tu centro…",
-    "tryDemo": "Probar la demo en vivo"
+    "tryDemo": "Probar la demo en vivo",
+    "tryDemoShort": "Ver demo",
+    "menu": "Menú"
   },
   "fallback": {
     "boatLabel": "Barco",
@@ -3892,7 +3906,7 @@
     "home": {
       "eyebrow": "Software para centros de buceo",
       "heroTitle": "Cada buceador reservado, firmado, verificado y localizado",
-      "heroDescription": "Reservas en línea, exenciones y formularios médicos, control de certificaciones, check-in y el manifiesto del barco, en una sola aplicación para tu centro de buceo. Un buceador que no está listo aparece con su nombre en recepción días antes de la salida.",
+      "heroDescription": "Desde la reserva online hasta el muelle, ve quién está listo y qué le falta a cada buceador.",
       "heroPriceLine": "Un precio único de {price} {cadence}, sin comisión sobre tus reservas.",
       "diverDoor": "¿Reservaste una inmersión?",
       "diverDoorLink": "Encuentra tu reserva",
@@ -3932,18 +3946,13 @@
           "mockupLabel": "La página de recuerdo de un buceador, con el registro del día, una nota de la tripulación y una sola petición de opinión."
         }
       },
-      "featuresTitle": "Lo que hacían la pizarra, la tablilla y las tres aplicaciones, en un solo plan",
       "featuresLink": "La lista completa de lo que incluye cada función →",
       "exportTitle": "Cómo llegan los registros, y cómo se van",
       "arrivingLabel": "Al entrar",
       "exportDescription1": "Sube una hoja de cálculo. Antes de guardar nada, la vista previa muestra en qué se convirtió cada columna y qué filas va a saltar. O envíanos el archivo por correo y una persona hace la importación contigo, gratis.",
       "spreadsheetLink": "Tu hoja de cálculo, columna por columna →",
       "leavingLabel": "Lo que sale",
-      "exportDescription2": "El botón Exportación de datos en Ajustes descarga un ZIP con todo esto dentro. {terms}",
-      "exportItem1": "Archivos CSV documentados, uno por tipo de registro",
-      "exportItem2": "Buceadores, reservas, registros de exención y historial de pagos",
-      "exportItem3": "Un archivo de contactos con el formato del asistente de importación de otro sistema",
-      "exportItem4": "Una guía en lenguaje claro de cada archivo",
+      "exportDescription2": "{claim} {terms}",
       "guidesLink": "Guías para dejar {competitors}, y una para una hoja de cálculo →",
       "tryTitle": "Cada buceador reservado, firmado y contado a bordo, desde tu primera salida",
       "stepLink": "{name} →",
@@ -4934,8 +4943,8 @@
         "summary": "Los buceadores reservan y pagan sus plazas desde tu horario, y una salida deja de vender en cuanto se llena.",
         "metaTitle": "Reservas en línea para centros de buceo",
         "metaDescription": "Los buceadores reservan sus plazas a cualquier hora, con equipo de alquiler, una solicitud de nitrox y el pago en un solo paso, después de leer la certificación que pide la salida. Las plazas se descuentan del aforo del barco, así que una salida no se puede sobrevender.",
-        "title": "Los buceadores reservan mientras tú estás en el agua, y leen la certificación que pide la salida antes de hacerlo",
-        "lede": "El horario de tu web recibe a los buceadores, su equipo de alquiler, una solicitud de nitrox y el pago en tu propia cuenta de Stripe, y una salida deja de vender sola en cuanto se llena.",
+        "title": "Los buceadores reservan mientras tú estás en el agua",
+        "lede": "Los buceadores ven los requisitos de certificación antes de reservar. Tu horario recibe la reserva, el alquiler, la solicitud de nitrox y el pago, y deja de vender cuando la salida se llena.",
         "screenLabel": "El panel de reserva de una salida, como lo ve un buceador: la certificación que pide la salida, las plazas libres, los buceadores, el equipo de alquiler y el nitrox, y el total.",
         "note1": "La certificación que pide la salida va encima del botón, donde el buceador la lee antes de pagar.",
         "note2": "Las plazas que quedan son el aforo del barco menos cada plaza vendida o retenida, y se vuelven a contar al guardar la reserva.",
@@ -5064,7 +5073,7 @@
         "summary": "Un toque por buceador en el mostrador, una búsqueda para quien no sabe en qué barco va, y quienes llegan sin reserva agregados al momento.",
         "metaTitle": "Check-in para la hora pico de un centro de buceo",
         "metaDescription": "Registra a los buceadores con un toque en la lista de la propia salida. Quien no está listo muestra lo que falta en lugar del toque, y quienes llegan sin reserva pueden completar sus datos con el código de tu mostrador antes de que les des su plaza.",
-        "title": "La hora pico es un toque por buceador, y quien no está listo muestra lo que falta en lugar del toque",
+        "title": "La hora pico es un toque por buceador",
         "lede": "Las llegadas se abren en la pestaña Buceadores de la salida, con el recuento de quién ha llegado, un toque Registrar junto a cada buceador listo y lo que falta junto a quien no lo está.",
         "screenLabel": "La pestaña Buceadores de una salida durante las llegadas: cuántos han llegado, un buceador registrado, un toque Registrar y una plaza retenida que pregunta si es la misma persona.",
         "note1": "El recuento es de buceadores que llegaron frente a buceadores reservados, y solo se mueve cuando entra un toque.",
@@ -5116,8 +5125,8 @@
         "summary": "La ruta, las referencias y la vida marina de cada sitio, escritas una vez y mostradas a cada buceador de un barco que va allí.",
         "metaTitle": "Briefings de sitios de buceo para tus buceadores",
         "metaDescription": "Escribe cada sitio de buceo una vez: profundidad, ruta, referencias con fotos y lo que vive allí. Cada buceador reservado en un barco a ese sitio lee el briefing antes de venir.",
-        "title": "Escribe cada sitio de buceo una vez, y cada buceador con reserva allí lee la ruta y los avistamientos recientes antes de venir",
-        "lede": "Escribe cada sitio una vez con su profundidad, la ruta sobre un mapa del relieve, referencias con fotos y las especies que se ven allí, y cada buceador reservado lo lee en la página de su salida.",
+        "title": "Escribe cada sitio de buceo una vez",
+        "lede": "Los buceadores leen la ruta, las referencias y los avistamientos recientes antes de venir. La profundidad, el mapa del relieve, las fotos y las especies de cada sitio se reúnen en la página de su salida.",
         "screenLabel": "El briefing de un sitio de buceo como lo leen los buceadores antes de la salida: el sitio, su profundidad y el tiempo en el agua, la ruta y lo que se vio allí este mes.",
         "note1": "La profundidad es la del sitio, en las unidades de tu centro, y el tiempo en el agua es tu habitual para esa inmersión.",
         "note2": "La ruta empieza en un círculo vacío y termina en uno relleno, así que el buceador lee hacia dónde avanza la inmersión.",
@@ -5194,8 +5203,8 @@
         "summary": "Páginas de cursos en el orden en que enseñas, con fechas abiertas a reserva y un instructor en cada sesión.",
         "metaTitle": "Reservas y programación de cursos de buceo",
         "metaDescription": "Páginas de cursos con precio, requisitos, plan día por día y fechas para reservar, a partir del contenido de PADI, SSI o SDI. Las sesiones de Open Water de PADI y los bautismos dejan de vender plazas al llegar a su ratio, y quien reserva en línea confirma que cada buceador cumple la edad mínima del curso.",
-        "title": "Las fechas de tus cursos se reservan desde tu propia web, y una sesión de Open Water de PADI deja de vender al llegar a su ratio de alumnos por instructor",
-        "lede": "Empieza con un curso de PADI, SSI o SDI, hazlo tuyo con tu precio, tus requisitos, tu plan día por día y tus fotos, y cada fecha se reserva desde la página del curso.",
+        "title": "Las fechas de tus cursos se reservan desde tu propia web",
+        "lede": "Haz tuyo un curso de PADI, SSI o SDI con tu precio, tus requisitos, tu plan y tus fotos. Una sesión de Open Water de PADI deja de vender al llegar a su ratio de alumnos por instructor.",
         "screenLabel": "Una página pública de curso: la agencia, el nombre y el precio del curso, el plan por día y una próxima fecha para reservar.",
         "note1": "La agencia va encima del título, así que un buceador que compara centros sabe qué tarjeta va a recibir.",
         "note2": "El plan por día es el del centro, editado a partir del catálogo con el que empezó.",
@@ -5250,7 +5259,8 @@
       "runsBoat": "¿Tienes barco?",
       "yes": "Sí",
       "no": "No",
-      "currentSystem": "¿Qué usas hoy?",
+      "currentSystem": "Herramienta actual (opcional)",
+      "notSpecified": "Sin especificar",
       "current": {
         "paper": "Papel",
         "spreadsheet": "Hojas de cálculo",

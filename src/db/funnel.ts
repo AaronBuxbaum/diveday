@@ -59,7 +59,8 @@ export async function recordSetupRequest(
       shopName: input.shopName,
       region: input.region,
       runsBoat: input.runsBoat,
-      currentSystem: input.currentSystem,
+      // An unanswered optional tool is stored without inventing an answer.
+      currentSystem: input.currentSystem ?? "",
       currentSystemGuide: input.currentSystemGuide ?? null,
       contactName: input.contactName,
       email: input.email,
