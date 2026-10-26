@@ -1597,6 +1597,7 @@ async function scrubDepartureTitles(
  * whole-word name match as the activity sweep plus the family name alone,
  * becomes `[redacted]`; the
  * keys, the other values and the row stay, so the change still reads as one.
+ * A site run (`siteNames`, one name per line) loses only the naming line.
  */
 async function scrubDepartureChangeTrail(
   tx: AppTransaction,
@@ -1609,8 +1610,18 @@ async function scrubDepartureChangeTrail(
   ) => sql`case when jsonb_typeof(${column}) is distinct from 'object' then ${column} else (
     select coalesce(jsonb_object_agg(
       entry.key,
-      case when jsonb_typeof(entry.value) = 'string' and (entry.value #>> '{}') ~* ${pattern}
-        then to_jsonb(${REDACTED_TEXT}::text) else entry.value end
+      case when jsonb_typeof(entry.value) <> 'string' or (entry.value #>> '{}') !~* ${pattern}
+        then entry.value
+      -- A site run is one name per line: only the line that names them goes,
+      -- so the move still reads with its other sites (review of #3061).
+      when entry.key = 'siteNames' then to_jsonb((
+        select string_agg(
+          case when line.name ~* ${pattern} then ${REDACTED_TEXT}::text else line.name end,
+          E'\n' order by line.ord
+        )
+        from regexp_split_to_table(entry.value #>> '{}', E'\n') with ordinality as line(name, ord)
+      ))
+      else to_jsonb(${REDACTED_TEXT}::text) end
     ), '{}'::jsonb)
     from jsonb_each(${column}) as entry(key, value)
   ) end`;

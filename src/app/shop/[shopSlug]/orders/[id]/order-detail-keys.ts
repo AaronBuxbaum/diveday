@@ -1,6 +1,7 @@
 import type { RecordPaymentOnOrderOutcome } from "@/db/orders";
-import type { OrderLineItemKind, OrderStatus } from "@/db/schema";
-import type { StaffMessageKey } from "@/i18n/staff-messages";
+import type { Order, OrderLineItemKind, OrderStatus } from "@/db/schema";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyCents } from "@/lib/format";
 import type { NoticeTone } from "@/lib/staff-notices";
 
 /** The order detail page's words, by key: its status, its line kinds, its notices. */
@@ -75,7 +76,30 @@ export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }>
   // Another tap's claim is still with Stripe, or Stripe never answered this
   // one: either way the money may already be recorded, so not a failure.
   "payment-in-flight": { tone: "warning", key: "orders.detail.notice.paymentInFlight" },
+  // An Undo the hold outran (review of #3061, dde-a F1). Worded from the
+  // order itself (`undoTooLateText`), never from the URL.
+  "payment-undo-too-late": { tone: "warning", key: "orders.detail.notice.undoTooLate" },
 };
+
+/**
+ * "Too late to undo: $340.00 cash is recorded.": what the order now holds,
+ * read off the order row, so the staffer who believed she took a payment back
+ * reads what was recorded and how. An order the counter did not settle (the
+ * diver paid online inside the hold) gets the plain sentence.
+ */
+export function undoTooLateText(
+  t: StaffTranslator,
+  order: Pick<Order, "status" | "collection" | "amountPaidCents" | "currency">,
+  locale: string,
+): string {
+  if (order.status !== "paid") return t("orders.detail.notice.undoTooLate");
+  const amount = formatMoneyCents(order.amountPaidCents, order.currency, locale);
+  if (order.collection === "cash") return t("orders.detail.notice.undoTooLateCash", { amount });
+  if (order.collection === "card_machine") {
+    return t("orders.detail.notice.undoTooLateCardMachine", { amount });
+  }
+  return t("orders.detail.notice.undoTooLate");
+}
 
 /** The `?notice=` code a Record payment outcome redirects with. */
 export function recordPaymentNotice(

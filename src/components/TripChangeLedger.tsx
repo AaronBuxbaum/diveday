@@ -1,8 +1,8 @@
+import { siteRunsLine } from "@/components/TripArrivalCard";
 import { SectionCard } from "@/components/ui/card";
 import type { TripChangeEvent } from "@/db/trip-change-events";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
 import { tripSiteNames } from "@/lib/trip-change-events";
 
 function valueText(value: unknown): string | null {
@@ -57,7 +57,8 @@ function changedFacts(
     return facts;
   }
   if (event.kind === "site_change") {
-    // The day's sites moved (issue #3060): the new run, in the diver's order.
+    // The day's sites moved (issue #3060): the new run, worded as the
+    // "Planned sites" row words it (`siteRunsLine`), so the two never differ.
     // Site names are public on the trip page, so a public page shows them too.
     const sites = tripSiteNames(event.afterValue);
     if (sites.join("\n") === tripSiteNames(before).join("\n")) return [];
@@ -65,9 +66,7 @@ function changedFacts(
       [
         "sites",
         sites.length > 0
-          ? t("trip.changeSites", {
-              sites: cachedListFormat(locale, { type: "conjunction" }).format(sites),
-            })
+          ? t("trip.changeSites", { sites: siteRunsLine(sites, locale, t) })
           : t("trip.changeSitesCleared"),
       ],
     ];

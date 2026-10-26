@@ -51,17 +51,18 @@ export async function recordTripChangeEvent(
 }
 
 /**
- * The site run a departure's plan names: its own site first, then each dive's
- * in dive order, by the names the diver reads. A site the shop has since
- * deleted keeps its name here, as it did on the page when it was planned.
+ * The site run a departure's plan names, exactly as the diver's "Planned
+ * sites" row reads it: each dive's site in dive order, by name, repeats kept.
+ * Not the trip's own site pointer, which the row never shows (review of
+ * #3061, dde-b 1). A site the shop has since deleted keeps its name here, as
+ * it did on the page when it was planned.
  */
 export async function tripSiteRunSnapshot(
   db: DbExecutor,
   shopId: string,
-  primarySiteId: string | null,
   legSiteIds: readonly (string | null)[],
 ): Promise<TripSitesSnapshot> {
-  const ordered = [primarySiteId, ...legSiteIds];
+  const ordered = legSiteIds;
   const ids = [...new Set(ordered.filter((id): id is string => Boolean(id)))];
   if (ids.length === 0) return tripSitesSnapshot([]);
   // No `deleted_at` filter: a deleted site keeps the name it was planned under.

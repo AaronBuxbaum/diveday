@@ -823,7 +823,7 @@ describe("updateTrip and the site-change ledger", () => {
       source: "shop",
       actorPersonId: actor,
       beforeValue: { siteNames: [a.name, b.name].join("\n") },
-      afterValue: { siteNames: c.name },
+      afterValue: { siteNames: [c.name, c.name].join("\n") },
     });
     expect(moved?.occurredAt.getTime()).toBeGreaterThanOrEqual(before.getTime() - 1_000);
     // The diver's ledger reads it.
@@ -861,5 +861,40 @@ describe("updateTrip and the site-change ledger", () => {
       expect.arrayContaining([[b.name, a.name].join("\n")]),
     );
     expect(entries).toHaveLength(2);
+  });
+
+  it("writes an entry when a repeated site moves or gains a dive (review of #3061)", async () => {
+    const { db, shop, trip, sites, patch } = await departure();
+    const [wreck, reef] = sites;
+    await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      plannedDives: 3,
+      dives: [{ diveSiteId: wreck.id }, { diveSiteId: reef.id }, { diveSiteId: wreck.id }],
+    });
+    // The wreck's two dives put back to back for the tide.
+    await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      plannedDives: 3,
+      dives: [{ diveSiteId: wreck.id }, { diveSiteId: wreck.id }, { diveSiteId: reef.id }],
+    });
+    // And a fourth tank at the reef.
+    await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      plannedDives: 4,
+      dives: [
+        { diveSiteId: wreck.id },
+        { diveSiteId: wreck.id },
+        { diveSiteId: reef.id },
+        { diveSiteId: reef.id },
+      ],
+    });
+    const runs = (await siteEntries(db, trip.id)).map((entry) => entry.afterValue.siteNames);
+    expect(runs).toHaveLength(3);
+    expect(runs).toEqual(
+      expect.arrayContaining([
+        [wreck.name, wreck.name, reef.name].join("\n"),
+        [wreck.name, wreck.name, reef.name, reef.name].join("\n"),
+      ]),
+    );
   });
 });

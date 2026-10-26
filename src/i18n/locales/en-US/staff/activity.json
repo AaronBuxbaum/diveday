@@ -66,6 +66,8 @@
     "order_paid_cash": "{actor} recorded an order paid in cash",
     "order_paid_card_machine": "{actor} recorded an order paid on the card machine",
     "order_paid_room_charge": "{actor} recorded an order charged to a room",
+    "counter_payment_not_recorded": "{actor}’s counter payment was not recorded: the order was no longer open",
+    "counter_payment_not_recorded_paid_online": "{actor}’s counter payment was not recorded: the order was already paid online",
     "paid_after_close_refunded": "{actor} refunded a card paid after its checkout closed",
     "seat_refunded": "{actor} removed {diver} and refunded the seat by card",
     "payment_waived": "{actor} marked {diver}’s seat waived",
@@ -126,7 +128,8 @@
   },
   "tripChange": {
     "meeting_point": "{actor} changed the meeting point",
-    "conditions": "{actor} posted conditions"
+    "conditions": "{actor} posted conditions",
+    "site_change": "{actor} changed the dive sites"
   },
   "log": {
     "title": "Activity",

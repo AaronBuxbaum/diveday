@@ -22,10 +22,12 @@ import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { trackEvent } from "@/lib/analytics";
+import type { DiveDaySession } from "@/lib/auth";
 import { nowMs } from "@/lib/clock";
 import { formValue, parseForm, readForm, single, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
+import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -221,11 +223,16 @@ function ticketFor(held: { id: string; runAt: Date }): HeldTicket {
  */
 async function assertMayActOnHeld(
   db: AppDb,
-  session: { user: { shopId: string; personId: string } },
+  session: DiveDaySession & { user: { shopId: string; personId: string } },
   id: string,
 ): Promise<void> {
   const row = await pendingHeldSend(db, session.user.shopId, id);
   if (!row) return;
+  // Money, as the tap was (review of #3061): taking a counter payment back,
+  // or recording it sooner, asks the same step-up the tap asked.
+  if (row.kind === "counter_payment" && !(await hasRequiredStepUp(db, session, "money"))) {
+    throw new Error("not_authorized");
+  }
   const gate =
     row.kind === "trip_rescheduled"
       ? canPersonConfigureTrips

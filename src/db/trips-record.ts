@@ -812,8 +812,8 @@ export async function updateTrip(
       await recordSiteRunChange(tx, {
         shopId,
         tripId,
-        before: await tripSiteRunSnapshot(tx, shopId, existing.diveSiteId, beforeSites),
-        after: await tripSiteRunSnapshot(tx, shopId, trip.diveSiteId, afterSites),
+        before: await tripSiteRunSnapshot(tx, shopId, beforeSites),
+        after: await tripSiteRunSnapshot(tx, shopId, afterSites),
         actorPersonId: patch.changeActorPersonId,
         occurredAt: changedAt,
       });

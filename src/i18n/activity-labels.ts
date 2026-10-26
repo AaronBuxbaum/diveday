@@ -52,6 +52,7 @@ const REVIEW_LINE_KEYS: Record<ReviewModerationLineCode, StaffMessageKey> = {
 const TRIP_CHANGE_LINE_KEYS: Record<TripChangeLineCode, StaffMessageKey> = {
   meeting_point: "activity.tripChange.meeting_point",
   conditions: "activity.tripChange.conditions",
+  site_change: "activity.tripChange.site_change",
 };
 
 /**

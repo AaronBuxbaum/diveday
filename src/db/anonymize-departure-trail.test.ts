@@ -363,4 +363,31 @@ describe("anonymizeDiver — the moderation and change trails", () => {
     });
     expect(rows.get(unrelated.id)?.afterValue).toEqual({ summary: "Calm" });
   });
+
+  it("redacts only the site in a run that names them, keeping the other sites", async () => {
+    const { db, shop } = ctx;
+    const person = await diver(db, shop.id, "Teodor Halvorsen");
+    const trip = await departure(db, shop.id, "Reef morning");
+    await seat(db, shop.id, trip.id, person.id);
+    const [moved] = await db
+      .insert(tripChangeEvents)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        kind: "site_change",
+        source: "shop",
+        beforeValue: { siteNames: "Molasses Reef\nFrench Reef" },
+        afterValue: { siteNames: "Halvorsen's Ledge\nMolasses Reef\nHalvorsen's Ledge" },
+      })
+      .returning({ id: tripChangeEvents.id });
+    if (!moved) throw new Error("fixture insert failed");
+
+    await erase(db, shop.id, person.id);
+
+    const [row] = await db.select().from(tripChangeEvents).where(eq(tripChangeEvents.id, moved.id));
+    expect(row?.beforeValue).toEqual({ siteNames: "Molasses Reef\nFrench Reef" });
+    expect(row?.afterValue).toEqual({
+      siteNames: [REDACTED_TEXT, "Molasses Reef", REDACTED_TEXT].join("\n"),
+    });
+  });
 });

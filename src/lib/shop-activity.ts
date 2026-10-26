@@ -120,6 +120,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   order_paid_cash: "money",
   order_paid_card_machine: "money",
   order_paid_room_charge: "money",
+  counter_payment_not_recorded: "money",
+  counter_payment_not_recorded_paid_online: "money",
   paid_after_close_refunded: "money",
   seat_refunded: "money",
   seat_self_refunded: "money",
@@ -176,8 +178,12 @@ export type ShopActivitySource = "activity" | "review" | "trip_change";
 /** A review moderation act, as `review_moderation_events.action` stores it. */
 export type ReviewModerationLineCode = "published" | "hidden";
 
-/** A departure plan change, as `trip_change_events.kind` stores it. */
-export type TripChangeLineCode = "meeting_point" | "conditions";
+/**
+ * A departure plan change, as `trip_change_events.kind` stores it. Every
+ * value of that enum, which `activity-labels.test.ts` holds this to, so a
+ * kind added there cannot reach the log as "unknown" (review of #3061).
+ */
+export type TripChangeLineCode = "meeting_point" | "conditions" | "site_change";
 
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 

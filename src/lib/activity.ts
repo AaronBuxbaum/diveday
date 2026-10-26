@@ -337,6 +337,14 @@ type ActivityParamShapes = {
   /** Charged to a resort guest's room (fifth-loop ideas, item 57). */
   order_paid_room_charge: { actor: string };
   /**
+   * A held counter payment that recorded nothing when its hold ended (issue
+   * #3030): the order was no longer open. The actor is the tapper, whose
+   * drawer holds money no record matches.
+   */
+  counter_payment_not_recorded: { actor: string };
+  /** The same, because the diver paid the invoice online inside the hold. */
+  counter_payment_not_recorded_paid_online: { actor: string };
+  /**
    * Money a card paid on a checkout DiveDay had already closed, sent back from
    * the Orders index (issue #2335). On the departure the checkout was for.
    */
@@ -570,6 +578,8 @@ export const ACTIVITY_CODES = [
   "order_paid_cash",
   "order_paid_card_machine",
   "order_paid_room_charge",
+  "counter_payment_not_recorded",
+  "counter_payment_not_recorded_paid_online",
   "paid_after_close_refunded",
   "seat_refunded",
   "payment_waived",

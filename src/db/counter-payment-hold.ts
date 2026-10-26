@@ -2,13 +2,19 @@ import { and, eq, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type CounterPaymentPayload, heldSendPayloadSchema, heldSendRunAt } from "@/lib/held-sends";
 import type { AppDb, DbExecutor } from "./client";
+import { claimHeldSend, executeHeldSend, type HeldSendOutcome } from "./held-sends";
 import {
+  isStaleCounterClaim,
   type RecordPaymentOnOrderOutcome,
   recordDemoPaymentOnOpenOrder,
   recordPaymentOnOpenOrder,
 } from "./orders";
 import { heldSends, orders, shops } from "./schema";
-import { counterPaymentActivity, recordShopActivity } from "./shop-activity";
+import {
+  counterPaymentActivity,
+  counterPaymentNotRecordedActivity,
+  recordShopActivity,
+} from "./shop-activity";
 
 /**
  * **Record payment: one tap with an eight-second Undo hold** (issue #3030,
@@ -17,10 +23,13 @@ import { counterPaymentActivity, recordShopActivity } from "./shop-activity";
  * Cash or the card machine is not recorded on the tap. The tap writes a
  * `held_sends` row of kind `counter_payment` eight seconds out; Undo deletes
  * it and the order is what it was; the tapping screen's release, or the
- * hourly sweep for a screen that went elsewhere, claims the row and records
- * the payment through the same writers the one-tap button used. A second tap
- * on the same order inside the hold is that hold, never a second one, and the
- * record path refuses an order that is no longer open behind that.
+ * screen leaving inside the hold (`commitCounterPaymentHold`, sent as the
+ * page goes), claims the row and records the payment through the same
+ * writers the one-tap button used; the hourly sweep is the fallback for a
+ * screen that could not say so (a dead battery). Every path records the tap's
+ * own time as `paid_at`. A second tap on the same order inside the hold is
+ * that hold, never a second one, and the record path refuses an order that is
+ * no longer open behind that, with a line in the shop's log saying so.
  */
 
 export type CounterPaymentOutcome = {
@@ -58,20 +67,21 @@ export async function holdCounterPayment(
       .from(orders)
       .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
       .for("update");
-    if (
-      order?.status !== "open" ||
-      order.collection !== "stripe_invoice" ||
-      order.stripePaymentIntentId !== null ||
-      order.counterClaimedAt !== null
-    ) {
-      return null;
-    }
+    if (order?.status !== "open" || order.stripePaymentIntentId !== null) return null;
+    // An unclaimed invoice, or a claim whose call died (stale), which the
+    // record path takes again; a live claim is another tap still with Stripe.
+    const claimFree =
+      order.counterClaimedAt === null
+        ? order.collection === "stripe_invoice"
+        : isStaleCounterClaim(order, now);
+    if (!claimFree) return null;
     const existing = await pendingCounterPaymentRow(tx, input.shopId, input.orderId);
     if (existing) return { id: existing.id, runAt: existing.runAt };
     const payload = heldSendPayloadSchema.parse({
       kind: "counter_payment",
       orderId: input.orderId,
       collection: input.collection,
+      heldAt: now.toISOString(),
     });
     const runAt = heldSendRunAt(payload, now);
     const [row] = await tx
@@ -120,11 +130,45 @@ export async function pendingCounterPayment(
 }
 
 /**
+ * **The screen left inside the hold** (review of #3061, dde-a F2): the page
+ * sends this as it goes (`pagehide`, hidden, or a navigation inside the app),
+ * and the hold is recorded now rather than at the hourly sweep, so the order
+ * stops reading Open and Stripe stops asking the diver within seconds. Only a
+ * `counter_payment` row of this shop; any other kind, or a row already taken
+ * by Undo, a release or the sweep, is left alone (`gone`).
+ */
+export async function commitCounterPaymentHold(
+  db: AppDb,
+  input: { shopId: string; heldId: string; now?: Date },
+): Promise<
+  | { status: "gone" }
+  | {
+      status: "done";
+      orderId: string;
+      outcome: Extract<HeldSendOutcome, { kind: "counter_payment" }>;
+    }
+> {
+  const [row] = await db
+    .select({ kind: heldSends.kind })
+    .from(heldSends)
+    .where(and(eq(heldSends.id, input.heldId), eq(heldSends.shopId, input.shopId)));
+  if (row?.kind !== "counter_payment") return { status: "gone" };
+  const claim = await claimHeldSend(db, input.shopId, input.heldId, input.now, { early: true });
+  if (claim.status !== "claimed" || claim.row.payload.kind !== "counter_payment") {
+    return { status: "gone" };
+  }
+  const outcome = await executeHeldSend(db, claim.row);
+  if (outcome.kind !== "counter_payment") return { status: "gone" };
+  return { status: "done", orderId: claim.row.payload.orderId, outcome };
+}
+
+/**
  * Record the held payment: locally on a demo shop, through Stripe's
  * out-of-band mark on a real one (`recordPaymentOnOpenOrder`), and on success
  * the activity line naming who tapped it. Both writers re-check staff, the
  * shop and that the order is still open, so a hold that outlived its order's
- * openness records nothing.
+ * openness records nothing; then the log says so (most often the diver paid
+ * the invoice online inside the hold), because no screen may be there to.
  */
 export async function recordHeldCounterPayment(
   db: AppDb,
@@ -141,6 +185,7 @@ export async function recordHeldCounterPayment(
   const demo = shop?.isDemo === true;
   if (!input.actorPersonId) return { outcome: { ok: false, reason: "invalid" }, demo };
   const { orderId, collection } = input.payload;
+  const paidAt = new Date(input.payload.heldAt);
   let outcome: RecordPaymentOnOrderOutcome;
   if (demo) {
     const recorded = await recordDemoPaymentOnOpenOrder(db, {
@@ -148,6 +193,7 @@ export async function recordHeldCounterPayment(
       orderId,
       actorPersonId: input.actorPersonId,
       collection,
+      paidAt,
     });
     outcome = recorded.ok ? recorded : { ok: false, reason: "invalid" };
   } else {
@@ -156,6 +202,7 @@ export async function recordHeldCounterPayment(
       orderId,
       actorPersonId: input.actorPersonId,
       collection,
+      paidAt,
     });
   }
   if (outcome.ok) {
@@ -164,6 +211,34 @@ export async function recordHeldCounterPayment(
       actorPersonId: input.actorPersonId,
       write: counterPaymentActivity(outcome.order.id, collection),
     });
+  } else if (NOT_RECORDED.has(outcome.reason)) {
+    await recordShopActivity(db, {
+      shopId: input.shopId,
+      actorPersonId: input.actorPersonId,
+      write: counterPaymentNotRecordedActivity(
+        orderId,
+        await paidOnline(db, input.shopId, orderId),
+      ),
+    });
   }
   return { outcome, demo };
+}
+
+/**
+ * The outcomes that end the hold with nothing recorded. Not `stripe_unknown`
+ * or `claim_held`: there the claim stands and Stripe's echo may still finish
+ * it, so "not recorded" could be false.
+ */
+const NOT_RECORDED = new Set<string>(["invalid", "stripe_refused", "not_configured"]);
+
+/** The order was settled by its own Stripe invoice (the diver paid online). */
+async function paidOnline(db: DbExecutor, shopId: string, orderId: string): Promise<boolean> {
+  const [order] = await db
+    .select({ status: orders.status, collection: orders.collection })
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)));
+  return (
+    order?.collection === "stripe_invoice" &&
+    (order.status === "paid" || order.status === "partly_refunded" || order.status === "refunded")
+  );
 }

@@ -308,7 +308,9 @@ export type ShopActivityWrite =
         | "order_refunded"
         | "order_paid_cash"
         | "order_paid_card_machine"
-        | "order_paid_room_charge";
+        | "order_paid_room_charge"
+        | "counter_payment_not_recorded"
+        | "counter_payment_not_recorded_paid_online";
       orderId: string;
     }
   | { code: "paid_after_close_refunded"; checkoutId: string }
@@ -375,6 +377,23 @@ export function counterPaymentActivity(
   collection: "cash" | "card_machine" | "room_charge",
 ): ShopActivityWrite {
   return { code: `order_paid_${collection}`, orderId };
+}
+
+/**
+ * The line for a held counter payment that recorded nothing when its hold
+ * ended (issue #3030, review of #3061): the order was no longer open, most
+ * often because the diver paid the invoice online inside the hold. Written
+ * under the tapper's name, because nobody else knows the money is in the
+ * drawer.
+ */
+export function counterPaymentNotRecordedActivity(
+  orderId: string,
+  paidOnline: boolean,
+): ShopActivityWrite {
+  return {
+    code: paidOnline ? "counter_payment_not_recorded_paid_online" : "counter_payment_not_recorded",
+    orderId,
+  };
 }
 
 /**

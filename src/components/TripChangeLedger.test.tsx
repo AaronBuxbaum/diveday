@@ -241,7 +241,7 @@ describe("TripChangeLedger", () => {
       expect(screen.getByText(/^Cambiado por el centro el /)).toBeInTheDocument();
     });
 
-    it("lists a run of sites in order, as a sentence list, also on a public page", () => {
+    it("lists a run of sites in order, as the Planned sites row words it, also on a public page", () => {
       render(
         <TripChangeLedger
           events={[sites({ afterValue: { siteNames: "Pickles Reef\nMolasses Reef" } })]}
@@ -250,7 +250,25 @@ describe("TripChangeLedger", () => {
           revealArrivalDetails={false}
         />,
       );
-      expect(screen.getByText("Sites: Pickles Reef and Molasses Reef")).toBeInTheDocument();
+      expect(screen.getByText("Sites: Pickles Reef, Molasses Reef")).toBeInTheDocument();
+    });
+
+    it("says a second dive at the same site, as the row does (review of PR 3061)", () => {
+      render(
+        <TripChangeLedger
+          events={[
+            sites({
+              beforeValue: { siteNames: "Spiegel Grove\nMolasses Reef\nSpiegel Grove" },
+              afterValue: { siteNames: "Spiegel Grove\nSpiegel Grove\nMolasses Reef" },
+            }),
+          ]}
+          locale="en-US"
+          timeZone={timeZone}
+        />,
+      );
+      expect(
+        screen.getByText("Sites: Spiegel Grove (two dives), Molasses Reef"),
+      ).toBeInTheDocument();
     });
 
     it("says a cleared run, and nothing for a run that reads the same", () => {

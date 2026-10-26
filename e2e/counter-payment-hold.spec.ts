@@ -36,7 +36,7 @@ test.describe("the counter payment hold", () => {
   test("Undo inside the hold records nothing", async ({ page }) => {
     await openFirstOpenOrder(page);
     await page.getByRole("button", { name: "Cash", exact: true }).click();
-    const held = page.getByRole("status").filter({ hasText: /^Recorded \$[\d.,]+ cash/ });
+    const held = page.getByRole("status").filter({ hasText: /^Recording \$[\d.,]+ cash/ });
     await expect(held).toBeVisible();
     await expect(page.getByRole("button", { name: "Card machine", exact: true })).toHaveCount(0);
 
@@ -54,11 +54,30 @@ test.describe("the counter payment hold", () => {
     await openFirstOpenOrder(page);
     await page.getByRole("button", { name: "Card machine", exact: true }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: /^Recorded \$[\d.,]+ on the card machine/ }),
+      page.getByRole("status").filter({ hasText: /^Recording \$[\d.,]+ on the card machine/ }),
     ).toBeVisible();
     await page.clock.runFor(8_500);
     await expect(
       page.getByText(staffCopy("orders.detail.notice.paymentRecordedDemo"), { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cash", exact: true })).toHaveCount(0);
+  });
+
+  test("leaving inside the hold records the payment then, not at the hourly sweep", async ({
+    page,
+  }) => {
+    await openFirstOpenOrder(page);
+    const orderUrl = page.url();
+    await page.getByRole("button", { name: "Cash", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: /^Recording \$[\d.,]+ cash/ }),
+    ).toBeVisible();
+    // A navigation inside the app, well inside the eight seconds.
+    await page.getByRole("link", { name: "Orders", exact: true }).first().click();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    await page.goto(orderUrl);
+    await expect(
+      page.getByText(staffCopy("orders.detail.status.paid"), { exact: true }).first(),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Cash", exact: true })).toHaveCount(0);
   });

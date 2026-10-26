@@ -1515,10 +1515,9 @@ export async function applyDetailsToFutureSeries(
           before: await tripSiteRunSnapshot(
             tx,
             shopId,
-            sibling.diveSiteId,
             tripSiteList(divesByTrip.get(sibling.id) ?? []),
           ),
-          after: await tripSiteRunSnapshot(tx, shopId, source.diveSiteId, sourceSites),
+          after: await tripSiteRunSnapshot(tx, shopId, sourceSites),
           actorPersonId,
           occurredAt: now,
         });

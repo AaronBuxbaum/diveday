@@ -123,6 +123,8 @@ describe("record payment on a demo shop", () => {
         orderId,
         actorPersonId: personId,
         collection,
+        // The tap's time, not the release's (review of PR 3061).
+        paidAt: expect.any(Date),
       });
       expect(recordPaymentOnOpenOrder).not.toHaveBeenCalled();
     },

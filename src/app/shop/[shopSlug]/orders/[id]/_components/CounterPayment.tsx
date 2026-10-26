@@ -78,6 +78,8 @@ export function RecordPaymentForm({
   t,
   roomCharge = true,
   initialHold = null,
+  leaveUrl,
+  tooLateHref,
 }: {
   orderId: string;
   /** The balance the tap records, in the shop's currency ("$340"). */
@@ -86,12 +88,18 @@ export function RecordPaymentForm({
   /** False on a demo shop: only cash and the card machine are recorded there. */
   roomCharge?: boolean;
   initialHold?: ComponentProps<typeof CounterPaymentHold>["initialHold"];
+  /** Where the page says it is leaving inside a hold, so it records now. */
+  leaveUrl: string;
+  /** The order page with "Too late to undo", for an Undo the hold outran. */
+  tooLateHref: string;
 }) {
   return (
     <CounterPaymentHold
       orderId={orderId}
       hold={holdCounterPaymentAction}
       initialHold={initialHold}
+      leaveUrl={leaveUrl}
+      tooLateHref={tooLateHref}
       copy={{
         label: t("orders.detail.recordPayment.label"),
         cash: t(ORDER_COLLECTION_KEYS.cash),

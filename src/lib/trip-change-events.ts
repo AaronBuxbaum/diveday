@@ -82,14 +82,19 @@ export function tripConditionsSnapshot(trip: TripConditionsSnapshotInput): TripC
   };
 }
 
-/** The ordered, de-duplicated run of site names, ready to compare and to show. */
+/**
+ * The dives' sites as the diver's "Planned sites" row reads them: dive order,
+ * an unchosen site left out, a repeated site kept (review of #3061, dde-b 1).
+ * A reorder, or a second dive at the same site, is a different day for the
+ * diver, so it must not compare equal.
+ */
 export function tripSitesSnapshot(
   names: readonly (string | null | undefined)[],
 ): TripSitesSnapshot {
   const run: string[] = [];
   for (const name of names) {
     const clean = name?.replace(/\s+/g, " ").trim();
-    if (clean && !run.includes(clean)) run.push(clean);
+    if (clean) run.push(clean);
   }
   return { siteNames: run.length > 0 ? run.join(SITE_RUN_SEPARATOR) : null };
 }

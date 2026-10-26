@@ -151,9 +151,14 @@ the demo note. Refresh, Void and Refund stay disabled on a demo order.
 
 Cash and Card machine on an open invoice stay one tap, but the tap no longer records: it holds the
 payment as a `counter_payment` held send ([20260906-before-you-ask](20260906-before-you-ask.md),
-decision 2) for eight seconds, the row reading "Recorded $340 cash" with Undo. Undo deletes the
-hold and records nothing; the hold running out, from the tapping screen or the hourly sweep for a
-screen that went elsewhere, records it through `recordPaymentOnOpenOrder` (or the demo writer) with
-the activity line naming who tapped it (`src/db/counter-payment-hold.ts`). A second tap inside the
-hold is the same hold. The money step-up is asked at the tap. The room charge keeps its form and
-records on its confirm.
+decision 2) for eight seconds, the row reading "Recording $340.00 cash" with Undo. Undo deletes the
+hold and records nothing; the hold running out on the tapping screen, or the screen leaving inside
+it (a `keepalive` POST to `orders/[id]/leave` on `pagehide`, a hidden tab or a navigation inside
+the app), records it through `recordPaymentOnOpenOrder` (or the demo writer) with the activity line
+naming who tapped it (`src/db/counter-payment-hold.ts`). The hourly sweep is only the fallback for
+a screen that could not say it was leaving. Every path stamps `paid_at` with the tap's time, which
+the hold carries, so a 23:55 tap is that day's money. A second tap inside the hold is the same
+hold. The money step-up is asked at the tap, and again for Undo or an early release. A hold that
+finds the order no longer open (the diver paid online inside it) records nothing and writes
+`counter_payment_not_recorded_paid_online` to the shop's log under the tapper's name. An order left
+with a stale claim can be held again. The room charge keeps its form and records on its confirm.
