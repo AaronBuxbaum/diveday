@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { AutoOpenDetails } from "./AutoOpenDetails";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.history.replaceState(null, "", "/");
+});
 
 function details(container: HTMLElement): HTMLDetailsElement {
   const el = container.querySelector("details");
@@ -91,5 +94,73 @@ describe("AutoOpenDetails' open prop", () => {
     });
     expect(details(container).open).toBe(false);
     container.remove();
+  });
+});
+
+describe("AutoOpenDetails same-page links", () => {
+  it("reveals a Next-style same-page anchor click without waiting for hashchange", () => {
+    const { container } = render(
+      <>
+        <a href="#x">Jump</a>
+        <AutoOpenDetails id="x" openOnHash="x">
+          <summary>Row</summary>
+        </AutoOpenDetails>
+      </>,
+    );
+    const link = container.querySelector("a") as HTMLAnchorElement;
+    link.addEventListener("click", (event) => event.preventDefault());
+    expect(details(container).open).toBe(false);
+    fireEvent.click(container.querySelector("a") as HTMLAnchorElement);
+    expect(window.location.hash).toBe("");
+    expect(details(container).open).toBe(true);
+    // Clicking the same destination again must reveal a row closed by the reader.
+    details(container).open = false;
+    fireEvent.click(container.querySelector("a") as HTMLAnchorElement);
+    expect(details(container).open).toBe(true);
+  });
+
+  it("reveals before the link's own handler can measure the scroll target", () => {
+    let openAtNavigation: boolean | undefined;
+    const { container } = render(
+      <>
+        <a href="#x">Jump</a>
+        <AutoOpenDetails id="x" openOnHash="x">
+          <summary>Row</summary>
+        </AutoOpenDetails>
+      </>,
+    );
+    const link = container.querySelector("a") as HTMLAnchorElement;
+    link.addEventListener("click", (event) => {
+      openAtNavigation = details(container).open;
+      event.preventDefault();
+    });
+    fireEvent.click(container.querySelector("a") as HTMLAnchorElement);
+    expect(openAtNavigation).toBe(true);
+  });
+
+  it("does not reveal the current row for another page or a new-tab click", () => {
+    const { container } = render(
+      <>
+        <a href="/elsewhere#x">Other page</a>
+        <a href="#x">New tab</a>
+        <AutoOpenDetails id="x" openOnHash="x">
+          <summary>Row</summary>
+        </AutoOpenDetails>
+      </>,
+    );
+    const links = container.querySelectorAll("a");
+    for (const link of links) link.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(links[0]);
+    expect(details(container).open).toBe(false);
+    for (const intent of [
+      { ctrlKey: true },
+      { metaKey: true },
+      { shiftKey: true },
+      { altKey: true },
+      { button: 1 },
+    ]) {
+      fireEvent.click(links[1], intent);
+      expect(details(container).open).toBe(false);
+    }
   });
 });

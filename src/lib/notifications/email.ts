@@ -1282,7 +1282,7 @@ type SetupRequestAlertEmailInput = {
   shopName: string;
   region: string;
   runsBoat: boolean;
-  currentSystem: SetupCurrentSystem;
+  currentSystem?: SetupCurrentSystem;
   /** A switching guide's slug, when the requester named their system. */
   currentSystemGuide?: string;
   contactName: string;
@@ -1320,7 +1320,12 @@ export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): Noti
     ["Shop", input.shopName],
     ["Where", input.region],
     ["Runs a boat", input.runsBoat ? "yes" : "no"],
-    ["Uses today", usesToday(input.currentSystem, input.currentSystemGuide)],
+    [
+      "Uses today",
+      input.currentSystem
+        ? usesToday(input.currentSystem, input.currentSystemGuide)
+        : "Not provided",
+    ],
     ["Name", input.contactName],
     // Typed by whoever filled the form; nothing has proved they own it.
     ["Email (unverified)", input.contactEmail],

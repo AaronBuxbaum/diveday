@@ -40,6 +40,7 @@ import { BadgeWall } from "./BadgeWall";
  */
 export function ShopfrontHero({
   name,
+  headingLevel: Heading = "h1",
   tagline,
   description = null,
   aggregate,
@@ -51,6 +52,7 @@ export function ShopfrontHero({
   t,
 }: {
   name: string;
+  headingLevel?: "h1" | "h2";
   /**
    * The next-boat card shares the row from `lg` up, so the photograph is the
    * narrower column there and asks for a smaller file.
@@ -105,17 +107,17 @@ export function ShopfrontHero({
               ink's own contrast and a two-line name on a phone does not bury
               the picture it sat on. */}
           <div className="bg-device-frame px-5 py-4 text-device-frame-foreground sm:px-8 sm:py-5">
-            <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
+            <Heading className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
               {name}
-            </h1>
+            </Heading>
             {tagline ? <p className="mt-2 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
           </div>
         </div>
       ) : (
         <>
-          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
+          <Heading className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
             {name}
-          </h1>
+          </Heading>
           {tagline ? <p className="mt-3 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
         </>
       )}

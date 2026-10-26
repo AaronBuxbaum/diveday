@@ -25,6 +25,7 @@ export type SetupRequestFormWords = {
   yes: string;
   no: string;
   currentSystem: string;
+  notSpecified: string;
   current: Record<SetupCurrentSystem, string>;
   whichSystem: string;
   anotherSystem: string;
@@ -43,10 +44,8 @@ export type SetupRequestFormWords = {
  * Component only so a refusal can answer in place with everything the reader
  * typed still in the boxes; a stored request redirects to the thank-you page.
  *
- * Seven asks, one optional (the phone), in the order a first set-up call takes
- * them: the shop, where it is, whether it runs a boat, what it runs on now,
- * then who to write back to. The two choice questions are pills, not selects:
- * two and five short answers read faster laid out than folded away.
+ * Contact and shop details come first. The phone and current tool are optional;
+ * an unanswered tool stays unanswered through validation and storage.
  *
  * **"Which one?"** (2026-10-22) follows "A booking system" or "Dive-shop
  * software", and only those: the systems with a switching guide, and
@@ -122,63 +121,6 @@ export function SetupRequestForm({
             className={controlClass}
           />
         </Field>
-        <Field label={words.runsBoat} group required error={errorFor("runsBoat")}>
-          <div className="grid grid-cols-2 gap-2">
-            {(["yes", "no"] as const).map((answer) => (
-              <ChoicePill
-                key={answer}
-                type="radio"
-                size="md"
-                name="runsBoat"
-                value={answer}
-                required
-                defaultChecked={values.runsBoat === answer}
-              >
-                {words[answer]}
-              </ChoicePill>
-            ))}
-          </div>
-        </Field>
-        <Field label={words.currentSystem} group required error={errorFor("currentSystem")}>
-          {/* One answer per row: two columns of a 334px card wrapped three of the five. */}
-          <div className="grid gap-2">
-            {SETUP_CURRENT_SYSTEMS.map((system) => (
-              <ChoicePill
-                key={system}
-                type="radio"
-                size="md"
-                name="currentSystem"
-                value={system}
-                required
-                defaultChecked={values.currentSystem === system}
-                onChange={() => setPicked(system)}
-              >
-                {words.current[system]}
-              </ChoicePill>
-            ))}
-          </div>
-        </Field>
-        {asksWhich ? (
-          <Field label={words.whichSystem} group>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                ...systems.map(({ slug, name }) => [slug, name] as const),
-                ["", words.anotherSystem] as const,
-              ].map(([slug, name]) => (
-                <ChoicePill
-                  key={slug}
-                  type="radio"
-                  size="md"
-                  name="currentSystemGuide"
-                  value={slug}
-                  defaultChecked={slug !== "" && values.currentSystemGuide === slug}
-                >
-                  {name}
-                </ChoicePill>
-              ))}
-            </div>
-          </Field>
-        ) : null}
         <Field label={words.contactName} error={errorFor("contactName")}>
           <input
             name="contactName"
@@ -210,6 +152,59 @@ export function SetupRequestForm({
             className={controlClass}
           />
         </Field>
+        <Field label={words.runsBoat} group required error={errorFor("runsBoat")}>
+          <div className="grid grid-cols-2 gap-2">
+            {(["yes", "no"] as const).map((answer) => (
+              <ChoicePill
+                key={answer}
+                type="radio"
+                size="md"
+                name="runsBoat"
+                value={answer}
+                required
+                defaultChecked={values.runsBoat === answer}
+              >
+                {words[answer]}
+              </ChoicePill>
+            ))}
+          </div>
+        </Field>
+        <Field label={words.currentSystem} error={errorFor("currentSystem")}>
+          <select
+            name="currentSystem"
+            defaultValue={values.currentSystem ?? ""}
+            onChange={(event) => setPicked(event.target.value)}
+            className={controlClass}
+          >
+            <option value="">{words.notSpecified}</option>
+            {SETUP_CURRENT_SYSTEMS.map((system) => (
+              <option key={system} value={system}>
+                {words.current[system]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {asksWhich ? (
+          <Field label={words.whichSystem} group>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ...systems.map(({ slug, name }) => [slug, name] as const),
+                ["", words.anotherSystem] as const,
+              ].map(([slug, name]) => (
+                <ChoicePill
+                  key={slug}
+                  type="radio"
+                  size="md"
+                  name="currentSystemGuide"
+                  value={slug}
+                  defaultChecked={slug !== "" && values.currentSystemGuide === slug}
+                >
+                  {name}
+                </ChoicePill>
+              ))}
+            </div>
+          </Field>
+        ) : null}
       </FieldGrid>
       <div className="flex flex-col gap-3">
         <SubmitButton pendingLabel={words.sending} className={buttonClass({ className: "w-full" })}>

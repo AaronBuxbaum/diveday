@@ -21,7 +21,7 @@ export function ShopPhotoStrip({ urls, label }: { urls: readonly string[]; label
       aria-label={label}
       // biome-ignore lint/a11y/noNoninteractiveTabindex: a horizontal scroll region must be reachable by keyboard
       tabIndex={0}
-      className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 focus-visible:focus-ring sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
+      className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 focus-visible:focus-ring-inset sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
     >
       {urls.map((url) => (
         <li key={url} className="w-[78%] shrink-0 snap-start sm:w-auto">

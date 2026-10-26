@@ -24,6 +24,25 @@ afterEach(cleanup);
  * column's width itself.
  */
 describe("the funnel's two doors", () => {
+  it("keeps the hero's demo action and setup destination tagged to the same source", () => {
+    const { container } = render(
+      <FunnelCtas
+        locale="en-US"
+        source="home-hero"
+        hero
+        demo={{ role: "captain", landing: null }}
+      />,
+    );
+    const button = screen.getByRole("button", { name: "Try the live demo" });
+    expect(button.closest("form")?.querySelector('input[name="source"]')).toHaveValue("home-hero");
+    expect(button.closest("form")?.querySelector('input[name="role"]')).toHaveValue("captain");
+    expect(screen.getByRole("link", { name: "Get set up" })).toHaveAttribute(
+      "href",
+      "/get-set-up?from=home-hero",
+    );
+    expect(container.querySelectorAll("form")).toHaveLength(1);
+  });
+
   it("fills the column on a phone and hugs its doors from sm up", () => {
     const { container } = render(<FunnelCtas locale="en-US" source="product" />);
     expect(container.firstElementChild).toHaveClass(

@@ -733,7 +733,6 @@
     "demandBody": "{count, plural, one {# buceador sigue esperando después de que esta salida se llenó} other {# buceadores siguen esperando después de que esta salida se llenó}}. Considera agregar otro barco o una segunda salida."
   },
   "publicPreview": {
-    "banner": "Estás viendo esta salida como la ve un buceador.",
     "manage": "Gestionar esta salida"
   },
   "minimumSeats": {

@@ -26,7 +26,7 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
   await page.getByLabel("Shop name").fill("Reef Line Divers");
   await page.getByLabel("Town or region").fill("Key Largo, FL");
   await page.getByRole("radio", { name: "Yes" }).check();
-  await page.getByRole("radio", { name: "Spreadsheets" }).check();
+  await page.getByRole("combobox", { name: "Current tool (optional)" }).selectOption("spreadsheet");
   await page.getByLabel("Your name").fill("Ana Ruiz");
   // A malformed address is refused in place, and nothing typed is lost.
   // An address with no dot in its domain passes the browser's own check and
@@ -36,7 +36,9 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
   await expect(page.getByText("Check the address.")).toBeVisible();
   await expect(page).toHaveURL(/\/get-set-up\?from=pricing$/);
   await expect(page.getByLabel("Shop name")).toHaveValue("Reef Line Divers");
-  await expect(page.getByRole("radio", { name: "Spreadsheets" })).toBeChecked();
+  await expect(page.getByRole("combobox", { name: "Current tool (optional)" })).toHaveValue(
+    "spreadsheet",
+  );
 
   await page.getByLabel("Email").fill(`${unique}@example.com`);
   await page.getByRole("button", { name: "Send" }).click();
@@ -74,13 +76,17 @@ test("a shop leaving FareHarbor asks from its guide and is sent back to that gui
   await expect(page.locator('a[href^="mailto:switch@"]')).toHaveCount(0);
   await page.locator('a[href="/get-set-up?from=switching-fareharbor-concierge"]').last().click();
   await expect(page).toHaveURL(/\/get-set-up\?from=switching-fareharbor-concierge$/);
-  await expect(page.getByRole("radio", { name: "A booking system" })).toBeChecked();
+  await expect(page.getByRole("combobox", { name: "Current tool (optional)" })).toHaveValue(
+    "booking_system",
+  );
   await expect(page.getByRole("radio", { name: "FareHarbor" })).toBeChecked();
 
   // Paper asks nothing more; dive-shop software asks again.
-  await page.getByRole("radio", { name: "Paper" }).check();
+  await page.getByRole("combobox", { name: "Current tool (optional)" }).selectOption("paper");
   await expect(page.getByRole("radio", { name: "FareHarbor" })).toHaveCount(0);
-  await page.getByRole("radio", { name: "A booking system" }).check();
+  await page
+    .getByRole("combobox", { name: "Current tool (optional)" })
+    .selectOption("booking_system");
   await page.getByRole("radio", { name: "FareHarbor" }).check();
 
   await page.getByLabel("Shop name").fill("Harbor Line Divers");
@@ -95,4 +101,17 @@ test("a shop leaving FareHarbor asks from its guide and is sent back to that gui
     "href",
     "/switching/fareharbor?from=setup-sent",
   );
+});
+
+test("a shop can request setup without choosing a current tool", async ({ page }) => {
+  await page.goto("/get-set-up");
+  await page.getByLabel("Shop name").fill("Reef Line Divers");
+  await page.getByLabel("Town or region").fill("Key Largo, FL");
+  await page.getByLabel("Your name").fill("Ana Ruiz");
+  await page.getByLabel("Email").fill(`optional-tool-${Date.now()}@example.com`);
+  await page.getByRole("radio", { name: "No", exact: true }).check();
+  await expect(page.getByRole("combobox", { name: "Current tool (optional)" })).toHaveValue("");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page).toHaveURL(/\/get-set-up\/sent$/);
+  await expect(page.getByRole("heading", { name: "Request sent", exact: true })).toBeVisible();
 });

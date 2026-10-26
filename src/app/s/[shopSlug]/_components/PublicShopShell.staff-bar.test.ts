@@ -15,12 +15,10 @@ import { tapTargetLinkClass } from "@/components/ui/button";
  * top band sat off the page and its bottom band crossed the bar's border into
  * the sticky chrome under it.
  */
-const SOURCE = readFileSync(join(__dirname, "PublicShopShell.tsx"), "utf8");
+const SOURCE = readFileSync(join(__dirname, "PublicStaffPreviewBar.tsx"), "utf8");
 
 function staffBar(): string {
-  const start = SOURCE.indexOf("{showStaffBar && shop ? (");
-  expect(start).toBeGreaterThan(-1);
-  return SOURCE.slice(start, SOURCE.indexOf(") : null}", start));
+  return SOURCE;
 }
 
 /** The class tokens of the `nth` literal `className="…"` in the bar. */
@@ -69,7 +67,7 @@ describe("the public staff bar", () => {
     // sentence level with the 44px link, so the sentence needs no floor.
     expect(row()).not.toContain("flex-wrap");
     expect(row()).toContain("sm:flex-wrap");
-    expect(staffBar()).toContain('staffT("shared.publicPreview.divesSee")');
+    expect(staffBar()).toContain("words.short");
     expect(sentence()).toContain("sm:min-h-11");
     expect(sentence()).not.toContain("min-h-11");
   });

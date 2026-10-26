@@ -8,7 +8,7 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { openMapsUrl } from "@/lib/maps";
-import { publicSchedulePath } from "@/lib/public-routes";
+import { FIND_YOUR_BOOKING_PATH, publicSchedulePath } from "@/lib/public-routes";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 
 /**
@@ -49,10 +49,14 @@ export function PublicShopHeader({
   languages,
   setLocale,
   languagePickerCopy,
+  recoveryLabel,
+  recoveryHref = FIND_YOUR_BOOKING_PATH,
 }: {
   shop: { slug: string; name: string; logoUrl?: string | null };
   navAriaLabel: string;
   navItems: readonly PublicShopNavItem[];
+  recoveryLabel?: string;
+  recoveryHref?: string;
   /** The language this page was written in — the one marked as in force. */
   locale: string;
   /** That language's own name for itself. */
@@ -76,23 +80,33 @@ export function PublicShopHeader({
            so a long shop name has to ellipse rather than push the nav off the
            viewport. The span rather than the link itself because
            `text-overflow` has nothing to act on inside a flex container. */
-        <Link
-          href={publicSchedulePath(shop.slug)}
-          // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
-          className="font-brand-display flex min-h-11 min-w-0 items-center gap-2.5 text-lg font-semibold tracking-tight"
-        >
-          {/* The shop's logo is the nav's mark beside its name (visual review
+        <div className="flex min-w-0 items-center justify-between gap-4">
+          <Link
+            href={publicSchedulePath(shop.slug)}
+            // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
+            className="font-brand-display flex min-h-11 min-w-0 items-center gap-2.5 text-lg font-semibold tracking-tight"
+          >
+            {/* The shop's logo is the nav's mark beside its name (visual review
               2026-10-24, B16); it stood as an orphan tile beside the hero. */}
-          {shop.logoUrl ? (
-            // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
-            <img
-              src={shop.logoUrl}
-              alt=""
-              className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
-            />
+            {shop.logoUrl ? (
+              // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
+              <img
+                src={shop.logoUrl}
+                alt=""
+                className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
+              />
+            ) : null}
+            <span className="truncate">{shop.name}</span>
+          </Link>
+          {recoveryLabel ? (
+            <a
+              href={recoveryHref}
+              className="inline-flex min-h-11 shrink-0 items-center text-base text-muted underline-offset-4 hover:underline"
+            >
+              {recoveryLabel}
+            </a>
           ) : null}
-          <span className="truncate">{shop.name}</span>
-        </Link>
+        </div>
       }
       trailing={
         /* The nav rides in the trailing cluster rather than the bar's centre

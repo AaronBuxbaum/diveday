@@ -272,7 +272,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // export inventory for leaving is the list, and the preview is a link away.
   await expect(page.getByRole("img", { name: /import preview/i })).toHaveCount(0);
   await expect(
-    page.getByText(diverTranslator("en-US")("marketing.home.exportItem1")),
+    page.getByText(diverTranslator("en-US")("marketing.export.claim"), { exact: false }),
   ).toBeVisible();
   // The two directions are named, and the geometry that names them is the
   // claim: a mirrored pair of columns for a section arguing that records leave
@@ -903,9 +903,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await page.goto("/");
   await page.getByRole("contentinfo").getByRole("link", { name: "Switch" }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "Every guide ends at the same import screen" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bring your shop with you" })).toBeVisible();
 
   // The named incumbents each have a live guide (no coming-soon entries).
   for (const name of [
@@ -958,11 +956,18 @@ test("migration guides walk a shop from an incumbent export into the importer", 
 
   // The scope table is the importer's honesty table — a claimed waiver
   // acceptance is trusted, medical clearance included, and marked imported.
-  await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
+  await page.locator("#import-reference summary").click();
+  await expect(
+    page
+      .locator("#import-reference")
+      .getByText("Signed waivers & medical clearance", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Stays behind").first()).toBeVisible();
   // Specialty cards moved into the green column and say what waits on staff.
   await expect(
-    page.getByText("Specialty certifications (deep, wreck, night, drysuit)"),
+    page
+      .locator("#import-reference")
+      .getByText("Specialty certifications (deep, wreck, night, drysuit)"),
   ).toBeVisible();
 
   // Nothing on a published page may cite how *we* talk about a decision. The
@@ -1028,7 +1033,12 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(
     page.getByRole("heading", { name: "Get your data out of FareHarbor" }),
   ).toBeVisible();
-  await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
+  await page.locator("#import-reference summary").click();
+  await expect(
+    page
+      .locator("#import-reference")
+      .getByText("Signed waivers & medical clearance", { exact: true }),
+  ).toBeVisible();
 
   // Rezdy is the second booking-channel guide — same coexist template, its own
   // copy (a monthly-plus-per-booking model rather than FareHarbor's fee).
@@ -1350,13 +1360,14 @@ test("the homepage's spreadsheet door survives, tagged, and lands on the columns
   // streamed body landed", `toBeInViewport` is "the anchor took the reader
   // there". Neither is a timing guess — both retry against what the destination
   // page itself renders.
-  const columns = page.getByRole("heading", { name: "The columns it reads" });
-  await expect(columns).toBeVisible();
+  const columns = page.locator("details#columns");
+  await expect(columns).toHaveAttribute("open", "");
+  await expect(columns.locator("summary")).toBeVisible();
   // Landed on what the words promised — not merely on a page that contains it.
   // This is the one an `id` on the phase can fail: drop the anchor and this
   // heading is two to three screens below the fold, behind the hero, the wedge
   // list and the mid-page CTA.
-  await expect(columns).toBeInViewport();
+  await expect(columns.locator("summary")).toBeInViewport();
 });
 
 test("the spreadsheet guide brings a no-system shop across for free", async ({ page }) => {
@@ -1399,7 +1410,12 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   expect(templateBody).toContain("@example.com");
 
   // The scope table is the importer's honesty table — same safety spine.
-  await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
+  await page.locator("#import-reference summary").click();
+  await expect(
+    page
+      .locator("#import-reference")
+      .getByText("Signed waivers & medical clearance", { exact: true }),
+  ).toBeVisible();
 
   // The owner-authorized concierge switch offer lands, phrased as a human
   // commitment, with a real handoff: the set-up form, tagged as its door.
@@ -1606,8 +1622,8 @@ test.describe("with Accept-Language: es", () => {
     // `/switching/[competitor]`; the guarantee this test checks is the same
     // either way.
     "/switching": {
-      english: "Every guide ends at the same import screen",
-      spanish: "Todas las guías terminan en la misma pantalla de importación",
+      english: "Bring your shop with you",
+      spanish: "Trae tu centro contigo",
     },
     "/switching/spreadsheet": {
       english: "Bring the spreadsheet with you",
@@ -1777,4 +1793,48 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   const footer = page.getByRole("contentinfo");
   await expect(footer.getByRole("link", { name: /privacy/i })).toHaveAttribute("href", "/privacy");
   await expect(footer.getByRole("link", { name: /terms/i })).toHaveAttribute("href", "/terms");
+});
+
+test("the mobile marketing menu keeps a demo door and returns keyboard focus", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  const menu = nav.getByRole("button", { name: "Menu", exact: true });
+  await expect(nav.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Product", exact: true })).toBeHidden();
+  await menu.focus();
+  await page.keyboard.press("Enter");
+  await expect(menu).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Tab");
+  await expect(nav.getByRole("link", { name: "Product", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  await expect(menu).toBeFocused();
+  await menu.click();
+  await nav.getByRole("link", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+});
+
+test("guide contents reveal the complete spreadsheet reference on the same page", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/switching/spreadsheet");
+  const reference = page.locator("details#columns");
+  await expect(reference).not.toHaveAttribute("open");
+  await page
+    .getByRole("navigation", { name: "On this page" })
+    .getByRole("link", { name: "Spreadsheet field reference" })
+    .click();
+  await expect(page).toHaveURL(/\/switching\/spreadsheet#columns$/);
+  await expect(reference).toHaveAttribute("open", "");
+  await expect(reference.getByRole("heading", { name: "Identity and contact" })).toBeVisible();
+  await reference.locator("summary").click();
+  await expect(reference).not.toHaveAttribute("open");
+  await page
+    .getByRole("navigation", { name: "On this page" })
+    .getByRole("link", { name: "Spreadsheet field reference" })
+    .click();
+  await expect(reference).toHaveAttribute("open", "");
+  await expect(reference.getByRole("heading", { name: "Identity and contact" })).toBeInViewport();
 });

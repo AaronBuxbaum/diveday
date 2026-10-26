@@ -66,11 +66,24 @@ export function AutoOpenDetails({
 
   useEffect(() => {
     const hashes = Array.isArray(openOnHash) ? openOnHash : [openOnHash];
-    const sync = () => {
-      if (hashes.some((hash) => window.location.hash === `#${hash}`)) {
+    const reveal = (fragment: string) => {
+      if (hashes.some((hash) => fragment === `#${hash}`)) {
         const details = ref.current;
         if (details) details.open = true;
       }
+    };
+    const sync = () => reveal(window.location.hash);
+    const onAnchorClick = (event: MouseEvent) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+        return;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(link instanceof HTMLAnchorElement) || (link.target && link.target !== "_self")) return;
+      const destination = new URL(link.href);
+      if (
+        destination.origin === window.location.origin &&
+        destination.pathname === window.location.pathname
+      )
+        reveal(destination.hash);
     };
     sync();
     // A client navigation that changes only the hash on an already-mounted
@@ -78,7 +91,14 @@ export function AutoOpenDetails({
     // effect, so listen for the change too — otherwise the second deep link's
     // target stays collapsed.
     window.addEventListener("hashchange", sync);
-    return () => window.removeEventListener("hashchange", sync);
+    // Next.js same-page links use pushState without hashchange. Reveal before
+    // their scroll, including a repeated click after the reader closed the row.
+    // Capture runs before the router’s bubbling click handler measures the target.
+    document.addEventListener("click", onAnchorClick, true);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      document.removeEventListener("click", onAnchorClick, true);
+    };
   }, [openOnHash]);
 
   return (

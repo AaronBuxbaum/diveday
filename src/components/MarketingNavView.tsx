@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { FunnelTag } from "@/components/FunnelTag";
 import { Wordmark } from "@/components/Logo";
+import { MarketingNavLinks } from "@/components/MarketingNavLinks";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { staffShopRoot } from "@/lib/staff-destinations";
-
-const navLinkClassName =
-  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-foreground lg:px-3";
 
 /**
  * The marketing header's markup, with the session already resolved to one
@@ -58,41 +56,16 @@ export function MarketingNavView({
     <header
       className={`bg-background/95 ${compactMobile ? "border-b-0 lg:border-b lg:border-border" : "border-b border-border"}`}
     >
-      {/*
-       * Phone layout is two deliberate rows — brand + CTA first, page links
-       * second — rather than free wrapping, which used to stack the link
-       * block *above* the logo and read as a broken header on the very first
-       * paint. ≥lg it collapses back to the familiar single row. Not ≥sm: the
-       * row needs about 669px in en-US and at 640 the bar has 592, so the
-       * links wrapped into a block of their own up to 716 (K-88). Not ≥md
-       * either: es-ES needs about 837px ("Quiénes somos", "Iniciar sesión",
-       * "Probar la demo en vivo"), so at md's 720 the same block came back up
-       * to 884. lg's 976 holds both diver locales.
-       */}
       <nav
         aria-label={t("nav.mainNavigation")}
-        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 lg:flex-nowrap ${compactMobile ? "max-lg:h-[52px] max-lg:flex-nowrap max-lg:py-0" : ""}`}
+        className={`relative mx-auto flex w-full max-w-7xl items-center gap-2 px-6 py-3 lg:gap-4 ${compactMobile ? "max-lg:h-[52px] max-lg:flex-nowrap max-lg:py-0" : ""}`}
       >
         <Wordmark href="/" className="text-foreground" />
-        <div
-          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 lg:order-none lg:mx-0 lg:ml-auto lg:basis-auto lg:justify-end lg:gap-x-2 ${compactMobile ? "max-lg:hidden" : ""}`}
-        >
-          {links.map((link) => (
-            <Link key={link.href} href={link.href} className={navLinkClassName}>
-              {link.label}
-            </Link>
-          ))}
-          {/* Signing out is a staff act, and it belongs on the staff header
-              where the shop's own nav lives — not on a public page whose job
-              is to explain the product. A signed-in visitor here is browsing
-              marketing, and the only thing they want from this bar is the way
-              back in, which the CTA slot below now is. */}
-          {shopSlug ? null : (
-            <Link href="/sign-in" className={navLinkClassName}>
-              {t("nav.signIn")}
-            </Link>
-          )}
-        </div>
+        <MarketingNavLinks
+          links={shopSlug ? links : [...links, { href: "/sign-in", label: t("nav.signIn") }]}
+          menuLabel={t("nav.menu")}
+          compactMobile={compactMobile}
+        />
         {/* One CTA slot, two audiences. Somebody already signed in cannot try
             the demo or start a trial — they have a shop — so the slot becomes
             the door back to it. Every marketing page carries it, the funnel's
@@ -127,7 +100,13 @@ export function MarketingNavView({
                 className: "whitespace-nowrap",
               })}
             >
-              {t("nav.tryDemo")}
+              <span className="lg:hidden" aria-hidden="true">
+                {t("nav.tryDemoShort")}
+              </span>
+              <span className="hidden lg:inline" aria-hidden="true">
+                {t("nav.tryDemo")}
+              </span>
+              <span className="sr-only">{t("nav.tryDemo")}</span>
             </SubmitButton>
           </form>
         )}

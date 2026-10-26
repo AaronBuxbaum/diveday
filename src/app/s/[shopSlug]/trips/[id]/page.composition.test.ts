@@ -119,8 +119,8 @@ describe("the trip the booking form is handed", () => {
 
   it("is projected at both client doors, never the raw row", () => {
     expect(SOURCE).toContain("trip: bookingFormTrip(trip),");
-    expect(SOURCE).toContain(
-      "<TripFullSection\n                  shopSlug={shopSlug}\n                  trip={bookingFormTrip(trip)}",
+    expect(SOURCE).toMatch(
+      /<TripFullSection\s+shopSlug=\{shopSlug\}\s+trip=\{bookingFormTrip\(trip\)\}/,
     );
     // Neither door takes the row itself. (`BookingFinePrint` inside them may:
     // it is a server component, rendered before anything crosses.)

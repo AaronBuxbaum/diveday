@@ -30,6 +30,7 @@ import {
   GUIDE_BAND_CLASS,
   GUIDE_BAND_LEDE_CLASS,
   GuideBodySkeleton,
+  GuideContents,
   GuideContext,
   GuideHero,
   ImportPhase,
@@ -211,6 +212,8 @@ async function GuideBody({
       />
 
       {/* Honest framing of the incumbent. */}
+      <GuideContents locale={locale} />
+
       <GuideContext locale={locale} paragraphs={guide.context.map((key) => t(key))} />
 
       {/* Coexist framing: for a booking channel a shop keeps (FareHarbor,
@@ -312,7 +315,12 @@ async function GuideBody({
           itself) → the importer's own scope table, verbatim → the importer →
           the cutover. */}
       <MovePath locale={locale}>
-        <MovePhase number={1} title={t(guide.exportHeading)} intro={t(guide.exportIntro)}>
+        <MovePhase
+          id="export"
+          number={1}
+          title={t(guide.exportHeading)}
+          intro={t(guide.exportIntro)}
+        >
           <StepList
             steps={guide.exportSteps.map((step) => ({
               title: t(step.title),
@@ -340,7 +348,12 @@ async function GuideBody({
         >
           <Suspense fallback={null}>{importCta}</Suspense>
         </ImportPhase>
-        <MovePhase number={4} title={t(guide.cutover.heading)} intro={t(guide.cutover.intro)}>
+        <MovePhase
+          id="cutover"
+          number={4}
+          title={t(guide.cutover.heading)}
+          intro={t(guide.cutover.intro)}
+        >
           <StepList
             steps={guide.cutover.steps.map((step) => ({
               title: t(step.title),

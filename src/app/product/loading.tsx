@@ -50,25 +50,25 @@ export default function ProductLoading() {
         {/* Hero: eyebrow, the title, the lede, the CTA pair, the demo note and
             the price line, left-aligned on the list's own column. */}
         <section>
-          <div className="mx-auto max-w-6xl px-6 pt-20 pb-12 lg:pt-28">
+          <div className="mx-auto max-w-6xl px-6 pt-8 pb-10 lg:pt-16">
             <SkeletonLineBars lines={1} height={`h-lh ${MARKETING_EYEBROW_CLASS}`} width="w-40" />
-            <div className="mt-5 max-w-4xl">
+            <div className="mt-4 max-w-4xl">
               <SkeletonLineBars
                 lines={{ base: 3, sm: 2 }}
                 height={`h-lh ${DISPLAY_TITLE_CLASS} sm:text-6xl`}
                 width="w-full"
               />
             </div>
-            <div className="mt-6 max-w-2xl">
+            <div className="mt-4 max-w-2xl">
               <SkeletonLineBars
                 lines={{ base: 5, sm: 3 }}
                 height="h-lh text-lg leading-8"
                 width="w-full"
               />
             </div>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
-              <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+              <div className="h-12 w-44 rounded-lg bg-surface-sunken" />
+              <div className="h-11 w-24 rounded-lg bg-surface-sunken" />
             </div>
             <div className="mt-3">
               <SkeletonLineBars

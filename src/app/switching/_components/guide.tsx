@@ -6,6 +6,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureRow } from "@/components/ui/disclosure";
 import { groupLabelClass } from "@/components/ui/group-label";
 import {
   BANNER_TITLE_CLASS,
@@ -339,6 +340,38 @@ export function GuideBodySkeleton({ lines }: { lines: GuideSkeletonLines }) {
  * `GUIDE_FACTS.back` uses for the export claim and `midSeasonCutover` uses for
  * the cutover steps. Compressed here, authored once, never re-worded.
  */
+export function GuideContents({
+  locale,
+  spreadsheet = false,
+}: {
+  locale: DiverLocale;
+  spreadsheet?: boolean;
+}) {
+  const t = diverTranslator(locale);
+  const links = [
+    {
+      id: spreadsheet ? "columns" : "export",
+      label: t(spreadsheet ? "switching.common.fieldReference" : "switching.common.exportFile"),
+    },
+    { id: "scope", label: t("switching.common.scopeTableTitle") },
+    { id: "import", label: t("switching.common.bringFileTitle") },
+    ...(!spreadsheet ? [{ id: "cutover", label: t("switching.common.cutoverLink") }] : []),
+  ];
+  return (
+    <nav aria-label={t("switching.common.contents")} className="mx-auto max-w-4xl px-6 pb-8">
+      <ul className="flex flex-wrap gap-x-6">
+        {links.map((link) => (
+          <li key={link.id}>
+            <a href={`#${link.id}`} className={buttonClass({ variant: "link", flush: true })}>
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 export function MovePath({ locale, children }: { locale: DiverLocale; children: ReactNode }) {
   const t = diverTranslator(locale);
   return (
@@ -467,38 +500,55 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
   ];
   return (
     <MovePhase
+      id="scope"
       number={number}
       title={t("switching.common.scopeTableTitle")}
       intro={t("switching.common.scopeTableDescription")}
     >
-      <div className="mt-8 space-y-8">
+      <div className="mt-6 space-y-4">
         {groups.map((group) => (
           <div key={group.scope}>
-            {/* The shared fact, stated once for the group instead of as a
+            <h4 className={groupLabelClass()}>{group.label}</h4>
+            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+              {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
+                <li key={row.id}>{t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 border-y border-border">
+        <DisclosureRow id="import-reference" heading={t("switching.common.importReference")}>
+          <div className="mt-8 space-y-8">
+            {groups.map((group) => (
+              <div key={group.scope}>
+                {/* The shared fact, stated once for the group instead of as a
                 chip on all thirteen rows (principles.md #9). No colour dot:
                 the two words are the whole distinction, and a 6px speck of
                 `--success` beside them was decoration pretending to be a
                 signal. Set in the same small-caps as the hero's fact labels
                 and the sources footnote, so one page has one voice for
                 "this names what follows". */}
-            <h4 className={groupLabelClass()}>{group.label}</h4>
-            <ul className="mt-3 divide-y divide-border border-y border-border">
-              {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
-                <li
-                  key={row.id}
-                  className="grid gap-1 py-3 sm:grid-cols-[15rem_1fr] sm:items-baseline sm:gap-4"
-                >
-                  <span className="font-medium text-foreground">
-                    {t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}
-                  </span>
-                  <span className="text-sm leading-6 text-muted">
-                    {t(IMPORT_SCOPE_ROW_KEYS[row.id].detail)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                <h4 className={groupLabelClass()}>{group.label}</h4>
+                <ul className="mt-3 divide-y divide-border border-y border-border">
+                  {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
+                    <li
+                      key={row.id}
+                      className="grid gap-1 py-3 sm:grid-cols-[15rem_1fr] sm:items-baseline sm:gap-4"
+                    >
+                      <span className="font-medium text-foreground">
+                        {t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}
+                      </span>
+                      <span className="text-sm leading-6 text-muted">
+                        {t(IMPORT_SCOPE_ROW_KEYS[row.id].detail)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-        ))}
+        </DisclosureRow>
       </div>
 
       {/* The return trip, stated where the reader is weighing the one-way
@@ -549,6 +599,7 @@ export function ImportPhase({
   ];
   return (
     <MovePhase
+      id="import"
       number={number}
       title={t("switching.common.bringFileTitle")}
       intro={t("switching.common.bringFileIntro")}

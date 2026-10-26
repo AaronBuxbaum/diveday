@@ -7,6 +7,8 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureRow } from "@/components/ui/disclosure";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -14,6 +16,7 @@ import { sharedLinkCard } from "@/lib/marketing";
 import {
   ClosingCta,
   DividedList,
+  GuideContents,
   GuideContext,
   GuideHero,
   ImportPhase,
@@ -128,22 +131,14 @@ export default async function SpreadsheetSwitchPage() {
 }
 
 /** The columns the importer recognizes, in the owner's own words. */
-const SHEET_COLUMNS = [
-  "name",
-  "email",
-  "phone",
-  "dateOfBirth",
-  "emergencyContact",
-  "diveInsurance",
-  "certification",
-  "specialty",
-  "nitrox",
-  "rentalSizes",
-  "pastVisits",
-  "waivers",
-  "paymentHistory",
-  "notes",
-  "gearHistory",
+const SHEET_COLUMN_GROUPS = [
+  {
+    key: "identity",
+    columns: ["name", "email", "phone", "dateOfBirth", "emergencyContact", "diveInsurance"],
+  },
+  { key: "certifications", columns: ["certification", "specialty", "nitrox"] },
+  { key: "kit", columns: ["rentalSizes", "gearHistory"] },
+  { key: "history", columns: ["pastVisits", "waivers", "paymentHistory", "notes"] },
 ] as const;
 
 /** The four jobs a spreadsheet has no way to hold — this guide's whole wedge. */
@@ -182,6 +177,8 @@ async function SpreadsheetBody({
         lede={t("switching.spreadsheet.heroLede")}
       />
 
+      <GuideContents locale={locale} spreadsheet />
+
       {/* What changes. The two paragraphs set up the trade and the second one
           ends in a colon, so the four jobs are that sentence's own list rather
           than a second band of cards under a second heading. */}
@@ -212,7 +209,7 @@ async function SpreadsheetBody({
             anchor the link lands on the hero, three blocks above what its words
             promise. Pinned in e2e/marketing.spec.ts. */}
         <MovePhase
-          id="columns"
+          id="prepare"
           number={1}
           title={t("switching.spreadsheet.columnsTitle")}
           intro={t("switching.spreadsheet.columnsIntro")}
@@ -226,21 +223,34 @@ async function SpreadsheetBody({
               {t("switching.spreadsheet.downloadTemplate")}
             </a>
           </div>
-          <ul className="mt-8 divide-y divide-border border-y border-border">
-            {SHEET_COLUMNS.map((column) => (
-              <li
-                key={column}
-                className="grid gap-1 py-3 sm:grid-cols-[15rem_1fr] sm:items-baseline sm:gap-4"
-              >
-                <span className="font-medium text-foreground">
-                  {t(`switching.spreadsheet.columns.${column}.column`)}
-                </span>
-                <span className="text-sm leading-6 text-muted">
-                  {t(`switching.spreadsheet.columns.${column}.detail`)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6 border-y border-border">
+            <DisclosureRow id="columns" heading={t("switching.common.fieldReference")}>
+              <div className="space-y-8">
+                {SHEET_COLUMN_GROUPS.map((group) => (
+                  <section key={group.key}>
+                    <h4 className={groupLabelClass()}>
+                      {t(`switching.common.fieldGroups.${group.key}`)}
+                    </h4>
+                    <ul className="mt-3 divide-y divide-border border-y border-border">
+                      {group.columns.map((column) => (
+                        <li
+                          key={column}
+                          className="grid gap-1 py-3 sm:grid-cols-[15rem_1fr] sm:items-baseline sm:gap-4"
+                        >
+                          <span className="font-medium text-foreground">
+                            {t(`switching.spreadsheet.columns.${column}.column`)}
+                          </span>
+                          <span className="text-sm leading-6 text-muted">
+                            {t(`switching.spreadsheet.columns.${column}.detail`)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </DisclosureRow>
+          </div>
         </MovePhase>
         <ScopePhase locale={locale} number={2} />
         {/* `importerNote` is the one slot a guide tailors the shared import

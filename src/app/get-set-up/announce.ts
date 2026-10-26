@@ -105,8 +105,8 @@ function errorCodeOf(error: unknown): string {
   return error instanceof Error ? error.name : "unknown_error";
 }
 
-function currentSystemOf(value: string): SetupCurrentSystem {
+function currentSystemOf(value: string): SetupCurrentSystem | undefined {
   return (SETUP_CURRENT_SYSTEMS as readonly string[]).includes(value)
     ? (value as SetupCurrentSystem)
-    : "other";
+    : undefined;
 }

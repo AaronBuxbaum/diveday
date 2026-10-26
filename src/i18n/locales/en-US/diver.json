@@ -516,6 +516,7 @@
     }
   },
   "findMyBooking": {
+    "link": "Find my booking",
     "heading": "Can’t find your link?",
     "body": "If you booked with us, enter the email you used and we’ll send it again.",
     "submit": "Send my link",
@@ -3444,6 +3445,17 @@
           "value": "The same export button, from the first day."
         }
       },
+      "contents": "On this page",
+      "fieldReference": "Spreadsheet field reference",
+      "importReference": "Full import field reference",
+      "exportFile": "Export your file",
+      "cutoverLink": "Make the move",
+      "fieldGroups": {
+        "identity": "Identity and contact",
+        "certifications": "Certifications",
+        "kit": "Kit",
+        "history": "History and records"
+      },
       "moveTitle": "How the move works",
       "moveIntro": "Every step is one you run yourself, in your own time. If you would rather hand it off, send us the file and a person brings your divers in with you, free.",
       "scopeTableTitle": "What comes across, and what does not",
@@ -3468,8 +3480,8 @@
     },
     "hub": {
       "eyebrow": "Switching to DiveDay",
-      "title": "Every guide ends at the same import screen",
-      "description": "Pick what you run now. Each guide gets your file out of it, and the screen at the bottom of this page is where the file lands.",
+      "title": "Bring your shop with you",
+      "description": "Choose what you use today to see what moves, what stays behind and how to start.",
       "spreadsheetTitle": "Coming from a spreadsheet",
       "spreadsheetDescription": "The sheet you already keep is the file. This guide is the column list it reads, then the four jobs a list never did.",
       "switchingFrom": "Switching from {competitor}",
@@ -3613,7 +3625,9 @@
     "tagline": "A calmer way to run a dive day.",
     "sayHello": "Say hello",
     "gettingReady": "Getting your shop ready…",
-    "tryDemo": "Try the live demo"
+    "tryDemo": "Try the live demo",
+    "tryDemoShort": "Try demo",
+    "menu": "Menu"
   },
   "fallback": {
     "boatLabel": "Boat",
@@ -3892,7 +3906,7 @@
     "home": {
       "eyebrow": "Dive shop software",
       "heroTitle": "Every diver booked, signed, checked and accounted for",
-      "heroDescription": "Online booking, waivers and medical forms, certification checks, check-in and the boat manifest, in one app for your dive shop. A diver who isn’t ready is named at the desk days before the boat leaves.",
+      "heroDescription": "From the online booking to the dock, see who’s ready and what each diver still needs.",
       "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
       "diverDoor": "Booked a dive?",
       "diverDoorLink": "Find your booking",
@@ -3932,18 +3946,13 @@
           "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
         }
       },
-      "featuresTitle": "What the whiteboard, the clipboard and the three apps did, in one plan",
       "featuresLink": "The full list of what each feature includes →",
       "exportTitle": "How records arrive, and how they leave",
       "arrivingLabel": "Coming in",
       "exportDescription1": "Upload a spreadsheet. Before anything saves, the preview shows what each column became and which rows it will skip. Or email us the file and a person does the import with you, free.",
       "spreadsheetLink": "Your spreadsheet, column by column →",
       "leavingLabel": "Going out",
-      "exportDescription2": "The Data export button in Settings downloads one ZIP with all of this in it. {terms}",
-      "exportItem1": "Documented CSV files, one per kind of record",
-      "exportItem2": "Divers, bookings, waiver records, and payment history",
-      "exportItem3": "A contacts file shaped for another system’s import wizard",
-      "exportItem4": "A plain-language guide to every file",
+      "exportDescription2": "{claim} {terms}",
       "guidesLink": "Guides for leaving {competitors}, and one for a spreadsheet →",
       "tryTitle": "Every diver booked, signed and counted aboard, from your first trip",
       "stepLink": "{name} →",
@@ -4934,8 +4943,8 @@
         "summary": "Divers book and pay for seats from your schedule, and a boat stops selling once it’s full.",
         "metaTitle": "Online booking for dive shops",
         "metaDescription": "Divers book their own seats at any hour, with rental gear, a nitrox request and payment in one pass, after reading the certification the trip needs. Seats come off the boat’s capacity, so a trip can’t be oversold.",
-        "title": "Divers book while you’re out on the water, and read the certification the trip needs before they do",
-        "lede": "The schedule on your site takes the divers, their rental gear, a nitrox request and the payment into your own Stripe account, and a departure stops selling by itself once it’s full.",
+        "title": "Divers book while you’re out on the water",
+        "lede": "Divers see the trip’s certification requirements before booking. Your schedule takes their booking, rental gear, nitrox request and payment, and stops selling when the departure is full.",
         "screenLabel": "A departure’s booking panel as a diver sees it: the certification the trip asks for, seats left, divers, rental gear and nitrox, and the total.",
         "note1": "The certification the trip asks for sits above the button, where a diver reads it before paying.",
         "note2": "Seats left is the boat’s capacity less every seat sold or held, counted again as the booking saves.",
@@ -5064,7 +5073,7 @@
         "summary": "One tap per diver at the counter, a lookup for anyone unsure of their boat, and walk-ins added on the spot.",
         "metaTitle": "Dive shop check-in for the morning rush",
         "metaDescription": "Check divers in with one tap on the departure’s own list. Anyone not ready shows what’s missing instead of the tap, and walk-ins can fill in their own details from the code on your counter before you seat them.",
-        "title": "The morning rush is one tap per diver, and anyone not ready shows what’s missing in place of the tap",
+        "title": "The morning rush is one tap per diver",
         "lede": "Arrivals open on the departure’s Divers tab, with a count of who’s here, a Check in tap beside each diver who’s ready, and what’s missing beside anyone who isn’t.",
         "screenLabel": "A departure’s Divers tab during arrivals: the count of divers here, a checked-in diver, a Check in tap, and a held seat asking whether it’s the same person.",
         "note1": "The count is divers here against divers booked, and it moves only when a tap lands.",
@@ -5116,8 +5125,8 @@
         "summary": "Each site’s route, landmarks and marine life written once, and shown to every diver on a boat that goes there.",
         "metaTitle": "Dive site briefings for your divers",
         "metaDescription": "Write each dive site once: depth, route, landmarks with photos and what lives there. Every diver booked on a boat to that site reads the briefing before they come.",
-        "title": "Write each dive site once, and every diver booked there reads the route and its recent sightings before they come",
-        "lede": "Write each site once with its depth, the route on a terrain map, landmarks with photos and the species divers see there, and every diver booked to it reads that on their trip page.",
+        "title": "Write each dive site once",
+        "lede": "Divers read the route, landmarks and recent sightings before they come. Each site’s depth, terrain map, photos and species stay together on their trip page.",
         "screenLabel": "A dive site briefing as divers read it before the trip: the site, its depth and time in the water, the route, and what has been seen there this month.",
         "note1": "Depth is the site’s own, in your shop’s units, and time in the water is your usual for that dive.",
         "note2": "The route starts at a hollow circle and finishes at a filled one, so a diver reads which way the dive swims.",
@@ -5194,8 +5203,8 @@
         "summary": "Course pages in the order you teach them, with dates divers can book and an instructor on every session.",
         "metaTitle": "Scuba course booking and scheduling",
         "metaDescription": "Course pages with price, prerequisites, a day-by-day plan and bookable dates, started from PADI, SSI or SDI content. PADI Open Water sessions and try dives stop selling at their ratio, and whoever books online confirms each diver meets the course’s minimum age.",
-        "title": "Divers book course dates from your own site, and a PADI Open Water session stops selling at its instructor ratio",
-        "lede": "Start from a PADI, SSI or SDI course, make it yours with your price, prerequisites, day-by-day plan and photos, and divers book its dates from the course page.",
+        "title": "Divers book course dates from your own site",
+        "lede": "Make a PADI, SSI or SDI course yours with your price, prerequisites, plan and photos. A PADI Open Water session stops selling at its instructor ratio.",
         "screenLabel": "A public course page: the agency, the course name and price, the plan by day, and an upcoming date to book.",
         "note1": "The agency sits above the title, so a diver comparing shops knows which card they’ll get.",
         "note2": "The plan by day is the shop’s own, edited from the catalog it started with.",
@@ -5250,7 +5259,8 @@
       "runsBoat": "Do you run a boat?",
       "yes": "Yes",
       "no": "No",
-      "currentSystem": "What do you use today?",
+      "currentSystem": "Current tool (optional)",
+      "notSpecified": "Not specified",
       "current": {
         "paper": "Paper",
         "spreadsheet": "Spreadsheets",

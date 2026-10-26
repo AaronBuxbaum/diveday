@@ -6,7 +6,11 @@ import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
 import { sectionCardClass } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  ITEM_TITLE_CLASS,
+  PAGE_TITLE_CLASS,
+  SECTION_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { type AppDb, getDb } from "@/db/client";
 import { listPublishedShopReviews } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -292,11 +296,7 @@ export default async function SchedulePage({
     hideAboveFilter,
     activeLens,
   });
-  const { identityPanels, panelsBeside, nextBoatFlat } = identityBand(
-    quiet.quiet,
-    !!nextBoat,
-    shop,
-  );
+  const { nextBoatFlat } = identityBand(quiet.quiet, !!nextBoat, shop);
 
   const { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey } = scheduleMonthRail({
     range,
@@ -361,108 +361,36 @@ export default async function SchedulePage({
 
   return (
     <main className={isEmbed ? "w-full flex-1 px-3 py-4" : SHOP_MAIN_CLASS}>
-      {/* **The shop leads, not the word "Schedule"** (ADR
-          20260827-clearwater-surface-language, decision 8). This was an h1
-          reading "Schedule" over a DiveDay sentence about finding your next day
-          on the water — identical on every shop in the product — with the
-          shop's conservation claims in a bordered card beneath it. The identity
-          band and the next boat now share one vertical reading flow, so the
-          bookable object sits right under the shop's own words. Neither renders
-          inside the frame, where the widget stays the list-first window onto the
-          schedule that issue #805 made it. */}
       {isEmbed ? null : (
-        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
-          {/* The logo is the nav's mark (B16), never a tile beside the hero. */}
-          {/* **The next boat beside the shop, from `lg` up.** Stacked, the
-              photograph, its name band and the next-boat card filled the whole
-              first screen of a 1280×900 window, and the schedule a diver came
-              for started 1,220px down. Side by side the card sits level with
-              the photograph and the schedule starts on the first screen. A
-              phone keeps the stack: one column is all it has. */}
-          <div
-            className={`min-w-0 flex-1 ${
-              panelsBeside
-                ? "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6"
-                : ""
-            }`}
-          >
-            <ShopfrontHero
-              beside={panelsBeside}
-              name={shop.name}
-              tagline={shop.tagline}
-              description={shop.description}
-              aggregate={reviewAggregate}
-              heroImage={
-                shop.brandHeroImageUrl
-                  ? { url: shop.brandHeroImageUrl, alt: shop.brandHeroImageAlt ?? "" }
-                  : null
-              }
-              badges={parseBrandBadges(shop.brandBadges)}
-              establishedYear={shop.establishedYear}
-              locale={locale}
-              t={t}
-            />
-            {/* **One row, not a column of narrow cards.** Each of these panels
-                held `max-w-md` of its own, so on a 1152px page they stacked
-                down the left third and left the other two-thirds empty — three
-                boxes reading as three unrelated things with nothing beside
-                them. They are one band: the same three facts, laid out as a row
-                at `md` and up and as the old stack on a phone. `grid-flow-col`
-                with `auto-cols-fr` rather than a fixed `grid-cols-3`, because
-                how many of them render is a fact about the shop's day — no
-                live boat — and the row has to read at one, two or three. Order
-                is the reading order it has always been: the quiet, the boat
-                that is out, the next one with space. */}
-            {identityPanels > 0 ? (
-              <div
-                className={`mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col ${
-                  panelsBeside ? "lg:mt-0 lg:grid-flow-row" : ""
-                }`}
-              >
-                {/* **The quiet, before the boat** (N-45). A shop with nothing on
-                    the water for a month leads with that fact rather than with a
-                    departure seven weeks out, which a visitor would otherwise have
-                    to date-subtract for themselves. It replaces the schedule's
-                    terminal empty state below rather than joining it, and the
-                    page's one primary becomes the composer's own submit — the
-                    arrangement `NextBoatCard` has always promised for a page with
-                    no bookable boat. */}
-                {quiet.quiet ? (
-                  <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
-                ) : null}
-                {nextBoat ? (
-                  <NextBoatCard
-                    href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
-                    when={whenWord(nextBoat.startsAt)}
-                    time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
-                    title={nextBoat.title}
-                    description={nextBoat.description}
-                    spots={scheduleSeatState(t, nextBoat).text}
-                    price={seatPriceLabel(nextBoat, currency, locale)}
-                    skipped={skippedBoats}
-                    firstSkippedTime={
-                      firstSkippedBoat
-                        ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
-                        : undefined
-                    }
-                    filtered={filteredView}
-                    flat={nextBoatFlat}
-                    t={t}
-                  />
-                ) : null}
-              </div>
+        <header>
+          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{shop.name}</h1>
+          <div className="mt-4 max-w-xl space-y-4">
+            {quiet.quiet ? (
+              <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
+            ) : null}
+            {nextBoat ? (
+              <NextBoatCard
+                href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
+                when={whenWord(nextBoat.startsAt)}
+                time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
+                title={nextBoat.title}
+                description={nextBoat.description}
+                spots={scheduleSeatState(t, nextBoat).text}
+                price={seatPriceLabel(nextBoat, currency, locale)}
+                skipped={skippedBoats}
+                firstSkippedTime={
+                  firstSkippedBoat
+                    ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
+                    : undefined
+                }
+                filtered={filteredView}
+                flat={nextBoatFlat}
+                t={t}
+              />
             ) : null}
           </div>
-        </div>
+        </header>
       )}
-
-      {/* The shop's photo strip, between who the shop is and its boats. Not
-          in the frame, which stays the list-first window onto the schedule. */}
-      {!isEmbed && shop.shopfrontPhotoUrls.length > 0 ? (
-        <div className="mt-8">
-          <ShopPhotoStrip urls={shop.shopfrontPhotoUrls} label={t("schedule.shopPhotos")} />
-        </div>
-      ) : null}
 
       {/* **The board itself, and nothing where there is no board** (N-45).
           A shop with nothing public on the books renders no "Schedule"
@@ -471,7 +399,7 @@ export default async function SchedulePage({
           over nothing is the page apologising. The frame keeps its own
           terminal state (see the empty state inside). */}
       {hasUpcoming || isEmbed ? (
-        <div className={isEmbed ? undefined : SECTION_GAP}>
+        <div id="schedule" className={isEmbed ? undefined : SECTION_GAP}>
           {isEmbed ? null : (
             <div className="mb-4">
               <h2 className={`font-brand-display ${SECTION_TITLE_CLASS}`}>{t("schedule.title")}</h2>
@@ -631,6 +559,31 @@ export default async function SchedulePage({
           className={SECTION_GAP}
           t={t}
         />
+      )}
+      {isEmbed ? null : (
+        <section className={SECTION_GAP} aria-label={shop.name}>
+          <ShopfrontHero
+            headingLevel="h2"
+            name={shop.name}
+            tagline={shop.tagline}
+            description={shop.description}
+            aggregate={reviewAggregate}
+            heroImage={
+              shop.brandHeroImageUrl
+                ? { url: shop.brandHeroImageUrl, alt: shop.brandHeroImageAlt ?? "" }
+                : null
+            }
+            badges={parseBrandBadges(shop.brandBadges)}
+            establishedYear={shop.establishedYear}
+            locale={locale}
+            t={t}
+          />
+          {shop.shopfrontPhotoUrls.length > 0 ? (
+            <div className="mt-8">
+              <ShopPhotoStrip urls={shop.shopfrontPhotoUrls} label={t("schedule.shopPhotos")} />
+            </div>
+          ) : null}
+        </section>
       )}
       {/* The boats, by name and seats (Harbor — ADR 20260901-diveday-reimagined:
           the storefront is the shop's website, and a shop's site always names

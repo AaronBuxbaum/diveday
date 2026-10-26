@@ -156,7 +156,7 @@ function ConditionsLineView({
     // under the pitch's door it sits flush, so its rule is the door's close —
     // 24px below, the door's label sat in an 80px band between two rules
     // (pixel-craft class 6). The page decides which; the line is the same.
-    <section className={`border-t border-border pt-4 ${ledgerRowRoomClass}`}>
+    <section data-trip-conditions className={`border-t border-border pt-4 ${ledgerRowRoomClass}`}>
       {parts.length > 0 ? (
         // **A wrap never strands a "·"** (pixel-craft class 8, K-483). Each
         // reading carries the dot before it in one item, so the two wrap

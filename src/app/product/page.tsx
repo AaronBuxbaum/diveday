@@ -102,19 +102,25 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
           left-aligned grid, with a rule and 213px of air between them, and
           read as two bands. */}
       <section>
-        <div className="mx-auto max-w-6xl px-6 pt-20 pb-12 lg:pt-28">
+        <div className="mx-auto max-w-6xl px-6 pt-8 pb-10 lg:pt-16">
           <Eyebrow>{t("marketing.product.eyebrow")}</Eyebrow>
-          <h1 className={`mt-5 max-w-4xl ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
+          <h1 className={`mt-4 max-w-4xl ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
             {t("marketing.product.heroTitle")}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
             {t("marketing.product.heroDescription")}
           </p>
           {/* The nav tap that lands here is the most evaluation-intent click
               on the site; without its own CTA the first offered action was
               the nav's trial link — the wrong ask while a buyer is still
               verifying claims. Same one-primary block as the home hero. */}
-          <FunnelCtas locale={locale} source="product" footnotes={{ offer }} className="mt-8" />
+          <FunnelCtas
+            locale={locale}
+            source="product"
+            hero
+            footnotes={{ offer }}
+            className="mt-6"
+          />
         </div>
       </section>
 

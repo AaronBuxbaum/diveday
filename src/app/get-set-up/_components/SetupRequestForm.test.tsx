@@ -13,7 +13,8 @@ const words: SetupRequestFormWords = {
   runsBoat: "Do you run a boat?",
   yes: "Yes",
   no: "No",
-  currentSystem: "What do you use today?",
+  currentSystem: "Current tool (optional)",
+  notSpecified: "Not specified",
   current: {
     paper: "Paper",
     spreadsheet: "Spreadsheets",
@@ -44,19 +45,29 @@ const systems = [
  * a switching guide's door.
  */
 describe("SetupRequestForm, which system", () => {
+  it("asks for contact details before optional migration routing", () => {
+    const { container } = render(
+      <SetupRequestForm source="pricing" words={words} systems={systems} />,
+    );
+    const email = screen.getByRole("textbox", { name: "Email" });
+    const tool = screen.getByRole("combobox", { name: "Current tool (optional)" });
+    expect(email.compareDocumentPosition(tool) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelectorAll('[name="currentSystem"][required]')).toHaveLength(0);
+  });
+
   it("asks which one only after a booking system or dive-shop software", () => {
     render(<SetupRequestForm source="pricing" words={words} systems={systems} />);
     expect(screen.queryByText("Which one?")).toBeNull();
 
-    fireEvent.click(screen.getByRole("radio", { name: "Paper" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "paper" } });
     expect(screen.queryByText("Which one?")).toBeNull();
 
-    fireEvent.click(screen.getByRole("radio", { name: "A booking system" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "booking_system" } });
     expect(screen.getByText("Which one?")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "FareHarbor" })).not.toBeChecked();
     expect(screen.getByRole("radio", { name: "Another one" })).toHaveAttribute("value", "");
 
-    fireEvent.click(screen.getByRole("radio", { name: "Spreadsheets" }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "spreadsheet" } });
     expect(screen.queryByRole("radio", { name: "FareHarbor" })).toBeNull();
   });
 
@@ -69,7 +80,7 @@ describe("SetupRequestForm, which system", () => {
         preselect={{ currentSystem: "booking_system", currentSystemGuide: "fareharbor" }}
       />,
     );
-    expect(screen.getByRole("radio", { name: "A booking system" })).toBeChecked();
+    expect(screen.getByRole("combobox")).toHaveValue("booking_system");
     expect(screen.getByRole("radio", { name: "FareHarbor" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "FareHarbor" })).toHaveAttribute(
       "name",

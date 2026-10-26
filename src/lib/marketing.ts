@@ -75,9 +75,7 @@ export const earlyAccessPriceAmount = earlyAccessPrice.price.replace(/[^\d.]/g, 
 /**
  * The full-shop export claim, shared across the marketing surfaces so they can
  * never drift apart: the pricing data-exit FAQ renders `claimKey` + `termsKey`;
- * the home export band renders `termsKey` in prose and carries the claim's
- * inventory as its itemized card (`marketing.home.exportItem*`) instead of the
- * long sentence. Contents verified against src/lib/export.ts; keep every
+ * the home export band renders the same claim and terms together. Contents verified against src/lib/export.ts; keep every
  * locale's rendering of these keys in sync with the bundle.
  */
 export const fullShopExport = {

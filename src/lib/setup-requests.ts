@@ -161,7 +161,10 @@ const setupRequestSchema = z
     shopName: requiredText(SETUP_TEXT_MAX),
     region: requiredText(SETUP_TEXT_MAX),
     runsBoat: z.enum(["yes", "no"], { error: "required" }).transform((value) => value === "yes"),
-    currentSystem: z.enum(SETUP_CURRENT_SYSTEMS, { error: "required" }),
+    currentSystem: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.enum(SETUP_CURRENT_SYSTEMS, { error: "invalid" }).optional(),
+    ),
     currentSystemGuide: z.string(),
     contactName: requiredText(SETUP_TEXT_MAX),
     email: z
@@ -279,9 +282,10 @@ export function setupSentAdvice(uses: unknown, guide?: unknown): SetupSentAdvice
  */
 export function setupSentPath(
   base: string,
-  system: SetupCurrentSystem,
+  system: SetupCurrentSystem | undefined,
   guide?: string | null,
 ): string {
+  if (!system) return base;
   const named = systemGuideAfter(system, guide);
   return `${base}?uses=${system}${named ? `&guide=${named}` : ""}`;
 }

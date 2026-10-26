@@ -40,6 +40,15 @@ describe("parseSetupRequest", () => {
     });
   });
 
+  it("accepts an unanswered current tool without inventing a system or keeping a stale guide", () => {
+    const parsed = parseSetupRequest({ ...complete, currentSystem: "", currentSystemGuide: "eve" });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.data.currentSystem).toBeUndefined();
+    expect(parsed.data.currentSystemGuide).toBeNull();
+    expect(setupSentPath("/get-set-up/sent", parsed.data.currentSystem)).toBe("/get-set-up/sent");
+  });
+
   it("reads 'no' as a shop without a boat and keeps a phone that was given", () => {
     const parsed = parseSetupRequest({ ...complete, runsBoat: "no", phone: " +1 305 555 0100 " });
     expect(parsed.ok && parsed.data.runsBoat).toBe(false);
@@ -54,7 +63,6 @@ describe("parseSetupRequest", () => {
         shopName: "required",
         region: "required",
         runsBoat: "required",
-        currentSystem: "required",
         contactName: "required",
         email: "required",
       },
@@ -74,7 +82,7 @@ describe("parseSetupRequest", () => {
     expect(parsed.fieldErrors.email).toBe("invalid");
     expect(parsed.fieldErrors.shopName).toBe("invalid");
     // An answer that is not one of the offered ones is the same as no answer.
-    expect(parsed.fieldErrors.currentSystem).toBe("required");
+    expect(parsed.fieldErrors.currentSystem).toBe("invalid");
     expect(parsed.fieldErrors.runsBoat).toBe("required");
   });
 

@@ -49,7 +49,7 @@ export function DayJumpStrip({
               // Spoken whole: the month is drawn once on the rail above, but a
               // screen reader reading one link hears the whole date.
               aria-label={`${dayParts.weekday} ${dayParts.day} ${dayParts.month}`}
-              className="flex min-h-12 flex-col items-center justify-center rounded-lg py-1 sm:min-w-12 sm:px-2 transition-colors hover:bg-surface focus-visible:focus-ring"
+              className="flex min-h-12 flex-col items-center justify-center rounded-lg py-1 sm:min-w-12 sm:px-2 transition-colors hover:bg-surface focus-visible:focus-ring-inset"
             >
               <span className={groupLabelClass()}>{dayParts.weekday}</span>{" "}
               <span className={`${FIGURE_INLINE_CLASS} leading-tight`}>{dayParts.day}</span>
