@@ -89,7 +89,6 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { nodeRuntimeProblem } from "./check-node-version.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -863,12 +862,6 @@ export function databaseDescription(env = process.env) {
 }
 
 async function main(argv = process.argv.slice(2)) {
-  const runtimeProblem = nodeRuntimeProblem();
-  if (runtimeProblem) {
-    console.error(`dev: ${runtimeProblem}`);
-    process.exitCode = 1;
-    return;
-  }
   applyDevDefaults();
   const ceiling = memoryCeilingBytes();
   const budget = memoryBudgetBytes(ceiling, {

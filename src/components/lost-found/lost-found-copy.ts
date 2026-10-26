@@ -33,6 +33,7 @@ export function lostItemRowCopy(t: StaffTranslator): LostItemRowCopy {
       whatsapp: t("desk.lostFound.channels.whatsapp"),
     },
     returned: t("desk.lostFound.returned"),
+    more: t("shared.shopSections.more"),
     discarded: t("desk.lostFound.discarded"),
     reopen: t("desk.lostFound.reopen"),
     unclaimed: t("desk.lostFound.unclaimed"),

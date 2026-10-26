@@ -23,7 +23,7 @@ import {
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
+import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
@@ -49,15 +49,16 @@ import { ClosingStation } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
 import { HelpRequestSection, helpRequestControl } from "./help-request-row";
-import { NeedsYouGroups } from "./NeedsYouGroups";
+import { NeedsYouQueue } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
-import { quietIcon, RowGlyph, type RowIconName } from "./row-glyph";
+import { quietIcon, RowGlyph } from "./row-glyph";
 import { rowKey } from "./row-key";
+import { SpineRow } from "./SpineRow";
 import { rowLine, spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
@@ -193,61 +194,6 @@ const HORIZON_PANEL_CLASS =
  * sentence starts at 289, and read as that row's continuation (pixel-craft
  * K-317).
  */
-function SpineRow({
-  tone,
-  icon,
-  kind,
-  trailing,
-  closed = true,
-  door,
-  children,
-}: {
-  tone: LedgerRowKindTone;
-  /** A quiet row's category drawing; ignored on a row that is wrong. */
-  icon?: RowIconName;
-  /** One word of kind, in the row's own type. */
-  kind: string;
-  /** The row's fix when it performs one — a real control beside the words. */
-  trailing?: React.ReactNode;
-  /** `false` inside a station's panel, whose own edge closes the list. */
-  closed?: boolean;
-  /**
-   * Where the row's own tap goes, and its name for a screen reader. One object,
-   * not two props: `LedgerRow`'s door is a union, so a link never reaches a
-   * reader without an accessible name. Absent on a row that performs its fix.
-   */
-  door?: { href: string; linkLabel: string };
-  /** The sentence's words. */
-  children: React.ReactNode;
-}) {
-  // Both halves or neither, as one value: the union `LedgerRow` takes.
-  const doorProps: { href: string; linkLabel: string } | { href?: never; linkLabel?: never } =
-    door ?? {};
-  return (
-    <LedgerRow
-      // Stacked below `sm`: the kind and the fix share the first line and the
-      // sentence takes the width beneath them, which is the phone artboard's
-      // reading and the only one where a full sentence has room to be read.
-      stacked
-      // The row's glyph — the first of the anatomy's four parts (glyph, one
-      // word of kind, one sentence, one fix), drawn from the shipped status
-      // family and never from the illustration hand: a status glyph is a
-      // status, and the ADR keeps drawings out of that job. The kind word
-      // beside it carries the meaning; the glyph is what a scan reads first.
-      leading={<RowGlyph tone={tone} icon={icon} />}
-      kind={{ word: kind, tone }}
-      trailing={trailing}
-      closed={closed}
-      {...doorProps}
-    >
-      {/* One line per row (ADR 20260904-reef-all-the-way-down, slice 16a):
-          the sentence at reading size — a subject over a detail at 14px was
-          the rail's grammar, and a panel reads as one sentence. */}
-      <p className="min-w-0 text-base leading-snug">{children}</p>
-    </LedgerRow>
-  );
-}
-
 /**
  * One job, as a ledger row: its kind as a word in the row's own type, the one
  * sentence saying what is wrong, and the one fix beside it.
@@ -313,6 +259,15 @@ function StationRow({
       ) : null}
     </>
   );
+  if (action.helpRequest) {
+    return helpRequestControl(action.helpRequest, action.actionLabel, t, {
+      leading: <RowGlyph tone={tone} icon={quietIcon(action.kind)} />,
+      kind: t(ACTION_KIND_KEYS[action.kind]),
+      tone,
+      sentence: <p className="min-w-0 text-base leading-snug">{sentence}</p>,
+      closed,
+    });
+  }
   const control = action.waiver ? (
     <WaiverSendControl
       surface="today"
@@ -359,8 +314,6 @@ function StationRow({
       hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
       copy={controls.paymentCopy}
     />
-  ) : action.helpRequest ? (
-    helpRequestControl(action.helpRequest, action.actionLabel, t)
   ) : action.agencyCheck && action.agencyCheck.cards.length > 0 ? (
     // **"Check with SSI" beside a card still waiting for its check** (H-105):
     // drawn only with the browser extension, and then the same check the
@@ -745,33 +698,6 @@ export type DaySpineContext = {
   now: Date;
 };
 
-/**
- * **The list says how long it is** (UX audit 2026-10-07, item 1): the summary
- * under the date counts what is due before the next boat and the badge counts
- * blocked divers, so the list carries its own total rather than leaving the
- * reader to reconcile three numbers.
- *
- * **And says how much of it is the next boat's** (#2413) when that is not all
- * of it, so the sentence's smaller number over this one reads as a part of it
- * rather than a contradiction.
- */
-function needsYouMeta(
-  t: StaffTranslator,
-  reading: NeedsYouReading,
-  locale: string,
-  timeZone: string,
-): string {
-  const { count, next, dueBeforeNext } = reading;
-  if (next == null || dueBeforeNext === count) {
-    return t("shopHome.spine.needsYouCount", { count });
-  }
-  return t("shopHome.spine.needsYouCountBeforeNext", {
-    count,
-    before: dueBeforeNext,
-    time: formatTime(next.startsAt, locale, timeZone),
-  });
-}
-
 export function DaySpine({ context }: { context: DaySpineContext }) {
   const {
     spine,
@@ -828,8 +754,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     wind.some((row) => row.departure != null && liveTripIds.has(row.departure.tripId));
   const closing = evening?.close.closing === true;
   // **One "Needs you" list**, read once (`readNeedsYou`) with the header's sentence.
-  const { lead, folded: deskFold } = needsYouReading;
-  const paymentsRows = showPaymentsRow ? 1 : 0;
   const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
   const spineBody = (
@@ -1000,48 +924,16 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </LedgerGroup>
       ) : null}
 
-      {lead.length + (deskFold?.length ?? 0) > 0 || showPaymentsRow || drafts.length > 0 ? (
-        <LedgerGroup
-          as="h2"
-          label={t("shopHome.spine.needsYouLabel")}
-          meta={needsYouMeta(t, needsYouReading, locale, timeZone)}
-        >
-          <NeedsYouGroups
-            rows={lead}
-            row={stationRowFor(controls)}
-            shopSlug={shopSlug}
-            t={t}
-            desk={
-              drafts.length > 0 || (!deskFold && paymentsRow) ? (
-                <>
-                  <DraftRows drafts={drafts} t={t} />
-                  {deskFold ? null : paymentsRow}
-                </>
-              ) : undefined
-            }
-          />
-          {/* **The desk's rows, folded, for a reader who crews a boat** (UX
-              audit 2026-10-07, item 7). A captain's "what now" is the boats
-              they are on; the front desk's twenty jobs are one line they can
-              open, never gone. */}
-          {deskFold ? (
-            <LedgerGroup
-              as="h3"
-              folded
-              className="mt-4"
-              label={t("shopHome.spine.deskFoldLabel", { count: deskFold.length + paymentsRows })}
-            >
-              <NeedsYouGroups
-                rows={deskFold}
-                row={stationRowFor(controls)}
-                shopSlug={shopSlug}
-                t={t}
-                desk={paymentsRow ?? undefined}
-              />
-            </LedgerGroup>
-          ) : null}
-        </LedgerGroup>
-      ) : null}
+      <NeedsYouQueue
+        reading={needsYouReading}
+        row={stationRowFor(controls)}
+        shopSlug={shopSlug}
+        t={t}
+        locale={locale}
+        timeZone={timeZone}
+        drafts={drafts.length > 0 ? <DraftRows drafts={drafts} t={t} /> : null}
+        payments={paymentsRow}
+      />
       {/* The other cards an agency check's page listed (layer 3), under the
           list: the row they came from leaves it once its card is certified. */}
       <AgencyListedOffersSlot shopSlug={shopSlug} />

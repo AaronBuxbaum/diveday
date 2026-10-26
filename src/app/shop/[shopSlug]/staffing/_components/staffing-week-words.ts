@@ -17,6 +17,7 @@ export function staffingWeekWords(t: StaffTranslator, week?: StaffWeek) {
     print: t("print.sheet.door"),
     person: t("staffing.week.person"),
     needsCrew: t("staffing.week.needsCrew"),
+    shiftsAndAway: t("staffing.week.shiftsAndAway"),
     assign: t("staffing.week.assign"),
     // **`t.raw`, not `t`** — both of these name an argument that only
     // `StaffingWeek` can supply (the departure's title, the person and

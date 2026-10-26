@@ -41,7 +41,6 @@ const WIDTH_CLASS = /max-w-[0-9]xl/g;
  * how many, and why. Adding one is a decision, not a fix.
  */
 export const ALLOWED = new Map([
-  ["page.tsx", { count: 1, why: "a skeleton bar's line length in Today's streamed fallback" }],
   ["orders/page.tsx", { count: 1, why: "a paragraph's measure under the orders ledger" }],
   ["settings/export/page.tsx", { count: 4, why: "four paragraphs' measure" }],
   ["dive-sites/[id]/page.tsx", { count: 1, why: "the delete confirmation's paragraph measure" }],

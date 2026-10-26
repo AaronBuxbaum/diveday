@@ -73,8 +73,8 @@
       "sms": "text",
       "whatsapp": "WhatsApp"
     },
-    "returned": "Returned",
-    "discarded": "Discarded",
+    "returned": "Mark returned",
+    "discarded": "Discard",
     "reopen": "Reopen",
     "unclaimed": "Unclaimed",
     "statusReturned": "returned",

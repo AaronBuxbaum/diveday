@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -35,6 +36,8 @@ import { WorkOrderJobCard } from "../_components/WorkOrderJobCard";
 import { WorkOrderLinesCard } from "../_components/WorkOrderLinesCard";
 import { WorkOrderStatusCard } from "../_components/WorkOrderStatusCard";
 import { WorkOrderWorkCard } from "../_components/WorkOrderWorkCard";
+import { isLineAddRefusal } from "../_lib/line-add-feedback";
+import { lineEditFeedback } from "../_lib/line-edit-feedback";
 import { deleteWorkOrderAction } from "../actions";
 
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
@@ -86,10 +89,10 @@ export default async function WorkOrderPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; workOrderId: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; form?: string; line?: string }>;
 }) {
   const { shopSlug, workOrderId: rawId } = await params;
-  const { notice } = await searchParams;
+  const { notice, form, line } = await searchParams;
   // A caller-controlled uuid, narrowed before the read: an unparseable literal
   // raises in Postgres rather than missing.
   const workOrderId = uuidParam(rawId);
@@ -118,13 +121,18 @@ export default async function WorkOrderPage({
     : [];
   const deleted = workOrder.deletedAt !== null;
   const outcome = workOrder.outcome as WorkOrderOutcome | null;
-  const banner = noticeFromParam(notice, NOTICES);
+  const localLineRefusal = isLineAddRefusal(notice, form, deleted);
+  const editFeedback = lineEditFeedback(notice, form, line, detail.lines, deleted);
+  const banner = noticeFromParam(
+    localLineRefusal || (editFeedback && editFeedback.notice !== "line-saved") ? undefined : notice,
+    NOTICES,
+  );
   const board = shopPath(shopSlug, "gear", "work-orders");
   const subject = detail.personName ?? detail.gearItemLabel ?? t("workOrders.title");
 
   return (
     <StaffPage width="reading">
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "form", "line"]} />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <EyebrowBackLink href={board}>{t("workOrders.title")}</EyebrowBackLink>
@@ -186,6 +194,7 @@ export default async function WorkOrderPage({
           staff={staff}
           technicianName={detail.technicianName}
           readOnly={deleted}
+          formOpen={["empty-problem", "invalid-date", "unknown-technician"].includes(notice ?? "")}
           locale={locale}
           t={t}
           draftNote={
@@ -229,7 +238,10 @@ export default async function WorkOrderPage({
 
         <WorkOrderLinesCard
           workOrderId={workOrder.id}
+          scope={`${keptTypedScope(shopSlug, session.user.personId)}.${workOrder.id}`}
+          notice={localLineRefusal || notice === "line-added" ? notice : undefined}
           lines={detail.lines}
+          editFeedback={editFeedback}
           totalCents={detail.totalCents}
           readOnly={deleted}
           currency={currency}

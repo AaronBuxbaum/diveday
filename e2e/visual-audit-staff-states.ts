@@ -64,6 +64,7 @@ export function registerStaffAuditCaptures(capture: AuditCapture, flowTimeout: n
         .first()
         .click();
       await page.getByRole("heading", { name: "Parts and labor" }).waitFor();
+      await page.getByText(copy("workOrders.detail.addPartOrLabor"), { exact: true }).click();
       await page.getByLabel("Description").last().fill("Second-stage service kit");
       await page.getByLabel("Price each").last().fill("42");
       await page.getByRole("button", { name: "Add", exact: true }).click();

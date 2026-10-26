@@ -454,11 +454,11 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
   ],
   // The dive site's upcoming departures, full-bleed rows in a card: cut left and right.
   [
-    "app/shop/[shopSlug]/dive-sites/[id]/page.tsx",
-    "px-4 py-3 text-sm hover:bg-surface-sunken",
+    "app/shop/[shopSlug]/dive-sites/_components/UpcomingSiteTrips.tsx",
+    "px-4 py-3 text-base hover:bg-surface-sunken",
     ["focus-visible:focus-ring-inset", "rounded-[inherit]"],
   ],
-  ["app/shop/[shopSlug]/dive-sites/[id]/page.tsx", "last:rounded-b-panel", []],
+  ["app/shop/[shopSlug]/dive-sites/_components/UpcomingSiteTrips.tsx", "last:rounded-b-panel", []],
   // Rows that bleed `-mx-3` into a 16px gutter sit 4px from a 390px
   // screen's edge: the viewport cut 1px off each side.
   [

@@ -1,8 +1,10 @@
+import { MoreMenu } from "@/components/MoreMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceFieldset } from "@/components/ui/form";
+import { menuRowClass } from "@/components/ui/menu";
 import type { WorkOrder } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { workOrderStatusLabel, workOrderStatusTone } from "@/i18n/work-order-labels";
@@ -79,19 +81,24 @@ export function WorkOrderStatusCard({
             {label(forward)}
           </MoveButton>
         ) : null}
-        {others.map((status) => (
-          <MoveButton
-            key={status}
-            workOrderId={workOrder.id}
-            status={status}
-            confirmMessage={
-              status === "picked_up" ? t("workOrders.detail.pickedUpConfirm") : undefined
-            }
-            t={t}
-          >
-            {label(status)}
-          </MoveButton>
-        ))}
+        {others.length > 0 ? (
+          <MoreMenu label={t("workOrders.detail.otherMoves")} size="sm">
+            {others.map((status) => (
+              <MoveButton
+                key={status}
+                workOrderId={workOrder.id}
+                status={status}
+                quiet
+                confirmMessage={
+                  status === "picked_up" ? t("workOrders.detail.pickedUpConfirm") : undefined
+                }
+                t={t}
+              >
+                {label(status)}
+              </MoveButton>
+            ))}
+          </MoreMenu>
+        ) : null}
       </ChoiceFieldset>
     </SectionCard>
   );
@@ -101,12 +108,14 @@ function MoveButton({
   workOrderId,
   status,
   confirmMessage,
+  quiet = false,
   t,
   children,
 }: {
   workOrderId: string;
   status: WorkOrderStatus;
   confirmMessage?: string;
+  quiet?: boolean;
   t: StaffTranslator;
   children: string;
 }) {
@@ -117,7 +126,9 @@ function MoveButton({
       <SubmitButton
         pendingLabel={t("workOrders.form.saving")}
         confirmMessage={confirmMessage}
-        className={buttonClass({ variant: "secondary" })}
+        className={
+          quiet ? menuRowClass("quiet", { gutter: false }) : buttonClass({ variant: "secondary" })
+        }
       >
         {children}
       </SubmitButton>

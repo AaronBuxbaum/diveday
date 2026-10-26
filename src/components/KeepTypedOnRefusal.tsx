@@ -38,7 +38,7 @@ function readKept(form: string, scope: string): Record<string, string> | null {
   }
 }
 
-function forgetKept(form: string, scope: string) {
+export function forgetKeptTyped(form: string, scope: string) {
   try {
     window.sessionStorage.removeItem(keptTypedKey(form, scope));
   } catch {
@@ -96,7 +96,7 @@ export function KeepTypedOnRefusal({
     const element = anchor.current?.closest("form");
     if (!element) return;
     if (!restore) {
-      forgetKept(form, scope);
+      forgetKeptTyped(form, scope);
       return;
     }
     const kept = readKept(form, scope);

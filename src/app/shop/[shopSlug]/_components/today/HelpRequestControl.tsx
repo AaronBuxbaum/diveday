@@ -1,11 +1,20 @@
 "use client";
 
-import { createContext, useActionState, useContext, useState } from "react";
+import {
+  createContext,
+  useActionState,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { type HelpRequestActionResult, helpRequestAction } from "@/app/shop/[shopSlug]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
+import { LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 
 export type HelpRequestCopy = {
   complete: string;
@@ -86,6 +95,14 @@ function useHelpRequest() {
   return value;
 }
 
+export type HelpRequestRowFace = {
+  leading: React.ReactNode;
+  kind: string;
+  tone: LedgerRowKindTone;
+  sentence: React.ReactNode;
+  closed: boolean;
+};
+
 export function HelpRequestControl({
   requestId,
   revision,
@@ -95,6 +112,7 @@ export function HelpRequestControl({
   label,
   crew,
   meetingLine,
+  row,
 }: {
   requestId: string;
   revision: number;
@@ -106,9 +124,20 @@ export function HelpRequestControl({
   crew: readonly { personId: string; fullName: string }[];
   /** Where the departure meets, already a whole bundle sentence. */
   meetingLine: string | null;
+  row?: HelpRequestRowFace;
 }) {
   const { result, run, copy } = useHelpRequest();
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const picker = useRef<HTMLSelectElement>(null);
+  const editorId = useId();
+  useEffect(() => {
+    if (open) picker.current?.focus({ preventScroll: true });
+  }, [open]);
+  const closeEditor = () => {
+    setOpen(false);
+    trigger.current?.focus({ preventScroll: true });
+  };
   const assigned = Boolean(helperPersonId && helperPersonName);
   // The picker starts on the saved helper only while they are still on the
   // crew list. A helper who left would otherwise fall through to whoever is
@@ -118,6 +147,12 @@ export function HelpRequestControl({
       ? (helperPersonId ?? "")
       : "";
   const ownResult = result?.requestId === requestId ? result : null;
+  useEffect(() => {
+    if (ownResult?.ok && ownResult.effect === "assigned") {
+      setOpen(false);
+      trigger.current?.focus({ preventScroll: true });
+    }
+  }, [ownResult]);
   const success = ownResult?.ok
     ? ownResult.effect === "assigned"
       ? copy.assigned
@@ -137,13 +172,15 @@ export function HelpRequestControl({
           : copy.failed
       : null;
 
-  return (
-    <div className="flex flex-col items-start gap-2">
+  const actions = (
+    <>
       {status === "acknowledged" && assigned ? (
         <div className="flex flex-wrap gap-2">
           <button
+            ref={trigger}
             type="button"
             aria-expanded={open}
+            aria-controls={open ? editorId : undefined}
             onClick={() => setOpen((current) => !current)}
             className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
           >
@@ -164,26 +201,41 @@ export function HelpRequestControl({
         </div>
       ) : (
         <button
+          ref={trigger}
           type="button"
           aria-expanded={open}
+          aria-controls={open ? editorId : undefined}
           onClick={() => setOpen((current) => !current)}
           className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
         >
           {open ? copy.cancel : label}
         </button>
       )}
+    </>
+  );
+  const editorAndOutcome = (
+    <>
       {open ? (
         <form
+          id={editorId}
           action={run}
-          className="w-full min-w-56 space-y-2 rounded-control border border-border-subtle bg-surface-sunken p-3 sm:w-64"
+          onReset={(event) => event.preventDefault()}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              closeEditor();
+            }
+          }}
+          className="w-full space-y-3 rounded-inset border border-border bg-surface-sunken p-3 sm:max-w-lg"
         >
           <input type="hidden" name="requestId" value={requestId} />
           <input type="hidden" name="expectedRevision" value={revision} />
           <input type="hidden" name="expectedStatus" value={status} />
           <input type="hidden" name="intent" value="assign" />
-          <label className="block text-sm font-medium">
+          <label className="block text-sm font-medium sm:max-w-sm">
             <span className="mb-1 block">{copy.selector}</span>
             <select
+              ref={picker}
               name="helperPersonId"
               required
               defaultValue={preselected}
@@ -221,7 +273,24 @@ export function HelpRequestControl({
         <p role="alert" className="text-sm font-medium text-danger">
           {error}
         </p>
-      ) : null}
+      ) : null}{" "}
+    </>
+  );
+  return row ? (
+    <LedgerRow
+      stacked
+      leading={row.leading}
+      kind={{ word: row.kind, tone: row.tone }}
+      trailing={actions}
+      below={open || success || error ? editorAndOutcome : undefined}
+      closed={row.closed}
+    >
+      {row.sentence}
+    </LedgerRow>
+  ) : (
+    <div className="flex flex-col items-start gap-2">
+      {actions}
+      {editorAndOutcome}
     </div>
   );
 }
@@ -251,7 +320,7 @@ export function HandledHelpRequests({
   const { run, copy } = useHelpRequest();
   if (rows.length === 0) return null;
   return (
-    <details className="rounded-control border border-border-subtle bg-surface-sunken px-3 py-2">
+    <details className="rounded-inset border border-border bg-surface-sunken px-3 py-2">
       <summary className="cursor-pointer text-sm font-medium">{summary}</summary>
       <ul className="mt-2 space-y-2">
         {rows.map((row) => (

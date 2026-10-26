@@ -1,8 +1,33 @@
+import type { Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup } from "./helpers";
 
 const staffCopy = staffTranslator("en-US");
+
+/** Same-code refusals need this action's redirect, then the queued reset restoration. */
+async function finishLineAction(page: Page, submit: Locator, notice: string) {
+  const path = new URL(page.url()).pathname;
+  await Promise.all([
+    page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === "POST" &&
+        new URL(candidate.url()).pathname === path &&
+        candidate.headers()["x-action-redirect"]?.includes(`notice=${notice}`) === true,
+    ),
+    submit.click(),
+  ]);
+  // FlashParams consumes notice query params immediately; the action's own
+  // pending state marks the committed result even when its URL is already clean.
+  await expect(page.locator('button[aria-busy="true"]')).toHaveCount(0);
+  // KeepTypedOnRefusal restores after React's reset on the next animation frame.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+}
 
 /**
  * The bench (ADR 20261008-gear-work-orders): opening a ticket on a diver's own
@@ -74,6 +99,7 @@ test.describe("staff", () => {
       .click();
     await page.getByRole("heading", { level: 2, name: "Parts and labor" }).waitFor();
 
+    await page.getByText(staffCopy("workOrders.detail.addPartOrLabor"), { exact: true }).click();
     await page.getByLabel("Description").last().fill("Second-stage service kit");
     await page.getByLabel("Price each").last().fill("42");
     await page.getByRole("button", { name: "Add", exact: true }).click();
@@ -82,10 +108,162 @@ test.describe("staff", () => {
     // The table is for reading; a figure changes behind the line's own menu.
     await page.getByRole("button", { name: "Change Second-stage service kit" }).last().click();
     await page.getByRole("button", { name: "Edit", exact: true }).click();
-    await page.locator("[data-row-menu]").getByLabel("Price each").fill("45");
-    await page.locator("[data-row-menu]").getByRole("button", { name: "Save" }).click();
+    const price = page.locator("[data-row-menu]").getByLabel("Price each");
+    await price.fill("bad");
+    for (const refusedPrice of ["bad", "still bad"]) {
+      await price.fill(refusedPrice);
+      await finishLineAction(
+        page,
+        page.locator("[data-row-menu]").getByRole("button", { name: "Save" }),
+        "invalid-amount",
+      );
+      await expect(price).toHaveValue(refusedPrice);
+      await expect(
+        page
+          .locator("[data-row-menu]")
+          .getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toHaveCount(1);
+    }
+    await price.fill("45");
+    await finishLineAction(
+      page,
+      page.locator("[data-row-menu]").getByRole("button", { name: "Save" }),
+      "line-saved",
+    );
     await expect(page.getByText("Line saved")).toBeVisible();
     await expect(page.getByRole("cell", { name: "$45.00" }).first()).toBeVisible();
+  });
+
+  test("a refused add keeps its figures across redirects and repeated additions return to the total", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Breathes wet at depth/ })
+      .first()
+      .click();
+    const door = page.getByText(staffCopy("workOrders.detail.addPartOrLabor"), { exact: true });
+    await door.click();
+    const form = page.locator("form").filter({ has: page.locator("#new-line-description") });
+    const description = form.getByLabel("Description", { exact: true });
+    const amount = form.getByLabel("Price each", { exact: true });
+    await amount.fill("bad");
+    for (const refusedPart of ["First refused kit", "Second refused kit"]) {
+      await description.fill(refusedPart);
+      await finishLineAction(
+        page,
+        form.getByRole("button", { name: "Add", exact: true }),
+        "invalid-amount",
+      );
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toBeVisible();
+      await expect(
+        form.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toHaveCount(1);
+      await expect(description).toHaveValue(refusedPart);
+      await expect(amount).toHaveValue("bad");
+    }
+    for (const part of ["First counter kit", "Second counter kit"]) {
+      if (!(await form.isVisible())) await door.click();
+      await description.fill(part);
+      await amount.fill("12");
+      await finishLineAction(
+        page,
+        form.getByRole("button", { name: "Add", exact: true }),
+        "line-added",
+      );
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.lineAdded"), { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("cell", { name: part, exact: true })).toBeVisible();
+      await expect(form).not.toBeVisible();
+      await expect(page.locator("#work-order-total")).toBeFocused();
+    }
+  });
+
+  test("alternate moves remain inside a ticket resized to phone width", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 844 });
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Breathes wet at depth/ })
+      .first()
+      .click();
+    const trigger = page.getByRole("button", {
+      name: staffCopy("workOrders.detail.otherMoves"),
+      exact: true,
+    });
+    await trigger.click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panel = page.locator("[data-more-menu-panel]");
+    await expect.poll(async () => (await panel.boundingBox())?.x ?? -1).toBeGreaterThanOrEqual(0);
+    const bounds = await panel.boundingBox();
+    if (!bounds) throw new Error("Alternate moves menu is missing");
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
+  });
+
+  test("a validation refusal stays visible when another desk deletes the ticket", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    const path = await page
+      .getByRole("link", { name: /Breathes wet at depth/ })
+      .first()
+      .getAttribute("href");
+    if (!path) throw new Error("Seeded work order is missing");
+    for (const kind of ["add", "edit"]) {
+      await page.goto(path);
+      if (kind === "add") {
+        await page
+          .getByText(staffCopy("workOrders.detail.addPartOrLabor"), { exact: true })
+          .click();
+        await page.locator("#new-line-description").fill("Deleted-ticket service kit");
+        await page.locator("#new-line-amount").fill("bad");
+      } else {
+        await page
+          .getByRole("button", { name: /^Change / })
+          .first()
+          .click();
+        await page.getByRole("button", { name: "Edit", exact: true }).click();
+        await page.locator("[data-row-menu]").getByLabel("Price each").fill("bad");
+      }
+      const other = makeActivitySafe(await context.newPage());
+      try {
+        await other.goto(path);
+        await other.getByRole("button", { name: "Delete work order" }).click();
+        await expect(
+          other.getByText(staffCopy("workOrders.notice.deleted"), { exact: true }),
+        ).toBeVisible();
+      } finally {
+        await other.close();
+      }
+      const action =
+        kind === "add"
+          ? page
+              .locator("form:has(#new-line-description)")
+              .getByRole("button", { name: "Add", exact: true })
+          : page.locator("[data-row-menu]").getByRole("button", { name: "Save", exact: true });
+      await action.click();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
+      await expect(page.locator("#new-line-description")).toHaveCount(0);
+      await expect(page.locator("[data-row-menu]")).toHaveCount(0);
+      await page.getByRole("button", { name: "Restore", exact: true }).click();
+      await expect(
+        page.getByText(staffCopy("workOrders.notice.restored"), { exact: true }),
+      ).toBeVisible();
+    }
   });
 
   test("records the work done, then hands the gear back", async ({ page }) => {
@@ -175,6 +353,9 @@ test.describe("staff", () => {
     const card = page.getByRole("region", { name: "Bill and pickup" });
     await expect(card.getByText("Goes to the customer when this ticket is ready.")).toBeVisible();
 
+    await page
+      .getByRole("button", { name: staffCopy("workOrders.detail.otherMoves"), exact: true })
+      .click();
     await page.getByRole("button", { name: "Ready for pickup" }).click();
     await expect(page.getByText("Status saved")).toBeVisible();
     await expect(card.getByText("Not sent: messages aren’t set up")).toBeVisible();

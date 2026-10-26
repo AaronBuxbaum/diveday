@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { buttonClass } from "@/components/ui/button";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
@@ -17,6 +18,7 @@ export function DayHeader({
   weekday,
   date,
   summary,
+  summaryHref,
   action,
   children,
 }: {
@@ -26,6 +28,7 @@ export function DayHeader({
   date: string;
   /** The day in one line: the boats, and what is still waiting. */
   summary: ReactNode;
+  summaryHref?: string;
   /** The header's one action — the paper day, on a day that has boats. */
   action?: ReactNode;
   /** What the page says under the line: the next departure, offline. */
@@ -40,7 +43,24 @@ export function DayHeader({
         </div>
         {action ? <div className="ms-auto shrink-0">{action}</div> : null}
       </div>
-      {summary ? <p className="mt-1 text-muted">{summary}</p> : null}
+      {summary ? (
+        <p className="mt-1 text-muted">
+          {summaryHref ? (
+            <a
+              href={summaryHref}
+              className={buttonClass({
+                variant: "link",
+                flush: true,
+                className: "text-start",
+              })}
+            >
+              {summary}
+            </a>
+          ) : (
+            summary
+          )}
+        </p>
+      ) : null}
       {children}
     </header>
   );

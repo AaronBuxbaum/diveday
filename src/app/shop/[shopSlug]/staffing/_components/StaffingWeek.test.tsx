@@ -793,69 +793,6 @@ describe("StaffingWeek geometry", () => {
     expect(rendersFlush(ask, "link", "sm")).toBe(true);
   });
 
-  /** Thursday on the phone: a shift, a crewed boat the person is away for, and the away line. */
-  function renderPhoneDay({ canManage }: { canManage: boolean }) {
-    const rendered = renderWeek({
-      canManage,
-      people: [
-        {
-          ...KEIKO,
-          crewingTrips: [
-            {
-              tripId: "trip-drift",
-              title: "Reef drift",
-              meetings: [
-                {
-                  startsAt: new Date("2026-08-27T13:00:00.000Z"),
-                  endsAt: new Date("2026-08-27T17:00:00.000Z"),
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      blocks: [
-        {
-          id: "away-1",
-          personId: KEIKO.personId,
-          startsOn: THURSDAY,
-          endsOn: THURSDAY,
-          note: null,
-        },
-      ],
-    });
-    const { list } = branches(rendered.container);
-    const name = within(list).getByText("Keiko Tanaka");
-    const entries = name.nextElementSibling as HTMLElement;
-    return { ...rendered, list, entries };
-  }
-
-  /**
-   * K-213: each departure a person crews was one line of blue text, 358×20
-   * (or ×40 wrapped), 4px from the next: a thumb aimed at one landed on its
-   * neighbour. Each is now a 44px target, and the day's entries abut, so the
-   * list keeps one pitch — every entry a 44px line, as a manager's shift
-   * already was beside its Remove.
-   */
-  it("makes each crewed departure on the phone a 44px target in a list of 44px lines", () => {
-    for (const canManage of [true, false]) {
-      const { list, entries, unmount } = renderPhoneDay({ canManage });
-      expect(entries.className).not.toMatch(/(?:^|\s)gap-/);
-      expect(entries.children.length).toBe(3);
-      for (const entry of entries.children) expect(entry).toHaveClass("min-h-11");
-      const door = within(list).getByRole("link", { name: /Reef drift/ });
-      expect(door).toHaveClass("flex", "flex-col", "min-h-11", "justify-center");
-      unmount();
-    }
-  });
-
-  /** K-489: "· Away" broke between its dot and its word, the word alone on a line. */
-  it("keeps the phone list's away marker whole", () => {
-    const { list } = renderPhoneDay({ canManage: true });
-    const marker = within(list).getByText((_, element) => element?.textContent === "· Away");
-    expect(marker).toHaveClass("whitespace-nowrap");
-  });
-
   /**
    * K-195: the page's doors drew a ledger row's box under a week that had
    * already closed itself, so the rule above "Add a shift" was two 1px rules

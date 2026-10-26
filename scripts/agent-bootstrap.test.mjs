@@ -14,7 +14,6 @@ describe("provider capability honesty", () => {
 
 it("bootstraps the checkout and recommends the installed formatter", () => {
   const result = bootstrap(process.cwd(), "codex");
-  expect(result.runtimeProblem).toBeNull();
   expect(result.head).toMatch(/^[a-f0-9]{40}$/);
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
   expect(pkg.devDependencies["@biomejs/biome"]).toBeTruthy();

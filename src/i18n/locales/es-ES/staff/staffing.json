@@ -119,7 +119,8 @@
     "requesting": "Pidiendo…",
     "shiftAria": "Turno de {person} el {day}",
     "thisWeek": "Esta semana",
-    "today": "Hoy"
+    "today": "Hoy",
+    "shiftsAndAway": "Turnos y días de ausencia"
   },
   "working": {
     "remove": "Quitar",

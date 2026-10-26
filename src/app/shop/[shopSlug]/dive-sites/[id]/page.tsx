@@ -7,7 +7,6 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { DangerDisclosure, DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import {
@@ -24,7 +23,7 @@ import { staffTideWindowText } from "@/i18n/tide-labels";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -42,6 +41,7 @@ import {
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
+import { UpcomingSiteTrips } from "../_components/UpcomingSiteTrips";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -238,37 +238,14 @@ export default async function EditDiveSitePage({
           dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : null}
-      {upcomingTrips.length > 0 ? (
-        <SectionCard title={t("diveSites.edit.upcomingHeading")} className="mt-8 overflow-hidden">
-          {/* Full-bleed rows inside the card rather than a second bordered box
-              inside it: each row pads itself and its hover fill has to reach
-              the card's own edge, so the list undoes the card's padding and
-              `overflow-hidden` clips that fill to the corner radius. The same
-              clip cut the outset focus ring on both sides, so the ring is drawn
-              inside the row, and the last row takes the card's bottom corners
-              so the clip cannot shave the ring's. Each row pads back exactly
-              what the list bleeds, `sm:` included, or from 640px up its words
-              start 4px left of the card's heading (K-412). */}
-          <ul className="-mx-4 -mb-4 divide-y divide-border border-t border-border sm:-mx-5 sm:-mb-5">
-            {upcomingTrips.map((trip) => (
-              <li key={trip.tripId} className="last:rounded-b-panel">
-                <Link
-                  href={`/shop/${shopSlug}/trips/${trip.tripId}`}
-                  className="flex flex-col gap-1 rounded-[inherit] px-4 py-3 text-sm hover:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3 sm:px-5"
-                >
-                  <span className="font-medium">{trip.title}</span>
-                  <span className="text-muted">
-                    {formatShortDate(trip.startsAt, locale, shop?.timezone ?? "UTC")}
-                  </span>
-                  {tideLineByTrip.has(trip.tripId) ? (
-                    <span className="basis-full text-muted">{tideLineByTrip.get(trip.tripId)}</span>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-      ) : null}
+      <UpcomingSiteTrips
+        trips={upcomingTrips}
+        tideLineByTrip={tideLineByTrip}
+        shopSlug={shopSlug}
+        locale={locale}
+        timeZone={shop.timezone}
+        t={t}
+      />
       <div className="mt-8">
         <SiteFormShell
           action={saveDiveSiteAction.bind(null, id)}

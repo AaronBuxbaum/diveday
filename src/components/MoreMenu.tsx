@@ -63,8 +63,14 @@ export function MoreMenu({
       setHang("end");
       return;
     }
-    const panel = panelRef.current?.getBoundingClientRect();
-    if (panel && panel.left < 0) setHang("start");
+    const keepOnScreen = () => {
+      const panel = panelRef.current?.getBoundingClientRect();
+      if (panel && panel.left < 0) setHang("start");
+      else if (panel && panel.right > window.innerWidth) setHang("end");
+    };
+    keepOnScreen();
+    window.addEventListener("resize", keepOnScreen);
+    return () => window.removeEventListener("resize", keepOnScreen);
   }, [open]);
 
   useEffect(() => {

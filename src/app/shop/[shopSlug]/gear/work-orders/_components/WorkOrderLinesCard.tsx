@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldActions } from "@/components/ui/form";
 import { TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import type { WorkOrderLine } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -13,7 +13,9 @@ import {
   workOrderLineTotalCents,
   workOrderQuantityInput,
 } from "@/lib/work-orders";
-import { addWorkOrderLineAction } from "../actions";
+import { LINE_ADD_REFUSAL_KEYS } from "../_lib/line-add-feedback";
+import { LINE_EDIT_REFUSAL_FIELDS, type LineEditFeedback } from "../_lib/line-edit-feedback";
+import { WorkOrderAddLine } from "./WorkOrderAddLine";
 import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMenu";
 
 /**
@@ -34,6 +36,9 @@ import { WorkOrderLineMenu, type WorkOrderLineMenuCopy } from "./WorkOrderLineMe
  */
 export function WorkOrderLinesCard({
   workOrderId,
+  scope,
+  notice,
+  editFeedback,
   lines,
   totalCents,
   readOnly,
@@ -42,6 +47,9 @@ export function WorkOrderLinesCard({
   t,
 }: {
   workOrderId: string;
+  scope: string;
+  notice?: string;
+  editFeedback?: LineEditFeedback;
   lines: WorkOrderLine[];
   totalCents: number;
   /** A deleted ticket: the figures stay readable, the forms go away. */
@@ -70,7 +78,11 @@ export function WorkOrderLinesCard({
       title={t("workOrders.detail.linesHeading")}
       padding="lg"
       actions={
-        <span className="font-medium tabular-nums">
+        <span
+          id="work-order-total"
+          tabIndex={-1}
+          className="scroll-mt-24 rounded-lg font-medium tabular-nums focus-visible:focus-ring"
+        >
           {t("workOrders.detail.total")}: {money(totalCents)}
         </span>
       }
@@ -81,7 +93,7 @@ export function WorkOrderLinesCard({
         // Pulled out by the cells' own inset, so a row's first word sits on
         // the card title's edge at every width (`CELL_EDGE` steps out at sm).
         <table
-          className="-mx-4 w-[calc(100%+2rem)] text-sm sm:-mx-5 sm:w-[calc(100%+2.5rem)]"
+          className="-mx-4 w-[calc(100%+2rem)] text-base sm:-mx-5 sm:w-[calc(100%+2.5rem)]"
           style={{ tableLayout: "fixed" }}
         >
           <THead>
@@ -130,6 +142,16 @@ export function WorkOrderLinesCard({
                     <div className="flex justify-end">
                       <WorkOrderLineMenu
                         workOrderId={workOrderId}
+                        scope={`${scope}.${line.id}`}
+                        notice={editFeedback?.lineId === line.id ? editFeedback.notice : undefined}
+                        refusal={
+                          editFeedback?.lineId === line.id && editFeedback.notice !== "line-saved"
+                            ? {
+                                field: LINE_EDIT_REFUSAL_FIELDS[editFeedback.notice],
+                                message: t(LINE_ADD_REFUSAL_KEYS[editFeedback.notice]),
+                              }
+                            : undefined
+                        }
                         line={{
                           id: line.id,
                           kind: line.kind,
@@ -151,11 +173,11 @@ export function WorkOrderLinesCard({
       )}
 
       {readOnly ? null : (
-        <FieldGrid
-          as="form"
-          action={addWorkOrderLineAction}
-          columns={4}
-          className="mt-6 border-border border-t pt-6"
+        <WorkOrderAddLine
+          key={workOrderId}
+          scope={scope}
+          notice={notice}
+          label={t("workOrders.detail.addPartOrLabor")}
         >
           <input type="hidden" name="workOrderId" value={workOrderId} />
           <Field label={t("workOrders.form.kind")} htmlFor="new-line-kind">
@@ -164,7 +186,12 @@ export function WorkOrderLinesCard({
               <option value="labor">{workOrderLineKindLabel(t, "labor")}</option>
             </select>
           </Field>
-          <Field label={t("workOrders.form.description")} htmlFor="new-line-description" required>
+          <Field
+            label={t("workOrders.form.description")}
+            htmlFor="new-line-description"
+            required
+            error={notice === "empty-description" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+          >
             <input
               id="new-line-description"
               name="description"
@@ -174,7 +201,12 @@ export function WorkOrderLinesCard({
               className={controlClass}
             />
           </Field>
-          <Field label={t("workOrders.form.quantity")} htmlFor="new-line-quantity" required>
+          <Field
+            label={t("workOrders.form.quantity")}
+            htmlFor="new-line-quantity"
+            required
+            error={notice === "invalid-quantity" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+          >
             <input
               id="new-line-quantity"
               name="quantity"
@@ -184,7 +216,12 @@ export function WorkOrderLinesCard({
               className={`${controlClass} tabular-nums`}
             />
           </Field>
-          <Field label={t("workOrders.form.unitAmount")} htmlFor="new-line-amount" required>
+          <Field
+            label={t("workOrders.form.unitAmount")}
+            htmlFor="new-line-amount"
+            required
+            error={notice === "invalid-amount" ? t(LINE_ADD_REFUSAL_KEYS[notice]) : undefined}
+          >
             <input
               id="new-line-amount"
               name="unitAmount"
@@ -201,7 +238,7 @@ export function WorkOrderLinesCard({
               {t("workOrders.detail.addLine")}
             </SubmitButton>
           </FieldActions>
-        </FieldGrid>
+        </WorkOrderAddLine>
       )}
     </SectionCard>
   );

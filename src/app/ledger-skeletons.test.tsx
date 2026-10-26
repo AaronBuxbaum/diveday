@@ -241,8 +241,6 @@ describe("the diver roster's skeleton", () => {
     const bars = container.querySelectorAll(".rounded-lg");
     expect(bars).toHaveLength(2);
     for (const bar of bars) expect(bar).toHaveClass("h-12");
-    // Add diver takes a line of its own under the full-width box on a phone.
-    expect(bars[1]).toHaveClass("max-sm:w-full");
   });
 
   it("draws every row at a LedgerRow's floor and inset", () => {

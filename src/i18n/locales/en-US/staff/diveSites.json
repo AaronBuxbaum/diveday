@@ -227,7 +227,6 @@
   },
   "edit": {
     "description": "Changes reach every upcoming dive that visits this site.",
-    "upcomingHeading": "Upcoming dives here",
     "copying": "Copying…",
     "deleteSite": "Delete site",
     "deleteConfirmTitle": "Delete this dive site?",
@@ -283,7 +282,8 @@
         "requiresNitrox": "Nitrox requirement",
         "creatures": "Field guide"
       }
-    }
+    },
+    "upcomingCount": "{count, plural, one {# upcoming departure here} other {# upcoming departures here}}"
   },
   "new": {
     "title": "Add a dive site",

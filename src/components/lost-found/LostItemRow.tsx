@@ -1,9 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
+import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
+import { menuRowClass } from "@/components/ui/menu";
 import { fill } from "@/i18n/fill";
 
 export type LostItemRowCopy = {
@@ -13,6 +15,7 @@ export type LostItemRowCopy = {
   told: string;
   channels: { email: string; sms: string; whatsapp: string };
   returned: string;
+  more: string;
   discarded: string;
   reopen: string;
   unclaimed: string;
@@ -77,16 +80,6 @@ export function LostItemRow({
       {paper ? null : (
         <form action={formAction} className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="itemId" value={item.id} />
-          {open && item.ownerName && !item.toldChannel ? (
-            <SubmitButton
-              name="intent"
-              value="tell"
-              pendingLabel={fill(copy.tell, { name: item.ownerName })}
-              className={button}
-            >
-              {fill(copy.tell, { name: item.ownerName })}
-            </SubmitButton>
-          ) : null}
           {open ? (
             <>
               <SubmitButton
@@ -97,14 +90,27 @@ export function LostItemRow({
               >
                 {copy.returned}
               </SubmitButton>
-              <SubmitButton
-                name="intent"
-                value="discarded"
-                pendingLabel={copy.discarded}
-                className={button}
-              >
-                {copy.discarded}
-              </SubmitButton>
+              {open && item.ownerName && !item.toldChannel ? (
+                <SubmitButton
+                  name="intent"
+                  value="tell"
+                  pendingLabel={fill(copy.tell, { name: item.ownerName })}
+                  className={buttonClass({ variant: "link", size: "sm" })}
+                >
+                  {fill(copy.tell, { name: item.ownerName })}
+                </SubmitButton>
+              ) : null}
+
+              <RowMenu label={copy.more}>
+                <SubmitButton
+                  name="intent"
+                  value="discarded"
+                  pendingLabel={copy.discarded}
+                  className={menuRowClass("danger", { gutter: false })}
+                >
+                  {copy.discarded}
+                </SubmitButton>
+              </RowMenu>
             </>
           ) : (
             <SubmitButton name="intent" value="open" pendingLabel={copy.reopen} className={button}>

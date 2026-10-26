@@ -112,7 +112,7 @@ test("the crew records something left aboard and the shop hands it back", async 
   await page.waitForURL("**/shop/blue-mantis/lost-found");
   const row = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
   await expect(row).toContainText(SAILED);
-  await row.getByRole("button", { name: "Returned" }).click();
+  await row.getByRole("button", { name: staff("desk.lostFound.returned"), exact: true }).click();
   // Handed back, it leaves the list; the demo's own left-behind mask (H-148)
   // still waits for its diver, booked tomorrow.
   await expect(row).toHaveCount(0);

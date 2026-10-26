@@ -20,6 +20,7 @@ export const WORDS: StaffingWeekWords = {
   print: "Print",
   person: "Person",
   needsCrew: "Needs crew",
+  shiftsAndAway: "Shifts and days away",
   assign: "Assign",
   assignAria: "Assign crew to {trip}",
   crewing: "Crewing",

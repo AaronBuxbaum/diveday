@@ -520,6 +520,7 @@ export function LedgerRow({
   kind,
   children,
   trailing,
+  below,
   trailingPassthrough = false,
   href,
   linkLabel,
@@ -543,6 +544,8 @@ export function LedgerRow({
   children: ReactNode;
   /** The one fix (a link or ghost button), a fact, or a chevron. */
   trailing?: ReactNode;
+  /** An optional local editor or outcome spanning the whole row beneath its summary. */
+  below?: ReactNode;
   /** Let taps on a decorative trailing fact reach the row's door underneath. */
   trailingPassthrough?: boolean;
   /**
@@ -584,7 +587,7 @@ export function LedgerRow({
   return (
     <Tag
       id={id}
-      className={`relative flex items-center gap-3 ${
+      className={`relative flex items-center gap-3 ${below != null ? "flex-wrap" : ""} ${
         closed ? ledgerRowBoxClass : ledgerRowOpenBoxClass
       } ${ROW_PAD[pad]} ${
         size === "lg" ? "min-h-14" : "min-h-13"
@@ -646,6 +649,9 @@ export function LedgerRow({
         >
           {trailing}
         </div>
+      ) : null}
+      {below != null ? (
+        <div className="w-full min-w-0 basis-full max-sm:order-4">{below}</div>
       ) : null}
       {href || reserveDoorSlot ? (
         // The door's glyph, last on the line at every width. It sits below

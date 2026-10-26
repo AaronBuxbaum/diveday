@@ -10,7 +10,6 @@ import {
 
 const healthy = {
   nodeMajor: 24,
-  nodeVersion: "24.22.0",
   pinnedMajor: 24,
   gh: true,
   fetchAgeMs: 60_000,
@@ -35,7 +34,6 @@ describe("the doctor's checks", () => {
     const sick = {
       ...healthy,
       nodeMajor: 22,
-      nodeVersion: "22.22.2",
       gh: false,
       fetchAgeMs: null,
       mainTip: "2026-10-05",
@@ -47,7 +45,6 @@ describe("the doctor's checks", () => {
     const rows = checks(sick);
     const warned = rows.filter((row) => row.status === "warn").map((row) => row.name);
     expect(warned).toEqual([
-      "node",
       "gh",
       "origin/main",
       "node_modules",
@@ -65,13 +62,13 @@ describe("the doctor's checks", () => {
     expect(renderReport(sick)).toContain("git fetch origin main");
   });
 
-  it("makes a repairable old minor visible while leaving remote branch advice informational", () => {
-    const facts = { ...healthy, nodeVersion: "24.18.0", orphanBranches: ["claude/merged-1"] };
+  it("keeps what only a human can change out of the session-start line, and in the report", () => {
+    const facts = { ...healthy, nodeMajor: 22, orphanBranches: ["claude/merged-1"] };
     const rows = checks(facts);
-    expect(rows.find((row) => row.name === "node")).toMatchObject({ status: "warn" });
+    expect(rows.find((row) => row.name === "node")).toMatchObject({ status: "info" });
     expect(rows.find((row) => row.name === "remote branches")).toMatchObject({ status: "info" });
-    expect(summaryLines(facts)[0]).toContain("Node 24.18.0");
-    expect(renderReport(facts)).toContain("pnpm install --frozen-lockfile");
+    expect(summaryLines(facts)[0]).toBe("Doctor: nothing to warn about.");
+    expect(renderReport(facts)).toContain("Node 22 (.nvmrc pins 24)");
     expect(renderReport(facts)).toContain("1 remote branches with no open PR");
   });
 
