@@ -125,3 +125,25 @@ that repair. No global configuration or dependency version change was made.
 
 Temporary capture paths are local evidence, not public PR attachments. Preserve sanitized images
 and final-head review results with the implementation PR before closing the visual loop.
+
+### Combined checkpoint and final visual pass
+
+After #3067 and #3077 merged externally, GitHub restacked the public layer onto main
+`79be34331124fd1f824418f248603539f29c2f3e`. Settings checkpoint `f49594ce5` includes the
+public repairs and lower Home size allowance; its tree is identical to the pre-restack
+combined checkpoint. Regeneration left the tree clean and the combined typecheck passed.
+
+The bounded second design review accepted the corrected code label/helper, email heading/switch
+layout, and missing-departure guidance without a false Copy action. Final phone/desktop evidence
+is in `/tmp/polish-04-final-email` and `/tmp/polish-04-final-embed-missing`; both pairs had zero
+probe flags. Selecting a departure restored a matching preview and real snippet. Root checked
+selection, iframe `show` and snippet `data-show` equality and viewed the loaded card and code
+in the `selected-departure-preview-native-1280.png` and `selected-departure-code-native-1280.png`
+captures. This is local browser evidence, not third-party CMS integration proof.
+
+That review found the Terms footer target was only 39 pixels wide. The existing shared footer
+slot now supplies a centered 44-pixel minimum width. Required-code and invalid-code captures at
+390 and 1280 in `/tmp/polish-04-footer-final` all have zero probe flags; root inspected the phone
+layout and confirmed the footer still fits. Scoped formatting and diff checks pass. No new
+blocking finding remains in the reviewed states. Configured backup/calendar/diagnostic fixtures,
+production CI, physical-device behavior and the earlier named coverage limits remain separate.
