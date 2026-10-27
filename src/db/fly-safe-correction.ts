@@ -463,7 +463,6 @@ export async function listFlySafeFollowUps(
   db: AppDb,
   input: { shopId: string; tripId: string; now?: Date },
 ): Promise<{ bookingId: string; name: string; status: "queued" | "follow_up" }[]> {
-  const now = input.now ?? nowDate();
   const [trip] = await db
     .select({ trip: trips, shop: shops })
     .from(trips)
@@ -472,12 +471,7 @@ export async function listFlySafeFollowUps(
       and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
     )
     .limit(1);
-  if (
-    trip?.trip.status !== "scheduled" ||
-    // diveday:allow-departure-offset: the correction window expires after the longest stated flying interval.
-    now.getTime() > trip.trip.endsAt.getTime() + FLY_SAFE_CORRECTION_WINDOW_MS
-  )
-    return [];
+  if (trip?.trip.status !== "scheduled") return [];
   const seats = await db
     .select({
       id: bookings.id,
@@ -567,8 +561,6 @@ export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: strin
         eq(trips.status, "scheduled"),
         liveTrip(),
         notRehearsal(),
-        // diveday:allow-departure-offset: the correction window is the longest flying interval, not a sailing buffer.
-        gte(trips.endsAt, new Date(now.getTime() - FLY_SAFE_CORRECTION_WINDOW_MS)),
         inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
       ),
