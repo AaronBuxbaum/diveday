@@ -1,4 +1,10 @@
-import { type CalendarDate, isCalendarDateExpired, isValidCalendarDate } from "./calendar-date";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  isCalendarDateExpired,
+  isValidCalendarDate,
+} from "./calendar-date";
+import type { CrewCredentialSnapshot } from "./crew-credential-snapshot";
 import {
   isCredentialedRole,
   lastDayOfDeparture,
@@ -54,6 +60,9 @@ export type SafetyRollCallEvent = {
   subjectId: string;
   checkpoint: string;
   status: "boarded" | "not_boarded" | "cleared";
+  credentialSnapshot?: CrewCredentialSnapshot[] | null;
+  credentialSnapshotStartedAt?: Date | null;
+  credentialSnapshotCapturedAt?: Date | null;
 };
 
 export type SafetyCredential = {
@@ -111,6 +120,8 @@ export type SafetyMonth = {
     personId: string;
     name: string;
     kinds: string[];
+    observationStartedAt?: Date;
+    observationCapturedAt?: Date;
   }[];
   /**
    * …of which sailed with no credential on file that answers the job they
@@ -286,6 +297,13 @@ function answersTheirJob(
 export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   const diverResult = standing(input.diverEvents);
   const crewResult = standing(input.crewEvents);
+  const crewObservations = new Map<string, SafetyRollCallEvent>();
+  for (const event of input.crewEvents) {
+    if (event.checkpoint !== "departure") continue;
+    const key = `${event.tripId}\0${event.subjectId}`;
+    if (event.status === "cleared") crewObservations.delete(key);
+    else crewObservations.set(key, event);
+  }
   const tripsWithEvents = new Set([
     ...input.diverEvents.map((event) => event.tripId),
     ...input.crewEvents.map((event) => event.tripId),
@@ -343,18 +361,49 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       // A crew member recorded ashore at the dock did not sail.
       if (crewResult(departure.tripId, personId, dock) === "not_boarded") continue;
       crewSailings += 1;
-      // Only what was on file by the day they sailed (review F3).
+      // A live mark observes a committed state that may differ from actual sailing.
       const recorded = credentialsByPerson.get(personId) ?? [];
-      // A transaction's internal timestamp does not prove its state was committed
-      // before departure. Versions are retained, but cannot yet certify the past.
-      if (
-        input.unavailableCredentialPeople?.has(personId) ||
-        recorded.some((card) => card.credentialId)
-      ) {
-        unknownCredentialSailings += 1;
-        continue;
+      const observation = crewObservations.get(`${departure.tripId}\0${personId}`);
+      const started = observation?.credentialSnapshotStartedAt;
+      const completed = observation?.credentialSnapshotCapturedAt;
+      const snapshot = observation?.status === "boarded" ? observation.credentialSnapshot : null;
+      const validSnapshot =
+        Array.isArray(snapshot) &&
+        snapshot.every(
+          (card) =>
+            card &&
+            typeof card.kind === "string" &&
+            (card.issuedAt === null ||
+              (typeof card.issuedAt === "string" && isValidCalendarDate(card.issuedAt))) &&
+            (card.renewsAt === null ||
+              (typeof card.renewsAt === "string" && isValidCalendarDate(card.renewsAt))),
+        );
+      const observationDay =
+        started &&
+        completed &&
+        started <= completed &&
+        calendarDateInTimezone(started, input.timeZone) ===
+          calendarDateInTimezone(completed, input.timeZone)
+          ? calendarDateInTimezone(started, input.timeZone)
+          : null;
+      let onFile: readonly SafetyCredential[];
+      let checkedDay = divesOn;
+      if (validSnapshot && observationDay && snapshot) {
+        checkedDay = observationDay;
+        onFile = snapshot
+          .filter((card) => !card.issuedAt || card.issuedAt <= checkedDay)
+          .map((card) => ({ ...card, personId }));
+      } else {
+        // A transaction timestamp cannot prove what was committed at sailing.
+        if (
+          input.unavailableCredentialPeople?.has(personId) ||
+          recorded.some((card) => card.credentialId)
+        ) {
+          unknownCredentialSailings += 1;
+          continue;
+        }
+        onFile = recorded.filter(({ issuedAt }) => !issuedAt || issuedAt <= divesOn);
       }
-      const onFile = recorded.filter(({ issuedAt }) => !issuedAt || issuedAt <= divesOn);
       if (onFile.length === 0) nothingOnFileSailings += 1;
       if (answersTheirJob(tripRole, shopRoles, onFile) === false) {
         unrecordedSailings += 1;
@@ -367,7 +416,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
         unrecorded.set(personId, entry);
       }
       if (onFile.length === 0) continue;
-      const kinds = lapsedCredentialKinds(onFile, divesOn);
+      const kinds = lapsedCredentialKinds(onFile, checkedDay);
       if (kinds.length > 0) {
         lapsedSailings.push({
           tripId: departure.tripId,
@@ -376,6 +425,9 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
           personId,
           name: input.personNames.get(personId) ?? "",
           kinds,
+          ...(validSnapshot && observationDay && started && completed
+            ? { observationStartedAt: started, observationCapturedAt: completed }
+            : {}),
         });
       }
     }

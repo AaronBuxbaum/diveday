@@ -548,7 +548,17 @@ export async function saveStaffCredentialAction(formData: FormData) {
           change: renewalOf ? "renewed" : "corrected",
         })
       : await createStaffCredential(db, input);
-  revalidateAndRedirect(path, noticeUrl(path, row ? "credential-saved" : "credential-invalid"));
+  const notice = !row
+    ? "credential-invalid"
+    : renewalOf
+      ? "credential-renewed"
+      : correctionOf
+        ? "credential-corrected"
+        : "credential-saved";
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, notice, credentialId ? { credentialChangeFor: input.personId } : undefined),
+  );
 }
 
 export async function reviewStaffCredentialAction(formData: FormData) {

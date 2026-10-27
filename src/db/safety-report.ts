@@ -145,6 +145,9 @@ export async function getSafetyMonth(
           subjectId: rollCallCrewEvents.personId,
           checkpoint: rollCallCrewEvents.checkpoint,
           status: rollCallCrewEvents.status,
+          credentialSnapshot: rollCallCrewEvents.credentialSnapshot,
+          credentialSnapshotStartedAt: rollCallCrewEvents.credentialSnapshotStartedAt,
+          credentialSnapshotCapturedAt: rollCallCrewEvents.credentialSnapshotCapturedAt,
         })
         .from(rollCallCrewEvents)
         .where(

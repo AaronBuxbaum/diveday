@@ -210,7 +210,9 @@
   says so. The roll-call figure keeps "not closed" apart from "no roll call taken" (review F2). The
   boarding caveat says what the dock count proves: the rail records nobody as boarded while
   readiness blocks them, and a seat whose readiness changed after boarding is not separated
-  (review F4). Historical credential evidence is unavailable and excluded from the checked
-  denominator: issue dates and transaction timestamps cannot prove what was committed at departure.
-  Current credentials remain on Team. Erasure removes version history.
+  (review F4). Live crew boarding marks can capture credential kind and dates in a single database
+  statement, with its observation interval. The lapse figure says it reads the live mark, not actual
+  departure; offline, unmarked and older records remain unavailable. An interval crossing midnight
+  in the shop's zone cannot establish the observation day and is also unavailable. Current credentials
+  remain on Team. Erasure removes version history and boarding observations.
   Crew assignments and other facts still read as the shop's records stand today.

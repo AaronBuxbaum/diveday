@@ -763,6 +763,22 @@ async function scrubPersonRecord(
     ),
   );
 
+  // Crew observations can exist without this person holding a booking.
+  await tx
+    .update(rollCallCrewEvents)
+    .set({
+      credentialSnapshot: null,
+      credentialSnapshotStartedAt: null,
+      credentialSnapshotCapturedAt: null,
+    })
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, shopId),
+        eq(rollCallCrewEvents.personId, personId),
+        isNotNull(rollCallCrewEvents.credentialSnapshot),
+      ),
+    );
+
   // Credentials belong to the staff member's operational record, but their
   // names and identifiers are still personal data when the target was later
   // entered as a diver. Retire those rows without leaving a credential tied

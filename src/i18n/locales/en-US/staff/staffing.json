@@ -74,6 +74,8 @@
     "credentialInvalid": "That credential could not be saved. Check the staff member and dates.",
     "credentialRenewalRequired": "Instructor and divemaster ratings need a renewal date.",
     "credentialReviewed": "Credential review updated",
+    "credentialRenewed": "Credential renewed",
+    "credentialCorrected": "Credential corrected",
     "credentialSaved": "Credential added",
     "invalid": "Check the shift date and times, then try again.",
     "invalidRange": "The last day can’t come before the first.",

@@ -73,14 +73,16 @@ export function safetyMonthTiles({
           key: "crew",
           label: t("incidents.safety.crew"),
           value: crewSafetyValue(safety, t).value,
+          ...(safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length > 0
+            ? {
+                href: `#${safety.lapsedSailings.length > 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
+              }
+            : {}),
           ...(safety.unknownCredentialSailings && teamHref
             ? { link: { href: teamHref, label: t("incidents.safety.currentCrewCredentials") } }
-            : {
-                href: `#${safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length === 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
-              }),
-          ...attention(
-            crewSafetyValue(safety, t).attention ? crewSafetyValue(safety, t).detail : null,
-          ),
+            : {}),
+          detail: crewSafetyValue(safety, t).detail,
+          detailTone: crewSafetyValue(safety, t).attention ? "attention" : "quiet",
         },
     {
       key: "incidents",

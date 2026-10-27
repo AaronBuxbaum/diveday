@@ -3,12 +3,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { StatusInView } from "@/components/ui/StatusInView";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { rolesMissingCredential } from "@/lib/crew-roles";
 import { cachedListFormat } from "@/lib/intl-cache";
+import type { FormNotice } from "@/lib/staff-notices";
 import { type CardCredential, CREDENTIALED_ROLES } from "../credential-rows";
 
 const MISSING_KIND_KEYS = {
@@ -46,6 +48,7 @@ export function StaffCardCredentials({
   reviewAction,
   deleteAction,
   editAction,
+  status,
 }: {
   personId: string;
   roles: readonly Role[];
@@ -55,9 +58,10 @@ export function StaffCardCredentials({
   reviewAction: (formData: FormData) => void | Promise<void>;
   deleteAction: (formData: FormData) => void | Promise<void>;
   editAction?: (formData: FormData) => void | Promise<void>;
+  status?: FormNotice;
 }) {
   const sailsOnACard = roles.some((role) => CREDENTIALED_ROLES.includes(role));
-  if (credentials.length === 0 && !sailsOnACard) return null;
+  if (credentials.length === 0 && !sailsOnACard && !status) return null;
   const missing = rolesMissingCredential(
     roles,
     credentials.map((credential) => credential.kind),
@@ -85,6 +89,12 @@ export function StaffCardCredentials({
   );
   return (
     <div className="mt-4">
+      {status ? (
+        <>
+          <FormStatus tone={status.tone}>{status.text}</FormStatus>
+          {status.tone !== "danger" ? <StatusInView /> : null}
+        </>
+      ) : null}
       {atRest.length > 0 ? (
         <ul
           aria-label={t("staffing.credentials.heading")}

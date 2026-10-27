@@ -34,6 +34,15 @@ describe("teamNoticeForm", () => {
     expect(teamNoticeForm("contact-saved", { contactFor: OTHER })).toBe(TEAM_FORMS.contact(OTHER));
   });
 
+  it("routes credential outcomes to the person and falls back when the row is gone", () => {
+    for (const code of ["credential-renewed", "credential-corrected", "credential-invalid"]) {
+      const form = teamNoticeForm(code, { credentialChangeFor: PERSON });
+      expect(form).toBe(TEAM_FORMS.credential(PERSON));
+      expect(teamNoticeOnRoster(form, [PERSON])).toBe(form);
+      expect(teamNoticeOnRoster(form, [])).toBe(TEAM_FORMS.page);
+    }
+  });
+
   it("keeps the invite form's outcomes, and its email box's, off the roster's rows", () => {
     expect(teamNoticeForm("invite-email-taken", { rolesFor: PERSON })).toBe(TEAM_FORMS.inviteEmail);
     expect(teamNoticeForm("invited", { rolesFor: PERSON })).toBe(TEAM_FORMS.invite);

@@ -137,7 +137,7 @@ describe("renewing annual professional status", () => {
     renewal.set("renewalOf", card.id);
     renewal.set("revision", String(card.revision));
     expect(await redirectedTo(() => saveStaffCredentialAction(renewal))).toBe(
-      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+      `/shop/${shop.slug}/settings/team?notice=credential-renewed&credentialChangeFor=${member.id}`,
     );
     const [first] = (await savedFor(member.id)).filter((row) => row.id === card.id);
     if (!first) throw new Error("renewed card missing");
@@ -146,7 +146,7 @@ describe("renewing annual professional status", () => {
     next.set("renewalOf", card.id);
     next.set("revision", String(first.revision));
     expect(await redirectedTo(() => saveStaffCredentialAction(next))).toBe(
-      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+      `/shop/${shop.slug}/settings/team?notice=credential-renewed&credentialChangeFor=${member.id}`,
     );
     const [second] = (await savedFor(member.id)).filter((row) => row.id === card.id);
     expect(second?.issuedAt).toBe("2010-05-01");
@@ -178,7 +178,7 @@ describe("future-dated renewals", () => {
       form.set(change, card.id);
       form.set("revision", String(card.revision));
       expect(await redirectedTo(() => saveStaffCredentialAction(form))).toBe(
-        `/shop/${shop.slug}/settings/team?notice=credential-invalid`,
+        `/shop/${shop.slug}/settings/team?notice=credential-invalid&credentialChangeFor=${member.id}`,
       );
     }
     const ratings = await ratingCredentialsByPerson(db, shop.id, [member.id]);
@@ -234,7 +234,7 @@ describe("renewing a staff credential", () => {
     renewal.set("renewalOf", oldCard.id);
     renewal.set("revision", String(oldCard.revision));
     expect(await redirectedTo(() => saveStaffCredentialAction(renewal))).toBe(
-      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+      `/shop/${shop.slug}/settings/team?notice=credential-renewed&credentialChangeFor=${member.id}`,
     );
     const cards = (await savedFor(member.id)).filter((card) => card.identifier === "LICENCE-123");
     expect(cards.some((card) => card.renewsAt === shiftCalendarDate(day, 366))).toBe(true);
@@ -246,7 +246,7 @@ describe("renewing a staff credential", () => {
     correction.set("correctionOf", oldCard.id);
     correction.set("revision", String(renewed.revision));
     expect(await redirectedTo(() => saveStaffCredentialAction(correction))).toBe(
-      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+      `/shop/${shop.slug}/settings/team?notice=credential-corrected&credentialChangeFor=${member.id}`,
     );
     const [corrected] = (await savedFor(member.id)).filter((card) => card.id === oldCard.id);
     if (!corrected) throw new Error("expected corrected licence");

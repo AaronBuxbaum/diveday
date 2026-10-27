@@ -5,7 +5,7 @@ import type { IncidentReportLine } from "@/db/incident-reports";
 import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatEvidenceDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { SafetyMonth } from "@/lib/safety-report";
 import { shopPath } from "@/lib/staff-notices";
@@ -175,6 +175,23 @@ export function SafetyLists({
                     t(credentialKindKeys[kind] ?? "staffing.credentials.kinds.other"),
                   ),
                 )}
+                {sailing.observationStartedAt && sailing.observationCapturedAt ? (
+                  <>
+                    {" "}·{" "}
+                    {t("incidents.safety.crewObservedBetween", {
+                      start: formatEvidenceDateTimeTz(
+                        sailing.observationStartedAt,
+                        locale,
+                        timeZone,
+                      ),
+                      end: formatEvidenceDateTimeTz(
+                        sailing.observationCapturedAt,
+                        locale,
+                        timeZone,
+                      ),
+                    })}
+                  </>
+                ) : null}
               </span>
             </Link>
           </li>

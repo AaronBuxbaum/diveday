@@ -47,6 +47,7 @@ import {
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { crewCredentialSnapshot } from "./crew-credential-snapshot";
 import { listTripGearAssignments } from "./gear";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
@@ -2267,6 +2268,10 @@ export async function recordCrewRollCall(
 
         const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
         if (!staffId) return { ok: false, reason: "staff_not_found" };
+        const captureCredentials =
+          source === "live" && checkpoint === "departure" && input.status === "boarded";
+        if (captureCredentials)
+          await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
 
         // Idempotency first, exactly as the diver path does it: a sync the device
         // retried (the response never arrived, the tab was closed mid-flight) must
@@ -2470,6 +2475,15 @@ export async function recordCrewRollCall(
             )[0] ?? null)
           : null;
 
+        const note = await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+          standingCrewRollCall(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            personId: input.personId,
+            checkpoint,
+          }),
+        );
+        const credentialSnapshotStartedAt = captureCredentials ? nowDate() : null;
         const [event] = await tx
           .insert(rollCallCrewEvents)
           .values({
@@ -2485,18 +2499,33 @@ export async function recordCrewRollCall(
             // evidence of which snapshot supplied the *readiness* it boarded on,
             // and a crew member has no readiness to evidence. It is still an input
             // above, where the staleness bound is computed from it.
-            note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
-              standingCrewRollCall(tx, {
-                shopId: input.shopId,
-                tripId: input.tripId,
-                personId: input.personId,
-                checkpoint,
-              }),
-            ),
+            note,
+            credentialSnapshot: captureCredentials
+              ? crewCredentialSnapshot(input.shopId, assigned.personId)
+              : null,
+            credentialSnapshotStartedAt,
+            credentialSnapshotCapturedAt: credentialSnapshotStartedAt,
             occurredAt,
           })
           .returning({ id: rollCallCrewEvents.id });
         if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+        if (credentialSnapshotStartedAt) {
+          const finishedAt = nowDate();
+          await tx
+            .update(rollCallCrewEvents)
+            .set(
+              finishedAt < credentialSnapshotStartedAt
+                ? {
+                    credentialSnapshot: null,
+                    credentialSnapshotStartedAt: null,
+                    credentialSnapshotCapturedAt: null,
+                  }
+                : { credentialSnapshotCapturedAt: finishedAt },
+            )
+            .where(
+              and(eq(rollCallCrewEvents.id, event.id), eq(rollCallCrewEvents.shopId, input.shopId)),
+            );
+        }
         await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
         // The seat was released and the rail has now said the person sailed, so it
         // comes back with them — the same consequence, the same trail lines and the
