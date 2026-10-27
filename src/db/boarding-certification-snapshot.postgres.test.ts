@@ -256,9 +256,11 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
     });
+    // Hold the shop evidence lock exclusively so both transactions reach the
+    // same gate, regardless of which one the scheduler starts first.
     const gate = await holdRowLock(
       pg,
-      sql`select id from people where id = ${source.id} for update`,
+      sql`select pg_advisory_xact_lock(hashtext('boarding_certification_evidence'), hashtext(${shop.id}))`,
     );
     const merge = mergeDiverRecords({
       db: pg.connect(),
