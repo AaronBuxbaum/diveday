@@ -125,7 +125,8 @@ export function DiverRowPanel({
         state by name keeps the full sentence — here, where the
         plan for dive two is read during the surface interval.
         Warning tone, never a gate (H-08). */}
-      {diver.depthAdvisory?.status === "exceeds" &&
+      {(diver.depthAdvisory?.status === "exceeds" ||
+        diver.depthAdvisory?.status === "verification_required") &&
       !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
         <p className="mb-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
           <StatusMark variant="warning" size="md" />

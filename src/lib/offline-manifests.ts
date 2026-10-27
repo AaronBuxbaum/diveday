@@ -143,6 +143,8 @@ export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
+  /** Absent on older snapshots, which cannot claim junior checks were captured. */
+  juniorAdvisoriesChecked?: true;
   /** Absent on copies made before site-only training readiness; queued events remain intact. */
   readinessPolicyVersion?: 1;
   /**
@@ -358,6 +360,8 @@ export type OfflineManifestPayload = {
            */
           | "dietaryNote"
         > & {
+          /** Worded at save time; no raw card, age, or verifier data rides here. */
+          safetyAdvisoryText?: string;
           /**
            * **The counter's own answer, and the reason the dock copy can take
            * one at all** (ADR 20260907-the-counter-survives-offline). One
@@ -1094,10 +1098,12 @@ export function serializeManifests(
   boatSafety: BoatSafetySection | null = null,
   /** The boat's open snags, worded; absent or empty carries none. */
   snags?: OfflineManifestPayload["snags"],
+  resolveJuniorAdvisory?: () => string,
 ): OfflineManifestPayload {
   return {
     readinessPolicyVersion: 1,
     shop,
+    ...(resolveJuniorAdvisory ? { juniorAdvisoriesChecked: true as const } : {}),
     ...(boatSafety ? { boatSafety } : {}),
     ...(snags && snags.items.length > 0 ? { snags } : {}),
     checklist: {
@@ -1173,6 +1179,13 @@ export function serializeManifests(
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
+        ...(resolveJuniorAdvisory &&
+        !diver.identityWithheld &&
+        (diver.depthAdvisory?.status === "verification_required" ||
+          (diver.depthAdvisory?.status === "exceeds" &&
+            diver.depthAdvisory.verificationReasons?.length))
+          ? { safetyAdvisoryText: resolveJuniorAdvisory() }
+          : {}),
         participantType: diver.participantType,
         bookedAs: diver.bookedAs,
         ...(diver.dietaryNote ? { dietaryNote: diver.dietaryNote } : {}),

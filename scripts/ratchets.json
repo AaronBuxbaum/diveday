@@ -357,12 +357,6 @@
         }
       },
       {
-        "why": "label-maps table rows for DEPTH_RANGE_KEYS (#2426): a list that cannot live in a sibling",
-        "files": {
-          "src/db/readiness.test.ts": "1519 -> 1522"
-        }
-      },
-      {
         "why": "merge of the ready-for-human batch's worker branches (#2611 tests from two sides)",
         "files": {
           "src/lib/trip-admission.test.ts": "984 -> 992"
@@ -418,6 +412,25 @@
         "files": {
           "src/db/erasure-coverage.test.ts": "1175 -> 1181"
         }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/executed-dives.test.ts": "1082 -> 1085",
+          "src/db/no-show.test.ts": "1100 -> 1165",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/db/retention.test.ts": "1250 -> 1262",
+          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -450,7 +463,7 @@
     "src/db/divers.test.ts": 3056,
     "src/db/erasure-coverage.test.ts": 1181,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1534,
+    "src/db/export.test.ts": 1363,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3692,
@@ -458,7 +471,7 @@
     "src/db/notifications.test.ts": 1871,
     "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1195,
-    "src/db/readiness.test.ts": 1522,
+    "src/db/readiness.test.ts": 1512,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1151,
     "src/db/reminders.test.ts": 981,

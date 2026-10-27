@@ -50,6 +50,11 @@ export function OfflineTripScreen({
             level="page"
           />
           <OfflineTripHeader view={view} controls={controls} />
+          {!view.envelope.snapshot.juniorAdvisoriesChecked ? (
+            <p className="mt-3 text-base text-warning-strong">
+              {t("shared.offlineManifest.juniorChecksUnavailable")}
+            </p>
+          ) : null}
           <a
             href="#offline-roll-call-context"
             className={buttonClass({

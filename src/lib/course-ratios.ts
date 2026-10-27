@@ -19,9 +19,8 @@ export type CourseRatioRule = {
  * model) to a hard ceiling of 12 — see H-08 (docs/product/human-decisions/) and
  * docs/architecture/decisions/20260724-course-admission-standards.md for the
  * PADI/SSI sourcing. Continuing-education courses (Advanced Open Water,
- * Rescue, specialties) are not modeled here — they already require a verified
- * card at booking (`courses.minimumCertificationLevel`) and PADI does not
- * publish a comparably strict numeric ratio for them.
+ * Rescue, specialties) are not modeled here: their in-water limits depend on
+ * dive and student conditions the departure does not currently record.
  *
  * Discover Scuba Diving (DSD) is a *different, tighter* PADI ratio — see
  * {@link DSD_RATIO} — because DSD participants have had zero prior water
@@ -140,8 +139,8 @@ export type CourseRatioKind = "intro" | "entry_level";
  *   **only for PADI**: 8/+2/12 is a cited PADI figure, `courses.agency` is free
  *   text an SSI/NAUI course legitimately fills in, and applying a PADI number to
  *   another agency's course would be a wrong-but-confident safety control.
- * - Everything else is ungated: continuing-education courses already require a
- *   verified card at booking and PADI publishes no comparable numeric ratio.
+ * - Everything else is ungated at booking. A missing booking cap is not a
+ *   statement that an agency has no in-water ratio.
  */
 export function courseRatioKind(course: CourseCrewGapCourse): CourseRatioKind | null {
   if (!course) return null;
@@ -160,6 +159,40 @@ const RATIO_BY_KIND: Record<CourseRatioKind, CourseRatioRule> = {
 export function courseRatioRule(course: CourseCrewGapCourse): CourseRatioRule | null {
   const kind = courseRatioKind(course);
   return kind === null ? null : RATIO_BY_KIND[kind];
+}
+
+/**
+ * A booking cap is not evidence that a training mark may relax a level.
+ * Continuing-education dives may have stricter conditions that the departure
+ * does not record (including Deep, student age and equipment). In particular,
+ * an edited prerequisite cannot turn a known continuing-ed course into Open
+ * Water for this decision. A shop-created non-intro course without a declared
+ * level is unclassified, so it cannot claim entry-level ratio coverage. An
+ * explicit Open Water course is still only a plan; its actual dive is unknown.
+ */
+export function trainingCourseRatioRule(
+  course: {
+    agency: string;
+    minimumLevel: string | null;
+    certifiesLevel: string | null;
+    intro: boolean;
+    sourceTemplateSlug?: string | null;
+  } | null,
+): CourseRatioRule | null {
+  if (!course) return null;
+  if (!course.intro && course.certifiesLevel === null) return null;
+  if (course.certifiesLevel && course.certifiesLevel !== "open_water") return null;
+  if (course.sourceTemplateSlug) {
+    const entryTemplates = course.intro
+      ? ["discover-scuba-diving", "ssi-try-scuba"]
+      : ["open-water-diver", "ssi-open-water-diver", "sdi-open-water-scuba-diver"];
+    if (!entryTemplates.includes(course.sourceTemplateSlug)) return null;
+  }
+  return courseRatioRule({
+    agency: course.agency,
+    minimumCertificationLevel: course.minimumLevel,
+    isIntroCourse: course.intro,
+  });
 }
 
 /**

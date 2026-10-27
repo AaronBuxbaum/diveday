@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { recordJuniorCardStatus } from "@/db/certification-junior";
 import type { AppDb } from "@/db/client";
 import {
   clearDrysuitExperienceSeen,
@@ -156,6 +157,29 @@ export async function addCardAction(shopSlug: string, personId: string, formData
     redirect(backTo(base, "invalid", "cards"));
   }
   revalidateAndRedirect(base, backTo(base, saved ? "captured" : "invalid", "cards"));
+}
+
+/** Record what this staff member saw on the card, not an agency-lookup inference. */
+export async function recordJuniorStatusAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  const cardId = z.uuid().safeParse(formData.get("certificationId"));
+  const status = z.enum(["junior", "full"]).safeParse(formData.get("juniorStatus"));
+  if (!cardId.success || !status.success) redirect(backTo(context.base, "invalid", "cards"));
+  const result = await recordJuniorCardStatus(context.db, {
+    shopId: context.staff.user.shopId,
+    personId: context.personId,
+    certificationId: cardId.data,
+    byPersonId: context.staff.user.personId,
+    juniorStatus: status.data,
+  });
+  revalidateAndRedirect(
+    context.base,
+    backTo(context.base, result.ok ? "captured" : "invalid", "cards"),
+  );
 }
 
 /**

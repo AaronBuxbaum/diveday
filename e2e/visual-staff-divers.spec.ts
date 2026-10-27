@@ -29,6 +29,16 @@ for (const scheme of ["light", "dark"] as const) {
     test.describe("staff", () => {
       signedInAsOwner();
 
+      test(`a card type check renders (${scheme})`, async ({ page }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        await openDiverFileGroup(page, "Certification records");
+        await page.getByText(staffCopy("divers.certifications.juniorCardChange")).first().click();
+        await expect(
+          page.getByLabel(staffCopy("divers.certifications.juniorCardSelect")).first(),
+        ).toHaveValue("");
+        await capture(page, "diver-card-type-check", scheme);
+      });
+
       // The roster — the front desk's densest everyday surface, and now one
       // ledger at every width: letter groups, a name per row, and a badge only
       // where something is exceptional (ADR 20260827-people-not-lists).

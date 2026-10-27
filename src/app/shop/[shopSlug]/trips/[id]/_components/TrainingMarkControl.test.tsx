@@ -65,7 +65,7 @@ describe("a training mark on a charter seat's row (issue #2275)", () => {
     expect(screen.getByText(/Training dive for Advanced Open Water/)).toBeTruthy();
     expect(
       screen.getByText(
-        "No instructor of the course is aboard for this seat (rostered by someone else, counted aboard, within the course ratio), so the departure’s own level applies.",
+        "Instructor coverage for this training seat cannot be established, so the departure’s own level applies.",
       ),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Clear training mark" })).toBeTruthy();
@@ -88,7 +88,7 @@ describe("a training mark on a charter seat's row (issue #2275)", () => {
       clearedWithFormsOwed: null,
     });
     expect(screen.queryByText(/Training dive for/)).toBeNull();
-    expect(screen.queryByText(/No instructor of the course/)).toBeNull();
+    expect(screen.queryByText(/Instructor coverage for this training seat/)).toBeNull();
     expect(screen.getByRole("button", { name: "Clear training mark" })).toBeTruthy();
   });
 

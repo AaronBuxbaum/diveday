@@ -29,6 +29,7 @@ import { agencyCheckActions, levelCardCheck, listedChecks } from "./card-checks"
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DrysuitExperienceRow } from "./DrysuitExperienceRow";
 import { fileGap } from "./file-gap";
+import { JuniorCardControl, JuniorCardStatus } from "./JuniorCardControl";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { NoCertificationRows } from "./NoCertificationRows";
@@ -508,6 +509,7 @@ export function CertificationsGroup({
                     })}
               </span>
             ) : null}
+            <JuniorCardStatus card={card} t={t} />
           </>
         }
         actions={
@@ -521,9 +523,7 @@ export function CertificationsGroup({
                 numberError={numberErrorFor(card.id)}
               />
             ) : (
-              /* Rendered for a settled card too, where it draws no button: the
-                 toast lives inside it, so it has to outlive the re-render that
-                 takes its own button away. */
+              /* The settled control keeps its Undo toast mounted after review. */
               <MarkCertifiedControl
                 action={markCertify}
                 certificationId={card.id}
@@ -532,6 +532,11 @@ export function CertificationsGroup({
                 copy={markCertified}
               />
             )}
+            {card.status === "verified" ? (
+              <JuniorCardControl
+                {...{ card, shopSlug, personId, locale, timezone: shop.timezone, t }}
+              />
+            ) : null}
             {deleteButton(t, deleteLevel, card.id, false)}
           </>
         }

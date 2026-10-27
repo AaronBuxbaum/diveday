@@ -223,7 +223,10 @@ function OfflineDiverRow({
             {offlineDiverStatusLine({
               stateWord,
               blockerTexts: staleTrainingReadiness
-                ? [t("manifest.trainingReadinessStale")]
+                ? [
+                    t("manifest.trainingReadinessStale"),
+                    ...diver.readiness.blockers.map((blocker) => blocker.text),
+                  ]
                 : ready
                   ? null
                   : diver.readiness.blockers.map((blocker) => blocker.text),
@@ -244,6 +247,9 @@ function OfflineDiverRow({
                 : null,
             })}
           </p>
+          {!withheld && diver.safetyAdvisoryText ? (
+            <p className="mt-2 text-base text-warning-strong">{diver.safetyAdvisoryText}</p>
+          ) : null}
           {/* **What is already on the record, in the open** (ADR
             20260828-a-missing-diver-gets-a-sentence, decision 4; layer 4
             review, dde-b 2): the observation a crew wrote on an alarmed

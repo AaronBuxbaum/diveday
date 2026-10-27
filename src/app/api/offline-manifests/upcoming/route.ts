@@ -154,6 +154,8 @@ export async function GET() {
           check: checks.get(item.id),
         })),
         boatSafety,
+        undefined,
+        () => t("shared.offlineManifest.juniorCheckRequired"),
       );
     }),
   );

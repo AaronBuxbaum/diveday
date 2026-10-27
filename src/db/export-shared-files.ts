@@ -116,6 +116,21 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
     // back in (issue #630).
     { header: "declared_identifier", in: "both", value: (row) => row.declaredIdentifier },
     { header: "status", in: "both", value: (row) => row.status },
+    { header: "junior_status", in: "both", value: (row) => row.juniorStatus },
+    { header: "junior_status_verified_at", in: "both", value: (row) => row.juniorStatusVerifiedAt },
+    {
+      header: "junior_status_verified_by_person_id",
+      in: "shop",
+      value: (row) => row.juniorStatusVerifiedByPersonId,
+    },
+    {
+      header: "junior_status_verified_by_name",
+      in: "diver",
+      value: (row, { personName }) =>
+        row.juniorStatusVerifiedByPersonId
+          ? personName.get(row.juniorStatusVerifiedByPersonId)
+          : null,
+    },
     { header: "review_note", in: "both", value: (row) => row.reviewNote },
     { header: "reviewed_at", in: "both", value: (row) => row.reviewedAt },
     {
@@ -168,6 +183,31 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
   diver: {
     rows: ({ certificationRows }) => certificationRows,
     note: "Certification records this shop holds on file, with their verification status.",
+  },
+});
+
+export const CERTIFICATION_JUNIOR_REVIEWS_CSV = sharedFile<ShopRow<"juniorReviewRows">>({
+  file: "certification_junior_reviews.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "certification_id", in: "both", value: (row) => row.certificationId },
+    { header: "person_id", in: "shop", value: (row) => row.personId },
+    { header: "recorded_by_person_id", in: "shop", value: (row) => row.recordedByPersonId },
+    {
+      header: "recorded_by_name",
+      in: "diver",
+      value: (row, { personName }) => personName.get(row.recordedByPersonId),
+    },
+    { header: "junior_status", in: "both", value: (row) => row.juniorStatus },
+    { header: "recorded_at", in: "both", value: (row) => row.recordedAt },
+  ],
+  shop: {
+    rows: ({ juniorReviewRows }) => juniorReviewRows,
+    note: EXPORT_FILE_NOTES["certification_junior_reviews.csv"],
+  },
+  diver: {
+    rows: ({ juniorReviewRows }) => juniorReviewRows,
+    note: EXPORT_FILE_NOTES["certification_junior_reviews.csv"],
   },
 });
 

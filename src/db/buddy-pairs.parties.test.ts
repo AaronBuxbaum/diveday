@@ -29,6 +29,14 @@ async function buddyContext() {
   if (!a || !b || !c) throw new Error("expected three Benwood bookings");
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("demo staff missing");
+  await db
+    .update(certifications)
+    .set({
+      juniorStatus: "full",
+      juniorStatusVerifiedAt: nowDate(),
+      juniorStatusVerifiedByPersonId: staff.person.id,
+    })
+    .where(inArray(certifications.personId, [a.person.id, b.person.id, c.person.id]));
   return { db, shop, trip, a, b, c, staff: staff.person };
 }
 
@@ -133,6 +141,7 @@ describe("which parties one tap leaves for the divemaster", () => {
     minor?: boolean;
     /** A verified card unless said otherwise; false is no card at all. */
     card?: boolean | "pending" | "self_declared" | "deleted";
+    cardStatus?: "junior" | "full" | null;
     type?: "diver" | "snorkeler" | "rider";
     /** Matched to this person on a guess (`identity_unconfirmed_at`). */
     held?: boolean;
@@ -151,6 +160,8 @@ describe("which parties one tap leaves for the divemaster", () => {
   ) {
     let lead: string | null = null;
     const ids: string[] = [];
+    const [staff] = await listStaff(db, shopId);
+    if (!staff) throw new Error("demo staff missing");
     for (const member of members) {
       made += 1;
       const [person] = await db
@@ -171,6 +182,14 @@ describe("which parties one tap leaves for the divemaster", () => {
           personId: person.id,
           agency: "padi",
           level: "open_water",
+          ...(member.cardStatus === null
+            ? {}
+            : {
+                juniorStatus:
+                  member.cardStatus ?? (member.minor ? ("junior" as const) : ("full" as const)),
+                juniorStatusVerifiedAt: nowDate(),
+                juniorStatusVerifiedByPersonId: staff.person.id,
+              }),
           ...(card === "self_declared"
             ? { selfDeclaredAt: nowDate(), status: "pending" as const }
             : {
@@ -223,6 +242,24 @@ describe("which parties one tap leaves for the divemaster", () => {
 
   const adult = { age: 40 } satisfies Member;
 
+  it("re-reads the off-by-default teen policy when the staffer taps", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    const ids = await party(db, shop.id, trip, [
+      { age: 15, minor: true },
+      { age: 17, minor: true },
+    ]);
+    expect((await planPartyTeams(db, shop.id, trip.id)).teamable).toEqual([
+      expect.arrayContaining(ids),
+    ]);
+    await db.update(shops).set({ requireAdultBuddyForTeens: true }).where(eq(shops.id, shop.id));
+    expect((await planPartyTeams(db, shop.id, trip.id)).left).toEqual([
+      { bookingIds: expect.arrayContaining(ids), reason: "junior_without_adult" },
+    ]);
+    expect(await tap(db, shop.id, trip.id)).toBe(0);
+    expect(await listTripBuddyTeams(db, shop.id, trip.id)).toEqual([]);
+  });
+
   it.each([
     { intro: null, age: 11, reason: "young_child" },
     { intro: true, age: 30, reason: "intro_course" },
@@ -272,6 +309,41 @@ describe("which parties one tap leaves for the divemaster", () => {
     const trip = await departure(db, shop.id);
     await party(db, shop.id, trip, [adult, adult]);
     expect(await tap(db, shop.id, trip.id)).toBe(1);
+  });
+
+  it("leaves an unclassified PADI card for staff even when teen policy is off", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    const ids = await party(db, shop.id, trip, [adult, { age: 17, minor: true, cardStatus: null }]);
+    const plan = await planPartyTeams(db, shop.id, trip.id);
+    expect(plan.left).toContainEqual({
+      bookingIds: expect.arrayContaining(ids),
+      reason: "junior_requirements_unconfirmed",
+    });
+    expect(await tap(db, shop.id, trip.id, [partyConfirmKey(ids)])).toBe(0);
+    expect(await listTripBuddyTeams(db, shop.id, trip.id)).toEqual([]);
+  });
+
+  it("never records an all-adult confirmation for a known teen and an unknown-age diver", async () => {
+    const { db, shop } = ctx;
+    for (const requireAdultForTeens of [false, true]) {
+      await db
+        .update(shops)
+        .set({ requireAdultBuddyForTeens: requireAdultForTeens })
+        .where(eq(shops.id, shop.id));
+      for (const age of [15, 17]) {
+        const trip = await departure(db, shop.id);
+        const ids = await party(db, shop.id, trip, [adult, { age, minor: true }, { age: null }]);
+        const plan = await planPartyTeams(db, shop.id, trip.id);
+        expect(plan.ageUnconfirmed).toEqual([]);
+        expect(plan.left).toContainEqual({
+          bookingIds: expect.arrayContaining(ids),
+          reason: "mixed_ages_unconfirmed",
+        });
+        expect(await tap(db, shop.id, trip.id, [partyConfirmKey(ids)])).toBe(0);
+        expect(await listTripBuddyTeamEvents(db, shop.id, trip.id)).toEqual([]);
+      }
+    }
   });
 
   it("leaves two eleven-year-olds whose parent is riding, not diving", async () => {

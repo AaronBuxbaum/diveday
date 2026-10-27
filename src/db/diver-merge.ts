@@ -166,6 +166,7 @@ export const DIVER_HISTORY_TABLES = [
   // sides cannot collide.
   "course_form_records",
   "certifications",
+  "certification_junior_reviews",
   "specialty_certifications",
   "prior_visits",
   "imported_payment_history",
@@ -275,6 +276,8 @@ export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as
  * page by leaving it.
  */
 export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
+  "certification_junior_reviews.recorded_by_person_id": "the staff member who sighted the card",
+  "certifications.junior_status_verified_by_person_id": "the staff member who sighted the card",
   "activity_events.actor_person_id": "who did it — attribution, not diver history",
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
   "bookings.fly_safe_acknowledged_by_person_id":
@@ -986,7 +989,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "work_orders",
     "lost_items",
   ],
-  history: ["prior_visits"],
+  history: ["prior_visits", "certification_junior_reviews"],
   lists: ["interests", "person_courtesy_email_unsubscribe_tokens", "trip_blowout_divers"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;

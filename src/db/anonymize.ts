@@ -101,6 +101,7 @@ import {
   bookings,
   buddyTeamEvents,
   calendarFeeds,
+  certificationJuniorReviews,
   certifications,
   courseFormRecords,
   customerGearItems,
@@ -977,6 +978,14 @@ async function scrubCertificationEvidence(
     .select()
     .from(certifications)
     .where(and(eq(certifications.shopId, shopId), eq(certifications.personId, personId)));
+  await tx
+    .delete(certificationJuniorReviews)
+    .where(
+      and(
+        eq(certificationJuniorReviews.shopId, shopId),
+        eq(certificationJuniorReviews.personId, personId),
+      ),
+    );
   for (const card of levelCards) {
     await tx
       .update(certifications)
@@ -987,6 +996,9 @@ async function scrubCertificationEvidence(
         declaredIdentifier: null,
         reviewNote: null,
         importedFromLabel: null,
+        juniorStatus: null,
+        juniorStatusVerifiedAt: null,
+        juniorStatusVerifiedByPersonId: null,
         deletedAt: card.deletedAt ?? now,
       })
       .where(eq(certifications.id, card.id));

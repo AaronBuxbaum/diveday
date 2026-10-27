@@ -32,6 +32,10 @@
  * yet, so no shop's record or erasure reaches it, and its window is argued
  * beside its number below (code review 2026-10-11, item 14).
  *
+ * **`certification_junior_reviews` is deliberately unbounded.** The owner's
+ * decision on #2810 (2026-10-27) requires corrections to stay with the card.
+ * Erasure removes the person's evidence, and deleting the card cascades it.
+ *
  * **`gear_service_events` is deliberately unbounded and does not belong here.**
  * It is append-only and its value is evidentiary rather than operational: a
  * unit's service, hydro-test and inspection history is what answers "was this
@@ -194,6 +198,7 @@ export type RetainedTable =
  * Whether the argument is any *good* is a reviewer's call, not a test's.
  */
 export const UNBOUNDED_BY_DECISION: readonly string[] = [
+  "certification_junior_reviews",
   "gear_service_events",
   "trip_stage_events",
   "buddy_team_events",

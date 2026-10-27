@@ -210,6 +210,7 @@ async function recordDeletedTables(
  * them, and a spec writing any other one needs a private shop too.
  */
 const RESET_KEEPS: Record<string, string> = {
+  certification_junior_reviews: "ON DELETE CASCADE from certifications clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
   account_sign_in_challenges:
     "stable staff pending sign-ins survive a schedule reset; purged accounts cascade them",
@@ -316,6 +317,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  * survivor here is a bug unless it is genuinely shared.
  */
 const CASCADE_KEEPS: Record<string, string> = {
+  certification_junior_reviews: "ON DELETE CASCADE from certifications clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
   push_subscriptions: "ON DELETE CASCADE from trips clears it",

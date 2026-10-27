@@ -1,5 +1,14 @@
 {
   "main": {
+    "juniorBuddy": {
+      "heading": "Adult buddy for teens",
+      "detail": "For one-tap party teams, require a certified adult with divers aged 15–17.",
+      "label": "One-tap party teams",
+      "required": "Require a certified adult",
+      "optional": "Do not require an adult",
+      "save": "Save",
+      "saving": "Saving…"
+    },
     "eyebrow": "Settings",
     "notice": {
       "packingSaved": "Packing checklist saved for every trip",
@@ -8,6 +17,8 @@
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
       "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
       "unitsSaved": "Units saved",
+      "juniorBuddySaved": "Buddy policy saved",
+      "juniorBuddyInvalid": "Choose a buddy policy.",
       "unitsSavedSitesLeft": "Units saved. {count, plural, one {# dive site was} other {# dive sites were}} left alone, whole, and still {count, plural, one {reads} other {read}} in {from, select, feet {feet} other {meters}}: {sites}{more, plural, =0 {} other { and # more}}. Check {count, plural, one {it} other {them}} by hand in Dive sites.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "passThroughSaved": "Pass-through fee saved",
@@ -818,6 +829,7 @@
       "contacts": "Portable contact records",
       "people": "Divers and staff",
       "certifications": "Certification records",
+      "certification_junior_reviews": "Junior card status reviews",
       "specialty_certifications": "Specialty records",
       "nitrox_certifications": "Nitrox records",
       "trips": "Departures",

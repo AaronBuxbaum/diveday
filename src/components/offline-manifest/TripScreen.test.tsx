@@ -104,6 +104,26 @@ describe("OfflineManifestView — one column, one text edge", () => {
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
   }
 
+  it("warns when a saved copy predates the junior checks", async () => {
+    const legacy = richEnvelope("trip-1");
+    delete legacy.snapshot.juniorAdvisoriesChecked;
+    await renderTrip(legacy);
+    expect(
+      screen.getByText(staffTranslator("en-US")("shared.offlineManifest.juniorChecksUnavailable")),
+    ).toBeVisible();
+  });
+
+  it("does not show the legacy warning after a fresh save checked advisories", async () => {
+    const fresh = richEnvelope("trip-1");
+    fresh.snapshot.juniorAdvisoriesChecked = true;
+    await renderTrip(fresh);
+    expect(
+      screen.queryByText(
+        staffTranslator("en-US")("shared.offlineManifest.juniorChecksUnavailable"),
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("offers visible roll-call context and an emergency return without recording a mark", async () => {
     await renderTrip(richEnvelope("trip-1"));
     const jump = screen.getByRole("link", { name: "Roll call" });

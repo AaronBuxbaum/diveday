@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { courseRatioRule } from "@/lib/course-ratios";
+import { trainingCourseRatioRule } from "@/lib/course-ratios";
 import { groupCrewAssignments } from "@/lib/crew-roles";
 import type { ParticipantType } from "@/lib/participant-types";
 import {
@@ -48,7 +48,7 @@ export type TrainingEnrollmentRow = TrainingMarkEnrollment & {
    * What the course says about levels, and its agency for the ratio;
    * `undefined` when the course row is gone (issue #2731).
    */
-  course: (TrainingDiveCourse & { agency: string }) | undefined;
+  course: (TrainingDiveCourse & { agency: string; sourceTemplateSlug?: string | null }) | undefined;
 };
 
 /**
@@ -81,6 +81,7 @@ export async function readTrainingEnrollments(
       courseRowId: courses.id,
       courseMinimumLevel: courses.minimumCertificationLevel,
       courseCertifiesLevel: courses.certifiesLevel,
+      courseSourceTemplateSlug: courses.sourceTemplateSlug,
       courseIsIntro: courses.isIntroCourse,
       courseAgency: courses.agency,
     })
@@ -115,6 +116,7 @@ export async function readTrainingEnrollments(
           : {
               minimumLevel: row.courseMinimumLevel,
               certifiesLevel: row.courseCertifiesLevel,
+              sourceTemplateSlug: row.courseSourceTemplateSlug,
               intro: row.courseIsIntro ?? false,
               agency: row.courseAgency ?? "",
             },
@@ -214,13 +216,7 @@ type AboardPair = {
 
 /** The ratio rule a course carries, or null when none is known (fail closed). */
 export function ratioRuleOf(course: TrainingEnrollmentRow["course"]) {
-  return course
-    ? courseRatioRule({
-        agency: course.agency,
-        minimumCertificationLevel: course.minimumLevel,
-        isIntroCourse: course.intro,
-      })
-    : null;
+  return trainingCourseRatioRule(course ?? null);
 }
 
 /** What `trainingDiveRoom` found for one (departure, session) pair. */
@@ -240,7 +236,7 @@ export type TrainingRoom = {
  * (`courseInstructorIdsAboard`), a certified assistant raising the cap, and
  * every marked seat of every session on the departure drawing on the same
  * instructors, oldest mark first (`trainingRoom`). A course with no known
- * ratio (`courseRatioRule`) has no room at all: its seats keep the
+ * ratio (`trainingCourseRatioRule`) has no room at all: its seats keep the
  * departure's level.
  */
 export async function trainingDiveRoom(
@@ -259,6 +255,8 @@ export async function trainingDiveRoom(
       sessionTripId: enrollmentSeats.tripId,
       courseRowId: courses.id,
       courseMinimumLevel: courses.minimumCertificationLevel,
+      courseCertifiesLevel: courses.certifiesLevel,
+      courseSourceTemplateSlug: courses.sourceTemplateSlug,
       courseIsIntro: courses.isIntroCourse,
       courseAgency: courses.agency,
     })
@@ -303,10 +301,12 @@ export async function trainingDiveRoom(
           rule:
             row.courseRowId === null
               ? null
-              : courseRatioRule({
+              : trainingCourseRatioRule({
                   agency: row.courseAgency ?? "",
-                  minimumCertificationLevel: row.courseMinimumLevel,
-                  isIntroCourse: row.courseIsIntro ?? false,
+                  minimumLevel: row.courseMinimumLevel,
+                  certifiesLevel: row.courseCertifiesLevel,
+                  intro: row.courseIsIntro ?? false,
+                  sourceTemplateSlug: row.courseSourceTemplateSlug,
                 }),
         })),
         candidate: {

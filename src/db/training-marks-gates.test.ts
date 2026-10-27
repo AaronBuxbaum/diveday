@@ -199,10 +199,16 @@ describe("training marks — the gates the build review closed (in-memory PGlite
 
   it("prints the course a marked dive counts toward on the manifest, and that no instructor is aboard", async () => {
     const ctx = await charterContext();
-    // A course with a known ratio (PADI, no minimum); one without has no room.
+    // An explicit PADI Open Water course has a known ratio; an unclassified one has no room.
     await ctx.db
       .update(courses)
-      .set({ agency: "padi", minimumCertificationLevel: null, isIntroCourse: false })
+      .set({
+        agency: "padi",
+        minimumCertificationLevel: null,
+        certifiesLevel: "open_water",
+        sourceTemplateSlug: null,
+        isIntroCourse: false,
+      })
       .where(eq(courses.id, ctx.course.courseId));
     await markSeat(ctx);
     const row = async () =>

@@ -92,3 +92,18 @@ it("does not use a legacy held seat’s course in the depth warning", () => {
   render(<OfflineRollCallSection view={view} controls={controls()} />);
   expect(screen.queryByText(/intro program’s depth limit/)).not.toBeInTheDocument();
 });
+
+it("does not expose a stale advisory attached to a held identity", () => {
+  const copy = savedCopy();
+  const person = copy.snapshot.manifests[0]?.divers[0];
+  if (!person) throw new Error("diver missing");
+  person.readiness = {
+    status: "blocked",
+    blockers: [{ code: "identity_unconfirmed", text: "Confirm identity" }],
+  };
+  person.safetyAdvisoryText = "Check this diver’s dive plan and supervision with the crew.";
+  const view = offlineTripView(copy, "departure");
+  if (!view) throw new Error("view missing");
+  render(<OfflineRollCallSection view={view} controls={controls()} />);
+  expect(screen.queryByText(person.safetyAdvisoryText)).not.toBeInTheDocument();
+});

@@ -1,4 +1,4 @@
-import { depthWarningText } from "@/i18n/depth-labels";
+import { depthWarningOrNull } from "@/i18n/depth-labels";
 import { identityReasonText } from "@/i18n/identity-check-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
@@ -270,7 +270,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
               : readinessBlockerText(t, blocker),
         }))
       : [];
-  const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
+  const depthText = depthWarningOrNull(t, depth);
   const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
   // A diver in a drysuit, theirs or ours, with no drysuit card on file
   // (H-78). Behind the same confirmation as the sizes and the nitrox word

@@ -16,6 +16,7 @@ import {
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
+  setShopJuniorBuddyPolicy,
   setShopReopensOn,
   setShopSeasonStart,
   setShopTemperatureUnit,
@@ -77,6 +78,20 @@ const unitsForm = z.object({
   currency: formValue(),
 });
 const timezoneForm = z.object({ timezone: formValue() });
+
+export async function saveJuniorBuddyPolicyAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const value = z.enum(["required", "optional"]).safeParse(formData.get("juniorBuddy"));
+  if (!value.success)
+    redirect(noticeUrl(settings, "junior-buddy-invalid", { saved: "juniorBuddy" }));
+  await setShopJuniorBuddyPolicy(await getDb(), session.user.shopId, value.data === "required");
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "junior-buddy-saved", { saved: "juniorBuddy" }),
+  );
+}
 const seasonStartForm = z.object({ seasonStartMonth: formValue(), seasonStartDay: formValue() });
 /**
  * The three units a shop reads its own numbers in — depth, water temperature,

@@ -21,6 +21,7 @@ vi.mock("../card-actions", () => ({
   deleteCertificationAction: vi.fn(),
   deleteSpecialtyAction: vi.fn(),
   markCertifiedAction: vi.fn(),
+  recordJuniorStatusAction: vi.fn(),
   recordDrysuitExperienceAction: vi.fn(),
   reviewAction: vi.fn(),
   reviewSpecialtyAction: vi.fn(),
@@ -77,6 +78,19 @@ function door() {
  * staffer opens a record for.
  */
 describe("the certification records door", () => {
+  it("asks the staffer to sight the junior or full card without a preselected answer", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          { id: "c1", agency: "naui", level: "open_water", status: "verified", identifier: "1234" },
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByText(t("divers.certifications.juniorCardUnknown"))).toBeInTheDocument();
+    const select = screen.getByLabelText(t("divers.certifications.juniorCardSelect"));
+    expect(select).toHaveValue("");
+    expect(select).toBeRequired();
+  });
   it("names the agency and the level of every card on file", () => {
     renderGroup(
       diver({

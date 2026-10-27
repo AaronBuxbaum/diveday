@@ -173,13 +173,19 @@ export type TrainingRoomSeat = {
  * ratio, and an instructor's new load must also fit the tightest ratio of every seat already on them (a DSD seat caps later Open Water seats at the DSD ratio). A certified assistant aboard the departure raises the cap, as it does
  * on the session itself (`countInWaterCrew`), shared out evenly and rounded
  * down: it may seat fewer than the session would, never more. A seat whose
- * course has no known ratio is never seated.
+ * course has no known ratio is never seated. Nor can another seat be covered
+ * on that departure: the actual in-water groups and instructor loads are unknown.
  */
 function seatTrainingRoom(
   seats: readonly TrainingRoomSeat[],
   sessionCrew: ReadonlyMap<string, readonly CrewMember[]>,
   departureCrew: readonly CrewMember[],
 ): { seated: Set<string>; overRatio: Set<string> } {
+  // Session rosters do not establish who dives together or which instructor
+  // takes an unmodeled seat. No modeled coverage can be proved on this departure.
+  if (seats.some((seat) => seat.rule === null)) {
+    return { seated: new Set(), overRatio: new Set() };
+  }
   const aboardFor = (sessionTripId: string) =>
     courseInstructorIdsAboard(sessionCrew.get(sessionTripId) ?? [], departureCrew);
   const instructors = new Set(seats.flatMap((seat) => aboardFor(seat.sessionTripId)));
@@ -190,9 +196,9 @@ function seatTrainingRoom(
   // **Deliberate, not an accident of the arithmetic** (issue #2830, Aaron
   // 2026-10-22). A DSD seat caps the same instructor's Open Water seats at the
   // DSD ratio, although the DSD seat lowers no level and the published DSD
-  // figure is written for DSD participants. Every seat on one instructor is one
-  // group in the water at once, under one pair of eyes, and a DSD participant
-  // has never breathed from a regulator in open water: the instructor has to
+  // figure is written for DSD participants. Seats assigned to one instructor
+  // may form one group in the water at once, and a DSD participant
+  // may never have breathed from a regulator in open water: the instructor has to
   // stay within reach of them for the whole dive, so the Open Water students
   // beside them get the attention a DSD group leaves over, not the attention a
   // dedicated Open Water ratio assumes. No standard we hold (HD-6) says a mixed

@@ -21,7 +21,11 @@ export function sharedDepthAdvisories(divers: TripManifest["divers"], t: StaffTr
   // a capsule pointing at a strip is a reference paper cannot follow.
   const advisoryDivers = new Map<string, string[]>();
   for (const diver of divers) {
-    if (diver.depthAdvisory?.status !== "exceeds") continue;
+    if (
+      diver.depthAdvisory?.status !== "exceeds" &&
+      diver.depthAdvisory?.status !== "verification_required"
+    )
+      continue;
     const text = depthWarningText(t, diver.depthAdvisory);
     advisoryDivers.set(text, [...(advisoryDivers.get(text) ?? []), diver.fullName]);
   }

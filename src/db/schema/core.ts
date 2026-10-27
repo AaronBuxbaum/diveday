@@ -104,6 +104,8 @@ export const shops = pgTable(
      * (20260724-course-admission-standards); a US shop flips it once in settings.
      */
     depthUnit: depthUnit("depth_unit").notNull().default("meters"),
+    /** Optional one-tap buddy policy; it never changes boarding readiness. */
+    requireAdultBuddyForTeens: boolean("require_adult_buddy_for_teens").notNull().default(false),
     /**
      * Whether this shop reads water temperature in Celsius or Fahrenheit.
      * Display and entry only — `trips.water_temperature_c` is always canonical
@@ -1310,7 +1312,7 @@ export const personRoles = pgTable(
 /**
  * The agencies a diver's card can be recorded under.
  *
- * Recording only, never gating: nothing in `src/lib/readiness.ts`,
+ * Advisory and recording only, never gating: nothing in `src/lib/readiness.ts`,
  * `trip-admission.ts`, or the nitrox gate reads the agency — a card clears on
  * its *level* and its verification state, both of which are agency-independent
  * by design, because a CMAS two-star and a PADI Advanced Open Water diver are

@@ -60,5 +60,6 @@ export function offlineManifestPayload({
         };
       }),
     },
+    () => t("shared.offlineManifest.juniorCheckRequired"),
   );
 }

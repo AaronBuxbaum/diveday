@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { charterContext, markSeat } from "@/test/training-mark-context";
 import { anonymizeDiver } from "./anonymize";
-import { people, personRoles, shops, tripAssignments } from "./schema";
+import { courses, people, personRoles, shops, tripAssignments } from "./schema";
 import { clearTrainingDive, dropTrainingMarkWithin } from "./training-marks";
 import { trainingPlanView } from "./training-plan-view";
 import { readTrainingPlan, setTrainingPlanAssignment } from "./training-plans";
@@ -108,12 +108,23 @@ describe("training planning assignments", () => {
       assignedByPersonId: ctx.owner,
     });
     expect(await setTrainingPlanAssignment(ctx.db, input)).toEqual({ ok: true });
+    // Even an edited prerequisite cannot turn continuing education into Open Water coverage.
+    await ctx.db
+      .update(courses)
+      .set({
+        certifiesLevel: "advanced_open_water",
+        minimumCertificationLevel: null,
+        sourceTemplateSlug: "advanced-open-water-diver",
+        isIntroCourse: false,
+        agency: "PADI",
+      })
+      .where(eq(courses.id, ctx.course.courseId));
     const view = await trainingPlanView(ctx.db, ctx.shop.id, ctx.charter.id);
     expect(view?.students.find((student) => student.id === ctx.seat.id)).toMatchObject({
       instructorPersonId: ctx.instructor,
       eligible: [ctx.instructor],
     });
-    // The seed course has no modeled ratio; an assignment must not invent one.
+    // A continuing course has no modeled ratio; an assignment must not invent one.
     expect(view?.students.find((student) => student.id === ctx.seat.id)?.rule).toBeNull();
     expect(view?.allocation.unresolvedStudents.has(ctx.seat.id)).toBe(true);
     expect((await readTrainingPlan(ctx.db, ctx.shop.id, ctx.charter.id)).students).toContainEqual({

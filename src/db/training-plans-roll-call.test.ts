@@ -14,7 +14,13 @@ it("keeps plans unresolved when a not-aboard instructor later returns", async ()
   const f = await charterContext(ctx);
   await f.db
     .update(courses)
-    .set({ agency: "PADI", minimumCertificationLevel: null, isIntroCourse: false })
+    .set({
+      agency: "PADI",
+      minimumCertificationLevel: null,
+      isIntroCourse: false,
+      certifiesLevel: "open_water",
+      sourceTemplateSlug: "open-water-diver",
+    })
     .where(eq(courses.id, f.course.courseId));
   const [helper] = await f.db
     .insert(people)
