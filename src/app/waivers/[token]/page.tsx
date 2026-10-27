@@ -21,6 +21,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
+import { isCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { questionnaireForJurisdiction } from "@/lib/medical";
@@ -158,13 +159,14 @@ export default async function WaiverPage({
 
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
-    const readyCapability = bookingId
-      ? await issueBookingCapability(db, {
-          shopId: state.record.shopId,
-          bookingId,
-          purpose: "readiness",
-        })
-      : null;
+    const readyCapability =
+      bookingId && !isCounterWaiverToken(token)
+        ? await issueBookingCapability(db, {
+            shopId: state.record.shopId,
+            bookingId,
+            purpose: "readiness",
+          })
+        : null;
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     // The same gate the doctor's page opens on, so the door never leads to a redirect.
     const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));

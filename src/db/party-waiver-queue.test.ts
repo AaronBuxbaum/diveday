@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { fileScopedShopContext } from "@/test/db";
 import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
 import { listTripReadiness } from "./readiness";
@@ -120,6 +121,8 @@ describe("party release QR handoff", () => {
       .set({ identityUnconfirmedAt: null, status: "cancelled" })
       .where(eq(bookings.id, f.minor.bookingId));
     expect(await issuePartyWaiver(f.db, input)).toBeNull();
+    // Existing waiver links intentionally retain their current cancellation policy.
+    expect((await getWaiverForToken(f.db, existing.token)).state).toBe("available");
   });
   it("never revives an expired or superseded QR and issues a fresh one", async () => {
     const f = await family();
@@ -171,5 +174,41 @@ describe("party release QR handoff", () => {
     expect(
       rows.find((row) => row.booking.id === f.third.bookingId)?.readiness.blockers.length,
     ).toBeGreaterThan(0);
+  });
+  it("keeps a waiver-only envelope scoped and expiring after the lead signs", async () => {
+    const f = await family();
+    const input = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.lead.bookingId,
+    };
+    const issued = await issuePartyWaiver(f.db, input);
+    if (!issued) throw new Error("link missing");
+    const envelope = sealCounterWaiverToken(issued.token, issued.expiresAt);
+    if (!envelope) throw new Error("envelope missing");
+    expect(envelope).not.toContain(issued.token);
+    expect((await getWaiverForToken(f.db, envelope)).state).toBe("available");
+    expect(
+      (
+        await completeWaiver(f.db, envelope, {
+          signerName: `Ana ${f.stamp}`,
+          agreed: true,
+          medicalAnswers: clearAnswers,
+        })
+      ).ok,
+    ).toBe(true);
+    expect((await getWaiverForToken(f.db, envelope)).state).toBe("completed");
+    expect(
+      (await getWaiverForToken(f.db, envelope, new Date(issued.expiresAt.getTime() + 1))).state,
+    ).toBe("unavailable");
+    expect(
+      (await getWaiverForToken(f.db, issued.token, new Date(issued.expiresAt.getTime() + 1))).state,
+    ).toBe("completed");
+    await f.db
+      .update(waiverRecords)
+      .set({ supersededAt: nowDate() })
+      .where(eq(waiverRecords.bookingId, f.lead.bookingId));
+    expect((await getWaiverForToken(f.db, envelope)).state).toBe("unavailable");
   });
 });

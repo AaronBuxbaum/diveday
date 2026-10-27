@@ -12,6 +12,7 @@ const bookingId = "55555555-5555-4555-8555-555555555555";
 
 describe("party waiver QR action", () => {
   it("gates each issue through shop staff and returns only an image", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
     vi.mocked(requireShopSurface).mockResolvedValue({ db: {}, shop: { id: "shop" } } as never);
     vi.mocked(issuePartyWaiver).mockResolvedValue({
       token: "secret-credential",
@@ -37,5 +38,15 @@ describe("party waiver QR action", () => {
     expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
       ok: false,
     });
+  });
+  it("refuses before issuance if the sealing key is unavailable", async () => {
+    vi.mocked(requireShopSurface).mockResolvedValue({ db: {}, shop: { id: "shop" } } as never);
+    vi.mocked(issuePartyWaiver).mockClear();
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
+      ok: false,
+    });
+    expect(issuePartyWaiver).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 });

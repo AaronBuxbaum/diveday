@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { hasReturned } from "@/lib/trips";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { listTripReadiness } from "./readiness";
 import { bookings, shops, trips } from "./schema";
@@ -130,6 +131,7 @@ export async function issuePartyWaiver(
 ): Promise<{ token: string; expiresAt: Date } | null> {
   try {
     return await db.transaction(async (tx) => {
+      await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
       const [trip] = await tx
         .select({ endsAt: trips.endsAt })
         .from(trips)

@@ -6,6 +6,7 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
+import { isCounterWaiverToken, openCounterWaiverToken } from "@/lib/counter-waiver-token";
 import {
   type GuardianRelationship,
   guardianSignatureRequired,
@@ -20,6 +21,7 @@ import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
 import { buildShopAnswers, draftShopAnswersFrom } from "@/lib/waiver-questions";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
 import { needsMedicalReview } from "@/lib/waivers";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
@@ -48,12 +50,14 @@ export type TokenWaiverState =
  * A bearer token only needs the record's shop and person, so token pages handle
  * both booking-scoped and person-scoped releases.
  */
-async function currentRecordForToken(db: AppDb, token: string) {
+async function currentRecordForToken(db: DbExecutor, token: string, now = nowDate()) {
+  const raw = isCounterWaiverToken(token) ? openCounterWaiverToken(token, now) : token;
+  if (!raw) return null;
   const [record] = await db
     .select()
     .from(waiverRecords)
     .where(
-      and(eq(waiverRecords.tokenHash, hashWaiverToken(token)), isNull(waiverRecords.supersededAt)),
+      and(eq(waiverRecords.tokenHash, hashWaiverToken(raw)), isNull(waiverRecords.supersededAt)),
     )
     .limit(1);
   return record ?? null;
@@ -61,11 +65,11 @@ async function currentRecordForToken(db: AppDb, token: string) {
 
 /** A bearer token reveals only its own record and is rejected on expiry/supersession. */
 export async function getWaiverForToken(
-  db: AppDb,
+  db: DbExecutor,
   token: string,
   now: Date = nowDate(),
 ): Promise<TokenWaiverState> {
-  const record = await currentRecordForToken(db, token);
+  const record = await currentRecordForToken(db, token, now);
   if (!record) return { state: "unavailable" };
   if (record.status !== "pending") return { state: "completed", record };
   if (record.expiresAt <= now) return { state: "expired", record };
@@ -99,38 +103,56 @@ export async function staleWaiverRecordForToken(
   token: string,
   now: Date = nowDate(),
 ): Promise<typeof waiverRecords.$inferSelect | null> {
+  const raw = isCounterWaiverToken(token) ? openCounterWaiverToken(token, now) : token;
+  if (!raw) return null;
   const [record] = await db
     .select()
     .from(waiverRecords)
-    .where(eq(waiverRecords.tokenHash, hashWaiverToken(token)))
+    .where(eq(waiverRecords.tokenHash, hashWaiverToken(raw)))
     .limit(1);
   if (record?.status !== "pending") return null;
   if (!record.supersededAt && record.expiresAt > now) return null;
   return record;
 }
 
+type SaveWaiverDraftInput = {
+  signerName?: string;
+  acknowledged: boolean;
+  medicalAnswers: MedicalAnswers;
+  /** The guardian section as typed, for a parent who comes back to the link. */
+  guardian?: DraftGuardian;
+  /**
+   * The shop questions as typed, raw by question id. Kept only where a value
+   * reads as a valid answer to a question the record's own template version
+   * asks; omitted, the saved draft is left as it was.
+   */
+  shopAnswers?: Readonly<Record<string, string>>;
+  /**
+   * The medical alert for the crew as typed. Kept when signing would keep
+   * it, dropped otherwise; omitted, the saved draft is left as it was.
+   */
+  medicalAlert?: string;
+  emergencyContact?: EmergencyContactInput;
+  now?: Date;
+};
+
 export async function saveWaiverDraft(
   db: AppDb,
   token: string,
-  input: {
-    signerName?: string;
-    acknowledged: boolean;
-    medicalAnswers: MedicalAnswers;
-    /** The guardian section as typed, for a parent who comes back to the link. */
-    guardian?: DraftGuardian;
-    /**
-     * The shop questions as typed, raw by question id. Kept only where a value
-     * reads as a valid answer to a question the record's own template version
-     * asks; omitted, the saved draft is left as it was.
-     */
-    shopAnswers?: Readonly<Record<string, string>>;
-    /**
-     * The medical alert for the crew as typed. Kept when signing would keep
-     * it, dropped otherwise; omitted, the saved draft is left as it was.
-     */
-    medicalAlert?: string;
-    now?: Date;
-  },
+  input: SaveWaiverDraftInput,
+): Promise<boolean> {
+  const initial = await currentRecordForToken(db, token, input.now);
+  if (!initial) return false;
+  return db.transaction(async (tx) => {
+    if (await lockWaiverForWriting(tx, initial)) return false;
+    return saveWaiverDraftLocked(tx, token, input);
+  });
+}
+
+async function saveWaiverDraftLocked(
+  db: DbExecutor,
+  token: string,
+  input: SaveWaiverDraftInput,
 ): Promise<boolean> {
   const state = await getWaiverForToken(db, token, input.now);
   if (state.state !== "available") return false;
@@ -158,6 +180,16 @@ export async function saveWaiverDraft(
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id });
+  if (saved && input.emergencyContact) {
+    if (state.record.bookingId)
+      await saveEmergencyContact(db, state.record.bookingId, input.emergencyContact);
+    else
+      await savePersonEmergencyContact(db, {
+        shopId: state.record.shopId,
+        personId: state.record.personId,
+        ...input.emergencyContact,
+      });
+  }
   return Boolean(saved);
 }
 
@@ -290,7 +322,7 @@ export type EmergencyContactInput = { name?: string; phone?: string };
  * booking, so a bearer token can only ever touch its own diver.
  */
 async function saveEmergencyContact(
-  db: AppDb,
+  db: DbExecutor,
   bookingId: string,
   contact: EmergencyContactInput,
 ): Promise<void> {
@@ -448,35 +480,103 @@ export async function savePersonEmergencyContact(
   return Boolean(updated);
 }
 
+type CompleteWaiverInput = {
+  signerName: string;
+  agreed: boolean;
+  medicalAnswers: MedicalAnswers;
+  emergencyContact?: EmergencyContactInput;
+  /**
+   * The guardian's half, when the page collected one. Required when the
+   * diver is a minor on the signing day; ignored otherwise — an adult's
+   * release carries no co-signer, whatever was typed into a section the
+   * page never rendered for them.
+   */
+  guardian?: GuardianInput;
+  /**
+   * The diver's answers to the shop's own questions, raw by question id.
+   * Only the ids are trusted: the questions, their prompts, kinds and
+   * options are read from the record's own template version, and the
+   * sealed snapshot is built from those (dive-domain review B1).
+   */
+  shopAnswers?: Readonly<Record<string, string>>;
+  /**
+   * The medical alert for the crew as typed (glossary *Medical alert for
+   * the crew*). Stored trimmed, blank as null; nothing reads what it says.
+   */
+  medicalAlert?: string;
+  now?: Date;
+};
+
+async function lockWaiverForWriting(
+  tx: DbExecutor,
+  initial: typeof waiverRecords.$inferSelect,
+): Promise<"unavailable" | "identity_unconfirmed" | null> {
+  // Erasure and person merge take the matching exclusive lock before rows.
+  await lockBoardingCertificationEvidence(tx, initial.shopId, "boarding");
+  if (initial.bookingId) {
+    const [seat] = await tx
+      .select({
+        personId: bookings.personId,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      })
+      .from(bookings)
+      .where(and(eq(bookings.id, initial.bookingId), eq(bookings.shopId, initial.shopId)))
+      .for("update")
+      .limit(1);
+    if (!seat || seat.personId !== initial.personId) return "unavailable";
+    if (seat.identityUnconfirmedAt) return "identity_unconfirmed";
+  }
+  const [person] = await tx
+    .select({
+      id: people.id,
+      anonymizedAt: people.anonymizedAt,
+      mergedIntoPersonId: people.mergedIntoPersonId,
+    })
+    .from(people)
+    // diveday:allow-deleted-people: an issued release may belong to a removed person; erasure is refused below.
+    .where(and(eq(people.id, initial.personId), eq(people.shopId, initial.shopId)))
+    // diveday:allow-update-lock: the signer and guardian facts must not change while the signature is recorded.
+    .for("update")
+    .limit(1);
+  if (!person || person.anonymizedAt || person.mergedIntoPersonId) return "unavailable";
+  const [record] = await tx
+    .select()
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.id, initial.id), eq(waiverRecords.shopId, initial.shopId)))
+    .for("update")
+    .limit(1);
+  if (
+    !record ||
+    record.supersededAt ||
+    record.personId !== initial.personId ||
+    record.bookingId !== initial.bookingId
+  )
+    return "unavailable";
+  return null;
+}
+
 export async function completeWaiver(
   db: AppDb,
   token: string,
-  input: {
-    signerName: string;
-    agreed: boolean;
-    medicalAnswers: MedicalAnswers;
-    emergencyContact?: EmergencyContactInput;
-    /**
-     * The guardian's half, when the page collected one. Required when the
-     * diver is a minor on the signing day; ignored otherwise — an adult's
-     * release carries no co-signer, whatever was typed into a section the
-     * page never rendered for them.
-     */
-    guardian?: GuardianInput;
-    /**
-     * The diver's answers to the shop's own questions, raw by question id.
-     * Only the ids are trusted: the questions, their prompts, kinds and
-     * options are read from the record's own template version, and the
-     * sealed snapshot is built from those (dive-domain review B1).
-     */
-    shopAnswers?: Readonly<Record<string, string>>;
-    /**
-     * The medical alert for the crew as typed (glossary *Medical alert for
-     * the crew*). Stored trimmed, blank as null; nothing reads what it says.
-     */
-    medicalAlert?: string;
-    now?: Date;
-  },
+  input: CompleteWaiverInput,
+): Promise<CompleteWaiverOutcome> {
+  const initial = await currentRecordForToken(db, token, input.now);
+  if (!initial) return { ok: false, reason: "unavailable" };
+  const outcome = await db.transaction(async (tx): Promise<CompleteWaiverOutcome> => {
+    const refusal = await lockWaiverForWriting(tx, initial);
+    if (refusal) return { ok: false, reason: refusal };
+    // The underlying and outer expiry are both checked by the locked reader.
+    return completeWaiverLocked(tx, token, input);
+  });
+  if (outcome.ok && !outcome.idempotent)
+    await publishManifestEventsForPerson(db, initial.shopId, initial.personId);
+  return outcome;
+}
+
+async function completeWaiverLocked(
+  db: DbExecutor,
+  token: string,
+  input: CompleteWaiverInput,
 ): Promise<CompleteWaiverOutcome> {
   const now = input.now ?? nowDate();
   const evidence = localTypedConsentProvider.capture({
@@ -646,9 +746,6 @@ export async function completeWaiver(
         });
       }
     }
-    // The release changes who the boat will board: open and primed manifests
-    // re-read (issue #2613).
-    await publishManifestEventsForPerson(db, state.record.shopId, state.record.personId);
     return { ok: true, status: completedStatus(saved.status), idempotent: false };
   }
 

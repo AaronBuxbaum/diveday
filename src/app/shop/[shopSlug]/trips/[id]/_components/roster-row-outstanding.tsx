@@ -63,7 +63,6 @@ export type RowOutstandingInput = Pick<
   | "previewPartyPaymentAction"
   | "markPartyPaidAction"
   | "partyPay"
-  | "partyLeadId"
   | "record"
   | "certifyDiverAction"
   | "saveCourseNextStepAction"
@@ -87,7 +86,7 @@ export type RowOutstandingInput = Pick<
 > &
   Pick<RowIdentity, "identityContact" | "packageNote"> &
   Pick<RowReasonList, "deskPrivateLines"> &
-  Pick<RosterRows, "trainingMarks">;
+  Pick<RosterRows, "trainingMarks"> & { partyLeadId?: string | null };
 
 /** The agency a card goes to, by name; "the agency" where the course named none. */
 function processingAgencyName(agency: IssuedCard["agency"], t: RosterSeat["t"]): string {

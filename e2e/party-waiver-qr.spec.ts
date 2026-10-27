@@ -53,6 +53,36 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.getByRole("button", { name: "Sign waiver" }).click();
     await expect(phone.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
     await page.reload();
+    await page.getByRole("button", { name: "Show waiver QR code for Alex Lagoon" }).click();
+    const leadDialog = page.getByRole("dialog", { name: "Party waivers" });
+    const leadSrc = await leadDialog.getByRole("img").getAttribute("src");
+    if (!leadSrc?.startsWith("data:image/png;base64,")) throw new Error("lead QR image missing");
+    const leadPng = Buffer.from(leadSrc.slice("data:image/png;base64,".length), "base64");
+    const leadPixels = await sharp(leadPng)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const leadDecoded = jsQR(
+      new Uint8ClampedArray(leadPixels.data),
+      leadPixels.info.width,
+      leadPixels.info.height,
+    );
+    if (!leadDecoded) throw new Error("lead QR could not be decoded");
+    const leadPath = new URL(leadDecoded.data).pathname;
+    await phone.goto(leadPath);
+    await leadDialog.getByRole("button", { name: "Close" }).click();
+    await phone.getByLabel("Type your full name").fill("Alex Lagoon");
+    await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+    const leadNo = phone.getByRole("radio", { name: "No" });
+    await expect(leadNo).not.toHaveCount(0);
+    for (const radio of await leadNo.all()) await radio.check();
+    await phone.getByRole("button", { name: "Sign waiver" }).click();
+    await expect(phone.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
+    await expect(phone).toHaveURL(new RegExp(`^${workerBaseURL}${leadPath}$`));
+    await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
+    await phone.reload();
+    await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
+    await page.reload();
     const row = page.getByRole("listitem").filter({ hasText: "Sky Lagoon" });
     await expect(row.getByText("Waiver signed", { exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Back to departure" }).click();

@@ -17,8 +17,6 @@ import {
   completeWaiver,
   getWaiverForToken,
   getWaiverTemplateQuestions,
-  saveBookingEmergencyContact,
-  savePersonEmergencyContact,
   saveWaiverDraft,
   staleWaiverRecordForToken,
 } from "@/db/waivers";
@@ -31,6 +29,7 @@ import {
   emergencyContactSchema,
   readEmergencyContact,
 } from "@/lib/contact";
+import { isCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { formValue, parseForm } from "@/lib/form-parse";
 import { GUARDIAN_RELATIONSHIPS, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import type { MedicalQuestionnaire } from "@/lib/medical";
@@ -386,7 +385,7 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
   }
   const context = await signingContext(token);
   if (!context) redirect(`/waivers/${token}?error=unavailable`);
-  const { record, recordBookingId, questionnaire, guardianRequired, shopQuestions } = context;
+  const { record, questionnaire, guardianRequired, shopQuestions } = context;
   const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
   const answers = readFormMedicalAnswers(formData, questionnaire, { allowIncomplete: true });
   const shopAnswers = readFormShopAnswers(formData, shopQuestions);
@@ -398,6 +397,13 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
     redirect(refusedSubmitPath(token, invalidField));
   }
   const db = await getDb();
+  const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+  const submittedContact = contact.success
+    ? readEmergencyContact({
+        name: contact.data.emergencyContactName,
+        phone: contact.data.emergencyContactPhone,
+      })
+    : undefined;
   const savedDraft = await saveWaiverDraft(db, token, {
     signerName: parsed.data.signerName,
     acknowledged: parsed.data.acknowledged === "on",
@@ -405,6 +411,10 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
     guardian: guardianDraftFrom(formData, guardianRequired),
     shopAnswers,
     medicalAlert: readFormMedicalAlert(formData),
+    emergencyContact:
+      submittedContact?.kind === "pair"
+        ? { name: submittedContact.name, phone: submittedContact.phone }
+        : undefined,
   });
   // A form the diver themselves just submitted through their own bearer
   // link — first-hand evidence of the language they read (docs ADR
@@ -425,31 +435,6 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
   // and the other cleared is refused below rather than spliced onto the
   // stored number. The draft is already written at this point, so the
   // refusal costs the diver nothing they typed into the rest of the form.
-  const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
-  const submittedContact = contact.success
-    ? readEmergencyContact({
-        name: contact.data.emergencyContactName,
-        phone: contact.data.emergencyContactPhone,
-      })
-    : undefined;
-  if (savedDraft && submittedContact?.kind === "pair") {
-    if (recordBookingId) {
-      await saveBookingEmergencyContact(db, {
-        shopId: record.shopId,
-        bookingId: recordBookingId,
-        name: submittedContact.name,
-        phone: submittedContact.phone,
-        actor: "bearer",
-      });
-    } else {
-      await savePersonEmergencyContact(db, {
-        shopId: record.shopId,
-        personId: record.personId,
-        name: submittedContact.name,
-        phone: submittedContact.phone,
-      });
-    }
-  }
   const refusedDraftContact = refusedContactField(submittedContact);
   if (savedDraft && refusedDraftContact) redirect(refusedSubmitPath(token, refusedDraftContact));
   revalidateAndRedirect(
@@ -575,25 +560,11 @@ export async function completeWaiverAction(token: string, formData: FormData) {
       guardian: guardianDraftFrom(formData, guardianRequired),
       shopAnswers,
       medicalAlert,
+      emergencyContact:
+        submittedContact?.kind === "pair"
+          ? { name: submittedContact.name, phone: submittedContact.phone }
+          : undefined,
     });
-    if (submittedContact?.kind === "pair") {
-      if (recordBookingId) {
-        await saveBookingEmergencyContact(db, {
-          shopId: record.shopId,
-          bookingId: recordBookingId,
-          name: submittedContact.name,
-          phone: submittedContact.phone,
-          actor: "bearer",
-        });
-      } else {
-        await savePersonEmergencyContact(db, {
-          shopId: record.shopId,
-          personId: record.personId,
-          name: submittedContact.name,
-          phone: submittedContact.phone,
-        });
-      }
-    }
     if (outcome.reason === "name_mismatch") {
       redirect(refusedSubmitPath(token, "signerNameMismatch"));
     }
@@ -649,6 +620,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
   // signed-waiver page whose only forward path is the same link — the
   // completed-state render below still shows that page for anyone who
   // revisits this token afterward.
+  if (isCounterWaiverToken(token)) revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
   const db = await getDb();
   // A parent who opened this from their party panel goes back to it, so the
   // next child's release is one tap away (dive-domain review F6).
