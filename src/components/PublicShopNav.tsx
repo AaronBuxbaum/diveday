@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 
 /**
  * One destination in the diver's public header.
@@ -74,15 +75,18 @@ const linkClass =
 export function PublicShopNav({
   ariaLabel,
   items,
+  action,
 }: {
   ariaLabel: string;
   items: readonly PublicShopNavItem[];
+  /** A related control follows the destinations in the same wrapping flow. */
+  action?: ReactNode;
 }) {
   const pathname = usePathname();
   const active = activeNavIndex(pathname, items);
   return (
-    <nav aria-label={ariaLabel}>
-      <ul className="flex items-center gap-0.5 sm:gap-1">
+    <nav aria-label={ariaLabel} className="min-w-0 flex-auto">
+      <ul className="flex flex-wrap items-center gap-0.5 sm:gap-1">
         {items.map((item, index) => (
           <li key={item.href}>
             <Link
@@ -98,6 +102,7 @@ export function PublicShopNav({
             </Link>
           </li>
         ))}
+        {action ? <li className="ms-auto ps-1 lg:ps-2">{action}</li> : null}
       </ul>
     </nav>
   );
