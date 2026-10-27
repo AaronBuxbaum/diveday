@@ -90,11 +90,6 @@ test.describe("seat claim links", () => {
     const claimUrlText = (await seatRow.locator("p.font-mono").textContent()) ?? "";
     const claimPath = claimUrlText.match(/\/claim\/[^\s/?#]+/)?.[0];
     expect(claimPath).toBeTruthy();
-    // Their own readiness page — where booking now lands, and where the claim
-    // panel lives for the whole run-up to the trip (ADR
-    // 20260820-one-page-after-booking).
-    const organizerUrl = page.url();
-
     // The invited diver opens the link on their own browser profile.
     const claimantContext = await browser.newContext({ baseURL: workerBaseURL });
     const claimantPage = makeActivitySafe(await claimantContext.newPage());
@@ -141,12 +136,14 @@ test.describe("seat claim links", () => {
     await claimantContext.close();
 
     // The organizer reloads their page: claimed, no link to share.
-    await page.goto(organizerUrl);
+    // The summary jump added a fragment; navigating to that same URL would
+    // stay in this document instead of reading the other device's claim.
+    await page.reload();
     const refreshedRow = page
       .locator("section", { has: page.getByRole("heading", { name: "Your group’s seats" }) })
       .locator("li")
       .filter({ hasText: "Sam Reyes" });
-    await expect(refreshedRow.getByText("Claimed")).toBeVisible();
+    await expect(refreshedRow.getByText("Claimed", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("link", { name: diver("ready.groupSummary", { total: 2, unclaimed: 0 }) }),
     ).toHaveAttribute("href", "#party-seats");

@@ -3,8 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import type { CompletedMedicalState } from "./completed-medical-state";
-import { WaiverCompleted } from "./WaiverCompleted";
-import { waiverRailProgress } from "./WaiverStepRail";
+import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
 
 const t = diverTranslator("en-US");
 const shop = {
@@ -27,17 +26,24 @@ function receipt(
       medicalState={medicalState}
       readyPath={readyPath}
       doctorPath={doctorPath}
-      signedRail={waiverRailProgress({
-        medicalAnswered: 0,
-        medicalTotal: 0,
-        medicalStillOpen: medicalState !== "complete",
-        signed: true,
-      })}
+      signedRail={completedWaiverRail(medicalState !== "complete", false)}
       diveSitesList={[]}
     />
   );
 }
 describe("signed waiver receipt", () => {
+  it.each([false, true])(
+    "keeps Medical open on a held signed receipt, shop questions=%s",
+    (hasShopQuestions) => {
+      const heldRail = completedWaiverRail(true, hasShopQuestions);
+      const clearRail = completedWaiverRail(false, hasShopQuestions);
+      expect(heldRail.medical).toBe(false);
+      expect(heldRail.sign).toBe(true);
+      expect(heldRail.done).toBe(heldRail.total - 1);
+      expect(clearRail.medical).toBe(true);
+      expect(clearRail.done).toBe(clearRail.total);
+    },
+  );
   it("puts the legal receipt then the actual referral before general preparation", () => {
     render(receipt("referral"));
     const signed = screen.getByText(t("waiver.signedBody"));
