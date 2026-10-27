@@ -63,6 +63,6 @@ test("boarding evidence stays with its heading and every sheet identifies the de
     expect(evidence, `heading and first card at offset ${offset}px`).toContain(
       "9:30:45.125 AM EDT",
     );
-    await style.evaluate((element) => element.remove());
+    await style.evaluate((element) => element.parentNode?.removeChild(element));
   }
 });
