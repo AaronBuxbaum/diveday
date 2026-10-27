@@ -51,7 +51,10 @@ export async function readTodayCatchUp(
     })
     .from(tripDeskEvents)
     .innerJoin(trips, eq(trips.id, tripDeskEvents.tripId))
-    .leftJoin(people, eq(people.id, tripDeskEvents.subjectPersonId))
+    .leftJoin(
+      people,
+      and(eq(people.id, tripDeskEvents.subjectPersonId), eq(people.shopId, input.shopId)),
+    )
     .leftJoin(
       bookings,
       and(eq(bookings.id, tripDeskEvents.bookingId), eq(bookings.shopId, input.shopId)),
@@ -67,6 +70,7 @@ export async function readTodayCatchUp(
       todayReadMarkEvents,
       and(
         eq(todayReadMarkEvents.eventId, tripDeskEvents.id),
+        eq(todayReadMarkEvents.shopId, input.shopId),
         mark ? eq(todayReadMarkEvents.markId, mark.id) : sql`false`,
       ),
     )
@@ -166,6 +170,6 @@ async function writeAcknowledgements(
   if (rows.length)
     await db
       .insert(todayReadMarkEvents)
-      .values(rows.map(({ id }) => ({ markId, eventId: id })))
+      .values(rows.map(({ id }) => ({ shopId: input.shopId, markId, eventId: id })))
       .onConflictDoNothing();
 }
