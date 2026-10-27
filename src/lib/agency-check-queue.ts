@@ -77,6 +77,7 @@ export type AgencyCheckOutcome =
   | "captcha"
   /** The agency's lookup page has changed: that agency's other cards are left. */
   | "page_changed"
+  | "manual_opened"
   /** This copy of the extension does not check the agency: its other cards are left. */
   | "unsupported"
   /** A lookup behind the shop's own sign-in (PADI) met a sign-in page: stops the queue at once. */

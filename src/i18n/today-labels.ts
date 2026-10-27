@@ -680,6 +680,7 @@ const MEDIA_DELETION_KIND_KEYS: Record<MediaDeletionKind, StaffMessageKey> = {
   dive_site_photo: "today.opsAlert.mediaKind.diveSitePhoto",
   shop_logo: "today.opsAlert.mediaKind.shopLogo",
   shop_hero: "today.opsAlert.mediaKind.shopHero",
+  boat_photo: "today.opsAlert.mediaKind.boatPhoto",
   payment_receipt: "today.opsAlert.mediaKind.paymentReceipt",
 };
 
@@ -1065,6 +1066,13 @@ export function gearOverdueDetailText(
   input: { unitLabels: readonly string[]; dueOn: string },
 ): string {
   return t("today.gear.overdueDetail", gearUnitsParams(locale, input));
+}
+
+export function gearOverdueGroupText(t: StaffTranslator, items: number, people: number) {
+  return {
+    subject: t("today.gear.overdueItems", { count: items }),
+    detail: t("today.gear.overduePeople", { count: people }),
+  };
 }
 
 /**

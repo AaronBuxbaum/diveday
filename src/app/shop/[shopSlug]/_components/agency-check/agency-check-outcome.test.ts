@@ -35,6 +35,7 @@ const COPY = {
   unreadable: "unreadable",
   captcha: "captcha",
   pageChanged: "pageChanged",
+  manualOpened: "manualOpened",
   unsupported: "unsupported",
   notFoundOnPage: "notFoundOnPage {name}",
   noAnswer: "noAnswer",

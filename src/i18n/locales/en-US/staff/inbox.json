@@ -75,8 +75,7 @@
     "placeholder": "Type your answer",
     "send": "Send",
     "sending": "Sending…",
-    "windowClosed": "{name} last wrote on WhatsApp more than 24 hours ago. After that, WhatsApp stops a business typing freely, so nobody gets messages they never asked for.",
-    "reopenLead": "Send one of these WhatsApp-approved messages instead. When {name} answers, you can type your reply.",
+    "windowClosed": "After 24 hours, WhatsApp requires an approved message; you can reply when {name} responds.",
     "reopenSent": "You asked {name} to write back {date}. When they do, you can type your reply here.",
     "diverRemoved": "This diver’s record was removed, so replies are switched off."
   },

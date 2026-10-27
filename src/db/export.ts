@@ -609,15 +609,11 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     waiversByPerson.set(record.personId, [...(waiversByPerson.get(record.personId) ?? []), record]);
   }
 
-  // Every DiveDay-stored image or imported-document URL any CSV below
-  // references, for the photos/ bundle (ADR 20260724-export-bundled-photos
-  // and 20260816-imported-payment-history-is-evidence). `fetchExportPhotos`
-  // filters this again to DiveDay's own storage — collecting a non-managed
-  // URL here is harmless, just never fetched.
+  // Stored image and document URLs referenced by the export's CSVs.
   const photoUrls = [
     ...recapPhotoRows.map((row) => row.imageUrl),
     ...tripRecapPhotoRows.map(({ photo }) => photo.imageUrl),
-    ...tripRows.map((row) => row.arrivalPhotoUrl),
+    ...tripRows.map((row) => row.arrivalPhotoUrl).concat(boatRows.map((row) => row.photoUrl)),
     ...siteRows.flatMap((row) => [row.satelliteImageUrl, row.routeImageUrl, ...row.imageUrls]),
     // No field-guide photos: a creature row is a catalog slug, and the
     // picture on its card is DiveDay's own asset under `public/marine-life`

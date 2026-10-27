@@ -23,6 +23,7 @@ import { summarizeShopYear } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
 import { sameMomentYearBefore, shopDaysBounds } from "@/lib/zoned";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
+import { ReportExportMenu } from "./ReportExportMenu";
 import { ReportRangeTabs } from "./ReportRangeTabs";
 import { YearReport } from "./YearReport";
 
@@ -142,14 +143,17 @@ export async function YearView({
       <ShopPageHeader
         title={t("shared.shopSections.money")}
         actions={
-          year.hasActivity ? (
-            <a
-              href={`${shopPath(shopSlug, "reports", "card")}${isThisYear ? "" : `?year=${yearNumber}`}`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("reports.year.printCard")}
-            </a>
-          ) : undefined
+          <>
+            {year.hasActivity ? (
+              <a
+                href={`${shopPath(shopSlug, "reports", "card")}?year=${yearNumber}`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("reports.year.printCard")}
+              </a>
+            ) : null}
+            <ReportExportMenu t={t} shopSlug={shopSlug} range={{ year: yearNumber }} />
+          </>
         }
       />
       <StaffSectionTabs section="money" current="reports" roles={roles} shop={shop} t={t} />
@@ -185,7 +189,6 @@ export async function YearView({
           report: summarizeMonth(toDate),
           currency,
           counterTaxIncludedCents: counter,
-          csvHref: `${shopPath(shopSlug, "reports", "download")}?year=${year.year}`,
         }}
         locale={locale}
         shopSlug={shopSlug}

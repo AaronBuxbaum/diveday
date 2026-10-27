@@ -59,14 +59,13 @@ describe("YearReport", () => {
 
 /** The year's money and its CSV (fourth UX review, item 25). */
 describe("the year's money", () => {
-  it("shows net revenue, tax and tips, and the year's file", () => {
+  it("shows net revenue, tax and tips", () => {
     render(
       <YearReport
         year={YEAR}
         money={{
           report: { revenueCents: 1_250_000, taxCents: 87_500, tipsCents: 64_000, tipCount: 31 },
           currency: "usd",
-          csvHref: "/shop/blue-mantis/reports/download?year=2026",
         }}
         locale="en-US"
         shopSlug="blue-mantis"
@@ -79,10 +78,6 @@ describe("the year's money", () => {
     expect(money).toHaveTextContent("Tax collected");
     expect(money).toHaveTextContent("$875");
     expect(money).toHaveTextContent("31 tips, for the crew");
-    expect(screen.getByRole("link", { name: "Download the year (CSV)" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/reports/download?year=2026",
-    );
   });
 
   it("says counter sales sit outside Tax collected only in a year the counter took money", () => {
@@ -90,7 +85,6 @@ describe("the year's money", () => {
     const money = (counterTaxIncludedCents: number) => ({
       report: { revenueCents: 1_250_000, taxCents: 87_500, tipsCents: 0, tipCount: 0 },
       currency: "usd",
-      csvHref: "/shop/blue-mantis/reports/download?year=2026",
       counterTaxIncludedCents,
     });
     const { rerender } = render(

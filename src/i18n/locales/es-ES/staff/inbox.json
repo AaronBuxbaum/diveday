@@ -75,8 +75,7 @@
     "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
     "sending": "Enviando…",
-    "windowClosed": "{name} escribió por WhatsApp por última vez hace más de 24 horas. Pasado ese plazo, WhatsApp no deja que un negocio escriba libremente, para que nadie reciba mensajes que no pidió.",
-    "reopenLead": "Envía uno de estos mensajes aprobados por WhatsApp. Cuando {name} conteste, podrás escribir tu respuesta.",
+    "windowClosed": "Después de 24 horas, WhatsApp requiere un mensaje aprobado; podrás responder cuando {name} conteste.",
     "reopenSent": "Pediste a {name} que escribiera {date}. Cuando lo haga, podrás escribir tu respuesta aquí.",
     "diverRemoved": "El registro de este buceador fue eliminado, así que las respuestas están desactivadas."
   },

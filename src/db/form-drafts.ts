@@ -1,4 +1,4 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, lte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type DraftFields,
@@ -18,6 +18,32 @@ import { formDrafts } from "./schema";
  * they were interrupted — so a stale one is dropped rather than shown.
  */
 export type FormDraft = { form: FormDraftKind; fields: DraftFields; savedAt: Date };
+
+/** Create a generated draft only if a staffer's fresh draft is not already present. */
+export async function saveFormDraftIfVacant(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    personId: string;
+    form: FormDraftKind;
+    fields: Iterable<[string, string]>;
+    now?: Date;
+  },
+): Promise<"saved" | "exists" | "empty"> {
+  const fields = draftableFields(input.fields);
+  if (!draftHasContent(fields)) return "empty";
+  const savedAt = input.now ?? nowDate();
+  const [saved] = await db
+    .insert(formDrafts)
+    .values({ shopId: input.shopId, personId: input.personId, form: input.form, fields, savedAt })
+    .onConflictDoUpdate({
+      target: [formDrafts.shopId, formDrafts.personId, formDrafts.form],
+      set: { fields, savedAt },
+      setWhere: lte(formDrafts.savedAt, new Date(savedAt.getTime() - FORM_DRAFT_TTL_MS)),
+    })
+    .returning({ form: formDrafts.form });
+  return saved ? "saved" : "exists";
+}
 
 export async function saveFormDraft(
   db: DbExecutor,

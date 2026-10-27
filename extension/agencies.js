@@ -15,7 +15,7 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   AGENCIES: {
     ssi: {
       url: "https://my.divessi.com/online_diver_check",
-      fields: ["name", "number"],
+      fields: ["name", "birthDate"],
       dateFormat: "YYYY-MM-DD",
     },
     naui: {

@@ -1,5 +1,13 @@
 {
   "_note": "Rendered CSS widths for responsive `sizes` declarations, measured in a real browser against `pnpm dev` (where the optimizer is on, so `sizes` reaches the DOM) at 390/768/1280/1920. Fixed-pixel declarations on fixed-width elements are NOT here — scripts/check-image-sizes.mjs derives those from the element's own Tailwind class, which cannot drift. Issue #1350.",
+  "src/app/s/[shopSlug]/_components/ShopPhotoStrip.tsx :: (min-width: 1152px) 315px, (min-width: 1024px) calc(33.333vw - 66px), (min-width: 640px) calc(50vw - 72px), calc(100vw - 64px)": {
+    "measured": "2026-10-26, private demo storefront with one boat photo",
+    "rendered": { "390": 324, "768": 310, "1280": 315, "1920": 315 }
+  },
+  "src/app/shop/[shopSlug]/boats/page.tsx :: 384px": {
+    "measured": "2026-10-26, private demo boat editor",
+    "rendered": { "390": 324, "768": 384, "1280": 384, "1920": 384 }
+  },
   "src/app/s/[shopSlug]/_components/ShopfrontHero.tsx :: (min-width: 1152px) 1152px, 100vw": {
     "measured": "2026-09-04, /s/blue-mantis",
     "rendered": {

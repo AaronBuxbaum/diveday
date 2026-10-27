@@ -197,6 +197,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // bookings, orders *and* the package they came from, so they go before all
   // three (ADR 20260822-a-package-is-entitlements-not-money).
   await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
+  // Counter rentals can name their invoice, so clear them before orders too.
+  await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   // Redemptions reference checkouts; the codes themselves are referenced *by*
@@ -295,10 +297,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(workOrderEvents).where(eq(workOrderEvents.shopId, shopId));
   await db.delete(workOrders).where(eq(workOrders.shopId, shopId));
   await db.delete(customerGearItems).where(eq(customerGearItems.shopId, shopId));
-  // The gear register, children first: reservations reference gear_items and
-  // bookings, service events reference gear_items and people
+  // The gear register, children first: reservations were cleared before orders;
+  // service events reference gear_items and people
   // (ADR 20260815-minimal-gear-register).
-  await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
   await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
@@ -307,6 +308,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The shop's Spanish for the trips, sites and courses about to go: a
   // translation has no foreign key to its subject, so it goes with them.
   await db.delete(shopTextTranslations).where(eq(shopTextTranslations.shopId, shopId));
+  // A crew request names its departure as well as the person who asked.
+  await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   // Before the series it points at, and after the trips: a skip is the
   // memory of a date that is no longer there.
@@ -379,11 +382,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(internalNotes).where(eq(internalNotes.shopId, shopId));
   await db.delete(activityEvents).where(eq(activityEvents.shopId, shopId));
   await db.delete(staffShifts).where(eq(staffShifts.shopId, shopId));
-  // The staffing week's two crew-authored tables. Both reference `people` with
-  // no cascade, so a demo where anyone asked for a departure or marked
-  // themselves away would strand the shop on the final `delete(people)` — the
-  // exact 23503 the sweep above this comment was written after.
-  await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
+  // Requests were cleared before their departures; availability still names people.
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
   await db.delete(calendarFeeds).where(eq(calendarFeeds.shopId, shopId));
   // Deliveries reference the destination they were sent to, so they go first.

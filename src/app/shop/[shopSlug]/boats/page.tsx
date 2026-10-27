@@ -4,6 +4,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { keptTypedScope } from "@/components/kept-typed-scope";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
@@ -174,6 +175,30 @@ export default async function BoatsSettingsPage({
                     />
                   </Field>
                 </FieldGrid>
+                <div className="space-y-3">
+                  {boat.photoUrl ? (
+                    <StoredPhoto
+                      src={boat.photoUrl}
+                      alt={boat.name}
+                      className="aspect-video w-full max-w-sm rounded-lg"
+                      sizes="384px"
+                    />
+                  ) : null}
+                  <Field label={t("boats.photoLabel")}>
+                    <input
+                      type="file"
+                      name="boatPhoto"
+                      accept="image/jpeg,image/png,image/webp"
+                      className={controlClass}
+                    />
+                  </Field>
+                  {boat.photoUrl ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" name="removeBoatPhoto" value="true" />
+                      {t("boats.removePhoto")}
+                    </label>
+                  ) : null}
+                </div>
                 <BoatPaperFields
                   boat={boat}
                   t={t}
