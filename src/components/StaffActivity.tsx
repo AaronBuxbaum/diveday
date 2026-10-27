@@ -18,6 +18,7 @@ export function StaffActivity({
   copy: { title: string; body: string; retry: string; signIn: string };
 }) {
   const [locked, setLocked] = useState(false);
+  const [checkState, setCheckState] = useState<"pending" | "settled">("pending");
   const [retry, setRetry] = useState<(() => void) | null>(null);
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -67,6 +68,7 @@ export function StaffActivity({
     };
     const check = async () => {
       const version = ++generation;
+      setCheckState("pending");
       lock(true);
       try {
         await inFlight;
@@ -90,6 +92,8 @@ export function StaffActivity({
       } catch {
         // Keep the page covered when the server cannot confirm the session.
         // The separately saved offline manifest and unsent roll call are untouched.
+      } finally {
+        if (!stopped && version === generation) setCheckState("settled");
       }
     };
     const send = () => {
@@ -104,6 +108,7 @@ export function StaffActivity({
           if (response.status === 401) {
             generation++;
             lock(true);
+            setCheckState("settled");
           } else if (response.ok && version === generation)
             schedule(Math.max(0, STAFF_IDLE_LIMIT_MS - (performance.now() - started)));
         })
@@ -152,36 +157,44 @@ export function StaffActivity({
     };
   }, [sessionId]);
 
-  if (!locked || !portal) return null;
-  return createPortal(
-    <div
-      ref={dialogRef}
-      className="fixed inset-0 z-50 grid place-items-center bg-surface p-6"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="staff-session-title"
-      aria-describedby="staff-session-description"
-      tabIndex={-1}
-    >
-      <div className="space-y-4 text-center">
-        <h1 id="staff-session-title" className={SECTION_TITLE_CLASS}>
-          {copy.title}
-        </h1>
-        <p id="staff-session-description">{copy.body}</p>
-        <div className="flex justify-center gap-3">
-          <button
-            type="button"
-            className={buttonClass({ variant: "secondary" })}
-            onClick={() => retry?.()}
+  const dialog =
+    locked && portal
+      ? createPortal(
+          <div
+            ref={dialogRef}
+            className="fixed inset-0 z-50 grid place-items-center bg-surface p-6"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="staff-session-title"
+            aria-describedby="staff-session-description"
+            tabIndex={-1}
           >
-            {copy.retry}
-          </button>
-          <a className={buttonClass()} href="/sign-in?session=ended">
-            {copy.signIn}
-          </a>
-        </div>
-      </div>
-    </div>,
-    portal,
+            <div className="space-y-4 text-center">
+              <h1 id="staff-session-title" className={SECTION_TITLE_CLASS}>
+                {copy.title}
+              </h1>
+              <p id="staff-session-description">{copy.body}</p>
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  className={buttonClass({ variant: "secondary" })}
+                  onClick={() => retry?.()}
+                >
+                  {copy.retry}
+                </button>
+                <a className={buttonClass()} href="/sign-in?session=ended">
+                  {copy.signIn}
+                </a>
+              </div>
+            </div>
+          </div>,
+          portal,
+        )
+      : null;
+  return (
+    <>
+      <span hidden data-staff-session-check={checkState} />
+      {dialog}
+    </>
   );
 }
