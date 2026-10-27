@@ -4,7 +4,7 @@ import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
-import { sendFlySafeCorrections } from "./fly-safe-correction";
+import { listShopFlySafeFollowUps, sendFlySafeCorrections } from "./fly-safe-correction";
 import { openFlySafeExposures } from "./fly-safe-exposures";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { sendDueReminders } from "./reminders";
@@ -340,6 +340,7 @@ describe("sendDueReminders and the fly-safe hours", () => {
         seen.push(value);
         if (value.kind === "trip_reminder_24h" && value.bookingId === bookingId)
           await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, earlier.id));
+        if (value.kind === "fly_safe_correction") return { status: "failed", retryable: true };
         return { status: "sent", providerMessageId: "accepted" };
       },
     };
@@ -349,6 +350,18 @@ describe("sendDueReminders and the fly-safe hours", () => {
       appOrigin: null,
     });
     expect(seen.some((n) => n.kind === "fly_safe_correction" && n.seatId === bookingId)).toBe(true);
+    expect(
+      await listShopFlySafeFollowUps(db, {
+        shopId: shop.id,
+        now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
+      }),
+    ).toContainEqual({
+      bookingId,
+      name: "Pat Party",
+      status: "queued",
+      tripId: reef.id,
+      tripTitle: reef.title,
+    });
   });
 
   it("corrects a figure when the trip becomes decompression during provider delivery", async () => {

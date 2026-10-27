@@ -1,4 +1,10 @@
 {
+  "flySafeFollowUp": {
+    "heading": "Seguimiento de las indicaciones para volar",
+    "intro": "Es posible que las indicaciones anteriores para volar ya no sean válidas.",
+    "queued": "Corrección en cola; pendiente de aceptación por el proveedor.",
+    "contact": "Contacta con el buceador y con quienes recibieron las indicaciones anteriores para confirmar las indicaciones actuales para volar."
+  },
   "surfaces": {
     "trip": "Salida",
     "manifest": "Manifiesto",

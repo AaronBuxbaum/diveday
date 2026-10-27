@@ -10,6 +10,8 @@ import {
   FLY_SAFE_CORRECTION_LEASE_MS,
   FLY_SAFE_CORRECTION_WINDOW_MS,
   flySafeToldUncorrected,
+  listFlySafeFollowUps,
+  listShopFlySafeFollowUps,
   recordFlySafeTold,
   rememberFlySafeTold,
   sendFlySafeCorrections,
@@ -81,6 +83,96 @@ describe("sendFlySafeCorrections (#2927)", () => {
       }),
     ).toEqual({ told: 0, failed: 0, unreached: [] });
     expect(again.sent).toHaveLength(0);
+  });
+
+  it("shows queued corrections and names divers needing follow-up after permanent rejection", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    expect(await listFlySafeFollowUps(db, { shopId: shop.id, tripId: reef.id, now })).toEqual([
+      { bookingId, name: "Pat Party", status: "queued" },
+    ]);
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toContainEqual({
+      bookingId,
+      name: "Pat Party",
+      status: "queued",
+      tripId: reef.id,
+      tripTitle: reef.title,
+    });
+    expect(
+      await listFlySafeFollowUps(db, { shopId: crypto.randomUUID(), tripId: reef.id, now }),
+    ).toEqual([]);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    await drainNotificationRetries(db, {
+      now,
+      provider: fakeEmail({ status: "failed", retryable: false }).provider,
+    });
+    expect(await listFlySafeFollowUps(db, { shopId: shop.id, tripId: reef.id, now })).toEqual([
+      { bookingId, name: "Pat Party", status: "follow_up" },
+    ]);
+    await db
+      .update(people)
+      .set({ deletedAt: now })
+      .where(eq(people.id, (await seat(db, bookingId)).personId));
+    expect(await listFlySafeFollowUps(db, { shopId: shop.id, tripId: reef.id, now })).toEqual([]);
+  });
+
+  it("clears the queued warning only after the provider accepts the queued correction", async () => {
+    const { db, shop, reef } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toHaveLength(1);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    await drainNotificationRetries(db, { now, provider: fakeEmail().provider });
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toEqual([]);
+  });
+
+  it("shows follow-up when queued retries exhaust and clears queued state on provider acceptance", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0), attempts: 2 })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    await drainNotificationRetries(db, {
+      now,
+      provider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    expect(await listFlySafeFollowUps(db, { shopId: shop.id, tripId: reef.id, now })).toEqual([
+      { bookingId, name: "Pat Party", status: "follow_up" },
+    ]);
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: fakeEmail().provider,
+    });
+    expect(await listFlySafeFollowUps(db, { shopId: shop.id, tripId: reef.id, now })).toEqual([]);
   });
 
   it("re-arms a rejected queued correction for a bounded later retry", async () => {
@@ -359,6 +451,13 @@ describe("sendFlySafeCorrections (#2927)", () => {
       emailProvider: provider,
     });
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toContainEqual({
+      bookingId,
+      name: "Pat Party",
+      status: "follow_up",
+      tripId: destination.id,
+      tripTitle: destination.title,
+    });
     const retry = fakeEmail();
     await sendDueReminders(db, { now, emailProvider: retry.provider, appOrigin: null });
     expect(retry.sent.some((n) => n.kind === "fly_safe_correction" && n.seatId === bookingId)).toBe(

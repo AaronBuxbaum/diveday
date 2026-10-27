@@ -15,7 +15,7 @@ import {
 } from "./fly-safe-exposures";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import { notificationProviderForDb, sendNotification } from "./notifications";
-import { bookings, people, shops, trips } from "./schema";
+import { bookings, notificationSendQueue, people, shops, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -457,6 +457,131 @@ export function flySafeToldUncorrected(
  * staffer who ticked the box knows whom to call.
  */
 export type FlySafeCorrectionOutcome = { told: number; failed: number; unreached: string[] };
+
+/** Staff-visible state, derived from the durable queue and exposure ledger. */
+export async function listFlySafeFollowUps(
+  db: AppDb,
+  input: { shopId: string; tripId: string; now?: Date },
+): Promise<{ bookingId: string; name: string; status: "queued" | "follow_up" }[]> {
+  const now = input.now ?? nowDate();
+  const [trip] = await db
+    .select({ trip: trips, shop: shops })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(
+      and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
+    )
+    .limit(1);
+  if (
+    trip?.trip.status !== "scheduled" ||
+    // diveday:allow-departure-offset: the correction window expires after the longest stated flying interval.
+    now.getTime() > trip.trip.endsAt.getTime() + FLY_SAFE_CORRECTION_WINDOW_MS
+  )
+    return [];
+  const seats = await db
+    .select({
+      id: bookings.id,
+      personId: bookings.personId,
+      participantType: bookings.participantType,
+      name: people.fullName,
+      sealed: bookings.flySafeRecipientSealed,
+      unknown: bookings.flySafeRecipientUnknown,
+    })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, input.tripId),
+        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        isNotNull(bookings.flySafeHoursTold),
+        livePerson(),
+        isNull(people.anonymizedAt),
+      ),
+    );
+  const entriesBySeat = seats.map((seat) => ({
+    seat,
+    entries: seat.sealed ? openFlySafeExposures(seat.sealed, input.shopId, seat.id) : null,
+  }));
+  const keys = entriesBySeat.flatMap(({ seat, entries }) =>
+    (entries ?? [])
+      .filter((entry) => entry.correctionId)
+      .map((entry) => `fly-safe-correction/${seat.id}/${entry.correctionId}`),
+  );
+  const queued = keys.length
+    ? await db
+        .select({ key: notificationSendQueue.idempotencyKey, status: notificationSendQueue.status })
+        .from(notificationSendQueue)
+        .where(
+          and(
+            eq(notificationSendQueue.shopId, input.shopId),
+            inArray(notificationSendQueue.idempotencyKey, keys),
+          ),
+        )
+    : [];
+  const queueByKey = new Map(queued.map((row) => [row.key, row.status]));
+  const result: { bookingId: string; name: string; status: "queued" | "follow_up" }[] = [];
+  for (const { seat, entries } of entriesBySeat) {
+    const hours = await readReminderFlySafeHours(db, {
+      shop: { id: input.shopId },
+      person: { id: seat.personId },
+      participantType: seat.participantType,
+      detail: {
+        shop: { timezone: trip.shop.timezone },
+        trip: { id: trip.trip.id, startsAt: trip.trip.startsAt },
+      },
+    });
+    let pending = false;
+    let followUp = seat.unknown || !entries;
+    for (const entry of entries ?? []) {
+      const state = entry.correctionId
+        ? queueByKey.get(`fly-safe-correction/${seat.id}/${entry.correctionId}`)
+        : undefined;
+      if (state === "queued" || state === "processing") pending = true;
+      else if (
+        (state === "failed" && entry.corrected) ||
+        (!entry.corrected && entry.hours !== hours)
+      )
+        followUp = true;
+    }
+    if (followUp || pending)
+      result.push({
+        bookingId: seat.id,
+        name: seat.name,
+        status: followUp ? "follow_up" : "queued",
+      });
+  }
+  return result;
+}
+
+/** Show the same follow-up list on every trip, including the trip that triggered a change. */
+export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: string; now?: Date }) {
+  const now = input.now ?? nowDate();
+  const candidates = await db
+    .selectDistinct({ id: trips.id, title: trips.title })
+    .from(trips)
+    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.shopId, input.shopId)))
+    .where(
+      and(
+        eq(trips.shopId, input.shopId),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+        notRehearsal(),
+        // diveday:allow-departure-offset: the correction window is the longest flying interval, not a sailing buffer.
+        gte(trips.endsAt, new Date(now.getTime() - FLY_SAFE_CORRECTION_WINDOW_MS)),
+        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        isNotNull(bookings.flySafeHoursTold),
+      ),
+    );
+  const groups = await Promise.all(
+    candidates.map(async (trip) =>
+      (await listFlySafeFollowUps(db, { shopId: input.shopId, tripId: trip.id, now })).map(
+        (item) => ({ ...item, tripId: trip.id, tripTitle: trip.title }),
+      ),
+    ),
+  );
+  return groups.flat();
+}
 
 /**
  * **Send each diver told a fly-safe wait the one correction** (issue #2927).
