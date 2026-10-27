@@ -154,7 +154,7 @@ export async function listDeskEventsSince(
     })
     .from(tripDeskEvents)
     .innerJoin(trips, eq(trips.id, tripDeskEvents.tripId))
-    .leftJoin(people, eq(people.id, tripDeskEvents.subjectPersonId))
+    .leftJoin(people, and(eq(people.id, tripDeskEvents.subjectPersonId), eq(people.shopId, shopId)))
     .leftJoin(bookings, and(eq(bookings.id, tripDeskEvents.bookingId), eq(bookings.shopId, shopId)))
     .leftJoin(
       tripHelpRequests,

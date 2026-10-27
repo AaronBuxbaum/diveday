@@ -29,6 +29,9 @@ import {
   shopStripeAccounts,
   shops,
   tips,
+  todayReadMarkEvents,
+  todayReadMarks,
+  tripDeskEvents,
   userAccounts,
 } from "./schema";
 import { resetDemoSchedule, seedIfEmpty } from "./seed";
@@ -53,6 +56,43 @@ describe("resetDemoSchedule", () => {
     await db.execute(sql`drop table inbox_saved_answers`);
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
     expect((await upcomingTripsWithCounts(db, shop.id)).length).toBeGreaterThan(0);
+  });
+
+  it("clears Today read marks so the next visit gets a fresh baseline", async () => {
+    const { db, shop } = ctx;
+    const [staff] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!staff) throw new Error("expected a seeded person");
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("expected a seeded trip");
+    const [mark] = await db
+      .insert(todayReadMarks)
+      .values({
+        shopId: shop.id,
+        personId: staff.id,
+        dayStart: new Date("2031-05-12T00:00:00Z"),
+      })
+      .returning();
+    const [event] = await db
+      .insert(tripDeskEvents)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        kind: "plan_changed",
+      })
+      .returning();
+    if (!mark || !event) throw new Error("expected Today history");
+    await db
+      .insert(todayReadMarkEvents)
+      .values({ shopId: shop.id, markId: mark.id, eventId: event.id });
+
+    await resetDemoSchedule(db, shop.id);
+
+    expect(
+      await db.select().from(todayReadMarks).where(eq(todayReadMarks.shopId, shop.id)),
+    ).toEqual([]);
+    expect(
+      await db.select().from(todayReadMarkEvents).where(eq(todayReadMarkEvents.shopId, shop.id)),
+    ).toEqual([]);
   });
 
   it("can restore the full history used by the browser demo", async () => {

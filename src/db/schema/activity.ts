@@ -3,6 +3,7 @@ import {
   bigint,
   bigserial,
   check,
+  foreignKey,
   index,
   jsonb,
   pgEnum,
@@ -457,6 +458,7 @@ export const tripDeskEvents = pgTable(
     index("trip_desk_events_actor_person_id_idx").on(table.actorPersonId),
     index("trip_desk_events_shop_trip_idx").on(table.shopId, table.tripId, table.seq),
     index("trip_desk_events_occurred_idx").on(table.occurredAt),
+    uniqueIndex("trip_desk_events_shop_id_id_unique").on(table.shopId, table.id),
   ],
 );
 
@@ -516,6 +518,7 @@ export const todayReadMarks = pgTable(
     ),
     index("today_read_marks_person_idx").on(table.personId),
     index("today_read_marks_seen_idx").on(table.lastSeenAt),
+    uniqueIndex("today_read_marks_shop_id_id_unique").on(table.shopId, table.id),
   ],
 );
 
@@ -523,6 +526,9 @@ export const todayReadMarks = pgTable(
 export const todayReadMarkEvents = pgTable(
   "today_read_mark_events",
   {
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
     markId: uuid("mark_id")
       .notNull()
       .references(() => todayReadMarks.id, { onDelete: "cascade" }),
@@ -531,7 +537,18 @@ export const todayReadMarkEvents = pgTable(
       .references(() => tripDeskEvents.id, { onDelete: "cascade" }),
   },
   (table) => [
+    foreignKey({
+      name: "today_read_mark_events_shop_mark_fk",
+      columns: [table.shopId, table.markId],
+      foreignColumns: [todayReadMarks.shopId, todayReadMarks.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "today_read_mark_events_shop_event_fk",
+      columns: [table.shopId, table.eventId],
+      foreignColumns: [tripDeskEvents.shopId, tripDeskEvents.id],
+    }).onDelete("cascade"),
     uniqueIndex("today_read_mark_events_unique").on(table.markId, table.eventId),
+    index("today_read_mark_events_shop_idx").on(table.shopId),
     index("today_read_mark_events_event_idx").on(table.eventId),
   ],
 );
