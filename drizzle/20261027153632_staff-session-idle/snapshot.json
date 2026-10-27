@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "cac7ec0b-fac0-4537-ac5f-082ad4566026",
+  "prevIds": [
+    "61a7bb5c-0700-4077-b194-b91b8c217375"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "account_sessions",
+        "last_human_activity_at"
+      ],
+      "writes": [
+        "s|col|public.account_sessions.last_human_activity_at",
+        "n|col|public.account_sessions.last_human_activity_at",
+        "e|col|public.account_sessions.last_human_activity_at"
+      ],
+      "reads": [
+        "n|tbl|public.account_sessions",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_sessions",
+        "name": "last_human_activity_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}
