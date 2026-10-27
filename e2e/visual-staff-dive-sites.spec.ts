@@ -106,12 +106,10 @@ for (const scheme of ["light", "dark"] as const) {
               await nextFrame();
               const after = geometry();
               const tilesIdle =
-                map.querySelector(
-                  ".leaflet-tile-loading, .leaflet-tile:not(.leaflet-tile-loaded)",
-                ) === null;
+                map.querySelector(".leaflet-tile:not(.leaflet-tile-loaded)") === null;
 
               return (
-                !map.classList.contains("leaflet-pan-anim") &&
+                !pane.classList.contains("leaflet-pan-anim") &&
                 tilesIdle &&
                 JSON.stringify(before) === JSON.stringify(after)
               );
