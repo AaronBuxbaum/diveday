@@ -39,7 +39,7 @@ test("a boat photo reaches public pages and can be removed", async ({
   await page.goto(`/shop/${privateShop.slug}/boats`);
   const row = page.locator(`#boat-${boat.id}`);
   await row.locator("summary").click();
-  await expect(row.getByRole("img", { name: boat.name })).toBeVisible();
+  await expect(row.locator('img[alt=""]')).toBeVisible();
   // This fleet intentionally has no media credentials. The real upload reports
   // that failure beside the boat and keeps the photo that was already saved.
   await row.getByLabel("Boat photo").setInputFiles("public/icon-512.png");
@@ -49,8 +49,9 @@ test("a boat photo reaches public pages and can be removed", async ({
   await row.getByRole("button", { name: "Save boat" }).click();
   expect((await failedSave).headers()["x-action-redirect"]).toContain("notice=boat-photo-invalid");
   await expect(page.getByText(staff("boats.boatPhotoInvalid"))).toBeVisible();
-  await expect(row.getByRole("img", { name: boat.name })).toBeVisible();
-  await row.getByLabel("Remove photo").check();
+  await expect(row.locator('img[alt=""]')).toBeVisible();
+  await row.getByText(staff("boats.removePhoto"), { exact: true }).click();
+  await expect(row.getByRole("checkbox", { name: staff("boats.removePhoto") })).toBeChecked();
   const removed = page.waitForResponse(
     (response) => response.request().method() === "POST" && response.url().includes("/boats"),
   );

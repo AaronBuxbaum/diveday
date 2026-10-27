@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { judgeAgencyPage } from "@/lib/agency-check";
 import { fileScopedShopContext } from "@/test/db";
 import { certificationForAgencyCheck, listAgencyCheckableCards } from "./agency-check";
 import type { AppDb } from "./client";
@@ -40,8 +41,8 @@ async function card(
 
 /**
  * **The cards a departure or the Today list offers to check** (H-105). The
- * list must never offer a card the action would refuse, so each case here is
- * checked against `certificationForAgencyCheck` too.
+ * The list and action share a read, but an SSI row can offer the manual
+ * handoff with incomplete identity even though the judge cannot certify it.
  */
 describe("listAgencyCheckableCards", () => {
   it("offers a pending level card the extension can look up, with its lookup", async () => {
@@ -61,14 +62,14 @@ describe("listAgencyCheckableCards", () => {
           agency: "ssi",
           firstName: "Lena",
           lastName: "Ortiz",
-          birthDate: null,
+          birthDate: "1990-04-12",
           cardNumber: "SSI-4471",
         },
       },
     ]);
   });
 
-  it("offers nothing the action would refuse", async () => {
+  it("omits ineligible cards while allowing SSI's manual lookup for a one-word name", async () => {
     const { db, shop } = ctx;
     const personId = await diver(db, shop.id, "Mara Quinn");
     const refused = [
@@ -91,7 +92,8 @@ describe("listAgencyCheckableCards", () => {
       .from(certifications)
       .where(eq(certifications.personId, personId));
 
-    // A one-word name has no last name to type into the agency's form.
+    // SSI can open a manual lookup with just a first name, but that incomplete
+    // identity must never turn a returned page into a verified card.
     const oneName = await diver(db, shop.id, "Cher");
     const oneNameCard = await card(db, shop.id, oneName);
 
@@ -100,11 +102,34 @@ describe("listAgencyCheckableCards", () => {
       personIds: [personId, oneName],
     });
 
-    expect(byPerson.size).toBe(0);
-    for (const [owner, row] of [
-      ...[...refused, claim].map((row) => [personId, row] as const),
-      [oneName, oneNameCard] as const,
-    ]) {
+    expect(byPerson.has(personId)).toBe(false);
+    expect(byPerson.get(oneName)).toEqual([
+      expect.objectContaining({
+        certificationId: oneNameCard.id,
+        query: expect.objectContaining({
+          firstName: "Cher",
+          lastName: "",
+          birthDate: "1990-04-12",
+        }),
+      }),
+    ]);
+    const manual = await certificationForAgencyCheck(db, {
+      shopId: shop.id,
+      personId: oneName,
+      certificationId: oneNameCard.id,
+    });
+    expect(manual).not.toBeNull();
+    if (!manual) throw new Error("manual SSI lookup missing");
+    expect(
+      judgeAgencyPage({
+        ...manual.query,
+        ...manual.identity,
+        level: manual.level,
+        today: "2026-10-26",
+        pageText: `Cher\n${oneNameCard.identifier}\nOpen Water Diver`,
+      }).verdict,
+    ).toBe("unreadable");
+    for (const [owner, row] of [...[...refused, claim].map((row) => [personId, row] as const)]) {
       if (!row) continue;
       expect(
         await certificationForAgencyCheck(db, {

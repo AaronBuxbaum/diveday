@@ -3,6 +3,7 @@ import {
   capture,
   installVisualBuildGuard,
   SURFACE_TIMEOUT_MS,
+  staffCopy,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
@@ -27,7 +28,7 @@ for (const scheme of ["light", "dark"] as const) {
       );
       expect(seeded.ok()).toBe(true);
       const { boat, trip } = (await seeded.json()) as {
-        boat: { name: string };
+        boat: { id: string; name: string };
         trip: { id: string };
       };
       await page.goto(`/s/${privateShop.slug}`);
@@ -44,6 +45,13 @@ for (const scheme of ["light", "dark"] as const) {
         .poll(() => tripPhoto.evaluate((image: HTMLImageElement) => image.naturalWidth))
         .toBeGreaterThan(0);
       await capture(page, "boat-photo-trip", scheme);
+      await page.goto(`/shop/${privateShop.slug}/boats`);
+      const row = page.locator(`#boat-${boat.id}`);
+      await row.locator("summary").click();
+      await expect(
+        row.getByRole("checkbox", { name: staffCopy("boats.removePhoto") }),
+      ).toBeAttached();
+      await capture(page, "boat-photo-editor", scheme);
     });
   });
 }

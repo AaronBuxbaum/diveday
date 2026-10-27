@@ -4,10 +4,6 @@
     "measured": "2026-10-26, private demo storefront with one boat photo",
     "rendered": { "390": 324, "768": 310, "1280": 315, "1920": 315 }
   },
-  "src/app/shop/[shopSlug]/boats/page.tsx :: 384px": {
-    "measured": "2026-10-26, private demo boat editor",
-    "rendered": { "390": 324, "768": 384, "1280": 384, "1920": 384 }
-  },
   "src/app/s/[shopSlug]/_components/ShopfrontHero.tsx :: (min-width: 1152px) 1152px, 100vw": {
     "measured": "2026-09-04, /s/blue-mantis",
     "rendered": {
