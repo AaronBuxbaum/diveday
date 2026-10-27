@@ -333,6 +333,7 @@
     "awayWithdraw": "Ya no trabaja en ella",
     "awayWithdrawing": "Guardando…",
     "courseNeedsInstructor": "Este curso no puede aceptar reservas hasta que un miembro de la tripulación asignado tenga el rol de instructor.",
+    "underTargetUnverified": "{divers, plural, one {# buceador} other {# buceadores}} sin supervisor confirmado. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "underTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasters, plural, =0 {ningún supervisor} one {# supervisor} other {# supervisores}}. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "Reservaron en {language}: {divers}. Nadie de esta tripulación tiene registrado {language}.",
     "languageCovered": "Charla en {language} para {divers}: {crew}.",

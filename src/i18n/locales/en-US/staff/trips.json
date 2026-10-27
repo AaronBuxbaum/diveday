@@ -333,6 +333,7 @@
     "awayWithdraw": "No longer working it",
     "awayWithdrawing": "Saving…",
     "courseNeedsInstructor": "This course cannot take bookings until one assigned crew member has the instructor role.",
+    "underTargetUnverified": "{divers, plural, one {# diver} other {# divers}} without a confirmed supervisor. Your {ratio}:1 target wants {needed, plural, one {# divemaster} other {# divemasters}}.",
     "underTarget": "{divers, plural, one {# diver} other {# divers}} with {divemasters, plural, =0 {no supervisor} one {# supervisor} other {# supervisors}}. Your {ratio}:1 target wants {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "{divers} booked in {language}. No one on this crew has recorded {language}.",
     "languageCovered": "{crew} can brief {divers} in {language}.",

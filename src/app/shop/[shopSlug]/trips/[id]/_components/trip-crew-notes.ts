@@ -80,15 +80,21 @@ export function tripCrewNotes({
   const underTargetNote =
     ratioGap.code === "none"
       ? null
-      : t("trips.crew.underTarget", {
-          divers: ratioGap.divers,
-          divemasters: ratioGap.divemasterCount,
-          ratio: diversPerDivemaster,
-          // The total the target wants, not the shortfall: "wants 1 more" than
-          // none reads as arithmetic about nothing when the boat has no
-          // divemaster at all, which is the case that matters most.
-          needed: ratioGap.needed,
-        });
+      : unverifiedCrew?.length && ratioGap.divemasterCount === 0
+        ? t("trips.crew.underTargetUnverified", {
+            divers: ratioGap.divers,
+            ratio: diversPerDivemaster,
+            needed: ratioGap.needed,
+          })
+        : t("trips.crew.underTarget", {
+            divers: ratioGap.divers,
+            divemasters: ratioGap.divemasterCount,
+            ratio: diversPerDivemaster,
+            // The total the target wants, not the shortfall: "wants 1 more" than
+            // none reads as arithmetic about nothing when the boat has no
+            // divemaster at all, which is the case that matters most.
+            needed: ratioGap.needed,
+          });
   const overRatioWarning = overRatioWarningText(t, crewGap);
   return { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning };
 }
