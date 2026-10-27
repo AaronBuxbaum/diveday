@@ -77,14 +77,14 @@ export function PublicShopHeader({
       stackedOnPhone
       naturalHeight
       leading={
-        /* Recovery keeps its natural width before the identity truncates.
-           Its cap still permits enlarged text to wrap, reserving the name's
-           2.75rem target and the 1rem gap. Truncation belongs on the span. */
-        <div className="flex min-w-0 items-center justify-between gap-4">
+        /* The flexible identity yields to recovery's natural width. Fixed
+           8px gaps preserve room for a first grapheme plus the full ellipsis
+           when text grows; enlarged gutters must not consume that budget. */
+        <div className="flex min-w-0 items-center justify-between gap-[8px]">
           <Link
             href={publicSchedulePath(shop.slug)}
             // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
-            className="font-brand-display flex min-h-11 min-w-11 items-center gap-2.5 text-lg font-semibold tracking-tight"
+            className={`font-brand-display flex min-h-11 flex-1 ${shop.logoUrl ? "min-w-[calc(2rem_+_8px_+_2em)]" : "min-w-11"} items-center gap-[8px] text-lg font-semibold tracking-tight`}
           >
             {/* The shop's logo is the nav's mark beside its name (visual review
               2026-10-24, B16); it stood as an orphan tile beside the hero. */}
@@ -96,12 +96,12 @@ export function PublicShopHeader({
                 className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
               />
             ) : null}
-            <span className="truncate">{shop.name}</span>
+            <span className="min-w-[2em] truncate">{shop.name}</span>
           </Link>
           {recoveryLabel ? (
             <a
               href={recoveryHref}
-              className="inline-flex min-h-11 min-w-0 max-w-[min(60%,calc(100%_-_3.75rem))] shrink-0 items-center text-base text-muted underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
             >
               {recoveryLabel}
             </a>

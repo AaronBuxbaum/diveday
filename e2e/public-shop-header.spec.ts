@@ -1,9 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { LOCALE_COOKIE } from "../src/i18n/locale-cookie";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 
 async function settledHeader(page: Page) {
   const header = page.locator("[data-chrome-natural]").filter({ visible: true });
@@ -206,74 +205,103 @@ for (const locale of ["en-US", "es-ES"] as const) {
 for (const locale of ["en-US", "es-ES"] as const) {
   for (const branded of [false, true]) {
     test.describe(`long shop identity ${locale} ${branded ? "logo" : "no logo"}`, () => {
-      // The private-shop sign-in helper uses English labels; the public page
-      // then uses the reader's actual locale cookie, as the language picker does.
+      // Mint/sign in with the helper's English labels. The public visitor
+      // below has an independent browser locale matching the rendered words.
       test.use({
         locale: "en-US",
         privateShopSlug: "course-date-requests-no-email",
         privateShopBrand: branded,
       });
       test("keeps recovery readable beside an overflowing shop name", async ({
-        page,
         privateShop,
+        browser,
+        workerBaseURL,
       }) => {
-        await page
-          .context()
-          .addCookies([{ name: LOCALE_COOKIE, value: locale, url: new URL(page.url()).origin }]);
-        for (const width of [390, 1280, 360]) {
-          for (const scale of [100, 200]) {
-            await page.setViewportSize({ width, height: 844 });
-            await page.goto(`/s/${privateShop.slug}/courses/sdi-rescue-diver`);
-            await expect(page.locator("html")).toHaveAttribute("lang", locale);
-            await page.evaluate((value) => {
-              document.documentElement.style.fontSize = `${value}%`;
-            }, scale);
-            await page.evaluate(() => document.fonts.ready);
-            const header = await settledHeader(page);
-            await expect(header.locator("img")).toHaveCount(branded ? 1 : 0);
-            const recovery = header.locator('a[href$="#find-my-booking"]');
-            await expect(recovery).toBeVisible();
-            const state = await recovery.evaluate((element) => {
-              const range = document.createRange();
-              range.selectNodeContents(element);
-              const rects = [...range.getClientRects()];
-              const name = element.closest("header")?.querySelector("span.truncate");
-              return {
-                lines: new Set(rects.map((rect) => Math.round(rect.top))).size,
-                textBounds: rects.map((rect) => rect.toJSON()),
-                recovery: element.getBoundingClientRect().toJSON(),
-                identity: element.previousElementSibling?.getBoundingClientRect().toJSON(),
-                row: element.parentElement?.getBoundingClientRect().toJSON(),
-                gap: element.parentElement
-                  ? Number.parseFloat(getComputedStyle(element.parentElement).columnGap)
-                  : 0,
-                name: name?.getBoundingClientRect().toJSON(),
-                nameText: name?.textContent,
-                header: element.closest("header")?.getBoundingClientRect().toJSON(),
-              };
-            });
-            const evidence = `long-name-${locale}-${branded ? "logo" : "no-logo"}-${width}-text-${scale}`;
-            await writeFile(
-              test.info().outputPath(`${evidence}.json`),
-              JSON.stringify(state, null, 2),
-            );
-            await page.screenshot({
-              path: test.info().outputPath(`${evidence}.png`),
-              animations: "disabled",
-            });
-            if (scale === 100)
-              expect(state.lines, "recovery has its natural one-line width").toBe(1);
-            if (scale === 200 && width < 640) expect(state.lines).toBeGreaterThan(1);
-            if (!state.identity || !state.row) throw new Error("Identity row missing");
-            expect(state.recovery.height).toBeGreaterThanOrEqual(44);
-            expect(state.identity.right + state.gap).toBeLessThanOrEqual(state.recovery.left + 0.5);
-            expect(state.recovery.right).toBeLessThanOrEqual(state.row.right + 0.5);
-            expect(state.identity.left).toBeGreaterThanOrEqual(state.row.left - 0.5);
-            for (const rect of state.textBounds) {
-              expect(rect.left).toBeGreaterThanOrEqual(0);
-              expect(rect.right).toBeLessThanOrEqual(width);
+        const context = await browser.newContext({ baseURL: workerBaseURL, locale });
+        try {
+          const page = makeActivitySafe(await context.newPage());
+          await page.goto(`/s/${privateShop.slug}/courses/sdi-rescue-diver`);
+          await expect(page.locator("html")).toHaveAttribute("lang", locale);
+          // Reflow one document so the matrix also exercises live observer updates.
+          for (const width of [390, 1280, 360]) {
+            for (const scale of [100, 200]) {
+              await page.setViewportSize({ width, height: 844 });
+              await page.evaluate((value) => {
+                document.documentElement.style.fontSize = `${value}%`;
+              }, scale);
+              await page.evaluate(() => document.fonts.ready);
+              const header = await settledHeader(page);
+              await expect(header.locator("img")).toHaveCount(branded ? 1 : 0);
+              await expect(
+                header.getByRole("link", { name: "Course Date Requests No Email", exact: true }),
+              ).toBeVisible();
+              const recovery = header.locator('a[href$="#find-my-booking"]');
+              await expect(recovery).toBeVisible();
+              const state = await recovery.evaluate((element) => {
+                const range = document.createRange();
+                range.selectNodeContents(element);
+                const rects = [...range.getClientRects()];
+                const name = element.closest("header")?.querySelector("span.truncate");
+                let requiredNameWidth = 0;
+                if (name) {
+                  const style = getComputedStyle(name);
+                  const measure = document.createElement("canvas").getContext("2d");
+                  if (!measure) throw new Error("Text metrics unavailable");
+                  measure.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+                  Reflect.set(measure, "letterSpacing", style.letterSpacing);
+                  const [first] = new Intl.Segmenter(undefined, {
+                    granularity: "grapheme",
+                  }).segment(name.textContent ?? "");
+                  requiredNameWidth = measure.measureText(`${first?.segment ?? ""}…`).width;
+                }
+                return {
+                  lines: new Set(rects.map((rect) => Math.round(rect.top))).size,
+                  textBounds: rects.map((rect) => rect.toJSON()),
+                  recovery: element.getBoundingClientRect().toJSON(),
+                  identity: element.previousElementSibling?.getBoundingClientRect().toJSON(),
+                  row: element.parentElement?.getBoundingClientRect().toJSON(),
+                  gap: element.parentElement
+                    ? Number.parseFloat(getComputedStyle(element.parentElement).columnGap)
+                    : 0,
+                  name: name?.getBoundingClientRect().toJSON(),
+                  nameFontSize: name ? Number.parseFloat(getComputedStyle(name).fontSize) : 0,
+                  requiredNameWidth,
+                  nameText: name?.textContent,
+                  header: element.closest("header")?.getBoundingClientRect().toJSON(),
+                };
+              });
+              const evidence = `long-name-${locale}-${branded ? "logo" : "no-logo"}-${width}-text-${scale}`;
+              await writeFile(
+                test.info().outputPath(`${evidence}.json`),
+                JSON.stringify(state, null, 2),
+              );
+              await page.screenshot({
+                path: test.info().outputPath(`${evidence}.png`),
+                animations: "disabled",
+              });
+              if (scale === 100)
+                expect(state.lines, "recovery has its natural one-line width").toBe(1);
+              if (scale === 200 && width < 640) expect(state.lines).toBeGreaterThan(1);
+              if (!state.identity || !state.row) throw new Error("Identity row missing");
+              if (!state.name) throw new Error("Shop name missing");
+              expect(
+                state.name.width,
+                "first grapheme and complete ellipsis fit",
+              ).toBeGreaterThanOrEqual(state.requiredNameWidth);
+              expect(state.recovery.height).toBeGreaterThanOrEqual(44);
+              expect(state.identity.right + state.gap).toBeLessThanOrEqual(
+                state.recovery.left + 0.5,
+              );
+              expect(state.recovery.right).toBeLessThanOrEqual(state.row.right + 0.5);
+              expect(state.identity.left).toBeGreaterThanOrEqual(state.row.left - 0.5);
+              for (const rect of state.textBounds) {
+                expect(rect.left).toBeGreaterThanOrEqual(0);
+                expect(rect.right).toBeLessThanOrEqual(width);
+              }
             }
           }
+        } finally {
+          await context.close();
         }
       });
     });
@@ -409,16 +437,58 @@ test.describe("public header print integration", () => {
       animations: "disabled",
     });
     await page.emulateMedia({ media: "screen" });
-    const restored = await settledHeader(page);
-    expect(
-      Math.abs(
-        (await restored.evaluate((element) => element.getBoundingClientRect().height)) - before,
-      ),
-    ).toBeLessThanOrEqual(1);
+    await expect(header).toHaveAttribute("data-chrome-measured", "true");
+    await expect
+      .poll(() =>
+        header.evaluate((element) =>
+          Math.abs(
+            element.getBoundingClientRect().height -
+              Number.parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue("--chrome-h"),
+              ),
+          ),
+        ),
+      )
+      .toBeLessThanOrEqual(1);
+    const after = await header.evaluate((element) => element.getBoundingClientRect().height);
+    expect(Math.abs(after - before)).toBeLessThanOrEqual(1);
     await expect(menu).toBeVisible();
     await expect
-      .poll(() => menu.evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity)))
-      .toBe(1);
+      .poll(() =>
+        menu.evaluate((element) => ({
+          opacity: Number.parseFloat(getComputedStyle(element).opacity),
+          moving: element
+            .getAnimations({ subtree: true })
+            .some((animation) => animation.playState === "running"),
+        })),
+      )
+      .toEqual({ opacity: 1, moving: false });
+    await expect
+      .poll(() =>
+        menu.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return {
+            left: Math.max(0, -bounds.left),
+            top: Math.max(0, -bounds.top),
+            right: Math.max(0, bounds.right - innerWidth),
+            bottom: Math.max(0, bounds.bottom - innerHeight),
+          };
+        }),
+      )
+      .toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
+    await writeFile(
+      test.info().outputPath("header-print-screen.json"),
+      JSON.stringify(
+        {
+          before,
+          after,
+          opacity: await menu.evaluate((element) => getComputedStyle(element).opacity),
+          menu: await menu.boundingBox(),
+        },
+        null,
+        2,
+      ),
+    );
     await page.screenshot({
       path: test.info().outputPath("header-screen-restored.png"),
       animations: "disabled",
@@ -426,5 +496,7 @@ test.describe("public header print integration", () => {
     await page.keyboard.press("Escape");
     await expect(trigger).toBeFocused();
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("[data-language-menu]")).toHaveCount(0);
+    await settledHeader(page);
   });
 });
