@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   choosePartySize,
@@ -9,6 +10,8 @@ import {
   signInAsOwner,
   signOut,
 } from "./helpers";
+
+const diver = diverTranslator("en-US");
 
 /**
  * The group-organizer loop (docs ADR 20260804-seat-claim-links): one
@@ -73,6 +76,13 @@ test.describe("seat claim links", () => {
     });
     const seatRow = panel.locator("li").filter({ hasText: "Sam Reyes" });
     await expect(seatRow.getByText("Not claimed yet")).toBeVisible();
+    await page
+      .getByRole("link", { name: diver("ready.groupSummary", { total: 2, unclaimed: 1 }) })
+      .click();
+    await expect(seatRow).toBeFocused();
+    await expect(
+      seatRow.getByRole("button", { name: diver("seatClaim.copyReminder") }),
+    ).toBeVisible();
     // The URL sits behind a collapsed "Show link" disclosure (the token must
     // not render as visible pixels) — textContent reads it either way, but
     // exercise the disclosure the way an organizer without a clipboard would.
@@ -137,6 +147,9 @@ test.describe("seat claim links", () => {
       .locator("li")
       .filter({ hasText: "Sam Reyes" });
     await expect(refreshedRow.getByText("Claimed")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: diver("ready.groupSummary", { total: 2, unclaimed: 0 }) }),
+    ).toHaveAttribute("href", "#party-seats");
     await expect(refreshedRow.locator("p.font-mono")).toHaveCount(0);
 
     // Staff see the claimant on the roster and the claim on the trail.

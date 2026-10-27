@@ -418,7 +418,7 @@ export function PackingSection({
                             <StepIcon step={entry.step} className="size-3.5" />
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-4">
-                            <span className="font-semibold tabular-nums text-foreground text-sm leading-6 sm:w-20 sm:shrink-0">
+                            <span className="font-semibold tabular-nums text-foreground text-base leading-6 sm:w-20 sm:shrink-0">
                               {/* `formatTime` builds the identical formatter,
                                   and building it here instead is the ~12x tax
                                   `scripts/lint-rules/intlCache.grit` exists to stop — once per
@@ -426,7 +426,7 @@ export function PackingSection({
                                   (issue #799). */}
                               {formatTime(entry.at, locale, shop.timezone)}
                             </span>
-                            <span className="text-muted text-sm leading-6">
+                            <span className="text-muted text-base leading-6">
                               {entry.rideMinutes
                                 ? t("trip.timeline.departureWithRide", {
                                     minutes: entry.rideMinutes,
