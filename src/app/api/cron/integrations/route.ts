@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import {
   dispatchDueIntegrationDeliveries,
+  INTEGRATIONS_CRON_BUDGET_MS,
   INTEGRATIONS_CRON_CRONTAB,
 } from "@/features/integrations";
 import { requireCronSecret } from "@/lib/cron-auth";
@@ -64,7 +65,12 @@ export async function GET(request: Request) {
     CRON_MONITOR_CONFIG,
   );
   try {
-    const summary = await dispatchDueIntegrationDeliveries(await getDb(), { limit: 50 });
+    const startedAtMs = performance.now();
+    const summary = await dispatchDueIntegrationDeliveries(await getDb(), {
+      limit: 50,
+      timeBudgetMs: INTEGRATIONS_CRON_BUDGET_MS,
+      startedAtMs,
+    });
     log("cron_integrations.scan_complete", "info", summary);
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
     return NextResponse.json(summary);

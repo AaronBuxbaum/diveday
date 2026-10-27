@@ -116,3 +116,18 @@ write that drains), and the dead-letter horizon stretches from about two hours t
 first attempt is unchanged, because it is dispatched on write. No shop has an integration connected
 yet; if a pilot shop's integration needs faster recovery, putting `:30` back is a one-line change to
 `INTEGRATIONS_CRON_CRONTAB` and `vercel.json`, which `dispatcher.test.ts` keeps in lockstep.
+
+## Amendment — 2026-10-27: bound each drain by elapsed time
+
+The cron now admits work for at most 240 seconds inside its 300-second route ceiling. Before it
+claims each due row, it checks that at least one second remains beyond the settlement reserve. Each
+claimed delivery gets one shared deadline of at most 60 seconds across provider requests and response
+body reads. A deadline aborts active HTTP work and travels through the existing retryable failure
+path, so the claim is settled and retried rather than left processing. Rows not admitted stay due
+and are counted in `skippedByBudget`; no parallel delivery was introduced.
+
+The after-response drain has a 15-second total budget, preserving an immediate attempt for an
+ordinary write while bounding how long the originating function can stay open. Both dispatch paths
+log the elapsed time, whether admission stopped on budget, and the number of due rows left for a
+later drain. These limits bound slow batches without changing delivery order, conditional claims,
+or the at-least-once retry contract.
