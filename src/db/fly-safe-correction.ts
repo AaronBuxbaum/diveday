@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -35,6 +35,10 @@ const LIVE_SEAT_STATUSES = ["booked", "checked_in"] as const;
  */
 export const FLY_SAFE_CORRECTION_WINDOW_MS = 48 * HOUR_MS;
 
+/** Expired workers may be retried; provider acceptance can therefore be duplicated after a crash. */
+export const FLY_SAFE_CORRECTION_LEASE_MS = 15 * 60 * 1000;
+const MAX_AUTOMATIC_CORRECTION_CLAIMS = 3;
+
 /** The night-before email went out carrying the fly-safe line: remember what it said. */
 export async function recordFlySafeTold(
   db: DbExecutor,
@@ -42,7 +46,14 @@ export async function recordFlySafeTold(
 ): Promise<void> {
   await db
     .update(bookings)
-    .set({ flySafeHoursTold: input.hours, flySafeCorrectedAt: null })
+    .set({
+      flySafeHoursTold: input.hours,
+      flySafeCorrectedAt: null,
+      flySafeCorrectionId: null,
+      flySafeCorrectionAttempts: 0,
+      flySafeCorrectionLeaseId: null,
+      flySafeCorrectionLeaseUntil: null,
+    })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
 }
 
@@ -117,7 +128,7 @@ export async function retryOwedFlySafeCorrections(
     );
   for (const trip of due) {
     try {
-      const outcome = await sendFlySafeCorrections(db, { ...trip, ...input });
+      const outcome = await sendFlySafeCorrections(db, { ...trip, ...input, automatic: true });
       if (outcome.unreached.length)
         log("reminder.fly_safe_correction_unreached", "error", {
           shopId: trip.shopId,
@@ -130,6 +141,28 @@ export async function retryOwedFlySafeCorrections(
       });
     }
   }
+}
+
+/** A rejected outbox row can only re-arm the recommendation it belongs to. */
+export async function rearmFailedFlySafeCorrection(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; correctionId: string },
+): Promise<void> {
+  await db
+    .update(bookings)
+    .set({
+      flySafeCorrectedAt: null,
+      flySafeCorrectionId: null,
+      flySafeCorrectionLeaseId: null,
+      flySafeCorrectionLeaseUntil: null,
+    })
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.id, input.bookingId),
+        eq(bookings.flySafeCorrectionId, input.correctionId),
+      ),
+    );
 }
 
 /**
@@ -169,13 +202,10 @@ export type FlySafeCorrectionOutcome = { told: number; failed: number; unreached
  * told a figure, held identity or not, by the email on that seat's own person
  * record (the only channel that carried the figure).
  *
- * **Once per seat.** The seat is claimed (`fly_safe_corrected_at`) in the
- * statement that selects it, before anything is sent, so a second save or a
- * race finds nothing owed. Any seat not sent or queued by the end, a refused
- * send, no address, or the rest of the batch after a provider throws, has its
- * claim put back, so a later pass tries again. A retryable failure holds its
- * claim only when its queue write succeeded; the queue then retries it.
- * A throw still propagates, after the put-back.
+ * A lease prevents concurrent workers from sending the same correction. A
+ * crashed worker's lease expires; a crash after provider acceptance may send
+ * a duplicate. The corrected timestamp is written only after acceptance or
+ * confirmed queue persistence, and a token fences a superseded worker.
  */
 export async function sendFlySafeCorrections(
   db: AppDb,
@@ -184,6 +214,8 @@ export async function sendFlySafeCorrections(
     tripId: string;
     /** Limit a move or reminder reconciliation to the affected seat. */
     bookingId?: string;
+    /** Limit background retries; an explicit staff action may try again. */
+    automatic?: boolean;
     now?: Date;
     emailProvider?: NotificationProvider;
     /** The one send door; a test passes one that throws to prove the put-back. */
@@ -224,9 +256,15 @@ export async function sendFlySafeCorrections(
       ),
     );
   if (owed.length === 0) return outcome;
+  const leaseId = crypto.randomUUID();
   const claimed = await db
     .update(bookings)
-    .set({ flySafeCorrectedAt: now })
+    .set({
+      flySafeCorrectionLeaseId: leaseId,
+      flySafeCorrectionId: leaseId,
+      flySafeCorrectionLeaseUntil: new Date(now.getTime() + FLY_SAFE_CORRECTION_LEASE_MS),
+      flySafeCorrectionAttempts: sql`${bookings.flySafeCorrectionAttempts} + 1`,
+    })
     .where(
       and(
         eq(bookings.shopId, input.shopId),
@@ -238,6 +276,13 @@ export async function sendFlySafeCorrections(
           owed.map((seat) => seat.id),
         ),
         isNull(bookings.flySafeCorrectedAt),
+        input.automatic
+          ? lt(bookings.flySafeCorrectionAttempts, MAX_AUTOMATIC_CORRECTION_CLAIMS)
+          : undefined,
+        or(
+          isNull(bookings.flySafeCorrectionLeaseUntil),
+          lte(bookings.flySafeCorrectionLeaseUntil, now),
+        ),
       ),
     )
     .returning({ id: bookings.id, personId: bookings.personId });
@@ -267,6 +312,26 @@ export async function sendFlySafeCorrections(
   // correction went or was queued; whatever is left when the loop ends, by
   // any exit including a throw, has its claim put back for the next save.
   const unsent = new Set(claimed.map((seat) => seat.id));
+  const finish = async (seatId: string, correctionId: string) => {
+    const [finished] = await db
+      .update(bookings)
+      .set({
+        flySafeCorrectedAt: now,
+        flySafeCorrectionId: correctionId,
+        flySafeCorrectionLeaseId: null,
+        flySafeCorrectionLeaseUntil: null,
+      })
+      .where(
+        and(
+          eq(bookings.id, seatId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, trip.id),
+          eq(bookings.flySafeCorrectionLeaseId, leaseId),
+        ),
+      )
+      .returning({ id: bookings.id });
+    if (finished) unsent.delete(seatId);
+  };
   const unreached = (personId: string) => {
     outcome.failed += 1;
     outcome.unreached.push(personById.get(personId)?.fullName ?? "");
@@ -280,11 +345,12 @@ export async function sendFlySafeCorrections(
         unreached(seat.personId);
         continue;
       }
+      const correctionId = leaseId;
       const delivery = await send(
         db,
         {
           kind: "fly_safe_correction",
-          correctionId: crypto.randomUUID(),
+          correctionId,
           seatId: seat.id,
           shopId: shop.id,
           to: person.email,
@@ -298,12 +364,12 @@ export async function sendFlySafeCorrections(
       );
       if (delivery.status === "sent") {
         outcome.told += 1;
-        unsent.delete(seat.id);
+        await finish(seat.id, correctionId);
         continue;
       }
       // A persisted retry holds the claim while the queue tries it.
       if (delivery.status === "failed" && delivery.retryable && delivery.retryQueued === true) {
-        unsent.delete(seat.id);
+        await finish(seat.id, correctionId);
         outcome.failed += 1;
         continue;
       }
@@ -313,8 +379,14 @@ export async function sendFlySafeCorrections(
     if (unsent.size > 0) {
       await db
         .update(bookings)
-        .set({ flySafeCorrectedAt: null })
-        .where(and(eq(bookings.shopId, input.shopId), inArray(bookings.id, [...unsent])));
+        .set({ flySafeCorrectionLeaseId: null, flySafeCorrectionLeaseUntil: null })
+        .where(
+          and(
+            eq(bookings.shopId, input.shopId),
+            eq(bookings.flySafeCorrectionLeaseId, leaseId),
+            inArray(bookings.id, [...unsent]),
+          ),
+        );
     }
   }
   return outcome;

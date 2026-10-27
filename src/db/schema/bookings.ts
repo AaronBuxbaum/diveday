@@ -370,12 +370,17 @@ export const bookings = pgTable(
      * a figure that no longer applies. Null on every seat told nothing.
      */
     flySafeHoursTold: integer("fly_safe_hours_told"),
-    /**
-     * When this seat was sent the one correction to that figure (issue
-     * #2927), claimed before the send so a diver hears it once. Null while
-     * nothing is owed or the correction has not gone.
-     */
+    /** A correction was accepted by the provider or persisted for retry. */
     flySafeCorrectedAt: timestamp("fly_safe_corrected_at", { withTimezone: true }),
+    /** Generation fenced against an older queued retry failing. */
+    flySafeCorrectionId: uuid("fly_safe_correction_id"),
+    /** Bounds unattended correction claims for the current recommendation. */
+    flySafeCorrectionAttempts: integer("fly_safe_correction_attempts").notNull().default(0),
+    /** A recoverable, expiring send claim. Its token fences stale workers. */
+    flySafeCorrectionLeaseId: uuid("fly_safe_correction_lease_id"),
+    flySafeCorrectionLeaseUntil: timestamp("fly_safe_correction_lease_until", {
+      withTimezone: true,
+    }),
     /**
      * **Whoever booked this seat said its diver is under 18** (the "Under 18"
      * box on the public party form; H-21 follow-up, decision of 2026-10-13).

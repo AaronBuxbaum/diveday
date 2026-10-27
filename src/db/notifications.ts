@@ -50,7 +50,11 @@ import { issueBookingCapability } from "./booking-capabilities";
 import { settledPartyPayment } from "./checkouts";
 import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
-import { correctFlySafeForBooking, rememberFlySafeTold } from "./fly-safe-correction";
+import {
+  correctFlySafeForBooking,
+  rearmFailedFlySafeCorrection,
+  rememberFlySafeTold,
+} from "./fly-safe-correction";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
 import {
@@ -711,6 +715,16 @@ async function refreshQueuedFlySafe(db: AppDb, notification: Notification): Prom
     : { ...withoutHours, flySafeHours: hours, flySafeAskCrew: false };
 }
 
+/** Recover a correction from its tenant-scoped queue key when its sealed payload is lost. */
+async function rearmLostFlySafePayload(db: AppDb, shopId: string, key: string): Promise<void> {
+  const match =
+    /^fly-safe-correction\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
+      key,
+    );
+  if (match)
+    await rearmFailedFlySafeCorrection(db, { shopId, bookingId: match[1], correctionId: match[2] });
+}
+
 export type NotificationRetrySummary = {
   scanned: number;
   sent: number;
@@ -949,6 +963,7 @@ export async function drainNotificationRetries(
     if (!claimed) continue;
 
     if (!candidate.payloadSealed) {
+      await rearmLostFlySafePayload(db, claimed.shopId, claimed.idempotencyKey);
       await db
         .update(notificationSendQueue)
         .set({
@@ -1021,6 +1036,7 @@ export async function drainNotificationRetries(
       // budget nothing.
       const recoveryAttempts = claimed.recoveryAttempts + 1;
       const parkIsFinal = recoveryAttempts >= UNREADABLE_RETRY_MAX_ATTEMPTS;
+      if (parkIsFinal) await rearmLostFlySafePayload(db, claimed.shopId, claimed.idempotencyKey);
       await db
         .update(notificationSendQueue)
         .set({
@@ -1226,6 +1242,15 @@ export async function drainNotificationRetries(
         .where(eq(notificationSendQueue.id, claimed.id));
       summary.queued += 1;
     } else {
+      // Re-arm first: a crash before parking the queue row can duplicate a correction,
+      // while parking first could lose the only recoverable retry.
+      if (notification.kind === "fly_safe_correction" && notification.correctionId) {
+        await rearmFailedFlySafeCorrection(db, {
+          shopId: notification.shopId,
+          bookingId: notification.seatId,
+          correctionId: notification.correctionId,
+        });
+      }
       await db
         .update(notificationSendQueue)
         .set({
