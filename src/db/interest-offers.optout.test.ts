@@ -4,6 +4,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { addInterest } from "./interest-dates-fixtures";
 
 const ctx = fileScopedShopContext();
 
@@ -180,6 +181,76 @@ describe("an unsubscribe from the last-minute list", () => {
 });
 
 describe("invitableSeats and the deal", () => {
+  it("releases an anonymous date-request party at 48 hours and counts a fresh re-offer", async () => {
+    const { db, shop, trip } = await context();
+    const departure = await tripRow(db, trip.id);
+    await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
+    const [bookedPerson] = await db.select().from(people).where(eq(people.email, ana.email));
+    if (!bookedPerson) throw new Error("setup: person missing");
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: bookedPerson.id,
+      status: "booked",
+    });
+    const baseline = await invitableSeats(db, departure);
+    expect(baseline).toBeGreaterThanOrEqual(2);
+    expect(baseline).toBeLessThan(departure.capacity);
+    const parentId = await addInterest(db, shop.id, {
+      interest: "reef dive",
+      name: "An unnamed request",
+      email: "request@example.com",
+    });
+    const now = nowDate();
+    const [child] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        parentInterestId: parentId,
+        personId: null,
+        partySize: 2,
+        offeredAt: new Date(now.getTime() - 48 * HOUR_MS + 1),
+      })
+      .returning({ id: interests.id });
+    if (!child) throw new Error("setup: date request offer missing");
+    expect(await invitableSeats(db, departure)).toBe(baseline - 2);
+
+    await db
+      .update(interests)
+      .set({ offeredAt: new Date(now.getTime() - 48 * HOUR_MS) })
+      .where(eq(interests.id, child.id));
+    expect(await invitableSeats(db, departure)).toBe(baseline);
+
+    await db.update(interests).set({ offeredAt: now }).where(eq(interests.id, child.id));
+    expect(await invitableSeats(db, departure)).toBe(baseline - 2);
+
+    await db.update(interests).set({ offeredAt: null }).where(eq(interests.id, child.id));
+    expect(await invitableSeats(db, departure)).toBe(baseline);
+  });
+
+  it("keeps an older named offer in the advisory count", async () => {
+    const { db, shop, trip } = await context();
+    const departure = await tripRow(db, trip.id);
+    const baseline = await invitableSeats(db, departure);
+    await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
+    const [person] = await db.select().from(people).where(eq(people.email, ana.email));
+    if (!person) throw new Error("setup: person missing");
+    await db.insert(interests).values({
+      shopId: shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      tripId: trip.id,
+      personId: person.id,
+      partySize: 1,
+      offeredAt: new Date(nowDate().getTime() - 72 * HOUR_MS),
+    });
+    expect(await invitableSeats(db, departure)).toBe(baseline - 1);
+  });
+
   it("keeps the seats a wait-list invite holds after a deal reaches the same diver", async () => {
     const { db, shop, trip } = await context();
     await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
