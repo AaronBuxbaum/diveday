@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
+import { MINUTE_MS } from "@/lib/clock";
+import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 
 /** How often a visible page re-reads itself. */
 export const LIVE_REFRESH_INTERVAL_MS = MINUTE_MS;
@@ -12,7 +13,7 @@ export const LIVE_REFRESH_MIN_GAP_MS = 30 * 1000;
  * With no tap or key for this long, the page stops re-reading itself, so an
  * unattended counter tablet's session can lapse (one working day; issue #2803).
  */
-export const LIVE_REFRESH_IDLE_LIMIT_MS = 12 * HOUR_MS;
+export const LIVE_REFRESH_IDLE_LIMIT_MS = STAFF_IDLE_LIMIT_MS;
 
 /** True while someone is typing into a field, which a refresh must not interrupt. */
 export function isTyping(active: Element | null): boolean {
@@ -37,10 +38,9 @@ export function isTyping(active: Element | null): boolean {
  * check-in queue a refresh that reorders rows under a wet thumb can check in
  * the wrong person (review fixes, dive-domain N7).
  *
- * Each refresh is a request under the staffer's session, which renews it. So
- * after `LIVE_REFRESH_IDLE_LIMIT_MS` with no pointerdown or keydown it stops,
- * and a tablet left open overnight reaches session expiry like any other tab.
- * The next tap starts it again.
+ * After `LIVE_REFRESH_IDLE_LIMIT_MS` with no pointerdown or keydown it stops.
+ * Server-side staff inactivity is tracked separately; passive refreshes do not
+ * count as input. The next tap starts refreshes again while the session is live.
  */
 export function LiveRefresh({ holdAfterTapMs = 0 }: { holdAfterTapMs?: number } = {}) {
   const router = useRouter();

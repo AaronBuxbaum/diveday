@@ -122,6 +122,8 @@ export const accountSessions = pgTable(
     roles: jsonb("roles").notNull().$type<string[]>(),
     /** `people.full_name` at sign-in — the "Hi, {name}" greeting and invite emails read this off the session rather than a fresh join. */
     name: text("name").notNull(),
+    /** Last server-recorded staff input; passive session reads never extend this. */
+    lastHumanActivityAt: appNowTimestamp("last_human_activity_at").notNull(),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },
