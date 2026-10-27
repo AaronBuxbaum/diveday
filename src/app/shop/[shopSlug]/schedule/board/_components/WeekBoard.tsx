@@ -16,6 +16,7 @@ import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
 import type { WeekAsk } from "./builder-types";
 import { CopyLastYear, LastYearTally, type LastYearWeekView } from "./CopyLastYear";
+import { WeekPaperDate } from "./WeekPaperDate";
 import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
 import { weekRows } from "./week-rows";
 
@@ -127,6 +128,7 @@ export type WeekDay = {
   weekday: string;
   dayNumber: string;
   label: string;
+  paperLabel: string;
   isToday: boolean;
   /** The shop's own calendar day is already behind this one. */
   isPast: boolean;
@@ -523,8 +525,10 @@ function WeekBoat({
   time,
   runs,
   crewLine,
+  paperDate,
 }: {
   board: WeekBoatBoard;
+  paperDate: string;
   departure: WeekDeparture;
   seats: WeekSeats;
   seatsLabel: string;
@@ -583,6 +587,7 @@ function WeekBoat({
           {time}
         </p>
         <div className="col-span-full row-start-2 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:pt-1">
+          <WeekPaperDate label={paperDate} />
           {/* **Two lines, never one clipped one.** A week's titles share their
               prefix — "Dawn Two-Tank — …", "Morning Two-Tank — …" — so a
               truncation eats exactly the half that says which boat this is.
@@ -806,7 +811,7 @@ export function WeekBoard({
           — in a test, in a spec, in a screen reader's rotor — would get seven
           days plus their boats and have to say which it meant. The headings
           are the structure. */}
-      <div className="flex flex-col">
+      <div className="flex flex-col print:block">
         {weekRows(week.days, (day) => day.entries.length === 0 && !spansByDay.has(day.dateIso)).map(
           (row) => {
             if (row.kind === "quiet") {
@@ -847,16 +852,12 @@ export function WeekBoard({
             const { day } = row;
             const spans = spansByDay.get(day.dateIso) ?? [];
             const empty = day.entries.length === 0 && spans.length === 0;
-            const addKey = `w:add:${day.dateIso}`;
             // Never on a day that has already been: a departure is put on the
             // board, and the board is ahead.
             const addButton =
               canConfigure && !day.isPast ? (
-                <button
-                  type="button"
-                  ref={registerToggle(addKey)}
-                  onClick={() => onToggle(addKey)}
-                  aria-expanded={openKey === addKey}
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board/new?date=${encodeURIComponent(day.dateIso)}&week=${encodeURIComponent(day.dateIso)}`}
                   aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
                   className={buttonClass({
                     variant: "ghost",
@@ -865,7 +866,7 @@ export function WeekBoard({
                   })}
                 >
                   <span aria-hidden="true">+</span> {copy.add}
-                </button>
+                </Link>
               ) : null;
             const panelUnder = (tripId: string) =>
               panel?.under === "departure" && panel.tripId === tripId ? panel.node : null;
@@ -880,6 +881,7 @@ export function WeekBoard({
               <li key={departure.tripId}>
                 <WeekBoat
                   departure={departure}
+                  paperDate={day.paperLabel}
                   seats={row.seats}
                   seatsLabel={row.seatsLabel}
                   meta={row.meta}
@@ -894,23 +896,17 @@ export function WeekBoard({
               </li>
             );
             return (
-              <div key={day.dateIso} className="border-b border-border">
+              <div
+                data-week-day={day.dateIso}
+                key={day.dateIso}
+                className="border-b border-border print:break-inside-avoid"
+              >
                 {/* One rail, 72px, at every width — sized, and shared with
                   the loading skeleton, in `week-geometry.ts`. */}
-                <div className={WEEK_DAY_GRID_CLASS}>
-                  {/* **The day holds its place while its own boats scroll**
-                    (ADR 20260827-clearwater-surface-language, decision 10).
-                    `top-(--chrome-h)`, never a number — the bar's height is a
-                    token. `self-start` so the sticky box is the header's own
-                    height rather than the grid row's.
-
-                    **One line at every width**: "FRI 2", level with the
-                    first departure's time beside it. Stacked from `sm` up, the
-                    weekday and its numeral made every day two lines tall, and
-                    an empty day twice the height of the one line it says. */}
+                <div className={`${WEEK_DAY_GRID_CLASS} print:block`}>
                   <h2
                     id={`week-day-${day.dateIso}`}
-                    className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
+                    className="sticky top-(--chrome-h) z-10 self-start bg-background py-2 print:static"
                   >
                     <span className="sr-only">{day.label}</span>
                     <span aria-hidden="true" className="flex min-h-8 items-center gap-1.5">

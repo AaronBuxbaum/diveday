@@ -43,7 +43,7 @@ export function RunningLate({
         <p className="text-base text-muted">
           {t("ready.lateSaid", { time: formatTime(data.runningLate.saidAt, locale, tz) })}
         </p>
-        <div>
+        <div className="print:hidden">
           <SubmitButton
             pendingLabel={t("ready.lateSending")}
             className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -62,7 +62,7 @@ export function RunningLate({
   return (
     <form
       action={sayRunningLateAction.bind(null, token)}
-      className="flex flex-wrap items-center gap-x-4 gap-y-2"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 print:hidden"
     >
       <p className="text-base text-muted">{t("ready.lateLead")}</p>
       <InlineConfirm

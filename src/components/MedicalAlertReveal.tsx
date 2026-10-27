@@ -140,7 +140,7 @@ export function MedicalAlertReveal({
 
   if (revealed) {
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 print:hidden">
         {/* The diver's own words, line breaks kept: "Bee-sting allergy.\nEpiPen
             in the blue dry bag." */}
         <p className="text-base whitespace-pre-wrap [overflow-wrap:anywhere]">{revealed.text}</p>

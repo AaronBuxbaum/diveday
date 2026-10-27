@@ -472,6 +472,15 @@ jobs:
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
             pnpm exec playwright install chromium
           fi
+          # Saved-record print assertions inspect actual PDF text. Only the
+          # shard assigned that spec needs Poppler; the visual and fast-lane
+          # jobs install it separately when their selections require it.
+          if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/staff-saved-print.spec.ts'; then
+            if ! command -v pdftotext >/dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends poppler-utils
+            fi
+          fi
           status=0
           pnpm exec playwright test "${spec_files[@]}" 2>&1 | tee shard.log || status=$?
           if [ "$status" -eq 0 ]; then
@@ -667,6 +676,18 @@ jobs:
         run: pnpm build:sw
       - if: steps.plan.outputs.run == 'true'
         uses: ./.github/actions/playwright-shell
+      # Crew captures and saved-record specs inspect actual PDF pages.
+      - name: Install PDF rendering tools
+        if: ${{ !cancelled() && (steps.plan.outputs.captures == 'true' || steps.plan.outputs.specs == 'true') }}
+        timeout-minutes: 5
+        run: |
+          if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
+             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/staff-saved-print[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
+            if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends poppler-utils
+            fi
+          fi
       - name: Run the fast lane's specs
         if: steps.plan.outputs.specs == 'true'
         run: |
@@ -807,8 +828,15 @@ jobs:
       # would silently bake "no service worker" into the visual baseline.
       - run: pnpm build:sw
       - uses: ./.github/actions/playwright-shell
-      # Only captures screenshots into e2e/screenshots — nothing here asserts,
-      # so a visual change never fails this step. The reg-suit compare against
+      - name: Install PDF rendering tools
+        timeout-minutes: 5
+        run: |
+          if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends poppler-utils
+          fi
+      # Capture screenshots into e2e/screenshots; state and paper-integrity
+      # assertions can fail this step. The reg-suit compare against
       # the S3 baseline runs once, in visual-report below, over every shard's
       # screenshots merged back together; reg-suit has no shard-aware mode of
       # its own to run per shard.

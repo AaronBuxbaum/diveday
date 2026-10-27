@@ -38,6 +38,7 @@ import {
 } from "./_components/CourseFormsRequirement";
 import { CoursePhotosSection } from "./_components/CoursePhotosSection";
 import { CoursePitchPricingSections } from "./_components/CoursePitchPricingSections";
+import { CourseSavedPrintDetails } from "./_components/CourseSavedPrintDetails";
 import { CourseDayByDaySection, CourseFaqSection } from "./_components/CourseScheduleFaqSections";
 import { CourseTemplateUpdatesPanel } from "./_components/CourseTemplateUpdatesPanel";
 import { courseEditNotices, refusedSectionId } from "./_components/edit-notices";
@@ -131,13 +132,7 @@ export default async function EditCoursePage({
       : t("courses.edit.openToUncertified")) +
     (course.minimumAge ? t("courses.edit.ageSuffix", { age: course.minimumAge }) : "");
 
-  // **The editor's sections, once, in page order.** The unsaved-changes
-  // sentence reads this one list, so a section cannot hold work the sentence
-  // cannot name (ADR 20260827-the-shops-shelves, decision 2). The four a
-  // course page is edited for stand open; the rest are closed behind their
-  // names (visual review 2026-10-24, A11). `scheduleDaysJson` keeps the id it
-  // has always had: `saveCourseContentAction` names it in `?field=` when the
-  // day-by-day payload is refused, and `FieldErrorFocus` resolves that by id.
+  // The form and its unsaved note share one section order; refusals use these ids.
   const sections: EditorSectionRef[] = [
     { id: "pitch", label: t("courses.edit.pitchLegend") },
     { id: "pricing", label: t("courses.edit.pricingLegend") },
@@ -158,6 +153,7 @@ export default async function EditCoursePage({
     ...section,
     unsavedTag,
     closed: true,
+    printEditorLabel: t("shared.formDraft.editorValues"),
     open: refusedSection === section.id,
   });
   const [pitch, pricing, glance, dayByDay] = sections
@@ -324,7 +320,7 @@ export default async function EditCoursePage({
               <CourseGlanceSection course={course} glance={glance} t={t} />
               <CourseDayByDaySection course={course} dayByDay={dayByDay} t={t} />
 
-              <DisclosureRowList>
+              <DisclosureRowList className="print:[&>details:not([open])]:hidden">
                 <CoursePhotosSection course={course} photos={photos} t={t} />
                 <CourseEnrollSection course={course} enroll={enroll} levelAge={levelAge} t={t} />
                 <CourseFeeCoversSection course={course} feeCovers={feeCovers} t={t} />
@@ -344,6 +340,12 @@ export default async function EditCoursePage({
                   />
                 ) : null}
               </DisclosureRowList>
+              <CourseSavedPrintDetails
+                course={course}
+                t={t}
+                display={{ locale, depthUnit: shop.depthUnit, levelAge }}
+                formsPanel={formsPanel}
+              />
             </div>
 
             {/* One control, not two: "Preview" opened the same page the "Live

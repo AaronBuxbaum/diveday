@@ -144,7 +144,7 @@ export function Copyable({
         // inset leaves a flush fill 4px from the sunken box's edge, and the
         // outdented box reaches its top, so the ring is drawn inside rather
         // than a pixel outside the box.
-        className: panel ? "-mt-3 focus-visible:focus-ring-inset" : undefined,
+        className: panel ? "-mt-3 focus-visible:focus-ring-inset print:hidden" : "print:hidden",
       })}
     >
       <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>

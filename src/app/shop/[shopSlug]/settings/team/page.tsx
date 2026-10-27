@@ -8,20 +8,12 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import {
-  ChoicePill,
-  controlClass,
-  Field,
-  FieldActions,
-  FieldGrid,
-  FormStatus,
-} from "@/components/ui/form";
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { listStaffCredentials } from "@/db/staff-credentials";
-import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
@@ -31,11 +23,11 @@ import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
-import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { AddCredentialDisclosure } from "./_components/AddCredentialDisclosure";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
+import { LanguageCheckboxes, StaffLanguagesValue } from "./_components/LanguageCheckboxes";
 import { StaffCardCredentials } from "./_components/StaffCardCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
@@ -89,38 +81,7 @@ function statusBadge(
  * flagged in the extraction report rather than changed here.
  */
 const roleLabels = staffRoleLabelRecord;
-
-/**
- * One staff member's spoken languages (issue #708) — a checkbox per language
- * DiveDay can render, each labelled in the *reader's* own language
- * (`languageNameIn`) so the staffer filling this in recognises the option,
- * unlike the diver-facing badge below which uses each language's endonym.
- */
-function LanguageCheckboxes({
-  defaultLanguages,
-  locale,
-  t,
-}: {
-  defaultLanguages: readonly string[];
-  locale: string;
-  t: StaffTranslator;
-}) {
-  return (
-    <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <legend className="sr-only">{t("settings.team.languagesLegend")}</legend>
-      {COMMON_SPOKEN_LANGUAGES.map((language) => (
-        <ChoicePill
-          key={language}
-          type="checkbox"
-          name={`language_${language}`}
-          defaultChecked={defaultLanguages.includes(language)}
-        >
-          {languageNameIn(language, locale) ?? language}
-        </ChoicePill>
-      ))}
-    </fieldset>
-  );
-}
+const EMPTY_PRINT_ROW_CLASS = "mt-4 print:[&:not(:has(details[open]))]:hidden";
 
 /**
  * The name divers actually read for this person, or empty when they read none.
@@ -177,8 +138,12 @@ function StaffRow({
   const rolesNotice = noticeForForm(notice, TEAM_FORMS.roles(member.personId));
   const contactStatus = noticeForForm(notice, TEAM_FORMS.contact(member.personId));
   const languagesStatus = noticeForForm(notice, TEAM_FORMS.languages(member.personId));
+  const hasContact = Boolean(member.emergencyContactName && member.emergencyContactPhone);
   return (
-    <li id={`staff-${member.personId}`} className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6">
+    <li
+      id={`staff-${member.personId}`}
+      className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6 print:break-inside-avoid print:px-3 print:py-2 print:[&>div]:mt-1 print:[&_summary]:min-h-0 print:[&_summary]:py-0"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="font-medium">{member.fullName}</p>
@@ -264,19 +229,11 @@ function StaffRow({
           nowhere gated — a shop that never fills this in loses nothing
           (issue #708). Its own immediate form, like the emergency contact
           below. */}
-      <div className="mt-4">
+      <div className={member.spokenLanguages.length ? "mt-4" : EMPTY_PRINT_ROW_CLASS}>
         <CompactDisclosureRow
           id={`languages-${member.personId}`}
           label={t("settings.team.languagesLabel")}
-          value={
-            member.spokenLanguages.length > 0
-              ? cachedListFormat(locale).format(
-                  member.spokenLanguages.map(
-                    (language) => languageNameIn(language, locale) ?? language,
-                  ),
-                )
-              : t("settings.team.emergencyContact.addValue")
-          }
+          value={<StaffLanguagesValue languages={member.spokenLanguages} locale={locale} t={t} />}
           open={Boolean(languagesStatus)}
         >
           <form action={saveStaffLanguagesAction} className="flex flex-col gap-3">
@@ -315,16 +272,18 @@ function StaffRow({
           the sheet a coastguard reads answered "who do we call?" for every
           paying diver and for neither of the two staff most reliably in the
           water (dive-domain review 20260810). */}
-      <div className="mt-4">
+      <div className={hasContact ? "mt-4" : EMPTY_PRINT_ROW_CLASS}>
         <CompactDisclosureRow
           id={`emergency-contact-${member.personId}`}
           label={t("settings.team.emergencyContact.label")}
           // The label names the fact, the value answers it — the row used to
           // say "Add an emergency contact" beside "Marisol Reyes (wife)".
           value={
-            member.emergencyContactName && member.emergencyContactPhone
-              ? member.emergencyContactName
-              : t("settings.team.emergencyContact.addValue")
+            hasContact ? (
+              member.emergencyContactName
+            ) : (
+              <span className="print:hidden">{t("settings.team.emergencyContact.addValue")}</span>
+            )
           }
           open={Boolean(contactStatus)}
         >
@@ -371,7 +330,7 @@ function StaffRow({
           which took this row's 8px gap and pushed the switches 8px down on a
           phone (the pixel probe, settings-team). `sm:ms-auto` holds the
           switches to the end without a placeholder holding the start. */}
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
         {member.accountStatus === "invited" ? (
           <form action={resendInviteAction}>
             <input type="hidden" name="userAccountId" value={member.userAccountId} />

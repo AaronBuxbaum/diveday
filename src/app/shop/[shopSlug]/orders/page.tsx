@@ -3,7 +3,6 @@ import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +40,10 @@ import {
   OPEN_TRIP_LINK,
 } from "./_components/notice-rows";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
+import {
+  ImportedOrdersListPagination,
+  OrdersListPagination,
+} from "./_components/OrdersListPagination";
 import { OrdersSeatLines } from "./_components/OrdersSeatLines";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { OwedLine } from "./_components/OwedLine";
@@ -575,14 +578,11 @@ export default async function OrdersIndexPage({
         <OrdersLedger days={days} className="mt-8" />
       ) : null}
 
-      {/* No `total` here: the toolbar already states how many orders the filter
-          found, and a shared fact said twice on one screen is the repetition
-          this recomposition is about. */}
-      <Pager
-        page={orderPage.page}
-        pageCount={orderPage.pageCount}
+      <OrdersListPagination
+        t={t}
+        shown={days.reduce((count, day) => count + day.rows.length, 0)}
+        pagination={orderPage}
         href={(target) => hrefWith({ page: target })}
-        words={staffPagerWords(t)}
       />
 
       {/* **The ledger as a bookkeeper's file** (third UX review, item 34): every
@@ -713,11 +713,11 @@ export default async function OrdersIndexPage({
                 })}
               </TBody>
             </Table>
-            <Pager
-              page={importedHistoryPage.page}
-              pageCount={importedHistoryPage.pageCount}
+            <ImportedOrdersListPagination
+              t={t}
+              shown={importedHistoryPage.rows.length}
+              pagination={importedHistoryPage}
               href={(target) => hrefWith({ importedPage: target })}
-              words={staffPagerWords(t)}
             />
           </LedgerGroup>
         </section>

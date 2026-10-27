@@ -79,7 +79,7 @@ export function MarketingNavView({
             href={staffShopRoot(shopSlug)}
             className={buttonClass({
               variant: "outline",
-              className: `ml-auto whitespace-nowrap lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`,
+              className: `ml-auto whitespace-nowrap print:hidden lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`,
             })}
           >
             {t("nav.goToShop")}
@@ -93,7 +93,7 @@ export function MarketingNavView({
           // first paint was a real "what do I click?" cost (design review).
           <form
             action={demoAction}
-            className={`ml-auto lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`}
+            className={`ml-auto print:hidden lg:ml-0 ${compactMobile ? "max-lg:hidden" : ""}`}
           >
             <FunnelTag source="nav" />
             <SubmitButton

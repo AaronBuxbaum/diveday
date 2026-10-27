@@ -552,6 +552,7 @@ export function CourseSessions({
                     href={publicTripPath(shopSlug, next.id)}
                     className={buttonClass({
                       variant: full ? "secondary" : "primary",
+                      className: "print:hidden",
                     })}
                   >
                     {full ? fullLabel : t("course.bookThisDate")}
@@ -587,7 +588,13 @@ export function CourseSessions({
                               <span className="mt-0.5 block text-sm text-muted">{lead}</span>
                             ) : null}
                           </span>
-                          <span className={buttonClass({ variant: "secondary", size: "sm" })}>
+                          <span
+                            className={buttonClass({
+                              variant: "secondary",
+                              size: "sm",
+                              className: "print:hidden",
+                            })}
+                          >
                             {full ? fullLabel : t("course.bookThisDate")}
                           </span>
                         </Link>
@@ -614,9 +621,9 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
           The chevron is the diver pages' one disclosure face, turning over
           open (visual review 2026-10-24, B35); it was a "+" that turned to
           an "×", which read as "add" and "remove". */}
-      <div className="mt-4 divide-y divide-border border-y border-border">
+      <div className="mt-4 divide-y divide-border border-y border-border print:hidden">
         {faqs.map((faq) => (
-          <details key={faq.question} className="group">
+          <details key={faq.question} className="group print:hidden">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 font-medium [&::-webkit-details-marker]:hidden">
               {faq.question}
               <DisclosureCaret
@@ -626,6 +633,16 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
             </summary>
             <p className="pb-4 leading-relaxed text-muted">{faq.answer}</p>
           </details>
+        ))}
+      </div>
+      {/* Closed native details omit their answers from a PDF. Paper gets
+          complete answers while the screen keeps its disclosure interaction. */}
+      <div className="mt-4 hidden divide-y divide-border border-y border-border print:block">
+        {faqs.map((faq) => (
+          <div key={faq.question} className="py-3" data-print-faq>
+            <h3 className="font-medium">{faq.question}</h3>
+            <p className="mt-2 leading-relaxed text-muted">{faq.answer}</p>
+          </div>
         ))}
       </div>
     </section>

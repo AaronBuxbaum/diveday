@@ -37,7 +37,7 @@ test.describe("shop integrations settings", () => {
   test("is reachable from Your data, the Settings group's one door", { tag: READ_ONLY }, async ({
     page,
   }) => {
-    await page.goto("/shop/blue-mantis/settings");
+    await page.goto("/shop/blue-mantis/settings#data");
     await page
       .getByRole("main")
       .getByRole("link", { name: "Export, import, backups and integrations" })

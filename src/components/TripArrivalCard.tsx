@@ -170,7 +170,7 @@ export function TripArrivalCard({
           <a
             href={downloadHref}
             download
-            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline print:hidden"
           >
             {t("trip.saveArrivalCard")}
           </a>
@@ -204,7 +204,7 @@ export function TripArrivalCard({
               href={openMapsUrl(facts.mapQuery)}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+              className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline print:hidden"
             >
               {t("trip.openArrivalMap")}
             </a>

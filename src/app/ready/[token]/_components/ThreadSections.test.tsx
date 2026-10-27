@@ -99,6 +99,25 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
 }
 
 describe("ThreadSections", () => {
+  it("keeps the paid-seat forfeit and submitted move receipt on paper", () => {
+    const paid = context();
+    Object.assign(paid.data, {
+      cancelPreview: "forfeit",
+      moveAsk: { note: "Any Saturday", sentAt: new Date("2026-07-21T13:30:00Z") },
+    });
+    render(<ThreadSections context={paid} />);
+    const receipt = screen.getByText("Any Saturday");
+    const unchanged = screen.getByText(t("ready.moveAsk.bookingUnchanged"));
+    const preview = screen.getByText(t("ready.cancelPreviewForfeit"));
+    for (const fact of [receipt, unchanged, preview]) {
+      expect(fact.closest('[class~="print:hidden"]')).toBeNull();
+    }
+    expect(
+      screen
+        .getByRole("button", { name: t("ready.cancelSpot") })
+        .closest('[class~="print:hidden"]'),
+    ).not.toBeNull();
+  });
   it("runs where to go, the crew, the ledger, the packing list, then the cancel door", () => {
     const { container } = render(<ThreadSections context={context()} />);
     const text = container.textContent ?? "";
@@ -237,6 +256,8 @@ describe("ThreadSections", () => {
     ).toBeTruthy();
     const ask = screen.getByRole("button", { name: "Ask to move" });
     const cancel = screen.getByRole("button", { name: t("ready.cancelSpot") });
+    expect(ask.closest('[class~="print:hidden"]')).not.toBeNull();
+    expect(cancel.closest('[class~="print:hidden"]')).not.toBeNull();
     expect(ask.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.querySelector('input[name="note"]')).toBeTruthy();
   });

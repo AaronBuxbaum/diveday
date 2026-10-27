@@ -263,6 +263,7 @@ export default async function BoatsSettingsPage({
               Captions, the same ones the rows above carry. */}
         <DisclosureRow
           id={boatRowId("new")}
+          className="print:hidden"
           heading={t("boats.createTitle")}
           open={Boolean(errorFor("new"))}
         >

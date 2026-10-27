@@ -97,7 +97,7 @@ function MastheadDoors({ facts, t }: { facts: MastheadFacts; t: DiverTranslator 
       {/* What this page *is*, said once, at the top. Divers arrive here from a
           booking submit or an emailed link, and both read as a confirmation, a
           thing you look at once and close. This one is the same URL all week. */}
-      <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
+      <p className="mt-3 text-sm text-muted print:hidden">{t("ready.keepThisPage")}</p>
     </>
   );
 }
