@@ -172,6 +172,7 @@ import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSafeCrew } from "./seed-safe-crew";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
+import { seedSharedDemoRecapPhoto } from "./seed-shared-demo-recap-photo";
 import { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
@@ -934,7 +935,7 @@ export async function seedDemoSchedule(
   // `privateShop` a spec takes for itself — gets random ids, because a literal
   // one can exist only once per database and a second shop would collide on it.
   const [shopRow] = await db
-    .select({ slug: shops.slug, timezone: shops.timezone })
+    .select({ slug: shops.slug, timezone: shops.timezone, isDemo: shops.isDemo })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
@@ -1045,6 +1046,11 @@ export async function seedDemoSchedule(
   if (opts.history !== false) {
     await seedHistory(db, shopId, instructor.id);
     await seedRecentRecaps(db, shopId);
+    if (shopRow?.isDemo) {
+      const primaryRecapTrip = tripRows[0];
+      if (!primaryRecapTrip) throw new Error("seed: primary recap trip missing");
+      await seedSharedDemoRecapPhoto(db, shopId, primaryRecapTrip.id);
+    }
     // The billing states that back-fill never produces: it invoices a paid trip
     // fee or a paid deposit and nothing else, so "Refunded", "Void",
     // "Uncollectible" and every retail line kind were unreachable from a shop

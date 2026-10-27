@@ -1,4 +1,4 @@
-import { and, count, eq, gte, lt, sql } from "drizzle-orm";
+import { and, count, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { summarizeMonth } from "@/lib/reporting";
@@ -6,8 +6,10 @@ import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { refreshCanonicalDemoSchedule } from "./demo-refresh";
+import { recapClosedReason } from "./recap";
 import { getMonthlyReport } from "./reporting";
-import { bookings, tips, tripReviews, trips } from "./schema";
+import { bookings, people, recapPhotos, tips, tripReviews, trips } from "./schema";
+import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 
 /**
@@ -81,6 +83,39 @@ async function tipsWithDeparture(db: AppDb, shopId: string) {
 }
 
 describe("seedRecentRecaps", () => {
+  it("gives a secondary diver a shared photo on a different completed departure", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    const [primary] = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.id, DEMO_RECAP_BOOKING_ID)));
+    expect(primary).toBeDefined();
+    const shared = await db
+      .select({
+        bookingId: bookings.id,
+        tripId: trips.id,
+        endsAt: trips.endsAt,
+        name: people.fullName,
+        imageUrl: recapPhotos.imageUrl,
+      })
+      .from(recapPhotos)
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, recapPhotos.bookingId), eq(bookings.shopId, shop.id)),
+      )
+      .innerJoin(trips, and(eq(trips.id, recapPhotos.tripId), eq(trips.shopId, shop.id)))
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shop.id)))
+      .where(and(eq(recapPhotos.shopId, shop.id), isNotNull(recapPhotos.sharedWithBoatAt)));
+    expect(shared).toHaveLength(1);
+    expect(shared[0]?.bookingId).not.toBe(DEMO_RECAP_BOOKING_ID);
+    expect(shared[0]?.tripId).not.toBe(primary?.tripId);
+    expect(shared[0]?.name).not.toBe("Priya Sharma");
+    expect(shared[0]?.endsAt.getTime()).toBeLessThan(nowDate().getTime());
+    expect(shared[0]?.imageUrl).toMatch(/^\/dive-sites\//);
+    if (!shared[0]) throw new Error("seeded shared recap photo is missing");
+    await expect(recapClosedReason(db, shared[0].bookingId)).resolves.toBeNull();
+  });
+
   it("refills a month whose tips and reviews have aged out from under the seed", async () => {
     const { db, shop } = await seededShopContext({ history: true });
     await ageTheDemo(db, shop.id);
