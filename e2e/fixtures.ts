@@ -106,6 +106,13 @@ export async function settleStaffHydration(page: Page): Promise<void> {
     page.locator(`${STAFF_HYDRATION_PROBE}:not([data-hydrated="true"])`),
     `${pathname} loaded, but React never took over its Search trigger`,
   ).toHaveCount(0);
+  // Search hydration alone can precede the live idle-session check. Typing
+  // under its inert overlay loses input; a settled refusal remains visible to
+  // tests that deliberately exercise a locked session.
+  await expect(
+    page.locator('[data-staff-session-check="settled"]'),
+    `${pathname} loaded, but the staff session check has not settled`,
+  ).toHaveCount(1);
   // A nav already streamed in is waited on too; one still behind its
   // skeleton is the clicking spec's own wait (`e2e/staff-nav.spec.ts`).
   await expect(
