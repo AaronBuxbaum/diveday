@@ -5570,7 +5570,9 @@
         "heading": "Equipo",
         "body": "{count, plural, one {# equipo necesita mantenimiento.} other {# equipos necesitan mantenimiento.}}",
         "link": "Abrir Equipo"
-      }
+      },
+      "needsAttention": "Necesita atención",
+      "preparedAt": "Preparado el {at}"
     },
     "staffInvite": {
       "subject": "{inviterName} te ha invitado a {shopName} en DiveDay",

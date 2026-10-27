@@ -150,6 +150,74 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     blockerTexts.some(
       ({ blocker }) => blocker.code === "medical_review" || blocker.code === "medical_not_cleared",
     );
+  const waiverRemedy = waiverControl.action ? (
+    <div className="mt-3">
+      <WaiverSendControl
+        surface="roster"
+        tripId={tripId}
+        bookingIds={[booking.id]}
+        label={waiverControl.label}
+        hint={waiverControl.hint}
+        pendingLabel={
+          waiverControl.action === "send" ? t("trips.roster.sending") : t("trips.roster.resending")
+        }
+        confirmMessage={
+          waiverControl.confirm
+            ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
+            : undefined
+        }
+        className={buttonClass({ variant: waiverControl.variant, size: "sm" })}
+        wrapperClassName=""
+        copy={waiverSendCopy(t)}
+      />
+      {/* A diver who signed on paper or on shore: let a non-diver
+              record it so the waiver gate isn't held up by a signature the
+              app never sees. */}
+      <PaperWaiverControl
+        action={markRosterWaiverInPersonAction}
+        bookingId={booking.id}
+        copy={paperWaiverCopy(t, "roster")}
+        requiresGuardian={requiresGuardian}
+        // A diver is standing at this departure, so the staffer here can
+        // truthfully say they watched both a namesake parent and child
+        // sign — the counter is the other such door, the diver's record
+        // deliberately not one.
+        offersNamesake
+        // Drawn on this row's own refusal, or on a page notice that
+        // named this booking, and on no other minor on the boat.
+        noticedNamesake={namesakeRefused}
+        // A page-level notice that landed the staffer back here reopens
+        // the form; a refusal of this form no longer navigates at all.
+        defaultOpen={namesakeRefused}
+        // The fallback under the row's leading action reads in quiet
+        // ink — a teal link out-shouted the bordered send pill above it
+        // (design review 2026-08-29).
+        variant="ghost"
+      />
+    </div>
+  ) : null;
+  const certificationRemedy = blockerTexts.some(
+    ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
+  ) ? (
+    <Link
+      href={`/shop/${shopSlug}/divers/${person.id}#cards`}
+      className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline print:hidden"
+    >
+      {t("trips.roster.reviewCertificationsLink")}
+    </Link>
+  ) : null;
+  const courseFormsRemedy = identityUnconfirmed ? null : (
+    <CourseFormsRowControl
+      tripId={tripId}
+      bookingId={booking.id}
+      owed={readinessByBooking.get(booking.id)?.owedCourseForms ?? []}
+      warnOnly={!COURSE_FORMS_BLOCK_BOARDING}
+      offerSend={!waiverControl.action}
+      requiresGuardian={requiresGuardian}
+      recordAction={recordPaperCourseFormAction}
+      t={t}
+    />
+  );
   const outstanding = (
     <>
       {arrival ? identityContact : null}
@@ -188,16 +256,6 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               lines (K-551). `-mb-3 align-bottom` gives that half back, as
               `buttonClass`'s `outdent` does for a quiet button, so the next
               line's box meets this one's and the target stays whole. */}
-          {blockerTexts.some(
-            ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
-          ) ? (
-            <Link
-              href={`/shop/${shopSlug}/divers/${person.id}#cards`}
-              className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline print:hidden"
-            >
-              {t("trips.roster.reviewCertificationsLink")}
-            </Link>
-          ) : null}
           {/* A snorkeler is held on the dive medical exactly as a diver is (H-109).
               The way aboard without it is a rider's seat, whose chip carries the
               warning; this only points at that switch, it clears nothing. */}
@@ -270,54 +328,6 @@ export function rowOutstanding(seat: RowOutstandingInput) {
       {/* The waiver, when there is one to send. The control's own face is
           the status and its label is the next action; a signed waiver has
           no control at all — its date line is reference, in the panel. */}
-      {waiverControl.action ? (
-        <div className="mt-3">
-          <WaiverSendControl
-            surface="roster"
-            tripId={tripId}
-            bookingIds={[booking.id]}
-            label={waiverControl.label}
-            hint={waiverControl.hint}
-            pendingLabel={
-              waiverControl.action === "send"
-                ? t("trips.roster.sending")
-                : t("trips.roster.resending")
-            }
-            confirmMessage={
-              waiverControl.confirm
-                ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
-                : undefined
-            }
-            className={buttonClass({ variant: waiverControl.variant, size: "sm" })}
-            wrapperClassName=""
-            copy={waiverSendCopy(t)}
-          />
-          {/* A diver who signed on paper or on shore: let a non-diver
-              record it so the waiver gate isn't held up by a signature the
-              app never sees. */}
-          <PaperWaiverControl
-            action={markRosterWaiverInPersonAction}
-            bookingId={booking.id}
-            copy={paperWaiverCopy(t, "roster")}
-            requiresGuardian={requiresGuardian}
-            // A diver is standing at this departure, so the staffer here can
-            // truthfully say they watched both a namesake parent and child
-            // sign — the counter is the other such door, the diver's record
-            // deliberately not one.
-            offersNamesake
-            // Drawn on this row's own refusal, or on a page notice that
-            // named this booking, and on no other minor on the boat.
-            noticedNamesake={namesakeRefused}
-            // A page-level notice that landed the staffer back here reopens
-            // the form; a refusal of this form no longer navigates at all.
-            defaultOpen={namesakeRefused}
-            // The fallback under the row's leading action reads in quiet
-            // ink — a teal link out-shouted the bordered send pill above it
-            // (design review 2026-08-29).
-            variant="ghost"
-          />
-        </div>
-      ) : null}
 
       {/* A training dive on a charter (issue #2275): the mark, or the course
           seats it may name. Before the forms it brings with it. */}
@@ -336,18 +346,6 @@ export function rowOutstanding(seat: RowOutstandingInput) {
       {/* The course's own forms, which the release's control above does not
           speak for (ADR 20261008-course-forms). Withheld on a held seat, like
           every other write onto the diver's record from this row. */}
-      {identityUnconfirmed ? null : (
-        <CourseFormsRowControl
-          tripId={tripId}
-          bookingId={booking.id}
-          owed={readinessByBooking.get(booking.id)?.owedCourseForms ?? []}
-          warnOnly={!COURSE_FORMS_BLOCK_BOARDING}
-          offerSend={!waiverControl.action}
-          requiresGuardian={requiresGuardian}
-          recordAction={recordPaperCourseFormAction}
-          t={t}
-        />
-      )}
 
       {/* Whenever this departure takes money — never relocated by what the
           status happens to be, so the control a staffer just used to mark a
@@ -391,27 +389,31 @@ export function rowOutstanding(seat: RowOutstandingInput) {
 
   // Whether the panel's first band has anything in it — every condition
   // `outstanding` draws on, so an empty band never leaves its rule behind.
-  const certificationBlocked = blockerTexts.some(
-    ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
-  );
   const hasWork =
     Boolean(arrival && identityContact) ||
     deskPrivateLines.length > 0 ||
     Boolean(arrival && booking.reEntryAsk) ||
     flaggedPrompts.length > 0 ||
-    certificationBlocked ||
     snorkelerMedicalHold ||
     Boolean(certifyDiverAction) ||
     Boolean(saveCourseNextStepAction) ||
     Boolean(setCourseMaterialsDoneAction) ||
-    waiverControl.action !== null ||
     trainingMark !== null ||
     requiresPayment;
 
   /**
    * **Reference**: what is merely true about this seat, one tap away.
    */
-  return { outstanding, hasWork };
+  return {
+    outstanding,
+    hasWork,
+    waiverRemedy,
+    certificationRemedy,
+    courseFormsRemedy,
+    hasCourseForms:
+      !identityUnconfirmed &&
+      (readinessByBooking.get(booking.id)?.owedCourseForms?.length ?? 0) > 0,
+  };
 }
 
 export type RowOutstanding = ReturnType<typeof rowOutstanding>;

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { RosterRow, type RosterRowContext } from "./RosterRow";
@@ -15,6 +15,21 @@ import type {
 } from "./types";
 
 afterEach(cleanup);
+
+// A stateful result isolates whether the parent preserves the real send control's identity.
+vi.mock("@/app/shop/[shopSlug]/_components/today/WaiverSendControl", async () => {
+  const { useState } = await import("react");
+  return {
+    WaiverSendControl: ({ label }: { label: string }) => {
+      const [done, setDone] = useState(false);
+      return (
+        <button type="button" onClick={() => setDone(true)}>
+          {done ? "Copy link" : label}
+        </button>
+      );
+    },
+  };
+});
 
 const noop = () => {};
 const t = staffTranslator("en-US");
@@ -356,5 +371,72 @@ describe("RosterRow party payment", () => {
       </ul>,
     );
     expect(screen.queryByTestId("party-payment")).toBeNull();
+  });
+});
+
+describe("blockers and information", () => {
+  it("preserves the send outcome when revalidation changes the waiver reason to pending", () => {
+    const waiverContext = (code: "waiver_not_sent" | "waiver_pending") => {
+      const context = contextFor("blocked");
+      const existing = context.rows.readinessByBooking.get("b-1");
+      if (!existing) throw new Error("missing readiness fixture");
+      context.rows.readinessByBooking = new Map([
+        [
+          "b-1",
+          {
+            ...existing,
+            readiness: { ...existing.readiness, blockers: [{ code }] },
+          },
+        ],
+      ]);
+      if (code === "waiver_pending")
+        context.rows.waiverByBooking = new Map([
+          [
+            "b-1",
+            {
+              waiver: { status: "pending", expiresAt: new Date("2026-12-01T00:00:00Z") },
+            },
+          ],
+        ]) as WaiverByBooking;
+      return context;
+    };
+    const { rerender } = render(
+      <RosterRow entry={seat} settled={false} context={waiverContext("waiver_not_sent")} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: t("trips.roster.waiverSend") }));
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
+    rerender(<RosterRow entry={seat} settled={false} context={waiverContext("waiver_pending")} />);
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
+  });
+  it("keeps a certification remedy beside the blocker outside the guest-details fold", () => {
+    const { container } = render(
+      <ul>
+        <RosterRow entry={seat} settled={false} context={contextFor("blocked")} />
+      </ul>,
+    );
+    const remedy = screen.getByRole("link", { name: t("trips.roster.reviewCertificationsLink") });
+    expect(remedy.closest("details")).toBeNull();
+    expect(remedy).toHaveAttribute("href", "/shop/blue-mantis/divers/p-1#cards");
+    expect(container.querySelectorAll('a[href$="#cards"]')).toHaveLength(1);
+    expect(screen.getByText(t("trips.roster.cannotBoard"))).toBeInTheDocument();
+  });
+  it("does not call missing optional contact information a boarding blocker", () => {
+    const context = contextFor("ready");
+    context.rows.waiverByBooking = new Map([
+      ["b-1", { waiver: { status: "completed", completedAt: new Date("2026-08-28T10:00:00Z") } }],
+    ]) as WaiverByBooking;
+    const contactMissing = {
+      ...seat,
+      person: { ...seat.person, emergencyContactName: null, emergencyContactPhone: null },
+    };
+    render(
+      <ul>
+        <RosterRow entry={contactMissing} settled={false} context={context} />
+      </ul>,
+    );
+    expect(screen.queryByText(t("trips.roster.cannotBoard"))).toBeNull();
+    expect(screen.getAllByText(t("trips.roster.informationAndPreparation")).length).toBeGreaterThan(
+      0,
+    );
   });
 });

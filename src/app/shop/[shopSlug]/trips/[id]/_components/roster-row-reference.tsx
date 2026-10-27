@@ -94,6 +94,7 @@ export function rowReference(seat: RowReferenceInput) {
         // an absent one. The confirm control is in the work above.
         <p className="mb-4 text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
       )}
+      <p className="mb-3 text-sm font-semibold">{t("trips.roster.contactHeading")}</p>
       <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
         {/* Who this is, first: the roster is scanned by name and state, and
             the email, with an adult's age, is the fact a desk reads back. */}
@@ -113,6 +114,13 @@ export function rowReference(seat: RowReferenceInput) {
             </p>
           </div>
         ) : null}
+        {/* A contact already on file: a fact about the seat, which is what
+            this panel is for. Only this state appears here — a missing one
+            is a reason line under the name (principle 9). */}
+        {showsPersonDetail ? emergencyContactBlock : heldEmergencyContactBlock}
+      </div>
+      <p className="mt-5 mb-3 text-sm font-semibold">{t("trips.roster.preparationHeading")}</p>
+      <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
         {/* The signed waiver's own evidence — when, and by which route —
             and nothing else. Every state that is *not* signed already says
             so under the name (principle 9). */}
@@ -166,11 +174,6 @@ export function rowReference(seat: RowReferenceInput) {
             ) : null}
           </div>
         ) : null}
-
-        {/* A contact already on file: a fact about the seat, which is what
-            this panel is for. Only this state appears here — a missing one
-            is a reason line under the name (principle 9). */}
-        {showsPersonDetail ? emergencyContactBlock : heldEmergencyContactBlock}
 
         {/* The full per-diver list, only when the reason lines compressed
             part of it into a count. */}

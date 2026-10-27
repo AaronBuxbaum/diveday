@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard, openTripTab } from "./helpers";
 
@@ -57,7 +58,12 @@ test.describe("as the owner", () => {
     await expect(main.getByText("Blue Mantis Divers", { exact: true })).toBeVisible();
     await expect(main.getByText("Diver", { exact: true })).toBeVisible();
     await expect(main.getByText("Seal", { exact: true })).toBeVisible();
-    await expect(main.getByText("Sealed and unchanged")).toBeVisible();
+    await expect(
+      main.getByText(staffTranslator("en-US")("waiversStaff.record.paperEvidence"), {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(main.getByText("Sealed and unchanged")).toHaveCount(0);
     await expect(main.getByRole("heading", { name: "What they signed" })).toBeVisible();
     // The signed time names its zone: a printed release outlives the screen
     // that knew which shop it came from.

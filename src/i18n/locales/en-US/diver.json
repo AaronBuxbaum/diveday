@@ -5570,7 +5570,9 @@
         "heading": "Gear",
         "body": "{count, plural, one {# unit is due for service.} other {# units are due for service.}}",
         "link": "Open Gear"
-      }
+      },
+      "needsAttention": "Needs attention",
+      "preparedAt": "Prepared {at}"
     },
     "staffInvite": {
       "subject": "{inviterName} invited you to {shopName} on DiveDay",

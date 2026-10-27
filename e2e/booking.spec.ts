@@ -8,6 +8,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openBookingActions,
   openRosterDetails,
   openThreadStep,
   openTripAbout,
@@ -142,12 +143,14 @@ test.describe("staff", () => {
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
     const noraRow = rosterRow(page, "Nora Quinn").filter({ visible: true });
     await openRosterDetails(noraRow);
+    await openBookingActions(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await expect(noraRow).toContainText("Remove Nora Quinn from this trip?");
     await noraRow.getByRole("button", { name: "Never mind" }).click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 
     await openRosterDetails(noraRow);
+    await openBookingActions(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     await expect(page.getByRole("status")).toContainText("Booking canceled");

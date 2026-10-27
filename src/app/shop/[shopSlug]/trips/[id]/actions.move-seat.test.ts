@@ -117,7 +117,9 @@ describe("moveSeatAction", () => {
     signIn();
     vi.mocked(moveSeat).mockResolvedValue(outcome);
     expect(await redirectedTo(() => moveSeatAction(SHOP_SLUG, TRIP_ID, form()))).toBe(
-      noticeUrl(back, notice),
+      outcome.ok
+        ? noticeUrl(back, notice)
+        : noticeUrl(`${back}#move-booking-${BOOKING_ID}`, notice, { bid: BOOKING_ID }),
     );
   });
 

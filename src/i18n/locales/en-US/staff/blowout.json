@@ -46,7 +46,8 @@
     "releasing": "Sending…",
     "resend": "Retry unsent messages",
     "resending": "Retrying…",
-    "empty": "No divers were booked when the blow-out was called"
+    "empty": "No divers were booked when the blow-out was called",
+    "offeredCount": "{count, plural, one {# offered departure} other {# offered departures}}"
   },
   "notices": {
     "called": "Blow-out called. The trip is canceled and every diver’s message is on its way.",

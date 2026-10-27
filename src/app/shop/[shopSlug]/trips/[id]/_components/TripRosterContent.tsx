@@ -30,6 +30,7 @@ import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
+import { moveSeatRefusalFor } from "./move-seat-refusal";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { FOOT_ROW_BODY, FOOT_ROW_SUMMARY } from "./TripAboutSection";
@@ -97,7 +98,7 @@ export type TripRosterContentContext = {
   /** The shop offers hotel pickups (the Features page): only then may a seat set one. */
   offersHotelPickup: boolean;
   tripNotice?: FormNotice;
-  pageNotice?: FormNotice;
+  pageNotice?: FormNotice & { moveRefusalOrigin?: string };
   noteDeleted?: { bookingId: string; body: string };
   confirmName?: string;
   confirmEmail?: string;
@@ -204,6 +205,15 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     waiver: waiverByBooking,
   } = byBooking;
 
+  const moveRefusal = moveSeatRefusalFor({
+    origin: pageNotice?.moveRefusalOrigin,
+    notice: pageNotice,
+    roster,
+    moveSeat: actions.moveSeat,
+    record: Boolean(record),
+    aboardAtSea: guests.aboardAtSea,
+  });
+  const moveSeat = actions.moveSeat ? { ...actions.moveSeat, refusal: moveRefusal } : undefined;
   const whoWantsInGroups = whoWantsInGroupsOf({ guests, t, locale, timezone });
 
   return (
@@ -222,7 +232,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         />
       ) : (
         <TripNoticeBanner
-          notice={pageNotice}
+          notice={moveRefusal ? undefined : pageNotice}
           locale={locale}
           undoBookingId={undoBookingId}
           undoAction={actions.undoRemoveBookingAction}
@@ -319,7 +329,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           previewPartyPaymentAction: actions.previewPartyPaymentAction,
           markPartyPaidAction: actions.markPartyPaidAction,
           removeBookingAction: actions.removeBookingAction,
-          moveSeat: actions.moveSeat,
+          moveSeat,
           setParticipantTypeAction: actions.setParticipantTypeAction,
           confirmIdentityAction: actions.confirmDiverIdentityAction,
           splitIdentityAction: actions.splitDiverIdentityAction,

@@ -5,6 +5,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openBookingActions,
   openRosterRow,
   openTripFromBoard,
   signInAsOwner,
@@ -92,8 +93,11 @@ test("staff carry a full boat's wait list to another departure, then move a seat
   // Then the seat itself, from its row on the full departure.
   await page.goto(fromUrl);
   const row = await openRosterRow(page, "Moira Seat");
+  await openBookingActions(row);
   await row.locator("summary", { hasText: "Move to another departure" }).click();
   const departure = row.getByLabel("Departure");
+  await expect(departure).toHaveValue("");
+  await expect(row.getByRole("button", { name: "Move", exact: true })).toBeDisabled();
   await departure.selectOption(
     (await departure.locator("option", { hasText: later }).getAttribute("value")) ?? "",
   );

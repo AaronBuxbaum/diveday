@@ -1,4 +1,5 @@
 import { DecompressionReminder } from "@/components/DecompressionReminder";
+import { buttonClass } from "@/components/ui/button";
 import { FIGURE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { crewDives, needsDecompressionCardReminder } from "@/lib/decompression-reminder";
@@ -102,6 +103,17 @@ export function OfflineRollCallSection({
                 })}
           </span>
         </h2>
+        <a
+          href="#offline-emergency-reference"
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            flush: true,
+            className: "print:hidden",
+          })}
+        >
+          {t("manifest.emergency.heading")}
+        </a>
         {/* **This copy may be missing someone, or carry someone gone**
             (issue #2980, option (a), decided 2026-10-24; domain reviews the
             same day). A walk-up seated after the save has no row below, and a

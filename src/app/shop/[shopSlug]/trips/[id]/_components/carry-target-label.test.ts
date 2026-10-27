@@ -8,7 +8,14 @@ import { carryTargetLabel } from "./carry-target-label";
  * one reads as full before anyone picks it.
  */
 describe("carryTargetLabel", () => {
-  const target = { id: "t", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT" };
+  const target = {
+    id: "t",
+    label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT",
+    startsAt: "2026-10-24T12:00:00.000Z",
+    localDay: "2026-10-24",
+    dayLabel: "Sat, Oct 24",
+    timeLabel: "8:00 AM EDT",
+  };
 
   it("says the seats a departure has left", () => {
     const t = staffTranslator("en-US");

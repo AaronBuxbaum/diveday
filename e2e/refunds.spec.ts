@@ -4,6 +4,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openBookingActions,
   openRosterDetails,
   openTripAbout,
   openTripAboutRow,
@@ -129,6 +130,7 @@ test.describe("refunds", () => {
 
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
     await openRosterDetails(noraRow);
+    await openBookingActions(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     await expect(
@@ -161,6 +163,7 @@ test.describe("refunds", () => {
 
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
     await openRosterDetails(noraRow);
+    await openBookingActions(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     // The cancellation itself still succeeded (the seat is freed either way),

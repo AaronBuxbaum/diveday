@@ -63,5 +63,8 @@
   "pickupHotelColumn": "Hotel / lodging",
   "pickupDiverColumn": "Diver",
   "pickupTimeUnset": "Unscheduled",
-  "cancelledNothingToPack": "The departure is canceled. Nothing to pack."
+  "cancelledNothingToPack": "The departure is canceled. Nothing to pack.",
+  "tasksLabel": "Preparation sections",
+  "pullList": "Pull list",
+  "piecesToAssign": "{count, plural, one {# piece to assign} other {# pieces to assign}}"
 }

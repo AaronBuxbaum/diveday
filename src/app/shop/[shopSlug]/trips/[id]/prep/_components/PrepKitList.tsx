@@ -53,7 +53,11 @@ export function PrepKitList({
   return (
     <section aria-labelledby={scopedId(idPrefix, "kit-heading")}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 id={scopedId(idPrefix, "kit-heading")} className={SECTION_TITLE_CLASS}>
+        <h2
+          id={scopedId(idPrefix, "kit-heading")}
+          tabIndex={-1}
+          className={`scroll-mt-28 ${SECTION_TITLE_CLASS}`}
+        >
           {t("tripPrep.rentalKitHeading")}
         </h2>
         {/* A state toggle, not two buttons: one list, two ways of
@@ -239,7 +243,7 @@ export function PrepKitList({
               <li
                 key={line.bookingId}
                 data-kit-line=""
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-2.5 text-sm"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-3 text-base"
               >
                 <div className="min-w-0">
                   <p className="font-semibold">
@@ -248,7 +252,7 @@ export function PrepKitList({
                         and margin, so a name that wraps keeps both. */}
                     <Link
                       href={`/shop/${shopSlug}/divers/${line.personId}`}
-                      className={`${tapTargetLinkClass} py-2.5 -my-2.5 hover:text-primary hover:underline`}
+                      className={`${tapTargetLinkClass} py-2.5 -my-2.5 focus-visible:focus-ring-inset hover:text-primary hover:underline`}
                     >
                       {line.fullName}
                     </Link>
