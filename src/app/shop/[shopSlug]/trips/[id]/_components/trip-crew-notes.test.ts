@@ -77,6 +77,21 @@ describe("tripCrewNotes", () => {
     );
   });
 
+  it("says a supervisor is unconfirmed when a future-issued rating prevents counting", () => {
+    const notes = tripCrewNotes({
+      crew: crew({
+        unverifiedCrew: [{ personId: "p1", fullName: "Alex" }],
+        ratioGap: { code: "under_target", divers: 1, divemasterCount: 0, needed: 1, shortBy: 1 },
+      }),
+      diversPerDivemaster: 6,
+      locale: "en-US",
+      t,
+    });
+    expect(notes.underTargetNote).toBe(
+      "1 diver without a confirmed supervisor. Your 6:1 target wants 1 divemaster.",
+    );
+  });
+
   it("states the total the shop's target wants, not the shortfall", () => {
     const notes = tripCrewNotes({
       crew: crew({

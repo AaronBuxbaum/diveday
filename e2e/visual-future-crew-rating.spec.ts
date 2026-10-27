@@ -40,6 +40,11 @@ test.describe("light mode", () => {
     await expect(page.getByText(staffCopy("trips.crew.courseNeedsInstructor"))).toBeVisible();
     await page.goto(`/shop/${privateShop.slug}/trips/${futureCrew.tripId}?view=details#crew`);
     await expect(page.getByText(note)).toBeVisible();
+    await expect(
+      page.getByText(
+        staffCopy("trips.crew.underTargetUnverified", { divers: 1, ratio: 6, needed: 1 }),
+      ),
+    ).toBeVisible();
     await expect(page.getByText(staffCopy("trips.crew.courseNeedsInstructor"))).toHaveCount(0);
     await capture(page, "trip-future-crew-rating", "light");
     await page.goto(`/shop/${privateShop.slug}/staffing`);
