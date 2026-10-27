@@ -223,7 +223,10 @@ function OfflineDiverRow({
             {offlineDiverStatusLine({
               stateWord,
               blockerTexts: staleTrainingReadiness
-                ? [t("manifest.trainingReadinessStale")]
+                ? [
+                    t("manifest.trainingReadinessStale"),
+                    ...diver.readiness.blockers.map((blocker) => blocker.text),
+                  ]
                 : ready
                   ? null
                   : diver.readiness.blockers.map((blocker) => blocker.text),

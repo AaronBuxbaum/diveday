@@ -98,13 +98,11 @@ export function OfflineCounter({
             // in the reader's language; then the desk's release, when there
             // is one. A blocked seat with no reason saved says "Blocked".
             const why = [
-              ...(staleTrainingReadiness
-                ? [t("manifest.trainingReadinessStale")]
-                : blocked
-                  ? diver.readiness.blockers.length > 0
-                    ? diver.readiness.blockers.map((blocker) => blocker.text)
-                    : [t("shared.offlineManifest.single.blockedBadge")]
-                  : []),
+              ...(staleTrainingReadiness ? [t("manifest.trainingReadinessStale")] : []),
+              ...(blocked ? diver.readiness.blockers.map((blocker) => blocker.text) : []),
+              ...(blocked && !staleTrainingReadiness && diver.readiness.blockers.length === 0
+                ? [t("shared.offlineManifest.single.blockedBadge")]
+                : []),
               ...(diver.notHere
                 ? [
                     diver.turnedAway
