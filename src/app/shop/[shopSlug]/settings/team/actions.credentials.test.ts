@@ -1,6 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { staffCredentials } from "@/db/schema";
+import { getSafetyMonth, getSafetyYear } from "@/db/safety-report";
+import { people, personRoles, staffCredentials, tripAssignments, trips } from "@/db/schema";
+import { shiftCalendarDate } from "@/lib/calendar-date";
+import { lastDayOfDeparture } from "@/lib/crew-roles";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -10,7 +14,7 @@ import {
   staffSession,
 } from "@/test/staff-session";
 
-const ctx = fileScopedShopContext();
+const ctx = fileScopedShopContext({ history: true });
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
@@ -105,5 +109,68 @@ describe("adding a staff credential", () => {
     expect(added.map((row) => row.kind).sort()).toEqual(
       ["assistant_instructor_rating", "first_aid_cpr", "captains_licence", "other"].sort(),
     );
+  });
+});
+
+describe("renewing a staff credential", () => {
+  it("retains the same card number and the lapsed sailing on both month and year reports", async () => {
+    const { db, shop } = await setup();
+    const [sailing] = await db
+      .select({ id: trips.id, endsAt: trips.endsAt })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          eq(trips.description, "Sailed. Kept in the log for the shop's monthly numbers."),
+        ),
+      )
+      .limit(1);
+    if (!sailing) throw new Error("expected a sailed history boat");
+    const [member] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Renewal test" })
+      .returning();
+    if (!member) throw new Error("expected a staff member");
+    await db.insert(personRoles).values({ personId: member.id, role: "captain" });
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: sailing.id, personId: member.id, tripRole: "captain" });
+    const day = lastDayOfDeparture(sailing.endsAt, shop.timezone);
+    vi.stubEnv("DIVEDAY_CLOCK", new Date(sailing.endsAt.getTime() - 2 * 86_400_000).toISOString());
+    const oldForm = credentialForm(member.id, "captains_licence", shiftCalendarDate(day, -1));
+    oldForm.set("identifier", "LICENCE-123");
+    oldForm.set("issuedAt", shiftCalendarDate(day, -365));
+    expect(await redirectedTo(() => saveStaffCredentialAction(oldForm))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+    );
+    const [oldCard] = (await savedFor(member.id)).filter(
+      (card) => card.identifier === "LICENCE-123",
+    );
+    if (!oldCard) throw new Error("expected the original licence");
+    advanceClock(3 * 86_400_000);
+    const from = new Date("2000-01-01T00:00:00Z");
+    const to = new Date("2100-01-01T00:00:00Z");
+    const before = await getSafetyMonth(db, shop.id, from, to, shop.timezone);
+    expect(
+      before.lapsedSailings.some((row) => row.personId === member.id && row.tripId === sailing.id),
+    ).toBe(true);
+
+    const renewal = credentialForm(member.id, "captains_licence", shiftCalendarDate(day, 366));
+    renewal.set("identifier", "LICENCE-123");
+    renewal.set("issuedAt", shiftCalendarDate(day, 1));
+    renewal.set("renewalOf", oldCard.id);
+    expect(await redirectedTo(() => saveStaffCredentialAction(renewal))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+    );
+    const cards = (await savedFor(member.id)).filter((card) => card.identifier === "LICENCE-123");
+    expect(cards.some((card) => card.renewsAt === shiftCalendarDate(day, 366))).toBe(true);
+    const after = await getSafetyMonth(db, shop.id, from, to, shop.timezone);
+    expect(
+      after.lapsedSailings.some((row) => row.personId === member.id && row.tripId === sailing.id),
+    ).toBe(true);
+    const year = await getSafetyYear(db, shop.id, Number(day.slice(0, 4)), shop.timezone);
+    expect(
+      year.lapsedSailings.some((row) => row.personId === member.id && row.tripId === sailing.id),
+    ).toBe(true);
   });
 });
