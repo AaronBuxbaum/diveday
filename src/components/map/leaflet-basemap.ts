@@ -94,9 +94,10 @@ function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): vo
   map.on("unload", () => {
     removed = true;
   });
-  const recover = () => {
+  const recover = (reason?: string) => {
     if (removed || fellBack) return;
     fellBack = true;
+    if (reason) console.warn(`${reason}; drawing raster place labels.`);
     if (layer) {
       try {
         map.removeLayer(layer);
@@ -112,7 +113,8 @@ function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): vo
       if (removed) return;
       // MapLibre needs WebGL2, and a layer that fails while being added stays
       // half-registered on the map and throws when the map is taken down.
-      if (!style || !hasWebGL2()) return recover();
+      if (!style) return recover();
+      if (!hasWebGL2()) return recover("WebGL2 is unavailable in this page");
       const labels = maplibreGL({
         style,
         pane: "basemapLabels",
@@ -120,16 +122,28 @@ function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): vo
       } as Parameters<typeof maplibreGL>[0]);
       layer = labels;
       labels.addTo(map);
-      labels.getMaplibreMap().on("error", recover);
+      labels
+        .getMaplibreMap()
+        .on("error", () => recover("MapLibre could not load the vector label renderer"));
     })
-    .catch(recover);
+    .catch(() => recover("The vector label renderer failed to initialize"));
 }
 
 let labelLayerImport: Promise<typeof import("@maplibre/maplibre-gl-leaflet")> | null = null;
 
 /** MapLibre and its Leaflet layer, fetched once, by the first map with a key. */
 function labelLayerModule() {
-  labelLayerImport ??= import("@maplibre/maplibre-gl-leaflet");
+  labelLayerImport ??= Promise.all([
+    import("@maplibre/maplibre-gl-leaflet"),
+    import("maplibre-gl"),
+  ]).then(([adapter, maplibre]) => {
+    // Next.js uses Turbopack for client bundles. MapLibre's worker must be
+    // exposed as a bundled URL before the Leaflet adapter creates its map.
+    maplibre.setWorkerUrl(
+      new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString(),
+    );
+    return adapter;
+  });
   return labelLayerImport;
 }
 
@@ -159,6 +173,7 @@ async function readLabelStyle(key: string): Promise<object | null> {
     );
     return null;
   } catch {
+    console.warn("Could not fetch Esri's vector label style; drawing raster place labels.");
     return null;
   }
 }
@@ -174,7 +189,11 @@ function isStyle(body: unknown): body is object {
 
 function hasWebGL2(): boolean {
   try {
-    return document.createElement("canvas").getContext("webgl2") !== null;
+    const context = document.createElement("canvas").getContext("webgl2");
+    if (!context) return false;
+    // This probe is temporary; release its context before MapLibre creates its own.
+    context.getExtension?.("WEBGL_lose_context")?.loseContext();
+    return true;
   } catch {
     return false;
   }

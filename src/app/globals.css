@@ -2271,6 +2271,8 @@ details[open]::details-content {
 .leaflet-container {
   overflow: hidden;
   position: relative;
+  /* Keep Leaflet's z-1000 controls within the map, below the app chrome. */
+  isolation: isolate;
   font-family: inherit;
 }
 .leaflet-tile,
