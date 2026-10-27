@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
+import { LOCALE_COOKIE } from "../src/i18n/locale-cookie";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -196,6 +197,83 @@ for (const locale of ["en-US", "es-ES"] as const) {
             path: test.info().outputPath(`anchor-text-${scale}.png`),
             animations: "disabled",
           });
+        }
+      });
+    });
+  }
+}
+
+for (const locale of ["en-US", "es-ES"] as const) {
+  for (const branded of [false, true]) {
+    test.describe(`long shop identity ${locale} ${branded ? "logo" : "no logo"}`, () => {
+      // The private-shop sign-in helper uses English labels; the public page
+      // then uses the reader's actual locale cookie, as the language picker does.
+      test.use({
+        locale: "en-US",
+        privateShopSlug: "course-date-requests-no-email",
+        privateShopBrand: branded,
+      });
+      test("keeps recovery readable beside an overflowing shop name", async ({
+        page,
+        privateShop,
+      }) => {
+        await page
+          .context()
+          .addCookies([{ name: LOCALE_COOKIE, value: locale, url: new URL(page.url()).origin }]);
+        for (const width of [390, 1280, 360]) {
+          for (const scale of [100, 200]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto(`/s/${privateShop.slug}/courses/sdi-rescue-diver`);
+            await expect(page.locator("html")).toHaveAttribute("lang", locale);
+            await page.evaluate((value) => {
+              document.documentElement.style.fontSize = `${value}%`;
+            }, scale);
+            await page.evaluate(() => document.fonts.ready);
+            const header = await settledHeader(page);
+            await expect(header.locator("img")).toHaveCount(branded ? 1 : 0);
+            const recovery = header.locator('a[href$="#find-my-booking"]');
+            await expect(recovery).toBeVisible();
+            const state = await recovery.evaluate((element) => {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              const rects = [...range.getClientRects()];
+              const name = element.closest("header")?.querySelector("span.truncate");
+              return {
+                lines: new Set(rects.map((rect) => Math.round(rect.top))).size,
+                textBounds: rects.map((rect) => rect.toJSON()),
+                recovery: element.getBoundingClientRect().toJSON(),
+                identity: element.previousElementSibling?.getBoundingClientRect().toJSON(),
+                row: element.parentElement?.getBoundingClientRect().toJSON(),
+                gap: element.parentElement
+                  ? Number.parseFloat(getComputedStyle(element.parentElement).columnGap)
+                  : 0,
+                name: name?.getBoundingClientRect().toJSON(),
+                nameText: name?.textContent,
+                header: element.closest("header")?.getBoundingClientRect().toJSON(),
+              };
+            });
+            const evidence = `long-name-${locale}-${branded ? "logo" : "no-logo"}-${width}-text-${scale}`;
+            await writeFile(
+              test.info().outputPath(`${evidence}.json`),
+              JSON.stringify(state, null, 2),
+            );
+            await page.screenshot({
+              path: test.info().outputPath(`${evidence}.png`),
+              animations: "disabled",
+            });
+            if (scale === 100)
+              expect(state.lines, "recovery has its natural one-line width").toBe(1);
+            if (scale === 200 && width < 640) expect(state.lines).toBeGreaterThan(1);
+            if (!state.identity || !state.row) throw new Error("Identity row missing");
+            expect(state.recovery.height).toBeGreaterThanOrEqual(44);
+            expect(state.identity.right + state.gap).toBeLessThanOrEqual(state.recovery.left + 0.5);
+            expect(state.recovery.right).toBeLessThanOrEqual(state.row.right + 0.5);
+            expect(state.identity.left).toBeGreaterThanOrEqual(state.row.left - 0.5);
+            for (const rect of state.textBounds) {
+              expect(rect.left).toBeGreaterThanOrEqual(0);
+              expect(rect.right).toBeLessThanOrEqual(width);
+            }
+          }
         }
       });
     });

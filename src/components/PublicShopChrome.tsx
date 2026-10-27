@@ -77,9 +77,9 @@ export function PublicShopHeader({
       stackedOnPhone
       naturalHeight
       leading={
-        /* The identity stays bounded beside recovery; the navigation below
-           may wrap without losing a destination. Truncation belongs on the
-           span: `text-overflow` cannot act inside the link's flex container. */
+        /* Recovery keeps its natural width before the identity truncates.
+           Its cap still permits enlarged text to wrap, reserving the name's
+           2.75rem target and the 1rem gap. Truncation belongs on the span. */
         <div className="flex min-w-0 items-center justify-between gap-4">
           <Link
             href={publicSchedulePath(shop.slug)}
@@ -101,7 +101,7 @@ export function PublicShopHeader({
           {recoveryLabel ? (
             <a
               href={recoveryHref}
-              className="inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 min-w-0 max-w-[min(60%,calc(100%_-_3.75rem))] shrink-0 items-center text-base text-muted underline-offset-4 hover:underline"
             >
               {recoveryLabel}
             </a>
