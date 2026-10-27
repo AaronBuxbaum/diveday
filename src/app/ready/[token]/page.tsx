@@ -13,7 +13,7 @@ import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
 import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
-import { ReadyBookedPage, ReadyMastheadMeta } from "@/app/ready/[token]/_components/ReadyMasthead";
+import { ReadyBookedPage, ReadyThreadPage } from "@/app/ready/[token]/_components/ReadyMasthead";
 import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
@@ -35,7 +35,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
-import { ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
@@ -43,8 +42,7 @@ import { getCourseFormsForBooking } from "@/db/course-forms";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { packageDivesForBooking } from "@/db/dive-packages";
 import { readPlannedFlySafe } from "@/db/fly-safe-plan";
-import { getBookedCard, getReadyPageData } from "@/db/ready";
-import { issuePartySeatClaims } from "@/db/seat-claims";
+import { getBookedCard } from "@/db/ready";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
@@ -54,7 +52,6 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { threadNextKey } from "@/i18n/thread-labels";
-import { nowDate } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -72,6 +69,11 @@ import {
 import { HeldAfterDiveCard, NoShowCard, releasedSeat } from "./_components/AfterDiveDoors";
 import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
+import {
+  type ReadyActionReads,
+  readReadyActions,
+  readyDateActions,
+} from "./_components/ready-date-actions";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
 import { terminalCardIn } from "./terminal-card";
@@ -148,6 +150,8 @@ export default async function ReadyTokenPage({
     found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)
       ? found
       : null;
+  const actionReads = readReadyActions(db, bookingId, capabilityShopId);
+  const { dataPromise, partyClaimsPromise } = actionReads;
   const thread = (
     <DiverReadinessPage
       db={db}
@@ -157,11 +161,16 @@ export default async function ReadyTokenPage({
       search={{ saved, error, pay, justBooked }}
       anonT={anonT}
       underBookedHeader={card !== null}
+      actionReads={actionReads}
     />
   );
   if (!card) return thread;
   return (
-    <ReadyBookedPage card={card} locale={await requestLocale(card.shop.defaultLocale)}>
+    <ReadyBookedPage
+      card={card}
+      locale={await requestLocale(card.shop.defaultLocale)}
+      dateActions={readyDateActions(dataPromise, partyClaimsPromise)}
+    >
       <Suspense fallback={<ReadyThreadBodySkeleton />}>{thread}</Suspense>
     </ReadyBookedPage>
   );
@@ -184,6 +193,7 @@ async function DiverReadinessPage({
   search: { saved, error, pay, justBooked },
   anonT,
   underBookedHeader,
+  actionReads: { dataPromise, partyClaimsPromise },
 }: {
   db: AppDb;
   token: string;
@@ -192,9 +202,10 @@ async function DiverReadinessPage({
   search: { saved?: string; error?: string; pay?: string; justBooked: boolean };
   anonT: DiverTranslator;
   underBookedHeader: boolean;
+  actionReads: ReadyActionReads;
 }) {
   const alone = terminalCardIn(underBookedHeader, token);
-  const data = await getReadyPageData(db, bookingId);
+  const data = await dataPromise;
   if (!data) return alone(<UnavailableReadyLink t={anonT} />);
 
   const { detail, shop, person } = data;
@@ -342,7 +353,7 @@ async function DiverReadinessPage({
     // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
     const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives, flySafePlan] =
       await Promise.all([
-        issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
+        partyClaimsPromise,
         threadTripReads,
         // What this booking has been charged. Read on every visit, because "what did
         // I pay?" is a question the night before too — and it is what the Pay step's
@@ -610,40 +621,13 @@ async function DiverReadinessPage({
   return underBookedHeader ? (
     below
   ) : (
-    // The whole page under the provider, not just the one Client Component
-    // that needs it today: a `useTranslations` call in a client child without
-    // it throws during the server render and takes the entire page down to a
-    // blank 200 (which is exactly how RentalFitForm broke this surface once).
-    // Its namespaces are "rental" (RentalFitForm), "common" (shared field
-    // hints) and "trip" (TripActions), the same list the booked path mounts.
-    <DiverIntlProvider
+    <ReadyThreadPage
+      data={data}
       locale={locale}
-      timeZone={detail.shop.timezone}
-      namespaces={["rental", "common", "trip"]}
+      t={t}
+      dateActions={readyDateActions(dataPromise, partyClaimsPromise)}
     >
-      <ThreadShell
-        shopName={detail.shop.name}
-        title={detail.trip.title}
-        meta={
-          <ReadyMastheadMeta
-            facts={{
-              shop: {
-                name: detail.shop.name,
-                slug: shop.slug,
-                timezone: detail.shop.timezone,
-                dockCallMinutes: shop.dockCallMinutes,
-              },
-              trip: detail.trip,
-              pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
-            }}
-            locale={locale}
-            now={nowDate()}
-            t={t}
-          />
-        }
-      >
-        {below}
-      </ThreadShell>
-    </DiverIntlProvider>
+      {below}
+    </ReadyThreadPage>
   );
 }

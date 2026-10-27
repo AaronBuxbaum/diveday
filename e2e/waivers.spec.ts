@@ -18,6 +18,7 @@ import {
 
 /** The seeded charter every waiver flow in this file starts from. */
 const TRIP = "Two-Tank Reef — Molasses & French";
+const receiptCopy = diverTranslator("en-US");
 
 signedInAsOwner();
 
@@ -226,19 +227,8 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // the level explicitly so a regression back to <h2> (no <h1> on the page at
   // all) fails here instead of silently passing a level-agnostic query.
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).toBeVisible();
-  // Task 44's corrected substance, kept through the copy trim that shortened
-  // the sentence: a physician's *own* sign-off is required, the shop only
-  // receives and checks for it, and no timeline the diver's doctor controls is
-  // promised. Matched on the load-bearing clause rather than the full sentence
-  // — the wording has been cut once and may be again; what must not move is
-  // that a doctor confirms in writing before the diver goes out.
-  await expect(
-    page.getByText(
-      "a doctor must confirm in writing that you’re fit to dive before you can go out",
-    ),
-  ).toBeVisible();
-  await expect(page.getByText("The shop will be in touch.")).toBeVisible();
-  await expect(page.getByText("usually before your trip day")).not.toBeVisible();
+  await expect(page.getByText(receiptCopy("waiver.signedBody"))).toBeVisible();
+  await expect(page.getByText(receiptCopy("waiver.medicalReferralNext"))).toBeVisible();
   await expect(page.getByRole("link", { name: "front.desk@mail.example" })).toHaveAttribute(
     "href",
     "mailto:front.desk@mail.example",
@@ -268,13 +258,38 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(form).toContainText(/Diver Medical \| Participant Questionnaire/);
   await expect(form).toContainText("Priya Sharma");
   await expect(
-    form.getByRole("link", { name: "Open the official form and print page 3" }),
+    form.getByRole("link", { name: receiptCopy("waiver.doctor.formLink") }),
   ).toHaveAttribute("href", /uhms\.org\/.+10346_EN/);
   await expect(page.getByText("Question 3")).toHaveCount(0);
   await expect(page.getByText("I struggle to perform moderate exercise")).toHaveCount(0);
+  await page.emulateMedia({ media: "print" });
+  try {
+    await expect(
+      page.getByText(receiptCopy("waiver.doctor.answersLocked"), { exact: true }),
+    ).toBeHidden();
+    await expect(
+      page.getByText(receiptCopy("waiver.doctor.answersPrintOmitted"), { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Date of birth")).toBeHidden();
+  } finally {
+    await page.emulateMedia({ media: "screen" });
+  }
   await page.getByLabel("Date of birth").fill("1900-01-01");
   await page.getByRole("button", { name: "Show my answers" }).click();
   await expect(page.getByText(/^That date doesn’t match the one/)).toBeVisible();
+  await page.emulateMedia({ media: "print" });
+  try {
+    await expect(
+      page.getByText(receiptCopy("waiver.doctor.answersLocked"), { exact: true }),
+    ).toBeHidden();
+    await expect(
+      page.getByText(receiptCopy("waiver.doctor.answersPrintOmitted"), { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Date of birth")).toBeHidden();
+  } finally {
+    await page.emulateMedia({ media: "screen" });
+  }
+
   await expect(page.getByText("Question 3")).toHaveCount(0);
   // The signed form comes back here, to the shop's staff only (#2797).
   await expect(page.getByText(/^Send a photo or PDF of the signed form here/)).toBeVisible();

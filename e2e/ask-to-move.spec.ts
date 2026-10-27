@@ -57,6 +57,9 @@ test.describe("ask to move", () => {
 
     // Unpaid, a cancel costs nothing: there is nothing to ask instead.
     await expect(page.getByRole("button", { name: "Ask to move" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: diver("ready.moveAsk.changePlans") })).toHaveCount(
+      0,
+    );
 
     await signInAsOwner(page);
     await page.goto(tripUrl);
@@ -100,6 +103,8 @@ test.describe("ask to move", () => {
     }
 
     await page.goto(readyUrl);
+    await page.getByRole("link", { name: diver("ready.moveAsk.changePlans") }).click();
+    await expect(page.locator("#move-ask")).toBeFocused();
     await expect(page.getByText(/Can’t make this date\? Ask .+ to move you/)).toBeVisible();
     await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
     await page.getByRole("button", { name: "Ask to move" }).click();
@@ -111,11 +116,16 @@ test.describe("ask to move", () => {
     await expect(receipt.getByText("Any Saturday in August", { exact: true })).toBeVisible();
     await expect(receipt.getByText(diver("ready.moveAsk.bookingUnchanged"))).toBeVisible();
     await expect(receipt.locator("time")).toHaveAttribute("datetime", e2eNow().toISOString());
+    await page.getByRole("link", { name: diver("ready.moveAsk.requestPending") }).click();
+    await expect(receipt).toBeFocused();
     const sentAt = await receipt.locator("time").getAttribute("datetime");
     await page.reload();
     await expect(receipt.getByText("Any Saturday in August", { exact: true })).toBeVisible();
     await expect(receipt.locator("time")).toHaveAttribute("datetime", sentAt ?? "");
     await expect(page.getByRole("button", { name: "Ask to move" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: diver("ready.moveAsk.changePlans") })).toHaveCount(
+      0,
+    );
     // The cancel is still the diver's own, beneath it.
     await expect(page.getByRole("button", { name: "Cancel my seat" })).toBeVisible();
 

@@ -31,27 +31,20 @@ function component(file: string): string {
 /** The two signing doors, which moved out of the page into the route's `actions.ts`. */
 const ACTIONS = component("actions.ts");
 const RELEASE = component("WaiverRelease.tsx");
+const COMPLETED = component("WaiverCompleted.tsx");
 
 function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
 }
 
-function countOf(marker: string): number {
-  return SOURCE.split(marker).length - 1;
-}
-
 describe("the waiver's pacing", () => {
   it("does not close Medical on a record the shop is still holding", () => {
-    // The hold is threaded into the one call rather than rendered as a second
-    // rail beside it — which is what keeps `signed: true` a single occurrence
-    // above. Without it this screen read "3 of 3 done" three lines under copy
-    // telling the diver a doctor must confirm in writing before they can go
-    // out: the product ticking its own blocking state.
-    expect(SOURCE).toContain("medicalStillOpen: needsReview");
-    expect(positionOf("const needsReview")).toBeLessThan(
-      positionOf("medicalStillOpen: needsReview"),
-    );
-    expect(countOf("waiverRailProgress(")).toBe(1);
+    expect(SOURCE).toContain("const needsReview = isUnresolvedMedicalHold(state.record)");
+    expect(SOURCE).toContain("completedWaiverRail(needsReview, !!state.record.shopAnswers)");
+    expect(positionOf("const needsReview")).toBeLessThan(positionOf("completedWaiverRail("));
+    expect(SOURCE).toContain("signedRail={signedRail}");
+    expect(COMPLETED).toContain("medicalStillOpen: needsReview");
+    expect(COMPLETED.split("waiverRailProgress(").length - 1).toBe(1);
   });
 });
 
