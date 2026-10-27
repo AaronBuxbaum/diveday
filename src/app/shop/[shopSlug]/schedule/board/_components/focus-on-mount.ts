@@ -1,3 +1,5 @@
+import { focusAfterStaffCheck } from "@/components/focus-after-staff-check";
+
 /**
  * Moves focus into a panel's first field the moment it mounts. Every panel
  * here is conditionally rendered (not just hidden), so this ref callback
@@ -7,5 +9,5 @@
  * own click on the toggle that revealed the panel).
  */
 export function focusOnMount(el: HTMLElement | null) {
-  el?.focus();
+  return focusAfterStaffCheck(el);
 }
