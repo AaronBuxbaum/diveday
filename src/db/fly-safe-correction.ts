@@ -38,6 +38,30 @@ export const FLY_SAFE_CORRECTION_WINDOW_MS = 48 * HOUR_MS;
 /** Expired workers may be retried; provider acceptance can therefore be duplicated after a crash. */
 export const FLY_SAFE_CORRECTION_LEASE_MS = 15 * 60 * 1000;
 const MAX_AUTOMATIC_CORRECTION_CLAIMS = 3;
+const FLY_SAFE_QUERY_CONCURRENCY = 4;
+
+/** Preserve input order while keeping database-backed work to a small fixed fan-out. */
+export async function mapFlySafeConcurrent<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  work: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  const indexedItems = items.map((item, index) => ({ item, index }));
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(items.length, Math.max(1, concurrency)) },
+    async () => {
+      while (true) {
+        const next = indexedItems[nextIndex++];
+        if (!next) return;
+        results[next.index] = await work(next.item, next.index);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
+}
 
 /** The night-before email went out carrying the fly-safe line: remember what it said. */
 export async function recordFlySafeTold(
@@ -536,54 +560,53 @@ async function readFlySafeFollowUps(
         )
     : [];
   const queueByKey = new Map(queued.map((row) => [row.key, row.status]));
-  const result: {
-    bookingId: string;
-    name: string;
-    status: "queued" | "follow_up";
-    fingerprint: string;
-  }[] = [];
-  for (const { seat, entries } of entriesBySeat) {
-    const hours = await readReminderFlySafeHours(db, {
-      shop: { id: input.shopId },
-      person: { id: seat.personId },
-      participantType: seat.participantType,
-      detail: {
-        shop: { timezone: trip.shop.timezone },
-        trip: { id: trip.trip.id, startsAt: trip.trip.startsAt },
-      },
-    });
-    let pending = false;
-    let followUp = seat.unknown || !entries;
-    const affected: string[] = [];
-    for (const entry of entries ?? []) {
-      const state = entry.correctionId
-        ? queueByKey.get(`fly-safe-correction/${seat.id}/${entry.correctionId}`)
-        : undefined;
-      if (state === "queued" || state === "processing") {
-        pending = true;
-        affected.push(entry.id);
-      } else if (
-        (state === "failed" && entry.corrected) ||
-        (!entry.corrected && entry.hours !== hours)
-      ) {
-        followUp = true;
-        affected.push(entry.id);
+  const resultBySeat = await mapFlySafeConcurrent(
+    entriesBySeat,
+    FLY_SAFE_QUERY_CONCURRENCY,
+    async ({ seat, entries }) => {
+      const hours = await readReminderFlySafeHours(db, {
+        shop: { id: input.shopId },
+        person: { id: seat.personId },
+        participantType: seat.participantType,
+        detail: {
+          shop: { timezone: trip.shop.timezone },
+          trip: { id: trip.trip.id, startsAt: trip.trip.startsAt },
+        },
+      });
+      let pending = false;
+      let followUp = seat.unknown || !entries;
+      const affected: string[] = [];
+      for (const entry of entries ?? []) {
+        const state = entry.correctionId
+          ? queueByKey.get(`fly-safe-correction/${seat.id}/${entry.correctionId}`)
+          : undefined;
+        if (state === "queued" || state === "processing") {
+          pending = true;
+          affected.push(entry.id);
+        } else if (
+          (state === "failed" && entry.corrected) ||
+          (!entry.corrected && entry.hours !== hours)
+        ) {
+          followUp = true;
+          affected.push(entry.id);
+        }
       }
-    }
-    if (followUp || pending) {
-      const fingerprint = createHash("sha256")
-        .update(JSON.stringify([seat.personId, hours, seat.unknown || !entries, affected.sort()]))
-        .digest("hex");
-      if (input.includeAcknowledged || seat.acknowledged !== fingerprint)
-        result.push({
-          bookingId: seat.id,
-          name: seat.name,
-          status: followUp ? "follow_up" : "queued",
-          fingerprint,
-        });
-    }
-  }
-  return result;
+      if (followUp || pending) {
+        const fingerprint = createHash("sha256")
+          .update(JSON.stringify([seat.personId, hours, seat.unknown || !entries, affected.sort()]))
+          .digest("hex");
+        if (input.includeAcknowledged || seat.acknowledged !== fingerprint)
+          return {
+            bookingId: seat.id,
+            name: seat.name,
+            status: followUp ? ("follow_up" as const) : ("queued" as const),
+            fingerprint,
+          };
+      }
+      return null;
+    },
+  );
+  return resultBySeat.filter((item): item is NonNullable<typeof item> => item !== null);
 }
 
 /** Trip-specific view, without the acknowledgement token. */
@@ -663,14 +686,12 @@ export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: strin
         isNotNull(bookings.flySafeHoursTold),
       ),
     );
-  const groups = await Promise.all(
-    candidates.map(async (trip) =>
-      (await readFlySafeFollowUps(db, { shopId: input.shopId, tripId: trip.id })).map((item) => ({
-        ...item,
-        tripId: trip.id,
-        tripTitle: trip.title,
-      })),
-    ),
+  const groups = await mapFlySafeConcurrent(candidates, FLY_SAFE_QUERY_CONCURRENCY, async (trip) =>
+    (await readFlySafeFollowUps(db, { shopId: input.shopId, tripId: trip.id })).map((item) => ({
+      ...item,
+      tripId: trip.id,
+      tripTitle: trip.title,
+    })),
   );
   return groups.flat();
 }
@@ -747,21 +768,36 @@ export async function sendFlySafeCorrections(
     );
   const plans = new Map<string, number | null>();
   const stale: string[] = [];
-  for (const seat of owed) {
-    const hours = await readReminderFlySafeHours(db, {
-      shop: { id: shop.id },
-      person: { id: seat.personId },
-      participantType: seat.participantType,
-      detail: { shop: { timezone: shop.timezone }, trip: { id: trip.id, startsAt: trip.startsAt } },
-    });
-    const entries = seat.recipient ? openFlySafeExposures(seat.recipient, shop.id, seat.id) : null;
-    if (
-      seat.unknown ||
-      !entries ||
-      entries.some((entry) => !entry.corrected && entry.hours !== hours)
-    ) {
-      stale.push(seat.id);
-      plans.set(seat.id, hours);
+  const plansForSeats = await mapFlySafeConcurrent(
+    owed,
+    FLY_SAFE_QUERY_CONCURRENCY,
+    async (seat) => {
+      const hours = await readReminderFlySafeHours(db, {
+        shop: { id: shop.id },
+        person: { id: seat.personId },
+        participantType: seat.participantType,
+        detail: {
+          shop: { timezone: shop.timezone },
+          trip: { id: trip.id, startsAt: trip.startsAt },
+        },
+      });
+      const entries = seat.recipient
+        ? openFlySafeExposures(seat.recipient, shop.id, seat.id)
+        : null;
+      if (
+        seat.unknown ||
+        !entries ||
+        entries.some((entry) => !entry.corrected && entry.hours !== hours)
+      ) {
+        return { id: seat.id, hours };
+      }
+      return null;
+    },
+  );
+  for (const plan of plansForSeats) {
+    if (plan) {
+      stale.push(plan.id);
+      plans.set(plan.id, plan.hours);
     }
   }
   if (stale.length === 0) return outcome;
