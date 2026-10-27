@@ -345,7 +345,7 @@ describe("a readable departure in the summary", () => {
     expect(within(summary).getByText("Grace Mensah")).toHaveClass("flex-1");
   });
 
-  it("keeps a flagged row's time and caret on the name's line, the badges on a line of their own", () => {
+  it("keeps badges on their own phone line and lets them share the name's line from sm up", () => {
     const { container } = renderLog([
       entry({
         id: "a",
@@ -358,8 +358,8 @@ describe("a readable departure in the summary", () => {
     const badges = within(summary).getByText("Waiting on physician").parentElement;
     expect(within(summary).getByText("Can’t be checked for changes").parentElement).toBe(badges);
     expect(badges?.parentElement).toBe(summary);
-    // The full-width badge line follows the complete departure at every width.
-    expect(badges).toHaveClass("order-last", "basis-full");
+    // Phones keep a separate badge line; wider rows use the space beside the name.
+    expect(badges).toHaveClass("order-last", "basis-full", "sm:order-none", "sm:basis-auto");
     expect(badges).not.toHaveClass("sm:contents");
     // The name, the time and the caret keep their places on the first line.
     const moved = [...summary.children].filter((child) =>
