@@ -137,6 +137,46 @@ describe("training allocation plan", () => {
     expect([...plan.unresolvedAssistants].sort()).toEqual(["a", "absent", "b", "deck"]);
   });
 
+  it("withholds a partial numeric group when an assigned student's course limit is unknown", () => {
+    const first = instructor("first");
+    const second = instructor("second");
+    const unknown = { id: "deep", sessionTripId: "deep", instructorPersonId: "first", rule: null };
+    const known = [...students("ow", "first", 9), ...students("other", "second", 9)];
+    for (const seats of [
+      [...known, unknown],
+      [unknown, ...known],
+    ]) {
+      const plan = trainingAllocationPlan({
+        students: seats,
+        sessionCrew: new Map([
+          ["ow", [first]],
+          ["deep", [first]],
+          ["other", [second]],
+        ]),
+        departureCrew: [first, second],
+        assistants: [],
+      });
+      expect(plan.groups.has("first")).toBe(false);
+      expect(plan.unresolvedStudents.has("deep")).toBe(true);
+      expect(plan.groups.get("second")).toEqual({ students: 9, capacity: 8, overRatio: true });
+    }
+  });
+
+  it("also withholds a partial group when an assigned student no longer belongs to that instructor's session", () => {
+    const teacher = instructor("teacher");
+    const plan = trainingAllocationPlan({
+      students: [...students("ow", "teacher", 9), ...students("other", "teacher", 1)],
+      sessionCrew: new Map([
+        ["ow", [teacher]],
+        ["other", []],
+      ]),
+      departureCrew: [teacher],
+      assistants: [],
+    });
+    expect(plan.groups.has("teacher")).toBe(false);
+    expect(plan.unresolvedStudents.has("other-0")).toBe(true);
+  });
+
   it("keeps unknown instructors, unknown ratios and duplicate students unresolved", () => {
     const t1 = instructor("t1");
     const plan = trainingAllocationPlan({

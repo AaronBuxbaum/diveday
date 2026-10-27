@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { trainingAllocationPlan } from "@/lib/training-allocation-plan";
 import { TrainingPlanContent } from "./TrainingPlanContent";
 
 afterEach(cleanup);
@@ -123,4 +124,72 @@ it("gives a specific next step when no course instructor is available, in Spanis
   expect(screen.getByText(t("trips.trainingPlan.noInstructor"))).toBeTruthy();
   expect(screen.getByText(t("trips.trainingPlan.noCourseInstructor"))).toBeTruthy();
   expect(screen.queryByText(t("trips.trainingPlan.limitsUnavailable"))).toBeNull();
+});
+
+it("does not show a partial numeric limit for a mixed group with an unmodeled course", () => {
+  const t = staffTranslator("en-US");
+  const rule = {
+    baseStudentsPerInstructor: 8,
+    assistantBonusPerInstructor: 2,
+    maxStudentsPerInstructor: 12,
+  };
+  const first = { personId: "first", shopRoles: ["instructor"], tripRole: "instructor" as const };
+  const second = { personId: "second", shopRoles: ["instructor"], tripRole: "instructor" as const };
+  const makeSeats = (instructorPersonId: string, prefix: string) =>
+    Array.from({ length: 9 }, (_, i) => ({
+      id: `${prefix}-${i}`,
+      name: `${prefix} ${i}`,
+      sessionTripId: prefix,
+      instructorPersonId,
+      eligible: [instructorPersonId],
+      rule,
+      markValid: true,
+    }));
+  const students = [
+    ...makeSeats("first", "ow"),
+    {
+      id: "deep",
+      name: "Deep student",
+      sessionTripId: "deep",
+      instructorPersonId: "first",
+      eligible: ["first"],
+      rule: null,
+      markValid: true,
+    },
+    ...makeSeats("second", "other"),
+  ];
+  const allocation = trainingAllocationPlan({
+    students,
+    sessionCrew: new Map([
+      ["ow", [first]],
+      ["deep", [first]],
+      ["other", [second]],
+    ]),
+    departureCrew: [first, second],
+    assistants: [],
+  });
+  render(
+    <TrainingPlanContent
+      t={t}
+      canEdit
+      action={vi.fn()}
+      plan={{
+        instructors: [
+          { id: "first", name: "Dana" },
+          { id: "second", name: "Morgan" },
+        ],
+        assistants: [],
+        students,
+        allocation,
+      }}
+    />,
+  );
+  expect(screen.getByText(t("trips.trainingPlan.limitsUnavailable"))).toBeTruthy();
+  expect(screen.getByText(t("trips.trainingPlan.checkCourseLimit"))).toBeTruthy();
+  expect(
+    screen.queryByText(t("trips.trainingPlan.over", { name: "Dana", students: 9, capacity: 8 })),
+  ).toBeNull();
+  expect(
+    screen.getByText(t("trips.trainingPlan.over", { name: "Morgan", students: 9, capacity: 8 })),
+  ).toBeTruthy();
 });

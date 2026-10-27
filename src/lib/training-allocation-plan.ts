@@ -56,6 +56,8 @@ export function trainingAllocationPlan(input: {
   }
   const groups = new Map<string, { students: number; capacity: number; overRatio: boolean }>();
   const unresolvedStudents = new Set<string>();
+  // Never report a partial group when an assigned seat cannot be resolved.
+  const incompleteInstructors = new Set<string>();
   const studentCounts = new Map<string, number>();
   for (const student of input.students)
     studentCounts.set(student.id, (studentCounts.get(student.id) ?? 0) + 1);
@@ -72,6 +74,7 @@ export function trainingAllocationPlan(input: {
       ).includes(id)
     ) {
       unresolvedStudents.add(student.id);
+      if (id) incompleteInstructors.add(id);
       continue;
     }
     const capacity = courseRatioCapacity(student.rule, 1, assistantCounts.get(id) ?? 0);
@@ -80,5 +83,6 @@ export function trainingAllocationPlan(input: {
     const cap = Math.min(prior?.capacity ?? capacity, capacity);
     groups.set(id, { students: count, capacity: cap, overRatio: count > cap });
   }
+  for (const instructorId of incompleteInstructors) groups.delete(instructorId);
   return { groups, unresolvedStudents, unresolvedAssistants };
 }
