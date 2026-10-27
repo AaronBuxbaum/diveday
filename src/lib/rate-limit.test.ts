@@ -545,6 +545,68 @@ describe("upstashRateLimitStore", () => {
     const result = await checkRateLimit("k", config, 0, store);
     expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
   });
+
+  it("bounds a request that never returns headers, aborts it, and preserves fail-open", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+      return new Promise<Response>(() => {
+        // This transport ignores AbortSignal, so the limiter must still return
+        // when its own deadline wins the race.
+        void init?.signal;
+      });
+    }) as unknown as typeof fetch;
+    const store = upstashRateLimitStore(
+      { url: "https://example.upstash.io", token: "test-token" },
+      fetchImpl,
+    );
+    const result = checkRateLimit("k", config, 0, store);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(await Promise.race([result, Promise.resolve("still pending")])).toEqual({
+      allowed: true,
+      retryAfterMs: 0,
+    });
+    expect(fetchImpl.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("bounds a response body that never finishes and preserves fail-closed", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = (async () => ({
+      ok: true,
+      json: () => new Promise<unknown>(() => {}),
+    })) as unknown as typeof fetch;
+    const store = upstashRateLimitStore(
+      { url: "https://example.upstash.io", token: "test-token" },
+      fetchImpl,
+    );
+    const result = checkRateLimitFailClosed("k", config, 0, store);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(await Promise.race([result, Promise.resolve("still pending")])).toMatchObject({
+      allowed: false,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("clears its deadline after an allow response", async () => {
+    vi.useFakeTimers();
+    const store = upstashRateLimitStore(
+      { url: "https://example.upstash.io", token: "test-token" },
+      (async () => ({
+        ok: true,
+        json: async () => ({ result: [1, "2"] }),
+      })) as unknown as typeof fetch,
+    );
+
+    await expect(store.take("k", config, 0)).resolves.toEqual({
+      allowed: true,
+      retryAfterMs: 0,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });
 
 describe("rateLimitStoreFromEnvironment", () => {
