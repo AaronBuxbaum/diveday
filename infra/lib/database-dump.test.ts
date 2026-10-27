@@ -96,7 +96,9 @@ describe("the weekly database dump", () => {
     template().hasResourceProperties("AWS::CodeBuild::Project", {
       Name: "diveday-database-dump",
       Environment: Match.objectLike({
-        Image: "public.ecr.aws/docker/library/postgres:17-alpine",
+        Image: Match.stringLikeRegexp(
+          "^public\\.ecr\\.aws/docker/library/postgres@sha256:[0-9a-f]{64}$",
+        ),
       }),
       Source: Match.objectLike({ Type: "NO_SOURCE" }),
     });

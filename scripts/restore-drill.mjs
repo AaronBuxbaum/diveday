@@ -54,13 +54,19 @@ export const RESTORE_DATABASE = "restore_drill";
 export const BRANCH_PREFIX = "restore-drill-";
 /**
  * pg_dump may be newer than its server, never older; the dump job pins the same major (§2c).
- * Pinned by digest, as every Action is pinned by SHA: this container receives a connection string
- * carrying production's role password, and the whole dump. The digest is the multi-arch index
- * `17-alpine` named on 2026-10-23 (ECR Public and Docker Hub agreed). Nothing bumps it
- * automatically; to move it, read the new index digest from the registry and change both parts.
+ * This container receives a connection string and the whole dump. The dump job and this drill
+ * read the same digest-pinned image; Dependabot watches the Dockerfile for updates.
  */
-export const POSTGRES_IMAGE =
-  "public.ecr.aws/docker/library/postgres:17-alpine@sha256:eee6c6e1b0894fa4fe0075eb054af9fd1cf39a35321c2d4110626cfe506411fb";
+const imageManifest = readFileSync(
+  new URL("../config/postgres-image/Dockerfile", import.meta.url),
+  "utf8",
+).trim();
+const imageMatch =
+  /^FROM (public\.ecr\.aws\/docker\/library\/postgres:17-alpine@sha256:[0-9a-f]{64})$/.exec(
+    imageManifest,
+  );
+if (!imageMatch) throw new Error("Invalid pinned Postgres image manifest");
+export const POSTGRES_IMAGE = imageMatch[1];
 /** Far below any real dump; the freshness watchdog alarms under the same floor (§2c). */
 export const MIN_DUMP_BYTES = 4 * 1024;
 /** One Neon API request. Creates return at once; Neon's slow work is in `operations`. */
