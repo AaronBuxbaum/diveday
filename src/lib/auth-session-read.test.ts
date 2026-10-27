@@ -3,9 +3,10 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { revokeAccountSession, revokeAllAccountSessions } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
-import { people, personRoles, shops, userAccounts } from "@/db/schema";
+import { accountSessions, people, personRoles, shops, userAccounts } from "@/db/schema";
 import { createAuth, readSessionFrom, sessionCookieWriteDue } from "@/lib/auth";
 import { authSecret } from "@/lib/auth-secret";
+import * as clock from "@/lib/clock";
 import { DAY_MS } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 
@@ -42,6 +43,7 @@ type Harness = {
 async function signedInHarness(
   on?: { db: AppDb; auth: ReturnType<typeof createAuth> },
   role: "owner" | "captain" = "owner",
+  initializeTestClock = true,
 ): Promise<Harness> {
   const db = on?.db ?? (await seededTestDb());
   const auth = on?.auth ?? createAuth(db);
@@ -69,6 +71,12 @@ async function signedInHarness(
     name: account.name,
   });
   if (!session) throw new Error("failed to create a session");
+  if (initializeTestClock) {
+    await db
+      .update(accountSessions)
+      .set({ lastHumanActivityAt: new Date(session.expiresAt.getTime() - SEVEN_DAYS_S * 1000) })
+      .where(eq(accountSessions.id, session.id));
+  }
   // better-call's signed cookie: `<value>.<base64 HMAC-SHA256>`, URI-encoded.
   const signature = createHmac("sha256", authSecret ?? "")
     .update(session.token)
@@ -112,6 +120,65 @@ function cookiesOf(...pairs: string[]): Headers {
 }
 
 describe("the session read writes no cookie it does not owe (issue #2263)", () => {
+  it("checks the clock after the session read, not before a delayed database response", async () => {
+    const harness = await signedInHarness();
+    const cookie = cookiesOf(harness.sessionCookie);
+    const quiet = await harness.auth.api.getSession({
+      headers: cookie,
+      query: { disableCookieCache: true, disableRefresh: true },
+    });
+    const boundary = mintedAt(harness) + 12 * 60 * 60 * 1000;
+    let current = boundary - 1;
+    const clockSpy = vi.spyOn(clock, "nowMs").mockImplementation(() => current);
+    try {
+      const api = new Proxy(harness.auth.api, {
+        get(target, property, receiver) {
+          if (property === "getSession")
+            return async () => {
+              current = boundary;
+              return quiet;
+            };
+          return Reflect.get(target, property, receiver);
+        },
+      });
+      const delayed = new Proxy(harness.auth, {
+        get(target, property, receiver) {
+          return property === "api" ? api : Reflect.get(target, property, receiver);
+        },
+      });
+      expect(await readSessionFrom(delayed, cookie)).toBeNull();
+    } finally {
+      clockSpy.mockRestore();
+    }
+  });
+  it("reads a newly minted Better Auth session without manually repairing its activity field", async () => {
+    const harness = await signedInHarness(undefined, "owner", false);
+    const [row] = await harness.db
+      .select()
+      .from(accountSessions)
+      .where(eq(accountSessions.id, harness.sessionId));
+    expect(row?.lastHumanActivityAt).toBeInstanceOf(Date);
+    expect(
+      await readSessionFrom(
+        harness.auth,
+        cookiesOf(harness.sessionCookie),
+        row?.lastHumanActivityAt.getTime(),
+      ),
+    ).not.toBeNull();
+  });
+  it("refuses a session at twelve hours of inactivity even with a warm cookie", async () => {
+    const harness = await signedInHarness();
+    const warm = await warmCacheCookie(harness);
+    const issued = mintedAt(harness);
+    expect(
+      await readSessionFrom(
+        harness.auth,
+        cookiesOf(harness.sessionCookie, warm),
+        issued + 12 * 60 * 60 * 1000,
+      ),
+    ).toBeNull();
+  });
+
   it("asks better-auth for a read that sets nothing, where the old read set the cache", async () => {
     const harness = await signedInHarness();
     const headers = cookiesOf(harness.sessionCookie);

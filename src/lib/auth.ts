@@ -35,6 +35,7 @@ import {
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { readSessionCookieCache } from "@/lib/session-cookie-cache";
+import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 import { withHashedSessionTokens } from "@/lib/session-token-hash";
 
 /**
@@ -267,6 +268,7 @@ export function createAuth(db: DbExecutor) {
         shopSlug: { type: "string", required: true, input: false },
         roles: { type: "string[]", required: true, input: false },
         name: { type: "string", required: true, input: false },
+        lastHumanActivityAt: { type: "date", required: false, input: false },
       },
       cookieCache: {
         enabled: true,
@@ -324,6 +326,8 @@ export function getAuth(): Promise<DiveDayAuth> {
 }
 
 export type DiveDaySession = {
+  /** Remaining idle time at this server read, for the desk's local privacy timer. */
+  idleRemainingMs?: number;
   user: {
     /** Better Auth account id, used to scope security settings. */
     userAccountId?: string;
@@ -394,6 +398,7 @@ export function sessionCookieWriteDue(input: {
 
 type RawSession = SessionSnapshot & {
   expiresAt: Date;
+  lastHumanActivityAt: Date;
   personId: string;
   roles: Role[];
   name: string;
@@ -414,19 +419,24 @@ type RawSession = SessionSnapshot & {
 export async function readSessionFrom(
   instance: DiveDayAuth,
   headers: Headers,
-  now: number = nowMs(),
+  now?: number,
 ): Promise<DiveDaySession | null> {
   const quiet = await instance.api.getSession({
     headers,
     query: { disableCookieCache: true, disableRefresh: true },
   });
   if (!quiet) return null;
+  const checkedAt = now ?? nowMs();
+  const activityAt = new Date(
+    (quiet.session as unknown as RawSession).lastHumanActivityAt,
+  ).getTime();
+  if (!Number.isFinite(activityAt) || checkedAt - activityAt >= STAFF_IDLE_LIMIT_MS) return null;
   const { sessionConfig } = await instance.$context;
   const cache = await readSessionCookieCache(headers);
   const cached = cache?.session as unknown as SessionSnapshot | undefined;
   const live = quiet.session as unknown as RawSession;
   const result = sessionCookieWriteDue({
-    now,
+    now: checkedAt,
     expiresAt: new Date(live.expiresAt),
     expiresInSec: sessionConfig.expiresIn,
     updateAgeSec: sessionConfig.updateAge,
@@ -436,8 +446,11 @@ export async function readSessionFrom(
     ? await instance.api.getSession({ headers, query: { disableCookieCache: true } })
     : quiet;
   if (!result) return null;
+  const decisionAt = now ?? nowMs();
+  if (decisionAt - activityAt >= STAFF_IDLE_LIMIT_MS) return null;
   const session = result.session as unknown as RawSession;
   return {
+    idleRemainingMs: STAFF_IDLE_LIMIT_MS - (decisionAt - activityAt),
     user: {
       personId: session.personId,
       userAccountId: result.user.id,

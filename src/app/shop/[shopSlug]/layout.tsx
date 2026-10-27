@@ -42,7 +42,7 @@ export default function ShopLayout({
   params: Promise<{ shopSlug: string }>;
 }) {
   return (
-    <>
+    <div id="staff-session-content" className="contents">
       <Suspense fallback={<ShopChromeSkeleton />}>
         <ShopChrome params={params} />
       </Suspense>
@@ -72,6 +72,6 @@ export default function ShopLayout({
       <Suspense fallback={null}>
         <RouteFocus />
       </Suspense>
-    </>
+    </div>
   );
 }

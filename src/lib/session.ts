@@ -1,3 +1,5 @@
+import { getSessionCookie } from "better-auth/cookies";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { loadActiveStaffRoles, loadActiveStaffRolesByPerson } from "@/db/authz";
@@ -36,7 +38,14 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  */
 export async function requireStaffSession() {
   const session = await auth();
-  if (!session?.user || !isStaff(session.user.roles)) redirect("/sign-in");
+  if (!session?.user) {
+    // The proxy may still see a warm cookie after the live session expires.
+    // Its explicit ended escape prevents a bounce back to this staff route.
+    redirect(
+      getSessionCookie(new Headers(await headers())) ? "/sign-in?session=ended" : "/sign-in",
+    );
+  }
+  if (!isStaff(session.user.roles)) redirect("/sign-in");
   // Every staff render passes through here, so this is where its query count
   // is armed; a page that knows its own route sharpens the label after.
   reportRenderQueries("/shop/**", after, { fallback: true });
