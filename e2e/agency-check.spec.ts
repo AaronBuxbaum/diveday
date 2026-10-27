@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openDiverFileGroup } from "./helpers";
+import { openDiverFileGroup, openSettingsRow } from "./helpers";
 
 signedInAsOwner();
 
@@ -118,6 +118,7 @@ test("a copy of the extension older than DiveDay needs is told to update, and ch
   test.setTimeout(45_000);
   await installFakeExtension(page, "match", "1.4.0");
   await page.goto(`/shop/${SHOP}/settings`);
+  await openSettingsRow(page, "Card checks");
   const row = page
     .locator("details")
     .filter({ has: page.getByRole("heading", { name: "Card checks", exact: true }) });

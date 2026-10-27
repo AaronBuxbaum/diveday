@@ -74,6 +74,25 @@ function installScrollSpy() {
 }
 
 describe("dive-site map layouts", () => {
+  it("places the map before the library rows", () => {
+    render(
+      <SiteLibraryLayout
+        shopAnchor={null}
+        pins={pins}
+        clusterLabel="dive sites"
+        catalog={<a href="/catalog">Catalog</a>}
+      >
+        <div>Library rows</div>
+      </SiteLibraryLayout>,
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Select map pin" })
+        .compareDocumentPosition(screen.getByText("Library rows")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("selects a library pin without scrolling the page to its ledger row", () => {
     const scrollSpy = installScrollSpy();
     render(

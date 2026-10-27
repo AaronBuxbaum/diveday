@@ -182,6 +182,7 @@ export function DisclosureRow({
   heading,
   value,
   open,
+  className = "",
   children,
 }: {
   /**
@@ -196,10 +197,16 @@ export function DisclosureRow({
   value?: ReactNode;
   /** Reveal an editor's own refusal or result, without closing a reader-open row. */
   open?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/row scroll-mt-24">
+    <AutoOpenDetails
+      id={id}
+      openOnHash={id}
+      open={open}
+      className={`group/row scroll-mt-24 ${className}`.trim()}
+    >
       <summary className={SUMMARY_CLASS}>
         {/* A heading inside a `<summary>` (implicit `button` role) is flattened
             by some screen readers' heading navigation — the same trade

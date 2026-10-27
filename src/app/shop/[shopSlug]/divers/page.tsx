@@ -302,13 +302,15 @@ export default async function DiversPage({
         canRestore={canDelete}
         quickAddAction={createDiverFromSearchAction}
         pager={
-          <Pager
-            page={diverPage.page}
-            pageCount={diverPage.pageCount}
-            href={pageHref}
-            total={t("divers.list.pagination.total", { count: diverPage.total })}
-            words={staffPagerWords(t)}
-          />
+          <div className="print:hidden">
+            <Pager
+              page={diverPage.page}
+              pageCount={diverPage.pageCount}
+              href={pageHref}
+              total={t("divers.list.pagination.total", { count: diverPage.total })}
+              words={staffPagerWords(t)}
+            />
+          </div>
         }
         copy={{
           addDiverLabel: t("divers.list.addDiverAction"),
@@ -326,6 +328,10 @@ export default async function DiversPage({
           // beside the box rather than a badge on a "People" heading: the count
           // is a fact about the list, not a status, and the heading it hung off
           // named the thing the page is already called.
+          paperCountLabel: t("divers.list.pagination.paperSubset", {
+            shown: rows.length,
+            total: diverPage.total,
+          }),
           countLabel: query
             ? t("divers.page.matchingCount", { count: diverPage.total })
             : t("divers.list.pagination.total", { count: diverPage.total }),

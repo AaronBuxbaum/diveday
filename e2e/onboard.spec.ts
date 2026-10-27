@@ -284,9 +284,9 @@ test.describe("a shop signing up from the Caribbean", () => {
 
     // ...and the shop row itself agrees, which is the assertion that the
     // derivation reached the database rather than only the checklist copy. The
-    // Units row's own closed summary is where a shop reads it back.
-    await page.goto(`/shop/${unique}/settings`);
-    await expect(page.getByText(/Meters \(m\).*MXN/)).toBeVisible();
+    // Units row's own summary is where a shop reads it back.
+    await page.goto(`/shop/${unique}/settings#units`);
+    await expect(page.locator("summary").getByText(/Meters \(m\).*MXN/)).toBeVisible();
   });
 });
 

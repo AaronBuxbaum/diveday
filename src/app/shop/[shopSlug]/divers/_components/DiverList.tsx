@@ -65,6 +65,7 @@ export interface DiverListCopy {
   removedNote: string;
   /** "312 divers", or "3 matching" while a search is on. Already pluralised. */
   countLabel: string;
+  paperCountLabel?: string;
   searchDiversLabel: string;
   searchPlaceholder: string;
   noDiversMatchView: string;
@@ -346,7 +347,7 @@ export function DiverList({
                   pendingLabel={copy.addDiverLabel}
                   className={buttonClass({
                     variant: "primary",
-                    className: "whitespace-nowrap",
+                    className: "whitespace-nowrap print:hidden",
                   })}
                 >
                   {copy.addDiverLabel}
@@ -362,7 +363,7 @@ export function DiverList({
                 onClick={cancelPendingSearch}
                 className={buttonClass({
                   variant: "primary",
-                  className: "whitespace-nowrap",
+                  className: "whitespace-nowrap print:hidden",
                 })}
               >
                 {copy.addDiverLabel}
@@ -376,9 +377,16 @@ export function DiverList({
             every list. It is the shared fact of that whole view, stated once
             where the count would be rather than repeated as a badge down every
             row. */}
-        <p className="text-sm text-muted tabular-nums">
+        <p
+          className={`text-sm text-muted tabular-nums ${copy.paperCountLabel && filter !== "removed" ? "print:hidden" : ""}`}
+        >
           {filter === "removed" ? copy.removedNote : copy.countLabel}
         </p>
+        {copy.paperCountLabel ? (
+          <p data-paper-roster-count className="hidden text-sm text-muted tabular-nums print:block">
+            {copy.paperCountLabel}
+          </p>
+        ) : null}
       </div>
       {/* Hidden over a day-one empty roster (see `showViews` above); kept
           whenever a search or chip narrowed the list, so the way back out

@@ -109,7 +109,10 @@ export function NoteDoor({
   className?: string;
 }) {
   return (
-    <details open={formOpen || undefined} className={`group ${className}`.trim()}>
+    <details
+      open={formOpen || undefined}
+      className={`group print:[&:not([open])]:hidden ${className}`.trim()}
+    >
       <summary
         className={buttonClass({
           variant: "link",

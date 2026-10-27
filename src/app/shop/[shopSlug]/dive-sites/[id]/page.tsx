@@ -341,7 +341,7 @@ export default async function EditDiveSitePage({
       ) : null}
       <DangerDisclosure
         open={Boolean(error)}
-        className="mt-10"
+        className="mt-10 print:hidden"
         summary={t("diveSites.edit.deleteSite")}
       >
         <h2 className="font-semibold">{t("diveSites.edit.deleteConfirmTitle")}</h2>

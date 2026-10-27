@@ -234,7 +234,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             {cancelPreviewKey ? (
               <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
             ) : null}
-            <form action={cancelMyBookingAction.bind(null, token)}>
+            <form action={cancelMyBookingAction.bind(null, token)} className="print:hidden">
               {/* The refund preview is repeated inside the confirm rather than
                       left further up the page: the diver reads what it costs at the
                       moment of commitment, not once on the way past. */}

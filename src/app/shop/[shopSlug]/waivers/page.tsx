@@ -292,7 +292,7 @@ export default async function WaiversPage({
         id="release"
         openOnHash="release"
         open={Boolean(banner)}
-        className="group/release mt-6 scroll-mt-24"
+        className="group/release mt-6 scroll-mt-24 print:[&:not([open])]:hidden"
       >
         <summary
           className={`${buttonClass({ variant: "secondary" })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
