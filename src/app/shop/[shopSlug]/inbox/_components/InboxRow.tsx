@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { z } from "zod";
 import { languageName } from "@/components/assists/language-name";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
@@ -68,8 +69,8 @@ const EXCERPT_LENGTH = 140;
 /** Whether a seat already carries the mark, by any door. */
 const marked = (seat: InboxSeat) => seat.runningLateAt !== null;
 
-/** Whether a sender's address is an email one: a page message can carry either. */
-const isEmailAddress = (address: string) => address.includes("@");
+/** Only a single plain address can be used as the recipient of a mailto link. */
+const isEmailAddress = (address: string) => z.email().safeParse(address).success;
 
 function excerpt(body: string): string {
   const flattened = body.replace(/\s+/g, " ").trim();
@@ -341,7 +342,10 @@ export function InboxRow({
               ) : isEmailAddress(message.fromAddress) ? (
                 // A stranger has no record to write from, so the reply starts in
                 // the staffer's own mail app. A phone number stays words.
-                <a href={`mailto:${message.fromAddress}`} className={ACT_CLASS}>
+                <a
+                  href={`mailto:${message.fromAddress.split("@").map(encodeURIComponent).join("@")}`}
+                  className={ACT_CLASS}
+                >
                   {t("inbox.replyByEmail")}
                 </a>
               ) : null}
