@@ -186,6 +186,11 @@ Both shells share one header bar: **56px**, translucent page background
 no child hard-codes `top-[68px]` again. The page's `<h1>` stays in the page (no collapsing
 large-title behavior — see Alternatives). The phone dock is unchanged.
 
+**2026-10-27 amendment, approved in #3116:** the public bar may grow when its existing
+navigation or enlarged text wraps. Staff chrome retains its fixed baseline. The public bar
+publishes its measured height through the shared offset token, with a separate baseline minimum
+so resizing can shrink it again. The surface, z-index, destinations and controls stay shared.
+
 ### 11. The coral budget
 
 The accent is the rarest thing the palette owns, and scarcity is what it is *for* — coral spent
