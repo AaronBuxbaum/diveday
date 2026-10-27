@@ -204,6 +204,18 @@ export function quickPlan({ changed, selection, specs = [], captures = [] }) {
   return steps;
 }
 
+/** A quick push's new work is measured from its own last completed CI, when available. */
+export function pushRoundWarning({ quick, ciSha, changed, git }) {
+  if (!quick) return null;
+  const diff = /^[a-f0-9]{40}$/.test(ciSha ?? "")
+    ? git(["diff", "--name-only", ciSha, "HEAD"])
+    : null;
+  const files = diff === null ? changed : [...new Set(diff.split("\n").filter(Boolean))];
+  if (files.length <= 150) return null;
+  const from = diff === null ? "the branch base (last CI commit unavailable)" : "last CI";
+  return `Push round: ${files.length} files changed since ${from}; aim for about 150 per push and keep a fix push to the fix.`;
+}
+
 /**
  * Whether everything since the branch's last push is merges, each bringing in another branch's
  * commits (the layer below, or main) and no commit of this branch's own. Those commits had their
@@ -561,12 +573,17 @@ async function main() {
   // named as red, so it is not the next CI run that says whether the fix worked. A file the
   // change deleted is left out; deleting a red test is the change's own claim, and CI checks it.
   const branch = git(["branch", "--show-current"]);
-  const own = ownDecision(
-    readOwnVerdict(branch, {
-      repo: repoSlug(git(["remote", "get-url", "origin"])) ?? process.env.GITHUB_REPOSITORY ?? null,
-    }),
-    { branch, head },
-  );
+  const ownVerdict = readOwnVerdict(branch, {
+    repo: repoSlug(git(["remote", "get-url", "origin"])) ?? process.env.GITHUB_REPOSITORY ?? null,
+  });
+  const roundWarning = pushRoundWarning({
+    quick,
+    ciSha: ownVerdict.sha,
+    changed: selection.changed,
+    git,
+  });
+  if (roundWarning) console.log(roundWarning);
+  const own = ownDecision(ownVerdict, { branch, head });
   for (const line of own.lines) console.log(line);
   const ownSpecs = docsOnly ? [] : own.specs.filter(existing);
   const ownCaptures = docsOnly ? [] : own.captures;

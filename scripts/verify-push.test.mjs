@@ -14,6 +14,7 @@ import {
   mergeOnly,
   notRunHere,
   plan,
+  pushRoundWarning,
   quickBase,
   quickPlan,
   runStep,
@@ -24,6 +25,39 @@ import {
 
 const names = (steps) => steps.map((step) => step.name);
 const base = { specs: [] };
+
+describe("the quick push round size", () => {
+  const sha = "a".repeat(40);
+  const files = (count) => Array.from({ length: count }, (_, i) => `src/file-${i}.ts`);
+
+  it("warns only above 150 files since this branch's latest completed CI", () => {
+    const git = (args) => (args[0] === "diff" ? files(151).join("\n") : null);
+    expect(pushRoundWarning({ quick: true, ciSha: sha, changed: files(400), git })).toMatch(
+      /151.*last CI/i,
+    );
+    expect(
+      pushRoundWarning({ quick: true, ciSha: sha, changed: [], git: () => files(150).join("\n") }),
+    ).toBeNull();
+    expect(pushRoundWarning({ quick: false, ciSha: sha, changed: files(400), git })).toBeNull();
+  });
+
+  it("labels the fallback when the branch has no locally readable CI commit", () => {
+    expect(
+      pushRoundWarning({ quick: true, ciSha: null, changed: files(151), git: () => null }),
+    ).toMatch(/151.*base/i);
+    expect(
+      pushRoundWarning({ quick: true, ciSha: sha, changed: files(151), git: () => null }),
+    ).toMatch(/151.*base/i);
+  });
+
+  it("does not count earlier rounds when the latest CI commit is available", () => {
+    const git = (args) => {
+      expect(args).toEqual(["diff", "--name-only", sha, "HEAD"]);
+      return files(2).join("\n");
+    };
+    expect(pushRoundWarning({ quick: true, ciSha: sha, changed: files(400), git })).toBeNull();
+  });
+});
 
 describe("the pre-push plan", () => {
   it("runs every local check CI's red jobs came from, cheapest first", () => {
