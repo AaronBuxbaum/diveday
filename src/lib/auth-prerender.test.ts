@@ -6,7 +6,8 @@ const request = vi.hoisted(() => ({
   connection: vi.fn(async () => {}),
   headers: vi.fn(async () => new Headers()),
   getDb: vi.fn(async () => ({})),
-  getSession: vi.fn(async () => null),
+  // A real session exercises the idle clock after the prerender boundary.
+  getSession: vi.fn(async () => ({ session: { lastHumanActivityAt: new Date(0) } })),
   nowMs: vi.fn(() => 1_800_000_000_000),
 }));
 
