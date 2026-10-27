@@ -1152,6 +1152,10 @@ select:not([multiple]):not([size]):dir(rtl) {
 
 @media print {
   /* A session lock protects the page on paper as well as on screen. */
+  body:has([data-staff-session-lock]) {
+    /* Suppress departure-specific page-margin identity while locked too. */
+    page: auto !important;
+  }
   body:has([data-staff-session-lock]) > [inert] {
     display: none !important;
   }
