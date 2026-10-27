@@ -1,6 +1,23 @@
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
 
+test("the diver search keeps its initial focus after session verification", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/divers");
+  const search = page.getByPlaceholder("Search people");
+  await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
+  await expect(search).toBeFocused();
+});
+
+test("the new departure field keeps its initial focus after session verification", async ({
+  page,
+}) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
+  await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
+  await expect(page.getByLabel("What is it")).toBeFocused();
+});
+
 test("real staff input renews the session; an expired warm cookie reaches sign-in", async ({
   page,
 }, testInfo) => {
