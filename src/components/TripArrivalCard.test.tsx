@@ -98,6 +98,50 @@ describe("arrivalCardFacts", () => {
  * timestamp is the change ledger's to state, and a second one here would be the
  * same fact twice.
  */
+describe("arrival details", () => {
+  const noDetails = {
+    ...trip,
+    arrivalLandmark: null,
+    arrivalLookFor: null,
+    arrivalParkingNote: null,
+    arrivalTransitNote: null,
+    arrivalFirstInteraction: null,
+  };
+
+  it("omits an empty facts list while keeping the map and contact links", () => {
+    const { container } = render(
+      <TripArrivalCard
+        shop={{ ...shop, contactPhone: "+1 305 555 0100" }}
+        trip={noDetails}
+        locale="en-US"
+        sites={[]}
+      />,
+    );
+    expect(container.querySelector("dl")).toBeNull();
+    expect(screen.getByRole("link", { name: "Open in maps" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "+1 305 555 0100" })).toBeInTheDocument();
+    expect(screen.getByText("Need a hand?", { exact: false })).toBeInTheDocument();
+  });
+
+  it.each([
+    "arrivalLandmark",
+    "arrivalLookFor",
+    "arrivalParkingNote",
+    "arrivalTransitNote",
+    "arrivalFirstInteraction",
+  ] as const)("keeps a lone %s fact", (field) => {
+    const { container } = render(
+      <TripArrivalCard
+        shop={shop}
+        trip={{ ...noDetails, [field]: "Find the dock host" }}
+        locale="en-US"
+      />,
+    );
+    expect(container.querySelectorAll("dl dt")).toHaveLength(1);
+    expect(screen.getByText("Find the dock host").tagName).toBe("DD");
+  });
+});
+
 describe("the Sites row", () => {
   it("reads in the order the day runs them, with no source chip (B21)", () => {
     render(

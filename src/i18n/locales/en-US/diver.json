@@ -893,7 +893,9 @@
       "sentAt": "Sent {when}",
       "bookingUnchanged": "Your booking stays on this date until the shop confirms a move.",
       "sent": "Request sent.",
-      "unavailable": "That couldn’t be sent. Call the shop on the number below."
+      "unavailable": "That couldn’t be sent. Call the shop on the number below.",
+      "changePlans": "Change plans",
+      "requestPending": "Move request pending"
     },
     "moveOffer": {
       "lead": "{title} has a seat free, at the same price or less.",
@@ -1075,7 +1077,9 @@
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
-    "savedCourseForms": "Course forms signed"
+    "savedCourseForms": "Course forms signed",
+    "groupDifferentDeparture": "Some group seats are on another departure.",
+    "groupSummary": "{total, plural, one {# seat in your group} other {# seats in your group}} · {unclaimed, plural, one {# unclaimed} other {# unclaimed}}"
   },
   "thread": {
     "stepsDone": "{done} of {total} done",
@@ -1143,25 +1147,25 @@
     "linkInactive": "That link is no longer active. Ask the shop for a fresh one.",
     "rateLimited": "Give it a few seconds and try again. Nothing was lost.",
     "medicalReview": "Thanks. One of your medical answers needs a closer look, and a doctor’s sign-off may be required. Please don’t assume you’re cleared until your shop confirms.",
-    "medicalReviewNext": "A “yes” means a doctor must confirm in writing that you’re fit to dive before you can go out; that is the rule at every shop, this one included. The shop will be in touch. If your trip is soon, contact them now: a sign-off can take a few days.",
     "medicalContactBoth": "Questions about next steps? Reach out to {shop}: <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",
     "medicalContactPhoneOnly": "Questions about next steps? Reach out to {shop}: <phone>{phoneNumber}</phone>.",
     "medicalContactEmailOnly": "Questions about next steps? Reach out to {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "Questions about next steps? Reach out to {shop}.",
-    "signedBody": "Signed, saved, and off your mind. We’ll see you at the dock. Your shop will let you know if anything else is needed.",
+    "signedBody": "Your waiver is signed and saved.",
     "seeWhatsLeft": "See what’s left before you sail",
     "doctor": {
       "title": "Take this to your doctor",
       "open": "Take this to your doctor",
-      "lede": "Print this page (or have the clinic print it) and ask your doctor to complete and sign the form below.",
-      "print": "Print this page",
+      "lede": "Take all three pages of the official questionnaire to your doctor. You can also print these instructions and your unlocked answers.",
+      "print": "Print instructions and answers",
       "back": "Back to your waiver",
       "formHeading": "The doctor’s form",
-      "formBody": "Your doctor completes and signs page {page} of the official <form>{title}</form> ({product}, version {version}).",
-      "formLink": "Open the official form and print page {page}",
+      "formBody": "Take the complete official <form>{title}</form> ({product}, version {version}). Your doctor completes and signs page {page}.",
+      "formLink": "Open the official medical PDF",
       "nameLabel": "Participant name",
       "answersHeading": "Your answers for the doctor",
       "answersLocked": "Enter your date of birth to show the answers your doctor needs to see.",
+      "answersPrintOmitted": "Your answers are not included in this printout.",
       "birthdateLabel": "Date of birth",
       "unlock": "Show my answers",
       "unlocking": "Checking…",
@@ -1247,7 +1251,11 @@
     "medicalAlertCounterOne": "1 character left",
     "medicalAlertCounterOther": "{count} characters left",
     "medicalAlertLabel": "What the crew should know",
-    "errorMedicalAlert": "Keep this to 500 characters of plain text to sign."
+    "errorMedicalAlert": "Keep this to 500 characters of plain text to sign.",
+    "medicalDeclinedNext": "The physician’s evaluation on file does not clear you to dive. Contact the shop about your next step.",
+    "medicalFormWaiting": "Your doctor’s form has been sent. Wait for staff to review it and confirm your next step. You are not cleared to dive yet.",
+    "medicalReferralNext": "Your questionnaire requires a physician’s written evaluation before you can dive.",
+    "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive."
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",
