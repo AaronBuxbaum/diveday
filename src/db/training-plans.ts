@@ -10,7 +10,11 @@ import { lockBoardingCertificationEvidence } from "./boarding-certification-snap
 import type { AppDb, DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { bookings, people, personRoles, tripAssignments, trips } from "./schema";
-import { readTrainingEnrollments, teachesSessionAsRostered } from "./training-mark-resolve";
+import {
+  readTrainingEnrollments,
+  teachesSessionAsRostered,
+  trustedCrewOfTrips,
+} from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
 
 type Subject = { kind: "assistant"; personId: string } | { kind: "student"; bookingId: string };
@@ -103,6 +107,15 @@ export async function setTrainingPlanAssignment(
     const teacher = crew.find((member) => member.personId === input.instructorPersonId);
     if (!teacher || !trusted(teacher.personId) || inWaterCrewRole(teacher) !== "instructor")
       return { ok: false };
+    const departureCrew =
+      (await trustedCrewOfTrips(tx, input.shopId, [input.tripId])).get(input.tripId) ?? [];
+    if (
+      !departureCrew.some(
+        (member) =>
+          member.personId === teacher.personId && inWaterCrewRole(member) === "instructor",
+      )
+    )
+      return { ok: false };
     const updatedAt = nowDate();
     if (input.subject.kind === "assistant") {
       const assistantId = input.subject.personId;
@@ -110,6 +123,11 @@ export async function setTrainingPlanAssignment(
       if (
         !assistant ||
         !trusted(assistant.personId) ||
+        !departureCrew.some(
+          (member) =>
+            member.personId === assistant.personId &&
+            inWaterCrewRole(member) === "certified_assistant",
+        ) ||
         inWaterCrewRole(assistant) !== "certified_assistant" ||
         assistant.personId === teacher.personId
       )
@@ -168,6 +186,16 @@ export async function setTrainingPlanAssignment(
           enrollment,
         ) ||
         !(await teachesSessionAsRostered(tx, input.shopId, enrollment.tripId, teacher.personId))
+      )
+        return { ok: false };
+      const sessionCrew =
+        (await trustedCrewOfTrips(tx, input.shopId, [enrollment.tripId])).get(enrollment.tripId) ??
+        [];
+      if (
+        !sessionCrew.some(
+          (member) =>
+            member.personId === teacher.personId && inWaterCrewRole(member) === "instructor",
+        )
       )
         return { ok: false };
       await tx

@@ -74,6 +74,7 @@ import {
 import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
 import { resolveTrainingMarks } from "./training-mark-resolve";
+import { invalidateTrainingPlansForCrewChange } from "./training-plan-crew";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
@@ -2270,7 +2271,11 @@ export async function recordCrewRollCall(
         if (!staffId) return { ok: false, reason: "staff_not_found" };
         const captureCredentials =
           source === "live" && checkpoint === "departure" && input.status === "boarded";
-        if (captureCredentials)
+        // An accepted absence invalidates plans while holding the same shop
+        // lock as planning, before either writer takes the trip row.
+        if (checkpoint === "departure" && input.status === "not_boarded")
+          await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
+        else if (captureCredentials)
           await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
 
         // Idempotency first, exactly as the diver path does it: a sync the device
@@ -2510,6 +2515,10 @@ export async function recordCrewRollCall(
           })
           .returning({ id: rollCallCrewEvents.id });
         if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+        if (checkpoint === "departure" && input.status === "not_boarded")
+          await invalidateTrainingPlansForCrewChange(tx, input.shopId, input.tripId, [
+            assigned.personId,
+          ]);
         if (credentialSnapshotStartedAt) {
           const finishedAt = nowDate();
           await tx

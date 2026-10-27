@@ -46,6 +46,38 @@ describe("training allocation plan", () => {
     expect(plan.groups.get("t2")).toEqual({ students: 9, capacity: 8, overRatio: true });
   });
 
+  it("allows a planned 10/8 split when the one assistant is assigned to the ten-student instructor", () => {
+    const t1 = instructor("t1");
+    const t2 = instructor("t2");
+    const plan = trainingAllocationPlan({
+      students: [...students("s1", "t1", 10), ...students("s2", "t2", 8)],
+      sessionCrew: new Map([
+        ["s1", [t1]],
+        ["s2", [t2]],
+      ]),
+      departureCrew: [t1, t2, assistant("dm")],
+      assistants: [{ assistantPersonId: "dm", instructorPersonId: "t1" }],
+    });
+    expect(plan.groups.get("t1")).toEqual({ students: 10, capacity: 10, overRatio: false });
+    expect(plan.groups.get("t2")).toEqual({ students: 8, capacity: 8, overRatio: false });
+    expect(plan.unresolvedStudents.size).toBe(0);
+    expect(plan.unresolvedAssistants.size).toBe(0);
+  });
+
+  it("applies the tighter intro limit to a mixed group even when an assistant is assigned", () => {
+    const teacher = instructor("t1");
+    const plan = trainingAllocationPlan({
+      students: [...students("dsd", "t1", 1, intro), ...students("ow", "t1", 2)],
+      sessionCrew: new Map([
+        ["dsd", [teacher]],
+        ["ow", [teacher]],
+      ]),
+      departureCrew: [teacher, assistant("dm")],
+      assistants: [{ assistantPersonId: "dm", instructorPersonId: "t1" }],
+    });
+    expect(plan.groups.get("t1")).toEqual({ students: 3, capacity: 2, overRatio: true });
+  });
+
   it("keeps the 11/11 plan over ratio for the instructor with one of three assistants", () => {
     const t1 = instructor("t1");
     const t2 = instructor("t2");
