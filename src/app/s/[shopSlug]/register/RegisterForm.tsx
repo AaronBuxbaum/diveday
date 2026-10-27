@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { AssistPhotoButton } from "@/components/assists/AssistPhotoButton";
 import { SMS_CONSENT_ONCE_FILLED, SmsConsentNote } from "@/components/SmsConsentNote";
 
@@ -18,6 +18,8 @@ import {
   SELF_REGISTRATION_DONE,
   type SelfRegistrationFormState,
 } from "@/lib/self-registration";
+
+import styles from "./RegisterForm.module.css";
 
 /**
  * **The counter's QR, as a form** (issue #1236).
@@ -59,6 +61,12 @@ export function RegisterForm({
   const t = useTranslations();
   const [state, formAction] = useActionState<SelfRegistrationFormState, FormData>(action, {});
 
+  const [agency, setAgency] = useState("");
+  const [level, setLevel] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   if (state.status === SELF_REGISTRATION_DONE) {
     return (
       <div className="mt-8">
@@ -69,7 +77,14 @@ export function RegisterForm({
   }
 
   return (
-    <form action={formAction} className="mt-8 flex flex-col gap-8">
+    <form
+      action={formAction}
+      data-hydrated={hydrated ? "true" : undefined}
+      // An action refusal must retain the native selects as well as typed fields.
+      // Success replaces the form above, so there is no successful form to reset.
+      onReset={(event) => event.preventDefault()}
+      className="mt-8 flex flex-col gap-8"
+    >
       <FieldGrid columns={2}>
         <Field label={t("register.nameLabel")} htmlFor="fullName">
           <input
@@ -120,12 +135,18 @@ export function RegisterForm({
         </Field>
       </FieldGrid>
 
-      <fieldset>
+      <fieldset className={styles.certificationFields}>
         <legend className={LEAD_TITLE_CLASS}>{t("register.certHeading")}</legend>
         <p className="mt-1 mb-4 text-sm text-muted">{t("register.certHint")}</p>
         <FieldGrid columns={2}>
           <Field label={t("register.agencyLabel")} htmlFor="agency">
-            <select id="agency" name="agency" defaultValue="" className={controlClass}>
+            <select
+              id="agency"
+              name="agency"
+              value={agency}
+              onChange={(event) => setAgency(event.target.value)}
+              className={controlClass}
+            >
               <option value="">{t("register.agencyNone")}</option>
               {SELF_DECLARED_AGENCIES.map((agency) => (
                 <option key={agency} value={agency}>
@@ -134,8 +155,18 @@ export function RegisterForm({
               ))}
             </select>
           </Field>
-          <Field label={t("register.levelLabel")} htmlFor="level">
-            <select id="level" name="level" defaultValue="" className={controlClass}>
+          <Field
+            label={t("register.levelLabel")}
+            htmlFor="level"
+            className={styles.certificationDetails}
+          >
+            <select
+              id="level"
+              name="level"
+              value={level}
+              onChange={(event) => setLevel(event.target.value)}
+              className={controlClass}
+            >
               <option value="">{t("register.levelPlaceholder")}</option>
               {SELF_DECLARED_LEVELS.map((level) => (
                 <option key={level} value={level}>
@@ -144,10 +175,24 @@ export function RegisterForm({
               ))}
             </select>
           </Field>
-          <Field label={t("register.identifierLabel")} htmlFor="identifier">
-            <input id="identifier" name="identifier" maxLength={120} className={controlClass} />
+          <Field
+            label={t("register.identifierLabel")}
+            htmlFor="identifier"
+            className={styles.certificationDetails}
+          >
+            <input
+              id="identifier"
+              name="identifier"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              maxLength={120}
+              className={controlClass}
+            />
           </Field>
         </FieldGrid>
+        <p className={`mt-3 text-base text-muted ${styles.uncertified}`}>
+          {t("register.uncertified")}
+        </p>
         {readCardPhoto ? (
           <AssistPhotoButton
             read={readCardPhoto}
