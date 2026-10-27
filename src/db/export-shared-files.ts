@@ -432,7 +432,19 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.trainingPlanByPersonId,
     },
-    { header: "training_plan_at", in: "shop", value: (row) => row.trainingPlanAt },
+    {
+      header: "training_plan_instructor_name",
+      in: "diver",
+      value: (row, { trainingPlanStaffName }) =>
+        nameOf(trainingPlanStaffName, row.trainingPlanInstructorPersonId),
+    },
+    {
+      header: "training_plan_by_name",
+      in: "diver",
+      value: (row, { trainingPlanStaffName }) =>
+        nameOf(trainingPlanStaffName, row.trainingPlanByPersonId),
+    },
+    { header: "training_plan_at", in: "both", value: (row) => row.trainingPlanAt },
     { header: "fly_safe_acknowledged_at", in: "shop", value: (row) => row.flySafeAcknowledgedAt },
     {
       header: "fly_safe_acknowledged_by_person_id",

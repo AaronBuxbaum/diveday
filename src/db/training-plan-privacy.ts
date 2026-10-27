@@ -23,7 +23,11 @@ export async function forgetTrainingPlanPeople(tx: DbExecutor, shopId: string, i
         ),
       ),
     );
-  const shopTrips = tx.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId)); // diveday:allow-deleted-trips
+  const shopTrips = tx
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: erasure also clears plans on deleted departures.
+    .where(eq(trips.shopId, shopId));
   await tx
     .update(tripAssignments)
     .set(cleared)

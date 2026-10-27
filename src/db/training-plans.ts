@@ -7,7 +7,8 @@ import { trainingMarkProblem } from "@/lib/training-mark";
 import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import { bookings, people, personRoles, tripAssignments, trips } from "./schema";
 import { readTrainingEnrollments, teachesSessionAsRostered } from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
@@ -188,39 +189,41 @@ export async function setTrainingPlanAssignment(
   });
 }
 
-export async function readTrainingPlan(db: AppDb, shopId: string, tripId: string) {
-  const [assistants, students] = await Promise.all([
-    db
-      .select({
-        assistantPersonId: tripAssignments.personId,
-        instructorPersonId: tripAssignments.trainingPlanInstructorPersonId,
-      })
-      .from(tripAssignments)
-      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-      .where(
-        and(
-          eq(trips.shopId, shopId),
-          eq(trips.id, tripId),
-          liveTrip(),
-          isNotNull(tripAssignments.trainingPlanInstructorPersonId),
+export async function readTrainingPlan(db: DbExecutor, shopId: string, tripId: string) {
+  const [assistants, students] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          assistantPersonId: tripAssignments.personId,
+          instructorPersonId: tripAssignments.trainingPlanInstructorPersonId,
+        })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            eq(trips.id, tripId),
+            liveTrip(),
+            isNotNull(tripAssignments.trainingPlanInstructorPersonId),
+          ),
         ),
-      ),
-    db
-      .select({
-        bookingId: bookings.id,
-        instructorPersonId: bookings.trainingPlanInstructorPersonId,
-      })
-      .from(bookings)
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          eq(trips.shopId, shopId),
-          eq(trips.id, tripId),
-          liveTrip(),
-          isNotNull(bookings.trainingPlanInstructorPersonId),
+    () =>
+      db
+        .select({
+          bookingId: bookings.id,
+          instructorPersonId: bookings.trainingPlanInstructorPersonId,
+        })
+        .from(bookings)
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(trips.shopId, shopId),
+            eq(trips.id, tripId),
+            liveTrip(),
+            isNotNull(bookings.trainingPlanInstructorPersonId),
+          ),
         ),
-      ),
   ]);
   return { assistants, students };
 }

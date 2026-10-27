@@ -892,6 +892,30 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     // diveday:allow-deleted-people: names for every row in the bundle, removed staff included.
     .where(eq(people.shopId, shopId));
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
+  // Plan attribution may name only current staff, never another diver even if
+  // a malformed historical reference points at one.
+  const planPersonIds = [
+    ...new Set(
+      bookingRows
+        .flatMap((row) => [row.trainingPlanInstructorPersonId, row.trainingPlanByPersonId])
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const planStaff = planPersonIds.length
+    ? await tx
+        .select({ id: people.id, fullName: people.fullName })
+        .from(people)
+        // diveday:allow-deleted-people: a removed staff member still attributed this plan.
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(
+          and(
+            eq(people.shopId, shopId),
+            inArray(people.id, planPersonIds),
+            inArray(personRoles.role, ["owner", "manager", "instructor"]),
+          ),
+        )
+    : [];
+  const trainingPlanStaffName = new Map(planStaff.map((row) => [row.id, row.fullName]));
 
   const certificationRows = await readScoped(tx, "certifications", scope);
 
@@ -1108,6 +1132,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     tripStartsAt,
     paymentByBooking,
     personName,
+    trainingPlanStaffName,
     certificationRows,
     specialtyRows,
     nitroxRows,

@@ -153,6 +153,9 @@ export async function markTrainingDive(
         .update(bookings)
         .set({
           trainingEnrollmentBookingId: input.enrollmentBookingId,
+          trainingPlanInstructorPersonId: null,
+          trainingPlanByPersonId: null,
+          trainingPlanAt: null,
           trainingMarkedAt: now,
           trainingMarkedByPersonId: input.actorPersonId,
         })
@@ -585,6 +588,9 @@ export async function dropTrainingMarkWithin(
     .update(bookings)
     .set({
       trainingEnrollmentBookingId: null,
+      trainingPlanInstructorPersonId: null,
+      trainingPlanByPersonId: null,
+      trainingPlanAt: null,
       trainingMarkedAt: null,
       trainingMarkedByPersonId: null,
     })

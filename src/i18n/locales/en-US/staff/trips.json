@@ -884,5 +884,17 @@
     "notCleared": "Not medically cleared.",
     "confirmIdentity": "Confirm identity",
     "reviewMedical": "Review medical status"
+  },
+  "trainingPlan": {
+    "title": "Training plan",
+    "scope": "Confirm the actual underwater groups and each program’s limits before diving.",
+    "instructor": "Instructor for {name}",
+    "unassigned": "Unassigned",
+    "save": "Save",
+    "saving": "Saving…",
+    "assistants": "Assistants",
+    "students": "Students",
+    "unresolved": "Some assignments or course limits need review.",
+    "over": "Planned group for {name}: {students} students; limit {capacity}."
   }
 }

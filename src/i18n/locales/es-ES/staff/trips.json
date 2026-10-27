@@ -884,5 +884,17 @@
     "notCleared": "Sin autorización médica.",
     "confirmIdentity": "Confirmar identidad",
     "reviewMedical": "Revisar estado médico"
+  },
+  "trainingPlan": {
+    "title": "Plan de formación",
+    "scope": "Confirma los grupos bajo el agua y los límites de cada programa antes de bucear.",
+    "instructor": "Instructor para {name}",
+    "unassigned": "Sin asignar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "assistants": "Asistentes",
+    "students": "Estudiantes",
+    "unresolved": "Revisa las asignaciones o los límites de algunos cursos.",
+    "over": "Grupo planeado para {name}: {students} estudiantes; límite {capacity}."
   }
 }

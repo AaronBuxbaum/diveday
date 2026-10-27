@@ -140,7 +140,7 @@ export type MarkedSeat = {
  * `teachesSessionAsRostered`, review 2026-10-17), and on a departure, nobody
  * the departure's crew count has marked not aboard.
  */
-async function trustedCrewOfTrips(
+export async function trustedCrewOfTrips(
   db: DbExecutor,
   shopId: string,
   tripIds: readonly string[],
@@ -213,7 +213,7 @@ type AboardPair = {
 };
 
 /** The ratio rule a course carries, or null when none is known (fail closed). */
-function ratioRuleOf(course: TrainingEnrollmentRow["course"]) {
+export function ratioRuleOf(course: TrainingEnrollmentRow["course"]) {
   return course
     ? courseRatioRule({
         agency: course.agency,

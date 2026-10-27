@@ -153,8 +153,8 @@ import {
   workOrders,
 } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
-import { forgetTrainingPlanPeople } from "./training-plan-privacy";
 import { customerProviderFromEnvironment } from "./stripe-providers";
+import { forgetTrainingPlanPeople } from "./training-plan-privacy";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
 export type AnonymizeDiverRefusal =

@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
-import { forgetTrainingPlanPeople } from "@/db/training-plan-privacy";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import {
@@ -13,6 +12,7 @@ import {
   trips,
   waiverRecords,
 } from "@/db/schema";
+import { forgetTrainingPlanPeople } from "@/db/training-plan-privacy";
 import { nowDate } from "@/lib/clock";
 import {
   type DiverDuplicateReason,
@@ -281,6 +281,13 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
     "which staffer resolved the flying-guidance follow-up",
   "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
   "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
+  "bookings.training_plan_by_person_id": "planning records involving a merged person are cleared",
+  "bookings.training_plan_instructor_person_id":
+    "planning records involving a merged person are cleared",
+  "trip_assignments.training_plan_by_person_id":
+    "planning records involving a merged person are cleared",
+  "trip_assignments.training_plan_instructor_person_id":
+    "planning records involving a merged person are cleared",
   "bookings.training_marked_by_person_id": "which staffer marked the dive as training",
   "bookings.training_cleared_by_person_id": "which staffer cleared a training mark with forms owed",
   "trip_assignments.assigned_by_person_id": "which staffer rostered the crew member",

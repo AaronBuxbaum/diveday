@@ -21,6 +21,21 @@ test.describe("mixed training depth warning", () => {
     const { mixedDepth } = (await response.json()) as { mixedDepth: { tripId: string } };
     await page.goto(`/shop/blue-mantis/trips/${mixedDepth.tripId}`);
     await expect(page.getByText(staff("manifest.mixedTrainingDepthWarning"))).toBeVisible();
+    const plan = page.locator("#training-plan");
+    await expect(
+      plan.getByRole("heading", { name: staff("trips.trainingPlan.title") }),
+    ).toBeVisible();
+    await expect(plan.getByText(staff("trips.trainingPlan.unresolved"))).toBeVisible();
+    const student = plan.getByLabel(staff("trips.trainingPlan.instructor", { name: "Maya" }));
+    await expect(student).toHaveValue("");
+    await student
+      .locator("xpath=ancestor::form")
+      .getByRole("button", { name: staff("trips.trainingPlan.save") })
+      .click();
+    await expect(page).toHaveURL(/#training-plan$/);
+    await expect(
+      plan.getByLabel(staff("trips.trainingPlan.instructor", { name: "Maya" })),
+    ).toHaveValue("");
     await capture(page, "trip-mixed-training-depth-roster", "light", {
       beforeScreenshot: async () => {
         await expect(

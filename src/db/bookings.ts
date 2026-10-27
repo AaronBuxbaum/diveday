@@ -2130,6 +2130,10 @@ export async function moveBooking(
       .update(bookings)
       .set({
         tripId: target.id,
+        // A plan belongs to the departure where staff made it.
+        trainingPlanInstructorPersonId: null,
+        trainingPlanByPersonId: null,
+        trainingPlanAt: null,
         // Moving alone leaves the party it was booked in.
         partyLeadBookingId: null,
         // Each of these was said about the old departure, so none is true of
