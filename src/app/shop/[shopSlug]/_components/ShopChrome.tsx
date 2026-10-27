@@ -8,6 +8,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { ShopNav, ShopNavSidebar } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
+import { StaffActivity } from "@/components/StaffActivity";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
@@ -266,6 +267,20 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
 
   return (
     <>
+      {ownShop &&
+      session?.idleRemainingMs !== undefined &&
+      session.user?.sessionId &&
+      isStaff(session.user.roles) ? (
+        <StaffActivity
+          sessionId={session.user.sessionId}
+          copy={{
+            title: staffT("shared.sessionIdle.title"),
+            body: staffT("shared.sessionIdle.body"),
+            retry: staffT("shared.sessionIdle.retry"),
+            signIn: staffT("shared.sessionIdle.signIn"),
+          }}
+        />
+      ) : null}
       {/* Every /shop page fronts ShopNav's 10-15 header tab stops (persona 14,
           ux-personas-20260730-findings.md) — this jumps a keyboard user past it and the
           demo banner straight to the page's own content. Unconditional, like

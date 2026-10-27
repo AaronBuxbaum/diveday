@@ -156,6 +156,12 @@
     "dayDoor": "Print the day",
     "dayDoorTomorrow": "Print tomorrow"
   },
+  "sessionIdle": {
+    "title": "Session paused",
+    "body": "Reconnect or sign in to continue.",
+    "retry": "Try again",
+    "signIn": "Sign in"
+  },
   "commandPalette": {
     "search": "Search",
     "dialogAriaLabel": "Quick search",

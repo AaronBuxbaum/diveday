@@ -156,6 +156,12 @@
     "dayDoor": "Imprimir el día",
     "dayDoorTomorrow": "Imprimir mañana"
   },
+  "sessionIdle": {
+    "title": "Sesión pausada",
+    "body": "Vuelve a conectarte o inicia sesión para continuar.",
+    "retry": "Reintentar",
+    "signIn": "Iniciar sesión"
+  },
   "commandPalette": {
     "search": "Buscar",
     "dialogAriaLabel": "Búsqueda rápida",
