@@ -10,10 +10,12 @@ import {
   jobKind,
   namedTests,
   percentile,
+  readRunJobs,
   readWeek,
   reconcileIssue,
   renderTable,
   runMinutes,
+  TransientGitHubError,
 } from "./ci-health.mjs";
 
 let ids = 0;
@@ -82,6 +84,37 @@ const WEEK = [
 ];
 
 describe("GitHub API reads", () => {
+  it("falls back to complete small pages only when a large jobs page repeatedly fails upstream", () => {
+    const calls = [];
+    const gh = (endpoint) => {
+      calls.push(endpoint);
+      if (endpoint.endsWith("per_page=100")) throw new TransientGitHubError("HTTP 502");
+      return endpoint.endsWith("page=1") ? [1, 2, 3, 4, 5] : [6, 7];
+    };
+    expect(readRunJobs(gh, "owner/repo", 42)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(calls).toHaveLength(3);
+    expect(calls[1]).toContain("per_page=5&page=1");
+    expect(() =>
+      readRunJobs(
+        () => {
+          throw new Error("HTTP 403");
+        },
+        "owner/repo",
+        42,
+      ),
+    ).toThrow("HTTP 403");
+    expect(() =>
+      readRunJobs(
+        (endpoint) => {
+          if (endpoint.endsWith("per_page=100")) throw new TransientGitHubError("HTTP 502");
+          throw new Error("page failed");
+        },
+        "owner/repo",
+        42,
+      ),
+    ).toThrow("page failed");
+  });
+
   it("retries a transient gateway error and returns the successful response", () => {
     const responses = [
       { status: 1, stderr: "gh: Server Error (HTTP 502)" },
