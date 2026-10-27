@@ -37,7 +37,9 @@ const ALLOWED: Record<string, string> = {
   "html:has([data-chrome-bar])":
     "Shell geometry the chrome bar publishes (its height as scroll padding), which every sticky offset reads.",
   "html:has([data-chrome-stacked])":
-    "The chrome bar's taller height on a phone when the shop name stacks above the tabs: the same published --chrome-h, overridden in place.",
+    "The chrome bar's taller base height on a phone when the shop name stacks above the tabs: publishes --chrome-base-h for fixed and measured headers.",
+  "html:has([data-chrome-natural])":
+    "Publishes the public header's measured --chrome-h or its base fallback for sticky offsets; no utility writes this shell geometry property.",
   "html:has([data-sticky-actions])":
     "Scroll padding for a page with a sticky action bar, so a jumped-to field lands above it.",
   "html:has([data-foot-bar])": "Scroll padding for a page with a foot bar, as above.",

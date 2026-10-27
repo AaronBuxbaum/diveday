@@ -100,7 +100,17 @@ export async function registerAtShopAction(
     return { error: t("common.rateLimited") };
   }
 
-  const parsed = parseForm(registrationSchema, formData);
+  // Decide agency first. Optional hidden fields are irrelevant to an uncertified
+  // submission, including malformed stale values or files in a crafted POST.
+  // Match blankAsAbsent's existing first-entry parsing for repeated fields.
+  const agency = formData.get("agency");
+  const uncertified = agency === null || agency === "";
+  const relevantForm = new FormData();
+  for (const [name, value] of formData) {
+    if (uncertified && (name === "level" || name === "identifier")) continue;
+    relevantForm.append(name, value);
+  }
+  const parsed = parseForm(registrationSchema, relevantForm);
   if (!parsed.ok) return { error: t("register.invalid") };
   if (!hasContactPath(parsed.data)) return { error: t("register.contactRequired") };
 
