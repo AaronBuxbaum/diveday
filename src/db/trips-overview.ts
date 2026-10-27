@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { crewLanguageBriefings } from "@/lib/crew-languages";
 import {
-  countInWaterCrew,
+  countBothClaims,
   lapsedRungs,
   lastDayOfDeparture,
   narrowedByLapse,
@@ -253,7 +253,7 @@ export async function getTripOverview(
     lapsedRungs: lapsedRungs(credentials.get(entry.person.id) ?? [], divesOn, firstCrewDay),
     unverifiedRungs: unverifiedRungs(credentials.get(entry.person.id) ?? [], firstCrewDay),
   }));
-  const inWaterCrew = countInWaterCrew(crewMembers);
+  const { supervision: inWaterCrew, roster: rosterInWaterCrew } = countBothClaims(crewMembers);
   // Who a lapse took down a rung, so the Crew panel can say why a list that
   // names an instructor still reads as short.
   const lapsedCrew = crewMembers
@@ -347,6 +347,7 @@ export async function getTripOverview(
       crewIds,
       tripRoleByPerson,
       inWaterCrew,
+      rosterInWaterCrew,
       lapsedCrew,
       unverifiedCrew,
       crewGap,
