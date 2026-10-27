@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+
 import { clearCourseForms } from "./course-form-only";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
@@ -24,6 +25,7 @@ import {
   seededTripId,
   writeCourseForm,
 } from "./helpers";
+import { todayCatchUpScenario } from "./today-catch-up-helper";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -66,10 +68,75 @@ for (const scheme of ["light", "dark"] as const) {
         });
       });
 
+      test(`Today catches up on a walk-in (${scheme})`, async ({
+        browser,
+        page,
+        workerBaseURL,
+      }) => {
+        const { reader, readerContext } = await todayCatchUpScenario(browser, page, workerBaseURL);
+        try {
+          await expect(reader.getByRole("region", { name: /Since / })).toContainText(
+            "Today Catchup Diver took a seat.",
+          );
+          await capture(reader, "today-catch-up", scheme, {
+            beforeScreenshot: async () => {
+              await expect(reader.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(
+                0,
+              );
+              await expect(reader.getByRole("region", { name: /Since / })).toContainText(
+                "Today Catchup Diver took a seat.",
+              );
+            },
+          });
+        } finally {
+          await readerContext.close();
+        }
+      });
+
       test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
         await capture(page, "today", scheme);
+      });
+
+      if (scheme === "light") {
+        test("grouped departure links have a usable touch target and keyboard focus", async ({
+          page,
+        }) => {
+          for (const width of [390, 1280]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto("/shop/blue-mantis");
+            const link = page.locator('#needs-you h3 a[href*="/trips/"]').first();
+            await expect(link).toBeVisible();
+            const box = await link.boundingBox();
+            expect(box?.height).toBeGreaterThanOrEqual(44);
+            await link.focus();
+            await page.keyboard.press("Shift+Tab");
+            await page.keyboard.press("Tab");
+            await expect(link).toBeFocused();
+          }
+        });
+      }
+
+      test(`a course station shows the course total (${scheme})`, async ({ page }) => {
+        await createTrip(page, {
+          course: "Open Water Diver",
+          title: "Course price check",
+          date: daysFromNow(1),
+          departsAt: "08:00",
+          returnsAt: "17:00",
+        });
+        await page.goto("/shop/blue-mantis");
+        await page
+          .locator("summary")
+          .filter({ hasText: /^Tomorrow · / })
+          .first()
+          .click();
+        const station = page
+          .locator("li")
+          .filter({ has: page.getByRole("heading", { name: "Course price check" }) });
+        await expect(station).toContainText("$709");
+        await capture(page, "today-course-price", scheme);
       });
 
       test(`the help editor opens beneath its person summary (${scheme})`, async ({ page }) => {

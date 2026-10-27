@@ -90,6 +90,20 @@ describe("a message on file", () => {
 });
 
 describe("a message from a stranger", () => {
+  it.each([
+    "marta@example.net?bcc=attacker@example.net",
+    "marta@example.net%3Fbcc=attacker@example.net",
+    "marta@example.net,attacker@example.net",
+    "marta@example.net\r\nBcc: attacker@example.net",
+    "marta@example.net&subject=private",
+  ])("does not offer an email reply to an unsafe sender: %s", async (address) => {
+    renderRow({ personId: null, fromAddress: address }, null);
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Unknown sender" }),
+    );
+    expect(screen.queryByRole("link", { name: "Reply by email" })).toBeNull();
+  });
+
   it("shows the address as muted words, and offers the reply in its open view", async () => {
     renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
     expect(screen.getByText("Unknown sender")).toBeInTheDocument();
@@ -104,6 +118,17 @@ describe("a message from a stranger", () => {
     expect(screen.getByRole("link", { name: "Reply by email" })).toHaveAttribute(
       "href",
       "mailto:marta.keller@example.net",
+    );
+  });
+
+  it("encodes the local part of a valid address in the reply link", async () => {
+    renderRow({ personId: null, fromAddress: "marta+boats@example.net" }, null);
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Unknown sender" }),
+    );
+    expect(screen.getByRole("link", { name: "Reply by email" })).toHaveAttribute(
+      "href",
+      "mailto:marta%2Bboats@example.net",
     );
   });
 

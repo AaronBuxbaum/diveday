@@ -23,7 +23,7 @@
 name: Preview
 
 on:
-  pull_request:
+  pull_request_target:
     types: [labeled, synchronize]
   issue_comment:
     types: [created]
@@ -47,13 +47,12 @@ jobs:
   # Without it, `issue_comment` is a privileged-checkout hole (CodeQL's
   # `actions/untrusted-checkout`, and it is right): that event always runs in
   # the base repository's context with its secrets available, so a maintainer
-  # typing `/preview` on a pull request from a fork would check that fork's tree
-  # out and run `pnpm install` — arbitrary lifecycle scripts — with VERCEL_TOKEN
-  # in the environment. The `author_association` check below gates *who may ask*
-  # and says nothing about *whose code runs*.
+  # typing `/preview` on a pull request from a fork could otherwise check that
+  # fork's tree out in a credential-bearing job. The `author_association`
+  # check below gates *who may ask* and says nothing about whose source uploads.
   #
   # Resolving the head by API rather than trusting the event payload also closes
-  # the gap between the two: the `pull_request` payload carries a head repo, the
+  # the gap between the two: the `pull_request_target` payload carries a head repo, the
   # `issue_comment` payload carries none at all, and one answer for both is one
   # thing to get right.
   resolve:
@@ -64,10 +63,10 @@ jobs:
     # GitHub account can comment on a public repository and this spends money.
     # `labeled`/`synchronize` need no such check: both require write access.
     if: >-
-      (github.event_name == 'pull_request'
+      (github.event_name == 'pull_request_target'
         && github.event.action == 'labeled'
         && github.event.label.name == 'preview')
-      || (github.event_name == 'pull_request'
+      || (github.event_name == 'pull_request_target'
         && github.event.action == 'synchronize'
         && contains(github.event.pull_request.labels.*.name, 'preview'))
       || (github.event_name == 'issue_comment'
@@ -91,7 +90,7 @@ jobs:
           read -r repo sha < <(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" \
             --jq '[.head.repo.full_name, .head.sha] | @tsv')
           if [ "$repo" != "$GITHUB_REPOSITORY" ]; then
-            echo "::error::#${PR}'s head is on ${repo}, not ${GITHUB_REPOSITORY}. A preview builds and installs the branch it deploys, so this workflow only ever runs code from this repository — where pushing already requires write access. Deploy a fork by hand if you have read the diff."
+            echo "::error::#${PR}'s head is on ${repo}, not ${GITHUB_REPOSITORY}. A preview builds the branch on Vercel, so this workflow only uploads code from this repository — where pushing already requires write access. Deploy a fork by hand if you have read the diff."
             exit 1
           fi
           echo "sha=${sha}" >> "$GITHUB_OUTPUT"
@@ -110,12 +109,38 @@ jobs:
     # useless. Manual action "preview-deploy-token" is how they get there.
     environment: preview-deploy
     steps:
+      # This workflow comes from the trusted base. Install the CLI before the
+      # pull request is checked out, away from its package and registry config.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
+      - name: Install the preview CLI in isolation
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/preview-cli"
+          cd "$RUNNER_TEMP/preview-cli"
+          touch user.npmrc global.npmrc
+          npm install --prefix "$PWD" --ignore-scripts --no-save --no-audit --no-fund \
+            --registry=https://registry.npmjs.org/ \
+            --userconfig="$PWD/user.npmrc" --globalconfig="$PWD/global.npmrc" vercel@62.5.0
       # The exact commit the job above proved is ours, never a ref: a branch can
       # move between the two jobs, and a ref would build whatever it moved to.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.resolve.outputs.sha }}
-      - uses: ./.github/actions/setup
+          persist-credentials: false
+      # Executable project configuration must not run in the token-bearing
+      # runner. The current project uses vercel.json; review a change to an
+      # executable configuration before allowing it here.
+      - name: Refuse executable Vercel configuration
+        run: |
+          set -euo pipefail
+          for config in vercel.ts vercel.mts vercel.js vercel.mjs vercel.cjs; do
+            if [ -e "$config" ] || [ -L "$config" ]; then
+              echo "::error::Executable Vercel configuration is not allowed in a preview checkout: $config"
+              exit 1
+            fi
+          done
       - name: Confirm the Vercel credentials are set
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -149,7 +174,7 @@ jobs:
         run: |
           set -euo pipefail
           # The CLI reads VERCEL_TOKEN from the environment; it is never on argv.
-          url=$(pnpm dlx vercel@62.5.0 deploy --archive=tgz --yes)
+          url=$("$RUNNER_TEMP/preview-cli/node_modules/.bin/vercel" deploy --archive=tgz --yes)
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Say where it is
         env:

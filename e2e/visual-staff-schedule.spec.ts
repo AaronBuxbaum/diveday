@@ -349,7 +349,7 @@ for (const scheme of ["light", "dark"] as const) {
         // *pre-click* board, so this is the only one that can tell the two
         // pages apart. A no-op for the expanded capture, which `goto`s the
         // panel state directly.
-        await page.waitForURL(/[?&]add=/);
+        await page.waitForURL(/\/schedule\/board\/new/);
         const courseSelect = page.locator('select[name="courseId"]');
         // The panel is mounted. Without this the wait below is vacuous.
         await courseSelect.waitFor({ state: "attached" });
@@ -671,7 +671,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await page.getByRole("link", { name: "Add a departure", exact: true }).click();
         await addPanelSettled(page);
-        await boardListSettled(page);
         await capture(page, "schedule-builder-add", scheme);
       });
 
@@ -695,7 +694,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByText(/(Next|Last) (high|low) water at .*; this departure reaches the site/)
           .waitFor();
-        await boardListSettled(page);
         await capture(page, "schedule-builder-add-tide", scheme);
       });
 
@@ -707,11 +705,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the expanded add-a-departure panel renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule/board?add=full");
-        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
+        await page.getByRole("heading", { name: "Add a departure", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await addPanelSettled(page);
-        await boardListSettled(page);
         await capture(page, "schedule-builder-add-full", scheme);
       });
 
@@ -723,7 +720,7 @@ for (const scheme of ["light", "dark"] as const) {
       // generates stable.
       test(`the repeating-trip panel renders true to the design (${scheme})`, async ({ page }) => {
         const title = "Standing Saturday charter";
-        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
         await page.getByLabel("What is it").fill(title);
         await page.getByLabel("Date").fill(daysFromNow(4));
         await page.getByLabel("Departs").fill("08:00");
@@ -797,7 +794,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/pick=all/);
         await page.getByRole("button", { name: "Review the call" }).click();
         await page.getByRole("heading", { level: 1, name: "Cancel these departures?" }).waitFor();
-        await capture(page, "blowout-day-review", scheme);
+        await capture(page, "blowout-day-review", scheme, {
+          beforeScreenshot: async () => {
+            // The preceding capture can return from its initial-paint tab and
+            // start a live staff-session recheck. Photograph the review only
+            // after the server confirms it, not the temporary session cover.
+            await expect(page.locator('[data-staff-session-check="settled"]')).toHaveCount(1);
+            await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
+            await expect(
+              page.getByRole("heading", { level: 1, name: "Cancel these departures?" }),
+            ).toBeVisible();
+          },
+        });
       });
 
       // The cascade record — the surface a blow-out morning is worked from.

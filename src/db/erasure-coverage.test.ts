@@ -235,9 +235,7 @@ function erasureHardDeleteOrder(): string[] {
 /**
  * Person-reachable tables the erasure deliberately leaves alone, and why.
  *
- * Each reason is a sentence a reviewer can disagree with rather than a category
- * label, because disagreeing with one is the only way a wrong answer here gets
- * found. Three arguments do most of the work and are worth stating once:
+ * Reasons invite review of each decision. Three arguments apply throughout:
  *
  * - **A staff member is never erased** (`anonymizeDiver` refuses anyone holding
  *   a staff role), so a table whose only person column is the staffer who
@@ -267,6 +265,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
   trip_read_marks: "how far a staff member has read a trip’s desk feed",
+  today_read_marks: "a staff member’s Today catch-up state",
+  today_read_mark_events: "IDs cascading with marks or desk events",
   stripe_refund_failures:
     "a refund Stripe reported failed or canceled: an amount, Stripe's status and reason codes (the reason narrowed at the webhook to Stripe's documented words by `refundFailureReasonOf`, anything else `unknown`), and the order, checkout or seat it reverses, by id, with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (issue #2291)",
   payment_disputes:

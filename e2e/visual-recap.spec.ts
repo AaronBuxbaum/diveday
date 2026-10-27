@@ -183,6 +183,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "recap-shared-photo", scheme);
       });
 
+      test(`the secondary demo diver can stop sharing a seeded recap photo (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-shared-recap-photo?secondary=1");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        const { bookingId } = (await seeded.json()) as { bookingId: string };
+        expect(bookingId).not.toBe(DEMO_RECAP_BOOKING_ID);
+        await page.goto(`/recap/${signRecapToken(bookingId)}`);
+        await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Stop sharing" })).toBeVisible();
+        await capture(page, "recap-secondary-demo-shared-photo", scheme);
+      });
+
       /**
        * **The session that certified its diver** (fourth review, item 55).
        *

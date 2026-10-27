@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { SiteLibraryGroup } from "@/db/dive-sites";
 import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { SiteLibraryLedger } from "./SiteLibraryLedger";
+import { CatalogDoor, SiteLibraryLedger } from "./SiteLibraryLedger";
 
 afterEach(cleanup);
 
@@ -53,7 +53,6 @@ function group(label: SiteLibraryGroup["label"], ...sites: Site[]): SiteLibraryG
 function renderLedger(
   groups: SiteLibraryGroup[],
   options: {
-    catalog?: { href: string; count: number } | null;
     currentTemplateVersion?: Map<string, number>;
     depthUnit?: "meters" | "feet";
   } = {},
@@ -66,7 +65,6 @@ function renderLedger(
       diverT={diverT}
       depthUnit={options.depthUnit ?? "meters"}
       currentTemplateVersion={options.currentTemplateVersion ?? new Map()}
-      catalog={options.catalog === undefined ? { href: "/catalog", count: 34 } : options.catalog}
     />,
   );
 }
@@ -194,27 +192,14 @@ describe("the template provenance", () => {
   });
 });
 
-/** The catalog is a door at the ledger's tail, never a second surface style. */
 describe("the catalog door", () => {
-  it("carries the whole catalog's count, and never claims to be near anybody", () => {
-    renderRow({}, { catalog: { href: "/catalog", count: 34 } });
+  it("carries the whole catalog's count", () => {
+    render(<CatalogDoor href="/catalog" count={34} t={t} />);
     expect(screen.getByRole("link", { name: "Browse the DiveDay catalog" })).toHaveAttribute(
       "href",
       "/catalog",
     );
     expect(screen.getByText("34 published sites")).toBeInTheDocument();
-  });
-
-  it("does not render when DiveDay has published nothing to browse", () => {
-    renderRow({}, { catalog: null });
-    expect(screen.queryByText(/Browse the DiveDay catalog/)).toBeNull();
-  });
-
-  it("is the ledger's tail, so an empty library has no door here at all", () => {
-    // The sibling half of the rule: with no rows there is no ledger, and the
-    // page's own two-door empty state owns the choice instead.
-    const { container } = renderLedger([], { catalog: { href: "/catalog", count: 34 } });
-    expect(container.querySelector("a")).toBeNull();
   });
 });
 

@@ -64,6 +64,28 @@ describe("AddPanel", () => {
     expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeTruthy();
   });
 
+  it("warns when the seats exceed the selected boat and leaves the form enabled", () => {
+    const copy = new Proxy({} as BuilderCopy, {
+      get: (_, key) =>
+        key === "boatCapacityWarning" ? "The boat has {count} seats." : String(key),
+    });
+    renderPanel({
+      copy,
+      options: {
+        courses: [],
+        diveSites: [],
+        hasBoatDiving: true,
+        boats: [{ id: "b1", name: "Reef", capacity: 6 }],
+      },
+    });
+    fireEvent.change(screen.getByLabelText(/boatSelectLabel/), { target: { value: "b1" } });
+    fireEvent.change(screen.getByLabelText("seats"), { target: { value: "8" } });
+    expect(screen.getByText("The boat has 6 seats.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "putOnBoard" })).not.toBeDisabled();
+    fireEvent.change(screen.getByLabelText("seats"), { target: { value: "6" } });
+    expect(screen.queryByText("The boat has 6 seats.")).toBeNull();
+  });
+
   it("hands Cancel back to the board", () => {
     const { props } = renderPanel();
     fireEvent.click(screen.getByRole("button", { name: "cancel" }));

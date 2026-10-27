@@ -148,7 +148,7 @@ export function ReviewLedger({
       {reviews.map((review) => (
         // 16px, the room a diver's words have always stood in here, and the
         // room its loading skeletons draw.
-        <LedgerRow key={review.id} pad="xl">
+        <LedgerRow key={review.id} pad="xl" className="print:py-2">
           <StarRating
             rating={review.rating}
             label={t("reviews.ratingOption", { rating: review.rating })}

@@ -381,7 +381,10 @@ export default async function NewDiverPage({
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
               {submitLabel}
             </SubmitButton>
-            <Link href={backLink.href} className={buttonClass({ variant: "secondary" })}>
+            <Link
+              href={backLink.href}
+              className={buttonClass({ variant: "secondary", className: "print:hidden" })}
+            >
               {t("divers.page.cancel")}
             </Link>
           </FieldActions>

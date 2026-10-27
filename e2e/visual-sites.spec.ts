@@ -115,6 +115,37 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "dive-site-new", scheme);
       });
 
+      test(`the empty site editors fit intermediate widths (${scheme})`, async ({
+        page,
+      }, testInfo) => {
+        await page.goto("/shop/blue-mantis/dive-sites/new");
+        await page.locator("form[data-hydrated]").filter({ visible: true }).waitFor();
+        await openIfClosed(page.locator("details#briefing-route").filter({ visible: true }));
+        await openIfClosed(page.locator("details#briefing-landmarks").filter({ visible: true }));
+        await openIfClosed(page.locator("details#briefing-field-guide").filter({ visible: true }));
+        await expect(
+          page.getByText(staffCopy("diveSites.form.route.needsCoordinates")),
+        ).toBeVisible();
+        const species = page.getByLabel("Find a species");
+        await expect(species).toBeVisible();
+        for (const width of [990, 1024, 1050]) {
+          await page.setViewportSize({ width, height: 800 });
+          const box = await species.boundingBox();
+          if (!box) throw new Error("The species field has no visible box");
+          expect(box.x + box.width).toBeLessThanOrEqual(width);
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth),
+          ).toBeLessThanOrEqual(width);
+          if (width === 1024) {
+            await testInfo.attach("expanded site editors at 1024px", {
+              body: await page.screenshot({ fullPage: true }),
+              contentType: "image/png",
+            });
+          }
+        }
+        await capture(page, "dive-site-empty-editors", scheme);
+      });
+
       /**
        * The same editor mid-edit — the one state neither capture above can
        * hold. ADR 20260827-the-shops-shelves' long-form editor pattern put a

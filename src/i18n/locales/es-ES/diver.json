@@ -832,7 +832,8 @@
     "invalid": "Algo del formulario no llegó bien. Revísalo e inténtalo de nuevo.",
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
     "unavailable": "Ese centro no acepta registros en este momento.",
-    "switchedOff": "Pídele al personal del mostrador que te registre."
+    "switchedOff": "Pídele al personal del mostrador que te registre.",
+    "uncertified": "Sin certificación registrada"
   },
   "packages": {
     "title": "Paquetes de inmersiones",
@@ -894,7 +895,9 @@
       "sentAt": "Enviado {when}",
       "bookingUnchanged": "Tu reserva sigue en esta fecha hasta que el centro confirme un cambio.",
       "sent": "Solicitud enviada.",
-      "unavailable": "No se pudo enviar. Llama al centro al número de abajo."
+      "unavailable": "No se pudo enviar. Llama al centro al número de abajo.",
+      "changePlans": "Cambiar de planes",
+      "requestPending": "Solicitud de cambio pendiente"
     },
     "moveOffer": {
       "lead": "{title} tiene una plaza libre, al mismo precio o menos.",
@@ -1076,7 +1079,10 @@
     "intentHeading": "¿Para qué es esta inmersión?",
     "intentChoose": "Prefiero no decirlo",
     "signCourseForms": "Firmar formularios del curso",
-    "savedCourseForms": "Formularios del curso firmados"
+    "courseFormsNeedSigning": "Los formularios del curso siguen pendientes de firma.",
+    "savedCourseForms": "Formularios del curso firmados",
+    "groupDifferentDeparture": "Algunas plazas del grupo están en otra salida.",
+    "groupSummary": "{total, plural, one {# plaza en tu grupo} other {# plazas en tu grupo}} · {unclaimed, plural, one {# sin reclamar} other {# sin reclamar}}"
   },
   "thread": {
     "stepsDone": "{done} de {total, plural, one {# paso completado} other {# pasos completados}}",
@@ -1144,25 +1150,25 @@
     "linkInactive": "Ese enlace ya no está activo. Pide uno nuevo al centro.",
     "rateLimited": "Espera unos segundos e inténtalo de nuevo. No se ha perdido nada.",
     "medicalReview": "Gracias. Una de tus respuestas médicas requiere una revisión más detenida y puede que necesites el visto bueno de un médico. No des por hecho que estás autorizado hasta que tu centro te lo confirme.",
-    "medicalReviewNext": "Un “sí” significa que un médico debe confirmar por escrito que estás apto para bucear antes de salir; esa es la regla en todos los centros, este incluido. El centro se pondrá en contacto. Si tu salida es pronto, escríbeles ya: la autorización puede tardar unos días.",
     "medicalContactBoth": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",
     "medicalContactPhoneOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <phone>{phoneNumber}</phone>.",
     "medicalContactEmailOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "¿Dudas sobre los siguientes pasos? Escribe a {shop}.",
-    "signedBody": "Firmado, guardado y fuera de tu cabeza. Nos vemos en el muelle. Tu centro te avisará si hace falta algo más.",
+    "signedBody": "Tu exención está firmada y guardada.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
     "doctor": {
       "title": "Llévale esto a tu médico",
       "open": "Llévale esto a tu médico",
-      "lede": "Imprime esta página (o pide que la impriman en la clínica) y pídele a tu médico que complete y firme el formulario de abajo.",
-      "print": "Imprimir esta página",
+      "lede": "Lleva las tres páginas del cuestionario oficial a tu médico. También puedes imprimir estas instrucciones y tus respuestas desbloqueadas.",
+      "print": "Imprimir instrucciones y respuestas",
       "back": "Volver a tu exención",
       "formHeading": "El formulario del médico",
-      "formBody": "Tu médico completa y firma la página {page} del formulario oficial <form>{title}</form> ({product}, versión {version}).",
-      "formLink": "Abrir el formulario oficial e imprimir la página {page}",
+      "formBody": "Lleva el formulario oficial completo <form>{title}</form> ({product}, versión {version}). Tu médico completa y firma la página {page}.",
+      "formLink": "Abrir el PDF médico oficial",
       "nameLabel": "Nombre del participante",
       "answersHeading": "Tus respuestas para el médico",
       "answersLocked": "Escribe tu fecha de nacimiento para ver las respuestas que tu médico necesita revisar.",
+      "answersPrintOmitted": "Tus respuestas no se incluyen en esta impresión.",
       "birthdateLabel": "Fecha de nacimiento",
       "unlock": "Ver mis respuestas",
       "unlocking": "Verificando…",
@@ -1248,7 +1254,11 @@
     "medicalAlertCounterOne": "Queda 1 carácter",
     "medicalAlertCounterOther": "Quedan {count} caracteres",
     "medicalAlertLabel": "Lo que la tripulación debe saber",
-    "errorMedicalAlert": "Escribe como máximo 500 caracteres de texto simple para firmar."
+    "errorMedicalAlert": "Escribe como máximo 500 caracteres de texto simple para firmar.",
+    "medicalDeclinedNext": "La evaluación médica archivada no te autoriza a bucear. Contacta al centro para saber cómo seguir.",
+    "medicalFormWaiting": "Tu formulario médico se ha enviado. Espera a que el personal lo revise y confirme el siguiente paso. Aún no tienes autorización para bucear.",
+    "medicalReferralNext": "Tu cuestionario requiere una evaluación médica por escrito antes de que puedas bucear.",
+    "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear."
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",

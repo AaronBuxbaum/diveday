@@ -140,6 +140,8 @@
     "popupBlocked": "El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes y vuelve a intentarlo."
   },
   "printPacket": {
+    "changedHeading": "Actualiza el paquete",
+    "changed": "La salida {id} cambió mientras se preparaba este paquete. No se incluyeron las hojas de esta salida. Actualiza la página y vuelve a imprimir.",
     "title": "Paquete de salida",
     "divesHeading": "Plan de inmersiones",
     "diveNumber": "Inmersión {number}",
@@ -153,6 +155,12 @@
     "dayEmptyTomorrow": "Mañana no hay salidas.",
     "dayDoor": "Imprimir el día",
     "dayDoorTomorrow": "Imprimir mañana"
+  },
+  "sessionIdle": {
+    "title": "Sesión pausada",
+    "body": "Vuelve a conectarte o inicia sesión para continuar.",
+    "retry": "Reintentar",
+    "signIn": "Iniciar sesión"
   },
   "commandPalette": {
     "search": "Buscar",
@@ -354,7 +362,7 @@
       "current": "Copia reciente",
       "currentOnline": "Copia reciente · en línea",
       "aging": "Copia antigua",
-      "stale": "Copia caducada"
+      "stale": "Copia desactualizada"
     },
     "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo…",
     "openingHeading": "Abriendo la copia guardada en este dispositivo",
@@ -379,6 +387,7 @@
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
       "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",
+      "unansweredEmpty": "DiveDay no respondió.",
       "freshnessAllCurrent": "Todas al día.",
       "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
       "savedAgo": "Guardada {ago}",
@@ -612,6 +621,8 @@
     "tellThem": "Avisarles"
   },
   "formDraft": {
+    "editorValues": "Valores del editor, incluidos los cambios sin guardar",
+    "savedDetails": "Datos guardados",
     "pickedUp": "Retomado del mostrador, {time}.",
     "startOver": "Empezar de nuevo",
     "unsavedSection": "Sin guardar"

@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
@@ -13,11 +13,10 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * recap can be photographed with the sharer's "Stop sharing" on it (H-129,
  * issue #2806).
  *
- * A test route rather than a line in the seed: sharing is the sharer's tick at
- * upload, and an e2e build has no media store to upload to, so the state is
- * reached by setting the one column the tick sets (ADR
- * 20261016-shared-boat-photos §1) on a photo the seed already gave this
- * booking. The demo's own recap stays the calm, unshared one.
+ * The primary demo recap stays unshared, so its shared state is reached here
+ * by setting the one column the upload tick sets (ADR
+ * 20261016-shared-boat-photos §1). `?secondary=1` finds the separate seeded
+ * shared photo without changing either recap.
  *
  * Mutating the shared fixture is safe: each Playwright worker owns its database
  * and `/api/test/reset` restores the schedule before every test. Gated
@@ -31,6 +30,25 @@ export async function POST(request: Request) {
   const db = await getDb();
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_demo" }, { status: 404 });
+
+  // The demo's own secondary diver already shared a photo during seeding.
+  // Return only its booking id so a browser test can open that real recap.
+  if (new URL(request.url).searchParams.get("secondary") === "1") {
+    const [photo] = await db
+      .select({ bookingId: recapPhotos.bookingId })
+      .from(recapPhotos)
+      .where(
+        and(
+          eq(recapPhotos.shopId, shop.id),
+          ne(recapPhotos.bookingId, DEMO_RECAP_BOOKING_ID),
+          isNotNull(recapPhotos.sharedWithBoatAt),
+        ),
+      )
+      .limit(1);
+    return photo
+      ? NextResponse.json({ bookingId: photo.bookingId })
+      : NextResponse.json({ error: "no_secondary_photo" }, { status: 404 });
+  }
 
   // The shop on the read and on the write, not only on the guard (issue #1812).
   const [booking] = await db

@@ -47,7 +47,8 @@ Part of the **design-review** skill ([SKILL.md](SKILL.md)). The SKILL.md procedu
      the viewer scales until a 4px offset disappears.
    - `node scripts/pixel-probe-report.mjs --atlas` builds the state atlas's contact sheets. Read
      the rest, hover and focus crops of every control you touched side by side; its entries are
-     the ones `grep -l '<a class it wears>' e2e/pixel-probe/atlas/*.json` names.
+     the ones `grep -l '<a class it wears>' e2e/pixel-probe/atlas/runs/<run-id>/*.json` names.
+     `ATLAS.md` names the run; older runs are separate and do not fill its gaps.
 
    Write down what is in the pixels — each measurement, each oddity — **before** reading the
    component code: read the code first and you see what was meant instead of what was drawn.

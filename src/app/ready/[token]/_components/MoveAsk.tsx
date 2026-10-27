@@ -38,7 +38,7 @@ export function MoveAsk({
 }) {
   if (state !== "open") {
     return (
-      <div id="move-ask" className="flex flex-col gap-2 text-base">
+      <div id="move-ask" tabIndex={-1} className="scroll-mt-8 flex flex-col gap-2 text-base">
         <p className="font-medium">{t("ready.moveAsk.asked", { shop: shopName })}</p>
         {state.note ? <p className="whitespace-pre-wrap wrap-anywhere">{state.note}</p> : null}
         <p className="text-muted">
@@ -51,13 +51,13 @@ export function MoveAsk({
     );
   }
   return (
-    <div id="move-ask" className="flex flex-col gap-3">
+    <div id="move-ask" tabIndex={-1} className="scroll-mt-8 flex flex-col gap-3">
       <p className="text-base text-muted">
         {shopPhone
           ? t("ready.moveAsk.body", { shop: shopName, phone: shopPhone })
           : t("ready.moveAsk.bodyNoPhone", { shop: shopName })}
       </p>
-      <form action={action} className="flex flex-wrap items-end gap-3">
+      <form action={action} className="flex flex-wrap items-end gap-3 print:hidden">
         <input type="hidden" name="tripId" value={tripId} />
         <Field label={t("ready.moveAsk.noteLabel")} className="min-w-56 flex-1">
           <input

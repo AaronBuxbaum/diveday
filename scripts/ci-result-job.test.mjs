@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { CI_JOBS } from "./ci-merge-verdict.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CI = readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8");
@@ -30,11 +31,25 @@ describe("the CI result job", () => {
     const others = jobIds(CI).filter((id) => id !== "ci-result");
     expect(others.length).toBeGreaterThan(5);
     expect(resultNeeds(CI).sort()).toEqual(others.sort());
+    expect([...CI_JOBS].sort()).toEqual(others.sort());
   });
 
   it("runs even when a job it needs failed, and keeps the name the ruleset requires", () => {
     const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
     expect(job).toMatch(/^ {4}name: CI result$/mu);
-    expect(job).toMatch(/^ {4}if: always\(\)/mu);
+    expect(job).toMatch(/^ {4}if: always\(\) && github\.event_name != 'schedule'$/mu);
+  });
+
+  it("keeps the complete unit and Playwright shard fleets", () => {
+    const job = (id) => {
+      const header = `\n  ${id}:\n`;
+      return CI.slice(CI.indexOf(header) + header.length).split(/\n {2}[a-z0-9-]+:\n/u)[0];
+    };
+    expect(job("unit-tests")).toMatch(/^ {8}shard: \[1, 2, 3, 4\]$/mu);
+    expect(job("playwright")).toMatch(/^ {8}shard: \[1, 2, 3, 4, 5, 6\]$/mu);
+    expect(job("visual")).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
+    for (const id of ["unit-tests", "playwright", "visual"]) {
+      expect(job(id)).not.toMatch(/^\s+exclude:/mu);
+    }
   });
 });

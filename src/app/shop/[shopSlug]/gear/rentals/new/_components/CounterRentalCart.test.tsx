@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -9,6 +11,7 @@ import { nowMs } from "@/lib/clock";
 import {
   CART_FILLS_FIELD,
   COUNTER_RENTAL_FORM,
+  counterRentalDraftScope,
   FILL_FIELD_PREFIX,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
@@ -60,6 +63,7 @@ const props: ComponentProps<typeof CounterRentalCart> = {
   invoiceExtras: null,
   notice: null,
   nitroxFillMethod: "blending",
+  canUseNitrox: true,
   words: {
     gearHeading: t("counterRentals.new.gearHeading"),
     kindsAria: t("counterRentals.new.kindsAria"),
@@ -79,6 +83,8 @@ const props: ComponentProps<typeof CounterRentalCart> = {
     fillLabel: t("counterRentals.new.fillLabel"),
     fillOptions: tankFillOptions(t, t("counterRentals.new.fillChoose")),
     fillHint: t("counterRentals.new.fillHint"),
+    fillUnavailable: t("counterRentals.new.fillUnavailable"),
+    fillRetained: t("counterRentals.new.fillRetained"),
   },
 };
 
@@ -87,23 +93,30 @@ function Cart({
   refusal = null,
   groups = props.groups,
   nitroxFillMethod = props.nitroxFillMethod,
+  canUseNitrox = true,
+  scope = SCOPE,
+  personId = "00000000-0000-4000-8000-000000000100",
 }: {
   restore?: boolean;
   refusal?: ComponentProps<typeof CounterRentalCart>["refusal"];
   groups?: ComponentProps<typeof CounterRentalCart>["groups"];
   nitroxFillMethod?: ComponentProps<typeof CounterRentalCart>["nitroxFillMethod"];
+  canUseNitrox?: boolean;
+  scope?: string;
+  personId?: string;
 }) {
   return (
     <form aria-label="Rental" onSubmit={(event) => event.preventDefault()}>
-      <KeepTypedOnRefusal form={COUNTER_RENTAL_FORM} scope={SCOPE} restore={restore} />
-      <input type="hidden" name="personId" value="00000000-0000-4000-8000-000000000100" />
+      <KeepTypedOnRefusal form={COUNTER_RENTAL_FORM} scope={scope} restore={restore} />
+      <input type="hidden" name="personId" value={personId} />
       <input type="hidden" name="from" value="2026-10-21" />
       <input type="hidden" name="until" value="2026-10-21" />
       <CounterRentalCart
         {...props}
+        canUseNitrox={canUseNitrox}
         groups={groups}
         nitroxFillMethod={nitroxFillMethod}
-        restoreKept={restore ? SCOPE : null}
+        restoreKept={restore ? scope : null}
         refusal={refusal}
       />
     </form>
@@ -115,7 +128,73 @@ const bill = () => screen.getByRole("list", { name: props.words.billHeading });
 const filter = () => screen.getByRole("searchbox", { name: props.words.filterLabel });
 const fill = (tank: PickerUnit) => screen.getByRole("combobox", { name: tank.fillAria ?? "" });
 
+describe("the rental total on paper", () => {
+  it("keeps the selected item count and total outside every staff print-hide rule", () => {
+    render(
+      <div id="shop-main-content">
+        <Cart />
+      </div>,
+    );
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    const footer = document.querySelector("[data-sticky-actions]");
+    expect(footer).toHaveTextContent("1 item");
+    expect(footer).toHaveTextContent("$10.00");
+    const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const hideRules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(
+        ([, selector, body]) =>
+          selector.trim().startsWith("#shop-main-content") && /display:\s*none/.test(body),
+      )
+      .map(([, selector]) => selector.trim());
+    expect(hideRules.length).toBeGreaterThan(0);
+    for (const selector of hideRules) {
+      expect(footer?.querySelector("p")?.closest(selector), selector).toBeNull();
+    }
+    const review = screen.getByRole("button", { name: props.words.review });
+    expect(hideRules.some((selector) => review.closest(selector) !== null)).toBe(true);
+    const editorActions = document.createElement("div");
+    editorActions.setAttribute("data-sticky-actions", "");
+    editorActions.innerHTML = '<button type="submit">Save</button>';
+    document.getElementById("shop-main-content")?.append(editorActions);
+    expect(hideRules.some((selector) => editorActions.matches(selector))).toBe(true);
+  });
+});
+
 describe("the counter cart's local lookup", () => {
+  it("offers only Air with an explanation when the selected person lacks a confirmed nitrox card", () => {
+    render(<Cart canUseNitrox={false} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    expect(
+      Array.from(fill(tank1).querySelectorAll<HTMLOptionElement>("option:not(:disabled)")).map(
+        (option) => option.value,
+      ),
+    ).toEqual(["21"]);
+    expect(screen.getByText(t("counterRentals.new.fillUnavailable"))).toBeVisible();
+    expect(fill(tank1)).toHaveValue("");
+  });
+  it("offers EANx when the selected person's nitrox card authorizes a fill", () => {
+    render(<Cart canUseNitrox />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    expect(fill(tank1).querySelector('option[value="32"]')).not.toBeNull();
+    expect(screen.queryByText(t("counterRentals.new.fillUnavailable"))).toBeNull();
+  });
+  it("keeps a previous EANx choice visible but requires an explicit eligible gas after authorization changes", () => {
+    const { rerender } = render(<Cart canUseNitrox />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    fireEvent.change(fill(tank1), { target: { value: "32" } });
+    rerender(<Cart canUseNitrox={false} />);
+    expect(fill(tank1)).toHaveValue("");
+    expect(fill(tank1)).toBeInvalid();
+    expect(fill(tank1).querySelector('option[value="32"]')).toBeNull();
+    expect(within(bill()).getByText(/Previous selection:.*32/)).toBeVisible();
+    expect(screen.getByRole("button", { name: props.words.review })).toBeVisible();
+    fireEvent.change(fill(tank1), { target: { value: "21" } });
+    expect(fill(tank1)).toHaveValue("21");
+    expect(within(bill()).queryByText(/Previous selection:/)).toBeNull();
+  });
   it("puts Gear before review and guides a sticky action to the first unresolved control", () => {
     render(<Cart />);
     fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
@@ -169,6 +248,66 @@ describe("the counter cart's local lookup", () => {
 });
 
 describe("issue 2723 refused cart", () => {
+  it("never restores one diver's cart into another diver's refusal", () => {
+    const first = "00000000-0000-4000-8000-000000000100";
+    const second = "00000000-0000-4000-8000-000000000200";
+    const firstScope = counterRentalDraftScope("blue-mantis", "desk", first);
+    const secondScope = counterRentalDraftScope("blue-mantis", "desk", second);
+    render(<Cart scope={firstScope} personId={first} />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    fireEvent.change(fill(tank1), { target: { value: "32" } });
+    fireEvent.submit(screen.getByRole("form", { name: "Rental" }));
+    cleanup();
+    render(<Cart restore scope={secondScope} personId={second} canUseNitrox={false} />);
+    expect(screen.queryByRole("list", { name: props.words.billHeading })).toBeNull();
+    expect(
+      new FormData(screen.getByRole("form", { name: "Rental" }) as HTMLFormElement).get("personId"),
+    ).toBe(second);
+    cleanup();
+    render(<Cart restore scope={firstScope} personId={first} />);
+    expect(fill(tank1)).toHaveValue("32");
+  });
+  it("retains refused EANx as context without submitting it or silently choosing air", () => {
+    render(<Cart canUseNitrox />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 002· AL80" }));
+    fireEvent.change(fill(tank1), { target: { value: "32" } });
+    fireEvent.change(fill(tank2), { target: { value: "36" } });
+    fireEvent.submit(screen.getByRole("form", { name: "Rental" }));
+    cleanup();
+    render(
+      <Cart
+        restore
+        canUseNitrox={false}
+        refusal={{
+          code: "no-nitrox-card",
+          unitId: null,
+          message: t("counterRentals.new.notice.noNitroxCard"),
+        }}
+      />,
+    );
+    for (const tank of [tank1, tank2]) {
+      expect(fill(tank)).toHaveValue("");
+      expect(fill(tank)).toBeInvalid();
+      expect(fill(tank).querySelector('option[value="32"]')).toBeNull();
+      const submitted = new FormData(
+        screen.getByRole("form", { name: "Rental" }) as HTMLFormElement,
+      ).get(`${FILL_FIELD_PREFIX}${tank.id}`);
+      expect(submitted).not.toBe("32");
+      expect(submitted).not.toBe("36");
+      expect(submitted).not.toBe("21");
+    }
+    expect(within(bill()).getByText(/Previous selection:.*32/)).toBeVisible();
+    expect(within(bill()).getByText(/Previous selection:.*36/)).toBeVisible();
+    expect(screen.getByRole("button", { name: props.words.review })).toBeVisible();
+    fireEvent.change(fill(tank1), { target: { value: "21" } });
+    expect(
+      new FormData(screen.getByRole("form", { name: "Rental" }) as HTMLFormElement).get(
+        `${FILL_FIELD_PREFIX}${tank1.id}`,
+      ),
+    ).toBe("21");
+    expect(fill(tank2)).toHaveValue("");
+  });
   it("keeps all 40 tanks, typed prices, EANx and No charge after a nitrox-card refusal", async () => {
     const tanks = Array.from({ length: 40 }, (_, index) =>
       unit(
@@ -248,16 +387,31 @@ describe("issue 2723 refused cart", () => {
     }));
     const groups = [{ kind: "wetsuit" as const, kindLabel: "Wetsuit", units: suits }];
     render(<Cart groups={groups} />);
-    for (const suit of suits) {
-      fireEvent.click(within(gear()).getByRole("button", { name: `${suit.label}· L` }));
-      fireEvent.click(screen.getByRole("checkbox", { name: suit.confirmLabel }));
+    const pickButtons = within(gear()).getAllByRole("button", { name: /^Suit \d{3}· L$/ });
+    expect(pickButtons).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(pickButtons[index]).toHaveAccessibleName(`${suit.label}· L`);
     }
+    act(() => {
+      for (const button of pickButtons) fireEvent.click(button);
+    });
+    const confirmations = screen.getAllByRole("checkbox");
+    expect(confirmations).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(confirmations[index]).toHaveAccessibleName(suit.confirmLabel);
+    }
+    act(() => {
+      for (const confirmation of confirmations) fireEvent.click(confirmation);
+    });
     fireEvent.click(screen.getByRole("radio", { name: t("counterRentals.new.pay.none") }));
     fireEvent.submit(screen.getByRole("form", { name: "Rental" }));
     cleanup();
     render(<Cart groups={groups} restore />);
-    for (const suit of suits) {
-      expect(screen.getByRole("checkbox", { name: suit.confirmLabel })).toBeChecked();
+    const restoredConfirmations = screen.getAllByRole("checkbox");
+    expect(restoredConfirmations).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(restoredConfirmations[index]).toHaveAccessibleName(suit.confirmLabel);
+      expect(restoredConfirmations[index]).toBeChecked();
     }
   });
 

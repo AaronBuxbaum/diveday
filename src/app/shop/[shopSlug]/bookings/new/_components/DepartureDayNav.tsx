@@ -60,7 +60,7 @@ export function DepartureDaySteps({
   className?: string;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-3 ${className}`}>
+    <div className={`flex items-center justify-between gap-3 print:hidden ${className}`}>
       {earlierHref ? (
         <Link href={earlierHref} className={buttonClass({ variant: "secondary" })}>
           {words.earlier}

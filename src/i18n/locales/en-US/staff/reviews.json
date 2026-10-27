@@ -29,7 +29,8 @@
   "publish": "Publish",
   "saving": "Saving…",
   "pagination": {
-    "total": "{count, plural, one {# review you have answered} other {# reviews you have answered}}"
+    "total": "{count, plural, one {# review you have answered} other {# reviews you have answered}}",
+    "paperSubset": "{total, plural, one {{shown} of # review you have answered shown} other {{shown} of # reviews you have answered shown}}"
   },
   "hideConfirm": "Hide this review",
   "hideReasonLabel": "Why are you taking it down?",

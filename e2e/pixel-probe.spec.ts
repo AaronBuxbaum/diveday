@@ -1,4 +1,8 @@
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import type { Page } from "@playwright/test";
+import sharp from "sharp";
 import {
   analyzeSnapshot,
   analyzeStates,
@@ -6,6 +10,8 @@ import {
   elementMeta,
 } from "../scripts/pixel-probe/analyze.mjs";
 import { collectGeometry } from "../scripts/pixel-probe/collect.mjs";
+import { loadRaw, writeCrop } from "../scripts/pixel-probe/crop.mjs";
+import { probeViewport } from "../scripts/pixel-probe/probe.mjs";
 import { statePass } from "../scripts/pixel-probe/states.mjs";
 import { expect, test } from "./fixtures";
 
@@ -36,6 +42,77 @@ const GLOBALS = `
   button { font: inherit; color: inherit; }
   .page { padding: 16px; }
 `;
+
+test("a new atlas run refreshes an unchanged control signature after its child changes", async ({
+  page,
+}) => {
+  const outDir = test.info().outputPath("atlas-freshness");
+  fs.mkdirSync(outDir, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setContent(
+    html(
+      ".card { width: 220px; padding: 12px; } .control { width: 160px; height: 80px; }",
+      '<div class="card"><button class="control"><span>Course price</span></button></div>',
+    ),
+  );
+  async function captureRun(run: string) {
+    const shot = path.join(outDir, `${run}.png`);
+    await page.screenshot({ path: shot, fullPage: true });
+    const result = await probeViewport(page, {
+      capture: "atlas-fixture",
+      scheme: "light",
+      width: 1280,
+      shot,
+      states: true,
+      targets: false,
+      atlasSeen: new Set(),
+      atlasRun: run,
+      outDir,
+      bound,
+      budgets: {
+        collectMs: 10_000,
+        callMs: 5_000,
+        statesMs: 15_000,
+        ringsMs: 10_000,
+        shotMs: 10_000,
+      },
+    });
+    expect(result.probed, result.skipped ?? "probe did not finish").toBe(true);
+    const dir = path.join(outDir, "atlas", "runs", run);
+    const metadataFile = fs.readdirSync(dir).find((file) => file.endsWith(".json"));
+    if (!metadataFile) throw new Error("atlas fixture did not capture a control");
+    const meta = JSON.parse(fs.readFileSync(path.join(dir, metadataFile), "utf8"));
+    const rest = path.join(dir, `${metadataFile.slice(0, -5)}-rest.png`);
+    const expected = path.join(outDir, `${run}-expected.png`);
+    await writeCrop(await loadRaw(shot), meta.rect, [], expected, 0);
+    expect(fs.readFileSync(rest)).toEqual(fs.readFileSync(expected));
+    return { meta, hash: metadataFile.slice(0, -5), pixels: fs.readFileSync(rest) };
+  }
+  const first = await captureRun("1-first");
+  await page.locator(".control span").evaluate((element) => {
+    element.style.fontSize = "24px";
+  });
+  const second = await captureRun("2-second");
+  expect(second.meta.sig).toBe(first.meta.sig);
+  expect(second.pixels.equals(first.pixels)).toBe(false);
+  execFileSync("node", ["scripts/pixel-probe-report.mjs", "--atlas"], {
+    env: { ...process.env, VISUAL_PROBE_DIR: outDir },
+    timeout: 30_000,
+  });
+  expect(fs.readFileSync(path.join(outDir, "ATLAS.md"), "utf8")).toContain("Run: 2-second");
+  const sheet = path.join(outDir, "atlas-sheets", "2-second", "sheet-001.png");
+  expect(fs.existsSync(sheet)).toBe(true);
+  const rest = path.join(outDir, "atlas", "runs", "2-second", `${second.hash}-rest.png`);
+  const image = sharp(rest).ensureAlpha();
+  const { width, height } = await image.metadata();
+  if (!width || !height) throw new Error("atlas crop has no size");
+  const pixelsInSheet = await sharp(sheet)
+    .extract({ left: 0, top: 24, width, height })
+    .ensureAlpha()
+    .raw()
+    .toBuffer();
+  expect(pixelsInSheet).toEqual(await image.raw().toBuffer());
+});
 
 /** One fixture page: the globals, the check's own CSS, and its markup inside a padded `.page`. */
 function html(css: string, body: string): string {

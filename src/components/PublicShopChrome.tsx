@@ -3,6 +3,7 @@ import { ChromeBar } from "@/components/chrome/ChromeBar";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { LogoMark } from "@/components/Logo";
+import { PublicShopHeaderHeight } from "@/components/PublicShopHeaderHeight";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -67,24 +68,23 @@ export function PublicShopHeader({
   languagePickerCopy: LanguagePickerCopy;
 }) {
   return (
-    /* The same bar the staff shell wears — one height, one z-index, one
-       translucency (ADR 20260827-clearwater-surface-language, decision 10).
+    /* The staff shell's same surface, z-index and shared height token
+       (ADR 20260827-clearwater-surface-language, decision 10).
        This header used to be its own shorter bar at `z-40`, which is why the
        schedule's sticky day headers, pinned at `top-0`, spent every scroll
        hidden underneath it. */
     <ChromeBar
       stackedOnPhone
+      naturalHeight
       leading={
-        /* A truncating span inside, which the name did not need while the row
-           could wrap onto a second line: the bar is one fixed-height row now,
-           so a long shop name has to ellipse rather than push the nav off the
-           viewport. The span rather than the link itself because
-           `text-overflow` has nothing to act on inside a flex container. */
-        <div className="flex min-w-0 items-center justify-between gap-4">
+        /* The flexible identity yields to recovery's natural width. Fixed
+           8px gaps preserve room for a first grapheme plus the full ellipsis
+           when text grows; enlarged gutters must not consume that budget. */
+        <div className="flex min-w-0 items-center justify-between gap-[8px]">
           <Link
             href={publicSchedulePath(shop.slug)}
             // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
-            className="font-brand-display flex min-h-11 min-w-0 items-center gap-2.5 text-lg font-semibold tracking-tight"
+            className={`font-brand-display flex min-h-11 flex-1 ${shop.logoUrl ? "min-w-[calc(2rem_+_8px_+_2em)]" : "min-w-11"} items-center gap-[8px] text-lg font-semibold tracking-tight`}
           >
             {/* The shop's logo is the nav's mark beside its name (visual review
               2026-10-24, B16); it stood as an orphan tile beside the hero. */}
@@ -96,12 +96,12 @@ export function PublicShopHeader({
                 className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
               />
             ) : null}
-            <span className="truncate">{shop.name}</span>
+            <span className="min-w-[2em] truncate">{shop.name}</span>
           </Link>
           {recoveryLabel ? (
             <a
               href={recoveryHref}
-              className="inline-flex min-h-11 shrink-0 items-center text-base text-muted underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
             >
               {recoveryLabel}
             </a>
@@ -110,20 +110,26 @@ export function PublicShopHeader({
       }
       trailing={
         /* The nav rides in the trailing cluster rather than the bar's centre
-           slot: on a diver's page the two tabs and the language control are one
+           slot: on a diver's page the destinations and language control are one
            group — which page, in which words — and both belong at the edge the
            shop's name is not at. The centre slot would have put them between
            the name and the picker, which on a phone is the arrangement that
            squeezes the name from both sides. */
         <>
-          <PublicShopNav ariaLabel={navAriaLabel} items={navItems} />
-          <LanguagePicker
-            current={locale}
-            currentLabel={localeLabel}
-            choices={languages}
-            setLocale={setLocale}
-            copy={languagePickerCopy}
+          <PublicShopNav
+            ariaLabel={navAriaLabel}
+            items={navItems}
+            action={
+              <LanguagePicker
+                current={locale}
+                currentLabel={localeLabel}
+                choices={languages}
+                setLocale={setLocale}
+                copy={languagePickerCopy}
+              />
+            }
           />
+          <PublicShopHeaderHeight />
         </>
       }
     />
@@ -217,7 +223,7 @@ export function PublicShopFooter({
   // from `sm` up the shop's name takes the same 44px line so the contact row
   // beside it does not sit 12px lower.
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="border-t border-border bg-surface print:break-inside-avoid">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div>
           <p className="sm:flex sm:min-h-11 sm:items-center">

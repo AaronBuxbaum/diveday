@@ -198,7 +198,7 @@ export default async function BlowoutPage({
         />
         <a
           href={unresolved > 0 ? "#unresolved-recovery" : "#rebooked-recovery"}
-          className="rounded-lg"
+          className="grid row-span-2 grid-rows-subgrid rounded-lg"
         >
           <ShopStat
             label={t("blowout.record.unresolved")}

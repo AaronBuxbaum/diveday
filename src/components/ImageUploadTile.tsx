@@ -77,7 +77,7 @@ export function ImageUploadTile({
   }
 
   return (
-    <div>
+    <div className="print:hidden">
       <label
         className={`relative flex aspect-square w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-panel border border-dashed border-border-strong p-3 text-center text-sm font-medium text-primary has-[:focus-visible]:focus-ring ${
           pending ? "cursor-progress" : "cursor-pointer hover:bg-foreground/8"

@@ -73,7 +73,7 @@ export function MoveSeatControl({
               <optgroup key={day} label={entries[0].dayLabel}>
                 {entries.map((target) => (
                   <option key={target.id} value={target.id} disabled={target.seatsLeft <= 0}>
-                    {target.timeLabel} · {target.label} · {target.availability}
+                    {target.dayLabel} · {target.timeLabel} · {target.label} · {target.availability}
                   </option>
                 ))}
               </optgroup>

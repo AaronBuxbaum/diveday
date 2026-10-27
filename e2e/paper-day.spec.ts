@@ -84,26 +84,51 @@ test.describe("the paper day", () => {
     // printer, and a captain holding page seven has no other way to tell.
     await expect(popup.getByText(/\d{4}/).first()).toBeVisible();
 
-    // **Each departure starts a fresh sheet.** The break is CSS
-    // (`globals.css`'s `.print-bundle-page:first-of-type { break-before: auto }`)
-    // and a full-page screenshot structurally cannot see a page boundary, so
-    // this reads the computed value instead. Each departure is three sections
-    // — plan, manifest, packing list — and only two breaks: the manifest runs
-    // on under its own plan (`print-bundle-continues`), and the document's
-    // first plan is exempt. Every later plan and every packing list breaks. A
-    // per-departure wrapper element made all of them first children and
-    // printed each boat's dive plan on the back of the previous boat's packing
-    // list.
+    // Each departure's three sections own different named pages. The name
+    // transition creates the physical break even when break-before is auto
+    // on a section that is its wrapper's first child. Verify the browser's
+    // resolved ownership, then the actual paginated PDF rather than a CSS
+    // break-before value that cannot describe named-page transitions.
     await popup.emulateMedia({ media: "print" });
-    const breaks = await popup.evaluate(() =>
-      [...document.querySelectorAll(".print-bundle-page")].map(
-        (element) => getComputedStyle(element).breakBefore,
+    const sectionPages = await popup.locator(".print-bundle-page").evaluateAll((elements) =>
+      elements.map((element) => {
+        // Plan/prep wrap their section; the composed manifest owns its name inside it.
+        const owner =
+          element.closest("[data-departure-paper]") ??
+          element.querySelector("[data-departure-paper]");
+        return {
+          headingId: element.getAttribute("aria-labelledby"),
+          page: owner ? getComputedStyle(owner).page : null,
+        };
+      }),
+    );
+    expect(sectionPages).toHaveLength(departures * 3);
+    const sectionNames = ["dives", "manifest", "prep"];
+    for (const [index, section] of sectionPages.entries()) {
+      const name = sectionNames[index % sectionNames.length];
+      const prefix = `print-${name}-`;
+      expect(section.headingId).toMatch(new RegExp(`^${prefix}`));
+      const tripId = section.headingId?.slice(prefix.length).toLowerCase();
+      const paperName = name === "manifest" ? "manifest-departure" : name;
+      expect(section.page).toBe(`departure-${tripId}-${paperName}`);
+    }
+    expect(new Set(sectionPages.map((section) => section.page)).size).toBe(sectionPages.length);
+    await popup.evaluate(() => document.fonts.ready);
+    // Returning to the packet rechecks its staff session. Exercise that check
+    // and wait for it: printing while it is pending correctly prints the lock.
+    await popup.bringToFront();
+    await Promise.all([
+      popup.waitForResponse(
+        (response) =>
+          response.url().includes("/api/staff-activity") && response.request().method() === "GET",
       ),
-    );
-    expect(breaks.length).toBe(departures * 3);
-    expect(breaks).toEqual(
-      breaks.map((_, index) => (index === 0 || index % 3 === 1 ? "auto" : "page")),
-    );
+      popup.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))),
+    ]);
+    await expect(popup.locator("[data-staff-session-lock]")).toHaveCount(0);
+    const pdf = await popup.pdf({ format: "Letter", preferCSSPageSize: true });
+    // Every section starts its own sheet; a long section may continue on more.
+    const sheets = pdf.toString("latin1").match(/\/Type \/Page\b/g) ?? [];
+    expect(sheets.length).toBeGreaterThanOrEqual(sectionPages.length);
     await popup.emulateMedia({ media: "screen" });
 
     // **No element id is emitted twice.** The manifest and prep pages carry

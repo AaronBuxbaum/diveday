@@ -5,7 +5,7 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
@@ -35,6 +35,7 @@ import { staffWeek } from "@/lib/staffing-week";
 import { resolveWeekStart, shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
+import { CrewPageHeader } from "./_components/CrewPageHeader";
 import { staffingGapWords } from "./_components/gap-words";
 import { StaffingWarnings } from "./_components/StaffingWarnings";
 import { StaffingWeek, weekTailRowClass } from "./_components/StaffingWeek";
@@ -264,14 +265,13 @@ export default async function StaffingPage({
   const saveCrewConsent = saveCrewPublicConsentAction.bind(null, weekStart);
   const deleteAway = deleteAwayAction.bind(null, weekStart);
   return (
-    <StaffPage width="full">
+    <StaffPage width="full" className="staffing-print-rota">
       {/* `week` is a reading of the page and stays in the URL; the rest is
           one-shot chrome, including the retired `from`/`to` an old bookmark
           may still carry. */}
       <FlashParams params={["from", "to", "notice"]} />
-      {/* The Crew view of Schedule (ADR 20261001-logbook): the section's name,
-          then the two views, carrying the week across. */}
-      <ShopPageHeader title={t("schedule.boardTitle")} />
+      {/* Schedule's Crew view (ADR 20261001-logbook) carries the week across. */}
+      <CrewPageHeader shopName={shop.name} t={t} />
       <ScheduleViews
         shopSlug={shopSlug}
         crewSchedule
@@ -285,7 +285,7 @@ export default async function StaffingPage({
       />
 
       {pageNotice ? (
-        <div className="mb-6">
+        <div className="mb-6 print:hidden">
           <ShopNotice tone={pageNotice.tone} role={noticeRole(pageNotice.tone)}>
             {t(pageNotice.key)}
           </ShopNotice>
@@ -324,6 +324,7 @@ export default async function StaffingPage({
             locale={locale}
             timeZone={shop.timezone}
             shopSlug={shopSlug}
+            shopName={shop.name}
             canManage={canManage}
             canDecide={canManage}
             deleteShiftAction={deleteShift}
@@ -333,7 +334,6 @@ export default async function StaffingPage({
               rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
               previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}`,
               nextHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, 1)}`,
-              // Absent while it would only reload the week already on screen.
               thisWeekHref: weekStart === weekStartOf(today) ? null : staffingPath,
             }}
             words={staffingWeekWords(t, week)}

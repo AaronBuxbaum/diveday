@@ -19,9 +19,8 @@ export function OfflineTripHeader({
   view: OfflineTripView;
   controls: OfflineTripControls;
 }) {
-  const { envelope, manifest, expired, freshness, pending, rejected, dateTime } = view;
+  const { manifest, expired, freshness, pending, rejected, savedAtHeader } = view;
   const { t, message, servedWithoutAnswer, liveOffer } = controls;
-  const savedAt = dateTime.format(new Date(envelope.snapshot.savedAt));
   const chip = offlineHeaderChip({ online: useOnline(), servedWithoutAnswer, freshness });
   return (
     <div className="border-b border-border pb-6">
@@ -30,7 +29,7 @@ export function OfflineTripHeader({
         printActions
         eyebrow={t("shared.offlineManifest.single.eyebrow")}
         title={manifest.trip.title}
-        description={t("shared.offlineManifest.single.savedAt", { when: savedAt })}
+        description={t("shared.offlineManifest.single.savedAt", { when: savedAtHeader })}
         actions={
           // One chip (B51): see `offlineHeaderChip`.
           chip.kind === "connectivity" ? (

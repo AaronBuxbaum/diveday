@@ -71,7 +71,7 @@ customer_gear_reminder_settings.csv 0 rows ac01efb17a4f0e71 [id,customer_gear_it
 tips.csv 355 rows 7c73cfc643d464fc [id,booking_id,person_id,person_name,status,currency,amount_cents,stripe_session_id,expires_at,completed_at,created_at]
 dive_sites.csv 8 rows c15e8d77c4e09732 [id,name,location_name,description,difficulty_level,snorkel_suitable,depth_range,depth_min_meters,max_depth_meters,expected_bottom_time_minutes,current_note,dive_plan,conservation_note,fit_tone,fit_note,field_guide_tips_heading,marine_life,marine_life_description,landmarks,minimum_certification_level,required_specialties,requires_nitrox,forecast_latitude,forecast_longitude,tide_station_id,tide_station_confirmed,tide_preference,satellite_image_url,route_image_url,route_points,route_label,route_note,route_zoom,image_urls,planning_note,planning_note_at,planning_note_by_person_id,deleted_at,created_at]
 dive_site_creatures.csv 29 rows ffbcca1df4b48b66 [id,dive_site_id,dive_site_name,position,name,kind,description,preparation_tip,image_url,catalog_slug]
-recap_photos.csv 2 rows b69824ddc79d7002 [id,booking_id,trip_id,image_url,caption,shared_with_boat_at,created_at]
+recap_photos.csv 3 rows 7b30f27fc9e891c6 [id,booking_id,trip_id,image_url,caption,shared_with_boat_at,created_at]
 trip_recap_photos.csv 0 rows 39e82d2fcab675ab [id,trip_id,trip_title,image_url,uploaded_by_person_id,uploaded_by_person_name,created_at]
 trip_reviews.csv 91 rows 793163dd9a19d866 [id,booking_id,trip_id,person_id,diver_name,rating,comment,is_standout,is_published,published_at,created_at,updated_at,shop_reply]
 recap_pulses.csv 0 rows 0fc571ac232bdb30 [id,booking_id,trip_id,person_id,diver_name,categories,note,addressed_at,addressed_by_person_id,deleted_at,created_at,updated_at]

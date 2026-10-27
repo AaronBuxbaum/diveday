@@ -472,6 +472,15 @@ jobs:
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
             pnpm exec playwright install chromium
           fi
+          # Saved-record print assertions inspect actual PDF text. Only the
+          # shard assigned that spec needs Poppler; the visual and fast-lane
+          # jobs install it separately when their selections require it.
+          if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/staff-saved-print.spec.ts'; then
+            if ! command -v pdftotext >/dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends poppler-utils
+            fi
+          fi
           status=0
           pnpm exec playwright test "${spec_files[@]}" 2>&1 | tee shard.log || status=$?
           if [ "$status" -eq 0 ]; then
@@ -667,6 +676,18 @@ jobs:
         run: pnpm build:sw
       - if: steps.plan.outputs.run == 'true'
         uses: ./.github/actions/playwright-shell
+      # Crew captures and saved-record specs inspect actual PDF pages.
+      - name: Install PDF rendering tools
+        if: ${{ !cancelled() && (steps.plan.outputs.captures == 'true' || steps.plan.outputs.specs == 'true') }}
+        timeout-minutes: 5
+        run: |
+          if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
+             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/staff-saved-print[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
+            if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends poppler-utils
+            fi
+          fi
       - name: Run the fast lane's specs
         if: steps.plan.outputs.specs == 'true'
         run: |
@@ -772,17 +793,9 @@ jobs:
     name: Visual capture shard ${{ matrix.shard }}/${{ needs.visual-plan.outputs.count }}
     needs: [build, visual-plan]
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
-    # Eight shards, one worker each — not four shards at two workers. Four
-    # shards at one worker made this the run's critical path: 554, 619, 913
-    # and 855 seconds on a green run (2026-10), of which an estimated 1.5-2
-    # minutes a shard is fixed cost (checkout, setup, artifact download,
-    # `build:sw`, the browser, one `next start`). Both levers halve the capture time per
-    # shard; only this one does it without putting a second browser and a
-    # second `next start` beside the first on the same runner, which is the
-    # oversubscription the playwright job above accepts knowingly and this
-    # suite — pixels, with a renderer-wedge probe that already earns one
-    # rerun — should not. Expected: the slowest shard ~8-8.5 minutes instead
-    # of ~15, for four more runners' fixed cost (~8 runner minutes) per run.
+    # Eight shards on main, two workers each. The first two-worker trial was
+    # faster but not byte-identical; the owner chose to accept that initial
+    # visual noise in #3056. Captures still surface real differences for review.
     #
     # Dealt by test, not by Playwright's index `--shard`: there is one spec
     # file, `fullyParallel` makes every test its own group, and nothing in it
@@ -815,8 +828,15 @@ jobs:
       # would silently bake "no service worker" into the visual baseline.
       - run: pnpm build:sw
       - uses: ./.github/actions/playwright-shell
-      # Only captures screenshots into e2e/screenshots — nothing here asserts,
-      # so a visual change never fails this step. The reg-suit compare against
+      - name: Install PDF rendering tools
+        timeout-minutes: 5
+        run: |
+          if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends poppler-utils
+          fi
+      # Capture screenshots into e2e/screenshots; state and paper-integrity
+      # assertions can fail this step. The reg-suit compare against
       # the S3 baseline runs once, in visual-report below, over every shard's
       # screenshots merged back together; reg-suit has no shard-aware mode of
       # its own to run per shard.
@@ -895,19 +915,7 @@ jobs:
         env:
           # A push or dispatched run of main: the runs that publish the baseline.
           ON_MAIN: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-          # Each shard is its own runner, and pinning to 1 worker keeps that
-          # shard's one browser+server pair from competing with a second for
-          # the runner's cores; the job's own comment above is why the speed
-          # comes from more shards instead. NOT the fix for the recurring 45s timeout on the
-          # /recap/[token] capture in visual-recap.spec.ts's long public-surfaces
-          # test, though it was tried as one first: that timeout reproduced
-          # identically with 2 workers and with 1 (3/3 CI runs, always the
-          # same assertion), ruling out worker contention as the cause. The
-          # actual fix is the test's own raised `test.setTimeout` (see the
-          # comment there) — cacheComponents' aggregate render cost across
-          # that test's sequential captures, not something this env var
-          # addresses.
-          E2E_WORKERS: "1"
+          E2E_WORKERS: "2"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -1604,8 +1612,8 @@ jobs:
   # The one check main's ruleset requires. A required check names a job, and
   # most jobs here are skipped on a docs-only change or split into shards whose
   # names move with the shard count, so none of them can be the required one.
-  # This job needs all of them and fails if any failed or was cancelled; a
-  # skipped job is a passed one, because `changes` decided it had nothing to do.
+  # This job needs all of them and fails on a missing, failed, cancelled, or
+  # unexpectedly skipped lane, using the change detector to identify required work.
   ci-result:
     name: CI result
     if: always() && github.event_name != 'schedule'
@@ -1648,12 +1656,7 @@ jobs:
       - name: Evidence artifact
         if: always()
         run: echo 'Download ci-result-${{ github.run_attempt }} for job failures, annotations, reproduction commands and artifact links.' >> "$GITHUB_STEP_SUMMARY"
-      - name: Every job passed or was skipped
+      - name: Every required job passed
         env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
-        run: |
-          echo "$RESULTS"
-          if echo "$RESULTS" | grep -qE '"(failure|cancelled)"'; then
-            echo "::error::A CI job failed or was cancelled."
-            exit 1
-          fi
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci-merge-verdict.mjs

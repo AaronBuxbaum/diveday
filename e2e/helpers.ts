@@ -482,7 +482,7 @@ export async function createTrip(
   // across ~30 specs, and the disclosed form is the superset — a spec that later
   // wants a deposit or a cancellation window must not have to know which depth
   // the helper happened to open.
-  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board?add=full`);
+  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/schedule/board/new?add=full`);
   if (options.course !== undefined) {
     // By name, not label: board rows carry aria-labels naming their departure,
     // which a label match would sweep up alongside the panel's own select.
@@ -700,21 +700,24 @@ async function walkBoardWeeksFor(page: Page, title: string | RegExp): Promise<Lo
   // `aria-label` is copy, so `getByRole("region", { name: "Schedule builder" })`
   // waits forever on a Spanish run — which is how three visual captures went
   // red the first time this crawl was shared with `openTripFromBoard`.
-  await page.locator("[data-schedule-builder]").waitFor();
+  // Activity retains the creation page's builder after returning to the board.
+  // Only the visible builder and week belong to the route being searched.
+  await page.locator("[data-schedule-builder]").filter({ visible: true }).waitFor();
+  const board = page.locator("[data-week-board]").filter({ visible: true });
   for (let hops = 0; hops < MAX_WEEK_HOPS; hops++) {
-    const link = page.locator("[data-week-board]").getByRole("link", { name: title, exact: true });
+    const link = board.getByRole("link", { name: title, exact: true });
     if ((await link.count()) > 0) return link.first();
     // The step's own copy-free hook, not "a link with a week in its href": the
     // pager renders three of those — previous, next, and the way home — and a
     // positional pick among them is one reorder away from walking backwards
     // forever. A navigation rather than a click, so a step that has scrolled
     // out of view on a tall week is still followable.
-    const next = page.locator('[data-week-board] a[data-week-step="next"]');
+    const next = board.locator('a[data-week-step="next"]');
     if ((await next.count()) === 0) break;
     const nextHref = await next.getAttribute("href");
     if (!nextHref) break;
     await page.goto(nextHref);
-    await page.locator("[data-schedule-builder]").waitFor();
+    await page.locator("[data-schedule-builder]").filter({ visible: true }).waitFor();
   }
   throw new Error(`trip "${title}" not found on the schedule board after paging`);
 }
@@ -833,15 +836,26 @@ export async function seededTripId(
  * opens the row first. A row that is already open — a save redirects back
  * with `?saved=<section>`, which re-renders it open — is left alone.
  */
+/** Open the same settings rail at any viewport width. */
+export async function openSettingsRail(page: Page): Promise<Locator> {
+  const rail = page.getByRole("navigation", { name: "Settings sections" });
+  await expect(rail).toBeVisible();
+  const toggle = rail.getByRole("button", { name: "Settings sections" });
+  if (await toggle.isVisible()) {
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  }
+  return rail;
+}
+
 export async function openSettingsRow(page: Page, heading: string) {
+  const rail = await openSettingsRail(page);
+  await rail.getByRole("link", { name: heading, exact: true }).click();
   const details = page
     .locator("details")
     .filter({ has: page.getByRole("heading", { level: 3, name: heading, exact: true }) })
     .first();
-  const isOpen = await details.evaluate((node) => node.hasAttribute("open"));
-  // `> summary` for the same reason as `openIfClosed` below: a settings row can
-  // hold its own nested disclosures, and only a direct summary opens this one.
-  if (!isOpen) await details.locator("> summary").click();
+  await expect(details).toBeVisible();
+  await expect(details).toHaveAttribute("open", "");
 }
 
 /**

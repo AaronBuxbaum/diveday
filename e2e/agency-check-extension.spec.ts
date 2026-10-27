@@ -480,7 +480,7 @@ test("DiveDay sees the installed extension, and settings says this browser has i
 }) => {
   test.setTimeout(30_000);
   expect(extensionId).toMatch(/^[a-p]{32}$/);
-  await page.goto(`/shop/${SHOP}/settings`);
+  await page.goto(`/shop/${SHOP}/settings#cert-check`);
   await expect(page.locator("html")).toHaveAttribute("data-diveday-cert-check", extensionVersion);
   const row = page
     .locator("details")
@@ -703,14 +703,14 @@ test("Try the checks runs every sample lookup in the extension, reads PADI's tab
 }) => {
   test.setTimeout(90_000);
   void extensionId;
-  await page.goto(`/shop/${SHOP}/settings`);
+  await page.goto(`/shop/${SHOP}/settings#cert-check`);
   const row = page
     .locator("details")
     .filter({ has: page.getByRole("heading", { name: "Card checks", exact: true }) });
-  await row.getByRole("heading", { name: "Card checks", exact: true }).click();
+  await expect(row).toHaveAttribute("open", "");
   // A disclosure on the row, not a page of its own (#2817).
   await row.getByText("Try the checks", { exact: true }).click();
-  await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
+  await expect(page).toHaveURL(`/shop/${SHOP}/settings#cert-check`);
   await expect(row.getByRole("button", { name: "Run the checks" })).toBeVisible();
   await expect(
     row.getByText(`Added to this browser (${extensionVersion})`, { exact: true }).first(),

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ThreadShell } from "@/components/thread/ThreadShell";
+import type { ReadyPageData } from "@/db/ready";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -96,7 +97,7 @@ function MastheadDoors({ facts, t }: { facts: MastheadFacts; t: DiverTranslator 
       {/* What this page *is*, said once, at the top. Divers arrive here from a
           booking submit or an emailed link, and both read as a confirmation, a
           thing you look at once and close. This one is the same URL all week. */}
-      <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
+      <p className="mt-3 text-sm text-muted print:hidden">{t("ready.keepThisPage")}</p>
     </>
   );
 }
@@ -110,15 +111,18 @@ export function ReadyMastheadMeta({
   locale,
   now,
   t,
+  dateActions,
 }: {
   facts: MastheadFacts;
   locale: string;
   now: Date;
   t: DiverTranslator;
+  dateActions?: ReactNode;
 }) {
   return (
     <>
       <MastheadWhen facts={facts} locale={locale} now={now} />
+      {dateActions}
       {/* The one number that matters on the morning of the trip, a shade
           stronger than the date line, never shouting. "Today" is said once,
           on the date line (visual review 2026-10-24, B24); "Today’s the
@@ -152,6 +156,7 @@ export function ReadyBookedHeader({
   locale,
   now,
   t,
+  dateActions,
   children,
 }: {
   facts: MastheadFacts;
@@ -165,6 +170,7 @@ export function ReadyBookedHeader({
   locale: string;
   now: Date;
   t: DiverTranslator;
+  dateActions?: ReactNode;
   /** Anything that belongs under the card and above the thread. */
   children?: ReactNode;
 }) {
@@ -178,6 +184,7 @@ export function ReadyBookedHeader({
       >
         <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
         <BookedWhen facts={facts} locale={locale} now={now} />
+        {dateActions}
         <p className="mt-1 font-medium text-foreground">{mastheadArrivalLine(facts, locale, t)}</p>
         {milestone ? (
           <p className="mt-1">
@@ -249,10 +256,12 @@ function BookedWhen({ facts, locale, now }: { facts: MastheadFacts; locale: stri
 export function ReadyBookedPage({
   card,
   locale,
+  dateActions,
   children,
 }: {
   card: MastheadFacts & { greetingName: string; milestone?: DiveDayMilestone | null };
   locale: DiverLocale;
+  dateActions?: ReactNode;
   children: ReactNode;
 }) {
   const t = diverTranslator(locale);
@@ -271,8 +280,72 @@ export function ReadyBookedPage({
             locale={locale}
             now={nowDate()}
             t={t}
+            dateActions={dateActions}
           />
         }
+      >
+        {children}
+      </ThreadShell>
+    </DiverIntlProvider>
+  );
+}
+
+/** The full thread and narrow booked card use the same masthead facts. */
+export function ReadyThreadMasthead({
+  data,
+  locale,
+  t,
+  dateActions,
+}: {
+  data: ReadyPageData;
+  locale: string;
+  t: DiverTranslator;
+  dateActions?: ReactNode;
+}) {
+  return (
+    <ReadyMastheadMeta
+      facts={{
+        shop: {
+          name: data.detail.shop.name,
+          slug: data.shop.slug,
+          timezone: data.detail.shop.timezone,
+          dockCallMinutes: data.shop.dockCallMinutes,
+        },
+        trip: data.detail.trip,
+        pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
+      }}
+      locale={locale}
+      now={nowDate()}
+      t={t}
+      dateActions={dateActions}
+    />
+  );
+}
+
+/** Keep every client thread child under the same provider as the booked opening. */
+export function ReadyThreadPage({
+  data,
+  locale,
+  t,
+  dateActions,
+  children,
+}: {
+  data: ReadyPageData;
+  locale: DiverLocale;
+  t: DiverTranslator;
+  dateActions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <DiverIntlProvider
+      locale={locale}
+      timeZone={data.detail.shop.timezone}
+      namespaces={["rental", "common", "trip"]}
+    >
+      <ThreadShell
+        shopName={data.detail.shop.name}
+        title={data.detail.trip.title}
+        meta={<ReadyThreadMasthead data={data} locale={locale} t={t} dateActions={dateActions} />}
       >
         {children}
       </ThreadShell>

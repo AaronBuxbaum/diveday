@@ -29,7 +29,8 @@
   "publish": "Publicar",
   "saving": "Guardando…",
   "pagination": {
-    "total": "{count, plural, one {# reseña que has respondido} other {# reseñas que has respondido}}"
+    "total": "{count, plural, one {# reseña que has respondido} other {# reseñas que has respondido}}",
+    "paperSubset": "{total, plural, one {{shown} de # reseña respondida en esta lista} other {{shown} de # reseñas respondidas en esta lista}}"
   },
   "hideConfirm": "Ocultar esta reseña",
   "hideReasonLabel": "¿Por qué la retiras?",

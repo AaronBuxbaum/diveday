@@ -13,6 +13,7 @@ import {
   shortHash,
   takesFocus,
 } from "./analyze.mjs";
+import { atlasRunDirectory, claimAtlasSignature } from "./atlas.mjs";
 import { collectGeometry } from "./collect.mjs";
 import { cropRegion, loadRaw, writeClipShot, writeCrop } from "./crop.mjs";
 import { settlementContextFor } from "./settlements.mjs";
@@ -168,11 +169,14 @@ function relative(file) {
  * @param {boolean} [ctx.exhaustiveAudit] opt-in states were registered for this run
  * @param {boolean} [ctx.initialPaintAudit] actual SSR fallback captures were enabled
  * @param {Set<string>} ctx.atlasSeen signatures already photographed by this process
+ * @param {string} ctx.atlasRun the shared id of this capture run
+ * @param {string} [ctx.outDir] isolated output directory for probe verification
  * @param {Function} ctx.bound `(what, ms, work, degraded) => Promise`
  * @param {object} ctx.budgets `{ collectMs, callMs, statesMs, ringsMs, shotMs }`
  */
 export async function probeViewport(page, ctx) {
   const started = Date.now();
+  const outDir = ctx.outDir ?? OUT_DIR;
   const name = safeName(ctx.capture);
   const stem = `${name}-${ctx.sweep ? "sweep-" : ""}vw-${ctx.width}`;
   const record = {
@@ -196,7 +200,7 @@ export async function probeViewport(page, ctx) {
     counts: {},
     dropped: {},
   };
-  const capturesDir = ensureDir(path.join(OUT_DIR, "captures"));
+  const capturesDir = ensureDir(path.join(outDir, "captures"));
   try {
     const snapshot = await ctx.bound(
       "pixel probe (not the screenshot): collecting geometry",
@@ -216,8 +220,9 @@ export async function probeViewport(page, ctx) {
       width: Math.max(snapshot.doc.width, snapshot.viewport.width),
       height: snapshot.doc.height,
     };
-    const cropsDir = ensureDir(path.join(OUT_DIR, "crops", name));
-    const atlasDir = ensureDir(path.join(OUT_DIR, "atlas"));
+    const cropsDir = ensureDir(path.join(outDir, "crops", name));
+    const atlasRoot = ensureDir(path.join(outDir, "atlas"));
+    const atlasDir = ensureDir(atlasRunDirectory(atlasRoot, ctx.atlasRun));
     const rings = new Map();
     const stateFlags = [];
     const shots = { state: 0, atlas: 0, stateDropped: 0, atlasDropped: 0 };
@@ -251,16 +256,15 @@ export async function probeViewport(page, ctx) {
           stateFlags.push(flag);
         }
         const hash = shortHash(meta.sig);
-        const firstSighting =
-          !ctx.atlasSeen.has(`${hash}-${state}`) &&
-          !fs.existsSync(path.join(atlasDir, `${hash}-${state}.png`));
-        if (firstSighting) {
-          if (shots.atlas < LIMITS.atlasShots) {
+        if (!ctx.atlasSeen.has(`${hash}-${state}`)) {
+          if (shots.atlas >= LIMITS.atlasShots) {
+            shots.atlasDropped += 1;
+          } else if (claimAtlasSignature(atlasRoot, ctx.atlasRun, hash, ctx.atlasSeen)) {
             shots.atlas += 1;
-            ctx.atlasSeen.add(`${hash}-${state}`);
             const around = atlasRegion(meta, rest.rect);
             const taken = await clipShot(page, ctx, around, 0, docSize);
             if (taken) {
+              ctx.atlasSeen.add(`${hash}-${state}`);
               await writeClipShot(
                 taken.buffer,
                 taken.clip,
@@ -271,7 +275,7 @@ export async function probeViewport(page, ctx) {
                 atlasHere.push({ hash, meta, rect: around, label: meta.label });
               }
             }
-          } else shots.atlasDropped += 1;
+          }
         }
       };
       const pass = await statePass(page, {
@@ -336,25 +340,24 @@ export async function probeViewport(page, ctx) {
         const file = path.join(atlasDir, `${entry.hash}-rest.png`);
         // Margin 0: the region already carries its context, and the rest
         // third must frame exactly what the forced hover and focus shots did.
-        if (!fs.existsSync(file)) await writeCrop(raw, entry.rect, [], file, 0);
+        await writeCrop(raw, entry.rect, [], file, 0);
         const meta = path.join(atlasDir, `${entry.hash}.json`);
-        if (!fs.existsSync(meta)) {
-          fs.writeFileSync(
-            meta,
-            `${JSON.stringify(
-              {
-                sig: entry.meta.sig,
-                csig: entry.meta.csig,
-                cls: entry.meta.cls,
-                label: entry.label,
-                capture: ctx.capture,
-                url: snapshot.path,
-              },
-              null,
-              1,
-            )}\n`,
-          );
-        }
+        fs.writeFileSync(
+          meta,
+          `${JSON.stringify(
+            {
+              sig: entry.meta.sig,
+              csig: entry.meta.csig,
+              cls: entry.meta.cls,
+              label: entry.label,
+              rect: entry.rect,
+              capture: ctx.capture,
+              url: snapshot.path,
+            },
+            null,
+            1,
+          )}\n`,
+        );
       }
     }
     record.dropped.stateShots = shots.stateDropped;

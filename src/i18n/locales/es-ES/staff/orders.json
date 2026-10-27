@@ -205,7 +205,8 @@
       "amount": "Importe"
     },
     "pagination": {
-      "total": "{count, plural, one {# movimiento} other {# movimientos}}"
+      "total": "{count, plural, one {# movimiento} other {# movimientos}}",
+      "paperSubset": "{total, plural, one {{shown} de # pedido en esta lista} other {{shown} de # pedidos en esta lista}}"
     },
     "importedHistory": {
       "sectionLabel": "Historial de pagos importado",
@@ -226,7 +227,8 @@
       "stripeReference": "Referencia de Stripe: {reference}",
       "amountNotProvided": "Importe no indicado",
       "pagination": {
-        "total": "{count, plural, one {# registro importado del origen} other {# registros importados del origen}}"
+        "total": "{count, plural, one {# registro importado del origen} other {# registros importados del origen}}",
+        "paperSubset": "{total, plural, one {{shown} de # registro importado en esta lista} other {{shown} de # registros importados en esta lista}}"
       }
     },
     "paymentOps": {

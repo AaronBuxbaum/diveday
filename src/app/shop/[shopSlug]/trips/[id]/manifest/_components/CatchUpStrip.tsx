@@ -43,6 +43,7 @@ export function CatchUpStrip({
   sentences,
   dismissLabel,
   dismissAction,
+  dismissSize = "sm",
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
@@ -52,6 +53,8 @@ export function CatchUpStrip({
   sentences: readonly string[];
   dismissLabel: string;
   dismissAction: () => Promise<void>;
+  /** Today uses the standard body-sized label; the manifest keeps its compact inset. */
+  dismissSize?: "sm" | "md";
 }) {
   if (sentences.length === 0) return null;
   return (
@@ -79,9 +82,9 @@ export function CatchUpStrip({
             pendingLabel={dismissLabel}
             className={buttonClass({
               variant: "link",
-              size: "sm",
+              size: dismissSize,
               flush: "padded",
-              className: "-my-2.5",
+              className: dismissSize === "md" ? "-my-3" : "-my-2.5",
             })}
           >
             {dismissLabel}

@@ -6,12 +6,20 @@ description: >
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
     - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         # Build evidence includes the exact runtime. A major selector accepts
         # different cached patches on different runners, breaking artifact reuse.
         # Source of truth: CI_NODE_VERSION in scripts/check-node-version.mjs.
+        node-version: 24.22.0
+    # The pinned pnpm installer alone retries classified registry failures. It
+    # keeps each attempt's output, and never wraps dependency install or tests.
+    - run: |
+        node scripts/bootstrap-pnpm.mjs
+        echo "$RUNNER_TEMP/diveday-pnpm/bin" >> "$GITHUB_PATH"
+      shell: bash
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
         node-version: 24.22.0
         # GitHub-hosted runners start empty, so they restore the pnpm store
         # from the Actions cache. The Mac's runners keep theirs on a shared

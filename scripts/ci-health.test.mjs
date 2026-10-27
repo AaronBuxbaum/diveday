@@ -4,15 +4,18 @@ import { findIssueProblems } from "./check-follow-ups.mjs";
 import {
   breaches,
   computeHealth,
+  ghJson,
   ISSUE_TITLE,
   issueBody,
   jobKind,
   namedTests,
   percentile,
+  readRunJobs,
   readWeek,
   reconcileIssue,
   renderTable,
   runMinutes,
+  TransientGitHubError,
 } from "./ci-health.mjs";
 
 let ids = 0;
@@ -79,6 +82,79 @@ const WEEK = [
   // Cancelled runs are no verdict, and a pull request with none has no CI.
   { number: 4, runs: [{ ...run("d1", "success"), conclusion: "cancelled" }] },
 ];
+
+describe("GitHub API reads", () => {
+  it("falls back to complete small pages only when a large jobs page repeatedly fails upstream", () => {
+    const calls = [];
+    const gh = (endpoint) => {
+      calls.push(endpoint);
+      if (endpoint.endsWith("per_page=100")) throw new TransientGitHubError("HTTP 502");
+      return endpoint.endsWith("page=1") ? [1, 2, 3, 4, 5] : [6, 7];
+    };
+    expect(readRunJobs(gh, "owner/repo", 42)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(calls).toHaveLength(3);
+    expect(calls[1]).toContain("per_page=5&page=1");
+    expect(() =>
+      readRunJobs(
+        () => {
+          throw new Error("HTTP 403");
+        },
+        "owner/repo",
+        42,
+      ),
+    ).toThrow("HTTP 403");
+    expect(() =>
+      readRunJobs(
+        (endpoint) => {
+          if (endpoint.endsWith("per_page=100")) throw new TransientGitHubError("HTTP 502");
+          throw new Error("page failed");
+        },
+        "owner/repo",
+        42,
+      ),
+    ).toThrow("page failed");
+  });
+
+  it("retries a transient gateway error and returns the successful response", () => {
+    const responses = [
+      { status: 1, stderr: "gh: Server Error (HTTP 502)" },
+      { status: 1, stderr: "gh: Server Error (HTTP 503)" },
+      { status: 0, stdout: '{"ok":true}' },
+    ];
+    const delays = [];
+    expect(
+      ghJson("repos/example", undefined, {
+        run: () => responses.shift(),
+        sleep: (ms) => delays.push(ms),
+      }),
+    ).toEqual({ ok: true });
+    expect(delays).toEqual([250, 500]);
+    expect(responses).toHaveLength(0);
+  });
+
+  it("stops after three transient failures and does not retry a client error", () => {
+    let calls = 0;
+    const fail = (stderr) => () => {
+      calls += 1;
+      return { status: 1, stderr };
+    };
+    expect(() =>
+      ghJson("repos/example", undefined, {
+        run: fail("gh: Server Error (HTTP 504)"),
+        sleep: () => {},
+      }),
+    ).toThrow("HTTP 504");
+    expect(calls).toBe(3);
+    calls = 0;
+    expect(() =>
+      ghJson("repos/example", undefined, {
+        run: fail("gh: Not Found (HTTP 404)"),
+        sleep: () => {},
+      }),
+    ).toThrow("HTTP 404");
+    expect(calls).toBe(1);
+  });
+});
 
 describe("computeHealth", () => {
   const health = computeHealth(WEEK);

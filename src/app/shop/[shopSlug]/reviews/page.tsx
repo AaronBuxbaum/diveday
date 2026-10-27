@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
-import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -31,6 +30,7 @@ import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { StaffListPagination } from "../_components/StaffListPagination";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import {
   type BulkPublishCopy,
@@ -418,12 +418,12 @@ export default async function ReviewsPage({
         )}
       </div>
 
-      <Pager
-        page={moderatedPage.page}
-        pageCount={moderatedPage.pageCount}
+      <StaffListPagination
+        t={t}
+        scope={{ key: "reviews.pagination.paperSubset", shown: moderatedPage.reviews.length }}
+        pagination={moderatedPage}
         href={pageHref}
-        total={t("reviews.pagination.total", { count: moderatedPage.total })}
-        words={staffPagerWords(t)}
+        totalLabel={t("reviews.pagination.total", { count: moderatedPage.total })}
       />
     </StaffPage>
   );

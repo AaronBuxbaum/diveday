@@ -15,7 +15,7 @@ bottom-up and atomically, and retargets what is left onto `main`
 **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
 newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
 the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap** (AGENTS.md's
-*Parallel work*). Pixels and depth are not exceptions. Only two cases go on their own branch off
+*Parallel work*). Push a batch in rounds of about 150 changed files at most, each green before the next; a fix push carries only the fix (#2934). Pixels and depth are not exceptions. Only two cases go on their own branch off
 `main`: **no stack is open** (`git fetch origin main` first, every time), or **a fix that must
 merge now**. After merging a layer up, run **`pnpm regen`** and commit what it changed before you
 push. **Merge the layer below once its CI is green**, not while it is red: a red layer merged up is

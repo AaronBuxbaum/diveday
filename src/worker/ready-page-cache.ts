@@ -213,6 +213,14 @@ async function forgottenSince(
   return Number.isFinite(at) && marker !== undefined && at >= requestedAt;
 }
 
+// Only publication is serialized; a slow asset fetch never blocks a newer save.
+let readyPublication: Promise<unknown> = Promise.resolve();
+function publishReadyCopy(write: () => Promise<boolean>): Promise<boolean> {
+  const next = readyPublication.then(write, write);
+  readyPublication = next.catch(() => {});
+  return next;
+}
+
 /**
  * Keep `response` as the one copy for `path`, replacing whatever was kept.
  * Reads the body (pass a clone). Returns whether it was kept; a page that
@@ -227,6 +235,9 @@ export async function saveReadyPage(
   response: Response,
   now: number,
   requestedAt: number = now,
+  prepareAssets?: (html: string) => Promise<void>,
+  mayPublish: () => boolean = () => true,
+  observationTime: () => number = () => now,
 ): Promise<boolean> {
   if (!storable(response)) return false;
   // A body of its own, so the copy is complete before anything is replaced.
@@ -234,8 +245,13 @@ export async function saveReadyPage(
   const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
   const cache = await storage.open(READY_CACHE_NAME);
   if (!Number.isFinite(named) || named <= now) {
-    await clearCopies(cache);
-    return false;
+    return publishReadyCopy(async () => {
+      // Observed terminal truth always forgets this path, including an older
+      // response. Only the current request may clear another path's copy.
+      await forgetReadyPage(storage, path, observationTime());
+      if (mayPublish()) await clearCopies(cache);
+      return false;
+    });
   }
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
@@ -261,18 +277,24 @@ export async function saveReadyPage(
       headers,
     },
   );
-  // Replace, then sweep: an offline reload landing mid-save (two saves overlap,
-  // the navigation's and the page's keep request) still finds a copy.
-  await cache.put(READY_COPY_KEY, copy);
-  // A forget that landed while this was storing: the copy just put down is
-  // the pre-cancel page, so it goes again (it is this path's, by the hash).
-  if (await forgottenSince(storage, hash, requestedAt)) {
-    const kept = await cache.match(READY_COPY_KEY);
-    if (kept?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
-    return false;
-  }
-  await clearCopies(cache, READY_COPY_KEY);
-  return true;
+  // Publish the document only after its required static assets are stored.
+  // Failure leaves the previous complete copy available, never a partial new one.
+  await prepareAssets?.(html);
+  return publishReadyCopy(async () => {
+    if (await forgottenSince(storage, hash, requestedAt)) return false;
+    if (!mayPublish()) return false;
+    await cache.put(READY_COPY_KEY, copy);
+    // Forgetting invalidates the copy even during its write. A newer request
+    // alone leaves this complete copy until its prepared replacement publishes.
+    // The queue keeps this cleanup ahead of any newer publication.
+    if (await forgottenSince(storage, hash, requestedAt)) {
+      const kept = await cache.match(READY_COPY_KEY);
+      if (kept?.headers.get(PATH_HASH_HEADER) === hash) await cache.delete(READY_COPY_KEY);
+      return false;
+    }
+    await clearCopies(cache, READY_COPY_KEY);
+    return mayPublish();
+  });
 }
 
 /** The kept copy for `path`, if there is one and it is still in date. */

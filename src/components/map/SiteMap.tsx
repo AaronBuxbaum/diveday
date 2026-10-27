@@ -581,7 +581,7 @@ function keepOverviewFitted(
     if (coordinates.length === 1) {
       map.setView(coordinates[0], Math.min(map.getZoom(), zoom), { animate: false });
     } else {
-      map.fitBounds(coordinates, { padding: [68, 68], maxZoom: 11, animate: false });
+      map.fitBounds(coordinates, { padding: [68, 68], animate: false });
     }
     lastFit.current = {
       map,

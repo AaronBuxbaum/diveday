@@ -3,6 +3,7 @@ import {
   bigint,
   bigserial,
   check,
+  foreignKey,
   index,
   jsonb,
   pgEnum,
@@ -388,6 +389,7 @@ export const heldSends = pgTable(
  */
 export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
   "arrival",
+  "running_late",
   "seat_taken",
   "seat_released",
   "gear_changed",
@@ -456,6 +458,7 @@ export const tripDeskEvents = pgTable(
     index("trip_desk_events_actor_person_id_idx").on(table.actorPersonId),
     index("trip_desk_events_shop_trip_idx").on(table.shopId, table.tripId, table.seq),
     index("trip_desk_events_occurred_idx").on(table.occurredAt),
+    uniqueIndex("trip_desk_events_shop_id_id_unique").on(table.shopId, table.id),
   ],
 );
 
@@ -490,5 +493,62 @@ export const tripReadMarks = pgTable(
   (table) => [
     uniqueIndex("trip_read_marks_trip_person_unique").on(table.tripId, table.personId),
     index("trip_read_marks_shop_seen_idx").on(table.shopId, table.lastSeenAt),
+  ],
+);
+
+/** A staff member's first view and acknowledgements for a shop-local day. */
+export const todayReadMarks = pgTable(
+  "today_read_marks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    dayStart: timestamp("day_start", { withTimezone: true }).notNull(),
+    lastSeenAt: appNowTimestamp("last_seen_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("today_read_marks_shop_person_day_unique").on(
+      table.shopId,
+      table.personId,
+      table.dayStart,
+    ),
+    index("today_read_marks_person_idx").on(table.personId),
+    index("today_read_marks_seen_idx").on(table.lastSeenAt),
+    uniqueIndex("today_read_marks_shop_id_id_unique").on(table.shopId, table.id),
+  ],
+);
+
+/** Exact events seen; cascades when either the mark or an event is pruned. */
+export const todayReadMarkEvents = pgTable(
+  "today_read_mark_events",
+  {
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    markId: uuid("mark_id")
+      .notNull()
+      .references(() => todayReadMarks.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => tripDeskEvents.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    foreignKey({
+      name: "today_read_mark_events_shop_mark_fk",
+      columns: [table.shopId, table.markId],
+      foreignColumns: [todayReadMarks.shopId, todayReadMarks.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "today_read_mark_events_shop_event_fk",
+      columns: [table.shopId, table.eventId],
+      foreignColumns: [tripDeskEvents.shopId, tripDeskEvents.id],
+    }).onDelete("cascade"),
+    uniqueIndex("today_read_mark_events_unique").on(table.markId, table.eventId),
+    index("today_read_mark_events_shop_idx").on(table.shopId),
+    index("today_read_mark_events_event_idx").on(table.eventId),
   ],
 );

@@ -369,7 +369,7 @@ export default async function ReportsPage({
           <Link
             href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
             aria-label={t("reports.previousMonth")}
-            className={`${navClass} shrink-0`}
+            className={`${navClass} shrink-0 print:hidden`}
             scroll={false}
           >
             <DiveDayIcon name="arrow-left" className="size-4" />
@@ -378,7 +378,7 @@ export default async function ReportsPage({
           <span
             aria-hidden="true"
             title={t("reports.earliestMonthTitle")}
-            className={`${navDisabledClass} shrink-0`}
+            className={`${navDisabledClass} shrink-0 print:hidden`}
           >
             <DiveDayIcon name="arrow-left" className="size-4" />
           </span>
@@ -393,7 +393,7 @@ export default async function ReportsPage({
           <Link
             href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}
             aria-label={t("reports.nextMonth")}
-            className={`${navClass} shrink-0`}
+            className={`${navClass} shrink-0 print:hidden`}
             scroll={false}
           >
             <DiveDayIcon name="arrow-right" className="size-4" />
@@ -402,7 +402,7 @@ export default async function ReportsPage({
           <span
             aria-hidden="true"
             title={t("reports.currentMonthTitle")}
-            className={`${navDisabledClass} shrink-0`}
+            className={`${navDisabledClass} shrink-0 print:hidden`}
           >
             <DiveDayIcon name="arrow-right" className="size-4" />
           </span>

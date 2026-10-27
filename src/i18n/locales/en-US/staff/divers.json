@@ -209,6 +209,7 @@
     "selfRegistered": "Signed up at the counter · {date}",
     "letterOther": "#",
     "pagination": {
+      "paperSubset": "{total, plural, one {{shown} of # diver shown} other {{shown} of # divers shown}}",
       "total": "{count, plural, one {# diver} other {# divers}}"
     },
     "viewNotBack": "Not back in 12 months",

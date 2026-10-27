@@ -46,7 +46,7 @@ test("a shop confirms its contact email through the real page and action", async
   await expect(page.getByRole("heading", { name: "Address confirmed" })).toBeVisible();
 
   // And the settings row no longer flags the address.
-  await page.goto(settings);
+  await page.goto(`${settings}#contact`);
   await expect(page.getByText("frontdesk.e2e@example.com")).toBeVisible();
   await expect(page.getByText("Awaiting confirmation")).toHaveCount(0);
 });

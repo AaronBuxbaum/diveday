@@ -140,6 +140,8 @@
     "popupBlocked": "Your browser blocked the print window. Allow pop-ups, then try again."
   },
   "printPacket": {
+    "changedHeading": "Packet needs refreshing",
+    "changed": "Departure {id} changed while this packet was being prepared. No departure sheets were included. Refresh and print again.",
     "title": "Trip packet",
     "divesHeading": "Dive plan",
     "diveNumber": "Dive {number}",
@@ -153,6 +155,12 @@
     "dayEmptyTomorrow": "No departures tomorrow",
     "dayDoor": "Print the day",
     "dayDoorTomorrow": "Print tomorrow"
+  },
+  "sessionIdle": {
+    "title": "Session paused",
+    "body": "Reconnect or sign in to continue.",
+    "retry": "Try again",
+    "signIn": "Sign in"
   },
   "commandPalette": {
     "search": "Search",
@@ -379,6 +387,7 @@
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
       "emptyHint": "Open a departure’s manifest while online and it is kept here.",
+      "unansweredEmpty": "DiveDay didn’t answer.",
       "freshnessAllCurrent": "All up to date.",
       "freshnessNeedRefresh": "{count, plural, one {# copy needs refreshing.} other {# copies need refreshing.}}",
       "savedAgo": "Saved {ago}",
@@ -612,6 +621,8 @@
     "tellThem": "Tell them"
   },
   "formDraft": {
+    "editorValues": "Editor values, including unsaved changes",
+    "savedDetails": "Saved details",
     "pickedUp": "Picked up from the desk, {time}.",
     "startOver": "Start over",
     "unsavedSection": "Unsaved"

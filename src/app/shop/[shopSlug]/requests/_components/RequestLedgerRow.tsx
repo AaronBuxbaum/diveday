@@ -253,7 +253,7 @@ export function RequestLedgerRow({
                 variant: "link",
                 size: "sm",
                 flush: true,
-                className: "mt-2",
+                className: "mt-2 print:hidden",
               })}
             >
               {openDeparture.label}

@@ -11,6 +11,7 @@ import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
@@ -87,6 +88,7 @@ import { readReviewsAwaitingModeration } from "./reviews";
 import {
   boats,
   bookings,
+  courses,
   interests,
   people,
   personRoles,
@@ -569,11 +571,18 @@ export async function listRollCallGaps(
       endsAt: trips.endsAt,
       capacity: trips.capacity,
       priceCents: trips.priceCents,
+      isRehearsal: trips.isRehearsal,
+      course: {
+        title: courses.title,
+        priceCents: courses.priceCents,
+        eLearningPriceCents: courses.eLearningPriceCents,
+      },
       plannedDives: trips.plannedDives,
       alertedAt: trips.rollCallAlertedAt,
       shoreAlertedAt: trips.rollCallShoreAlertedAt,
     })
     .from(trips)
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
     .where(
       and(
         liveTrip(),
@@ -804,7 +813,7 @@ export async function listRollCallGaps(
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       capacity: trip.capacity,
-      priceCents: trip.priceCents,
+      priceCents: trip.isRehearsal ? null : perDiverBookingPriceCents(trip, trip.course),
       rosterSize: bookingIds.length,
       underway,
       stale,
@@ -1492,7 +1501,7 @@ function summarizeDepartures(
       courseTitle: trip.course?.title ?? null,
       siteName: trip.diveSite?.name ?? null,
       boatName: trip.boatId ? (boatNames.get(trip.boatId) ?? null) : null,
-      priceCents: trip.priceCents,
+      priceCents: trip.isRehearsal ? null : perDiverBookingPriceCents(trip, trip.course),
       crew: tripCrew,
       crewAccountedFor: completeness.crewAccountedFor,
       crewReason: completeness.crewReason,

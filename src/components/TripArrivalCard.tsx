@@ -154,6 +154,14 @@ export function TripArrivalCard({
 }) {
   const t = diverTranslator(locale);
   const facts = arrivalCardFacts(shop, trip);
+  const hasDetails = Boolean(
+    sites?.length ||
+      facts.landmark ||
+      facts.lookFor ||
+      facts.parkingNote ||
+      facts.transitNote ||
+      facts.firstInteraction,
+  );
   return (
     <SectionCard
       title={t("trip.arrivalHeading")}
@@ -162,7 +170,7 @@ export function TripArrivalCard({
           <a
             href={downloadHref}
             download
-            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline print:hidden"
           >
             {t("trip.saveArrivalCard")}
           </a>
@@ -196,7 +204,7 @@ export function TripArrivalCard({
               href={openMapsUrl(facts.mapQuery)}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+              className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline print:hidden"
             >
               {t("trip.openArrivalMap")}
             </a>
@@ -207,33 +215,38 @@ export function TripArrivalCard({
             only where. The saved card (`arrival-card/route.ts`) still carries
             the dock call, through `arrivalDockCallLine`, because it travels
             without the masthead. */}
-        <dl className="grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
-          {sites && sites.length > 0 ? (
-            <div>
-              {/* The source in words, not a chip (visual review 2026-10-24,
+        {hasDetails ? (
+          <dl className="grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
+            {sites && sites.length > 0 ? (
+              <div>
+                {/* The source in words, not a chip (visual review 2026-10-24,
                   B21): "Planned sites". A site change is ledgered (issue
                   #3060), so "What changed" says when the plan moved and who
                   moved it; the label says the list can move before then. */}
-              <dt className="text-sm font-semibold">{t("trip.arrivalSites")}</dt>
-              <dd className="mt-1 text-sm text-muted">{siteRunsLine(sites, locale, t)}</dd>
-            </div>
-          ) : null}
-          {facts.landmark ? (
-            <ArrivalFact label={t("trip.arrivalLandmark")} value={facts.landmark} />
-          ) : null}
-          {facts.lookFor ? (
-            <ArrivalFact label={t("trip.arrivalLookFor")} value={facts.lookFor} />
-          ) : null}
-          {facts.parkingNote ? (
-            <ArrivalFact label={t("trip.arrivalParking")} value={facts.parkingNote} />
-          ) : null}
-          {facts.transitNote ? (
-            <ArrivalFact label={t("trip.arrivalTransit")} value={facts.transitNote} />
-          ) : null}
-          {facts.firstInteraction ? (
-            <ArrivalFact label={t("trip.arrivalFirstInteraction")} value={facts.firstInteraction} />
-          ) : null}
-        </dl>
+                <dt className="text-sm font-semibold">{t("trip.arrivalSites")}</dt>
+                <dd className="mt-1 text-sm text-muted">{siteRunsLine(sites, locale, t)}</dd>
+              </div>
+            ) : null}
+            {facts.landmark ? (
+              <ArrivalFact label={t("trip.arrivalLandmark")} value={facts.landmark} />
+            ) : null}
+            {facts.lookFor ? (
+              <ArrivalFact label={t("trip.arrivalLookFor")} value={facts.lookFor} />
+            ) : null}
+            {facts.parkingNote ? (
+              <ArrivalFact label={t("trip.arrivalParking")} value={facts.parkingNote} />
+            ) : null}
+            {facts.transitNote ? (
+              <ArrivalFact label={t("trip.arrivalTransit")} value={facts.transitNote} />
+            ) : null}
+            {facts.firstInteraction ? (
+              <ArrivalFact
+                label={t("trip.arrivalFirstInteraction")}
+                value={facts.firstInteraction}
+              />
+            ) : null}
+          </dl>
+        ) : null}
         {/* The links are 44px targets on a 20px line, and here they hand the
             difference back (`-my-3`): their boxes made the line 44px tall, so
             "Need a hand?" sat 22px over them and 17px under the rule, grouped

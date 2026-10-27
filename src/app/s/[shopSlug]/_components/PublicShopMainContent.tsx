@@ -20,7 +20,11 @@ import type { ReactNode } from "react";
  */
 export function PublicShopMainContent({ children }: { children: ReactNode }) {
   return (
-    <div id="public-shop-main-content" tabIndex={-1} className="flex flex-1 flex-col outline-none">
+    <div
+      id="public-shop-main-content"
+      tabIndex={-1}
+      className="flex flex-1 flex-col outline-none print:block"
+    >
       {children}
     </div>
   );

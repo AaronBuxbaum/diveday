@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { z } from "zod";
 import { languageName } from "@/components/assists/language-name";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
@@ -68,8 +69,8 @@ const EXCERPT_LENGTH = 140;
 /** Whether a seat already carries the mark, by any door. */
 const marked = (seat: InboxSeat) => seat.runningLateAt !== null;
 
-/** Whether a sender's address is an email one: a page message can carry either. */
-const isEmailAddress = (address: string) => address.includes("@");
+/** Only a single plain address can be used as the recipient of a mailto link. */
+const isEmailAddress = (address: string) => z.email().safeParse(address).success;
 
 function excerpt(body: string): string {
   const flattened = body.replace(/\s+/g, " ").trim();
@@ -183,7 +184,9 @@ export function InboxRow({
   // mid-sentence with nothing able to open the rest. No line count cuts them
   // either: three lines held the seeded message only where its column was
   // wide. The 140-character excerpt is what bounds the row.
-  const wordsCut = message.personId ? "truncate" : "wrap-anywhere";
+  const wordsCut = message.personId
+    ? "truncate print:overflow-visible print:whitespace-normal print:text-clip"
+    : "wrap-anywhere";
   // Each seat's own roster row, by the anchor that opens it (`RosterRow`),
   // and the same row with its move open (`SeatFootActions`). With more than
   // one seat, each move names its departure: the row cannot know which one the
@@ -294,12 +297,18 @@ export function InboxRow({
           message ~122px at 640 (K-460, K-461). Below `md` the name sits over
           the message, which takes the body's whole width. */}
         <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
-          <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0">{name}</p>
+          <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0 print:overflow-visible print:whitespace-normal print:text-clip">
+            {name}
+          </p>
           <div className="min-w-0 flex-1">
             {/* A WhatsApp message has no subject and never will, so the row's
               lead line is the diver's own first words rather than a slot
               apologising for an empty one. */}
-            {subject ? <p className="truncate font-medium">{subject}</p> : null}
+            {subject ? (
+              <p className="truncate font-medium print:overflow-visible print:whitespace-normal print:text-clip">
+                {subject}
+              </p>
+            ) : null}
             {/* The diver's own words, and nothing added to them. An "Ask to
               move" sent without a note has none; its facts say what it is. */}
             {message.body.trim() ? (
@@ -341,7 +350,10 @@ export function InboxRow({
               ) : isEmailAddress(message.fromAddress) ? (
                 // A stranger has no record to write from, so the reply starts in
                 // the staffer's own mail app. A phone number stays words.
-                <a href={`mailto:${message.fromAddress}`} className={ACT_CLASS}>
+                <a
+                  href={`mailto:${message.fromAddress.split("@").map(encodeURIComponent).join("@")}`}
+                  className={ACT_CLASS}
+                >
                   {t("inbox.replyByEmail")}
                 </a>
               ) : null}

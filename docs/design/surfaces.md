@@ -537,7 +537,8 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
   during, and after.
 - **The question it arrives with:** "what do I still have to do, where do I go, and who has my
   hand-off?" — answered by one figure and the named next step first, then the shared arrival card,
-  change ledger, party status and one small help request.
+  change ledger, party status and one small help request; an available date request and the
+  organizer's held-seat summary sit beside the booked departure without implying a confirmed move.
 - **Controls that dissolved:** the receipt panel, the emails line and the per-row Done chips (the
   steps' settled lines say it once); the four inline forms at rest (one open step at a time); help
   is a controlled choice, never a free-text support inbox; the trailing "Your dive shop" card
@@ -566,6 +567,40 @@ H-01/H-03's.
   legend in — eleven questions cut through their own boxes, which on a legal surface reads as a
   rendering fault. Presentation only: the semantics that name each radio group, and every word of
   the release and the questionnaire, are untouched (H-01/H-03).
+
+### The signed receipt — `/waivers/[token]`, completed
+
+- **One idea:** my release is saved, with any remaining medical step stated plainly.
+- **The question it arrives with:** "what happens next?" is answered by the actual review,
+  referral, form-sent, declined or completed state before optional trip preparation.
+- **Controls that dissolved:** the doctor door appears only for an actual referral with an
+  authorized path, while a sent form becomes a receipt rather than another request to upload.
+- **Remove first:** no signature, physician-evaluation or non-clearance meaning should be removed.
+- **Composition:** an outcome followed by its necessary action keeps signing separate from
+  medical clearance and from boarding readiness.
+
+### The doctor's page — `/waivers/[token]/doctor`
+
+- **One idea:** take the official medical form to my doctor, then return the signed form.
+- **The question it arrives with:** "which form does my doctor need?" is answered by the original
+  three-page questionnaire as the first action, before the application's print control.
+- **Controls that dissolved:** none, because opening the original, printing instructions,
+  unlocking private answers and returning the signed form serve distinct steps.
+- **Remove first:** no medical instruction or privacy gate; the contact fallback remains useful
+  when the diver cannot upload a file.
+- **Composition:** official form, protected answers and signed-form return form a reading order
+  that stays truthful before and after DOB unlock.
+
+### Counter self-registration — `/s/[shopSlug]/register`
+
+- **One idea:** give the shop my diver details once.
+- **The question it arrives with:** "what does the shop need from me?" is answered by identity,
+  contact, certification and rental-size groups in that order.
+- **Controls that dissolved:** certification level and optional number appear only when the
+  selected agency makes them relevant.
+- **Remove first:** decorative panels, rather than the form's labels, consent or refusal feedback.
+- **Composition:** one unboxed form uses the same group order on phone and desktop, retaining
+  entered details after a refused submission without presenting self-declared cards as verified.
 
 ### The gear register — `/shop/[shopSlug]/gear`
 
