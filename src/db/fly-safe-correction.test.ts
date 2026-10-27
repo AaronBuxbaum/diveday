@@ -98,13 +98,15 @@ describe("sendFlySafeCorrections (#2927)", () => {
     expect(await listFlySafeFollowUps(db, { shopId: shop.id, tripId: reef.id, now })).toEqual([
       { bookingId, name: "Pat Party", status: "queued" },
     ]);
-    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toContainEqual({
-      bookingId,
-      name: "Pat Party",
-      status: "queued",
-      tripId: reef.id,
-      tripTitle: reef.title,
-    });
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toContainEqual(
+      expect.objectContaining({
+        bookingId,
+        name: "Pat Party",
+        status: "queued",
+        tripId: reef.id,
+        tripTitle: reef.title,
+      }),
+    );
     expect(
       await listFlySafeFollowUps(db, { shopId: crypto.randomUUID(), tripId: reef.id, now }),
     ).toEqual([]);
@@ -451,13 +453,15 @@ describe("sendFlySafeCorrections (#2927)", () => {
       emailProvider: provider,
     });
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
-    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toContainEqual({
-      bookingId,
-      name: "Pat Party",
-      status: "follow_up",
-      tripId: destination.id,
-      tripTitle: destination.title,
-    });
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toContainEqual(
+      expect.objectContaining({
+        bookingId,
+        name: "Pat Party",
+        status: "follow_up",
+        tripId: destination.id,
+        tripTitle: destination.title,
+      }),
+    );
     const retry = fakeEmail();
     await sendDueReminders(db, { now, emailProvider: retry.provider, appOrigin: null });
     expect(retry.sent.some((n) => n.kind === "fly_safe_correction" && n.seatId === bookingId)).toBe(

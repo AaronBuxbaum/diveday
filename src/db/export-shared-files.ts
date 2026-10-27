@@ -421,6 +421,12 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.trainingEnrollmentBookingId,
     },
+    { header: "fly_safe_acknowledged_at", in: "shop", value: (row) => row.flySafeAcknowledgedAt },
+    {
+      header: "fly_safe_acknowledged_by_person_id",
+      in: "shop",
+      value: (row) => row.flySafeAcknowledgedByPersonId,
+    },
     { header: "training_marked_at", in: "shop", value: (row) => row.trainingMarkedAt },
     {
       header: "training_marked_by_person_id",

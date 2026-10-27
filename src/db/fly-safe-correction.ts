@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -459,10 +460,12 @@ export function flySafeToldUncorrected(
 export type FlySafeCorrectionOutcome = { told: number; failed: number; unreached: string[] };
 
 /** Staff-visible state, derived from the durable queue and exposure ledger. */
-export async function listFlySafeFollowUps(
-  db: AppDb,
-  input: { shopId: string; tripId: string; now?: Date },
-): Promise<{ bookingId: string; name: string; status: "queued" | "follow_up" }[]> {
+async function readFlySafeFollowUps(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; includeAcknowledged?: boolean },
+): Promise<
+  { bookingId: string; name: string; status: "queued" | "follow_up"; fingerprint: string }[]
+> {
   const [trip] = await db
     .select({ trip: trips, shop: shops })
     .from(trips)
@@ -471,7 +474,7 @@ export async function listFlySafeFollowUps(
       and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
     )
     .limit(1);
-  if (trip?.trip.status !== "scheduled") return [];
+  if (!trip) return [];
   const seats = await db
     .select({
       id: bookings.id,
@@ -480,6 +483,7 @@ export async function listFlySafeFollowUps(
       name: people.fullName,
       sealed: bookings.flySafeRecipientSealed,
       unknown: bookings.flySafeRecipientUnknown,
+      acknowledged: bookings.flySafeAcknowledgementFingerprint,
     })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
@@ -487,7 +491,6 @@ export async function listFlySafeFollowUps(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
         livePerson(),
         isNull(people.anonymizedAt),
@@ -514,7 +517,12 @@ export async function listFlySafeFollowUps(
         )
     : [];
   const queueByKey = new Map(queued.map((row) => [row.key, row.status]));
-  const result: { bookingId: string; name: string; status: "queued" | "follow_up" }[] = [];
+  const result: {
+    bookingId: string;
+    name: string;
+    status: "queued" | "follow_up";
+    fingerprint: string;
+  }[] = [];
   for (const { seat, entries } of entriesBySeat) {
     const hours = await readReminderFlySafeHours(db, {
       shop: { id: input.shopId },
@@ -527,30 +535,101 @@ export async function listFlySafeFollowUps(
     });
     let pending = false;
     let followUp = seat.unknown || !entries;
+    const affected: string[] = [];
     for (const entry of entries ?? []) {
       const state = entry.correctionId
         ? queueByKey.get(`fly-safe-correction/${seat.id}/${entry.correctionId}`)
         : undefined;
-      if (state === "queued" || state === "processing") pending = true;
-      else if (
+      if (state === "queued" || state === "processing") {
+        pending = true;
+        affected.push(entry.id);
+      } else if (
         (state === "failed" && entry.corrected) ||
         (!entry.corrected && entry.hours !== hours)
-      )
+      ) {
         followUp = true;
+        affected.push(entry.id);
+      }
     }
-    if (followUp || pending)
-      result.push({
-        bookingId: seat.id,
-        name: seat.name,
-        status: followUp ? "follow_up" : "queued",
-      });
+    if (followUp || pending) {
+      const fingerprint = createHash("sha256")
+        .update(JSON.stringify([seat.personId, hours, seat.unknown || !entries, affected.sort()]))
+        .digest("hex");
+      if (input.includeAcknowledged || seat.acknowledged !== fingerprint)
+        result.push({
+          bookingId: seat.id,
+          name: seat.name,
+          status: followUp ? "follow_up" : "queued",
+          fingerprint,
+        });
+    }
   }
   return result;
 }
 
+/** Trip-specific view, without the acknowledgement token. */
+export async function listFlySafeFollowUps(
+  db: AppDb,
+  input: { shopId: string; tripId: string; now?: Date },
+) {
+  return (await readFlySafeFollowUps(db, input)).map(
+    ({ fingerprint: _fingerprint, ...item }) => item,
+  );
+}
+
+/** Resolve only the exact state the staff member reviewed; never mark email as delivered. */
+export async function acknowledgeFlySafeFollowUp(
+  db: AppDb,
+  input: {
+    shopId: string;
+    bookingId: string;
+    actorPersonId: string;
+    fingerprint: string;
+  },
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [seat] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      // diveday:allow-update-lock: fence the reviewed exposure state against concurrent ledger changes and erasure.
+      .for("update");
+    if (!seat) return false;
+    const [actor] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .where(
+        and(
+          eq(people.id, input.actorPersonId),
+          eq(people.shopId, input.shopId),
+          livePerson(),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .limit(1);
+    if (!actor) return false;
+    const task = (
+      await readFlySafeFollowUps(tx, {
+        shopId: input.shopId,
+        tripId: seat.tripId,
+        includeAcknowledged: true,
+      })
+    ).find((item) => item.bookingId === seat.id);
+    if (!task || task.fingerprint !== input.fingerprint) return false;
+    await tx
+      .update(bookings)
+      .set({
+        flySafeAcknowledgementFingerprint: task.fingerprint,
+        flySafeAcknowledgedAt: nowDate(),
+        flySafeAcknowledgedByPersonId: actor.id,
+      })
+      .where(and(eq(bookings.id, seat.id), eq(bookings.shopId, input.shopId)));
+    return true;
+  });
+}
+
 /** Show the same follow-up list on every trip, including the trip that triggered a change. */
 export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: string; now?: Date }) {
-  const now = input.now ?? nowDate();
   const candidates = await db
     .selectDistinct({ id: trips.id, title: trips.title })
     .from(trips)
@@ -558,18 +637,18 @@ export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: strin
     .where(
       and(
         eq(trips.shopId, input.shopId),
-        eq(trips.status, "scheduled"),
         liveTrip(),
         notRehearsal(),
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
       ),
     );
   const groups = await Promise.all(
     candidates.map(async (trip) =>
-      (await listFlySafeFollowUps(db, { shopId: input.shopId, tripId: trip.id, now })).map(
-        (item) => ({ ...item, tripId: trip.id, tripTitle: trip.title }),
-      ),
+      (await readFlySafeFollowUps(db, { shopId: input.shopId, tripId: trip.id })).map((item) => ({
+        ...item,
+        tripId: trip.id,
+        tripTitle: trip.title,
+      })),
     ),
   );
   return groups.flat();

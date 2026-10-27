@@ -337,7 +337,7 @@ export default async function ManageTripPage({
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
-        <FlySafeFollowUps db={db} shopId={shop.id} shopSlug={shopSlug} now={now} locale={locale} />
+        <FlySafeFollowUps {...{ db, shop, shopSlug, tripId, now, locale }} />
 
         {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
           // A card in a tone: the card's radius, bed and inset, so its words start

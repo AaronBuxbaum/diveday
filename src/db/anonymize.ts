@@ -1217,6 +1217,16 @@ async function scrubBookingRows(
   // A duplicate cancelled seat can remain on a merged-away person. Lock every
   // seat first, so an in-flight boarding cannot insert a snapshot after this
   // erasure scans the event table.
+  // Preserve the acknowledgement while removing the erased staff member's identity.
+  await tx
+    .update(bookings)
+    .set({ flySafeAcknowledgedByPersonId: null })
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.flySafeAcknowledgedByPersonId, personChain),
+      ),
+    );
   const snapshotSeats = await tx
     .select({ id: bookings.id })
     .from(bookings)
@@ -1227,7 +1237,13 @@ async function scrubBookingRows(
   if (snapshotSeats.length > 0) {
     await tx
       .update(bookings)
-      .set({ flySafeRecipientSealed: null, flySafeRecipientUnknown: false })
+      .set({
+        flySafeRecipientSealed: null,
+        flySafeRecipientUnknown: false,
+        flySafeAcknowledgementFingerprint: null,
+        flySafeAcknowledgedAt: null,
+        flySafeAcknowledgedByPersonId: null,
+      })
       .where(
         and(
           eq(bookings.shopId, shopId),

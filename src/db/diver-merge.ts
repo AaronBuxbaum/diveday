@@ -276,6 +276,8 @@ export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as
 export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
   "activity_events.actor_person_id": "who did it — attribution, not diver history",
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
+  "bookings.fly_safe_acknowledged_by_person_id":
+    "which staffer resolved the flying-guidance follow-up",
   "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
   "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
   "bookings.training_marked_by_person_id": "which staffer marked the dive as training",

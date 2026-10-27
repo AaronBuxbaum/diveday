@@ -1,26 +1,30 @@
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
 import { listShopFlySafeFollowUps } from "@/db/fly-safe-correction";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
+import { acknowledgeFlySafeAction } from "./fly-safe-follow-up-actions";
 
 type Locale = Parameters<typeof staffTranslator>[0];
 
 export async function FlySafeFollowUps({
   db,
-  shopId,
+  shop,
   shopSlug,
+  tripId,
   now,
   locale,
 }: {
   db: AppDb;
-  shopId: string;
+  shop: { id: string };
   shopSlug: string;
+  tripId: string;
   now: Date;
   locale: Locale;
 }) {
-  const items = await listShopFlySafeFollowUps(db, { shopId, now });
+  const items = await listShopFlySafeFollowUps(db, { shopId: shop.id, now });
   if (!items.length) return null;
   const t = staffTranslator(locale);
   return (
@@ -32,6 +36,7 @@ export async function FlySafeFollowUps({
         {t("trips.flySafeFollowUp.heading")}
       </h2>
       <p>{t("trips.flySafeFollowUp.intro")}</p>
+      <p>{t("trips.flySafeFollowUp.resolveHelp")}</p>
       <ul className="mt-2 list-inside list-disc">
         {items.map((item) => (
           <li key={item.bookingId}>
@@ -45,6 +50,19 @@ export async function FlySafeFollowUps({
                 ? "trips.flySafeFollowUp.queued"
                 : "trips.flySafeFollowUp.contact",
             )}
+            <form
+              action={acknowledgeFlySafeAction.bind(
+                null,
+                shopSlug,
+                tripId,
+                item.bookingId,
+                item.fingerprint,
+              )}
+            >
+              <SubmitButton pendingLabel={t("trips.flySafeFollowUp.resolving")}>
+                {t("trips.flySafeFollowUp.resolve")}
+              </SubmitButton>
+            </form>
           </li>
         ))}
       </ul>

@@ -373,6 +373,13 @@ export const bookings = pgTable(
     flySafeRecipientSealed: text("fly_safe_recipient_sealed"),
     /** An exposure whose original recipient or sealed ledger cannot be recovered. */
     flySafeRecipientUnknown: boolean("fly_safe_recipient_unknown").notNull().default(false),
+    /** The specific outstanding guidance state staff explicitly resolved. */
+    flySafeAcknowledgementFingerprint: text("fly_safe_acknowledgement_fingerprint"),
+    flySafeAcknowledgedAt: timestamp("fly_safe_acknowledged_at", { withTimezone: true }),
+    flySafeAcknowledgedByPersonId: uuid("fly_safe_acknowledged_by_person_id").references(
+      () => people.id,
+      { onDelete: "set null" },
+    ),
     /** A correction was accepted by the provider or persisted for retry. */
     flySafeCorrectedAt: timestamp("fly_safe_corrected_at", { withTimezone: true }),
     /** Generation fenced against an older queued retry failing. */

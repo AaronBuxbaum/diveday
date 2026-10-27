@@ -355,13 +355,15 @@ describe("sendDueReminders and the fly-safe hours", () => {
         shopId: shop.id,
         now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
       }),
-    ).toContainEqual({
-      bookingId,
-      name: "Pat Party",
-      status: "queued",
-      tripId: reef.id,
-      tripTitle: reef.title,
-    });
+    ).toContainEqual(
+      expect.objectContaining({
+        bookingId,
+        name: "Pat Party",
+        status: "queued",
+        tripId: reef.id,
+        tripTitle: reef.title,
+      }),
+    );
   });
 
   it("corrects a figure when the trip becomes decompression during provider delivery", async () => {

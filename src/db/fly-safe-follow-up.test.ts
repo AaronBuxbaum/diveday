@@ -5,6 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import {
+  acknowledgeFlySafeFollowUp,
   FLY_SAFE_CORRECTION_WINDOW_MS,
   listShopFlySafeFollowUps,
   recordFlySafeTold,
@@ -50,6 +51,74 @@ async function seat(db: typeof ctx.db, bookingId: string) {
 }
 
 describe("flying guidance follow-up", () => {
+  it("retains a cancelled seat's unresolved task until staff acknowledge the reviewed guidance", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    await db.update(tripRows).set({ status: "cancelled" }).where(eq(tripRows.id, reef.id));
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toEqual([
+      expect.objectContaining({ bookingId, status: "queued" }),
+    ]);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    await drainNotificationRetries(db, {
+      now,
+      provider: fakeEmail({ status: "failed", retryable: false }).provider,
+    });
+    const [staff] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Staff Member" })
+      .returning();
+    if (!staff) throw new Error("staff missing");
+    const [task] = await listShopFlySafeFollowUps(db, { shopId: shop.id, now });
+    expect(task).toMatchObject({ bookingId, status: "follow_up" });
+    expect(
+      await acknowledgeFlySafeFollowUp(db, {
+        shopId: crypto.randomUUID(),
+        bookingId,
+        actorPersonId: staff.id,
+        fingerprint: task.fingerprint,
+      }),
+    ).toBe(false);
+    expect(
+      await acknowledgeFlySafeFollowUp(db, {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: staff.id,
+        fingerprint: task.fingerprint,
+      }),
+    ).toBe(true);
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toEqual([]);
+    expect(await seat(db, bookingId)).toMatchObject({
+      flySafeAcknowledgedByPersonId: staff.id,
+      flySafeAcknowledgementFingerprint: task.fingerprint,
+    });
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "flysafe-pat@example.com",
+    });
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now })).toHaveLength(1);
+    expect(
+      await acknowledgeFlySafeFollowUp(db, {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: staff.id,
+        fingerprint: task.fingerprint,
+      }),
+    ).toBe(false);
+  });
+
   it("keeps queued and rejected corrections visible after the automatic sending window", async () => {
     const { db, shop, reef, bookingId } = await toldSeat();
     await markDeco(db, reef.id);
@@ -62,10 +131,12 @@ describe("flying guidance follow-up", () => {
       emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
     });
     const expected = { bookingId, name: "Pat Party", tripId: reef.id, tripTitle: reef.title };
-    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now: after })).toContainEqual({
-      ...expected,
-      status: "queued",
-    });
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now: after })).toContainEqual(
+      expect.objectContaining({
+        ...expected,
+        status: "queued",
+      }),
+    );
     expect(await listShopFlySafeFollowUps(db, { shopId: crypto.randomUUID(), now: after })).toEqual(
       [],
     );
@@ -77,10 +148,12 @@ describe("flying guidance follow-up", () => {
       now: after,
       provider: fakeEmail({ status: "failed", retryable: false }).provider,
     });
-    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now: after })).toContainEqual({
-      ...expected,
-      status: "follow_up",
-    });
+    expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now: after })).toContainEqual(
+      expect.objectContaining({
+        ...expected,
+        status: "follow_up",
+      }),
+    );
     const provider = fakeEmail();
     await sendFlySafeCorrections(db, {
       shopId: shop.id,

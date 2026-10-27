@@ -371,6 +371,9 @@ async function repointInTransaction(
     .set({
       personId: input.toPersonId,
       flySafeRecipientSealed: null,
+      flySafeAcknowledgementFingerprint: null,
+      flySafeAcknowledgedAt: null,
+      flySafeAcknowledgedByPersonId: null,
       flySafeRecipientUnknown: sql`${bookings.flySafeHoursTold} is not null or ${bookings.flySafeRecipientUnknown}`,
       flySafeCorrectedAt: null,
       flySafeCorrectionId: null,

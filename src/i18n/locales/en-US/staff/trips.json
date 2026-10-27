@@ -1,6 +1,9 @@
 {
   "flySafeFollowUp": {
     "heading": "Flying guidance follow-up",
+    "resolveHelp": "Mark resolved only after contacting the diver or otherwise resolving their flying guidance. This does not confirm email delivery.",
+    "resolve": "Mark follow-up resolved",
+    "resolving": "Saving…",
     "intro": "Earlier flying guidance may no longer apply.",
     "queued": "Correction queued; provider acceptance is pending.",
     "contact": "Contact the diver and anyone who received the earlier guidance to confirm current flying guidance."
