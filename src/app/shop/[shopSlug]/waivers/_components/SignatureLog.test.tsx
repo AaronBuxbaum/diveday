@@ -332,31 +332,17 @@ describe("a row's height", () => {
   });
 });
 
-/**
- * **On a phone the departure is read whole, on a line of its own** (class 8).
- * The pixel probe (staff-waivers@390): the departure shared the first line
- * with the name, the time and the caret, and truncated to 38–182px of its
- * 276–351px on every row — the date never showed, and a "Can’t be checked for changes" row kept
- * only "Two-…". The column is 358px, wider than the longest seeded value, so
- * below `sm` the row takes `LedgerRow`'s `stacked` grammar: the name, time
- * and caret on the first line, the departure under them at full width.
- *
- * A badge is the exception, and below `sm` it takes a line of its own under
- * the departure. Left on the first line, a medical badge (about 193px with
- * its mark, at its longest) beside a name, the time and the caret needs more than
- * the 358px column for any name over about 62px, so on every flagged row the
- * time and caret wrapped to a middle line at its start and the departure took
- * a third. From `sm` up it is the one-line row it was.
- */
-describe("a row on a phone", () => {
+/** Repeated names need the full departure/date at the actual ledger width;
+ * badges must never steal that identity or displace time and caret. */
+describe("a readable departure in the summary", () => {
   it("drops the departure to a full-width line under the name instead of cutting it", () => {
     const { container } = renderLog([entry({ id: "a", integrity: "unsealed" })]);
     const summary = summaryOf(container, "a");
     const trip = within(summary).getByText(/Two-Tank Reef/);
-    expect(trip).toHaveClass("max-sm:order-last", "max-sm:basis-full", "sm:truncate");
-    expect(trip).not.toHaveClass("truncate");
+    expect(trip).toHaveClass("order-last", "basis-full");
+    expect(trip).not.toHaveClass("truncate", "sm:truncate");
     // The name pushes the time and caret to the first line's end.
-    expect(within(summary).getByText("Grace Mensah")).toHaveClass("max-sm:me-auto");
+    expect(within(summary).getByText("Grace Mensah")).toHaveClass("flex-1");
   });
 
   it("keeps a flagged row's time and caret on the name's line, the badges on a line of their own", () => {
@@ -372,12 +358,12 @@ describe("a row on a phone", () => {
     const badges = within(summary).getByText("Waiting on physician").parentElement;
     expect(within(summary).getByText("Can’t be checked for changes").parentElement).toBe(badges);
     expect(badges?.parentElement).toBe(summary);
-    // Below `sm` a full-width line after the departure's; from `sm` up the
-    // badges are the row's own items again, where they always stood.
-    expect(badges).toHaveClass("max-sm:order-last", "max-sm:basis-full", "sm:contents");
+    // The full-width badge line follows the complete departure at every width.
+    expect(badges).toHaveClass("order-last", "basis-full");
+    expect(badges).not.toHaveClass("sm:contents");
     // The name, the time and the caret keep their places on the first line.
     const moved = [...summary.children].filter((child) =>
-      [...child.classList].some((token) => token.startsWith("max-sm:order")),
+      [...child.classList].some((token) => token === "order-last"),
     );
     expect(moved).toEqual([within(summary).getByText(/Two-Tank Reef/), badges]);
   });
@@ -386,7 +372,7 @@ describe("a row on a phone", () => {
     const { container } = renderLog([entry({ id: "a" })]);
     const summary = summaryOf(container, "a");
     const fullWidth = [...summary.children].filter((child) =>
-      child.classList.contains("max-sm:basis-full"),
+      child.classList.contains("basis-full"),
     );
     expect(fullWidth).toEqual([within(summary).getByText(/Two-Tank Reef/)]);
   });
