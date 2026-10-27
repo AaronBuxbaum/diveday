@@ -3,7 +3,6 @@ import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { FlashParams } from "@/components/FlashParams";
 import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
-import { keptTypedScope } from "@/components/kept-typed-scope";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import { listDiverSummaries } from "@/db/divers";
 import { countGearItems, listAvailableGearUnits } from "@/db/gear";
 import {
   counterRentalCards,
+  counterRentalHasNitroxFillCard,
   counterRentalPerson,
   counterRentalUnitLabel,
   counterRentalWaiverStandings,
@@ -42,7 +42,7 @@ import { uuidParam } from "@/lib/uuid";
 import { InvoiceAddressFields } from "../../../orders/_components/InvoiceAddressFields";
 import { CounterRentalWaiverLine } from "../../_components/CounterRentalWaiverLine";
 import { createCounterRentalAction } from "../actions";
-import { COUNTER_RENTAL_FORM } from "../rental-form";
+import { COUNTER_RENTAL_FORM, counterRentalDraftScope } from "../rental-form";
 import {
   CounterRentalCart,
   type PaymentChoice,
@@ -96,25 +96,26 @@ export default async function RentOutPage({
   const { shopSlug } = await params;
   const search = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
-  const keptScope = keptTypedScope(shopSlug, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
 
   const personId = uuidParam(search.personId);
+  const keptScope = counterRentalDraftScope(shopSlug, session.user.personId, personId);
   const query = search.q?.trim() ?? "";
   const from = search.from && isValidCalendarDate(search.from) ? search.from : todayLocal;
   const until = search.until && isValidCalendarDate(search.until) ? search.until : from;
   const windowRefusal = checkCounterRentalWindow({ from, until, todayLocal });
 
   const noticeUnitId = uuidParam(search.unit);
-  const [person, fleetSize, matches, cards, noticeUnit, waivers] = await Promise.all([
+  const [person, fleetSize, matches, cards, nitroxCard, noticeUnit, waivers] = await Promise.all([
     personId ? counterRentalPerson(db, shop.id, personId) : null,
     countGearItems(db, shop.id),
     !personId && query
       ? listDiverSummaries(db, shop.id, { query, limit: 6, timeZone: shop.timezone })
       : null,
     personId ? counterRentalCards(db, shop.id, personId) : null,
+    personId ? counterRentalHasNitroxFillCard(db, shop.id, personId) : false,
     // The URL carries a unit id, never words: the label is this shop's own,
     // looked up here, and an id that is not one falls back to the unnamed line.
     noticeUnitId ? counterRentalUnitLabel(db, shop.id, noticeUnitId) : null,
@@ -356,6 +357,8 @@ export default async function RentOutPage({
               </SectionCard>
             ) : (
               <CounterRentalCart
+                key={person.id}
+                canUseNitrox={nitroxCard}
                 groups={byKind}
                 coreKinds={counterRentalCoreKinds(shop.rentalItems)}
                 nitroxFillMethod={shop.nitroxFillMethod}
