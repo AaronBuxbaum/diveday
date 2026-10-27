@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { OfflineCounter } from "./Counter";
 import { OfflineDiverRollCall } from "./DiverRollCall";
 import { controls, savedCopy, view } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
@@ -25,6 +26,22 @@ describe("OfflineDiverRollCall", () => {
     expect(row?.textContent).toContain("This saved training clearance is out of date");
     expect(row?.textContent).toContain("This mark does not identify which dive is training");
     expect(trip.blockedAtRail[0]).toBe(true);
+  });
+
+  it("holds an old marked verdict at the offline counter too", () => {
+    const copy = savedCopy();
+    const [diver] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.trainingDive = { courseTitle: "Open Water", instructorAboard: true };
+    diver.readiness = { status: "ready", blockers: [] };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("manifest missing");
+    const { container } = render(<OfflineCounter view={trip} controls={controls()} />);
+    expect(container.textContent).toContain("This saved training clearance is out of date");
+    const row = [...container.querySelectorAll("li")].find((item) =>
+      item.textContent?.includes(diver.fullName),
+    );
+    expect(row?.querySelector("button")).toBeNull();
   });
 
   it("keeps a medical capsule after a dive on a diver boarded over a physician's no, issue 2380", () => {

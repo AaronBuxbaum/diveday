@@ -99,7 +99,9 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
            */
           const seat = {
             bookingStatus: diver.notHere ? "no_show" : arrival ? "checked_in" : "booked",
-            readiness: diver.readiness,
+            readiness: offlineTrainingReadinessStale(envelope.snapshot, diver)
+              ? { ...diver.readiness, status: "blocked" as const }
+              : diver.readiness,
           };
           return {
             diver,
