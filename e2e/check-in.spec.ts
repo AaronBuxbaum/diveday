@@ -255,6 +255,7 @@ test("a counter walk-in family is seated together from one form", async ({ page 
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
   await page.goto(counter);
+  await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
   const find = page.getByRole("searchbox", { name: "Find a returning diver" });
   await find.fill("Zzyzx No Such Diver");
   await find.press("Enter");

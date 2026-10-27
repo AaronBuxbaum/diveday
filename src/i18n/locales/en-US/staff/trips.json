@@ -866,6 +866,8 @@
     "unnamed": "Held seat",
     "review": "Review party waivers",
     "medicalNotCleared": "Waiver signed · not medically cleared",
-    "notCleared": "Not medically cleared."
+    "notCleared": "Not medically cleared.",
+    "confirmIdentity": "Confirm identity",
+    "reviewMedical": "Review medical status"
   }
 }

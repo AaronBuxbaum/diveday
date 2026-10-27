@@ -143,6 +143,41 @@ describePostgres("counter waiver locking", () => {
       expect(record?.draftAcknowledged).not.toBe(true);
     },
   );
+  it.each(["sign", "draft"] as const)(
+    "refuses %s and contact after expiry while waiting",
+    async (operation) => {
+      const f = await fixture();
+      const gate = await updateAndHold(f.pg, async (tx) => {
+        await tx
+          .update(waiverRecords)
+          .set({ expiresAt: new Date(nowDate().getTime() - 1000) })
+          .where(eq(waiverRecords.id, f.issued.recordId));
+      });
+      const action =
+        operation === "sign"
+          ? completeWaiver(f.pg.connect(), f.issued.token, {
+              signerName: "Alex Lagoon",
+              agreed: true,
+              medicalAnswers: clearAnswers,
+              emergencyContact: { name: "Jordan", phone: "1234567890" },
+            })
+          : saveWaiverDraft(f.pg.connect(), f.issued.token, {
+              acknowledged: true,
+              medicalAnswers: clearAnswers,
+              emergencyContact: { name: "Jordan", phone: "1234567890" },
+            });
+      try {
+        await waitForLockWaiters(f.pg.db, 1);
+      } finally {
+        await gate.release();
+      }
+      const result = await action;
+      if (operation === "sign") expect(result).toEqual({ ok: false, reason: "expired" });
+      else expect(result).toBe(false);
+      const [person] = await f.pg.db.select().from(people).where(eq(people.id, f.person.id));
+      expect(person?.emergencyContactName).toBeNull();
+    },
+  );
   it.each([
     ["guardian", { minorDeclaredAt: nowDate() }],
     ["held", { identityUnconfirmedAt: nowDate() }],
@@ -235,12 +270,15 @@ describePostgres("counter waiver locking", () => {
       else expect(outcome).toBe(false);
     },
   );
-  it("blocks a writer behind erasure's exclusive shop lock", async () => {
+  it("refuses a signer after an erasure holding the exclusive shop lock commits", async () => {
     const f = await fixture();
-    const gate = await holdRowLock(
-      f.pg,
-      sql`select pg_advisory_xact_lock(hashtext('boarding_certification_evidence'),hashtext(${f.shop.id}))`,
-    );
+    const gate = await updateAndHold(f.pg, async (tx) => {
+      await lockBoardingCertificationEvidence(tx, f.shop.id, "rewrite");
+      await tx
+        .update(people)
+        .set({ anonymizedAt: nowDate(), deletedAt: nowDate() })
+        .where(eq(people.id, f.person.id));
+    });
     const action = completeWaiver(f.pg.connect(), f.issued.token, {
       signerName: "Alex Lagoon",
       agreed: true,
@@ -251,7 +289,7 @@ describePostgres("counter waiver locking", () => {
     } finally {
       await gate.release();
     }
-    expect((await action).ok).toBe(true);
+    expect(await action).toEqual({ ok: false, reason: "unavailable" });
   });
   it("blocks erasure's exclusive shop lock while signing owns its shared lock", async () => {
     const f = await fixture();

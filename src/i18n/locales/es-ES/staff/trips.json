@@ -866,6 +866,8 @@
     "unnamed": "Plaza retenida",
     "review": "Revisar exenciones del grupo",
     "medicalNotCleared": "Exención firmada · sin autorización médica",
-    "notCleared": "Sin autorización médica."
+    "notCleared": "Sin autorización médica.",
+    "confirmIdentity": "Confirmar identidad",
+    "reviewMedical": "Revisar estado médico"
   }
 }

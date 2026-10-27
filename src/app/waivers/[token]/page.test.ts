@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { waiverRecords } from "@/db/schema";
+import { bookingCapabilities, bookings, waiverRecords } from "@/db/schema";
 import { completeWaiver } from "@/db/waivers-completion";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
@@ -11,6 +11,8 @@ import {
   waiverContextFor,
 } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
+import { nowDate } from "@/lib/clock";
+import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
@@ -101,5 +103,74 @@ describe("the actual completed waiver branch", () => {
     expect(html).toContain(t("waiver.signedBody"));
     expect(html).toContain(t("waiver.seeWhatsLeft"));
     expect(html).not.toContain("data-medical-next=");
+  });
+  it("a lead's counter receipt cannot mint readiness after completion, expiry or supersession", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
+    try {
+      const { db, shop, booking, issued, where } = await signed(clearAnswers);
+      const [sibling] = await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, shop.id),
+            eq(bookings.tripId, booking.tripId),
+            ne(bookings.id, booking.id),
+          ),
+        )
+        .limit(1);
+      if (!sibling) throw new Error("party sibling missing");
+      await db
+        .update(bookings)
+        .set({ partyLeadBookingId: booking.id })
+        .where(eq(bookings.id, sibling.id));
+      const expiresAt = new Date(nowDate().getTime() + 60_000);
+      const envelope = sealCounterWaiverToken(issued.token, expiresAt);
+      if (!envelope) throw new Error("envelope missing");
+      const renderCounter = async () =>
+        renderToStaticMarkup(
+          await WaiverPage({
+            params: Promise.resolve({ token: envelope }),
+            searchParams: Promise.resolve({}),
+          }),
+        );
+      const before = await db
+        .select({ id: bookingCapabilities.id })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.purpose, "readiness"),
+          ),
+        );
+      const live = await renderCounter();
+      expect(live).toContain(t("waiver.counterSigned"));
+      expect(live).not.toContain(issued.token);
+      expect(live).not.toContain("/ready/");
+      expect(live).not.toContain(t("waiver.seeWhatsLeft"));
+      vi.stubEnv("DIVEDAY_CLOCK", expiresAt.toISOString());
+      const expired = await renderCounter();
+      expect(expired).not.toContain("/ready/");
+      expect(expired).not.toContain(issued.token);
+      expect(expired).not.toContain(t("waiver.counterSigned"));
+      vi.stubEnv("DIVEDAY_CLOCK", new Date(expiresAt.getTime() - 30_000).toISOString());
+      await db.update(waiverRecords).set({ supersededAt: nowDate() }).where(where);
+      const superseded = await renderCounter();
+      expect(superseded).not.toContain("/ready/");
+      expect(superseded).not.toContain(issued.token);
+      expect(superseded).not.toContain(t("waiver.counterSigned"));
+      const after = await db
+        .select({ id: bookingCapabilities.id })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.purpose, "readiness"),
+          ),
+        );
+      expect(after).toHaveLength(before.length);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

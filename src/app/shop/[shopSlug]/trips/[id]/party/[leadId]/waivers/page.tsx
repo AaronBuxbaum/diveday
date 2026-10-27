@@ -5,6 +5,8 @@ import {
   CourseFormsQrButton,
   CourseFormsQrProvider,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/CourseFormsQr";
+import { EyebrowBackLink } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
 import { getPartyWaiverQueue, type PartyWaiverState } from "@/db/party-waiver-queue";
 import { requestLocale } from "@/i18n/request";
@@ -51,9 +53,9 @@ export default async function PartyWaiversPage({
   return (
     <StaffPage width="reading">
       <div className="space-y-6">
-        <Link className="text-primary hover:underline" href={shopPath(shopSlug, "trips", id)}>
+        <EyebrowBackLink href={shopPath(shopSlug, "trips", id)}>
           {t("trips.partyWaiverQueue.back")}
-        </Link>
+        </EyebrowBackLink>
         <div>
           <h1 className={PAGE_TITLE_CLASS}>{t("trips.partyWaiverQueue.title")}</h1>
           <p className="mt-1 text-muted">{queue.tripTitle}</p>
@@ -85,9 +87,21 @@ export default async function PartyWaiversPage({
                       </p>
                     ) : null}
                   </div>
-                  {member.state === "needed" && member.name ? (
-                    <CourseFormsQrButton bookingId={member.bookingId} name={member.name} />
-                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    {member.state === "needed" && member.name ? (
+                      <CourseFormsQrButton bookingId={member.bookingId} name={member.name} />
+                    ) : null}
+                    {member.state === "held" || member.medicalState ? (
+                      <Link
+                        className={buttonClass({ variant: "secondary" })}
+                        href={`${shopPath(shopSlug, "trips", id)}#booking-${member.bookingId}`}
+                      >
+                        {member.state === "held"
+                          ? t("trips.partyWaiverQueue.confirmIdentity")
+                          : t("trips.partyWaiverQueue.reviewMedical")}
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
               </li>
             ))}

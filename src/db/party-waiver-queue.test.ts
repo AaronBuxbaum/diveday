@@ -1,10 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
 import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
+import * as readinessDb from "./readiness";
 import { listTripReadiness } from "./readiness";
 import { bookings, people, personRoles, waiverRecords } from "./schema";
 import { seatParty } from "./seat-diver";
@@ -253,5 +254,38 @@ describe("party release QR handoff", () => {
       state: "medical_not_cleared",
       medicalState: "not_cleared",
     });
+  });
+  it("keeps a refusal visible when a fresh waiver is also needed", async () => {
+    const f = await family();
+    const rows = await listTripReadiness(f.db, f.shop.id, f.trip.id, nowDate());
+    const changed = rows.map((row) =>
+      row.booking.id === f.lead.bookingId
+        ? {
+            ...row,
+            readiness: {
+              ...row.readiness,
+              blockers: [
+                ...row.readiness.blockers,
+                { code: "waiver_pending" as const },
+                { code: "medical_not_cleared" as const },
+              ],
+            },
+          }
+        : row,
+    );
+    const spy = vi.spyOn(readinessDb, "listTripReadiness").mockResolvedValue(changed);
+    try {
+      const queue = await getPartyWaiverQueue(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+      });
+      expect(queue?.members.find((member) => member.bookingId === f.lead.bookingId)).toMatchObject({
+        state: "needed",
+        medicalState: "not_cleared",
+      });
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

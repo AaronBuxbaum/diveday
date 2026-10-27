@@ -1,6 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * The three reads the waiver signing page (`src/app/waivers/[token]`) makes
@@ -41,11 +42,15 @@ export async function getBookingTripId(
   const [row] = await db
     .select({ tripId: bookings.tripId })
     .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
         ne(bookings.status, "cancelled"),
+        eq(trips.shopId, shopId),
+        ne(trips.status, "cancelled"),
+        liveTrip(),
       ),
     )
     .limit(1);
