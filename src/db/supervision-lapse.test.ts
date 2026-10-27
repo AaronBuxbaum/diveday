@@ -186,6 +186,15 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
     expect(counts.unverified).toEqual([
       { personId: keiko, fullName: "Keiko Tanaka", lost: "instructor" },
     ]);
+    const staffing = await getStaffingView(
+      db,
+      shop.id,
+      new Date(startsAt.getTime() - HOUR_MS),
+      new Date(trip.endsAt.getTime() + HOUR_MS),
+    );
+    expect(staffing.gapTrips).toEqual([
+      expect.objectContaining({ tripId: trip.id, ratingUnverified: true }),
+    ]);
     expect(await tripCourseCrewCounts(db, trip.id)).toMatchObject({ instructorCount: 1 });
     await expect(
       createBooking(db, {

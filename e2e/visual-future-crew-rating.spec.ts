@@ -50,6 +50,9 @@ test.describe("light mode", () => {
       date: formatCalendarDate(futureCrew.issueDate, "en-US"),
     });
     await expect(page.getByText(warning)).toBeVisible();
+    await expect(
+      page.getByText(staffCopy("today.actionKind.crewRatingUnverified")).first(),
+    ).toBeVisible();
     await capture(page, "staffing-future-crew-rating", "light");
   });
 });
