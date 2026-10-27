@@ -147,6 +147,16 @@ for (const scheme of ["light", "dark"] as const) {
               }[] = [];
               const headingChecks: boolean[] = [];
               const readable = async () => {
+                await expect
+                  .poll(async () =>
+                    page.locator("[data-chrome-natural]").evaluate((header) => {
+                      const token = Number.parseFloat(
+                        getComputedStyle(document.documentElement).getPropertyValue("--chrome-h"),
+                      );
+                      return Math.abs(token - header.getBoundingClientRect().height);
+                    }),
+                  )
+                  .toBeLessThanOrEqual(1);
                 const heading = await page
                   .getByRole("heading", { level: 1 })
                   .evaluate((element) => {
