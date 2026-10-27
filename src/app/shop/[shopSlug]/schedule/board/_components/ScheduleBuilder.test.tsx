@@ -111,6 +111,7 @@ describe("ScheduleBuilder week board", () => {
         weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index] ?? "",
         dayNumber: String(24 + index),
         label: `Day ${24 + index}`,
+        paperLabel: `${dateIso} · America/New_York`,
         isToday: dateIso === "2026-08-27",
         isPast: dateIso < "2026-08-27",
         boatWarning: null,
@@ -210,13 +211,11 @@ describe("ScheduleBuilder week board", () => {
     // and a day already behind carries none, because a departure is put on
     // the board and the board is ahead. Aug 27 is "today" in this fixture, so
     // four of the seven can take one.
-    expect(
-      within(grid()).getAllByRole("button", { name: /^Add a departure on Day / }),
-    ).toHaveLength(4);
+    expect(within(grid()).getAllByRole("link", { name: /^Add a departure on Day / })).toHaveLength(
+      4,
+    );
     for (const past of ["Day 24", "Day 25", "Day 26"]) {
-      expect(
-        within(grid()).queryByRole("button", { name: `Add a departure on ${past}` }),
-      ).toBeNull();
+      expect(within(grid()).queryByRole("link", { name: `Add a departure on ${past}` })).toBeNull();
     }
   });
 
@@ -451,17 +450,6 @@ describe("ScheduleBuilder week board", () => {
         expect(form.contains(document.activeElement)).toBe(true);
       }
     });
-
-    it("opens a day's add form under that day, not under the week", async () => {
-      const user = userEvent.setup();
-      board(friday());
-      await user.click(screen.getByRole("button", { name: "Add a departure on Day 28" }));
-      const form = document.querySelector("form") as HTMLFormElement;
-      const fridayList = screen.getByRole("list", { name: "Day 28" });
-      expect(fridayList.parentElement?.contains(form)).toBe(true);
-      const saturdayList = screen.getByRole("list", { name: "Day 29" });
-      expect(saturdayList.parentElement?.contains(form)).toBe(false);
-    });
   });
 
   it("opens move, copy and remove from a multi-day course bar too", async () => {
@@ -582,9 +570,7 @@ describe("ScheduleBuilder week board", () => {
 
     // Trip definition is owner/manager/instructor work (H-14); the crew read
     // the week and run the day from each departure's own page.
-    expect(within(grid()).queryAllByRole("button", { name: /^Add a departure on / })).toHaveLength(
-      0,
-    );
+    expect(within(grid()).queryAllByRole("link", { name: /^Add a departure on / })).toHaveLength(0);
     expect(within(grid()).queryByRole("button", { name: /^Move, copy, or remove / })).toBeNull();
     expect(within(grid()).getByRole("link", { name: "Two-Tank Reef" })).toHaveAttribute(
       "href",

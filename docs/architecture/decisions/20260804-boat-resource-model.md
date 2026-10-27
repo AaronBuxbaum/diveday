@@ -164,7 +164,7 @@ clears.
 This record stays Proposed. Slice 1's "the vessel's real ceiling" landed in a narrower shape with
 roadmap N-10's paper dates: `boats.certified_passengers`, the passenger limit printed on the boat's
 Coast Guard certificate, beside the existing `boats.capacity` (the seats a shop sells), which
-already refuses a departure that sells more seats than the boat holds. The certificate never
+then refused a departure that sold more seats than the configured number. The certificate never
 refuses anything: the fleet row says when the seats on sale pass it, and a departure's Boat tab
 says when the people booked pass it (`src/lib/boat-safety.ts`). Nothing here touches admission,
 readiness or the roll call.
@@ -176,7 +176,7 @@ seats above it ([H-107](../../product/human-decisions/H-107-certificate-caps-sea
 save whose `capacity` passes `certified_passengers` is refused with a field error, and so is a
 certificate lowered under the seats an upcoming departure on the hull still sells
 (`boatSeatsRefusal`); `tripDetailsPatch` refuses a departure's capacity above the assigned hull's
-certificate beside its existing refusal above the hull's `capacity`. Capacity and the certificate
+certificate; at the time it also refused above the hull’s `capacity`. Capacity and the certificate
 count the same people, everyone aboard but the crew. A row already over the limit keeps sailing,
 its manifest line and its danger-toned fleet row stand, and its next save must fix it. The booking
 transaction is the ceiling that holds regardless: it sells at most the lower of the departure's
@@ -185,3 +185,12 @@ transaction is the ceiling that holds regardless: it sells at most the lower of 
 roll start the new departure at the certificate; "apply to the rest of the series" gives a date on
 a smaller hull the details with its seats capped at the certificate, and only a date holding more
 seats than that, or with a roll call past the new dive count, is left alone (#2322). Nothing here touches admission, readiness or the roll call.
+
+
+## Note 2026-10-26 — configured capacity is advisory
+
+Aaron directed that a departure whose seats exceed `boats.capacity`, the shop’s configured seats
+on sale for the boat, shows a warning without blocking a save. The schedule creation and departure
+details forms show the configured number. This supersedes the configured-capacity refusal in the
+historical notes above; the separately recorded `certified_passengers` limit continues to refuse
+saves and cap sales as described in H-107.

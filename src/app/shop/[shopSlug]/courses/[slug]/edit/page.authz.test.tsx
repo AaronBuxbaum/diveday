@@ -111,6 +111,7 @@ const COURSE = {
   excludes: [],
   scheduleDays: [],
   faqs: [],
+  learningMaterials: [],
   priceCents: 49900,
   eLearningPriceCents: null,
   minimumCertificationLevel: null,

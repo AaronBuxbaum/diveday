@@ -61,6 +61,7 @@ export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): Buil
     departs: st("schedule.builder.departs"),
     returns: st("schedule.builder.returns"),
     seats: st("schedule.builder.seats"),
+    boatCapacityWarning: st.raw("schedule.builder.boatCapacityWarning"),
     dives: st("schedule.builder.dives"),
     price: st("schedule.builder.price"),
     priceDescription: st("schedule.builder.priceDescription"),

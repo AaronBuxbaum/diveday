@@ -17,7 +17,7 @@ import { type SiteFitTone, siteFit } from "@/lib/diver-planning";
  * **The dive-site library as one ledger** — ADR 20260827-the-shops-shelves,
  * the library pattern: "a search/filter toolbar, grouped rows (by the
  * collection's own shared fact), exceptional badges only, the row as the door",
- * with the DiveDay catalog as a quiet door at the tail rather than a second
+ * with the DiveDay catalog as a quiet door above the rows rather than a second
  * surface style.
  *
  * What this replaced was a three-column table beside a card grid one query
@@ -55,7 +55,6 @@ export function SiteLibraryLedger({
   diverT,
   depthUnit,
   currentTemplateVersion,
-  catalog,
 }: {
   groups: readonly SiteLibraryGroup[];
   shopSlug: string;
@@ -66,13 +65,7 @@ export function SiteLibraryLedger({
   depthUnit: DepthUnit;
   /** Published version per source template id, for the one badge a row may wear. */
   currentTemplateVersion: ReadonlyMap<string, number>;
-  /** The tail door, or null when DiveDay publishes nothing to browse. */
-  catalog: { href: string; count: number } | null;
 }) {
-  // A ledger with no rows is not a ledger, and the door is its *tail*: with an
-  // empty library the page's own two-door empty state owns the write-one-or-
-  // import-one choice, and a second catalog door underneath it would be the
-  // third identical destination on one screen.
   if (groups.length === 0) return null;
   return (
     <div className="mt-8">
@@ -103,7 +96,6 @@ export function SiteLibraryLedger({
           );
         })}
       </div>
-      {catalog ? <CatalogDoor href={catalog.href} count={catalog.count} t={t} /> : null}
     </div>
   );
 }
@@ -239,19 +231,25 @@ function SiteRow({
 /**
  * **The catalog, as a door rather than a destination.** DiveDay's published
  * site catalog was a second surface style — a two-column card grid behind a
- * header button — for a thing a shop opens once or twice a year. It is now the
- * last row of the library it feeds, in the same grammar as the rows above it,
- * and the header's secondary action has gone with it.
+ * header button — for a thing a shop opens once or twice a year. It is now above the library it feeds, in the same grammar as the rows below it.
  *
  * The count is the whole catalog's, never a fetched page's total, and it never
  * claims to be near anybody: the catalog's *ordering* leans on the shop's
  * coordinates, its size does not, so the door renders the same line for a shop
  * that has not set an address yet.
  */
-function CatalogDoor({ href, count, t }: { href: string; count: number; t: StaffTranslator }) {
+export function CatalogDoor({
+  href,
+  count,
+  t,
+}: {
+  href: string;
+  count: number;
+  t: StaffTranslator;
+}) {
   const title = t("diveSites.list.browseTemplates");
   return (
-    <div className="mt-10">
+    <div>
       <LedgerRow
         as="div"
         href={href}

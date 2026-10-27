@@ -29,7 +29,7 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { CatalogView } from "./_components/CatalogView";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
-import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
+import { CatalogDoor, SiteLibraryLedger } from "./_components/SiteLibraryLedger";
 import { catalogPageMetadata } from "./dive-site-page-metadata";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
@@ -114,7 +114,7 @@ export default async function DiveSitesPage({
     // this shop have a library yet? — which is what separates the day-one
     // empty state from a search that simply matched nothing.
     diveSiteLibrarySize(db, shop.id),
-    // The tail door's number, over the whole published catalog — never the
+    // The catalog door's number, over the whole published catalog — never the
     // `total` of a page nobody has fetched yet (ADR 20260827-the-shops-shelves).
     countGlobalDiveSiteTemplates(db),
     listDiveSiteMapRows(db, shop.id),
@@ -179,10 +179,6 @@ export default async function DiveSitesPage({
         // primaries on one screen is what principle 8 forbids — so the card
         // owns them until there is a library to act on.
         //
-        // One action, not two: the catalog's "Browse templates" secondary
-        // retired the day the ledger grew its own tail door (ADR
-        // 20260827-the-shops-shelves), which is where a shop looking for a site
-        // it has not written yet is already looking.
         actions={
           librarySize === 0 ? undefined : (
             <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass()}>
@@ -273,6 +269,9 @@ export default async function DiveSitesPage({
           shopAnchor={shopAnchor}
           pins={pins}
           clusterLabel={t("diveSites.map.clusterLabel")}
+          catalog={
+            catalogSize > 0 ? <CatalogDoor href={catalogHref} count={catalogSize} t={t} /> : null
+          }
         >
           {sites.length === 0 ? (
             <EmptyState
@@ -289,10 +288,6 @@ export default async function DiveSitesPage({
                 diverT={diverT}
                 depthUnit={shop.depthUnit}
                 currentTemplateVersion={currentTemplateVersion}
-                // The tail door renders only when there is something behind it. A
-                // catalog DiveDay has not published into yet would otherwise offer a
-                // shop a page of nothing at the foot of its own library.
-                catalog={catalogSize > 0 ? { href: catalogHref, count: catalogSize } : null}
               />
 
               <Pager

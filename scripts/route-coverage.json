@@ -54,6 +54,10 @@
     "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["booking-confirmed-embed"]
   },
+  "/shop/[shopSlug]/schedule/board/new": {
+    "e2e": ["schedule-builder.spec.ts"],
+    "visual": ["schedule-builder-add", "schedule-builder-add-full", "schedule-builder-add-tide"]
+  },
   "/shop/[shopSlug]/bookings/new/[tripId]": {
     "visual": ["booking-new-diver"]
   },

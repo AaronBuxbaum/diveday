@@ -41,7 +41,11 @@ export function AddCertificationForm({
         {/* The status ledger's "Add certification" lands here
               (`STATUS_TARGET_ANCHORS.add_card`), and opens it: a fix that
               scrolled to a shut door would leave the form one more tap away. */}
-        <AutoOpenDetails id={ADD_ANCHOR} openOnHash={ADD_ANCHOR} className="group scroll-mt-8">
+        <AutoOpenDetails
+          id={ADD_ANCHOR}
+          openOnHash={ADD_ANCHOR}
+          className="group scroll-mt-8 print:[&:not([open])]:hidden"
+        >
           <summary
             className={buttonClass({
               variant: "link",

@@ -217,7 +217,7 @@ export function PublicShopFooter({
   // from `sm` up the shop's name takes the same 44px line so the contact row
   // beside it does not sit 12px lower.
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="border-t border-border bg-surface print:break-inside-avoid">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div>
           <p className="sm:flex sm:min-h-11 sm:items-center">

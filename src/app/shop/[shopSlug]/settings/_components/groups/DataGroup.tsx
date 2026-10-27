@@ -135,6 +135,7 @@ export async function DataGroup({
     */}
       {pendingMediaDeletions.length > 0 ? (
         <section
+          data-settings-urgent
           aria-label={t("settings.main.dataJobs.mediaDeletions.sectionLabel")}
           className="mb-6"
         >
@@ -203,6 +204,7 @@ export async function DataGroup({
     */}
       {owedProcessorErasures.length > 0 ? (
         <section
+          data-settings-urgent
           aria-label={t("settings.main.dataJobs.processorErasures.sectionLabel")}
           className="mb-6"
         >

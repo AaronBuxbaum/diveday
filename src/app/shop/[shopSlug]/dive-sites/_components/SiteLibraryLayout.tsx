@@ -9,12 +9,14 @@ export function SiteLibraryLayout({
   viewportStorageKey,
   pins,
   clusterLabel,
+  catalog,
   children,
 }: {
   shopAnchor: ShopAnchor | null;
   viewportStorageKey?: string;
   pins: MapPin[];
   clusterLabel: string;
+  catalog?: ReactNode;
   children: ReactNode;
 }) {
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
@@ -25,16 +27,9 @@ export function SiteLibraryLayout({
       ? { latitude: pins[0].latitude, longitude: pins[0].longitude }
       : { latitude: 25.0117, longitude: -80.4223 };
 
-  // **The list first, the map under it** (visual review 2026-10-24, A35):
-  // the sites are what a staffer came to open; the map is a second reading of
-  // the same rows, on a muted ground that stays empty while the map library
-  // loads. The box keeps the map's old heights: a 16:9 box at the library's
-  // width is under 400px tall, where Leaflet clusters every pin and no site
-  // can be opened from the map without zooming first.
   return (
     <div className="mt-6 flex flex-col gap-8">
-      <div className="min-w-0 w-full">{children}</div>
-      <div className="h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface-sunken sm:h-[540px] lg:h-[620px]">
+      <div className="h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface-sunken sm:h-[540px] lg:h-[620px] print:hidden">
         <QuietSiteMap
           viewportStorageKey={viewportStorageKey}
           center={defaultCenter}
@@ -46,6 +41,10 @@ export function SiteLibraryLayout({
           onSelectPin={setSelectedPinId}
           className="h-full w-full"
         />
+      </div>
+      <div className="min-w-0 w-full">
+        {catalog}
+        {children}
       </div>
     </div>
   );

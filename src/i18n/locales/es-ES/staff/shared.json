@@ -140,6 +140,8 @@
     "popupBlocked": "El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes y vuelve a intentarlo."
   },
   "printPacket": {
+    "changedHeading": "Actualiza el paquete",
+    "changed": "La salida {id} cambió mientras se preparaba este paquete. No se incluyeron las hojas de esta salida. Actualiza la página y vuelve a imprimir.",
     "title": "Paquete de salida",
     "divesHeading": "Plan de inmersiones",
     "diveNumber": "Inmersión {number}",
@@ -619,6 +621,8 @@
     "tellThem": "Avisarles"
   },
   "formDraft": {
+    "editorValues": "Valores del editor, incluidos los cambios sin guardar",
+    "savedDetails": "Datos guardados",
     "pickedUp": "Retomado del mostrador, {time}.",
     "startOver": "Empezar de nuevo",
     "unsavedSection": "Sin guardar"

@@ -1,16 +1,20 @@
 import Link from "next/link";
-import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
+import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow, ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
 import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
-import { formatDayParts, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import {
+  formatDayParts,
+  formatShortDate,
+  formatTimeRangeTz,
+  formatTimeZoneGeneric,
+} from "@/lib/format";
 import {
   GAP_TONE,
   type PlacedGap,
@@ -21,6 +25,7 @@ import {
 } from "@/lib/staffing-week";
 import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
 import { StaffingPersonalRows } from "./StaffingPersonalRows";
+import { StaffingWeekHeader } from "./StaffingWeekHeader";
 import { mobileDepartureGroups } from "./staffing-mobile-groups";
 import { ShiftFace } from "./staffing-shift-face";
 import { WarningLine } from "./staffing-warning-line";
@@ -68,8 +73,6 @@ export type StaffingWeekWords = {
   next: string;
   thisWeek: string;
   today: string;
-  /** The door that prints the week: the rota a shop pins up by the dock. */
-  print: string;
   /** The header of the person column — visually empty, never nameless. */
   person: string;
   /** The gap row's own label. */
@@ -296,7 +299,10 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
-      <span className="block truncate font-medium" title={trip.title}>
+      <span
+        className="block truncate font-medium print:overflow-visible print:whitespace-normal"
+        title={trip.title}
+      >
         {trip.title}
       </span>
       {/* **One person, two hulls, these same hours** (issue #1695) — a state
@@ -333,19 +339,12 @@ function CrewChip({
   );
 }
 
-/**
- * A day a crew member has said they are away.
- *
- * Quiet by construction: it is not a problem, it is a fact the person supplied,
- * and drawing it in the warning ink this grid reserves for a boat with nobody
- * in the water would spend that channel on somebody's holiday. It goes loud in
- * exactly one place — on a departure they are *also* crewing (`CrewChip`).
- */
+/** Away is a quiet fact; an overlapping crew assignment carries the warning. */
 function AwayChip({ block, words }: { block: AvailabilityBlock; words: StaffingWeekWords }) {
   return (
     <span className={chipClass("away")}>
       <span className="font-semibold">{words.away}</span>
-      {block.note ? <span className="font-medium">{block.note}</span> : null}
+      {block.note ? <span className="font-medium print:hidden">{block.note}</span> : null}
     </span>
   );
 }
@@ -581,6 +580,7 @@ export function StaffingWeek({
   locale,
   timeZone,
   shopSlug,
+  shopName,
   canManage,
   canDecide,
   deleteShiftAction,
@@ -594,6 +594,7 @@ export function StaffingWeek({
   locale: string;
   timeZone: string;
   shopSlug: string;
+  shopName: string;
   canManage: boolean;
   /** Whether this reader may answer a crew member's request (issue #1235). */
   canDecide: boolean;
@@ -638,110 +639,91 @@ export function StaffingWeek({
           thisWeekHref={links.thisWeekHref}
           words={words}
         />
-        <PrintButton label={words.print} quiet />
       </div>
 
-      {/* ---- The grid, from `lg` up. Its rules are its rows' (`WEEK_GRID`),
-          so the last row there closes it, gap row or not. */}
-      <div className="mt-4 hidden lg:block">
-        <div className={WEEK_GRID.row}>
-          <div className={WEEK_GRID.personHead}>
-            <span className="sr-only">{words.person}</span>
-          </div>
-          {dayFaces.map((day) => (
-            <div key={day.date} className={WEEK_GRID.dayHead}>
-              {/* `h2`, not `h3`: the page's own `<h1>` is directly above and a
-                  skipped level is an axe `heading-order` failure (the suite
-                  scanned this route until 2026-10-24). */}
-              <h2 className="flex flex-wrap items-baseline gap-x-1.5">
-                <span className="sr-only">{day.label}</span>
-                <span aria-hidden="true" className="flex flex-wrap items-baseline gap-x-1.5">
-                  {/* A day column is a ledger group and wears the one group-label
-                      spelling (`groupLabelClass`), primary on the current day. */}
-                  <span className={groupLabelClass(day.isToday ? "primary" : "muted")}>
-                    {day.weekday} {day.day}
-                  </span>
-                  {/* Today is the word as well as the ink. */}
-                  {day.isToday ? (
-                    <span className="text-xs font-semibold text-primary">{words.today}</span>
-                  ) : null}
-                </span>
-              </h2>
-            </div>
-          ))}
-        </div>
+      {/* Native table groups give PDF renderers an explicit repeatable
+          header row. Screen rows keep their grid layout. */}
+      <table className="staffing-print-grid mt-4 hidden w-full lg:block print:table">
+        <StaffingWeekHeader
+          days={dayFaces}
+          shopName={shopName}
+          rangeLabel={links.rangeLabel}
+          timeZoneLabel={formatTimeZoneGeneric(locale, timeZone)}
+          words={words}
+          grid={WEEK_GRID}
+        />
 
-        {/* The gap row renders only when a departure is short-handed. A row of
-            seven empty cells beside "Needs crew" would be the page saying
-            nothing at the volume of something. */}
-        {week.hasGaps ? (
-          <div className={WEEK_GRID.row}>
-            <div className={WEEK_GRID.person}>
-              <p className="text-sm font-semibold text-muted">{words.needsCrew}</p>
-            </div>
-            {week.gapDays.map((cell) => (
-              <div key={cell.date} className={WEEK_GRID.day}>
-                {cell.gaps.map((gap) => (
-                  <GapChip
-                    key={gap.tripId}
-                    gap={gap}
-                    shopSlug={shopSlug}
-                    locale={locale}
-                    timeZone={timeZone}
-                    gapWords={gapWords}
-                    words={words}
-                    canManage={canManage}
-                    canDecide={canDecide}
-                    requestAction={requestAction}
-                    decideRequestAction={decideRequestAction}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {week.people.map((person) => (
-          <div key={person.personId} className={WEEK_GRID.row}>
-            <div className={WEEK_GRID.person}>
-              <PersonFace person={person} totals={words.personTotals?.[person.personId]} />
-            </div>
-            {person.days.map((cell, index) => {
-              const day = week.days[index];
-              return (
-                <div key={cell.date} className={WEEK_GRID.day}>
-                  {cell.shifts.map((shift) => (
-                    <ShiftChip
-                      key={shift.id}
-                      shift={shift}
-                      personName={person.name}
-                      dayLabel={dayFaces[index]?.label ?? cell.date}
-                      locale={locale}
-                      timeZone={timeZone}
-                      isPast={day?.isPast ?? false}
-                      canManage={canManage}
-                      words={words}
-                      deleteShiftAction={deleteShiftAction}
-                    />
-                  ))}
-                  {cell.crewing.map((trip) => (
-                    <CrewChip
-                      key={trip.tripId}
-                      trip={trip}
+        <tbody className="block print:table-row-group">
+          {/* Empty gap rows say nothing; only short-handed departures render. */}
+          {week.hasGaps ? (
+            <tr className={WEEK_GRID.row}>
+              <th scope="row" className={`${WEEK_GRID.person} text-start font-normal`}>
+                <p className="text-sm font-semibold text-muted">{words.needsCrew}</p>
+              </th>
+              {week.gapDays.map((cell) => (
+                <td key={cell.date} className={WEEK_GRID.day}>
+                  {cell.gaps.map((gap) => (
+                    <GapChip
+                      key={gap.tripId}
+                      gap={gap}
                       shopSlug={shopSlug}
                       locale={locale}
                       timeZone={timeZone}
+                      gapWords={gapWords}
                       words={words}
+                      canManage={canManage}
+                      canDecide={canDecide}
+                      requestAction={requestAction}
+                      decideRequestAction={decideRequestAction}
                     />
                   ))}
-                  {cell.away.map((block) => (
-                    <AwayChip key={block.id} block={block} words={words} />
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+                </td>
+              ))}
+            </tr>
+          ) : null}
+          {week.people.map((person) => (
+            <tr key={person.personId} className={WEEK_GRID.row}>
+              <th scope="row" className={`${WEEK_GRID.person} text-start font-normal`}>
+                <PersonFace person={person} totals={words.personTotals?.[person.personId]} />
+              </th>
+              {person.days.map((cell, index) => {
+                const day = week.days[index];
+                return (
+                  <td key={cell.date} className={WEEK_GRID.day}>
+                    {cell.shifts.map((shift) => (
+                      <ShiftChip
+                        key={shift.id}
+                        shift={shift}
+                        personName={person.name}
+                        dayLabel={dayFaces[index]?.label ?? cell.date}
+                        locale={locale}
+                        timeZone={timeZone}
+                        isPast={day?.isPast ?? false}
+                        canManage={canManage}
+                        words={words}
+                        deleteShiftAction={deleteShiftAction}
+                      />
+                    ))}
+                    {cell.crewing.map((trip) => (
+                      <CrewChip
+                        key={trip.tripId}
+                        trip={trip}
+                        shopSlug={shopSlug}
+                        locale={locale}
+                        timeZone={timeZone}
+                        words={words}
+                      />
+                    ))}
+                    {cell.away.map((block) => (
+                      <AwayChip key={block.id} block={block} words={words} />
+                    ))}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       {/* ---- The same week as a day list, below `lg`. Days with nothing in
           them are absent rather than empty: the reader is paging a week, and
@@ -750,7 +732,7 @@ export function StaffingWeek({
           list as their row (ADR 20260902-crew-requests-and-blackouts). It
           drew a day away only beside a shift or a boat, so a week of days
           away drew no list at all, and no rule over the doors (K-195). */}
-      <div className="mt-4 lg:hidden">
+      <div className="mt-4 lg:hidden print:hidden">
         {listDays.map(({ day, rows, departures }) => {
           return (
             <div key={day.date} className="mt-6 first:mt-0">

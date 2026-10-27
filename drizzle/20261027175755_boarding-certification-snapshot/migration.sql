@@ -1,0 +1,4 @@
+ALTER TABLE "roll_call_events" ADD COLUMN "certification_snapshot" jsonb;--> statement-breakpoint
+ALTER TABLE "roll_call_events" ADD COLUMN "certification_snapshot_started_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "roll_call_events" ADD COLUMN "certification_snapshot_captured_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "roll_call_events" ADD CONSTRAINT "roll_call_events_certification_snapshot_shape" CHECK (("certification_snapshot" is null and "certification_snapshot_started_at" is null and "certification_snapshot_captured_at" is null) or ("certification_snapshot" is not null and "certification_snapshot_started_at" is not null and "certification_snapshot_captured_at" is not null and "certification_snapshot_started_at" <= "certification_snapshot_captured_at" and "status" = 'boarded' and "checkpoint" = 'departure' and "source" = 'live' and jsonb_typeof("certification_snapshot") = 'array'));

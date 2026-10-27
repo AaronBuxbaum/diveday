@@ -204,14 +204,16 @@ export function SettingsRow({
   );
   if (fragment) {
     return (
-      <AutoOpenDetails
-        openOnHash={fragment}
-        open={open}
-        onToggle={onToggle}
-        className="group scroll-mt-24"
-      >
-        {body}
-      </AutoOpenDetails>
+      <div data-settings-section={fragment}>
+        <AutoOpenDetails
+          openOnHash={fragment}
+          open={open}
+          onToggle={onToggle}
+          className="group scroll-mt-24"
+        >
+          {body}
+        </AutoOpenDetails>
+      </div>
     );
   }
   return (
@@ -252,7 +254,7 @@ export function SettingsDoorRow({
   // on the bordered box, the rule came out of the 56px and every door drew 1px
   // shorter than the settings it sits among.
   return (
-    <div className="group/door">
+    <div className="group/door" data-settings-door>
       <div className="relative flex min-h-14 items-center justify-between gap-4 px-4 py-3 transition-brand hover:bg-surface-sunken sm:px-5">
         <div className="min-w-0">
           <h3 className="text-base">

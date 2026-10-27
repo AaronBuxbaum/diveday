@@ -40,7 +40,7 @@ export default async function ForgotPasswordPage({
           title={t("account.forgotPassword.sentTitle")}
           text={t("account.forgotPassword.sent")}
           action={
-            <Link href="/sign-in" className="font-medium text-primary hover:underline">
+            <Link href="/sign-in" className="font-medium text-primary hover:underline print:hidden">
               {t("account.common.backToSignIn")}
             </Link>
           }
@@ -53,7 +53,10 @@ export default async function ForgotPasswordPage({
           description={t("account.forgotPassword.description")}
           footer={
             <p>
-              <Link href="/sign-in" className="font-medium text-primary hover:underline">
+              <Link
+                href="/sign-in"
+                className="font-medium text-primary hover:underline print:hidden"
+              >
                 {t("account.common.backToSignIn")}
               </Link>
             </p>

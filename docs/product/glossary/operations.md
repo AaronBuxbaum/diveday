@@ -946,7 +946,10 @@
   shop hands to authorities or insurers after a departure, generated from close-out: the manifest roster with each person's per-checkpoint roll-call state, the
   **pre-departure checklist**'s own answer for each shop-defined item (checked, by whom, when, or
   explicitly not checked), the
-  complete append-only roll-call timeline (corrections included), certification evidence as held,
+  complete append-only roll-call timeline (corrections included), certification evidence captured
+  for each live departure boarding request, labeled with its read interval separately from cards held now
+  (the read may follow the tap and may wait while a card changes; an older or offline boarding has
+  no captured card evidence and says unavailable; an empty capture says no cards were on file),
   waiver **status** (state, date, template version — never the medical questionnaire's answers),
   the **buddy pair** staff recorded for the departure — a stable team number, the buddy's name,
   and who recorded the pairing when, since a pairing decided at the dock and one typed in that
@@ -966,7 +969,8 @@
   the printed facts sits in the footer with its **version**. It is tamper-evidence, not a
   signature: regenerating the export from unchanged records reproduces the code, so two copies can
   be checked against each other. Version 2 prints, but does not seal, when the log was made and for
-  whom; version 1 is refused for a log holding anything version 2 added (a late seat or crew line,
+  whom; version 3 seals the boarding snapshot but excludes the separately labeled current cards.
+  Earlier codes cannot seal a captured boarding snapshot. Version 1 is refused for a log holding anything version 2 added (a late seat or crew line,
   an incident report) or a line later than the log says it was made (ADR
   20261016-departure-log-code-v2). Owner only, one tap from
   the manifest (`/shop/<slug>/trips/<id>/log`).

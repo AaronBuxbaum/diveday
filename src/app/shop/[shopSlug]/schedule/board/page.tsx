@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
@@ -24,9 +24,9 @@ import { resolveWeekStart, weekDates } from "@/lib/week-board";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { RescheduleNotice } from "../../_components/RescheduleNotice";
 import { ScheduleViews } from "../_components/ScheduleViews";
-import { BoardHeaderActions } from "./_components/BoardHeaderActions";
+import { BoardPageShell } from "./_components/BoardPageShell";
 import { requestedCourseAndSite, weekAroundRead } from "./_components/board-reads";
-import type { BoardSearchParams } from "./_components/board-search-params";
+import { type BoardSearchParams, legacyAddHref } from "./_components/board-search-params";
 import { boardWeekView } from "./_components/board-week-view";
 import {
   builderPriceInput,
@@ -84,9 +84,25 @@ export default async function ScheduleBoardPage({
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { builder, count, created, gear, held, tell, series, add, date, course, requests, site } =
-    await searchParams;
-  const { week } = await searchParams;
+  const query = await searchParams;
+  const {
+    builder,
+    count,
+    created,
+    gear,
+    held,
+    tell,
+    series,
+    add,
+    date,
+    course,
+    requests,
+    site,
+    week,
+  } = query;
+  const createPage = query._createPage === "1";
+  const legacyHref = legacyAddHref(shopSlug, query);
+  if (legacyHref) redirect(legacyHref);
   const requestIds = [
     ...new Set(
       (requests ?? "")
@@ -109,6 +125,8 @@ export default async function ScheduleBoardPage({
   // Which week the desktop grid draws. Total by construction: a malformed or missing `?week=`
   // lands on the one the shop is in rather than refusing the page (`src/lib/week-board.ts`).
   const weekStartIso = resolveWeekStart(week, todayIso);
+  const returnWeek = week ? weekStartIso : undefined;
+  const boardHref = `/shop/${shopSlug}/schedule/board${returnWeek ? `?week=${returnWeek}` : ""}`;
 
   // The board works off one keyset page of departures, same as the public list — a shop with
   // hundreds of upcoming departures still loads one page, not the whole future.
@@ -199,7 +217,11 @@ export default async function ScheduleBoardPage({
   // `?course=` always implies an open panel: it would otherwise land on a board
   // that silently swallowed the course the link named.
   const addPanelState =
-    add === "full" ? "expanded" : add || requestedCourse || requestedSite ? "quick" : "closed";
+    add === "full"
+      ? "expanded"
+      : createPage || add || requestedCourse || requestedSite
+        ? "quick"
+        : "closed";
 
   const initialCourse: BuilderInitialCourse | null = requestedCourse
     ? {
@@ -253,43 +275,28 @@ export default async function ScheduleBoardPage({
   });
 
   return (
-    <StaffPage width="full">
-      <ShopPageHeader
-        // The section's own name: the nav row, this heading and the Crew
-        // view's heading all say "Schedule" (ADR 20261001-logbook).
-        title={st("schedule.boardTitle")}
-        // **The header stands down while the board is empty** (issue 797).
-        // With nothing upcoming, this cluster offered a new owner three doors
-        // and made the impossible one primary: "Add a booking" leads to a
-        // departure picker with no departures in it, so the page's most
-        // emphasised action was a dead end; "+ Add a departure" and the empty
-        // state's own "Schedule a trip" are the same act twelve pixels apart
-        // in the reading order; and "View public page" invited a look at a
-        // page with nothing on it. Two primaries rendered together, which
-        // §8 counts by what is on screen.
-        //
-        // So the one act that can succeed is left where it already was, in
-        // the empty state below. This is the fork the orders index makes for
-        // the same reason a few routes over — its header primary stands down
-        // while its list is empty rather than doubling the empty state's.
-        actions={
-          hasUpcoming ? (
-            <BoardHeaderActions st={st} shopSlug={shopSlug} canConfigure={canConfigure} />
-          ) : undefined
-        }
-      />
-
-      <ScheduleViews
-        shopSlug={shopSlug}
-        crewSchedule={shop.crewScheduleEnabled}
-        current="week"
-        week={weekStartIso}
-        copy={{
-          label: st("schedule.views.label"),
-          week: st("schedule.views.week"),
-          crew: st("schedule.views.crew"),
-        }}
-      />
+    <BoardPageShell
+      createPage={createPage}
+      boardHref={boardHref}
+      hasUpcoming={hasUpcoming}
+      canConfigure={canConfigure}
+      shopSlug={shopSlug}
+      returnWeek={returnWeek}
+      st={st}
+    >
+      {!createPage ? (
+        <ScheduleViews
+          shopSlug={shopSlug}
+          crewSchedule={shop.crewScheduleEnabled}
+          current="week"
+          week={weekStartIso}
+          copy={{
+            label: st("schedule.views.label"),
+            week: st("schedule.views.week"),
+            crew: st("schedule.views.crew"),
+          }}
+        />
+      ) : null}
 
       {/* The four-tile overview row is gone on purpose: "Departures 46 /
           Booked 196" aggregated a horizon nobody acts on as a number, and on
@@ -311,7 +318,7 @@ export default async function ScheduleBoardPage({
         </ShopNotice>
       ) : null}
 
-      {!hasUpcoming ? (
+      {!createPage && !hasUpcoming ? (
         <EmptyState
           title={t("schedule.noUpcomingStaff")}
           body={t("schedule.noTripsStaff")}
@@ -325,7 +332,7 @@ export default async function ScheduleBoardPage({
           action={
             canConfigure ? (
               <Link
-                href={`/shop/${shopSlug}/schedule/board?add=1`}
+                href={`/shop/${shopSlug}/schedule/board/new${returnWeek ? `?week=${returnWeek}` : ""}`}
                 scroll={false}
                 className={buttonClass()}
               >
@@ -360,7 +367,9 @@ export default async function ScheduleBoardPage({
           initialSite,
           requestPlan,
           openAdd: addPanelState,
-          week: builderWeek,
+          createPage,
+          returnWeek,
+          week: createPage ? null : builderWeek,
           actions: {
             add: addDepartureAction.bind(null, shopSlug),
             move: moveDepartureAction.bind(null, shopSlug),
@@ -370,6 +379,6 @@ export default async function ScheduleBoardPage({
           },
         }}
       />
-    </StaffPage>
+    </BoardPageShell>
   );
 }

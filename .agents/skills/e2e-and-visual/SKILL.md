@@ -59,6 +59,7 @@ Read the file for the case in front of you:
 - [shops.md](shops.md) — which shop a writing spec uses, so parallel workers never collide.
 - [locators.md](locators.md) — hidden or duplicated elements and what the page fixture does about them.
 - [captures.md](captures.md) — which states of a surface need their own visual capture.
+- [print.md](print.md) — print CSS, paper documents and PDFs: real pagination, rendered ink and regression evidence.
 
 ## Capture full-size; bound the page in code
 
