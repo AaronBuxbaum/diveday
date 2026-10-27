@@ -61,6 +61,33 @@ afterEach(() => {
 });
 
 describe("infra-cdk", () => {
+  it("runs the infra diff for a Postgres image-only change", () => {
+    const directory = mkdtempSync(join(tmpdir(), "diveday-infra-filter-"));
+    directories.push(directory);
+    const git = (...args) => {
+      const result = spawnSync("git", args, { cwd: directory, encoding: "utf8" });
+      if (result.status !== 0) throw new Error(result.stderr);
+      return result.stdout.trim();
+    };
+    git("init", "-q");
+    git("config", "user.name", "test");
+    git("config", "user.email", "test@example.invalid");
+    mkdirSync(join(directory, "config", "postgres-image"), { recursive: true });
+    const image = join(directory, "config", "postgres-image", "Dockerfile");
+    writeFileSync(image, "FROM old\n");
+    git("add", ".");
+    git("commit", "-qm", "base");
+    writeFileSync(image, "FROM new\n");
+    const workflow = readFileSync(join(process.cwd(), ".github/workflows/infra.yml"), "utf8");
+    const paths = workflow.match(
+      /git diff --name-only "\$\{BASE_SHA\}\.\.\.HEAD" -- ([^\n)]+)/,
+    )?.[1];
+    expect(paths).toBeDefined();
+    expect(git("diff", "--name-only", "HEAD", "--", ...paths.trim().split(/\s+/))).toBe(
+      "config/postgres-image/Dockerfile",
+    );
+  });
+
   it("runs synth without verifying an AWS session -- selectDeployProfile's env shaping still applies", () => {
     const directory = fixture();
     const result = spawnSync(

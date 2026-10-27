@@ -318,7 +318,7 @@ portability feature it was built as.
 | Property | Reality |
 | --- | --- |
 | What it is | `pg_dump --format=custom --no-owner --no-privileges` over the whole cluster, gzipped. Covers `user_accounts`, `account_tokens` and `calendar_feeds` — and everything else — in one file |
-| Host | CodeBuild project `diveday-database-dump` (`infra/lib/infra-stack.ts` §20), image `public.ecr.aws/docker/library/postgres:17-alpine`. Pinned to the Postgres **major** version: `pg_dump` may be newer than its server, never older, so `DUMP_POSTGRES_MAJOR` is a floor to raise when Neon upgrades |
+| Host | CodeBuild project `diveday-database-dump` (`infra/lib/infra-stack.ts` §20), using the digest-pinned Postgres 17 image in `config/postgres-image/Dockerfile`. `pg_dump` may be newer than its server, never older, so revisit the major version when Neon upgrades |
 | Cadence | Weekly, **Mondays 05:30 UTC**, EventBridge Scheduler → `codebuild:StartBuild`. Half an hour after the export pass, a day before the watchdog, so one week's dump and one week's bundles share a run date |
 | Key convention | `dumps/<YYYY-MM-DD>/diveday.dump.gz` in `DatabaseDumpBucket`, default name `diveday-database-dumps`, override with `--context dumpBucketName=...`. **Not** the bundles' bucket, since 2026-08-15 — and there is no second place to look, see the abandoned prefix below |
 | Retention | **35 days, then deleted** — a lifecycle rule over the whole bucket, deliberately the opposite of the bundles' "never expire". The file holds every password hash and every medical answer in the platform, and it answers a question asked within days of a loss, never months. `DUMP_RETENTION_DAYS` in `infra/lib/infra-stack.ts` is the one number to change if H-02 lands somewhere else |
@@ -577,9 +577,11 @@ environment's branch rule keeps that to `main`: by default an environment admits
 The verify step gets a minimal environment (`subprocessEnv`): no Neon key, AWS session or GitHub
 token, which lives on the two alert steps only.
 
-The Postgres image is pinned by digest, read from ECR Public and Docker Hub on 2026-10-23.
-Dependabot does not read `POSTGRES_IMAGE`, so a Postgres minor or an Alpine fix is a by-hand bump
-of the digest there.
+The dump and restore drill share the digest-pinned Postgres image in
+`config/postgres-image/Dockerfile`. Dependabot checks it weekly and opens a pull request for a new
+digest; the infrastructure workflow shows the resulting CDK diff. Merging updates the restore drill,
+but the running dump job keeps its old image until the CDK stack is deployed through the approved
+`infra-deploy` workflow. Run that deployment after reviewing and merging an image update.
 
 ### Quarterly restore test
 

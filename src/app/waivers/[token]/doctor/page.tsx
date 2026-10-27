@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { ThreadShell } from "@/components/thread/ThreadShell";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -75,12 +76,6 @@ export default async function DoctorReferralPage({
     >
       {/* A fixed rule from `capabilityPagePrintRule`, never a request value. */}
       <style data-capability-print="">{capabilityPagePrintRule()}</style>
-      <div className="mt-6 flex flex-wrap items-center gap-4 print:hidden">
-        <PrintButton label={t("waiver.doctor.print")} />
-        <Link href={waiverPath} className="text-base text-primary hover:underline">
-          {t("waiver.doctor.back")}
-        </Link>
-      </div>
 
       <section
         className="mt-8 rounded-lg border border-border-strong p-5"
@@ -104,9 +99,9 @@ export default async function DoctorReferralPage({
             href={FORM.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-base font-medium text-primary hover:underline print:hidden"
+            className={buttonClass({ className: "print:hidden" })}
           >
-            {t("waiver.doctor.formLink", { page: FORM.examinerPage })}
+            {t("waiver.doctor.formLink")}
           </a>
           {/* On paper a link is its address: the form's public PDF, never this page's. */}
           <span className="hidden break-all text-sm text-foreground print:inline">{FORM.url}</span>
@@ -117,6 +112,16 @@ export default async function DoctorReferralPage({
         </div>
       </section>
 
+      <div className="mt-6 flex flex-wrap items-center gap-4 print:hidden">
+        <PrintButton label={t("waiver.doctor.print")} />
+        <Link
+          href={waiverPath}
+          className={`${tapTargetLinkClass} text-base text-primary hover:underline`}
+        >
+          {t("waiver.doctor.back")}
+        </Link>
+      </div>
+
       <section className="mt-8" aria-labelledby="doctor-answers">
         <h2 id="doctor-answers" className={SECTION_TITLE_CLASS}>
           {t("waiver.doctor.answersHeading")}
@@ -126,6 +131,7 @@ export default async function DoctorReferralPage({
             token={token}
             copy={{
               prompt: t("waiver.doctor.answersLocked"),
+              printOmitted: t("waiver.doctor.answersPrintOmitted"),
               birthdate: t("waiver.doctor.birthdateLabel"),
               submit: t("waiver.doctor.unlock"),
               submitting: t("waiver.doctor.unlocking"),

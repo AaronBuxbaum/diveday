@@ -135,7 +135,7 @@ function CertificationDisclosure({
   }
   return (
     <details className="group/cert overflow-hidden rounded-inset border border-border bg-surface-sunken/50">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-base font-semibold">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-inset px-4 py-3 text-base font-semibold focus-visible:focus-ring-inset">
         <DisclosureCaret className="group-open/cert:rotate-90" />
         <span className="min-w-0 flex-1">{summary}</span>
         {optionalLabel ? <Badge size="sm">{optionalLabel}</Badge> : null}

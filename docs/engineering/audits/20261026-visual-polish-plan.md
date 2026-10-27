@@ -9,37 +9,84 @@ Audit commit: `1419edbd6cb2ab218b6f9a97ca1c0db387cca2f0`. Source comparison:
 `d75f4dea7b51e1e2d57c597dc0b0f56449049c6b`; the relevant source paths were unchanged at that
 comparison. Later implementation work must be verified at its own head.
 
-Owner outcome: 71 proposals ready, 4 requiring focused verification, 7 already done, and 3 retaining
-current behavior (M04, D06, D07). All eight additional owner approvals are recorded below. M02 adds
-no new Product hero scene; RGS04 adds no filename search. No owner questions remain pending. Any
-browser review Skip and notes retain precedence; browser-only choices were not read.
+Original owner outcome — 26 October 2026 mapping stage: the record then counted 71 ready proposals,
+4 requiring focused verification, 7 already done, and 3 retaining current behavior (M04, D06, D07).
+Those aggregate counts are historical; the later execution ledger records the current authorization
+counts as 72 ready and 3 verification-first. Individual readiness and owner
+choices remain preserved. These authorization figures do not count implementation completion.
 
-Current execution targets cover all 75 residual proposals (71 ready and 4 requiring verification).
-Issue #3066 is in progress; the six later batches are queued. The 7 already-done and 3
-owner-retained proposals have no new execution target.
+At that original stage, all eight additional owner approvals were recorded and no owner questions
+remained pending. That historical statement does not describe the current decision: RP04 now awaits
+owner input in #3101. M02 still adds no new Product hero scene, and RGS04 adds no filename search.
+Browser review Skip and notes retain precedence; this record does not overwrite browser-only
+choices.
 
-| Execution issue | Proposal IDs | State |
-| --- | --- | --- |
-| [#3066](https://github.com/AaronBuxbaum/diveday/issues/3066) | C01, C06, C13, C14, D05, B05, RB09, RGS01 | In progress |
-| [#3069](https://github.com/AaronBuxbaum/diveday/issues/3069) | M01, M02, M03, M05, M06, M09, D01, D02, D03, D04, RP01, RP08, D08 | Queued |
-| [#3070](https://github.com/AaronBuxbaum/diveday/issues/3070) | M07, M08, RP05, C03, C05, C07, C08, C09, C11, C12, RGS02, RGS04, RGS09 | Queued |
-| [#3071](https://github.com/AaronBuxbaum/diveday/issues/3071) | S01, S02, S03, S04, S05, S06, S07, S08, S09, RR03, RR04, RR05, RR08 | Queued |
-| [#3072](https://github.com/AaronBuxbaum/diveday/issues/3072) | C04, C10, RGS03, RGS06, RGS07, RGS08, RR02, RR06, RR07, RR09 | Queued |
-| [#3073](https://github.com/AaronBuxbaum/diveday/issues/3073) | B01, B02, B03, B04, B07, B08, RB02, RB03, RB04, RB05, RB06, RB08, RP09 | Queued |
-| [#3074](https://github.com/AaronBuxbaum/diveday/issues/3074) | R01, RP02, RP03, RP04, RP06 | Queued |
+Current execution reconciliation — 27 October 2026 (PR #3105 review snapshot)
 
-Prerequisite [issue #3065](https://github.com/AaronBuxbaum/diveday/issues/3065) is tracked in [PR
-#3067](https://github.com/AaronBuxbaum/diveday/pull/3067), on `codex/visual-polish-01-feedback`
-after [PR #3054](https://github.com/AaronBuxbaum/diveday/pull/3054). The implementing chat reports
-the local quick gate passed; hosted CI remains pending. Comparison with the actual intended base
-shows four files; the stale registered PR base pin remains under investigation. These statuses do
-not claim merge or deployment.
+Of 75 implementation proposals, 70 have merged with CI and visual review verified. Four diver
+proposals are published in PR #3105 and remain partial pending final visual verification. RP04 is separately held
+for an owner decision. Seven proposals were already done and three remain as requested. Historical
+authorization and readiness counts remain separate and unchanged: 72 ready, 3 requiring
+verification, 7 already done, and 3 retained. No acceptance criterion has changed.
 
-The latest portable mapping is prepared on `codex/visual-polish-02-clear-controls`. [Open this
-branch’s portable
-record](https://github.com/AaronBuxbaum/diveday/blob/codex/visual-polish-02-clear-controls/docs/engineering/audits/20261026-visual-polish-plan.md).
-Proposal links in the local artifact point to these lowercase GitHub headings; the update becomes
-available after this branch is pushed.
+| Execution issue | Current scope and state |
+| --- | --- |
+| #3066 | Eight IDs merged; CI and visual review complete |
+| #3069 | Thirteen IDs merged; CI and visual review complete |
+| #3070 | Thirteen IDs merged; CI and visual review complete |
+| #3071 | Thirteen IDs merged; CI and visual review complete |
+| #3072 | Ten IDs merged; CI and visual review complete |
+| #3073 / #3096 | Thirteen boat IDs and repair PR #3099 merged externally |
+| #3074 | Four IDs in PR #3105; CI passed at 7d9515, offline visual repair pending final verification |
+| #3101 | RP04 and its full original requirements; owner decision pending |
+
+Boat repair PR #3099 merged externally at 2026-10-27T06:06:37Z as
+`20324bd4cfe1131db869d94b1249e2ab4869e979`; root did not merge it. Exact tree
+`871fc7536d452cfc4b7bbf5f6cb772a51c07b9d8` matches verified head
+`72a83e4fd95cb83629ac8ba401d5a4bda29ea488`. CI run 40456129459 passed, and all 26 changed images
+were accepted: 20 exact expected/actual/diff hash carries and 6 fresh reviews. Historical c006 and
+762 regression verdicts remain preserved. Nested child waiver loading retains a bounded visual gap:
+only the parent fallback was observed; child source/test parity is correct. Merge does not establish
+deployment.
+
+The full five-ID diver source is backed up, clean, and pushed at
+`d7008e2e6d24425661890bc156a0fa6454d8b8d1` on `codex/visual-polish-09-diver-current`. Its final nine
+changed paths retain the reviewed bytes. Final bounded local review accepts all four retained IDs,
+including F1 and F2 closure, preserved arrival facts, member evidence, and combined 390-pixel proof.
+All 34 desktop-shift flags were dismissed using exact geometry; all six final medical PDFs were
+independently accepted. These are local evidence results, not validation of the newly integrated
+publication branch.
+
+The four-ID subset is published in [PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105),
+branch `codex/visual-polish-09-diver-journeys`, based on parent #3103 at
+`688495158087f0a684cd258744ec14cc4f2b6cef`. Parent CI passed before publication. Initial local checks
+passed 168 tests in 16 files, lint, both TypeScript projects, repository guards and regeneration.
+The first hosted run exposed two stale composition tests and a missing real organizer reload in a
+journey test. Four test files were repaired; 46 focused tests passed. The repaired head
+`7d9515a7e28f4973286daa54216323750134f978` passed CI run 40463968405.
+
+Independent review of all 59 first-head visual differences accepted 57 and rejected two offline
+captures for fallback typography. A native reproduction proved missing cached fonts. The repair
+caches required local styles and fonts before publishing a saved copy and preserves newer copies
+when saves finish out of order. Cancellation, terminal responses and delayed cache writes have
+focused regression coverage. Native phone and desktop font preservation is verified; final hosted
+comparison of the repaired source remains required. The prior failing captures and test results
+remain evidence, not accepted baselines. #3074 owns only R01, RP02, RP03 and RP06; #3101 owns RP04
+and all its original requirements. No merge or deployment of this PR is claimed.
+
+RP04's complete original requirements moved from #3074 to
+[#3101](https://github.com/AaronBuxbaum/diveday/issues/3101), “Finish registration disclosure after
+deciding no-JavaScript delivery,” classified half-done and ready for the human decision. No
+requirement was waived. Its complete source and actual JavaScript-disabled RED test remain in the
+full backup. Streaming delivery requires a decision about new non-streaming architecture versus
+narrower acceptance; neither choice is assumed approved. Map U1 remains unverified with diagnostic
+permission pending after automatic rejection for provider-metadata egress, without bypass.
+
+Current main is the externally merged boat commit `20324bd4cfe1131db869d94b1249e2ab4869e979`. The
+original audit scope is available at an [immutable historical
+snapshot](https://github.com/AaronBuxbaum/diveday/blob/ca57514595faf55d57ff2bfdd03c6dfc9df7d47e/docs/engineering/audits/20261026-visual-polish-plan.md).
+Both old publication branches were deleted. Proposal anchors, original scope, owner decisions, and
+audit narrative remain preserved; current execution targets are given above and at each proposal.
 
 Local interactive artifact ID: `01a16de7-0368-77e2-b15c-7d6e84a71f38`. Its folder contains
 `index.html`, `review-data.json`, `execution-ledger.json` and `implementation-plan.md`. Local links
@@ -52,11 +99,13 @@ October were searched. Closed records unchanged since 1 October were not exhaust
 Exact execution tickets, partial matches and historical context are distinguished below; related
 issues are not automatic closure targets.
 
-Verification boundary: no new browser interaction, keyboard/touch checks, computed styles,
-accessibility/provider/payment checks or A4/Letter PDF pagination was performed for this record.
-Follow current repository review and CI rules. Safety-critical changes require two differently
-framed domain reviews; security-sensitive changes require security review. Audit status and
-execution readiness are independent.
+Original mapping-only verification boundary (26 October): creating the original portable record did
+not run browser interactions, keyboard or touch checks, computed-style checks,
+accessibility/provider/payment checks, or A4/Letter PDF pagination. Later implementation layers have
+separate browser and PDF evidence recorded in the current execution ledger; the historical boundary
+does not negate those later checks. Follow current repository review and CI rules. Safety-critical
+changes require two differently framed domain reviews; security-sensitive changes require security
+review. Audit status and execution readiness are independent.
 
 ## Proposal index
 
@@ -95,12 +144,14 @@ execution readiness are independent.
 
 ## M01
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make the homepage a short, persuasive journey**
 
-**Execution:** Ready to implement. Owner explicitly approved: Move repeated catalogue to Product;
-preserve all essential booking-to-boat scenes. Homepage editorial replacement changes the settled
-H-93 booking-to-boat argument; preserve required dock check-in scene, and do not reduce five scenes
-to three without deciding which.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Move repeated
+catalogue to Product; preserve all essential booking-to-boat scenes. Homepage editorial replacement
+changes the settled H-93 booking-to-boat argument; preserve required dock check-in scene, and do not
+reduce five scenes to three without deciding which.
 
 **Owner decision:** Move repeated catalogue to Product; preserve all essential booking-to-boat
 scenes.
@@ -127,11 +178,12 @@ dock check-in scene (H-94).
 
 **Source:** src/app/page.tsx; src/app/product/; marketing components and bundles
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes M01; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes M01. Current implementation state is recorded above.
 
 - Historical/context: [PR #2109](https://github.com/AaronBuxbaum/diveday/pull/2109) — closed,
 partial. Earlier homepage journey redesign; refined editorial reduction remains.
@@ -147,11 +199,13 @@ related. Implements H-94 fourth dock check-in scene, which must be preserved.
 
 ## M02
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Show the product sooner in marketing heroes**
 
-**Execution:** Ready to implement. Shorten existing hero text and bring the existing homepage scene
-nearer the promise; Product can shorten text now. Adding a new Product hero scene is separate
-decision scope.
+**Initial readiness (26 October):** Ready to implement. Shorten existing hero text and bring the
+existing homepage scene nearer the promise; Product can shorten text now. Adding a new Product hero
+scene is separate decision scope.
 
 **Owner decision:** Omit new Product hero scene; shorten/reposition existing material only.
 
@@ -177,11 +231,12 @@ legible product scene close to the promise. Keep detailed supporting proof below
 
 **Source:** src/app/page.tsx; src/app/product/
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes M02; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes M02. Current implementation state is recorded above.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 related. Marketing consistency cleanup, not short hero/product-scene composition.
@@ -191,11 +246,13 @@ related. Marketing consistency cleanup, not short hero/product-scene composition
 
 ## M03
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Reduce mobile marketing navigation to one calm row**
 
-**Execution:** Ready to implement. Owner explicitly approved: Use one-row mobile navigation with
-secondary Menu. Replacing visible navigation with a new mobile menu introduces an interaction and
-changes which destinations stay visible.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Use one-row
+mobile navigation with secondary Menu. Replacing visible navigation with a new mobile menu
+introduces an interaction and changes which destinations stay visible.
 
 **Owner decision:** Use one-row mobile navigation with secondary Menu.
 
@@ -219,11 +276,12 @@ destinations in an accessible menu. Retain visible Sign in for returning staff w
 
 **Source:** Marketing header/navigation components
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes M03; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes M03. Current implementation state is recorded above.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 related. Shared marketing cleanup, not accessible compact mobile navigation.
@@ -233,10 +291,12 @@ related. Shared marketing cleanup, not accessible compact mobile navigation.
 
 ## M04
 
+**Current execution (27 October):** Retained by owner; no implementation requested.
+
 **Lead About with purpose, then the personal story**
 
-**Execution:** Retain current by owner choice. Owner explicitly chose to retain current behavior:
-Keep current About opening.
+**Initial readiness (26 October):** Retain current by owner choice. Owner explicitly chose to retain
+current behavior: Keep current About opening.
 
 **Owner decision:** Keep current About opening.
 
@@ -276,10 +336,12 @@ related. Earlier story-first About redesign, not proposed purpose-first composit
 
 ## M05
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Give the switching hub an outcome-led headline**
 
-**Execution:** Ready to implement. Outcome-led heading is routine copy cleanup under settled H-93,
-with migration limits intact.
+**Initial readiness (26 October):** Ready to implement. Outcome-led heading is routine copy cleanup
+under settled H-93, with migration limits intact.
 
 **Audit assessment (25 October):** still-open. The current switching hub still leads with “Every
 guide ends at the same import screen”. Its close is calmer, but the outcome-led headline proposal
@@ -298,11 +360,12 @@ behind and how to start; retain the specific guides and honest migration limitat
 
 **Source:** src/app/switching/page.tsx and marketing bundle
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes M05; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes M05. Current implementation state is recorded above.
 
 - Historical/context: [PR #3059](https://github.com/AaronBuxbaum/diveday/pull/3059) — closed,
 partial. Merged duplicate switching close; headline still separate scope.
@@ -312,10 +375,12 @@ partial. Merged duplicate switching close; headline still separate scope.
 
 ## M06
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Split the online-booking headline into one claim and one reassurance**
 
-**Execution:** Ready to implement. Split compound claims into headline and supporting sentence;
-retain admission-versus-boarding precision. No new product promise.
+**Initial readiness (26 October):** Ready to implement. Split compound claims into headline and
+supporting sentence; retain admission-versus-boarding precision. No new product promise.
 
 **Audit assessment (25 October):** still-open. Online booking still combines the convenience and
 certification clauses in a six-line 390px heading. Courses, Check-in and Dive sites retain similarly
@@ -339,11 +404,12 @@ concrete safety/operational promises in supporting text.
 
 **Source:** src/app/product/[feature]/ and feature copy
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes M06; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes M06. Current implementation state is recorded above.
 
 - Historical/context: [PR #2103](https://github.com/AaronBuxbaum/diveday/pull/2103) — closed,
 related. Introduced feature page copy; no refined headline split acceptance criteria.
@@ -353,10 +419,12 @@ related. Introduced feature page copy; no refined headline split acceptance crit
 
 ## M07
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Give authentication a quiet shell**
 
-**Execution:** Ready to implement. Reuse the existing quiet auth shell for generic sign-in/recovery.
-This is wrapper consistency, not an authentication behavior change.
+**Initial readiness (26 October):** Ready to implement. Reuse the existing quiet auth shell for
+generic sign-in/recovery. This is wrapper consistency, not an authentication behavior change.
 
 **Audit assessment (25 October):** still-open. Generic sign-in and forgot-password still carry
 marketing navigation, demo action and footer. Required-field markers were removed on sign-in, but
@@ -379,11 +447,12 @@ sign-in/forgot-password wrappers, not every auth route.
 
 **Source:** src/app/sign-in/; src/app/forgot-password/; auth layout
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes M07; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes M07. Current implementation state is recorded above.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 partial. Tidied sign-in/dead links; noisy generic wrappers remain in audit.
@@ -393,10 +462,12 @@ partial. Tidied sign-in/dead links; noisy generic wrappers remain in audit.
 
 ## M08
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Remove the extra setup landing step**
 
-**Execution:** Ready to implement. Remove redundant closed/consumed/uninvited setup interstitial
-only; authorized onboarding and its inputs remain intact.
+**Initial readiness (26 October):** Ready to implement. Remove redundant closed/consumed/uninvited
+setup interstitial only; authorized onboarding and its inputs remain intact.
 
 **Audit assessment (25 October):** still-open. Closed and consumed onboarding still show an
 intermediate explanation and Get set up action. Active authorized onboarding remains a distinct
@@ -417,14 +488,15 @@ its required inputs.
 
 **Source:** src/app/onboard/; src/app/get-set-up/
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #1961](https://github.com/AaronBuxbaum/diveday/issues/1961) — closed,
 related. Setup-invite policy and token security, not uninvited/consumed entry simplification.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes M08; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes M08. Current implementation state is recorded above.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 related. Setup-success and token page cleanup.
@@ -434,11 +506,13 @@ related. Setup-success and token page cleanup.
 
 ## M09
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Ask the minimum before an owner can request setup**
 
-**Execution:** Ready to implement. Owner explicitly approved: Make Current tool optional. Required
-current-tool information is a business intake policy. Compact existing selection is safe, but
-optionality needs owner answer.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Make Current tool
+optional. Required current-tool information is a business intake policy. Compact existing selection
+is safe, but optionality needs owner answer.
 
 **Owner decision:** Make Current tool optional.
 
@@ -464,25 +538,29 @@ requirements.
 
 **Source:** src/app/get-set-up/
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2834](https://github.com/AaronBuxbaum/diveday/issues/2834) — closed,
 related. Setup-mail security; not minimum setup-request form scope.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes M09; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes M09. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/get-set-up-light-vw-390.png`,
 `current/get-set-up-light-vw-1280.png`
 
 ## D01
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Let a shopfront answer “When can I dive?” sooner**
 
-**Execution:** Ready to implement. Owner explicitly approved: Put dates/schedule before storefront
-introduction. Moving the entire schedule ahead of shop story/gallery changes storefront information
-architecture, beyond deleting repeated logo/filter chrome already shipped.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Put
+dates/schedule before storefront introduction. Moving the entire schedule ahead of shop
+story/gallery changes storefront information architecture, beyond deleting repeated logo/filter
+chrome already shipped.
 
 **Owner decision:** Put dates/schedule before storefront introduction.
 
@@ -510,11 +588,12 @@ story.
 
 **Source:** src/app/s/[shopSlug]/page.tsx and shopfront components
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes D01; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes D01. Current implementation state is recorded above.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 partial. Logo and filter consolidation implemented; earlier full schedule access remains.
@@ -524,10 +603,12 @@ partial. Logo and filter consolidation implemented; earlier full schedule access
 
 ## D02
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make “Find my booking” easy to find**
 
-**Execution:** Ready to implement. Expose existing recovery destination through shared
-PublicShopNav; no new recovery mechanism or privacy policy.
+**Initial readiness (26 October):** Ready to implement. Expose existing recovery destination through
+shared PublicShopNav; no new recovery mechanism or privacy policy.
 
 **Audit assessment (25 October):** still-open. Find my booking remains in Other ways we can help
 after departures, courses, boats and reviews. A global homepage recovery link now exists, but does
@@ -550,24 +631,27 @@ retaining the existing recovery flow and privacy behavior.
 
 **Source:** src/app/s/[shopSlug]/; src/app/find-your-booking/
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2690](https://github.com/AaronBuxbaum/diveday/issues/2690) — closed,
 related. Find-your-booking capture determinism, not a public navigation door.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes D02; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes D02. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/find-my-booking-composer-light-vw-390.png`,
 `current/find-my-booking-composer-light-vw-1280.png`
 
 ## D03
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Keep alternative trips after the selected trip’s booking action**
 
-**Execution:** Ready to implement. Reorder existing mobile sections so selected-trip booking
-precedes alternatives; preserve desktop ordering and all terms.
+**Initial readiness (26 October):** Ready to implement. Reorder existing mobile sections so
+selected-trip booking precedes alternatives; preserve desktop ordering and all terms.
 
 **Audit assessment (25 October):** still-open. On current phone trip pages, Also on the schedule
 still precedes Grab a seat. The sticky Book action offers a direct jump, and desktop correctly keeps
@@ -593,11 +677,12 @@ indiscriminately.
 
 **Source:** src/app/s/[shopSlug]/trips/[id]/page.tsx and composition
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes D03; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes D03. Current implementation state is recorded above.
 
 - Historical/context: [PR #2048](https://github.com/AaronBuxbaum/diveday/pull/2048) — closed,
 partial. Desktop form beside selected day; refined phone alternatives order remains.
@@ -610,10 +695,12 @@ partial. Public booking cleanup, not phone-first selected-trip ordering.
 
 ## D04
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Use one staff-preview context bar**
 
-**Execution:** Ready to implement. Merge duplicate staff-preview context bars using existing return
-destinations.
+**Initial readiness (26 October):** Ready to implement. Merge duplicate staff-preview context bars
+using existing return destinations.
 
 **Audit assessment (25 October):** still-open. Current staff preview still has the global Divers see
 this page / Open the board bar and a separate departure-specific diver-view / Manage this trip
@@ -633,21 +720,24 @@ action and a secondary board link only if necessary.
 
 **Source:** Public trip staff-preview components
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes D04; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes D04. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/public-trip-run-line-light-vw-390.png`,
 `current/public-trip-run-line-light-vw-1280.png`
 
 ## D05
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Name the booking party accurately**
 
-**Execution:** Ready to implement. Rename party count People because existing participation choices
-include snorkeling and riding; no mixed-party feature expansion.
+**Initial readiness (26 October):** Ready to implement. Rename party count People because existing
+participation choices include snorkeling and riding; no mixed-party feature expansion.
 
 **Audit assessment (25 October):** still-open. Current form still labels the count Number of divers
 while Joining as supports diving, snorkeling and riding. Neutral seat counts improved elsewhere
@@ -684,10 +774,12 @@ Execution issue #3066 explicitly includes D05; implementation is in progress, no
 
 ## D06
 
+**Current execution (27 October):** Retained by owner; no implementation requested.
+
 **Choose course imagery that helps identify the course**
 
-**Execution:** Retain current by owner choice. Owner explicitly chose to retain current behavior:
-Keep current course imagery.
+**Initial readiness (26 October):** Retain current by owner choice. Owner explicitly chose to retain
+current behavior: Keep current course imagery.
 
 **Owner decision:** Keep current course imagery.
 
@@ -723,10 +815,12 @@ related. Course image resolution, not authentic training imagery selection.
 
 ## D07
 
+**Current execution (27 October):** Retained by owner; no implementation requested.
+
 **Explore goal-first course discovery**
 
-**Execution:** Retain current by owner choice. Owner explicitly chose to retain current behavior:
-Keep agency-first course discovery.
+**Initial readiness (26 October):** Retain current by owner choice. Owner explicitly chose to retain
+current behavior: Keep agency-first course discovery.
 
 **Owner decision:** Keep agency-first course discovery.
 
@@ -764,11 +858,13 @@ records contain no overlap.
 
 ## D08
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **State shared package terms once**
 
-**Execution:** Verify first. Need a fresh multi-package fixture to distinguish identical tank terms
-from commercially distinct quantities/prices before further de-duplication; single-package capture
-cannot show repetition.
+**Initial readiness (26 October):** Verify first. Need a fresh multi-package fixture to distinguish
+identical tank terms from commercially distinct quantities/prices before further de-duplication;
+single-package capture cannot show repetition.
 
 **Audit assessment (25 October):** partially-resolved. Identical course-exclusion/scope terms now
 appear once in the introduction and differing scopes stay with their cards. Tank accounting remains
@@ -794,11 +890,12 @@ tank-accounting repetition; change only repetition still present.
 
 **Source:** src/app/s/[shopSlug]/packages/
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes D08; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes D08. Current implementation state is recorded above.
 
 - Historical/context: [PR #3027](https://github.com/AaronBuxbaum/diveday/pull/3027) — closed,
 partial. Shared package width/disclosure cleanup; remaining multi-option repetition needs fresh
@@ -809,11 +906,13 @@ check.
 
 ## S01
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Establish a compact mobile collection header**
 
-**Execution:** Ready to implement. Normalize existing mobile collection header hierarchy with
-current primitives. Title/action, search, active filters, records; quiet existing exports. Do not
-invent a new universal menu.
+**Initial readiness (26 October):** Ready to implement. Normalize existing mobile collection header
+hierarchy with current primitives. Title/action, search, active filters, records; quiet existing
+exports. Do not invent a new universal menu.
 
 **Audit assessment (25 October):** still-open. Collection headers retain action/search/filter
 stacks; StaffPage width normalization and course row Schedule removal do not implement compact
@@ -836,11 +935,12 @@ by family rather than bespoke CSS patches.
 
 **Source:** src/app/shop/[shopSlug]/divers/page.tsx:246
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S01; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S01. Current implementation state is recorded above.
 
 - Historical/context: [PR #2886](https://github.com/AaronBuxbaum/diveday/pull/2886) — closed,
 partial. Unified collections; does not establish the refined mobile header for every family.
@@ -852,10 +952,12 @@ partial. Order/schedule header overflow, not complete cross-collection treatment
 
 ## S02
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make clipped filter choices discoverable**
 
-**Execution:** Ready to implement. Make current chip overflow apparent using restrained existing
-scroller/edge affordances. A new filter-builder UI is outside this safe scope.
+**Initial readiness (26 October):** Ready to implement. Make current chip overflow apparent using
+restrained existing scroller/edge affordances. A new filter-builder UI is outside this safe scope.
 
 **Audit assessment (25 October):** still-open. Shared FilterChips unchanged across audit commits;
 hidden-option discovery proposal remains.
@@ -875,11 +977,12 @@ into a large wall.
 
 **Source:** src/components/ui/FilterChips.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S02; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S02. Current implementation state is recorded above.
 
 - Historical/context: [PR #2886](https://github.com/AaronBuxbaum/diveday/pull/2886) — closed,
 related. Collection patterns do not explicitly cover discoverable clipped filter overflow.
@@ -888,10 +991,12 @@ related. Collection patterns do not explicitly cover discoverable clipped filter
 
 ## S03
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Add a direct jump to Today’s outstanding work**
 
-**Execution:** Ready to implement. Turn existing outstanding-work count into an anchor to the
-existing queue; preserve boat/safety ordering and coordinate #2800.
+**Initial readiness (26 October):** Ready to implement. Turn existing outstanding-work count into an
+anchor to the existing queue; preserve boat/safety ordering and coordinate #2800.
 
 **Audit assessment (25 October):** still-open. Current Today crew-clash phone still places Needs you
 beneath four departure cards; top count has no queue jump.
@@ -913,11 +1018,12 @@ issue.
 
 **Source:** src/app/shop/[shopSlug]/_components/today/DaySpine.tsx:1006
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S03; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S03. Current implementation state is recorded above.
 
 - Historical/context: [PR #3037](https://github.com/AaronBuxbaum/diveday/pull/3037) — closed,
 partial. Needs-you rows rank by impact; no top outstanding-count jump.
@@ -926,10 +1032,12 @@ partial. Needs-you rows rank by impact; no top outstanding-count jump.
 
 ## S04
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Let expanded help controls use the row width**
 
-**Execution:** Ready to implement. Expand current Arrange help form across its parent row; keep
-current actions and meanings.
+**Initial readiness (26 October):** Ready to implement. Expand current Arrange help form across its
+parent row; keep current actions and meanings.
 
 **Audit assessment (25 October):** still-open. HelpRequestControl expanded form layout unchanged;
 this interval adds handled-request reopening, not full-width expansion. Expanded interaction not
@@ -952,23 +1060,26 @@ that settled decision.
 
 **Source:** src/app/shop/[shopSlug]/_components/today/HelpRequestControl.tsx:143
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2939](https://github.com/AaronBuxbaum/diveday/issues/2939) — closed,
 related. Reopening handled requests; no resolution-form row-width hierarchy.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S04; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S04. Current implementation state is recorded above.
 
 **Evidence references in local artifact:**
 
 ## S05
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make overdue work orders scannable by promise date**
 
-**Execution:** Ready to implement. Reorder current work-order identity, promised date and complaint
-for scanning; no new sorting or promised-date rules.
+**Initial readiness (26 October):** Ready to implement. Reorder current work-order identity,
+promised date and complaint for scanning; no new sorting or promised-date rules.
 
 **Audit assessment (25 October):** still-open. Work-order list only adopts StaffPage; promised-date
 row composition unchanged.
@@ -987,11 +1098,12 @@ overdue line; put the detailed complaint beneath or inside the row.
 
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/page.tsx:96
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S05; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S05. Current implementation state is recorded above.
 
 - Historical/context: [PR #2270](https://github.com/AaronBuxbaum/diveday/pull/2270) — closed,
 related. Introduced work orders; not promise-date scanning.
@@ -1000,10 +1112,13 @@ related. Introduced work orders; not promise-date scanning.
 
 ## S06
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Show one current work-order status and a sensible next step**
 
-**Execution:** Ready to implement. Use existing action-menu conventions for exceptional transitions
-while retaining current state and ordinary forward action. No transition-rule changes.
+**Initial readiness (26 October):** Ready to implement. Use existing action-menu conventions for
+exceptional transitions while retaining current state and ordinary forward action. No
+transition-rule changes.
 
 **Audit assessment (25 October):** partially-resolved. Current status now static Badge and moves
 secondary, resolving state-versus-action confusion. Alternate transitions remain inline peers rather
@@ -1023,11 +1138,12 @@ transitions in an overflow menu while retaining the ordinary forward move inline
 
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/_components/WorkOrderStatusCard.tsx:74
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S06; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S06. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Current state now a static badge; alternate transitions still equal-weight buttons.
@@ -1036,10 +1152,12 @@ partial. Current state now a static badge; alternate transitions still equal-wei
 
 ## S07
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Give lost-property actions a clear hierarchy**
 
-**Execution:** Ready to implement. Demote discard through the existing local action-menu pattern
-while retaining consequence handling and a clear Return action.
+**Initial readiness (26 October):** Ready to implement. Demote discard through the existing local
+action-menu pattern while retaining consequence handling and a clear Return action.
 
 **Audit assessment (25 October):** still-open. LostItemRow still uses peer secondary return and
 discard controls; lost-found page only narrows shell and removes footer link.
@@ -1058,11 +1176,12 @@ discard an overflow action with its existing consequence/confirmation.
 
 **Source:** src/components/lost-found/LostItemRow.tsx:60
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S07; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S07. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 related. Removed lost-found explanatory sentence, not return/contact/discard action hierarchy.
@@ -1071,10 +1190,12 @@ related. Removed lost-found explanatory sentence, not return/contact/discard act
 
 ## S08
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make the dive-site editor start with the editable record**
 
-**Execution:** Ready to implement. Collapse upcoming site uses into existing disclosure grammar;
-template replacement already moved below editor.
+**Initial readiness (26 October):** Ready to implement. Collapse upcoming site uses into existing
+disclosure grammar; template replacement already moved below editor.
 
 **Audit assessment (25 October):** partially-resolved. Template replacement moved below form into
 disclosure. Upcoming-departures card remains expanded before editable fields.
@@ -1095,11 +1216,12 @@ uses into a count/disclosure so editable identity/fields appear first.
 
 **Source:** src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx:241
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S08; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S08. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Template moved below one-form editor; upcoming-uses disclosure remains.
@@ -1108,11 +1230,13 @@ partial. Template moved below one-form editor; upcoming-uses disclosure remains.
 
 ## S09
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Group mobile crew assignments by departure**
 
-**Execution:** Ready to implement. Owner explicitly approved: Use departure-first staffing on phone.
-Departure-first staffing changes the primary work orientation and potentially adds a second view; it
-is an IA choice rather than copy consistency.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Use
+departure-first staffing on phone. Departure-first staffing changes the primary work orientation and
+potentially adds a second view; it is an IA choice rather than copy consistency.
 
 **Owner decision:** Use departure-first staffing on phone.
 
@@ -1133,11 +1257,12 @@ person-oriented view only where it helps schedule staff across departures.
 
 **Source:** src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx:973
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes S09; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes S09. Current implementation state is recorded above.
 
 - Historical/context: [PR #3037](https://github.com/AaronBuxbaum/diveday/pull/3037) — closed,
 partial. Staffing time/action layout fixed; departure grouping remains.
@@ -1149,10 +1274,14 @@ related. Crew view cleanup and feature switch.
 
 ## B01
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Place the remedy next to a readiness blocker**
 
-**Execution:** Ready to implement. Place existing blocker-specific remedy beside the blocker. Do not
-add unsupported actions or optimistic clearance; requires two domain reviews.
+**Initial readiness (26 October):** Ready to implement. Place existing blocker-specific remedy
+beside the blocker. Do not add unsupported actions or optimistic clearance; requires two domain
+reviews.
 
 **Audit assessment (25 October):** still-open. Current desk capture shows Turn away on collapsed
 blocked row while Send waiver remains inside expanded detail.
@@ -1175,11 +1304,12 @@ clearance; two differently framed domain reviews.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/RosterRow.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes B01; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes B01. Current implementation state is recorded above.
 
 - Historical/context: [PR #3037](https://github.com/AaronBuxbaum/diveday/pull/3037) — closed,
 partial. Turn away moved beside Blocked; reason-specific remedy remains.
@@ -1188,10 +1318,14 @@ partial. Turn away moved beside Blocked; reason-specific remedy remains.
 
 ## B02
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Separate boarding blockers from incomplete information**
 
-**Execution:** Ready to implement. Separate existing cannot-board facts from optional missing
-information; presentation only, retain admission/readiness gates and domain reviews.
+**Initial readiness (26 October):** Ready to implement. Separate existing cannot-board facts from
+optional missing information; presentation only, retain admission/readiness gates and domain
+reviews.
 
 **Audit assessment (25 October):** still-open. Current desk still groups optional missing emergency
 contact and blocked waiver together under Still to clear with enabled Check in on optional rows.
@@ -1213,11 +1347,12 @@ gate.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/roster-row-outstanding.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes B02; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes B02. Current implementation state is recorded above.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 related. One explicit manifest status line; not boarding blockers vs information distinction.
@@ -1226,10 +1361,13 @@ related. One explicit manifest status line; not boarding blockers vs information
 
 ## B03
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Organize expanded guest details around the immediate job**
 
-**Execution:** Ready to implement. Group existing expanded person facts and disclose booking
-exceptions; no change to actions or readiness data.
+**Initial readiness (26 October):** Ready to implement. Group existing expanded person facts and
+disclose booking exceptions; no change to actions or readiness data.
 
 **Audit assessment (25 October):** still-open. Current expanded desk still mixes emergency/rental
 facts, notes, move and removal in one long region. Manifest sheet improved separately.
@@ -1248,11 +1386,12 @@ Booking actions disclosure. Auto-open only the section relevant to a visible exc
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/roster-row-reference.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes B03; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes B03. Current implementation state is recorded above.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Person sheet facts consolidated; booking-action disclosure still separate proposal.
@@ -1261,10 +1400,13 @@ partial. Person sheet facts consolidated; booking-action disclosure still separa
 
 ## B04
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Make moving a booking a deliberate date-first choice**
 
-**Execution:** Ready to implement. Require deliberate existing destination selection and group
-destinations by date; keep capacity, eligibility, money and audit checks.
+**Initial readiness (26 October):** Ready to implement. Require deliberate existing destination
+selection and group destinations by date; keep capacity, eligibility, money and audit checks.
 
 **Audit assessment (25 October):** still-open. Current move-seat capture still preselects Morning
 Two-Tank destination; no explicit empty selection/date-first destination composition.
@@ -1287,23 +1429,26 @@ history.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/_components/seat-move.ts
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2141](https://github.com/AaronBuxbaum/diveday/issues/2141) — closed,
 related. Move panel turnaround warnings; not date-first deliberate destination choice.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes B04; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes B04. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/trip-roster-move-seat-light-vw-390.png`
 
 ## B05
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Name the time zone inside the move-departure editor**
 
-**Execution:** Ready to implement. Name existing shop-local input timezone in its label; no timezone
-conversion or booking-time rules change.
+**Initial readiness (26 October):** Ready to implement. Name existing shop-local input timezone in
+its label; no timezone conversion or booking-time rules change.
 
 **Audit assessment (25 October):** still-open. Current native move-editor crop labels New departure
 time without shop zone; surrounding board time rows also lack zone. Original precision concern
@@ -1335,13 +1480,15 @@ Execution issue #3066 explicitly includes B05; implementation is in progress, no
 
 ## B06
 
+**Current execution (27 October):** Already done at audit; no new implementation.
+
 **Compose the day packet as one document**
 
-**Execution:** Already done. Artifact assessment marks resolved and current source is unchanged:
-Resolve the packet composition proposal, with PDF verification recorded in V03/limits. Optional
-A4/Letter review is not residual implementation work and should not leave this selectable as a
-partially open task. Current packet region contains a considered paper document and no rider-control
-leakage; RB06 exclusively owns the live-print leak.
+**Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
+source is unchanged: Resolve the packet composition proposal, with PDF verification recorded in
+V03/limits. Optional A4/Letter review is not residual implementation work and should not leave this
+selectable as a partially open task. Current packet region contains a considered paper document and
+no rider-control leakage; RB06 exclusively owns the live-print leak.
 
 **Audit assessment (25 October):** resolved. Resolve the packet composition proposal, with PDF
 verification recorded in V03/limits. Optional A4/Letter review is not residual implementation work
@@ -1358,7 +1505,6 @@ described in the current assessment.
 
 **Acceptance:**
 
-
 **Preserve/review:** Screen evidence only; verify print CSS/PDF before calling this a print defect.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestPaper.tsx
@@ -1373,11 +1519,14 @@ Paper packet composition implemented; audit resolves original proposal.
 
 ## B07
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Keep the departure-log explanation from burying the record**
 
-**Execution:** Verify first. First verify required departure provenance in actual print/export
-before a screen-only explanatory disclosure; current compressed paragraph is already factual and no
-evidentiary defect established.
+**Initial readiness (26 October):** Verify first. First verify required departure provenance in
+actual print/export before a screen-only explanatory disclosure; current compressed paragraph is
+already factual and no evidentiary defect established.
 
 **Audit assessment (25 October):** partially-resolved. Four intro paragraphs compressed to one muted
 paragraph; native phone still has seven lines before summary. Full explanation disclosure remains
@@ -1401,11 +1550,12 @@ at departure.
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/log/page.tsx:161
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes B07; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes B07. Current implementation state is recorded above.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Compressed departure-log preamble implemented; optional screen-only disclosure remains
@@ -1415,10 +1565,13 @@ refinement.
 
 ## B08
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Explain paper-release provenance in human terms**
 
-**Execution:** Ready to implement. Use paper-specific recording/provenance copy matching existing
-data. Preserve evidence limits; review with security and two domain experts.
+**Initial readiness (26 October):** Ready to implement. Use paper-specific recording/provenance copy
+matching existing data. Preserve evidence limits; review with security and two domain experts.
 
 **Audit assessment (25 October):** still-open. Paper record labels recording route but seal still
 says Can’t be checked for changes; no paper-specific consequence wording.
@@ -1440,23 +1593,26 @@ legally valid.
 
 **Source:** src/i18n/locales/en-US/staff/waiversStaff.json:46
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #3002](https://github.com/AaronBuxbaum/diveday/issues/3002) — closed,
 related. Historic waiver cutoff provenance; not plain-language paper-release verification copy.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes B08; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes B08. Current implementation state is recorded above.
 
 **Evidence references in local artifact:**
 
 ## C01
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Add visible units to dock-day duration inputs**
 
-**Execution:** Ready to implement. Add visible/accessibly named minutes to existing dock-day numeric
-fields; units are settled precision, no new feature.
+**Initial readiness (26 October):** Ready to implement. Add visible/accessibly named minutes to
+existing dock-day numeric fields; units are settled precision, no new feature.
 
 **Audit assessment (25 October):** still-open. Duration fields remain bare numbers; new unified
 dock-day page no longer renders the old “Every number here is in minutes” section description. Add
@@ -1490,11 +1646,14 @@ related. Dock-day form consolidated; visible minutes units are separate residual
 
 ## C02
 
+**Current execution (27 October):** Already done at audit; no new implementation.
+
 **Make integration availability internally consistent**
 
-**Execution:** Already done. Artifact assessment marks resolved and current source is unchanged:
-Unavailable provider cards and activation promise replaced by one truthful “More integrations come
-later. Ask us…” footer. Native current capture confirms configured Zapier only.
+**Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
+source is unchanged: Unavailable provider cards and activation promise replaced by one truthful
+“More integrations come later. Ask us…” footer. Native current capture confirms configured Zapier
+only.
 
 **Audit assessment (25 October):** resolved. Unavailable provider cards and activation promise
 replaced by one truthful “More integrations come later. Ask us…” footer. Native current capture
@@ -1508,7 +1667,6 @@ Zapier only.
 described in the current assessment.
 
 **Acceptance:**
-
 
 **Preserve/review:** Do not invent a notification or activation workflow.
 
@@ -1525,10 +1683,13 @@ Only available provider cards remain; truthful future footer resolves audit.
 
 ## C03
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Put importing before the reference manual**
 
-**Execution:** Ready to implement. Place existing upload/preview before detailed reference table,
-retaining essential exclusions before upload and full reference in disclosure.
+**Initial readiness (26 October):** Ready to implement. Place existing upload/preview before
+detailed reference table, retaining essential exclusions before upload and full reference in
+disclosure.
 
 **Audit assessment (25 October):** still-open. Import page unchanged; reference table still precedes
 wizard.
@@ -1548,20 +1709,23 @@ preview-before-commit.
 
 **Source:** src/app/shop/[shopSlug]/settings/import/page.tsx:258
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes C03; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes C03. Current implementation state is recorded above.
 
 **Evidence references in local artifact:**
 
 ## C04
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Label form ordering numbers and move metadata below long legal titles**
 
-**Execution:** Ready to implement. Give existing order/max-age fields visible labels and full-width
-legal titles; retain medical age exception.
+**Initial readiness (26 October):** Ready to implement. Give existing order/max-age fields visible
+labels and full-width legal titles; retain medical age exception.
 
 **Audit assessment (25 October):** still-open. Unified course form still puts order input in
 separate right w-20 wrapper with aria-label only; full-title/layout proposal remains.
@@ -1584,11 +1748,12 @@ existing C04 rather than duplicate it
 
 **Source:** src/app/shop/[shopSlug]/courses/[slug]/edit/_components/CourseFormsRequirement.tsx:210
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes C04; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes C04. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 related. Course editor unified save; labelled order fields remain a separate layout proposal.
@@ -1599,11 +1764,13 @@ related. Course editor unified save; labelled order fields remain a separate lay
 
 ## C05
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Lead active sessions with device identity**
 
-**Execution:** Verify first. Source already groups sessions by device/current/last activity. Fresh
-session screenshots and revocation/error states are required; no remaining implementation defect is
-established.
+**Initial readiness (26 October):** Verify first. Source already groups sessions by
+device/current/last activity. Fresh session screenshots and revocation/error states are required; no
+remaining implementation defect is established.
 
 **Audit assessment (25 October):** needs-verification. Source now leads grouped sessions with
 browser/platform, includes-current marker and last activity; no security/session capture exists in
@@ -1627,11 +1794,12 @@ scope.
 
 **Source:** settings/security/_components/AccountSessionsList.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes C05; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes C05. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Device-grouped active sessions implemented; fresh rendered verification remains.
@@ -1640,10 +1808,12 @@ partial. Device-grouped active sessions implemented; fresh rendered verification
 
 ## C06
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Remove secret-storage implementation copy**
 
-**Execution:** Ready to implement. Remove implementation-facing secret-storage clause; keep user
-consequence, reauthentication and recovery warnings.
+**Initial readiness (26 October):** Ready to implement. Remove implementation-facing secret-storage
+clause; keep user consequence, reauthentication and recovery warnings.
 
 **Audit assessment (25 October):** still-open. English bundle still says Disabling it removes the
 stored secret.
@@ -1670,11 +1840,13 @@ Execution issue #3066 explicitly includes C06; implementation is in progress, no
 
 ## C07
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Show a useful embed before nine format choices**
 
-**Execution:** Ready to implement. Owner explicitly approved: Use Calendar/Button defaults with
-other formats secondary. Choosing Calendar/Button/More replaces nine visible formats with a new
-selector hierarchy; common formats should be chosen deliberately.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Use
+Calendar/Button defaults with other formats secondary. Choosing Calendar/Button/More replaces nine
+visible formats with a new selector hierarchy; common formats should be chosen deliberately.
 
 **Owner decision:** Use Calendar/Button defaults with other formats secondary.
 
@@ -1695,11 +1867,12 @@ formats choice. Group QR and partner links as sharing formats. Choose common for
 
 **Source:** settings/embed/EmbedGenerator.tsx:180
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes C07; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes C07. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Embed preview/load/code controls cleaned; nine formats remain separate scope.
@@ -1709,11 +1882,13 @@ partial. Embed preview/load/code controls cleaned; nine formats remain separate 
 
 ## C08
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Lead backups with evidence of successful delivery**
 
-**Execution:** Ready to implement. Promote already available verifiedAt/delivery state and Test
-delivery; disclose destination identifiers/editing, open setup when incomplete. No new backup
-tracking feature.
+**Initial readiness (26 October):** Ready to implement. Promote already available
+verifiedAt/delivery state and Test delivery; disclose destination identifiers/editing, open setup
+when incomplete. No new backup tracking feature.
 
 **Audit assessment (25 October):** still-open. BackupsSection unchanged. Delivery-first composition
 not implemented.
@@ -1733,20 +1908,23 @@ identifiers and editing behind Destination details; expand setup automatically w
 
 **Source:** settings/export/_components/BackupsSection.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes C08; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes C08. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/settings-backups-light-vw-1280.png`
 
 ## C09
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Replace email badge-plus-button with one stateful control**
 
-**Execution:** Ready to implement. Use existing switch grammar for reversible email preferences with
-pending/error feedback; preserve toggle semantics and previews.
+**Initial readiness (26 October):** Ready to implement. Use existing switch grammar for reversible
+email preferences with pending/error feedback; preserve toggle semantics and previews.
 
 **Audit assessment (25 October):** still-open. Current email capture still pairs On badge with Turn
 off in both sections.
@@ -1768,21 +1946,24 @@ actions.
 
 **Source:** settings/email/page.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes C09; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes C09. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/settings-email-light-vw-1280.png`,
 `current/settings-email-light-vw-390.png`
 
 ## C10
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Summarize team credentials without hiding exceptions**
 
-**Execution:** Ready to implement. Summarize existing credential lists with count while preserving
-exceptions at rest. H-59 forbids new gates; two domain reviews.
+**Initial readiness (26 October):** Ready to implement. Summarize existing credential lists with
+count while preserving exceptions at rest. H-59 forbids new gates; two domain reviews.
 
 **Audit assessment (25 October):** still-open. Credential exceptions now stand at rest, but
 collapsed summaries still print full long qualification lists; current native phone image confirms.
@@ -1803,11 +1984,12 @@ and renewals inside the section; never collapse a role-critical deficiency into 
 
 **Source:** settings/team/_components/StaffCardCredentials.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes C10; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes C10. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Exceptions shown on staff cards; long collapsed credential summaries remain.
@@ -1817,10 +1999,12 @@ partial. Exceptions shown on staff cards; long collapsed credential summaries re
 
 ## C11
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make activity feel like a ledger**
 
-**Execution:** Ready to implement. Render existing activity as grouped ledger rows and disclose
-unused date controls; show active range and Clear, no new search engine.
+**Initial readiness (26 October):** Ready to implement. Render existing activity as grouped ledger
+rows and disclose unused date controls; show active range and Clear, no new search engine.
 
 **Audit assessment (25 October):** still-open. Activity component unchanged; boxed event/filter
 composition remains.
@@ -1838,23 +2022,26 @@ common filters compact and put unused date range behind Filter; show active rang
 
 **Source:** settings/activity/page.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2314](https://github.com/AaronBuxbaum/diveday/issues/2314) — closed,
 related. Visible From/To labels, not date-grouped ledger and filter disclosure.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes C11; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes C11. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/settings-activity-light-vw-1280.png`
 
 ## C12
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Simplify the two calendar subscription scopes**
 
-**Execution:** Ready to implement. Remove repeated scope descriptions and empty-state text; retain
-actual feed controls, revoke action and synchronization warning.
+**Initial readiness (26 October):** Ready to implement. Remove repeated scope descriptions and
+empty-state text; retain actual feed controls, revoke action and synchronization warning.
 
 **Audit assessment (25 October):** still-open. Both create controls now secondary, but repeated
 descriptions and Not subscribed yet remain in current pair.
@@ -1873,11 +2060,12 @@ controls and revoke. Keep the synchronization-lag warning visible.
 
 **Source:** settings/calendar/page.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes C12; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes C12. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Create weight changed.
@@ -1890,10 +2078,12 @@ partial. Both create controls equal secondary weight; scope-row simplification r
 
 ## C13
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Remove the unavailable WhatsApp call to action**
 
-**Execution:** Ready to implement. Replace disabled unavailable Connect with truthful availability
-and existing-SMS consequence; do not build WhatsApp signup.
+**Initial readiness (26 October):** Ready to implement. Replace disabled unavailable Connect with
+truthful availability and existing-SMS consequence; do not build WhatsApp signup.
 
 **Audit assessment (25 October):** still-open. WhatsApp component unchanged; original unavailable
 disabled-connect finding remains.
@@ -1925,10 +2115,12 @@ Execution issue #3066 explicitly includes C13; implementation is in progress, no
 
 ## C14
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Let the shop tagline be read while edited**
 
-**Execution:** Ready to implement. Use existing textarea/autosize pattern so tagline is readable;
-preserve 120-character limit and current save.
+**Initial readiness (26 October):** Ready to implement. Use existing textarea/autosize pattern so
+tagline is readable; preserve 120-character limit and current save.
 
 **Audit assessment (25 October):** still-open. Tagline remains single-line text input maxLength 120;
 current profile phone capture visibly clips saved tagline.
@@ -1957,13 +2149,15 @@ Execution issue #3066 explicitly includes C14; implementation is in progress, no
 
 ## C15
 
+**Current execution (27 October):** Already done at audit; no new implementation.
+
 **Shorten the safety page’s preamble on screen**
 
-**Execution:** Already done. Artifact assessment marks resolved and current source is unchanged:
-Resolve the original screen-preamble proposal: current phone and desktop confirm the shorter ledger.
-Do not reclassify a removed qualification as a confirmed defect merely because the old design
-suggestion said to preserve it. There is no demonstrated legal requirement or rendered false
-interpretation here.
+**Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
+source is unchanged: Resolve the original screen-preamble proposal: current phone and desktop
+confirm the shorter ledger. Do not reclassify a removed qualification as a confirmed defect merely
+because the old design suggestion said to preserve it. There is no demonstrated legal requirement or
+rendered false interpretation here.
 
 **Audit assessment (25 October):** resolved. Resolve the original screen-preamble proposal: current
 phone and desktop confirm the shorter ledger. Do not reclassify a removed qualification as a
@@ -1980,7 +2174,6 @@ described in the current assessment.
 
 **Acceptance:**
 
-
 **Preserve/review:** Do not imply absence of recorded incidents proves safety or compliance.
 
 **Source:** src/app/shop/[shopSlug]/safety/
@@ -1996,10 +2189,14 @@ Safety preamble shortened to linked count tiles; audit resolves original scope.
 
 ## R01
 
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
+
 **Expose Change plans beside the trip date**
 
-**Execution:** Ready to implement. Link trip-date context to existing request section and show
-existing pending state. Preserve booking date until staff confirms.
+**Initial readiness (26 October):** Ready to implement. Link trip-date context to existing request
+section and show existing pending state. Preserve booking date until staff confirms.
 
 **Audit assessment (25 October):** still-open. Current pending-move phone capture still places the
 request after packing, the day rhythm, flying guidance and log-entry preview; nothing beside the
@@ -2025,25 +2222,28 @@ a move is confirmed.
 
 **Source:** src/app/ready/[token]/_components/ThreadSections.tsx:194; MoveAsk.tsx:61
 
-**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2666](https://github.com/AaronBuxbaum/diveday/issues/2666) — closed,
 related. Captures ask-to-move state; not Change plans door beside date.
 
 - Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
-Execution issue #3074 explicitly includes R01; queued for implementation or required verification.
+Historical scope mapping: issue #3074 explicitly includes R01. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/ready-asked-to-move-light-vw-390.png`,
 `current/ready-asked-to-move-light-vw-1280.png`
 
 ## RB01
 
+**Current execution (27 October):** Already done at audit; no new implementation.
+
 **Make offline crew identities dock-readable**
 
-**Execution:** Already done. Artifact assessment marks resolved and current source is unchanged:
-Native phone crew crop now gives Keiko name own bold line and explicit 16px awaiting-roll-call
-status, buddy names beneath. Source text-base confirms intended critical text.
+**Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
+source is unchanged: Native phone crew crop now gives Keiko name own bold line and explicit 16px
+awaiting-roll-call status, buddy names beneath. Source text-base confirms intended critical text.
 
 **Audit assessment (25 October):** resolved. Native phone crew crop now gives Keiko name own bold
 line and explicit 16px awaiting-roll-call status, buddy names beneath. Source text-base confirms
@@ -2057,7 +2257,6 @@ text.
 described in the current assessment.
 
 **Acceptance:**
-
 
 **Preserve/review:** Preserve domain rules and test phone, tablet where covered, desktop and print
 where affected; safety changes require two differently framed dive-domain-expert reviews.
@@ -2075,10 +2274,14 @@ Offline crew/person identities and explicit status are readable in current audit
 
 ## RB02
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Give touch users a direct route to offline roll call**
 
-**Execution:** Ready to implement. Use plain anchored Roll call/Emergency reference links to
-existing sections; this is navigation to an existing job, not new operational state.
+**Initial readiness (26 October):** Ready to implement. Use plain anchored Roll call/Emergency
+reference links to existing sections; this is navigation to an existing job, not new operational
+state.
 
 **Audit assessment (25 October):** still-open. Current saved-manifest phone still requires passing
 emergency/checklist/counter to reach checkpoint and crew; only keyboard SkipLink, no visible touch
@@ -2106,11 +2309,12 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/components/offline-manifest/TripScreen.tsx:46
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes RB02; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes RB02. Current implementation state is recorded above.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Still-to-board jump added; direct touch route from saved status to roll call remains.
@@ -2119,10 +2323,13 @@ partial. Still-to-board jump added; direct touch route from saved status to roll
 
 ## RB03
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Keep packing names and sizes readable on a phone**
 
-**Execution:** Ready to implement. Raise existing identifying packing text to 16px and rebalance
-wrapping columns; keep one ledger and quantities.
+**Initial readiness (26 October):** Ready to implement. Raise existing identifying packing text to
+16px and rebalance wrapping columns; keep one ledger and quantities.
 
 **Audit assessment (25 October):** still-open. Packing row retains text-sm and fixed 6.5rem item
 column; current prep assignment phone keeps small dense names/sizes.
@@ -2145,11 +2352,12 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/prep/_components/prep-lines.tsx:271
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes RB03; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes RB03. Current implementation state is recorded above.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 related. Prep fit and tank composition changed; packing table phone text/readability remains.
@@ -2158,10 +2366,13 @@ related. Prep fit and tank composition changed; packing table phone text/readabi
 
 ## RB04
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Restore cancellation recovery facts on mobile**
 
-**Execution:** Ready to implement. Reveal currently hidden payment/offer facts in mobile recovery
-row, with existing disclosure conventions; no new recovery logic.
+**Initial readiness (26 October):** Ready to implement. Reveal currently hidden payment/offer facts
+in mobile recovery row, with existing disclosure conventions; no new recovery logic.
 
 **Audit assessment (25 October):** still-open. Current blowout phone still omits Money/Offered
 columns; source hideBelow sm/md remains.
@@ -2186,24 +2397,28 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/schedule/blowout/[tripId]/page.tsx:339
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2460](https://github.com/AaronBuxbaum/diveday/issues/2460) — closed,
 related. Blow-out title metadata; not mobile recovery facts.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes RB04; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes RB04. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/blowout-cascade-light-vw-390.png`,
 `current/blowout-cascade-light-vw-1280.png`
 
 ## RB05
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Put unresolved cancellation work before settled rows**
 
-**Execution:** Ready to implement. Order existing unresolved work first and anchor existing count;
-keep undelivered-message exceptions visible even for rebooked people.
+**Initial readiness (26 October):** Ready to implement. Order existing unresolved work first and
+anchor existing count; keep undelivered-message exceptions visible even for rebooked people.
 
 **Audit assessment (25 October):** still-open. Current blowout list still alphabetic and count 2
 unresolved not a jump/filter; Mara/Owen remain among settled rows.
@@ -2226,20 +2441,24 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/schedule/blowout/[tripId]/page.tsx:280
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes RB05; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes RB05. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/blowout-cascade-light-vw-390.png`
 
 ## RB06
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Remove a nonfunctional add-rider control from printed manifests**
 
-**Execution:** Ready to implement. Hide live Add a rider disclosure in print, keeping actual rider
-identities and already-fixed packet rendering.
+**Initial readiness (26 October):** Ready to implement. Hide live Add a rider disclosure in print,
+keeping actual rider identities and already-fixed packet rendering.
 
 **Audit assessment (25 October):** partially-resolved. Packet print no longer includes Add a rider
 via ManifestPaper/DockDesk paper=true, but native live manifest-print crop still prints the closed
@@ -2264,11 +2483,12 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DockDesk.tsx:52
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes RB06; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes RB06. Current implementation state is recorded above.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Packets suppress rider controls; live manifest print disclosure still leaks.
@@ -2278,11 +2498,13 @@ partial. Packets suppress rider controls; live manifest print disclosure still l
 
 ## RB07
 
+**Current execution (27 October):** Already done at audit; no new implementation.
+
 **Say a diver’s rental fit once in the person sheet**
 
-**Execution:** Already done. Artifact assessment marks resolved and current source is unchanged:
-Native Priya phone sheet subtitle now Diver · age 27, explicit status line; complete rental list
-appears exactly once under Rental fit.
+**Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
+source is unchanged: Native Priya phone sheet subtitle now Diver · age 27, explicit status line;
+complete rental list appears exactly once under Rental fit.
 
 **Audit assessment (25 October):** resolved. Native Priya phone sheet subtitle now Diver · age 27,
 explicit status line; complete rental list appears exactly once under Rental fit.
@@ -2294,7 +2516,6 @@ line; complete rental list appears exactly once under Rental fit.
 described in the current assessment.
 
 **Acceptance:**
-
 
 **Preserve/review:** Preserve domain rules and test phone, tablet where covered, desktop and print
 where affected; safety changes require two differently framed dive-domain-expert reviews.
@@ -2312,10 +2533,13 @@ Rental fit occurs once in person sheet; original audit proposal resolved.
 
 ## RB08
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Let gear staff reach assignment work before scrolling the entire pull list**
 
-**Execution:** Ready to implement. Anchor task-count links to existing pull and assignment sections;
-no duplicated assignment data or new tab system.
+**Initial readiness (26 October):** Ready to implement. Anchor task-count links to existing pull and
+assignment sections; no duplicated assignment data or new tab system.
 
 **Audit assessment (25 October):** still-open. Prep phone still puts Rental assignments below full
 packing ledger without in-page assignment jump.
@@ -2339,11 +2563,12 @@ where affected; safety changes require two differently framed dive-domain-expert
 
 **Source:** src/app/shop/[shopSlug]/trips/[id]/prep/_components/PrepBody.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes RB08; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes RB08. Current implementation state is recorded above.
 
 - Historical/context: [PR #3053](https://github.com/AaronBuxbaum/diveday/pull/3053) — closed,
 partial. Prep counts now coherent; assignment-section navigation remains.
@@ -2352,10 +2577,12 @@ partial. Prep counts now coherent; assignment-section navigation remains.
 
 ## RB09
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Name the cancellation follow-up page in operational language**
 
-**Execution:** Ready to implement. Replace implementation term cascade with Cancelled departure in
-heading and inbound link; behavior unchanged.
+**Initial readiness (26 October):** Ready to implement. Replace implementation term cascade with
+Cancelled departure in heading and inbound link; behavior unchanged.
 
 **Audit assessment (25 October):** still-open. Current native blowout screen remains Blow-out
 cascade; bundle and inbound link still name cascade.
@@ -2390,11 +2617,13 @@ complete.
 
 ## RR01
 
+**Current execution (27 October):** Already done at audit; no new implementation.
+
 **Translate every order line type, including e-learning**
 
-**Execution:** Already done. Artifact assessment marks resolved and current source is unchanged:
-KIND_KEYS now exhaustive OrderLineItemKind map includes e_learning_fee; dispute helper falls back to
-localized Other. Native current open order shows e-Learning fee.
+**Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
+source is unchanged: KIND_KEYS now exhaustive OrderLineItemKind map includes e_learning_fee; dispute
+helper falls back to localized Other. Native current open order shows e-Learning fee.
 
 **Audit assessment (25 October):** resolved. KIND_KEYS now exhaustive OrderLineItemKind map includes
 e_learning_fee; dispute helper falls back to localized Other. Native current open order shows
@@ -2407,7 +2636,6 @@ dispute helper falls back to localized Other. Native current open order shows e-
 described in the current assessment.
 
 **Acceptance:**
-
 
 **Source:** src/app/shop/[shopSlug]/orders/[id]/order-detail-keys.ts:27; page.tsx:235;
 print/dispute/page.tsx:145
@@ -2423,11 +2651,13 @@ Exhaustive order-line kind labels include e_learning_fee.
 
 ## RR02
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Start an invoice with one line instead of four empty forms**
 
-**Execution:** Ready to implement. Owner explicitly approved: Build dynamic invoice lines with
-Add/Remove and subtotal. Current parser and page share LINE_ITEM_ROWS=4. Dynamic add/remove and
-running subtotal introduce new client state rather than merely hiding duplicate text.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Build dynamic
+invoice lines with Add/Remove and subtotal. Current parser and page share LINE_ITEM_ROWS=4. Dynamic
+add/remove and running subtotal introduce new client state rather than merely hiding duplicate text.
 
 **Owner decision:** Build dynamic invoice lines with Add/Remove and subtotal.
 
@@ -2452,21 +2682,24 @@ explicit send action.
 
 **Source:** src/app/shop/[shopSlug]/orders/new/page.tsx:256; order-form.ts:10
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RR02; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RR02. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/orders-new-light-vw-1280.png`,
 `current/orders-new-light-vw-390.png`
 
 ## RR03
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Give the gear record a maintenance-led composition**
 
-**Execution:** Ready to implement. Disclose empty note editor and move existing service-due facts
-toward identity; no service/rental-hold rule change.
+**Initial readiness (26 October):** Ready to implement. Disclose empty note editor and move existing
+service-due facts toward identity; no service/rental-hold rule change.
 
 **Audit assessment (25 October):** partially-resolved. Status/details combined, Edit moved to
 header, Pull for service precedes service and Delete moved to foot. Native tank still has full empty
@@ -2490,11 +2723,12 @@ rental holds.
 
 **Source:** src/app/shop/[shopSlug]/gear/[id]/page.tsx:308,406,505,548
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes RR03; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes RR03. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Combined status/details panel.
@@ -2508,10 +2742,12 @@ note/maintenance refinement.
 
 ## RR04
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make a collected work order read like a finished record**
 
-**Execution:** Ready to implement. Show collected work orders as readable records with local Edit
-controls for existing corrections; Paid remains independent of Collected.
+**Initial readiness (26 October):** Ready to implement. Show collected work orders as readable
+records with local Edit controls for existing corrections; Paid remains independent of Collected.
 
 **Audit assessment (25 October):** still-open. Collected work-order presentation only changed shell
 width; complaint/work fields and payment controls remain editable at rest in current pair.
@@ -2536,11 +2772,12 @@ notes.
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/[workOrderId]/page.tsx:182,229;
 _components/WorkOrderJobCard.tsx:38; WorkOrderLinesCard.tsx:47
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes RR04; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes RR04. Current implementation state is recorded above.
 
 - Historical/context: [PR #2276](https://github.com/AaronBuxbaum/diveday/pull/2276) — closed,
 related. Work-order billing/ready notification feature, not finished-record composition.
@@ -2550,10 +2787,12 @@ related. Work-order billing/ready notification feature, not finished-record comp
 
 ## RR05
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Keep parts and labor addition out of the resting ticket**
 
-**Execution:** Ready to implement. Disclose existing part/labor add form at list foot; retain form
-on error and line-local menus. No charging semantics change.
+**Initial readiness (26 October):** Ready to implement. Disclose existing part/labor add form at
+list foot; retain form on error and line-local menus. No charging semantics change.
 
 **Audit assessment (25 October):** still-open. WorkOrderLinesCard unchanged; blank four-field add
 form remains at rest on current collected ticket.
@@ -2575,21 +2814,24 @@ successful add, return to the updated line and total.
 
 **Source:** src/app/shop/[shopSlug]/gear/work-orders/_components/WorkOrderLinesCard.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes RR05; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes RR05. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/work-order-ticket-collected-light-vw-1280.png`,
 `current/work-order-ticket-collected-light-vw-390.png`
 
 ## RR06
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Say the unsighted nitrox status once within its card**
 
-**Execution:** Ready to implement. Remove duplicated self-declared detail only when it adds no
-identifier/provenance; keep explicit unsighted state and Verify action.
+**Initial readiness (26 October):** Ready to implement. Remove duplicated self-declared detail only
+when it adds no identifier/provenance; keep explicit unsighted state and Verify action.
 
 **Audit assessment (25 October):** still-open. CertificationsGroup unchanged; current
 diver-level-card-sighting and nitrox-card-sighting overview captures confirm duplicated
@@ -2613,14 +2855,15 @@ self-declaration.
 
 **Source:** src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx:604–612
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2592](https://github.com/AaronBuxbaum/diveday/issues/2592) — closed,
 related. Agency-check action on specialty/nitrox cards; duplicate unsighted wording remains.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RR06; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RR06. Current implementation state is recorded above.
 
 **Evidence references in local artifact:**
 `current/diver-level-card-sighting-open-light-vw-390.png`,
@@ -2628,10 +2871,13 @@ Execution issue #3072 explicitly includes RR06; queued for implementation or req
 
 ## RR07
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Identify the surviving duplicate beside the merge action**
 
-**Execution:** Ready to implement. Repeat distinguishing existing survivor identity/count beside
-destructive merge action and update it on keeper swap. No extra confirmation step.
+**Initial readiness (26 October):** Ready to implement. Repeat distinguishing existing survivor
+identity/count beside destructive merge action and update it on keeper swap. No extra confirmation
+step.
 
 **Audit assessment (25 October):** partially-resolved. Email wraps better across half-card columns.
 Native current phone still ends with Merge into Priya Sharma without nearby distinguishing
@@ -2656,11 +2902,12 @@ checks. This is a presentation improvement, not a new confirmation step.
 **Source:**
 src/app/shop/[shopSlug]/divers/[personId]/merge/[survivorId]/MergePreview.tsx:269,386,442
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RR07; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RR07. Current implementation state is recorded above.
 
 - Historical/context: [PR #3059](https://github.com/AaronBuxbaum/diveday/pull/3059) — closed,
 partial. Merge email wrapping fixed.
@@ -2673,10 +2920,12 @@ partial. Full-width compared email values; survivor identity by merge action rem
 
 ## RR08
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Give rating-only reviews a compact row with readable identity**
 
-**Execution:** Ready to implement. Use compact rating-only rows while raising identity to readable
-size and preserving 44px moderation menus and written-review composition.
+**Initial readiness (26 October):** Ready to implement. Use compact rating-only rows while raising
+identity to readable size and preserving 44px moderation menus and written-review composition.
 
 **Audit assessment (25 October):** still-open. ReviewLedgerRow unchanged; overview current
 rating-only rows retain tiny identity and detached menu.
@@ -2700,24 +2949,27 @@ publication/moderation history.
 
 **Source:** src/app/shop/[shopSlug]/reviews/_components/ReviewLedgerRow.tsx:75–95,134
 
-**GitHub match:** exact-existing. Exact execution target: issue #3071 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3071 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2931](https://github.com/AaronBuxbaum/diveday/issues/2931) — open,
 related. Synthetic review capture stability, not rating-only card hierarchy.
 
 - Execution: [Issue #3071](https://github.com/AaronBuxbaum/diveday/issues/3071) — open, exact.
-Execution issue #3071 explicitly includes RR08; queued for implementation or required verification.
+Historical scope mapping: issue #3071 explicitly includes RR08. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/staff-reviews-light-vw-1280.png`,
 `current/staff-reviews-light-vw-390.png`
 
 ## RR09
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Put gear selection before payment review in counter rentals**
 
-**Execution:** Ready to implement. Reorder existing counter-rental sections to Who/When/Gear/review,
-keeping sticky total linked to unresolved requirements and explicit charge.
+**Initial readiness (26 October):** Ready to implement. Reorder existing counter-rental sections to
+Who/When/Gear/review, keeping sticky total linked to unresolved requirements and explicit charge.
 
 **Audit assessment (25 October):** still-open. Current rental phone still puts selected
 items/payment before Gear; only shell width changed.
@@ -2742,24 +2994,27 @@ payment semantics.
 **Source:** src/app/shop/[shopSlug]/gear/rentals/new/page.tsx; _components/CounterRentalPicker.tsx;
 CounterRentalCart.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2257](https://github.com/AaronBuxbaum/diveday/issues/2257) — closed,
 related. Counter tank gas/nitrox behavior; not Who/When/Gear/payment ordering.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RR09; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RR09. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/counter-rental-form-light-vw-1280.png`,
 `current/counter-rental-form-light-vw-390.png`
 
 ## RGS01
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Show departure time in command-palette search results**
 
-**Execution:** Ready to implement. Include localized departure time/shop timezone in existing search
-result detail. Preserve nearest ranking and tenant scope.
+**Initial readiness (26 October):** Ready to implement. Include localized departure time/shop
+timezone in existing search result detail. Preserve nearest ranking and tenant scope.
 
 **Audit assessment (25 October):** still-open. Search toResults still formats short date plus site
 only; no departure time or zone.
@@ -2793,10 +3048,12 @@ complete.
 
 ## RGS02
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Give the phone search palette an explicit way to close**
 
-**Execution:** Ready to implement. Add explicit standard dialog Close control and suppress
-keyboard-only hint prose by pointer capability. Preserve Escape and focus restoration.
+**Initial readiness (26 October):** Ready to implement. Add explicit standard dialog Close control
+and suppress keyboard-only hint prose by pointer capability. Preserve Escape and focus restoration.
 
 **Audit assessment (25 October):** still-open. CommandPalette unchanged and lacks explicit touch
 Close control.
@@ -2817,24 +3074,27 @@ exists
 
 **Source:** src/components/search/CommandPalette.tsx:674; src/components/search/PaletteLegend.tsx:26
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2366](https://github.com/AaronBuxbaum/diveday/issues/2366) — closed,
 related. Palette capture reliability; not phone close control.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes RGS02; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes RGS02. Current implementation state is recorded above.
 
 **Evidence references in local artifact:**
 
 ## RGS03
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Make template replacement reviewable before it competes with site editing**
 
-**Execution:** Ready to implement. Owner explicitly approved: Show current-versus-template values
-before replacement. Current/incoming value comparison is a new preview capability handling
-replacement semantics, beyond the already-authorized moved disclosure.
+**Initial readiness (26 October):** Ready to implement. Owner explicitly approved: Show
+current-versus-template values before replacement. Current/incoming value comparison is a new
+preview capability handling replacement semantics, beyond the already-authorized moved disclosure.
 
 **Owner decision:** Show current-versus-template values before replacement.
 
@@ -2859,11 +3119,12 @@ reviews for depth/admission-related wording
 
 **Source:** src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx:242
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RGS03; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RGS03. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Template replacement moved below editor disclosure; current/incoming comparison remains.
@@ -2873,11 +3134,13 @@ partial. Template replacement moved below editor disclosure; current/incoming co
 
 ## RGS04
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Turn the export manifest into a scannable file index**
 
-**Execution:** Ready to implement. Group existing export manifest into scannable
-filename/count/purpose rows with per-file reference disclosure and global caveats. New filename
-filtering is held separately as optional complexity.
+**Initial readiness (26 October):** Ready to implement. Group existing export manifest into
+scannable filename/count/purpose rows with per-file reference disclosure and global caveats. New
+filename filtering is held separately as optional complexity.
 
 **Owner decision:** Omit new filename search; existing file-index/disclosure cleanup only.
 
@@ -2902,21 +3165,24 @@ them. Never drop the portability/legal caveats
 
 **Source:** src/app/shop/[shopSlug]/settings/export/page.tsx:135
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes RGS04; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes RGS04. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/settings-export-file-grid-light-vw-1280.png`,
 `current/settings-export-file-grid-light-vw-390.png`
 
 ## RGS06
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Name the source field in translation editors**
 
-**Execution:** Ready to implement. Name existing translation input Course summary in Spanish and
-colocate with source summary. Preserve unified save/staleness checks.
+**Initial readiness (26 October):** Ready to implement. Name existing translation input Course
+summary in Spanish and colocate with source summary. Preserve unified save/staleness checks.
 
 **Audit assessment (25 October):** partially-resolved. Translation now folded into Spanish section
 and one editor save. Summary scope still unnamed and section remains at end, not beside summary;
@@ -2942,11 +3208,12 @@ translation
 src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx:327;
 src/components/assists/TranslationEditor.tsx:80
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RGS06; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RGS06. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Unified translation save; source-field naming/placement remains.
@@ -2956,11 +3223,13 @@ partial. Unified translation save; source-field naming/placement remains.
 
 ## RGS07
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Group the credential ledger by person and quiet its settled actions**
 
-**Execution:** Verify first. Per-person ledger already shipped. Confirm current reviewed/expired
-correction parity and authorization; person-prefilled Add link is safe independently, but do not
-invent a re-review workflow from missing control alone.
+**Initial readiness (26 October):** Verify first. Per-person ledger already shipped. Confirm current
+reviewed/expired correction parity and authorization; person-prefilled Add link is safe
+independently, but do not invent a re-review workflow from missing control alone.
 
 **Audit assessment (25 October):** partially-resolved. Duplicate flat ledger removed, credential
 actions moved into person cards with exceptions at rest. Add still links to global unpreselected
@@ -2985,11 +3254,12 @@ trail. Coordinate with C10 but distinct scope: ledger vs collapsed summaries
 **Source:** src/app/shop/[shopSlug]/settings/team/_components/StaffCredentials.tsx:81;
 src/app/shop/[shopSlug]/settings/team/page.tsx:633
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RGS07; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RGS07. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 partial. Flat credential ledger replaced with staff cards; person preselection/correction parity
@@ -3000,10 +3270,12 @@ remain.
 
 ## RGS08
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Keep signed-record lookup ahead of rarely edited form definitions**
 
-**Execution:** Ready to implement. Place existing signed-record search before rarely edited
-versioned form definitions; preserve material-change warnings and direct edit links.
+**Initial readiness (26 October):** Ready to implement. Place existing signed-record search before
+rarely edited versioned form definitions; preserve material-change warnings and direct edit links.
 
 **Audit assessment (25 October):** still-open. Waiver management still precedes signed-record lookup
 in current phone and desktop captures.
@@ -3026,11 +3298,12 @@ document titles and material-change warnings
 
 **Source:** src/app/shop/[shopSlug]/waivers/page.tsx:350
 
-**GitHub match:** exact-existing. Exact execution target: issue #3072 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3072 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3072](https://github.com/AaronBuxbaum/diveday/issues/3072) — open, exact.
-Execution issue #3072 explicitly includes RGS08; queued for implementation or required verification.
+Historical scope mapping: issue #3072 explicitly includes RGS08. Current implementation state is recorded above.
 
 - Historical/context: [PR #3018](https://github.com/AaronBuxbaum/diveday/pull/3018) — closed,
 related. Waiver definition columns aligned, not signed-record-first composition.
@@ -3040,10 +3313,12 @@ related. Waiver definition columns aligned, not signed-record-first composition.
 
 ## RGS09
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Hide diagnostic JSON behind the support action**
 
-**Execution:** Ready to implement. Disclose raw support JSON while leaving human result, Copy report
-and Email support visible. Preserve exact payload and diagnostic caveats.
+**Initial readiness (26 October):** Ready to implement. Disclose raw support JSON while leaving
+human result, Copy report and Email support visible. Preserve exact payload and diagnostic caveats.
 
 **Audit assessment (25 October):** still-open. CertCheckTry unchanged; diagnostic raw JSON still
 open in normal flow.
@@ -3065,21 +3340,24 @@ disclosure and exact support payload
 
 **Source:** src/app/shop/[shopSlug]/settings/_components/CertCheckTry.tsx:272
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes RGS09; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes RGS09. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/settings-cert-checks-light-vw-390.png`,
 `current/settings-cert-checks-light-vw-1280.png`
 
 ## RP01
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Lead embedded booking success with the confirmation**
 
-**Execution:** Ready to implement. Move existing embedded success confirmation ahead of mobile
-briefing while preserving seat/payment/readiness distinctions.
+**Initial readiness (26 October):** Ready to implement. Move existing embedded success confirmation
+ahead of mobile briefing while preserving seat/payment/readiness distinctions.
 
 **Audit assessment (25 October):** still-open. Current embedded phone success is 1,927px tall. The
 confirmation still follows trip briefing, conditions and What changed, while desktop already shows
@@ -3103,24 +3381,30 @@ date zone.
 **Source:** src/app/s/[shopSlug]/trips/[id]/page.tsx; _components/EmbedBookedNotice.tsx;
 _components/BookingSections.tsx
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2432](https://github.com/AaronBuxbaum/diveday/issues/2432) — closed,
 related. Embed confirmation fallback name, not confirmation-first composition.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes RP01; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes RP01. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/booking-confirmed-embed-light-vw-390.png`,
 `current/booking-confirmed-embed-light-vw-1280.png`
 
 ## RP02
 
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
+
 **Make the doctor referral action open the actual form**
 
-**Execution:** Ready to implement. Make existing official doctor-form link primary and label page
-printing truthfully; retain exact medical questions, form version/licensing and domain reviews.
+**Initial readiness (26 October):** Ready to implement. Make existing official doctor-form link
+primary and label page printing truthfully; retain exact medical questions, form version/licensing
+and domain reviews.
 
 **Audit assessment (25 October):** still-open. Current doctor page still tells the reader to Print
 this page and complete the form below, although the actual official examiner page is a link. A
@@ -3146,8 +3430,9 @@ private-answer access changes.
 
 **Source:** src/app/waivers/[token]/doctor/page.tsx; src/i18n/locales/en-US/diver.json:1176
 
-**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2793](https://github.com/AaronBuxbaum/diveday/issues/2793) — closed,
 related. Official examiner form/transcription policy; reviewed closed issue does not require direct
@@ -3157,17 +3442,21 @@ PDF primary action.
 related. Private return upload; not official-form action and print-instructions labels.
 
 - Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
-Execution issue #3074 explicitly includes RP02; queued for implementation or required verification.
+Historical scope mapping: issue #3074 explicitly includes RP02. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/waiver-doctor-light-vw-390.png`,
 `current/waiver-doctor-light-vw-1280.png`
 
 ## RP03
 
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
+
 **Make unresolved medical review the next action after signing**
 
-**Execution:** Ready to implement. Move existing precise held-medical next step ahead of general
-prep CTA; branch shop review versus actual doctor referral. No screening changes.
+**Initial readiness (26 October):** Ready to implement. Move existing precise held-medical next step
+ahead of general prep CTA; branch shop review versus actual doctor referral. No screening changes.
 
 **Audit assessment (25 October):** still-open. Current medical-held success still leads with Waiver
 received and gives the general prep link primary emphasis while Take this to your doctor remains
@@ -3193,8 +3482,9 @@ or boarding rules; two domain reviews.
 
 **Source:** src/app/waivers/[token] success state; diver waiver copy bundle
 
-**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2065](https://github.com/AaronBuxbaum/diveday/issues/2065) — closed,
 related. Staff readiness wording about medical referral, not post-signing next-action hierarchy.
@@ -3203,17 +3493,21 @@ related. Staff readiness wording about medical referral, not post-signing next-a
 related. Private signed-form return; retain distinctions between referral and shop review.
 
 - Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
-Execution issue #3074 explicitly includes RP03; queued for implementation or required verification.
+Historical scope mapping: issue #3074 explicitly includes RP03. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/waiver-medical-held-light-vw-390.png`,
 `current/waiver-medical-held-light-vw-1280.png`
 
 ## RP04
 
+**Current execution (27 October):** Current execution target #3101 owns all original RP04
+requirements; #3074 is historical context. Owner decision pending; full d700 source and actual
+no-JavaScript RED retained. No acceptance waived.
+
 **Only ask certification details when the diver has a certification**
 
-**Execution:** Ready to implement. Condition certification detail controls on existing certified
-agency selection, preserve values when switched back; do not infer verification.
+**Initial readiness (26 October):** Ready to implement. Condition certification detail controls on
+existing certified agency selection, preserve values when switched back; do not infer verification.
 
 **Audit assessment (25 October):** still-open. Current register capture still shows Level and Card
 number immediately under Agency: Not certified yet. The fields remain unconditional.
@@ -3236,24 +3530,30 @@ clearance; domain review.
 
 **Source:** src/app/s/[shopSlug]/register/RegisterForm.tsx:119
 
-**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Original execution target: issue #3074 (original
+drafting state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2130](https://github.com/AaronBuxbaum/diveday/issues/2130) — closed,
 related. Supported agencies in registration; not conditional uncertified fields.
 
-- Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
-Execution issue #3074 explicitly includes RP04; queued for implementation or required verification.
+- Historical execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — original
+five-ID batch. It originally included RP04; that scope has transferred without an acceptance waiver.
+- Current execution: [Issue #3101](https://github.com/AaronBuxbaum/diveday/issues/3101) — owns RP04 and
+its complete original requirements, pending the owner’s delivery decision.
 
 **Evidence references in local artifact:** `current/shopfront-register-light-vw-390.png`,
 `current/shopfront-register-light-vw-1280.png`
 
 ## RP05
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Present second-factor authentication as a normal next step**
 
-**Execution:** Ready to implement. Present ordinary second-factor challenge neutrally with clear
-recovery option; retain actual error styling for incorrect submissions and auth checks.
+**Initial readiness (26 October):** Ready to implement. Present ordinary second-factor challenge
+neutrally with clear recovery option; retain actual error styling for incorrect submissions and auth
+checks.
 
 **Audit assessment (25 October):** still-open. Current ordinary second-factor challenge remains a
 red error under the credential form, with authenticator/recovery helper copy sharing the field label
@@ -3276,21 +3576,26 @@ security review for any auth-state changes.
 
 **Source:** src/app/sign-in/page.tsx; src/i18n/locales/en-US/diver.json:3344
 
-**GitHub match:** exact-existing. Exact execution target: issue #3070 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3070 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3070](https://github.com/AaronBuxbaum/diveday/issues/3070) — open, exact.
-Execution issue #3070 explicitly includes RP05; queued for implementation or required verification.
+Historical scope mapping: issue #3070 explicitly includes RP05. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/sign-in-second-factor-light-vw-390.png`,
 `current/sign-in-second-factor-light-vw-1280.png`
 
 ## RP06
 
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
+
 **Surface unclaimed group seats beside the organizer confirmation**
 
-**Execution:** Ready to implement. Expose existing organizer-authorized group seat summary and jump
-near confirmation; no new claim authority or cross-adult medical disclosure.
+**Initial readiness (26 October):** Ready to implement. Expose existing organizer-authorized group
+seat summary and jump near confirmation; no new claim authority or cross-adult medical disclosure.
 
 **Audit assessment (25 October):** still-open. Current organizer confirmation remains personal-only;
 the unclaimed seat is in Your group’s seats below personal preparation, arrival and What changed.
@@ -3315,23 +3620,26 @@ privacy, guardian flows and payment ownership.
 
 **Source:** src/app/ready/[token]/_components/PartySection.tsx; ready page composition
 
-**GitHub match:** exact-existing. Exact execution target: issue #3074 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3074 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — open, exact.
-Execution issue #3074 explicitly includes RP06; queued for implementation or required verification.
+Historical scope mapping: issue #3074 explicitly includes RP06. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/party-organizer-confirmation-light-vw-390.png`,
 `current/party-organizer-confirmation-light-vw-1280.png`
 
 ## RP07
 
+**Current execution (27 October):** Already done at audit; no new implementation.
+
 **Avoid asking for the shop name again after setup was sent**
 
-**Execution:** Already done. Artifact assessment marks resolved and current source is unchanged:
-Current phone and desktop success explicitly say the request was sent and now explain the optional
-field: “We use it to name your demo.” The original missing-purpose ambiguity is resolved while
-retaining H-131’s optional personalization.
+**Initial readiness (26 October):** Already done. Artifact assessment marks resolved and current
+source is unchanged: Current phone and desktop success explicitly say the request was sent and now
+explain the optional field: “We use it to name your demo.” The original missing-purpose ambiguity is
+resolved while retaining H-131’s optional personalization.
 
 **Audit assessment (25 October):** resolved. Current phone and desktop success explicitly say the
 request was sent and now explain the optional field: “We use it to name your demo.” The original
@@ -3345,7 +3653,6 @@ ambiguity is resolved while retaining H-131’s optional personalization.
 described in the current assessment.
 
 **Acceptance:**
-
 
 **Preserve/review:** Do not expose contact data in URLs or persist sensitive form fields for demo
 personalization.
@@ -3363,10 +3670,13 @@ Setup-success wording explains optional demo personalization; audit resolves.
 
 ## RP08
 
+**Current execution (27 October):** Merged; exact-head CI and visual review complete.
+
 **Separate switching guidance from the full import reference**
 
-**Execution:** Ready to implement. Disclose detailed import mapping after concise first steps and
-add plain in-page contents; preserve complete mapping and unsupported-data caveats.
+**Initial readiness (26 October):** Ready to implement. Disclose detailed import mapping after
+concise first steps and add plain in-page contents; preserve complete mapping and unsupported-data
+caveats.
 
 **Audit assessment (25 October):** still-open. Current spreadsheet guide is 9,753px tall on phone.
 The lengthy column definitions remain fully expanded within the migration steps, without a contents
@@ -3392,24 +3702,28 @@ data imports.
 
 **Source:** src/app/switching and shared switching guide components
 
-**GitHub match:** exact-existing. Exact execution target: issue #3069 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3069 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2200](https://github.com/AaronBuxbaum/diveday/issues/2200) — closed,
 related. Corrected migration wording; not short guidance and expandable field reference.
 
 - Execution: [Issue #3069](https://github.com/AaronBuxbaum/diveday/issues/3069) — open, exact.
-Execution issue #3069 explicitly includes RP08; queued for implementation or required verification.
+Historical scope mapping: issue #3069 explicitly includes RP08. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/switching-spreadsheet-light-vw-390.png`,
 `current/switching-spreadsheet-light-vw-1280.png`
 
 ## RP09
 
+**Current execution (27 October):** Merged externally in repair PR #3099 at verified tree 871fc.
+Exact72 CI and all 26 differences clear; deployment not verified.
+
 **Lead the weekly digest with unresolved operational work**
 
-**Execution:** Ready to implement. Promote existing unresolved roll-call summary above weekly
-reporting; retain timestamp/context that digest is not live emergency truth.
+**Initial readiness (26 October):** Ready to implement. Promote existing unresolved roll-call
+summary above weekly reporting; retain timestamp/context that digest is not live emergency truth.
 
 **Audit assessment (25 October):** still-open. Current digest still lists two open roll calls below
 Last week, Money, This week and Waivers. Its unresolved-work order is unchanged.
@@ -3431,14 +3745,15 @@ existing alerting and safety processes, domain review.
 
 **Source:** src/lib/notifications/weekly-digest-email.ts
 
-**GitHub match:** exact-existing. Exact execution target: issue #3073 (queued). Historical or
-partial references below remain context and are not automatic closure targets.
+**Historical GitHub matching:** exact-existing. Execution target: issue #3073 (original drafting
+state was queued). Historical or partial references below remain context and are not automatic
+closure targets.
 
 - Historical/context: [Issue #2489](https://github.com/AaronBuxbaum/diveday/issues/2489) — closed,
 related. Digest unused forecast cleanup; not unresolved operational-work summary.
 
 - Execution: [Issue #3073](https://github.com/AaronBuxbaum/diveday/issues/3073) — open, exact.
-Execution issue #3073 explicitly includes RP09; queued for implementation or required verification.
+Historical scope mapping: issue #3073 explicitly includes RP09. Current implementation state is recorded above.
 
 **Evidence references in local artifact:** `current/weekly-digest-email-light-vw-390.png`,
 `current/weekly-digest-email-light-vw-1280.png`

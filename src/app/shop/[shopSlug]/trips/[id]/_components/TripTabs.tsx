@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SECTION_TAB_LIST_CLASS, sectionTabClass } from "@/components/SectionTabs";
+import { sectionTabClass, WRAPPING_SECTION_TAB_LIST_CLASS } from "@/components/SectionTabs";
 import { Badge } from "@/components/ui/badge";
 import { STAGE_TONE } from "@/lib/trip-stage-tone";
 import type { TripStage } from "@/lib/trip-stages";
@@ -95,10 +95,10 @@ export function TripTabs({
     <div className="print:hidden">
       {/* **Never a sideways drag** (`e2e/trips.spec.ts`): the four fit a 390px
           phone in Spanish, the longer locale, by splitting the row with
-          tighter padding below `sm` rather than by scrolling. Every tab is the
-          same width — the section tabs' grid. */}
+          bounded controls rather than by scrolling. At enlarged text the
+          whole controls flow into rows, keeping every label intact. */}
       <nav aria-label={copy.tabsLabel} data-trip-tabs className="border-b border-border">
-        <ul className={SECTION_TAB_LIST_CLASS}>
+        <ul className={WRAPPING_SECTION_TAB_LIST_CLASS}>
           {TRIP_TABS.map((tab) => {
             const active = tab === current;
             return (
@@ -106,9 +106,9 @@ export function TripTabs({
                 <Link
                   href={tripTabHref(shopSlug, tripId, tab)}
                   aria-current={active ? "page" : undefined}
-                  className={`grow ${sectionTabClass(active)}`}
+                  className={`grow ${sectionTabClass(active, { wrap: true })}`}
                 >
-                  <span className="min-w-0 break-words">{copy.tabs[tab]}</span>
+                  <span className="min-w-0">{copy.tabs[tab]}</span>
                 </Link>
               </li>
             );

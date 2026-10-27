@@ -12,6 +12,8 @@ import {
   now,
   waiverContextFor,
 } from "@/db/waivers-test-fixtures";
+import { diverTranslator } from "@/i18n/messages";
+import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { DOCTOR_UNLOCK_FAILURE_LIMIT } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 
@@ -107,7 +109,13 @@ describe("the doctor's page", () => {
     expect(html).toContain(person.fullName);
     expect(html).toContain("Diver Medical | Participant Questionnaire");
     expect(html).toContain("10346 EN");
-    expect(html).toContain("print page 3");
+    expect(html).toContain("signs page 3");
+    expect(html).toContain(`href="${RSTC_QUESTIONNAIRE.published.url}"`);
+    expect(html).toContain('target="_blank" rel="noopener noreferrer"');
+    expect(html).toContain(diverTranslator("en-US")("waiver.doctor.print"));
+    expect(html.indexOf(`href="${RSTC_QUESTIONNAIRE.published.url}"`)).toBeLessThan(
+      html.indexOf(diverTranslator("en-US")("waiver.doctor.print")),
+    );
     expect(html).toContain('name="birthdate"');
     expect(html).not.toContain("1984");
     expect(html).not.toContain("Mar 9");
@@ -139,6 +147,7 @@ describe("the doctor's page", () => {
     expect(html).toContain("You’re not cleared to dive until staff have read it and told you.");
     expect(html).not.toContain('name="doctorForm"');
     expect(html).not.toContain("media.example.com");
+    expect(html).toContain(`href="${RSTC_QUESTIONNAIRE.published.url}"`);
     expect(html).not.toContain("Can’t send it here?");
   });
 
@@ -154,6 +163,7 @@ describe("the doctor's page", () => {
     expect(html).toContain("Go through the whole questionnaire with your doctor.");
     expect(html).not.toContain('name="birthdate"');
     expect(html).not.toContain("wasn");
+    expect(html).toContain(`href="${RSTC_QUESTIONNAIRE.published.url}"`);
   });
 
   it("shows the published prompts and the form version only for the diver's date of birth", async () => {
@@ -195,6 +205,7 @@ describe("the doctor's page", () => {
     const html = await render(token);
     expect(html).toContain("Go through the whole questionnaire with your doctor.");
     expect(html).not.toContain('name="birthdate"');
+    expect(html).toContain(`href="${RSTC_QUESTIONNAIRE.published.url}"`);
   });
 
   it("sends a clean release back to its waiver page", async () => {

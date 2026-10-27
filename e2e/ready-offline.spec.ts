@@ -69,6 +69,7 @@ globalThis.Date = new Proxy(__RealDate, {
 
   // Online, the page asks its worker to keep a copy; wait for the phone to hold it.
   await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: diver("ready.offlineRemove") })).toBeVisible();
   return readyPath;
 }
 

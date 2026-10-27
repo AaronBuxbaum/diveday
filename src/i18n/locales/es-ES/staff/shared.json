@@ -356,7 +356,7 @@
       "current": "Copia reciente",
       "currentOnline": "Copia reciente · en línea",
       "aging": "Copia antigua",
-      "stale": "Copia caducada"
+      "stale": "Copia desactualizada"
     },
     "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo…",
     "openingHeading": "Abriendo la copia guardada en este dispositivo",
@@ -381,6 +381,7 @@
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
       "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",
+      "unansweredEmpty": "DiveDay no respondió.",
       "freshnessAllCurrent": "Todas al día.",
       "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
       "savedAgo": "Guardada {ago}",

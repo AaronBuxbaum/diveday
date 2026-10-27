@@ -247,19 +247,47 @@ function inReadyScope(): boolean {
   return isReadyScope(self.registration?.scope);
 }
 
-/** Best effort: a stylesheet that fails to cache leaves the copy readable, only plainer. */
-async function keepStylesheets(paths: string[]): Promise<void> {
+/** Keep the page's own styles and their local fonts before publishing its offline document. */
+async function keepReadyAssets(html: string): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
+  const keepAsset = async (path: string): Promise<Response> => {
+    const cached = await cache.match(path);
+    if (cached) return cached;
+    const response = await fetch(path, { credentials: "same-origin", redirect: "error" });
+    if (!response.ok) throw new Error("Readiness asset could not be loaded");
+    await cache.put(path, response.clone());
+    return response;
+  };
   await Promise.all(
-    paths.map(async (path) => {
-      try {
-        if (await cache.match(path)) return;
-        const response = await fetch(path);
-        if (response.ok) await cache.put(path, response);
-      } catch {
-        // Offline copy without this sheet; nothing to tell anyone.
+    readyPageStylesheets(html, self.location.origin).map(async (path) => {
+      const sheet = await keepAsset(path);
+      const css = await sheet.text();
+      const fonts = new Set<string>();
+      for (const match of css.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/g)) {
+        const url = new URL(match[1], new URL(path, self.location.origin));
+        if (
+          url.origin === self.location.origin &&
+          url.pathname.startsWith("/_next/static/") &&
+          /\.(?:woff2?|ttf|otf)$/.test(url.pathname)
+        )
+          fonts.add(url.pathname + url.search);
       }
+      await Promise.all([...fonts].map(keepAsset));
     }),
+  );
+}
+
+let readyRequestGeneration = 0;
+function keepReadyPage(path: string, response: Response, requestedAt: number, generation: number) {
+  return saveReadyPage(
+    caches,
+    path,
+    response,
+    nowMs(),
+    requestedAt,
+    keepReadyAssets,
+    () => generation === readyRequestGeneration,
+    nowMs,
   );
 }
 
@@ -306,13 +334,11 @@ self.addEventListener("message", (event) => {
       return;
     }
     const requestedAt = nowMs();
+    const generation = ++readyRequestGeneration;
     event.waitUntil(
       fetch(path, { credentials: "same-origin", cache: "no-store" })
         .then(async (response) => {
-          const html = await response.clone().text();
-          const kept = await saveReadyPage(caches, path, response, nowMs(), requestedAt);
-          if (kept) await keepStylesheets(readyPageStylesheets(html, self.location.origin));
-          return kept;
+          return keepReadyPage(path, response, requestedAt, generation);
         })
         .then(
           (ok) => port?.postMessage({ ok }),
@@ -716,12 +742,11 @@ self.addEventListener("fetch", (event) => {
         (signal) => {
           // A cancel landing that forgets this path after now outranks it (#2979).
           const requestedAt = nowMs();
+          const generation = ++readyRequestGeneration;
           return fetch(event.request, { signal }).then((response) => {
             if (url.search === "") {
               event.waitUntil(
-                saveReadyPage(caches, path, response.clone(), nowMs(), requestedAt).catch(
-                  () => false,
-                ),
+                keepReadyPage(path, response.clone(), requestedAt, generation).catch(() => false),
               );
             }
             return response;

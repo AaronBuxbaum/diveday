@@ -52,6 +52,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-list", scheme);
       });
 
+      test(`the saved list says when DiveDay did not answer (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await settleOfflineShellWorker(page);
+        await page.goto("/offline-manifest?fallback=slow");
+        await expect(page.getByRole("heading", { name: "Saved on this device" })).toBeVisible();
+        await expect(
+          page.getByText(
+            staffTranslator("en-US")("shared.offlineManifest.single.unansweredBanner"),
+          ),
+        ).toBeVisible();
+        await capture(page, "offline-manifest-list-unanswered", scheme);
+      });
+
       /**
        * The same list with one copy no longer current — the only state on it
        * that carries a pill at all.

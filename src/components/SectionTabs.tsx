@@ -15,19 +15,26 @@ export type SectionTab = { id: string; href: string; label: string };
  * **Every tab is the same width** (Aaron, 2026-10-03: Money's "Discount codes"
  * tab was wider than "Orders", so the targets jumped as you moved along).
  *
- * The list splits the phone width evenly and lets labels wrap. From `sm` up
+ * The list is a grid of `1fr` columns floored at their content. From `sm` up
  * it is as wide as it needs (`w-fit`), which sizes every column to the widest
- * tab. On a phone a long label wraps inside its equal target instead of widening the page.
+ * tab. On a phone a label keeps its full word rather than splitting letters.
  * The rule under the tabs runs the full width either way, so it sits on the
  * `<nav>`, and the current tab's underline sits on top of it.
  *
- * The departure's own tabs (`TripTabs`) wear these same two classes.
+ * Departure tabs explicitly opt into bounded wrapping for enlarged text.
  */
 export const SECTION_TAB_LIST_CLASS =
-  "grid grid-flow-col auto-cols-[minmax(0,1fr)] sm:auto-cols-[minmax(min-content,1fr)] sm:w-fit";
+  "grid grid-flow-col auto-cols-[minmax(min-content,1fr)] sm:w-fit";
 
-export function sectionTabClass(active: boolean): string {
-  return `-mb-px flex min-h-11 min-w-0 items-center justify-center whitespace-normal break-words text-center sm:whitespace-nowrap border-b-2 px-2 text-sm font-medium sm:px-4 ${
+/** The departure controls flow into rows when staff enlarge their text. */
+export const WRAPPING_SECTION_TAB_LIST_CLASS =
+  "grid grid-cols-[repeat(auto-fit,minmax(min(100%,5rem),1fr))] sm:grid-flow-col sm:auto-cols-[minmax(min-content,1fr)] sm:grid-cols-none sm:w-fit";
+
+export function sectionTabClass(
+  active: boolean,
+  { wrap = false }: { wrap?: boolean } = {},
+): string {
+  return `-mb-px flex min-h-11 items-center justify-center ${wrap ? "min-w-0 whitespace-nowrap text-center px-0" : "whitespace-nowrap px-2"} border-b-2 text-sm font-medium sm:px-4 ${
     active
       ? "border-primary text-foreground"
       : "border-transparent text-muted hover:text-foreground"
@@ -58,7 +65,7 @@ export function SectionTabs({
                 aria-current={active ? "page" : undefined}
                 className={`grow ${sectionTabClass(active)}`}
               >
-                <span className="min-w-0 break-words">{tab.label}</span>
+                {tab.label}
               </Link>
             </li>
           );

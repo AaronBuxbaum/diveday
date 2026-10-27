@@ -8,7 +8,7 @@ import type { SeatMove } from "./roster-model";
  */
 export function carryTargetLabel(target: SeatMove["targets"][number], t: StaffTranslator): string {
   return t("trips.guests.carryWaitlistTarget", {
-    target: target.label,
+    target: `${target.dayLabel} · ${target.timeLabel} · ${target.label}`,
     count: target.seatsLeft,
   });
 }
