@@ -82,7 +82,16 @@ export async function getWaiverTripHeader(db: DbExecutor, shopId: string, bookin
     .select({ title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+        eq(trips.shopId, shopId),
+        ne(trips.status, "cancelled"),
+        liveTrip(),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }

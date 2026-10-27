@@ -248,7 +248,9 @@ export default async function WaiverPage({
   return (
     <ThreadShell
       shopName={shopName}
-      title={t("waiver.beforeDockTitle")}
+      title={
+        recordBookingId && !tripHeader ? t("waiver.independentTitle") : t("waiver.beforeDockTitle")
+      }
       meta={
         <WaiverTripMeta tripHeader={tripHeader} locale={locale} timezone={shop.timezone} t={t} />
       }

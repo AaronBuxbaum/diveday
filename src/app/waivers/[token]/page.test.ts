@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { bookingCapabilities, bookings, waiverRecords } from "@/db/schema";
+import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
 import { completeWaiver } from "@/db/waivers-completion";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
@@ -173,4 +173,50 @@ describe("the actual completed waiver branch", () => {
       vi.unstubAllEnvs();
     }
   });
+  it.each(["seat", "departure"] as const)(
+    "keeps a pending counter waiver signable without %s cancellation claims",
+    async (cancelled) => {
+      vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
+      try {
+        const fixture = await context();
+        vi.mocked(getDb).mockResolvedValue(fixture.db);
+        const issued = await issueWaiverRequest(fixture.db, {
+          shopId: fixture.shop.id,
+          bookingId: fixture.booking.id,
+          now,
+        });
+        if (!issued.ok) throw new Error("waiver missing");
+        const envelope = sealCounterWaiverToken(issued.token, issued.expiresAt);
+        if (!envelope) throw new Error("envelope missing");
+        const [trip] = await fixture.db
+          .select({ title: trips.title })
+          .from(trips)
+          .where(eq(trips.id, fixture.booking.tripId));
+        if (!trip) throw new Error("trip missing");
+        if (cancelled === "seat")
+          await fixture.db
+            .update(bookings)
+            .set({ status: "cancelled" })
+            .where(eq(bookings.id, fixture.booking.id));
+        else
+          await fixture.db
+            .update(trips)
+            .set({ status: "cancelled" })
+            .where(eq(trips.id, fixture.booking.tripId));
+        const html = renderToStaticMarkup(
+          await WaiverPage({
+            params: Promise.resolve({ token: envelope }),
+            searchParams: Promise.resolve({}),
+          }),
+        );
+        expect(html).toContain(t("waiver.independentTitle"));
+        expect(html).not.toContain(t("waiver.beforeDockTitle"));
+        expect(html).not.toContain(trip.title);
+        expect(html).not.toContain(issued.token);
+        expect(html).toContain(t("waiver.signButton"));
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 });

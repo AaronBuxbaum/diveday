@@ -1257,7 +1257,8 @@
     "medicalFormWaiting": "Tu formulario médico se ha enviado. Espera a que el personal lo revise y confirme el siguiente paso. Aún no tienes autorización para bucear.",
     "medicalReferralNext": "Tu cuestionario requiere una evaluación médica por escrito antes de que puedas bucear.",
     "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear.",
-    "counterSigned": "Exención firmada"
+    "counterSigned": "Exención firmada",
+    "independentTitle": "Firma tu exención"
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",

@@ -36,6 +36,7 @@ describe("the waiver signing page's reads (in-memory PGlite)", () => {
     if (!seat) throw new Error("seat missing");
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat.id));
     expect(await getBookingTripId(db, shop.id, seat.id)).toBeNull();
+    expect(await getWaiverTripHeader(db, shop.id, seat.id)).toBeNull();
   });
 
   it("does not claim scheduled sites for a cancelled departure", async () => {
@@ -48,6 +49,7 @@ describe("the waiver signing page's reads (in-memory PGlite)", () => {
     if (!seat) throw new Error("seat missing");
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, seat.tripId));
     expect(await getBookingTripId(db, shop.id, seat.id)).toBeNull();
+    expect(await getWaiverTripHeader(db, shop.id, seat.id)).toBeNull();
   });
 
   it("reads the name a release is signed under", async () => {

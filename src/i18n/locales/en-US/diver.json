@@ -1257,7 +1257,8 @@
     "medicalFormWaiting": "Your doctor’s form has been sent. Wait for staff to review it and confirm your next step. You are not cleared to dive yet.",
     "medicalReferralNext": "Your questionnaire requires a physician’s written evaluation before you can dive.",
     "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive.",
-    "counterSigned": "Waiver signed"
+    "counterSigned": "Waiver signed",
+    "independentTitle": "Sign your waiver"
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",
