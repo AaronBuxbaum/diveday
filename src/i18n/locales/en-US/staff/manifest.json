@@ -198,6 +198,7 @@
     "young_child": "a diver under 12",
     "minor_age_conflict": "an Under 18 box that disagrees with a date of birth",
     "minor_age_unknown": "a minor with no date of birth",
+    "mixed_ages_unconfirmed": "a minor with someone whose age is unknown",
     "junior_without_adult": "a junior with no certified adult on file",
     "junior_requirements_unconfirmed": "check the card and supervision requirements"
   },

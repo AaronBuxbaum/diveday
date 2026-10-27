@@ -16,6 +16,7 @@ const PARTY_LEFT_REASONS = everyCodeOf<PartyLeftReason>({
   young_child: true,
   minor_age_conflict: true,
   minor_age_unknown: true,
+  mixed_ages_unconfirmed: true,
   junior_without_adult: true,
   junior_requirements_unconfirmed: true,
   too_large: true,

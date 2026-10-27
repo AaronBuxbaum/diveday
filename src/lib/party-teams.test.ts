@@ -97,7 +97,7 @@ describe("partyLeftReason", () => {
 
     it("is left when the adult's age is not on file", () => {
       expect(partyLeftReason(FUN_DIVE, [adult({ age: null }), child(13)])).toBe(
-        "junior_without_adult",
+        "mixed_ages_unconfirmed",
       );
     });
 
@@ -114,6 +114,17 @@ describe("partyLeftReason", () => {
 
   it("leaves a minor with no date of birth, whose band nobody knows", () => {
     expect(partyLeftReason(FUN_DIVE, [adult(), child(null)])).toBe("minor_age_unknown");
+  });
+
+  it("leaves known teens with an unknown-age diver instead of asking to confirm everyone is adult", () => {
+    for (const age of [15, 17]) {
+      for (const requireAdultForTeens of [false, true]) {
+        const party = [child(age), adult({ age: null }), adult()];
+        expect(partyLeftReason({ course: null, requireAdultForTeens }, party)).toBe(
+          "mixed_ages_unconfirmed",
+        );
+      }
+    }
   });
 
   describe("a party of four or more (second pass, F2)", () => {
@@ -217,6 +228,23 @@ describe("agency-specific junior safeguards", () => {
     certifications: [{ agency, juniorStatus }],
   });
   const withTeenPolicy = { course: null, requireAdultForTeens: true };
+
+  it("leaves an unclassified PADI card for review at any age, even beside a full card", () => {
+    for (const age of [15, 17, 25]) {
+      for (const requireAdultForTeens of [false, true]) {
+        const diver = {
+          ...adult({ age }),
+          certifications: [
+            { agency: "padi", juniorStatus: "full" as const },
+            { agency: "padi", juniorStatus: null },
+          ],
+        };
+        expect(partyLeftReason({ course: null, requireAdultForTeens }, [adult(), diver])).toBe(
+          "junior_requirements_unconfirmed",
+        );
+      }
+    }
+  });
 
   it("leaves a NAUI junior for staff to check the guardian-selected buddy", () => {
     expect(partyLeftReason(FUN_DIVE, [adult(), sighted(13, "naui", "junior")])).toBe(

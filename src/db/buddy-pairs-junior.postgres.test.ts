@@ -81,6 +81,9 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
       level: "open_water",
       identifier: "TWO",
       status: "verified",
+      juniorStatus: "full",
+      juniorStatusVerifiedAt: nowDate(),
+      juniorStatusVerifiedByPersonId: staff.id,
     });
     const [lead] = await pg.db
       .insert(bookings)
