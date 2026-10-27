@@ -82,6 +82,12 @@ describe("StaffingWeek", () => {
     expect(screen.queryByText("A crew rating isn’t current")).toBeNull();
   });
 
+  it("does not describe an assigned instructor as absent when the rating is unverified", () => {
+    renderWeek({ gaps: [{ ...GAP, gap: "uncrewed_course", ratingUnverified: true }] });
+    expect(screen.getAllByText("Check crew rating").length).toBeGreaterThan(0);
+    expect(screen.queryByText("No instructor or crew")).toBeNull();
+  });
+
   it("says nothing about crew when every departure has some", () => {
     renderWeek();
 

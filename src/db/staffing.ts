@@ -119,6 +119,8 @@ export type StaffingGapTrip = {
    * says so beside the code rather than showing one more shortfall.
    */
   ratingLapsed: boolean;
+  /** An issue date after the first dive day is the reason the count is unverified. */
+  ratingUnverified?: boolean;
 };
 
 export type StaffingView = {
@@ -379,6 +381,9 @@ export async function getStaffingView(
       gap,
       meetings: meetingsFor(entry.trip),
       ratingLapsed: gapCodeFor(entry, counts.roster) !== gap,
+      ...(counts.unverified?.length && gapCodeFor(entry, counts.roster) !== gap
+        ? { ratingUnverified: true }
+        : {}),
     });
   }
   gapTrips.sort(
