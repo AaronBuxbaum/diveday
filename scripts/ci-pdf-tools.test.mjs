@@ -16,7 +16,7 @@ function selected(pattern, entries, flags = "-Eq") {
 }
 
 describe("CI installs PDF tools for the selected browser tests", () => {
-  it.each(["staff-saved-print", "boarding-certification-paper"])(
+  it.each(["staff-saved-print", "boarding-certification-paper", "five-dive-departure-log"])(
     "installs Poppler when the shard contains %s",
     (spec) => {
       const block = job("playwright");
@@ -30,7 +30,7 @@ describe("CI installs PDF tools for the selected browser tests", () => {
     },
   );
 
-  it.each(["staff-saved-print", "boarding-certification-paper"])(
+  it.each(["staff-saved-print", "boarding-certification-paper", "five-dive-departure-log"])(
     "installs Poppler for a fast-lane selection of %s, including a line selection",
     (spec) => {
       const block = job("fast-lane");

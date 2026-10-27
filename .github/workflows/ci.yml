@@ -475,7 +475,7 @@ jobs:
           # These print assertions inspect actual PDF text. Only shards
           # assigned those specs need Poppler; the visual and fast-lane
           # jobs install it separately when their selections require it.
-          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper)[.]spec[.]ts$'; then
+          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper|five-dive-departure-log)[.]spec[.]ts$'; then
             if ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
               sudo apt-get install -y --no-install-recommends poppler-utils
@@ -682,7 +682,7 @@ jobs:
         timeout-minutes: 5
         run: |
           if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
-             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper)[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
+             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper|five-dive-departure-log)[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
             if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
               sudo apt-get install -y --no-install-recommends poppler-utils
