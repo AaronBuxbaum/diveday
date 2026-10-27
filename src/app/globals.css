@@ -2853,3 +2853,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     width: min(264px, calc(100vw - 64px)) !important;
   }
 }
+
+/* Start the evidence section on a fresh sheet so its heading stays with its records. */
+@media print {
+  section:has(> #incident-evidence-heading) {
+    break-before: page;
+  }
+}

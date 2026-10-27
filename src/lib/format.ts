@@ -295,6 +295,23 @@ export function formatDateTimeTz(date: Date, locale = "en-US", timeZone: string)
   );
 }
 
+/** An incident record preserves the observed order of moments within one minute. */
+export function formatEvidenceDateTimeTz(date: Date, locale = "en-US", timeZone: string): string {
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      fractionalSecondDigits: 3,
+      timeZoneName: "short",
+      timeZone,
+    }).formatToParts(date),
+  );
+}
+
 /** "7:30 AM – 11:00 AM" — en dash, no repeated day. */
 export function formatTimeRange(
   start: Date,
