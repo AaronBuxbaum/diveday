@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { proseLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { mixedTrainingAdvisories } from "@/db/mixed-training-advisory";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -44,7 +45,7 @@ export async function MixedTrainingAdvisory({
       <ul className="mt-2 space-y-1">
         {matches.map((session) => (
           <li key={session.tripId}>
-            <Link className="underline" href={shopPath(shopSlug, "trips", session.tripId)}>
+            <Link className={proseLinkClass} href={shopPath(shopSlug, "trips", session.tripId)}>
               {session.title}
             </Link>
             {" · "}
