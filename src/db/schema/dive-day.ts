@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { BoatPaperRecord, BoatRadioRecord, BoatSafetyNotice } from "@/lib/boat-safety";
+import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
@@ -91,6 +92,11 @@ export const rollCallEvents = pgTable(
      * gate: nothing reads it to refuse or allow anything.
      */
     readinessStatus: text("readiness_status"),
+    /** The card evidence captured in the live boarding INSERT; null means unavailable. */
+    certificationSnapshot:
+      jsonb("certification_snapshot").$type<
+        (IncidentCertificationEvidence & { reviewedByPersonId: string | null })[]
+      >(),
     /** The blockers behind a `blocked` snapshot, as the engine raised them; null otherwise. */
     readinessBlockers: jsonb("readiness_blockers").$type<ReadinessBlocker[]>(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
@@ -139,6 +145,10 @@ export const rollCallEvents = pgTable(
       table.occurredAt,
     ),
     uniqueIndex("roll_call_events_shop_client_event_unique").on(table.shopId, table.clientEventId),
+    check(
+      "roll_call_events_certification_snapshot_shape",
+      sql`${table.certificationSnapshot} is null or (${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
+    ),
     check(
       "roll_call_events_readiness_snapshot_shape",
       sql`(${table.readinessStatus} is null and ${table.readinessBlockers} is null) or (${table.status} = 'boarded' and ${table.readinessStatus} in ('ready', 'blocked'))`,

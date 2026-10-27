@@ -241,8 +241,10 @@ export type IncidentRosterEntry = {
   buddy: IncidentBuddyPairing | null;
   /** One row per checkpoint, in sailing order — never omitted when unrecorded. */
   rollCall: IncidentRollCallResult[];
-  /** Empty means "no certification evidence on file" — the UI must say so. */
+  /** Cards as they stand now, separately labeled and outside the version-3 integrity code. */
   certifications: IncidentCertificationEvidence[];
+  /** Null means boarding evidence is unavailable; an empty array means no cards were captured. */
+  certificationsAtBoarding: IncidentCertificationEvidence[] | null;
   /** Null only on a held seat (`identityWithheld`): withheld, never a stated absence. */
   waiver: IncidentWaiverStatus | null;
 };
@@ -468,11 +470,12 @@ export type IncidentLogReport = {
 /**
  * Which recipe {@link incidentExportContentHash} follows. Version 1 is every
  * log printed before roster changes and incident reports joined the document;
- * version 2 hashes both, and the version itself. A printout carries its
- * version, so an old one is still checked against the facts it was made from.
+ * version 2 hashes both, and the version itself. Version 3 seals boarding
+ * certification evidence, while current cards are printed outside the seal.
+ * A printout carries its version, so the previous recipes remain available.
  */
-export const INCIDENT_EXPORT_HASH_VERSION = 2;
-export type IncidentExportHashVersion = 1 | 2;
+export const INCIDENT_EXPORT_HASH_VERSION = 3;
+export type IncidentExportHashVersion = 1 | 2 | 3;
 
 export type IncidentExportDocument = {
   meta: {
@@ -653,6 +656,7 @@ export function rosterChangeFromActivity(row: {
 
 export type IncidentDiverEvidenceInput = {
   bookingId: string;
+  certificationsAtBoarding?: IncidentCertificationEvidence[] | null;
   certifications: readonly (Certification & { reviewedByName?: string | null })[];
   specialtyCertifications: readonly (SpecialtyCertification & { reviewedByName?: string | null })[];
   nitroxCertifications: readonly (NitroxCertification & { reviewedByName?: string | null })[];
@@ -1026,6 +1030,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
               manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
           ),
           certifications: [],
+          certificationsAtBoarding: null,
           // Null, not `not_sent`: the hashed document states no waiver fact
           // about a seat whose waiver read is somebody else's.
           waiver: null,
@@ -1046,6 +1051,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         // No evidence entry at all reads the same as empty evidence: an
         // explicit "nothing on file", never a crash and never a filtered row.
         certifications: evidence ? certificationEvidence(evidence) : [],
+        certificationsAtBoarding: evidence?.certificationsAtBoarding ?? null,
         waiver: waiverStatus(
           evidence?.waiver ?? null,
           departureAt,
@@ -1283,7 +1289,9 @@ function holdsVersion2Facts(
  * so an old printout still checks against a fresh export of the same records,
  * and it refuses a log holding anything version 2 added, which no version-1
  * code can honestly seal. Version 2 adds both, and the version
- * number itself, so no version-2 code can pass for a version-1 one.
+ * number itself, so no version-2 code can pass for a version-1 one. Version 3
+ * excludes mutable current cards and seals the boarding snapshot, including
+ * explicit unavailability; earlier versions refuse a captured snapshot.
  *
  * Version 2 also leaves out **when the log was made and for whom**: the page
  * builds it as it is read, by whoever reads it, so sealing either made every
@@ -1294,11 +1302,19 @@ export function incidentExportContentHash(
     Partial<Pick<IncidentExportDocument, "incidentReports">>,
   version: IncidentExportHashVersion = INCIDENT_EXPORT_HASH_VERSION,
 ): string {
+  if (version < 3 && body.roster.some((entry) => entry.certificationsAtBoarding != null)) {
+    throw new Error("A log with boarding certification evidence has no earlier integrity code.");
+  }
   const { tripId: _tripId, shopSlug: _shopSlug, ...meta } = body.meta;
   const facts = {
     meta: version === 1 ? meta : unsealedMeta(meta),
     departureSummary: body.departureSummary,
-    roster: body.roster.map(({ bookingId: _bookingId, ...entry }) => entry),
+    roster: body.roster.map((row) => {
+      const { bookingId: _bookingId, certificationsAtBoarding, ...entry } = row;
+      if (version !== 3) return entry;
+      const { certifications: _currentCards, ...historical } = entry;
+      return { ...historical, certificationsAtBoarding };
+    }),
     // Only when there is one, like the snags below.
     ...(body.turnedAway.length > 0
       ? { turnedAway: body.turnedAway.map(({ bookingId: _bookingId, ...entry }) => entry) }

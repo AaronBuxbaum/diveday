@@ -719,6 +719,16 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
       in: "both",
       value: (row) => row.readinessBlockers?.map((blocker) => blocker.code).join(";") ?? null,
     },
+    {
+      header: "certification_snapshot",
+      in: "both",
+      value: (row) =>
+        row.certificationSnapshot === null
+          ? null
+          : JSON.stringify(
+              row.certificationSnapshot.map(({ reviewedByPersonId: _reviewerId, ...card }) => card),
+            ),
+    },
     { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
     { header: "created_at", in: "shop", value: (row) => row.createdAt },
   ],

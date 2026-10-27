@@ -1,0 +1,2 @@
+ALTER TABLE "roll_call_events" ADD COLUMN "certification_snapshot" jsonb;--> statement-breakpoint
+ALTER TABLE "roll_call_events" ADD CONSTRAINT "roll_call_events_certification_snapshot_shape" CHECK ("certification_snapshot" is null or ("status" = 'boarded' and "checkpoint" = 'departure' and "source" = 'live' and jsonb_typeof("certification_snapshot") = 'array'));

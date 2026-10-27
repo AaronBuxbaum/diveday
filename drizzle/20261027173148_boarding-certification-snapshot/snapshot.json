@@ -1,0 +1,79 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d7a01a32-6fd6-43b1-9f15-42a5195a8ec8",
+  "prevIds": [
+    "9331a880-836b-47c4-a7eb-ae6e3533ee2a"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "certification_snapshot"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.certification_snapshot",
+        "n|col|public.roll_call_events.certification_snapshot",
+        "e|col|public.roll_call_events.certification_snapshot"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_events"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_events.roll_call_events_certification_snapshot_shape",
+        "n|ck|public.roll_call_events.roll_call_events_certification_snapshot_shape",
+        "e|ck|public.roll_call_events.roll_call_events_certification_snapshot_shape",
+        "n|con|public.roll_call_events.roll_call_events_certification_snapshot_shape"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.certification_snapshot",
+        "n|col|public.roll_call_events.status",
+        "n|col|public.roll_call_events.checkpoint",
+        "n|col|public.roll_call_events.source"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "certification_snapshot",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "roll_call_events_certification_snapshot_shape",
+        "value": "\"certification_snapshot\" is null or (\"status\" = 'boarded' and \"checkpoint\" = 'departure' and \"source\" = 'live' and jsonb_typeof(\"certification_snapshot\") = 'array')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

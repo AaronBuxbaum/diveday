@@ -40,6 +40,7 @@ import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
+import { boardingCertificationSnapshot } from "./boarding-certification-snapshot";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
@@ -1966,6 +1967,7 @@ async function writeRollCall(
       status: bookings.status,
       personId: bookings.personId,
       participantType: bookings.participantType,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       turnedAwayAt: bookings.turnedAwayAt,
       plannedDives: trips.plannedDives,
       shopId: trips.shopId,
@@ -2110,6 +2112,14 @@ async function writeRollCall(
       ),
       readinessStatus: readinessSnapshot?.status ?? null,
       readinessBlockers: readinessSnapshot?.blockers ?? null,
+      // Offline sync observes today, not the cards the device saw at the tap.
+      certificationSnapshot:
+        source === "live" &&
+        checkpoint === "departure" &&
+        input.status === "boarded" &&
+        booking.identityUnconfirmedAt === null
+          ? boardingCertificationSnapshot(input.shopId, booking.personId)
+          : null,
       occurredAt,
     })
     .returning({ id: rollCallEvents.id });

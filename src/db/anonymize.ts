@@ -1,3 +1,4 @@
+import { rewriteBoardingSnapshotReviewer } from "./boarding-certification-snapshot";
 /**
  * Diver erasure — the destructive counterpart to `deleteDiver`'s reversible
  * removal (ADR 20260802-diver-data-erasure).
@@ -1154,6 +1155,8 @@ async function scrubBookingRows(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now, bookingIds, owned, retire } = ctx;
+  // A reviewer can be erased even when they held no seat on these departures.
+  await rewriteBoardingSnapshotReviewer(tx, shopId, personId, null);
   if (owned) {
     // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
     // diver said this departure's crew may know it is a first trip or a long
@@ -1245,12 +1248,15 @@ async function scrubBookingRows(
     // made while blocked. The shape check allows a `blocked` status with no list.
     await tx
       .update(rollCallEvents)
-      .set({ readinessBlockers: null })
+      .set({ readinessBlockers: null, certificationSnapshot: null })
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
           inArray(rollCallEvents.bookingId, bookingIds),
-          isNotNull(rollCallEvents.readinessBlockers),
+          or(
+            isNotNull(rollCallEvents.readinessBlockers),
+            isNotNull(rollCallEvents.certificationSnapshot),
+          ),
         ),
       );
 

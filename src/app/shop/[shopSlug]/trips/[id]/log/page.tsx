@@ -23,7 +23,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { BoatAtDeparture } from "./_components/BoatAtDeparture";
-import { CertificationLine } from "./_components/CertificationLine";
+import { CertificationEvidence } from "./_components/CertificationEvidence";
 import { CrewAtDeparture, RollCallCell } from "./_components/CrewAtDeparture";
 import { CrewAwayWorkingLog } from "./_components/CrewAwayWorkingLog";
 import {
@@ -336,27 +336,12 @@ export default async function IncidentExportPage({
                   />
                 </p>
               )}
-              {diver.identityWithheld ? null : diver.certifications.length === 0 ? (
-                <p className="mt-1 text-sm text-muted">{t("incidentExport.certNone")}</p>
-              ) : (
-                <ul className="mt-1 flex flex-col gap-1 text-sm text-muted">
-                  {diver.certifications.map((card) => (
-                    // Specialty belongs in the key: a PADI diver's Deep and
-                    // Wreck cards carry the same PADI number (see the unique
-                    // index note on specialty_certifications in schema.ts).
-                    <li
-                      key={`${card.kind}-${card.agency}-${card.level}-${card.specialty}-${card.identifier}`}
-                    >
-                      <CertificationLine
-                        t={t}
-                        card={card}
-                        agencyText={agencyText}
-                        dateTime={dateTime}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <CertificationEvidence
+                diver={diver}
+                t={t}
+                agencyText={agencyText}
+                dateTime={dateTime}
+              />
             </li>
           ))}
         </ul>
