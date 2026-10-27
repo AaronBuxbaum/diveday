@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
-import type { OfflineManifestUpcomingResponse } from "../src/lib/offline-manifests";
+import {
+  OFFLINE_MANIFEST_SHELL_VERSION,
+  type OfflineManifestUpcomingResponse,
+} from "../src/lib/offline-manifests";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openOnThisPhone, openThreadStep } from "./helpers";
 
@@ -107,14 +110,14 @@ test.describe("touch manifest", () => {
     await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
     await expect
       .poll(() =>
-        page.evaluate(async () => {
+        page.evaluate(async (version) => {
           const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
-          const cache = await caches.open("diveday-offline-manifest-shell-v2");
+          const cache = await caches.open(`diveday-offline-manifest-shell-${version}`);
           return (
             registration?.active?.state === "activated" &&
             Boolean(await cache.match("/offline-manifest"))
           );
-        }),
+        }, OFFLINE_MANIFEST_SHELL_VERSION),
       )
       .toBe(true);
     await context.setOffline(true);

@@ -245,3 +245,40 @@ describe("ReadyMastheadMeta", () => {
     expect(screen.getByText(/This page is yours to keep/)).toBeTruthy();
   });
 });
+
+describe("date-adjacent next actions in both openings", () => {
+  it.each(["ordinary", "booked"] as const)(
+    "places the supplied existing-section link after the date in %s",
+    (kind) => {
+      const t = diverTranslator("en-US");
+      const dateActions = <a href="#move-ask">{t("ready.moveAsk.changePlans")}</a>;
+      render(
+        withProvider(
+          "en-US",
+          kind === "booked" ? (
+            <ReadyBookedHeader
+              facts={FACTS}
+              greetingName="Priya"
+              locale="en-US"
+              now={NIGHT_BEFORE}
+              t={t}
+              dateActions={dateActions}
+            />
+          ) : (
+            <ReadyMastheadMeta
+              facts={FACTS}
+              locale="en-US"
+              now={NIGHT_BEFORE}
+              t={t}
+              dateActions={dateActions}
+            />
+          ),
+        ),
+      );
+      const date = screen.getByText(/^Tomorrow · Sun, Oct\s11/);
+      const action = screen.getByRole("link", { name: t("ready.moveAsk.changePlans") });
+      expect(date.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(action).toHaveAttribute("href", "#move-ask");
+    },
+  );
+});

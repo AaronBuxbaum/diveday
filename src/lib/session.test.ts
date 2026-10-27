@@ -43,9 +43,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: vi.fn(async () => new Headers()) }));
 
 const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
+const { headers } = await import("next/headers");
 const { isLiveShopStaff, requireShopSurface, requireStaffSession } = await import("./session");
 
 const authMock = vi.mocked(auth);
@@ -96,6 +98,15 @@ describe("requireStaffSession", () => {
     const error = await refusal(() => requireStaffSession());
     expect(error).toBeInstanceOf(RedirectError);
     expect(error.message).toBe("/sign-in");
+  });
+
+  it("breaks the warm-cookie redirect loop when the live session has ended", async () => {
+    authMock.mockResolvedValue(null);
+    vi.mocked(headers).mockResolvedValueOnce(
+      new Headers({ cookie: "better-auth.session_token=old" }),
+    );
+    const error = await refusal(() => requireStaffSession());
+    expect(error.message).toBe("/sign-in?session=ended");
   });
 
   it("sends a signed-in non-staff visitor to sign in", async () => {

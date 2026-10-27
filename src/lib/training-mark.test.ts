@@ -4,6 +4,7 @@ import { COURSE_FORMS_BLOCK_BOARDING, type RequiredCourseForm } from "./course-f
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import {
   courseInstructorsAboard,
+  mixedTrainingDepthAdvisory,
   type TrainingDiveCourse,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
@@ -507,5 +508,25 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
       departureCrew: [teacher],
     });
     expect(none.overRatio.size).toBe(0);
+  });
+});
+
+describe("mixed training depth advisory", () => {
+  it("asks staff to check depth when introductory and other course students share a departure", () => {
+    expect(mixedTrainingDepthAdvisory([{ intro: true }, { intro: false }])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{ intro: false }, { intro: true }])).toBe(true);
+  });
+
+  it("prompts on older saved course marks whose type is unknown", () => {
+    expect(mixedTrainingDepthAdvisory([{}, {}])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{ intro: true }, {}])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{ intro: false }, {}])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{}])).toBe(false);
+  });
+
+  it("does not infer a mixed departure from an intro or other course alone", () => {
+    expect(mixedTrainingDepthAdvisory([])).toBe(false);
+    expect(mixedTrainingDepthAdvisory([{ intro: true }, { intro: true }])).toBe(false);
+    expect(mixedTrainingDepthAdvisory([{ intro: false }, { intro: false }])).toBe(false);
   });
 });

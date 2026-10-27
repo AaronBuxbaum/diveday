@@ -266,7 +266,12 @@ export type ManifestDiverInput = {
    * unmarked seat and on a mark that no longer stands (`training_mark_invalid`
    * says that).
    */
-  trainingDive?: { courseTitle: string; instructorAboard: boolean; overRatio?: boolean } | null;
+  trainingDive?: {
+    courseTitle: string;
+    instructorAboard: boolean;
+    overRatio?: boolean;
+    intro?: boolean;
+  } | null;
   /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */

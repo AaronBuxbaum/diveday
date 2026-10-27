@@ -221,6 +221,7 @@ export const STAFF_HISTORY_TABLES = [
   // about, somebody who works the boats, so either side of a merge holding one
   // is a staff record and the merge is refused rather than carried across.
   "trip_read_marks",
+  "today_read_marks",
   // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
   // a staff login is ever sent one, so a record holding one is a staff record
   // and the merge is refused, like the calendar feed above.

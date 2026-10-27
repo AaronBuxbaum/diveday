@@ -7,6 +7,7 @@ import {
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
@@ -56,14 +57,14 @@ async function waitForShellPrimed(page: Page) {
 
   await expect
     .poll(() =>
-      page.evaluate(async () => {
+      page.evaluate(async (version) => {
         const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
-        const cache = await caches.open("diveday-offline-manifest-shell-v2");
+        const cache = await caches.open(`diveday-offline-manifest-shell-${version}`);
         return (
           registration?.active?.state === "activated" &&
           (await cache.match("/offline-manifest")) !== undefined
         );
-      }),
+      }, OFFLINE_MANIFEST_SHELL_VERSION),
     )
     .toBe(true);
 }

@@ -1,4 +1,5 @@
 import { DecompressionReminder } from "@/components/DecompressionReminder";
+import { MixedTrainingDepthWarning } from "@/components/MixedTrainingDepthWarning";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -6,6 +7,7 @@ import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { crewDives, needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { scopedId } from "@/lib/element-id";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
+import { mixedTrainingDepthAdvisory } from "@/lib/training-mark";
 import { DiverRollCallRow } from "./DiverRollCallRow";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import { HoldPlace } from "./HoldPlace";
@@ -74,6 +76,14 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
         <DecompressionReminder text={t("manifest.decompressionReminder")} />
       ) : null}
       <SharedDepthAdvisories sharedAdvisories={sharedAdvisories} locale={locale} t={t} />
+      <MixedTrainingDepthWarning
+        show={mixedTrainingDepthAdvisory(
+          divers.flatMap((diver) =>
+            !diver.identityWithheld && diver.trainingDive ? [diver.trainingDive] : [],
+          ),
+        )}
+        t={t}
+      />
       {/* Only on a packet printed with the medical alerts (issue #2990). */}
       {context.printedMedicalAlerts && context.printedMedicalAlerts.texts.size > 0 ? (
         <PrintedMedicalAlertsNote

@@ -361,12 +361,12 @@ const EXCLUDED_TABLES = [
   // Exporting it would also be the one thing #1202's boundary rules out: a
   // durable, downloadable, per-person account of who did what and when.
   "trip_desk_events",
-  // Where each staffer had read up to in that trail. Meaningless without the
-  // events above, and meaningless in another system — same reasoning again.
+  // Per-staff read state has no meaning without the desk events.
+  // It is not portable to another system.
   "trip_read_marks",
-  // A send tapped and not yet left (ADR 20260906-before-you-ask, decision 2).
-  // A row lives eight seconds and is deleted on either exit; a bundle that
-  // caught one would export a tap, not a record.
+  "today_read_marks",
+  "today_read_mark_events",
+  // Held sends live eight seconds; exporting one would export a tap, not a record.
   "held_sends",
   // What one staffer had typed into a form when the phone rang (same ADR,
   // decision 3): a day-old draft of their own, never a shop record.

@@ -89,6 +89,8 @@ export const SUBPROCESS_TIMEOUTS = {
   vercelCli: 120_000,
   /** One `gh` call. */
   ghCli: 120_000,
+  /** One registry-backed install of the pinned package manager, before dependency installation. */
+  packageManagerBootstrap: 120_000,
   /**
    * One `gh api` read made *inside* a `PreToolUse` hook (`guard-bash.mjs` asking which branch
    * a run belongs to). The hook's own ceiling is ten seconds and it fails open, so the read has

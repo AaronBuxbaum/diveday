@@ -403,7 +403,7 @@
   "addDiver": {
     "heading": "Add a booking",
     "mixedTrainingTitle": "Possible training overlap",
-    "mixedTrainingBody": "If students from these sessions train together on one departure, check instructor groups and the intro ratio before the dive.",
+    "mixedTrainingBody": "If students from these sessions train together on one departure, check instructor groups, the intro ratio and the intro program’s depth limit before the dive.",
     "fullDescription": "The boat is full.",
     "findLabel": "Find a returning diver",
     "findPlaceholder": "Name, email, or phone",
@@ -648,6 +648,13 @@
     "reasonWaiverNotSigned": "Waiver not signed yet",
     "reasonUnpaid": "Not paid yet",
     "courseForms": {
+      "showQrFor": "Show QR code for {name}",
+      "showQr": "Show QR code",
+      "qrTitle": "Course forms",
+      "qrScan": "Scan with your phone to sign.",
+      "qrClose": "Close",
+      "qrLoading": "Preparing code",
+      "qrFailed": "Could not prepare the code. Close and check the student’s forms.",
       "owed": "{count, plural, one {Course form owed: {forms}} other {Course forms owed: {forms}}}",
       "send": "Send course forms",
       "recordPaper": "Signed on paper",

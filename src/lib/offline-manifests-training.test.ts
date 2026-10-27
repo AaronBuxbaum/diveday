@@ -78,6 +78,25 @@ describe("the dock copy of a training dive", () => {
     ).toEqual({ courseTitle: "Advanced Open Water", instructorAboard: false });
   });
 
+  it("keeps the recorded intro classification for the offline depth prompt", () => {
+    for (const intro of [true, false]) {
+      expect(
+        save({ trainingDive: { courseTitle: "Course", instructorAboard: false, intro } })
+          .trainingDive,
+      ).toMatchObject({ intro });
+    }
+  });
+
+  it("does not save a held seat’s course or introductory classification", () => {
+    const row = save({
+      identityClaim: { bookedAs: "Maya", matchedBy: "picked_name" },
+      readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+      trainingDive: { courseTitle: "Intro", instructorAboard: false, intro: true },
+    });
+    expect(row.identityWithheld).toBe(true);
+    expect(row).not.toHaveProperty("trainingDive");
+  });
+
   it("carries who cleared a mark with its forms unsigned", () => {
     for (const cleared of [
       { byName: "Ana Ruiz", reason: "forms_owed" as const },

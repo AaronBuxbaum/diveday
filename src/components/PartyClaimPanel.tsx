@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { diverTranslator } from "@/i18n/messages";
+import { partySeatAnchor } from "@/lib/party-seat-anchor";
 
 /** One party seat as the organizer's surfaces render it. */
 export type PartyClaimSeat = {
@@ -76,20 +77,25 @@ export function PartyClaimPanel({
             inside a `rounded-panel bg-surface` panel at the same radius, which
             reads as a rendering bug rather than as structure. */}
         {seats.map((seat) => (
-          <li key={seat.bookingId} className="rounded-inset border border-border bg-surface/70 p-4">
+          <li
+            key={seat.bookingId}
+            id={partySeatAnchor(seat.bookingId)}
+            tabIndex={-1}
+            className="scroll-mt-8 rounded-inset border border-border bg-surface/70 p-4"
+          >
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="font-semibold">{seat.seatName}</span>
               {seat.claimed ? (
-                <span className="text-sm font-semibold text-success">
+                <span className="text-base font-semibold text-success">
                   {t("seatClaim.claimedBadge")}
                 </span>
               ) : (
-                <span className="text-sm font-medium text-muted">
+                <span className="text-base font-medium text-muted">
                   {t("seatClaim.awaitingBadge")}
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-base text-muted">
               {seat.waiverSigned ? t("seatClaim.waiverComplete") : t("seatClaim.waiverNeeded")}
             </p>
             {!seat.claimed && seat.claimUrl ? (

@@ -40,3 +40,55 @@ for (const locale of ["en-US", "es-ES"] as const) {
     });
   });
 }
+
+it("shows the depth check from a saved mixed-training manifest", () => {
+  const copy = savedCopy();
+  const manifest = copy.snapshot.manifests[0];
+  if (!manifest?.divers[0] || !manifest.divers[1]) throw new Error("divers missing");
+  manifest.divers[0].trainingDive = { courseTitle: "Intro", instructorAboard: false, intro: true };
+  manifest.divers[1].trainingDive = {
+    courseTitle: "Open Water",
+    instructorAboard: false,
+    intro: false,
+  };
+  const view = offlineTripView(copy, "departure");
+  if (!view) throw new Error("view missing");
+  render(<OfflineRollCallSection view={view} controls={controls()} />);
+  expect(
+    screen.getByText(
+      /If intro participants dive with other students, check the intro program’s depth limit/,
+    ),
+  ).toBeVisible();
+});
+
+it("still prompts for older saved copies with two course marks of unknown type", () => {
+  const copy = savedCopy();
+  const manifest = copy.snapshot.manifests[0];
+  if (!manifest?.divers[0] || !manifest.divers[1]) throw new Error("divers missing");
+  manifest.divers[0].trainingDive = { courseTitle: "Intro", instructorAboard: false };
+  manifest.divers[1].trainingDive = { courseTitle: "Open Water", instructorAboard: false };
+  const view = offlineTripView(copy, "departure");
+  if (!view) throw new Error("view missing");
+  render(<OfflineRollCallSection view={view} controls={controls()} />);
+  expect(screen.getByText(/intro program’s depth limit/)).toBeVisible();
+});
+
+it("does not use a legacy held seat’s course in the depth warning", () => {
+  const copy = savedCopy();
+  const manifest = copy.snapshot.manifests[0];
+  if (!manifest?.divers[0] || !manifest.divers[1]) throw new Error("divers missing");
+  manifest.divers[0].readiness = {
+    status: "blocked",
+    blockers: [{ code: "identity_unconfirmed", text: "Confirm identity" }],
+  };
+  manifest.divers[0].trainingDive = { courseTitle: "Intro", instructorAboard: false, intro: true };
+  manifest.divers[1].trainingDive = {
+    courseTitle: "Open Water",
+    instructorAboard: false,
+    intro: false,
+  };
+  const view = offlineTripView(copy, "departure");
+  if (!view) throw new Error("view missing");
+  render(<OfflineRollCallSection view={view} controls={controls()} />);
+  expect(screen.queryByText(/intro program’s depth limit/)).not.toBeInTheDocument();
+});

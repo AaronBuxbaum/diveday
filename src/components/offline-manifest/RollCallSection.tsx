@@ -1,9 +1,12 @@
 import { DecompressionReminder } from "@/components/DecompressionReminder";
+import { MixedTrainingDepthWarning } from "@/components/MixedTrainingDepthWarning";
 import { buttonClass } from "@/components/ui/button";
 import { FIGURE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { crewDives, needsDecompressionCardReminder } from "@/lib/decompression-reminder";
+import { isHeldSeat } from "@/lib/held-seat";
 import { countParticipants, hasNonDivers, joinPassengerSplit } from "@/lib/participant-types";
+import { mixedTrainingDepthAdvisory } from "@/lib/training-mark";
 import { OfflineCrewRollCall } from "./CrewRollCall";
 import type { OfflineTripControls } from "./controls";
 import { OfflineDiverRollCall } from "./DiverRollCall";
@@ -134,6 +137,16 @@ export function OfflineRollCallSection({
             { when: view.savedAtZoned },
           )}
         </p>
+        <MixedTrainingDepthWarning
+          show={mixedTrainingDepthAdvisory(
+            manifest.divers.flatMap((diver) =>
+              !diver.identityWithheld && !isHeldSeat(diver) && diver.trainingDive
+                ? [diver.trainingDive]
+                : [],
+            ),
+          )}
+          t={t}
+        />
         {showsDecompressionReminder ? (
           <DecompressionReminder text={t("manifest.decompressionReminder")} />
         ) : null}
