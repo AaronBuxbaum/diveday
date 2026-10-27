@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -175,8 +175,15 @@ export async function sendPlannedReadinessLink(
     await tx
       .select({ id: bookings.id })
       .from(bookings)
-      .where(and(eq(bookings.id, plan.bookingId), eq(bookings.shopId, plan.shopId)))
-      .for("update");
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(
+        and(
+          eq(bookings.id, plan.bookingId),
+          eq(bookings.shopId, plan.shopId),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .for("update", { of: people });
     if (await hasLiveReadinessCapability(tx, { ...plan, now })) return "raced" as const;
     return issueBookingCapability(tx, {
       shopId: plan.shopId,

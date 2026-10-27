@@ -133,8 +133,15 @@ export async function sendFindMyBookingLinks(
         await tx
           .select({ id: bookings.id })
           .from(bookings)
-          .where(and(eq(bookings.id, row.bookingId), eq(bookings.shopId, input.shopId)))
-          .for("update");
+          .innerJoin(people, eq(people.id, bookings.personId))
+          .where(
+            and(
+              eq(bookings.id, row.bookingId),
+              eq(bookings.shopId, input.shopId),
+              isNull(people.anonymizedAt),
+            ),
+          )
+          .for("update", { of: people });
         if (
           await hasLiveReadinessCapability(tx, {
             shopId: input.shopId,

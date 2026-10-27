@@ -7,8 +7,8 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
-import { recordFlySafeTold } from "./fly-safe-correction";
 import { listDeskEventsSince, markTripCaughtUp } from "./desk-events";
+import { recordFlySafeTold } from "./fly-safe-correction";
 import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { listTripActivity } from "./operations";
 import {

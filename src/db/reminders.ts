@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import type { TripRequirement } from "@/db/schema";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
@@ -276,6 +276,7 @@ async function mintReminderLinks(
   whatsAppShopIds: ReadonlyMap<string, unknown>,
 ): Promise<ReminderLinks> {
   const links = new Map<string, ReminderLink>();
+  const suppressed = new Set<string>();
   if (!origin) return new ReminderLinks(links);
   // A phone-only diver on the STOP list, at a shop with no WhatsApp of its own,
   // is refused by the SMS wrapper: no link is minted for a text that cannot go
@@ -306,6 +307,9 @@ async function mintReminderLinks(
       now,
       delivered: true,
     });
+    for (const bookingId of bookingIds) {
+      if (!issued.has(bookingId)) suppressed.add(bookingId);
+    }
     for (const [bookingId, { token }] of issued) {
       links.set(bookingId, {
         shopId,
@@ -314,7 +318,17 @@ async function mintReminderLinks(
       });
     }
   }
-  return new ReminderLinks(links);
+  return new ReminderLinks(links, suppressed);
+}
+
+function remindersWithIssuedLinks<T extends { row: { booking: { id: string } } }>(
+  rows: T[],
+  links: ReminderLinks,
+  summary: { skipped: number },
+): T[] {
+  const sendable = rows.filter(({ row }) => links.shouldSend(row.booking.id));
+  summary.skipped += rows.length - sendable.length;
+  return sendable;
 }
 
 /** A pass that has scanned `scanned` bookings and sent nothing yet. */
@@ -515,6 +529,7 @@ export async function sendDueReminders(
         // Only a seat the diver still holds: a released one (turned away at
         // the desk) is not a "see you tomorrow" (layer 3 review, dde-1 F2).
         inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        isNull(people.anonymizedAt),
         and(eq(trips.status, "scheduled"), notRehearsal()),
         gt(trips.startsAt, now),
         lte(trips.startsAt, horizon),
@@ -693,13 +708,14 @@ export async function sendDueReminders(
   }
 
   const links = await mintReminderLinks(db, origin, sending, now, whatsAppProviders);
+  const sendable = remindersWithIssuedLinks(sending, links, summary);
   await links.whileSending(db, now, async () => {
     for (const {
       row: { booking, person, trip, shop },
       cadence,
       checklist,
       materialsDue,
-    } of sending) {
+    } of sendable) {
       const student = Boolean(trip.courseId) && isDiver(booking.participantType);
       const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
       // No request to negotiate `Accept-Language` from at a cron fire: this reads

@@ -7,7 +7,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { DbExecutor } from "./client";
-import { bookingCapabilities, bookings, trips } from "./schema";
+import { bookingCapabilities, bookings, people, trips } from "./schema";
 
 export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
 
@@ -98,36 +98,44 @@ export async function issueBookingCapability(
   },
 ): Promise<IssuedCapability | null> {
   const now = input.now ?? nowDate();
-  const [booking] = await db
-    .select({ id: bookings.id, tripEndsAt: trips.endsAt })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.id, input.bookingId),
-        eq(bookings.shopId, input.shopId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .limit(1);
-  if (!booking) return null;
+  return db.transaction(async (tx) => {
+    const [booking] = await tx
+      .select({ id: bookings.id, tripEndsAt: trips.endsAt })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          ne(bookings.status, "cancelled"),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .limit(1)
+      // Erasure locks the person before revoking booking capabilities. Taking
+      // the same lock makes mint either precede erasure (and get revoked) or
+      // follow it (and see no eligible subject).
+      .for("update", { of: people });
+    if (!booking) return null;
 
-  await retireOldestLiveCapabilities(db, input.shopId, [input.bookingId], input.purpose, now);
+    await retireOldestLiveCapabilities(tx, input.shopId, [input.bookingId], input.purpose, now);
 
-  const token = createCapabilityToken();
-  const tripBound = capabilityExpiryFor(booking.tripEndsAt, now);
-  const expiresAt = input.expiresAt && input.expiresAt < tripBound ? input.expiresAt : tripBound;
-  await db.insert(bookingCapabilities).values({
-    shopId: input.shopId,
-    bookingId: input.bookingId,
-    purpose: input.purpose,
-    tokenHash: hashCapabilityToken(token),
-    tokenSealed: input.sealingKey ? sealSecret(token, input.sealingKey) : null,
-    delivered: input.delivered ?? false,
-    issuedAt: now,
-    expiresAt,
+    const token = createCapabilityToken();
+    const tripBound = capabilityExpiryFor(booking.tripEndsAt, now);
+    const expiresAt = input.expiresAt && input.expiresAt < tripBound ? input.expiresAt : tripBound;
+    await tx.insert(bookingCapabilities).values({
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      purpose: input.purpose,
+      tokenHash: hashCapabilityToken(token),
+      tokenSealed: input.sealingKey ? sealSecret(token, input.sealingKey) : null,
+      delivered: input.delivered ?? false,
+      issuedAt: now,
+      expiresAt,
+    });
+    return { token, expiresAt };
   });
-  return { token, expiresAt };
 }
 
 /**
@@ -158,11 +166,13 @@ export async function issueBookingCapabilities(
     .select({ id: bookings.id, tripEndsAt: trips.endsAt })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
     .where(
       and(
         inArray(bookings.id, bookingIds),
         eq(bookings.shopId, input.shopId),
         ne(bookings.status, "cancelled"),
+        isNull(people.anonymizedAt),
       ),
     );
   if (found.length === 0) return issued;
@@ -199,35 +209,59 @@ export async function mintBookingCapabilities(
     delivered?: boolean;
   },
 ): Promise<Map<string, IssuedCapability>> {
-  const issued = new Map<string, IssuedCapability>();
-  const seats = [...new Map(input.seats.map((seat) => [seat.bookingId, seat])).values()];
-  if (seats.length === 0) return issued;
+  return db.transaction(async (tx) => {
+    const issued = new Map<string, IssuedCapability>();
+    const requested = [...new Map(input.seats.map((seat) => [seat.bookingId, seat])).values()];
+    if (requested.length === 0) return issued;
+    // Stable person ordering avoids deadlocks when a party spans people and
+    // concurrent erasures or capability batches overlap.
+    const eligible = await tx
+      .select({ bookingId: bookings.id })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(
+        and(
+          inArray(
+            bookings.id,
+            requested.map((seat) => seat.bookingId),
+          ),
+          eq(bookings.shopId, input.shopId),
+          ne(bookings.status, "cancelled"),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .orderBy(people.id)
+      .for("update", { of: people });
+    const eligibleIds = new Set(eligible.map(({ bookingId }) => bookingId));
+    const seats = requested.filter((seat) => eligibleIds.has(seat.bookingId));
+    if (seats.length === 0) return issued;
 
-  await retireOldestLiveCapabilities(
-    db,
-    input.shopId,
-    seats.map((seat) => seat.bookingId),
-    input.purpose,
-    input.now,
-  );
+    await retireOldestLiveCapabilities(
+      tx,
+      input.shopId,
+      seats.map((seat) => seat.bookingId),
+      input.purpose,
+      input.now,
+    );
 
-  const rows = seats.map((seat) => {
-    const token = createCapabilityToken();
-    const expiresAt = capabilityExpiryFor(seat.tripEndsAt, input.now);
-    issued.set(seat.bookingId, { token, expiresAt });
-    return {
-      shopId: input.shopId,
-      bookingId: seat.bookingId,
-      purpose: input.purpose,
-      tokenHash: hashCapabilityToken(token),
-      tokenSealed: null,
-      delivered: input.delivered ?? false,
-      issuedAt: input.now,
-      expiresAt,
-    };
+    const rows = seats.map((seat) => {
+      const token = createCapabilityToken();
+      const expiresAt = capabilityExpiryFor(seat.tripEndsAt, input.now);
+      issued.set(seat.bookingId, { token, expiresAt });
+      return {
+        shopId: input.shopId,
+        bookingId: seat.bookingId,
+        purpose: input.purpose,
+        tokenHash: hashCapabilityToken(token),
+        tokenSealed: null,
+        delivered: input.delivered ?? false,
+        issuedAt: input.now,
+        expiresAt,
+      };
+    });
+    await tx.insert(bookingCapabilities).values(rows);
+    return issued;
   });
-  await db.insert(bookingCapabilities).values(rows);
-  return issued;
 }
 
 /**
@@ -254,14 +288,16 @@ export async function issueCourseFormsCapability(
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
       .where(
         and(
           eq(bookings.id, input.bookingId),
           eq(bookings.shopId, input.shopId),
           ne(bookings.status, "cancelled"),
+          isNull(people.anonymizedAt),
         ),
       )
-      .for("update");
+      .for("update", { of: people });
     if (!booking) return null;
     if (sealingKey) {
       const [live] = await tx
@@ -378,6 +414,7 @@ export async function verifyBookingCapability(
   // ever drifting from its booking's — nothing legitimate can cause that
   // today, but a verified identity must never be trusted past that check.
   if (row.bookingStatus === "cancelled") return null;
+  if (row.personAnonymized) return null;
   // Trip cancellation doesn't cascade into cancelling its bookings (a
   // separate, pre-existing gap outside this ticket's scope), so a booking
   // can still read "booked" after the trip itself is called off — a
@@ -425,6 +462,7 @@ export async function verifyStrandedBookingCapability(
   const row = await liveCapabilityRow(db, { ...input, purpose: "readiness" });
   if (!row) return null;
   if (row.bookingStatus === "cancelled") return null;
+  if (row.personAnonymized) return null;
   if (row.tripStatus !== "cancelled" || row.tripDeleted) return null;
   if (row.capabilityShopId !== row.bookingShopId) return null;
   return { bookingId: row.bookingId, shopId: row.capabilityShopId };
@@ -443,6 +481,7 @@ async function liveCapabilityRow(
       capabilityShopId: bookingCapabilities.shopId,
       bookingShopId: bookings.shopId,
       personId: bookings.personId,
+      personAnonymized: sql<boolean>`${people.anonymizedAt} is not null`,
       tripId: bookings.tripId,
       bookingStatus: bookings.status,
       tripStatus: trips.status,
@@ -451,6 +490,7 @@ async function liveCapabilityRow(
     })
     .from(bookingCapabilities)
     .innerJoin(bookings, eq(bookings.id, bookingCapabilities.bookingId))
+    .innerJoin(people, eq(people.id, bookings.personId))
     // diveday:allow-deleted-trips: both verifiers read `tripDeleted` and refuse a deleted departure.
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
