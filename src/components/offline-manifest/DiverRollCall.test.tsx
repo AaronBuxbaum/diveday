@@ -77,6 +77,17 @@ describe("OfflineDiverRollCall", () => {
     expect(dockRow?.querySelector('button[aria-label="Mark boarded"]')).toBeNull();
     dock.unmount();
 
+    const departureManifest = copy.snapshot.manifests[0];
+    if (!departureManifest) throw new Error("departure manifest missing");
+    const afterDiveManifest = structuredClone(departureManifest);
+    afterDiveManifest.checkpoint = "after_dive_1";
+    const afterDiveDiver = afterDiveManifest.divers[0];
+    if (!afterDiveDiver) throw new Error("after-dive diver missing");
+    afterDiveDiver.readiness.blockers[0] = {
+      code: "medical_review",
+      text: "After-dive physician referral needs review",
+    };
+    copy.snapshot.manifests.push(afterDiveManifest);
     copy.events = [
       {
         clientEventId: "event-1",
@@ -90,13 +101,20 @@ describe("OfflineDiverRollCall", () => {
         syncStatus: "pending",
       },
     ];
+    // A saved envelope has separately serialized manifests for each checkpoint.
+    const saved: typeof copy = JSON.parse(JSON.stringify(copy));
     for (const checkpoint of ["departure", "after_dive_1"] as const) {
-      const trip = offlineTripView(copy, checkpoint);
+      const trip = offlineTripView(saved, checkpoint);
       if (!trip) throw new Error("manifest missing");
+      expect(trip.manifest.checkpoint).toBe(checkpoint);
       const rendered = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
       const row = rendered.container.querySelector(`#offline-roll-call-${diver.bookingId}`);
       expect(row?.textContent).toContain("This saved training clearance is out of date");
-      expect(row?.textContent).toContain("Physician referral needs review");
+      expect(row?.textContent).toContain(
+        checkpoint === "departure"
+          ? "Physician referral needs review"
+          : "After-dive physician referral needs review",
+      );
       expect(row?.textContent).toContain("Certification missing when saved");
       rendered.unmount();
     }
