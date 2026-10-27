@@ -1,5 +1,6 @@
-import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import {
   type Notification,
   type NotificationDelivery,
@@ -41,14 +42,14 @@ export async function recordFlySafeTold(
 ): Promise<void> {
   await db
     .update(bookings)
-    .set({ flySafeHoursTold: input.hours })
+    .set({ flySafeHoursTold: input.hours, flySafeCorrectedAt: null })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
 }
 
 /**
- * Whether a send leaves the diver holding what the email said: it went, or it
- * failed in a way `sendNotification` queues for the next pass, which will
- * deliver the same words later.
+ * A sent figure or an ambiguous retryable provider failure may have reached
+ * the diver. The latter is conservative exposure, not evidence of acceptance
+ * or of a successfully persisted retry.
  */
 export function deliveryCarriesFigure(delivery: NotificationDelivery): boolean {
   return (
@@ -57,9 +58,8 @@ export function deliveryCarriesFigure(delivery: NotificationDelivery): boolean {
 }
 
 /**
- * After a reminder goes out: a night-before email that carried the fly-safe
- * line, sent or queued to go, leaves the seat holding that figure, so marking
- * the departure as decompression diving later can correct it.
+ * Record a sent or potentially accepted night-before figure, so a later
+ * decompression change can correct it even when provider failure is ambiguous.
  */
 export async function rememberFlySafeTold(
   db: DbExecutor,
@@ -78,6 +78,58 @@ export async function rememberFlySafeTold(
     bookingId: input.bookingId,
     hours: notification.flySafeHours,
   });
+}
+
+/** Reconcile the seat's current departure after a reminder is accepted or its delivery is uncertain. */
+export async function correctFlySafeForBooking(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; now?: Date; emailProvider?: NotificationProvider },
+): Promise<FlySafeCorrectionOutcome> {
+  const [seat] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!seat) return { told: 0, failed: 0, unreached: [] };
+  return sendFlySafeCorrections(db, { ...input, tripId: seat.tripId });
+}
+
+/** Retry unqueued or refused corrections on the next scheduled reminder pass. */
+export async function retryOwedFlySafeCorrections(
+  db: AppDb,
+  input: { now: Date; emailProvider: NotificationProvider },
+): Promise<void> {
+  const due = await db
+    .selectDistinct({ shopId: trips.shopId, tripId: trips.id })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(
+      and(
+        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        isNotNull(bookings.flySafeHoursTold),
+        isNull(bookings.flySafeCorrectedAt),
+        eq(trips.status, "scheduled"),
+        eq(trips.exceedsNoDecoLimits, true),
+        liveTrip(),
+        notRehearsal(),
+        gte(trips.endsAt, new Date(input.now.getTime() - FLY_SAFE_CORRECTION_WINDOW_MS)),
+      ),
+    );
+  for (const trip of due) {
+    try {
+      const outcome = await sendFlySafeCorrections(db, { ...trip, ...input });
+      if (outcome.unreached.length)
+        log("reminder.fly_safe_correction_unreached", "error", {
+          shopId: trip.shopId,
+          count: outcome.unreached.length,
+        });
+    } catch (error) {
+      log("reminder.fly_safe_correction_retry_failed", "error", {
+        shopId: trip.shopId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+  }
 }
 
 /**
@@ -121,8 +173,8 @@ export type FlySafeCorrectionOutcome = { told: number; failed: number; unreached
  * statement that selects it, before anything is sent, so a second save or a
  * race finds nothing owed. Any seat not sent or queued by the end, a refused
  * send, no address, or the rest of the batch after a provider throws, has its
- * claim put back, so the next save tries again; a retryable failure is queued
- * by `sendNotification` and stays claimed, because the queue will deliver it.
+ * claim put back, so a later pass tries again. A retryable failure holds its
+ * claim only when its queue write succeeded; the queue then retries it.
  * A throw still propagates, after the put-back.
  */
 export async function sendFlySafeCorrections(
@@ -130,6 +182,8 @@ export async function sendFlySafeCorrections(
   input: {
     shopId: string;
     tripId: string;
+    /** Limit a move or reminder reconciliation to the affected seat. */
+    bookingId?: string;
     now?: Date;
     emailProvider?: NotificationProvider;
     /** The one send door; a test passes one that throws to prove the put-back. */
@@ -162,6 +216,7 @@ export async function sendFlySafeCorrections(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, trip.id),
+        input.bookingId ? eq(bookings.id, input.bookingId) : undefined,
         inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
@@ -175,6 +230,9 @@ export async function sendFlySafeCorrections(
     .where(
       and(
         eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, trip.id),
+        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        isNotNull(bookings.flySafeHoursTold),
         inArray(
           bookings.id,
           owed.map((seat) => seat.id),
@@ -226,6 +284,7 @@ export async function sendFlySafeCorrections(
         db,
         {
           kind: "fly_safe_correction",
+          correctionId: crypto.randomUUID(),
           seatId: seat.id,
           shopId: shop.id,
           to: person.email,
@@ -242,9 +301,8 @@ export async function sendFlySafeCorrections(
         unsent.delete(seat.id);
         continue;
       }
-      // A retryable failure is queued by `sendNotification` and stays claimed,
-      // because the queue will deliver it: late, but nobody to call.
-      if (delivery.status === "failed" && delivery.retryable) {
+      // A persisted retry holds the claim while the queue tries it.
+      if (delivery.status === "failed" && delivery.retryable && delivery.retryQueued === true) {
         unsent.delete(seat.id);
         outcome.failed += 1;
         continue;

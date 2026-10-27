@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
@@ -13,7 +13,8 @@ import {
   rememberFlySafeTold,
   sendFlySafeCorrections,
 } from "./fly-safe-correction";
-import { bookings, people, trips as tripRows } from "./schema";
+import { sendDueReminders } from "./reminders";
+import { bookings, notificationSendQueue, people, trips as tripRows } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -77,6 +78,74 @@ describe("sendFlySafeCorrections (#2927)", () => {
       }),
     ).toEqual({ told: 0, failed: 0, unreached: [] });
     expect(again.sent).toHaveLength(0);
+  });
+
+  it("persists a second correction after a newer figure, without colliding with the first retry", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    const mail = fakeEmail({ status: "failed", retryable: true });
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: mail.provider,
+    });
+    await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 18 });
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: mail.provider,
+    });
+    const rows = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(rows.filter((row) => row.status === "queued")).toHaveLength(2);
+    expect(new Set(rows.map((row) => row.idempotencyKey)).size).toBe(2);
+  });
+
+  it("retries an unqueued correction on the next reminder pass", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    try {
+      await sendFlySafeCorrections(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        now,
+        emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    const recovered = fakeEmail();
+    await sendDueReminders(db, { now, emailProvider: recovered.provider, appOrigin: null });
+    expect(
+      recovered.sent.some(
+        (value) => value.kind === "fly_safe_correction" && value.seatId === bookingId,
+      ),
+    ).toBe(true);
+  });
+
+  it("releases the correction claim when a retry cannot be persisted", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    try {
+      const result = await sendFlySafeCorrections(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        now: new Date(reef.startsAt.getTime() - HOUR_MS),
+        emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+      });
+      expect(result.unreached).toEqual(["Pat Party"]);
+      expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("tells nobody while the departure is not marked as decompression diving", async () => {

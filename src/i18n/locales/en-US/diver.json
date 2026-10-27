@@ -5474,7 +5474,8 @@
       "dayBody": "{tripTitle} sails {day, select, today {today} other {tomorrow}}; be at the dock by {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
       "daySubjectCourse": "{day, select, today {Your course starts today} other {Your course starts tomorrow}}: {tripTitle}",
       "dayBodyCourse": "{tripTitle} starts {day, select, today {today} other {tomorrow}} at {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
-      "flySafe": "Plan to fly no earlier than {count, plural, one {# hour} other {# hours}} after your last dive, and longer if you make decompression stops."
+      "flySafe": "Plan to fly no earlier than {count, plural, one {# hour} other {# hours}} after your last dive, and longer if you make decompression stops.",
+      "flySafeAskCrew": "Ask the crew how long to wait before flying."
     },
     "courseMaterials": {
       "heading": "Before your first day"

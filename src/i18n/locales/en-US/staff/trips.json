@@ -71,6 +71,8 @@
     "bookingRemoved": "Booking canceled. The seat is open again.",
     "bookingRemovedRefunded": "Booking canceled and the payment refunded. The seat is open again.",
     "bookingRemovedForfeit": "Booking canceled. The seat is open again. It was past the cancellation window, so it was non-refundable.",
+    "seatMovedFlySafeUnreached": "Moved. Contact the diver to confirm the new trip and flying advice.",
+    "seatMovedOwedFlySafeUnreached": "Moved; the price difference is owed. Contact the diver to confirm the new trip and flying advice.",
     "seatMoved": "Moved. The diver has the new time.",
     "seatMovedUntold": "Moved, but the message with the new time did not go out. Tell them yourself.",
     "seatMovedOwed": "Moved. The new departure costs more, so the difference is owed.",

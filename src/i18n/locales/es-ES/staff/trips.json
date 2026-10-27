@@ -69,6 +69,8 @@
     "noteAdded": "Nota privada del personal agregada",
     "noteDeleted": "Nota privada del personal eliminada",
     "bookingRemoved": "Reserva cancelada. La plaza vuelve a estar disponible.",
+    "seatMovedFlySafeUnreached": "Se trasladó. Contacta al buceador para confirmar la nueva salida y cuándo puede volar.",
+    "seatMovedOwedFlySafeUnreached": "Se trasladó; queda pendiente la diferencia de precio. Contacta al buceador para confirmar la nueva salida y cuándo puede volar.",
     "seatMoved": "Listo. El buceador ya tiene el nuevo horario.",
     "seatMovedUntold": "Listo, pero el mensaje con el nuevo horario no salió. Avísale tú.",
     "seatMovedOwed": "Listo. La nueva salida cuesta más, así que se debe la diferencia.",

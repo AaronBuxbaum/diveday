@@ -61,6 +61,7 @@ export type DiverStateEmailInput = {
       replyKeywords?: boolean;
       /** The fly-safe wait in hours, on the night before a diver's last boat (H-150); the line is absent without it. */
       flySafeHours?: number;
+      flySafeAskCrew?: boolean;
     }
   | {
       state: "fly_safe_correction";
@@ -153,7 +154,9 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
   const flySafe =
     tonight && input.flySafeHours !== undefined
       ? t("notifications.tripReminder.flySafe", { count: input.flySafeHours })
-      : null;
+      : tonight && input.flySafeAskCrew
+        ? t("notifications.tripReminder.flySafeAskCrew")
+        : null;
   const label = t("notifications.common.seeWhatsLeft");
   // The reply line is a fact about the channel, not about the state, so it
   // stays under the link on both reminders and nowhere else.

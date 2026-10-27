@@ -541,6 +541,9 @@ const tripReminder7dSchema = z.object({
 const tripReminder24hSchema = z.object({
   kind: z.literal("trip_reminder_24h"),
   ...tripReminderFields,
+  tripId: z.uuid().optional(),
+  personId: z.uuid().optional(),
+  flySafeAskCrew: z.boolean().optional(),
 });
 
 /**
@@ -1388,6 +1391,7 @@ export type CustomerGearPiece = z.infer<typeof customerGearPieceSchema>;
  */
 const flySafeCorrectionSchema = z.object({
   kind: z.literal("fly_safe_correction"),
+  correctionId: z.uuid().optional(),
   seatId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
@@ -2414,7 +2418,7 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `departure-note/${notification.noteId}/${notification.seatId}`;
     // One correction per seat, ever (issue #2927).
     case "fly_safe_correction":
-      return `fly-safe-correction/${notification.seatId}`;
+      return `fly-safe-correction/${notification.seatId}${notification.correctionId ? `/${notification.correctionId}` : ""}`;
     // One send per tap on Tell.
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;

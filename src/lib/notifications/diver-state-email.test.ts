@@ -157,6 +157,27 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     );
   });
 
+  it("renders crew guidance in both languages when the previous figure cannot be verified", () => {
+    const english = diverStateEmail({
+      ...base,
+      state: "tonight",
+      now: night,
+      flySafeAskCrew: true,
+    });
+    expect(english.text).toContain("Ask the crew how long to wait before flying.");
+    expect(english.html).toContain("Ask the crew how long to wait before flying.");
+    const spanish = diverStateEmail({
+      ...base,
+      state: "tonight",
+      locale: "es-ES",
+      now: night,
+      flySafeAskCrew: true,
+    });
+    expect(spanish.text).toContain(
+      "Consulta con la tripulación cuánto tiempo debes esperar antes de volar.",
+    );
+  });
+
   it("says nothing about flying without the hours, or on the week-out nudge", () => {
     const tonight = diverStateEmail({ ...base, state: "tonight", now: night, dockCallMinutes: 30 });
     expect(tonight.text).not.toMatch(/fly/i);

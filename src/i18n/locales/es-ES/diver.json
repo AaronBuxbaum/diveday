@@ -5474,7 +5474,8 @@
       "dayBody": "{tripTitle} sale {day, select, today {hoy} other {mañana}}; preséntate en el muelle a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
       "daySubjectCourse": "{day, select, today {Tu curso empieza hoy} other {Tu curso empieza mañana}}: {tripTitle}",
       "dayBodyCourse": "{tripTitle} empieza {day, select, today {hoy} other {mañana}} a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
-      "flySafe": "Planea volar como mínimo {count, plural, one {# hora} other {# horas}} después de tu última inmersión, y más si haces paradas de descompresión."
+      "flySafe": "Planea volar como mínimo {count, plural, one {# hora} other {# horas}} después de tu última inmersión, y más si haces paradas de descompresión.",
+      "flySafeAskCrew": "Consulta con la tripulación cuánto tiempo debes esperar antes de volar."
     },
     "courseMaterials": {
       "heading": "Antes de tu primer día"
