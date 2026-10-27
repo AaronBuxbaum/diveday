@@ -76,6 +76,7 @@ export type BuddyTeamRefusal =
   | "already_teamed"
   | "team_not_found"
   | "not_a_member"
+  | "busy"
   /**
    * The seat is a snorkeler's or a rider's (ADR 20261007-participant-types). A
    * buddy team is divers who look after each other underwater; somebody who is
@@ -166,6 +167,101 @@ async function requireScheduledTrip(tx: Tx, shopId: string, tripId: string): Pro
     .limit(1)
     .for("update");
   return Boolean(trip);
+}
+
+/** Lock even a cancelled or deleted departure before changing an existing team. */
+async function lockTeamTrip(tx: Tx, shopId: string, tripId: string): Promise<boolean> {
+  const [trip] = await tx
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: existing teams must remain correctable on deleted departures.
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .for("update");
+  return Boolean(trip);
+}
+
+/** Hold every named person before reading names for a team event. */
+async function lockTeamPeople(
+  tx: Tx,
+  shopId: string,
+  tripId: string,
+  members: readonly BuddyTeamMemberInput[],
+) {
+  const bookingIds = members.flatMap((member) =>
+    member.kind === "diver" && isUuid(member.bookingId) ? [member.bookingId] : [],
+  );
+  const crewIds = members.flatMap((member) =>
+    member.kind === "crew" && isUuid(member.personId) ? [member.personId] : [],
+  );
+  const seats = bookingIds.length
+    ? await tx
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(bookings.tripId, tripId),
+            inArray(bookings.id, bookingIds),
+          ),
+        )
+    : [];
+  const ids = [
+    ...new Set([...crewIds, ...seats.flatMap((seat) => (seat.personId ? [seat.personId] : []))]),
+  ];
+  if (!ids.length) return;
+  await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      // diveday:allow-deleted-people: an existing team can include a removed or erased member.
+      and(eq(people.shopId, shopId), inArray(people.id, ids)),
+    )
+    .orderBy(asc(people.id))
+    .for("no key update", { noWait: true });
+}
+
+/** Read member identifiers only; names are read after their person locks. */
+async function teamMemberRefs(
+  tx: Tx,
+  shopId: string,
+  tripId: string,
+  teamId: string,
+): Promise<BuddyTeamMemberInput[]> {
+  const rows = await tx
+    .select({ bookingId: buddyPairMembers.bookingId, crewPersonId: buddyPairMembers.crewPersonId })
+    .from(buddyPairMembers)
+    .where(
+      and(
+        eq(buddyPairMembers.shopId, shopId),
+        eq(buddyPairMembers.tripId, tripId),
+        eq(buddyPairMembers.pairId, teamId),
+      ),
+    );
+  return rows.flatMap<BuddyTeamMemberInput>((row) =>
+    row.bookingId
+      ? [{ kind: "diver" as const, bookingId: row.bookingId }]
+      : row.crewPersonId
+        ? [{ kind: "crew" as const, personId: row.crewPersonId }]
+        : [],
+  );
+}
+
+/** Roll back the trip lock before retrying a contended person. */
+async function retryTeamMutation<T extends FormBuddyTeamOutcome | BuddyTeamMutationOutcome>(
+  db: AppDb,
+  run: (tx: Tx) => Promise<T>,
+): Promise<T | { ok: false; reason: "busy" | "already_teamed" }> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await db.transaction(run);
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_teamed" };
+      if (!isLockWaitRefusal(error)) throw error;
+      if (attempt === 2) return { ok: false, reason: "busy" };
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  return { ok: false, reason: "busy" };
 }
 
 /**
@@ -384,15 +480,7 @@ export async function formBuddyTeam(
     now?: Date;
   },
 ): Promise<FormBuddyTeamOutcome> {
-  let outcome: FormBuddyTeamOutcome;
-  try {
-    outcome = await db.transaction((tx) => formBuddyTeamInTx(tx, input));
-  } catch (error) {
-    // The pre-check races a concurrent write; the unique index is the
-    // authority, and losing to it is the same refusal.
-    if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_teamed" };
-    throw error;
-  }
+  const outcome = await retryTeamMutation(db, (tx) => formBuddyTeamInTx(tx, input));
   // Teams render on the manifest, so a change here is exactly what the push
   // signal exists for (ADR 20260726-manifest-push-refresh).
   if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
@@ -430,7 +518,7 @@ async function formBuddyTeamInTx(
   if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
     return { ok: false, reason: "trip_unavailable" };
   }
-
+  await lockTeamPeople(tx, input.shopId, input.tripId, input.members);
   const resolved = await resolveMembers(tx, input.shopId, input.tripId, input.members);
   if (!resolved.ok) return resolved;
 
@@ -747,56 +835,52 @@ export async function addBuddyTeamMember(
     now?: Date;
   },
 ): Promise<BuddyTeamMutationOutcome> {
-  let outcome: BuddyTeamMutationOutcome;
-  try {
-    outcome = await db.transaction(async (tx): Promise<BuddyTeamMutationOutcome> => {
-      const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
-      if (!staffId) return { ok: false, reason: "staff_not_found" };
-      if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
-        return { ok: false, reason: "trip_unavailable" };
-      }
-      const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
-      if (standing.length === 0) return { ok: false, reason: "team_not_found" };
-      if (standing.some((member) => memberKey(member) === memberKey(input.member))) {
-        return { ok: false, reason: "duplicate_member" };
-      }
-      const resolved = await resolveMembers(tx, input.shopId, input.tripId, [input.member]);
-      if (!resolved.ok) return resolved;
-      const [member] = resolved.members;
-      if (!member) return { ok: false, reason: "booking_unavailable" };
-      if (member.kind === "diver") {
-        const existing = await tx
-          .select({ bookingId: buddyPairMembers.bookingId })
-          .from(buddyPairMembers)
-          .where(eq(buddyPairMembers.bookingId, member.bookingId))
-          .limit(1);
-        if (existing.length > 0) return { ok: false, reason: "already_teamed" };
-      }
-      const occurredAt = input.now ?? nowDate();
-      await tx.insert(buddyPairMembers).values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        pairId: input.teamId,
-        bookingId: member.kind === "diver" ? member.bookingId : null,
-        crewPersonId: member.kind === "crew" ? member.personId : null,
-        pairedByPersonId: staffId,
-        createdAt: occurredAt,
-      });
-      await recordTeamEvent(tx, {
-        shopId: input.shopId,
-        tripId: input.tripId,
-        teamId: input.teamId,
-        action: "member_added",
-        members: sortMembers([...standing, member], memberKey),
-        recordedByPersonId: staffId,
-        occurredAt,
-      });
-      return { ok: true };
+  const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
+    const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
+    if (!staffId) return { ok: false, reason: "staff_not_found" };
+    if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
+      return { ok: false, reason: "trip_unavailable" };
+    }
+    const refs = await teamMemberRefs(tx, input.shopId, input.tripId, input.teamId);
+    await lockTeamPeople(tx, input.shopId, input.tripId, [...refs, input.member]);
+    const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
+    if (standing.length === 0) return { ok: false, reason: "team_not_found" };
+    if (standing.some((member) => memberKey(member) === memberKey(input.member))) {
+      return { ok: false, reason: "duplicate_member" };
+    }
+    const resolved = await resolveMembers(tx, input.shopId, input.tripId, [input.member]);
+    if (!resolved.ok) return resolved;
+    const [member] = resolved.members;
+    if (!member) return { ok: false, reason: "booking_unavailable" };
+    if (member.kind === "diver") {
+      const existing = await tx
+        .select({ bookingId: buddyPairMembers.bookingId })
+        .from(buddyPairMembers)
+        .where(eq(buddyPairMembers.bookingId, member.bookingId))
+        .limit(1);
+      if (existing.length > 0) return { ok: false, reason: "already_teamed" };
+    }
+    const occurredAt = input.now ?? nowDate();
+    await tx.insert(buddyPairMembers).values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      pairId: input.teamId,
+      bookingId: member.kind === "diver" ? member.bookingId : null,
+      crewPersonId: member.kind === "crew" ? member.personId : null,
+      pairedByPersonId: staffId,
+      createdAt: occurredAt,
     });
-  } catch (error) {
-    if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_teamed" };
-    throw error;
-  }
+    await recordTeamEvent(tx, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      teamId: input.teamId,
+      action: "member_added",
+      members: sortMembers([...standing, member], memberKey),
+      recordedByPersonId: staffId,
+      occurredAt,
+    });
+    return { ok: true };
+  });
   if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
   return outcome;
 }
@@ -832,9 +916,13 @@ export async function removeBuddyTeamMember(
   // trail keeps a `member_removed`/`dissolved` entry naming the actor, the
   // time, and the members as they stood, and the incident export renders it —
   // so what is lost is the live roster's convenience, never the record.
-  const outcome = await db.transaction(async (tx): Promise<BuddyTeamMutationOutcome> => {
+  const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
     const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
+    if (!(await lockTeamTrip(tx, input.shopId, input.tripId)))
+      return { ok: false, reason: "team_not_found" };
+    const refs = await teamMemberRefs(tx, input.shopId, input.tripId, input.teamId);
+    await lockTeamPeople(tx, input.shopId, input.tripId, refs);
     const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
     if (standing.length === 0) return { ok: false, reason: "team_not_found" };
     if (!standing.some((member) => memberKey(member) === memberKey(input.member))) {
@@ -890,9 +978,13 @@ export async function dissolveBuddyTeam(
     now?: Date;
   },
 ): Promise<BuddyTeamMutationOutcome> {
-  const outcome = await db.transaction(async (tx): Promise<BuddyTeamMutationOutcome> => {
+  const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
     const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
+    if (!(await lockTeamTrip(tx, input.shopId, input.tripId)))
+      return { ok: false, reason: "team_not_found" };
+    const refs = await teamMemberRefs(tx, input.shopId, input.tripId, input.teamId);
+    await lockTeamPeople(tx, input.shopId, input.tripId, refs);
     const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
     if (standing.length === 0) return { ok: false, reason: "team_not_found" };
     await tx
