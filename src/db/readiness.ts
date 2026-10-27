@@ -1531,9 +1531,9 @@ export async function listTripReadiness(
     // An uncertified diver falls to the entry-level ceiling rather than to
     // silence — on a trip with no `minimum_certification_level` (a DSD session,
     // an all-levels charter) nothing else says a word about them. But when a
-    // certification blocker *is* already raised, the depth line would only
-    // repeat it, so it is suppressed: the "no redundant warning" argument holds
-    // exactly where a redundant warning actually exists.
+    // certification blocker *is* already raised, the numeric no-card line
+    // would repeat it. Keep age and supervision verification visible even
+    // then: those questions are not answered by a missing-card blocker.
     const certificationBlocked =
       depthLimit.basis === "no_card" &&
       row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification");
@@ -1550,10 +1550,16 @@ export async function listTripReadiness(
        */
       // A snorkeler or a rider is not going to the site's depth, so a ceiling
       // has nothing to say about them — silence, not "within".
-      depthAdvisory:
-        certificationBlocked || !isDiver(row.booking.participantType)
-          ? ({ status: "unknown" } as const)
-          : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit),
+      depthAdvisory: !isDiver(row.booking.participantType)
+        ? ({ status: "unknown" } as const)
+        : certificationBlocked && depthLimit.verificationReasons?.length
+          ? ({
+              status: "verification_required",
+              verificationReasons: depthLimit.verificationReasons,
+            } as const)
+          : certificationBlocked
+            ? ({ status: "unknown" } as const)
+            : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit),
     };
   });
 }

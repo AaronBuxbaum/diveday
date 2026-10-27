@@ -2,7 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createCertification, listTripReadiness, reviewCertification } from "./readiness";
+import {
+  createCertification,
+  listTripReadiness,
+  reviewCertification,
+  upsertTripRequirements,
+} from "./readiness";
 import { certifications, diveSites, people, shops } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -49,6 +54,35 @@ it("keeps the junior advisory when a young diver has no verified card or site de
   expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
 });
 
+it("keeps age and supervision checks visible without a verified card, birthday, or site depth", async () => {
+  const { db, shop, reef, seat } = await fixture();
+  await upsertTripRequirements(db, {
+    shopId: shop.id,
+    tripId: reef.id,
+    requiresWaiver: false,
+    minimumCertificationLevel: "open_water",
+    requiredSpecialties: [],
+    requiresNitrox: false,
+    requiresPayment: false,
+  });
+  await db.update(people).set({ dateOfBirth: null }).where(eq(people.id, seat.person.id));
+  await db
+    .update(certifications)
+    .set({ status: "pending" })
+    .where(and(eq(certifications.shopId, shop.id), eq(certifications.personId, seat.person.id)));
+  const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
+    (row) => row.booking.id === seat.booking.id,
+  );
+  expect(diver?.depthAdvisory).toMatchObject({
+    status: "verification_required",
+    verificationReasons: ["junior_limits"],
+  });
+  expect(diver?.readiness.blockers).toContainEqual(
+    expect.objectContaining({ code: "certification_pending" }),
+  );
+  expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
+});
+
 it("keeps the PADI junior advisory when date of birth and site depth are missing", async () => {
   const { db, shop, reef, seat, card } = await fixture();
   const [staff] = await listStaff(db, shop.id);
@@ -67,7 +101,27 @@ it("keeps the PADI junior advisory when date of birth and site depth are missing
   );
   expect(diver?.depthAdvisory).toMatchObject({
     status: "verification_required",
-    verificationReasons: ["junior_limits"],
+    verificationReasons: expect.arrayContaining(["junior_limits"]),
   });
   expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
+});
+
+it("keeps unclassified PADI Advanced card and age checks visible without gating boarding", async () => {
+  const { db, shop, reef, seat, card } = await fixture();
+  await db.update(people).set({ dateOfBirth: null }).where(eq(people.id, seat.person.id));
+  await db
+    .update(certifications)
+    .set({ level: "advanced_open_water" })
+    .where(eq(certifications.id, card.id));
+  for (const depth of [25, null]) {
+    await db.update(diveSites).set({ maxDepthMeters: depth }).where(eq(diveSites.shopId, shop.id));
+    const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
+      (row) => row.booking.id === seat.booking.id,
+    );
+    expect(diver?.depthAdvisory).toMatchObject({
+      status: "verification_required",
+      verificationReasons: ["card_status", "junior_limits"],
+    });
+    expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
+  }
 });

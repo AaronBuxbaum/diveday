@@ -62,6 +62,7 @@ describe("diverDepthLimit", () => {
         ceiling: { meters: 12, feet: 40 },
         basis: "no_card",
         level: null,
+        verificationReasons: ["junior_limits"],
       });
     }
   });
@@ -247,6 +248,48 @@ describe("agency-specific junior depth evidence", () => {
     juniorStatus: "junior" | "full" | null,
   ) => ({ ...card(level, { agency }), juniorStatus });
 
+  it("asks staff to check card and age for an unclassified PADI Advanced card without a birthday", () => {
+    const limit = diverDepthLimit([sighted("advanced_open_water", "padi", null)], [], null, TODAY);
+    for (const siteDepth of [25, null]) {
+      expect(checkDepthCeiling(siteDepth, limit)).toMatchObject({
+        status: "verification_required",
+        verificationReasons: ["card_status", "junior_limits"],
+      });
+    }
+  });
+
+  it("keeps an unknown card visible beside a verified full card when age is unknown", () => {
+    const limit = diverDepthLimit(
+      [sighted("advanced_open_water", "padi", "full"), sighted("open_water", "padi", null)],
+      [],
+      null,
+      TODAY,
+    );
+    expect(checkDepthCeiling(null, limit)).toMatchObject({
+      status: "verification_required",
+      verificationReasons: expect.arrayContaining(["card_status", "junior_limits"]),
+    });
+  });
+
+  it.each(["padi", "naui", "sdi", "ssi", "bsac", "other"] as const)(
+    "does not infer adult age from a %s card when the birthday is missing",
+    (agency) => {
+      for (const status of [null, "junior", "full"] as const) {
+        const limit = diverDepthLimit(
+          [sighted("advanced_open_water", agency, status)],
+          [],
+          null,
+          TODAY,
+        );
+        expect(checkDepthCeiling(null, limit)).toMatchObject({
+          status: "verification_required",
+          verificationReasons: expect.arrayContaining(["junior_limits"]),
+        });
+        if (status === null) expect(limit.verificationReasons).toContain("card_status");
+      }
+    },
+  );
+
   it("asks staff to verify age, depth and supervision for a PADI junior card without a birthday", () => {
     const limit = diverDepthLimit([sighted("open_water", "padi", "junior")], [], null, TODAY);
     for (const siteDepth of [18, null]) {
@@ -260,6 +303,18 @@ describe("agency-specific junior depth evidence", () => {
   it("asks staff to verify junior limits for an 11-year-old with no verified card", () => {
     for (const cards of [[], [card("open_water", { status: "pending" })]]) {
       const limit = diverDepthLimit(cards, [], "2015-01-01", TODAY);
+      for (const siteDepth of [8, null]) {
+        expect(checkDepthCeiling(siteDepth, limit)).toMatchObject({
+          status: "verification_required",
+          verificationReasons: ["junior_limits"],
+        });
+      }
+    }
+  });
+
+  it("asks staff to verify age and supervision when no verified card or birthday is on file", () => {
+    for (const cards of [[], [card("open_water", { status: "pending" })]]) {
+      const limit = diverDepthLimit(cards, [], null, TODAY);
       for (const siteDepth of [8, null]) {
         expect(checkDepthCeiling(siteDepth, limit)).toMatchObject({
           status: "verification_required",
@@ -325,6 +380,22 @@ describe("agency-specific junior depth evidence", () => {
       TODAY,
     );
     expect(checkDepthCeiling(null, limit)).toMatchObject({ status: "verification_required" });
+  });
+
+  it.each(["2009-01-01", "2010-01-01"])(
+    "asks staff to check BSAC under-18 supervision for %s even on a full card",
+    (birthday) => {
+      const limit = diverDepthLimit([sighted("open_water", "bsac", "full")], [], birthday, TODAY);
+      expect(checkDepthCeiling(null, limit)).toMatchObject({
+        status: "verification_required",
+        verificationReasons: ["junior_limits"],
+      });
+    },
+  );
+
+  it("does not apply the BSAC under-18 prompt once a full-card holder is 18", () => {
+    const limit = diverDepthLimit([sighted("open_water", "bsac", "full")], [], "2008-01-01", TODAY);
+    expect(checkDepthCeiling(null, limit)).toEqual({ status: "unknown" });
   });
 
   it("does not let a deeper full card hide a NAUI junior card's 18 m condition", () => {

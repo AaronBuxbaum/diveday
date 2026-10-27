@@ -1,5 +1,5 @@
 import type { Certification, SpecialtyCertification } from "@/db/schema";
-import { ageOnDate, JUNIOR_AGE_END, JUNIOR_YOUNGEST_BAND_END } from "./age";
+import { ADULT_AGE, ageOnDate, JUNIOR_AGE_END, JUNIOR_YOUNGEST_BAND_END } from "./age";
 import type { CalendarDate } from "./calendar-date";
 import { type DepthUnit, depthInUnit } from "./depth-units";
 import {
@@ -115,10 +115,16 @@ export function diverDepthLimit(
   })[];
   const reasons = new Set<JuniorVerificationReason>();
   if (age !== null && age < JUNIOR_AGE_END) reasons.add("junior_limits");
+  if (age === null && verified.length === 0) reasons.add("junior_limits");
   for (const card of cards) {
     if (!card.agency) continue;
-    if (card.agency !== "padi" && card.juniorStatus == null) reasons.add("card_status");
-    if (card.juniorStatus === "junior" && (card.agency !== "padi" || age === null)) {
+    if (card.juniorStatus == null && (card.agency !== "padi" || age === null))
+      reasons.add("card_status");
+    if (
+      age === null ||
+      (card.agency === "bsac" && age < ADULT_AGE) ||
+      (card.agency !== "padi" && card.juniorStatus === "junior")
+    ) {
       reasons.add("junior_limits");
     }
   }
