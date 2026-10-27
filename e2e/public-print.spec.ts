@@ -1,5 +1,7 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { SUPPORT_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
+import { bookOpenWaterSession, openThreadStep } from "./helpers";
 import { capturePrintPdfs } from "./print-pdf";
 
 test("marketing paper keeps its identity without the open navigation menu", async ({ page }) => {
@@ -74,3 +76,43 @@ for (const route of ["/get-set-up", "/s/blue-mantis/reviews"]) {
     await capturePrintPdfs(page, route === "/get-set-up" ? "public-setup" : "public-reviews");
   });
 }
+
+test("the check-in feature prints a useful first sheet", async ({ page }) => {
+  await page.goto("/product/check-in");
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toBeVisible();
+  await page.emulateMedia({ media: "print" });
+  const hero = page.locator("main > section").first();
+  expect(
+    await hero.locator(":scope > div").evaluate((element) => getComputedStyle(element).display),
+  ).toBe("block");
+  const pdf = await page.pdf({ format: "Letter", preferCSSPageSize: true });
+  expect(pdf.toString("latin1").match(/\/Type \/Page\b/g)?.length).toBeLessThanOrEqual(3);
+  await capturePrintPdfs(page, "public-feature-check-in");
+});
+
+test("a course prep PDF keeps the checklist without signing actions", async ({ page }) => {
+  await bookOpenWaterSession(page, "Paper Course Diver", "paper-course@example.com");
+  const sign = await openThreadStep(page, "sign");
+  const forms = sign.getByRole("link", { name: "Sign course forms", exact: true });
+  await expect(forms).toBeVisible();
+  await expect(sign.getByRole("button", { name: "Sign your waiver", exact: true })).toBeVisible();
+  await page.emulateMedia({ media: "print" });
+  await expect(forms).not.toBeVisible();
+  await expect(
+    sign.getByRole("button", { name: "Sign your waiver", exact: true }),
+  ).not.toBeVisible();
+  await expect(
+    sign.getByText(diverTranslator("en-US")("ready.courseFormsNeedSigning"), { exact: true }),
+  ).toBeVisible();
+  await expect(
+    sign.getByText(diverTranslator("en-US")("ready.checklistDetail.waiverPending"), {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(sign.getByText("Sign", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Where to go", exact: true })).toBeVisible();
+  const pdf = await page.pdf({ format: "Letter", preferCSSPageSize: true });
+  expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+  await capturePrintPdfs(page, "public-course-prep-actions");
+});

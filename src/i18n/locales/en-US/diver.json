@@ -1075,6 +1075,7 @@
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
+    "courseFormsNeedSigning": "Course forms still need signing.",
     "savedCourseForms": "Course forms signed"
   },
   "thread": {

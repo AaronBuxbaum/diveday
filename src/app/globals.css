@@ -547,14 +547,16 @@ body {
  * **Only a roll call on screen counts.** Cache Components keeps a page left
  * behind mounted under React's `<Activity>`, hidden by an inline
  * `display: none` on its outermost element (the trip shell's `<main>` when
- * the reader left the trip, the `.boat-mode` wrapper when they only left the
- * tab). A bare `:has(… div.boat-mode)` still found that hidden manifest, so
- * every page reached without a reload after the Boat tab had no tab bar, no
- * header and a navy ground. Each selector below steps over both. */
+ * the reader left the trip, the departure-paper identity wrapper when they
+ * only left the tab). A bare `:has(… div.boat-mode)` still found that hidden
+ * manifest, so every page reached without a reload after the Boat tab had no
+ * tab bar, no header and a navy ground. Each selector follows the identity
+ * wrapper and excludes every boundary Activity can hide. */
 @media (max-width: 1023px) {
   body:has(
       #shop-main-content
         > main:not([style*="display: none"])
+        > [data-departure-paper]:not([style*="display: none"])
         > div.boat-mode:not([style*="display: none"])
     )
     [data-staff-chrome="true"] {
@@ -564,6 +566,7 @@ body {
   html:has(
     #shop-main-content
       > main:not([style*="display: none"])
+      > [data-departure-paper]:not([style*="display: none"])
       > div.boat-mode:not([style*="display: none"])
   ) {
     --chrome-h: 0px;
@@ -582,7 +585,9 @@ body {
  */
 @media screen {
   #shop-main-content:has(
-    > main:not([style*="display: none"]) > div.boat-mode:not([style*="display: none"])
+    > main:not([style*="display: none"])
+      > [data-departure-paper]:not([style*="display: none"])
+      > div.boat-mode:not([style*="display: none"])
   ) {
     background-color: #ffffff;
 

@@ -172,7 +172,7 @@ export default async function WorkOrderPage({
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
-      <div className="mt-8 space-y-10">
+      <div className="mt-8 space-y-10 print:space-y-4">
         {detail.gearItemKind ? (
           <p className="text-muted">
             {t("workOrders.detail.ownUnitSubject", {

@@ -57,7 +57,9 @@
       "medical": "Medical holds"
     },
     "pagination": {
-      "total": "{count, plural, one {# record} other {# records}}"
+      "total": "{count, plural, one {# record} other {# records}}",
+      "paperSubset": "{total, plural, one {{shown} of # record shown} other {{shown} of # records shown}}",
+      "paperPinned": "Selected record also shown"
     },
     "paperRecorded": "Paper release recorded",
     "openSignedRecord": "Open signed record"

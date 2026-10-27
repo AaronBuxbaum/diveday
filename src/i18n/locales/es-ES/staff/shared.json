@@ -614,6 +614,8 @@
     "tellThem": "Avisarles"
   },
   "formDraft": {
+    "editorValues": "Valores del editor, incluidos los cambios sin guardar",
+    "savedDetails": "Datos guardados",
     "pickedUp": "Retomado del mostrador, {time}.",
     "startOver": "Empezar de nuevo",
     "unsavedSection": "Sin guardar"

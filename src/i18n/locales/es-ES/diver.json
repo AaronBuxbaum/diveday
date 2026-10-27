@@ -1075,6 +1075,7 @@
     "intentHeading": "¿Para qué es esta inmersión?",
     "intentChoose": "Prefiero no decirlo",
     "signCourseForms": "Firmar formularios del curso",
+    "courseFormsNeedSigning": "Los formularios del curso siguen pendientes de firma.",
     "savedCourseForms": "Formularios del curso firmados"
   },
   "thread": {

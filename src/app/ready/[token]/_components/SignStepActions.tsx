@@ -61,34 +61,41 @@ export function SignStepActions({
     );
   if (!waiverCode && !formsOwed) return null;
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      {waiverCode ? (
-        <form action={signWaiverFromReady.bind(null, token)}>
-          <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
-            {t(
-              waiverCode === "waiver_pending"
-                ? "ready.signWaiver"
-                : // Expired, lapsed and guardian-missing all end in the same act, and
-                  // "Get a fresh waiver link" is what each one's own copy has
-                  // already told the reader to do.
-                  "ready.freshWaiverLink",
-            )}
-          </SubmitButton>
-        </form>
+    <>
+      {formsOwed ? (
+        <p className="hidden text-sm print:block">{t("ready.courseFormsNeedSigning")}</p>
       ) : null}
-      {/* The course's forms are signed on this link's own sub-page: they
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        {waiverCode ? (
+          <form action={signWaiverFromReady.bind(null, token)}>
+            <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
+              {t(
+                waiverCode === "waiver_pending"
+                  ? "ready.signWaiver"
+                  : // Expired, lapsed and guardian-missing all end in the same act, and
+                    // "Get a fresh waiver link" is what each one's own copy has
+                    // already told the reader to do.
+                    "ready.freshWaiverLink",
+              )}
+            </SubmitButton>
+          </form>
+        ) : null}
+        {/* The course's forms are signed on this link's own sub-page: they
           belong to this enrollment, which is exactly what the readiness link
           proves. Second to the release when both are owed — the release is
           the one the shop leads with. */}
-      {formsOwed ? (
-        <Link
-          href={`/ready/${token}/forms`}
-          prefetch={false}
-          className={waiverCode ? buttonClass({ variant: "secondary", size: "sm" }) : actionButton}
-        >
-          {t("ready.signCourseForms")}
-        </Link>
-      ) : null}
-    </div>
+        {formsOwed ? (
+          <Link
+            href={`/ready/${token}/forms`}
+            prefetch={false}
+            className={
+              waiverCode ? buttonClass({ variant: "secondary", size: "sm" }) : actionButton
+            }
+          >
+            {t("ready.signCourseForms")}
+          </Link>
+        ) : null}
+      </div>
+    </>
   );
 }
