@@ -65,7 +65,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ shopS
   if (!shop.selfRegistrationEnabled) {
     const { t } = await requestTranslator(shop.defaultLocale);
     return (
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10 [&_h1]:wrap-anywhere">
         <ShopPageHeader title={shop.name} description={t("register.switchedOff")} />
         {shop.contactPhone || shop.contactEmail ? (
           <p className="mt-4 flex flex-wrap gap-x-4">
@@ -89,7 +89,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ shopS
   const canAssist = await assistsAvailable(await getDb(), shop.id);
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10 [&_h1]:wrap-anywhere">
       <ShopPageHeader
         title={t("register.title", { shop: shop.name })}
         description={t("register.intro")}
