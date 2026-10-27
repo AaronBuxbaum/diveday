@@ -548,13 +548,14 @@ describe("upstashRateLimitStore", () => {
 
   it("bounds a request that never returns headers, aborts it, and preserves fail-open", async () => {
     vi.useFakeTimers();
-    const fetchImpl = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+    const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
       return new Promise<Response>(() => {
         // This transport ignores AbortSignal, so the limiter must still return
         // when its own deadline wins the race.
         void init?.signal;
       });
-    }) as unknown as typeof fetch;
+    });
+    const fetchImpl = fetchMock as unknown as typeof fetch;
     const store = upstashRateLimitStore(
       { url: "https://example.upstash.io", token: "test-token" },
       fetchImpl,
@@ -567,7 +568,7 @@ describe("upstashRateLimitStore", () => {
       allowed: true,
       retryAfterMs: 0,
     });
-    expect(fetchImpl.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -605,6 +606,26 @@ describe("upstashRateLimitStore", () => {
       allowed: true,
       retryAfterMs: 0,
     });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("clears its deadline after a deny response or a transport error", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ result: [0, "0"] }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 500 });
+    const store = upstashRateLimitStore(
+      { url: "https://example.upstash.io", token: "test-token" },
+      fetchMock as unknown as typeof fetch,
+    );
+
+    await expect(store.take("k", config, 0)).resolves.toMatchObject({ allowed: false });
+    expect(vi.getTimerCount()).toBe(0);
+    await expect(store.take("k", config, 0)).rejects.toThrow("Upstash Redis responded 500");
     expect(vi.getTimerCount()).toBe(0);
   });
 });
