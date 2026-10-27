@@ -63,6 +63,7 @@ export function StaffActivity({
       else {
         for (const [element, wasInert] of previousInert) element.inert = wasInert;
         previousInert.clear();
+        document.dispatchEvent(new Event("staff-session-unlocked"));
       }
       setLocked(value);
     };
