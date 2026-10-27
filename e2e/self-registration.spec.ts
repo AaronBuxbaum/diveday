@@ -1,5 +1,8 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
+import { SELF_DECLARED_AGENCIES, SELF_DECLARED_LEVELS } from "../src/lib/self-registration";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup, waiverLinkFromToast } from "./helpers";
 
 /**
@@ -32,6 +35,7 @@ async function submit(
 test("a walk-in registers, and the shop sees them on the roster", async ({ page }) => {
   const email = freshEmail();
   await page.goto(REGISTER);
+  await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Register with");
 
   await page.getByLabel("Agency").selectOption("padi");
@@ -48,11 +52,13 @@ test("a returning diver's submission is indistinguishable from a new one's", asy
   // second finds the person the first created, and the visitor cannot tell.
   const email = freshEmail();
   await page.goto(REGISTER);
+  await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
   await submit(page, { name: "Wanjiru Kamau", email });
   const first = await page.getByRole("heading", { name: "You’re on file" }).textContent();
   const firstBody = await page.getByText("has your details").textContent();
 
   await page.goto(REGISTER);
+  await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
   await submit(page, { name: "Wanjiru Kamau", email });
   await expect(page.getByRole("heading", { name: "You’re on file" })).toHaveText(first ?? "");
   await expect(page.getByText("has your details")).toHaveText(firstBody ?? "");
@@ -62,6 +68,7 @@ test("a submission with no way to reach the diver is refused, and says why", asy
   // The one refusal a visitor may see, because it is about the form rather
   // than about them.
   await page.goto(REGISTER);
+  await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
   await submit(page, { name: "No Contact" });
   await expect(page.getByText("Leave an email or a phone number")).toBeVisible();
   await expect(page.getByRole("heading", { name: "You’re on file" })).toHaveCount(0);
@@ -96,6 +103,7 @@ test.describe("a diver whose release already stands", () => {
     const email = freshEmail();
 
     await page.goto(REGISTER);
+    await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
     await submit(page, { name, email });
     const heading = await page.getByRole("heading", { name: "You’re on file" }).textContent();
     const body = await page.getByText("has your details").textContent();
@@ -131,6 +139,7 @@ test.describe("a diver whose release already stands", () => {
 
     // Now the branch: this submission mints nothing and sends nothing.
     await page.goto(REGISTER);
+    await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
     await submit(page, { name, email });
     await expect(page.getByRole("heading", { name: "You’re on file" })).toHaveText(heading ?? "");
     await expect(page.getByText("has your details")).toHaveText(body ?? "");
@@ -139,4 +148,105 @@ test.describe("a diver whose release already stands", () => {
     await page.goto(diverFile);
     await expect(page.getByRole("region", { name: "Waiver" }).getByText("Signed")).toBeVisible();
   });
+});
+
+test("agency backtracking keeps edits through refusal, and all supported options reveal the same normalized levels", async ({
+  page,
+}) => {
+  const words = diverTranslator("en-US");
+  await page.goto(REGISTER);
+  await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
+  const agency = page.getByLabel(words("register.agencyLabel"));
+  const level = page.getByLabel(words("register.levelLabel"));
+  const number = page.getByLabel(words("register.identifierLabel"));
+  await expect(page.getByText(words("register.uncertified"))).toBeVisible();
+  await expect(level).toBeHidden();
+  await expect(number).toBeHidden();
+  await expect(page.getByRole("combobox")).toHaveCount(1);
+  for (const value of SELF_DECLARED_AGENCIES) {
+    await agency.selectOption(value);
+    await expect(level).toBeVisible();
+    await expect(number).toBeVisible();
+    expect(
+      await level
+        .locator("option")
+        .evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value)),
+    ).toEqual(["", ...SELF_DECLARED_LEVELS]);
+  }
+  await agency.selectOption("padi");
+  await agency.focus();
+  await page.keyboard.press("Tab");
+  await expect(level).toBeFocused();
+  await level.selectOption("rescue");
+  await number.fill("P-123");
+  await agency.selectOption("");
+  await expect(level).toBeHidden();
+  await agency.selectOption("padi");
+  await expect(level).toHaveValue("rescue");
+  await expect(number).toHaveValue("P-123");
+  await page.getByLabel(words("register.wetsuitLabel")).fill("M");
+  await submit(page, { name: "No Contact" });
+  await expect(page.getByText(words("register.contactRequired"))).toBeVisible();
+  await expect(agency).toHaveValue("padi");
+  await expect(level).toHaveValue("rescue");
+  await expect(number).toHaveValue("P-123");
+  await expect(page.getByLabel(words("register.nameLabel"))).toHaveValue("No Contact");
+  await expect(page.getByLabel(words("register.wetsuitLabel"))).toHaveValue("M");
+});
+
+test("an uncertified submission succeeds after backing out of a card declaration", async ({
+  page,
+}) => {
+  const words = diverTranslator("en-US");
+  await page.goto(REGISTER);
+  await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
+  await page.getByLabel(words("register.agencyLabel")).selectOption("padi");
+  await page.getByLabel(words("register.levelLabel")).selectOption("rescue");
+  await page.getByLabel(words("register.identifierLabel")).fill("P-123");
+  await page.getByLabel(words("register.agencyLabel")).selectOption("");
+  await expect(page.getByRole("combobox")).toHaveCount(1);
+  await submit(page, { name: "Uncertified Walk In", email: freshEmail() });
+  await expect(page.getByRole("heading", { name: words("register.doneTitle") })).toBeVisible();
+});
+
+test("switching counter sign-up off refuses an open form and leaves a crew fallback", async ({
+  page,
+  privateShop,
+  browser,
+  workerBaseURL,
+}) => {
+  const words = diverTranslator("en-US");
+  const staff = staffTranslator("en-US");
+  const visitorContext = await browser.newContext({ baseURL: workerBaseURL, locale: "en-US" });
+  try {
+    const visitor = makeActivitySafe(await visitorContext.newPage());
+    const register = `/s/${privateShop.slug}/register`;
+    await visitor.goto(register);
+    await expect(visitor.locator("form[data-hydrated='true']")).toBeVisible();
+    await visitor.getByLabel(words("register.nameLabel")).fill("Counter Walk In");
+    await visitor.getByLabel(words("register.emailLabel")).fill(freshEmail());
+    await expect(visitor.getByRole("button", { name: words("register.submit") })).toBeVisible();
+
+    await page.goto(`/shop/${privateShop.slug}/settings/features`);
+    await page.getByLabel(staff("settings.main.features.selfRegistration.label")).uncheck();
+    // Subscribe before submitting: FlashParams removes the notice after rendering.
+    await Promise.all([
+      page.waitForURL(/\/settings\/features\?notice=feature-saved$/),
+      page.getByRole("button", { name: "Save", exact: true }).click(),
+    ]);
+    await expect(
+      page.getByRole("status").filter({ hasText: staff("settings.main.features.saved") }),
+    ).toBeVisible();
+
+    await visitor.getByRole("button", { name: words("register.submit") }).click();
+    await expect(visitor.getByText(words("register.unavailable"))).toBeVisible();
+    await expect(visitor.getByLabel(words("register.nameLabel"))).toHaveValue("Counter Walk In");
+    const response = await visitor.reload();
+    expect(response?.status()).toBe(200);
+    await expect(visitor.getByText(words("register.switchedOff"))).toBeVisible();
+    await expect(visitor.locator("form")).toHaveCount(0);
+    await expect(visitor.getByRole("button", { name: words("register.submit") })).toHaveCount(0);
+  } finally {
+    await visitorContext.close();
+  }
 });

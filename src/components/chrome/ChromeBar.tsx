@@ -12,10 +12,10 @@ import type { ReactNode } from "react";
  * driven and could only be measured, never read. One of the two bars painted
  * over its own sticky day headers as a result.
  *
- * So the bar is a fixed height rather than a padded row, and that height is a
- * token (`--chrome-h`, declared in `globals.css`) rather than a number: the
- * bar sets `h-(--chrome-h)` and every surface that pins something beneath it
- * says `top-(--chrome-h)`, so the two can no longer disagree.
+ * The staff bar keeps that fixed height. The public bar can grow when its
+ * existing controls wrap; its observer publishes the actual height to the
+ * same `--chrome-h` token every sticky surface reads. Its independent baseline
+ * minimum never reads that output, so the header can shrink again too.
  * `src/components/chrome/chrome.test.ts` scans `src/app`, `src/components`,
  * `src/features` and `e2e` and fails on a hand-written distance: a bracketed
  * offset whose measured part is a length rather than a variable
@@ -62,14 +62,16 @@ import type { ReactNode } from "react";
  * `h-(--chrome-h)` and not `h-14`: 3.5rem is the same 56px, but written this
  * way the bar's height and every sticky offset beneath it are one declaration.
  */
-export const CHROME_BAR_CLASS =
-  "sticky top-0 z-30 h-(--chrome-h) border-b border-border bg-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 print:hidden";
+const CHROME_BAR_SURFACE_CLASS =
+  "sticky top-0 z-30 border-b border-border bg-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 print:hidden";
+export const CHROME_BAR_CLASS = `${CHROME_BAR_SURFACE_CLASS} h-(--chrome-h)`;
 
 export function ChromeBar({
   leading,
   trailing,
   staffChrome = false,
   stackedOnPhone = false,
+  naturalHeight = false,
 }: {
   /** The shop's own identity — the staff shell's menu, the shopfront's name. */
   leading: ReactNode;
@@ -80,25 +82,32 @@ export function ChromeBar({
   /**
    * Below `sm`, two rows rather than one: the leading slot on its own line
    * above the trailing cluster (issue #2303, the shopfront's name above its
-   * tabs). The bar is still a fixed height, and that height is still the
-   * token: `globals.css` reads the marker and sets `--chrome-h` for two rows,
-   * so everything pinned beneath it moves with it.
+   * tabs). `globals.css` reads the marker and sets the two-row baseline.
+   * Natural-height public chrome can grow above it, with its observer keeping
+   * every sticky offset in step.
    */
   stackedOnPhone?: boolean;
+  /** Public navigation can wrap; its observer publishes the actual sticky clearance. Staff stay fixed. */
+  naturalHeight?: boolean;
 }) {
   return (
     // `data-chrome-bar` is what `globals.css` asks the document for before it
     // insets the scrollport by this bar's height — the marker, rather than the
     // class, because the class is a look and this is a fact about the page.
     <header
-      className={CHROME_BAR_CLASS}
+      className={
+        naturalHeight
+          ? `${CHROME_BAR_SURFACE_CLASS} flex min-h-(--chrome-base-h)`
+          : CHROME_BAR_CLASS
+      }
       data-chrome-bar=""
       data-staff-chrome={staffChrome || undefined}
       data-chrome-stacked={stackedOnPhone || undefined}
+      data-chrome-natural={naturalHeight || undefined}
     >
-      {/* One row, always — a fixed height cannot wrap, so every slot shrinks
-          instead. `min-w-0` on the two content slots is what lets a long shop
-          name ellipse rather than push the row wider than the viewport.
+      {/* The fixed staff row shrinks its slots; public chrome also lets them
+          wrap when the viewport or enlarged text needs more room. `min-w-0`
+          keeps a long shop name from pushing the row beyond the viewport.
 
           The gaps tighten below `sm` and the horizontal padding does not: the
           padding is what lines the shop's name up with the left edge of the
@@ -108,12 +117,12 @@ export function ChromeBar({
           the shop's name sits over the nav it names (ADR 20261001-logbook).
           The shopfront's bar keeps the page's own measure. */}
       <div
-        className={`mx-auto flex h-full w-full items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6 ${staffChrome ? "" : "max-w-6xl"} ${stackedOnPhone ? "max-sm:flex-col max-sm:items-stretch max-sm:justify-center max-sm:gap-0" : ""}`}
+        className={`mx-auto flex ${naturalHeight ? "flex-wrap max-sm:flex-nowrap" : "h-full"} w-full items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6 ${staffChrome ? "" : "max-w-6xl"} ${stackedOnPhone ? "max-sm:flex-col max-sm:items-stretch max-sm:justify-center max-sm:gap-0" : ""}`}
       >
         <div className="flex min-w-0 shrink items-center">{leading}</div>
         {trailing ? (
           <div
-            className={`ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3 ${stackedOnPhone ? "max-sm:ms-0 max-sm:justify-between" : ""}`}
+            className={`ms-auto flex ${naturalHeight ? "min-w-0 max-w-full shrink flex-wrap" : "shrink-0"} items-center gap-1.5 sm:gap-2 lg:gap-3 ${stackedOnPhone ? "max-sm:ms-0 max-sm:justify-between" : ""}`}
           >
             {trailing}
           </div>
