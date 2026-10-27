@@ -223,7 +223,8 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     "href",
     "mailto:front.desk@mail.example",
   );
-  await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
+  await expect(page.getByText(receiptCopy("waiver.prepLinkHelp"))).toBeVisible();
+  await expect(page.locator('a[href^="/ready/"]')).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();
   // The rail closes at two, not three. This record is signed and its medical
