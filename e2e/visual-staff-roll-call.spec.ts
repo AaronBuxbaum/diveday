@@ -27,6 +27,7 @@ import {
   openReefTrip,
   openSailedTrip,
   SURFACE_TIMEOUT_MS,
+  staffCopy,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
@@ -379,11 +380,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest-buddy-teams-panel", scheme);
       });
 
-      // H-08: a site deeper than a diver's certification trains for. Warning
-      // tone and *outside* the red blocker list, because it never blocks — an
-      // instructor may be keeping that diver shallower on purpose. Nothing in
-      // the seed reaches this state (every seeded site sits within its divers'
-      // ceilings), so the depth is raised for the capture.
+      // H-08: a site deeper than the seeded 12 m reaches 105 ft. The seeded
+      // cards do not establish junior/full status, so the roster asks the crew
+      // to verify each diver's applicable limit before planning; it stays an
+      // advisory outside the red blocker list.
       //
       // **No revert, and none needed.** A dive site is schedule data, not shop
       // configuration: `resetDemoSchedule` deletes `dive_sites` and re-seeds it
@@ -408,18 +408,30 @@ for (const scheme of ["light", "dark"] as const) {
         // above. Same allowance as every other flow capture here.
         test.setTimeout(FLOW_TIMEOUT_MS);
         await page.goto("/shop/blue-mantis/dive-sites");
-        await page.getByRole("link", { name: "Molasses Reef" }).first().click();
-        await page.waitForURL(/\/dive-sites\//);
+        const siteHref = await page
+          .getByRole("link", { name: "Molasses Reef", exact: true })
+          .first()
+          .getAttribute("href");
+        if (!siteHref) throw new Error("no dive-site link for Molasses Reef");
+        // A full navigation lets the site editor hydrate before the first
+        // field interaction; the SPA click path can lose that initial fill.
+        await page.goto(siteHref);
         await page.getByLabel(/Maximum depth/).fill("105");
         await page.getByRole("button", { name: "Save", exact: true }).click();
-        await page.getByText("Dive site saved").waitFor();
+        await expect(page.getByText("Dive site saved")).toBeVisible();
+        await page.goto(siteHref);
+        await expect(page.getByLabel(/Maximum depth/)).toHaveValue("105");
 
         await openReefTrip(page);
         await openTripTab(page, "Trip");
-        await page
-          .getByText(/deeper than the/)
-          .first()
-          .waitFor();
+        const warning = page
+          .getByText(
+            staffCopy("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
+            { exact: false },
+          )
+          .first();
+        await expect(warning).toBeVisible();
+        await expect(warning).toContainText(staffCopy("trips.roster.depthVerificationCard"));
         await capture(page, "trip-guests-depth-warning", scheme);
       });
 

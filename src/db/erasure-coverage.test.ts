@@ -293,7 +293,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "cleared by ON DELETE CASCADE from `user_accounts` and `account_sessions`, both of which the erasure deletes",
   push_subscriptions:
     "`person_id` is the staff member who opted a device in, and the erasure refuses anyone holding a staff role. This becomes a gap the day a diver-facing push subscription ships",
-  trip_assignments: "which crew member works which departure — a staff roster row",
   trip_series_crew:
     "who sails with a repeating departure on every new date — a staff roster row, like `trip_assignments`",
   customer_gear_notices:
@@ -465,6 +464,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
  * indirection is visible rather than looking like a write nobody declared.
  */
 const WRITTEN_VIA_HELPER: Record<string, string> = {
+  trip_assignments:
+    "`forgetTrainingPlanPeople` (./training-plan-privacy) clears personal instructor/author handles and timestamps while preserving the operational crew assignment; erasure refuses staff-role identities",
   claude_call_content:
     "`forgetClaudeCallContent` (./claude-call-content) — every erasure path deletes the shop's Claude call text through it, under the lock a call in flight writes under (ADR 20261023-claude-call-content)",
   claude_call_content_erasures:
@@ -916,7 +917,9 @@ describe("erasure coverage", () => {
   it("writes or deliberately keeps every table a foreign key connects to a diver", () => {
     const { written } = erasureWriteSites();
     const undecided = personScopedTableNames(tables)
-      .filter((name) => !written.has(name) && !(name in ERASURE_KEEPS))
+      .filter(
+        (name) => !written.has(name) && !(name in ERASURE_KEEPS) && !(name in WRITTEN_VIA_HELPER),
+      )
       .sort();
     expect(undecided).toEqual([]);
   });

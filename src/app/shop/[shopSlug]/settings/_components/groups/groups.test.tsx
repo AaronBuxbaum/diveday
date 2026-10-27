@@ -84,7 +84,14 @@ describe("each settings group renders as its own component", () => {
     expect(rendered.map((group) => group.id)).toEqual(SETTINGS_GROUPS.map((group) => group.id));
     expect(SETTINGS_GROUPS).toHaveLength(8);
     // The set-once rows (season, listing) live with the shop.
-    expect(rendered[0]?.rows).toEqual(["timezone", "units", "address", "season", "searchListing"]);
+    expect(rendered[0]?.rows).toEqual([
+      "timezone",
+      "units",
+      "juniorBuddy",
+      "address",
+      "season",
+      "searchListing",
+    ]);
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
     // No on/off switch is a row any more: they are all on the Features page.
     expect(rendered[2]?.rows).toEqual(["certCheck", "packing"]);

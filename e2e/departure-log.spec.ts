@@ -132,7 +132,7 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   await expect(page.getByText(/^No incident report has been started/)).toBeVisible();
 
   // The tamper-evidence code: a full SHA-256 in the footer, with its recipe's version.
-  await expect(page.getByText("Integrity code (SHA-256) · version 2")).toBeVisible();
+  await expect(page.getByText("Integrity code (SHA-256) · version 3")).toBeVisible();
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible();
 });
 

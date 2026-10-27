@@ -102,10 +102,10 @@ describe("the Safety page", () => {
   });
 
   /**
-   * **Four doors, no prose** (visual review A05, A27): the month is four
-   * counts, each a link to the list behind it, and no paragraph explains them.
+   * **Four counts, actionable doors** (visual review A05, A27): each count
+   * links only when its underlying safety evidence needs staff attention.
    */
-  it("reads the month as four counts, each a door to its list", async () => {
+  it("reads the month as four counts, linking actionable evidence", async () => {
     const figures = figuresIn(await renderTree(["owner"])) as unknown as {
       key: string;
       label: string;
@@ -117,7 +117,14 @@ describe("the Safety page", () => {
       "crew",
       "incidents",
     ]);
-    for (const figure of figures) expect(figure.href, figure.key).toBeTruthy();
+    for (const figure of figures) {
+      if (figure.key === "crew") {
+        // Clean crew evidence offers no list to act on.
+        expect(figure.href).toBeUndefined();
+      } else {
+        expect(figure.href, figure.key).toBeTruthy();
+      }
+    }
     const text = await renderAs(["owner"]);
     expect(text).not.toContain("What the shop recorded on departures");
     expect(text).not.toContain("The dock roll call won’t record");
