@@ -8,8 +8,15 @@ import {
   markIntegrationDeliveryFailed,
 } from "@/db/integration-events";
 import { markIntegrationError, markIntegrationHealthy } from "@/db/integrations";
+import { IntegrationDeliveryDeadlineError } from "./delivery-deadline";
 import { deliverQuickBooksEvent, quickBooksConfigFromEnvironment } from "./quickbooks";
 import { deliverZapierEvent } from "./zapier";
+
+/** Leave room inside the route's 300-second platform ceiling to settle a claim. */
+export const INTEGRATIONS_CRON_BUDGET_MS = 240_000;
+export const INTEGRATION_DELIVERY_MAX_MS = 60_000;
+export const INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS = 1_000;
+const MINIMUM_USEFUL_DELIVERY_SLICE_MS = 1_000;
 
 /**
  * **The outbox drain's cadence: twice an hour, on `:00` and `:30`.**
@@ -47,12 +54,30 @@ export type IntegrationDispatchSummary = {
   delivered: number;
   retried: number;
   failed: number;
+  elapsedMs: number;
+  budgetExhausted: boolean;
+  skippedByBudget: number;
 };
 
 export async function dispatchDueIntegrationDeliveries(
   db: DbExecutor,
-  input: { limit?: number; order?: DueDeliveryOrder; fetchImpl?: typeof fetch } = {},
+  input: {
+    limit?: number;
+    order?: DueDeliveryOrder;
+    fetchImpl?: typeof fetch;
+    timeBudgetMs?: number;
+    settlementReserveMs?: number;
+    monotonicNow?: () => number;
+    startedAtMs?: number;
+  } = {},
 ): Promise<IntegrationDispatchSummary> {
+  const monotonicNow = input.monotonicNow ?? (() => performance.now());
+  const startedAt = input.startedAtMs ?? monotonicNow();
+  const timeBudgetMs = input.timeBudgetMs ?? INTEGRATIONS_CRON_BUDGET_MS;
+  const settlementReserveMs =
+    input.settlementReserveMs ?? INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS;
+  const budgetDeadline = startedAt + Math.max(0, timeBudgetMs);
+  const providerDeadline = budgetDeadline - Math.max(0, settlementReserveMs);
   // `oldest-first` by default, which is what a backlog pass owes its rows. The
   // write path asks for `newest-first` so the delivery it just enqueued is in
   // the batch however long the queue behind it is -- see `DueDeliveryOrder`.
@@ -62,26 +87,73 @@ export async function dispatchDueIntegrationDeliveries(
     delivered: 0,
     retried: 0,
     failed: 0,
+    elapsedMs: 0,
+    budgetExhausted: false,
+    skippedByBudget: 0,
   };
   const fetchImpl = input.fetchImpl ?? fetch;
 
-  for (const candidate of due) {
+  for (const [index, candidate] of due.entries()) {
+    if (providerDeadline - monotonicNow() < MINIMUM_USEFUL_DELIVERY_SLICE_MS) {
+      summary.budgetExhausted = true;
+      summary.skippedByBudget = due.length - index;
+      break;
+    }
     const claimed = await claimIntegrationDelivery(db, candidate.delivery.id);
     if (!claimed) continue;
+    const deliveryController = new AbortController();
+    const deliveryDeadline = Math.min(
+      providerDeadline,
+      monotonicNow() + INTEGRATION_DELIVERY_MAX_MS,
+    );
+    const deliveryTimeout = setTimeout(
+      () => deliveryController.abort(),
+      Math.max(0, deliveryDeadline - monotonicNow()),
+    );
     // The stored payload names the customer by id and nothing else; the name
     // and email are read here, at the moment of sending, so a 400-day-old event
     // row never holds a diver's identity (issue #1016).
-    const event = await hydrateIntegrationEventPayload(db, candidate.event);
     let result: { status: "delivered" } | { status: "failed"; code: string; retryable: boolean };
-    if (candidate.integration.provider === "quickbooks") {
-      const config = quickBooksConfigFromEnvironment();
-      result = config
-        ? await deliverQuickBooksEvent(db, candidate.integration, event, config, fetchImpl)
-        : { status: "failed", code: "quickbooks_not_configured", retryable: false };
-    } else if (candidate.integration.provider === "zapier") {
-      result = await deliverZapierEvent(candidate.integration, event, fetchImpl);
-    } else {
-      result = { status: "failed", code: "provider_not_dispatchable", retryable: false };
+    try {
+      const event = await hydrateIntegrationEventPayload(db, candidate.event);
+      if (deliveryController.signal.aborted || monotonicNow() >= deliveryDeadline) {
+        deliveryController.abort();
+        throw new IntegrationDeliveryDeadlineError();
+      }
+      if (candidate.integration.provider === "quickbooks") {
+        const config = quickBooksConfigFromEnvironment();
+        result = config
+          ? await deliverQuickBooksEvent(
+              db,
+              candidate.integration,
+              event,
+              config,
+              fetchImpl,
+              deliveryController.signal,
+            )
+          : { status: "failed", code: "quickbooks_not_configured", retryable: false };
+      } else if (candidate.integration.provider === "zapier") {
+        result = await deliverZapierEvent(
+          candidate.integration,
+          event,
+          fetchImpl,
+          deliveryController.signal,
+        );
+      } else {
+        result = { status: "failed", code: "provider_not_dispatchable", retryable: false };
+      }
+      if (deliveryController.signal.aborted || monotonicNow() >= deliveryDeadline) {
+        deliveryController.abort();
+        throw new IntegrationDeliveryDeadlineError();
+      }
+    } catch (error) {
+      if (!(error instanceof IntegrationDeliveryDeadlineError)) {
+        clearTimeout(deliveryTimeout);
+        throw error;
+      }
+      result = { status: "failed", code: "integration_delivery_timeout", retryable: true };
+    } finally {
+      clearTimeout(deliveryTimeout);
     }
 
     if (result.status === "delivered") {
@@ -101,5 +173,6 @@ export async function dispatchDueIntegrationDeliveries(
     if (result.retryable && claimed.attemptCount < 8) summary.retried += 1;
     else summary.failed += 1;
   }
+  summary.elapsedMs = Math.max(0, Math.round(monotonicNow() - startedAt));
   return summary;
 }

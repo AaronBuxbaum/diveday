@@ -16,13 +16,23 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const { dispatchDueIntegrationDeliveries } = await import("@/features/integrations");
+const { dispatchDueIntegrationDeliveries, INTEGRATIONS_CRON_BUDGET_MS } = await import(
+  "@/features/integrations"
+);
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
 const secret = "cron-test-secret";
 const FAKE_DB = { fake: "db" };
-const SUMMARY = { scanned: 2, delivered: 1, retried: 1, failed: 0 };
+const SUMMARY = {
+  scanned: 2,
+  delivered: 1,
+  retried: 1,
+  failed: 0,
+  elapsedMs: 42,
+  budgetExhausted: false,
+  skippedByBudget: 0,
+};
 
 function cronRequest(authorization?: string) {
   const headers: Record<string, string> = {};
@@ -66,7 +76,11 @@ describe("GET /api/cron/integrations", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(SUMMARY);
-    expect(dispatchDueIntegrationDeliveries).toHaveBeenCalledWith(FAKE_DB, { limit: 50 });
+    expect(dispatchDueIntegrationDeliveries).toHaveBeenCalledWith(FAKE_DB, {
+      limit: 50,
+      timeBudgetMs: INTEGRATIONS_CRON_BUDGET_MS,
+      startedAtMs: expect.any(Number),
+    });
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(
       1,
       { monitorSlug: "diveday-integrations", status: "in_progress" },
