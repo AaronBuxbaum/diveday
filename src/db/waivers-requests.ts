@@ -15,7 +15,7 @@ import {
   WAIVER_LINK_TTL_MS,
   waiverClockInstant,
 } from "@/lib/waivers";
-import type { AppDb, DbExecutor } from "./client";
+import type { DbExecutor } from "./client";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
@@ -77,14 +77,12 @@ export type IssueWaiverOutcome =
  * stops being the *usual* outcome of asking twice.
  */
 export async function issueWaiverRequest(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; bookingId?: string; personId?: string; now?: Date },
 ): Promise<IssueWaiverOutcome> {
   if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
-  const now = input.now ?? nowDate();
   const token = createWaiverToken();
   const tokenHash = hashWaiverToken(token);
-  const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
   const keyResult = secretKeyFromEnvironment();
   const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
 
@@ -144,9 +142,6 @@ export async function issueWaiverRequest(
       timezone: await shopTimezone(tx, input.shopId),
     };
 
-    const template = await getCurrentWaiverTemplate(tx, input.shopId);
-    if (!template) return { ok: false, reason: "template_not_found" };
-
     const current = await tx
       .select()
       .from(waiverRecords)
@@ -158,7 +153,14 @@ export async function issueWaiverRequest(
             : and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)),
           isNull(waiverRecords.supersededAt),
         ),
-      );
+      )
+      .for("update");
+    // A row lock can wait past expiry or a concurrent signature. Re-read the
+    // clock and terms only after every current record is locked.
+    const now = input.now ?? nowDate();
+    const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
+    const template = await getCurrentWaiverTemplate(tx, input.shopId);
+    if (!template) return { ok: false, reason: "template_not_found" };
     // A signature that has lapsed (its year, its physician's year, or terms the
     // shop has since changed) stands for nothing: the seat reads
     // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on

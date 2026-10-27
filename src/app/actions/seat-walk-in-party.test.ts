@@ -30,6 +30,7 @@ const { seatWalkInPartyAction } = await import("./seat-diver");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";
 const TRIP_ID = "33333333-3333-4333-8333-333333333333";
+const LEAD_BOOKING = "55555555-5555-4555-8555-555555555555";
 const LEO_ON_FILE = "44444444-4444-4444-8444-444444444444";
 
 function form(extra: [string, string][] = []): FormData {
@@ -65,7 +66,10 @@ beforeEach(() => {
   vi.mocked(requireShopSurface).mockResolvedValue({
     session: { user: { shopId: SHOP_ID, personId: "staff" } },
   } as never);
-  vi.mocked(seatParty).mockResolvedValue({ ok: true, seats: [] } as never);
+  vi.mocked(seatParty).mockResolvedValue({
+    ok: true,
+    seats: [{ bookingId: LEAD_BOOKING }],
+  } as never);
   vi.mocked(findSimilarDivers).mockResolvedValue([]);
 });
 
@@ -153,7 +157,7 @@ describe("seatWalkInPartyAction", () => {
 
   it("drops the draft of the lead's details once the party is seated", async () => {
     const to = new URL(await landing(form()), "http://x");
-    expect(to.searchParams.get("notice")).toBe("walkin-party-added");
+    expect(to.pathname).toBe(`/shop/blue-mantis/trips/${TRIP_ID}/party/${LEAD_BOOKING}/waivers`);
     expect(discardFormDraft).toHaveBeenCalledWith(expect.anything(), SHOP_ID, "staff", "new_diver");
   });
 

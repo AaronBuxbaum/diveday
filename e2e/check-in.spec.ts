@@ -273,8 +273,14 @@ test("a counter walk-in family is seated together from one form", async ({ page 
     .fill("Odo Brightwater");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
+  await expect(page).toHaveURL(
+    new RegExp(`/shop/blue-mantis/trips/${tripId}/party/[0-9a-f-]{36}/waivers$`),
+  );
+  for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
+    await expect(page.getByText(name, { exact: true })).toBeVisible();
+  }
+  await page.getByRole("link", { name: "Back to departure" }).click();
   await expect(page).toHaveURL(counter);
-  await expect(page.getByText(/^Everyone is on this boat’s list, together/)).toBeVisible();
   for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
     await expect(deskRow(page, name)).toHaveCount(1);
   }

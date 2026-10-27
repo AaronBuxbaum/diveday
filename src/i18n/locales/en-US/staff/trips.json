@@ -844,5 +844,26 @@
     "daysAgo": "{days}d ago",
     "emailSubject": "A seat is open on {tripTitle}",
     "emailBody": "Hi {firstName},\n\nA seat is open on {tripTitle} ({tripWhen}) with {shopName}. Grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
+  },
+  "partyWaiverQueue": {
+    "title": "Party waivers",
+    "intro": "Each person can scan their own code and sign on their phone.",
+    "back": "Back to departure",
+    "show": "Show QR code",
+    "showFor": "Show waiver QR code for {name}",
+    "scan": "Ask this person to scan the code on their own phone.",
+    "close": "Close",
+    "loading": "Preparing the code…",
+    "failed": "This waiver is no longer available here. Refresh and check the seat.",
+    "needed": "Waiver needed",
+    "signed": "Waiver signed",
+    "medicalReview": "Waiver signed · medical review needed",
+    "held": "Identity needs confirmation",
+    "notRequired": "Waiver not required",
+    "unknown": "Check departure requirements",
+    "guardian": "A parent or guardian must also sign.",
+    "medical": "Medical review also needed.",
+    "unnamed": "Held seat",
+    "review": "Review party waivers"
   }
 }
