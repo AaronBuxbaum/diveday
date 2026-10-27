@@ -484,7 +484,7 @@ async function TodayBody({
         <TodayUpdated t={t} time={formatTime(now, locale, shop.timezone)} />
       </DayHeader>
 
-      <TodayCatchUpSlot shopSlug={shopSlug} />
+      <TodayCatchUpSlot shopSlug={shopSlug} locale={locale} />
 
       {created && firstBookableMoment ? (
         <TodayFirstBookable
