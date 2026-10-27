@@ -33,3 +33,21 @@ test("real staff input renews the session; an expired warm cookie reaches sign-i
   await page.reload();
   await expect(page).toHaveURL(/\/sign-in\?session=ended/);
 });
+
+test("a staff 404 locks its open search results when the session expires", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/no-such-page");
+  await page.getByRole("main").getByRole("button", { name: "Search" }).click();
+  await page.getByRole("combobox", { name: /Search divers/ }).fill("Priya Sharma");
+  await expect(page.getByRole("option", { name: "Priya Sharma", exact: true })).toBeVisible();
+  expect(
+    (await page.request.post("/api/test/age-staff-session", { data: { age: "idle" } })).status(),
+  ).toBe(204);
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  const locked = page.getByRole("alertdialog", { name: "Session paused" });
+  await expect(locked).toBeVisible();
+  const result = page.getByRole("option", { name: "Priya Sharma", exact: true });
+  expect(await result.evaluate((option) => Boolean(option.closest("[inert]")))).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(locked.locator(":focus")).toHaveCount(1);
+});

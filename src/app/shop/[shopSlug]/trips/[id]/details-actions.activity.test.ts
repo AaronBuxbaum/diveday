@@ -121,6 +121,20 @@ describe("the details form in the activity log", () => {
     expect(url.searchParams.get("view")).toBe("details");
   });
 
+  it("refuses a fifth planned dive on an ordinary departure without changing it", async () => {
+    const { db, shop, trip } = await context();
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("plannedDives", "5");
+    expect(await redirectedTo(() => saveDetails(shop.slug, trip.id, form))).toContain(
+      "notice=invalid",
+    );
+    const [unchanged] = await db
+      .select({ plannedDives: trips.plannedDives })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(unchanged?.plannedDives).toBe(trip.plannedDives);
+  });
+
   it("names the staffer who changed the departure time", async () => {
     const { db, shop, owner, trip } = await context();
 

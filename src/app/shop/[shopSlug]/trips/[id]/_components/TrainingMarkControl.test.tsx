@@ -72,6 +72,15 @@ describe("a training mark on a charter seat's row (issue #2275)", () => {
     expect(screen.queryByRole("combobox")).toBeNull();
   });
 
+  it("explains why an unassigned multi-dive mark cannot lower site requirements", () => {
+    draw({
+      mark: { ...mark, siteAttributionUnknown: true },
+      options: [],
+      clearedWithFormsOwed: null,
+    });
+    expect(screen.getByText(t("trips.roster.trainingMark.siteAttributionUnknown"))).toBeTruthy();
+  });
+
   it("says nothing of a course on a mark that no longer stands: the blocker line speaks", () => {
     draw({
       mark: { ...mark, valid: false, courseInstructorAboard: false },

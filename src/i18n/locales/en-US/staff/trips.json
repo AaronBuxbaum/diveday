@@ -670,6 +670,7 @@
       "paperCopy": "I have the signed paper copy"
     },
     "trainingMark": {
+      "siteAttributionUnknown": "This mark does not identify which dive is training, so site certification requirements still apply.",
       "label": "Training dive",
       "countsToward": "Counts toward",
       "option": "{course}, {date}",

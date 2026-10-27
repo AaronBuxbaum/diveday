@@ -26,6 +26,7 @@ import {
   SETUP_PHONE_MAX,
   SETUP_TEXT_MAX,
 } from "@/lib/setup-requests";
+import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { EMERGENCY_READERS_LISTED, EMERGENCY_READS_LISTED } from "@/lib/weekly-digest";
 
@@ -1812,8 +1813,8 @@ const rollCallStaleSchema = z.object({
   recipientName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: tripTitleSchema,
-  /** The after-dive checkpoint that is open: 1–4. */
-  diveNumber: z.number().int().min(1).max(4),
+  /** The after-dive checkpoint that is open, up to the course-session limit. */
+  diveNumber: z.number().int().min(1).max(MAX_COURSE_DIVES),
   /**
    * The two counts, summed across the departure's diver and crew rows (EAP
    * review on H-118): people recorded not back aboard, and people with no
@@ -1914,7 +1915,7 @@ const rollCallStaleShoreSchema = z.object({
   /** The shop's own phone, when it has one on file: who to call first. */
   shopPhone: z.string().trim().min(1).max(60).nullable(),
   tripTitle: tripTitleSchema,
-  diveNumber: z.number().int().min(1).max(4),
+  diveNumber: z.number().int().min(1).max(MAX_COURSE_DIVES),
   notBackAboard: z.number().int().min(0).max(10_000),
   awaiting: z.number().int().min(0).max(10_000),
   endsAt: z.date(),
