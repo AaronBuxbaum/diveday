@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import {
+  choiceClass,
   controlClass,
   Field,
   FieldActions,
@@ -194,7 +195,12 @@ export default async function BoatsSettingsPage({
                   </Field>
                   {boat.photoUrl ? (
                     <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" name="removeBoatPhoto" value="true" />
+                      <input
+                        type="checkbox"
+                        name="removeBoatPhoto"
+                        value="true"
+                        className={choiceClass}
+                      />
                       {t("boats.removePhoto")}
                     </label>
                   ) : null}
