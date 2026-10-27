@@ -41,33 +41,36 @@ export function EmbedKindChoices({
   );
 
   return (
-    <fieldset>
-      <legend id={name} className="sr-only">
-        {copy.what}
-      </legend>
-      <div className="grid grid-cols-2 gap-2">
-        {kinds.filter((k) => k === "calendar" || k === "button").map(kindChoice)}
-      </div>
-      <details open={kind !== "calendar" && kind !== "button"} className="group/formats mt-3">
-        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-          {copy.moreFormats}
-          {kind !== "calendar" && kind !== "button" ? (
-            <span className="ms-2 text-muted">{copy.kinds[kind]}</span>
+    <>
+      <p className="hidden text-sm font-medium print:block">{copy.kinds[kind]}</p>
+      <fieldset className="print:hidden">
+        <legend id={name} className="sr-only">
+          {copy.what}
+        </legend>
+        <div className="grid grid-cols-2 gap-2">
+          {kinds.filter((k) => k === "calendar" || k === "button").map(kindChoice)}
+        </div>
+        <details open={kind !== "calendar" && kind !== "button"} className="group/formats mt-3">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+            {copy.moreFormats}
+            {kind !== "calendar" && kind !== "button" ? (
+              <span className="ms-2 text-muted">{copy.kinds[kind]}</span>
+            ) : null}
+            <SummaryCaret className="ms-2 size-3 group-open/formats:rotate-90" />
+          </summary>
+          <div className="grid grid-cols-2 gap-2">
+            {kinds
+              .filter((k) => k !== "calendar" && k !== "button" && k !== "qr" && k !== "partner")
+              .map(kindChoice)}
+          </div>
+          {kinds.some((k) => k === "qr" || k === "partner") ? (
+            <p className="mb-2 mt-4 text-sm text-muted">{copy.sharingFormats}</p>
           ) : null}
-          <SummaryCaret className="ms-2 size-3 group-open/formats:rotate-90" />
-        </summary>
-        <div className="grid grid-cols-2 gap-2">
-          {kinds
-            .filter((k) => k !== "calendar" && k !== "button" && k !== "qr" && k !== "partner")
-            .map(kindChoice)}
-        </div>
-        {kinds.some((k) => k === "qr" || k === "partner") ? (
-          <p className="mb-2 mt-4 text-sm text-muted">{copy.sharingFormats}</p>
-        ) : null}
-        <div className="grid grid-cols-2 gap-2">
-          {kinds.filter((k) => k === "qr" || k === "partner").map(kindChoice)}
-        </div>
-      </details>
-    </fieldset>
+          <div className="grid grid-cols-2 gap-2">
+            {kinds.filter((k) => k === "qr" || k === "partner").map(kindChoice)}
+          </div>
+        </details>
+      </fieldset>
+    </>
   );
 }

@@ -160,7 +160,7 @@ export async function FeaturePageBody({
           left a 3px gutter (design review, 2026-10-05). `lg:pt-2.5` sets the
           breadcrumb on the same line as the panel's first line. */}
       <section className="border-b border-border">
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)] gap-12 px-6 py-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-16 lg:py-20">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)] gap-12 px-6 py-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-16 lg:py-20 print:block print:py-6">
           <div className="max-w-2xl lg:pt-2.5">
             <nav aria-label={t("marketing.featureChrome.breadcrumbLabel")}>
               <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -192,7 +192,7 @@ export async function FeaturePageBody({
               demo={page.demo}
               className="mt-8"
             />
-            <p className="mt-3 text-sm font-medium text-muted">
+            <p className="mt-3 text-sm font-medium text-muted print:hidden">
               {t("marketing.featureChrome.demoNote", {
                 place: t(`marketing.featurePages.${key}.demoPlace`),
               })}
@@ -206,7 +206,13 @@ export async function FeaturePageBody({
             {/* The roll call is a phone, narrower than the column, so its
                 figure narrows with it and the notes sit under the phone
                 rather than out past its edges. */}
-            <figure className={page.screen === "rollCall" ? "mx-auto w-full max-w-sm" : "w-full"}>
+            <figure
+              className={
+                page.screen === "rollCall"
+                  ? "mx-auto w-full max-w-sm print:mt-6"
+                  : "w-full print:mt-6"
+              }
+            >
               <FeatureScreen
                 screen={page.screen}
                 label={t(`marketing.featurePages.${key}.screenLabel`)}
@@ -226,7 +232,7 @@ export async function FeaturePageBody({
           numbering styles one scroll apart read as two systems. */}
       <MarketingReveal>
         <section className="bg-surface">
-          <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20">
+          <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20 print:py-6">
             <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.featureChrome.stepsTitle")}
             </h2>
@@ -257,8 +263,8 @@ export async function FeaturePageBody({
           asked, and how leaving works, the third pillar of the positioning in
           the words `/product` and the pricing FAQ use (`fullShopExport`). */}
       <MarketingReveal>
-        <section className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20">
-          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <section className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20 print:py-6">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 print:block">
             <div>
               <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.featureChrome.includedTitle")}
@@ -302,7 +308,7 @@ export async function FeaturePageBody({
           one hand rather than a template's three. */}
       <MarketingReveal>
         <section className="border-t border-border">
-          <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:py-20">
+          <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:py-20 print:block print:py-6">
             <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.featureChrome.faqTitle")}
             </h2>
@@ -334,7 +340,7 @@ export async function FeaturePageBody({
           last, for the reader the close did not convince yet. */}
       <MarketingReveal>
         <section className="border-t border-border bg-surface">
-          <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20">
+          <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20 print:py-6">
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
               <h2 className={`${SUB_TITLE_CLASS} sm:text-2xl`}>
                 {t("marketing.featureChrome.relatedTitle")}

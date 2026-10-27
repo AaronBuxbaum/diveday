@@ -46,8 +46,11 @@ for (const width of [390, 1280]) {
     });
 
     test("the card-check disclosure has a complete touch target", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/settings");
-      await page.locator("summary:has(#cert-check)").click();
+      await page.goto("/shop/blue-mantis/settings#cert-check");
+      await expect(page.locator('[data-settings-section="cert-check"] > details')).toHaveAttribute(
+        "open",
+        "",
+      );
       const summary = page.locator("summary").filter({ hasText: "Try the checks" });
       await expect(summary).toBeVisible();
       const box = await summary.boundingBox();

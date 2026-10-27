@@ -21,6 +21,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { AutoPrint } from "../trips/[id]/_components/AutoPrint";
 import { TRIP_SHELL_CLASS } from "../trips/[id]/_components/trip-shell";
 import { keptSheets } from "../trips/[id]/print/_components/kept-sheets";
+import { firstPacketPageName, PacketSummary } from "../trips/[id]/print/_components/PacketDocument";
 import {
   PACKET_READY_SELECTOR,
   PacketReady,
@@ -164,7 +165,7 @@ export default async function ShopDayPrintPage({
     <main className={TRIP_SHELL_CLASS}>
       <div className="trip-print-bundle" data-paper-screen>
         <AutoPrint readySelector={PACKET_READY_SELECTOR} />
-        <header className="mb-10 border-b border-border pb-6 print:mb-6">
+        <PacketSummary openingPageName={firstPacketPageName(sheets)}>
           <p className={EYEBROW_CLASS}>DiveDay</p>
           <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>
             {t(tomorrow ? "shared.printPacket.dayTitleTomorrow" : "shared.printPacket.dayTitle")}
@@ -202,7 +203,7 @@ export default async function ShopDayPrintPage({
               {t("shared.printPacket.dayDoorTomorrow")}
             </Link>
           )}
-        </header>
+        </PacketSummary>
         {/* **A `Fragment`, not a wrapper div.** The page breaks between sheets
           are `globals.css`'s `.print-bundle-page:first-of-type { break-before:
           auto }`, which exempts the *first* section of its parent — so a
@@ -212,7 +213,7 @@ export default async function ShopDayPrintPage({
           still match the real tree. Keeping every section a sibling is what
           makes exactly one of them the first. */}
         {sheets.map((sheet) => (
-          <Fragment key={sheet.id}>{sheet.packet}</Fragment>
+          <Fragment key={sheet.id}>{sheet.packet.document}</Fragment>
         ))}
         {sheets.length === 0 ? (
           <p>

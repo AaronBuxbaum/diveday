@@ -34,11 +34,9 @@ for (const scheme of ["light", "dark"] as const) {
       // The settings hub, the directory every shop setting hangs off.
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Trip packing checklist" }).waitFor();
-        // One row open in the capture, so the baseline shows the disclosure's
-        // open-form treatment as well as the at-rest directory.
+        // Capture the selected packing setting with its form open.
         await openSettingsRow(page, "Trip packing checklist");
-        await capture(page, "settings-payments", scheme);
+        await capture(page, "settings-packing-checklist", scheme);
       });
 
       /**
@@ -56,8 +54,8 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * The address card, open — one search box and the address it found (ADR
        * 20260811-address-is-one-search-box). It earns its own capture because
-       * the row is closed in `settings-payments`, so the shape that replaced
-       * five text boxes and a Save button is otherwise never looked at.
+       * the packing capture shows a different setting. This shows the shape
+       * that replaced five text boxes and a Save button.
        *
        * The fleet configures no `PLACES_AWS_*` credentials, so this captures
        * the unconfigured state — the search box absent, its one sentence in
@@ -66,7 +64,6 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the shop address card renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Shop address" }).waitFor();
         await openSettingsRow(page, "Shop address");
         await page.getByRole("button", { name: "Remove address" }).waitFor();
         await capture(page, "settings-address", scheme);
@@ -114,9 +111,8 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * The dock-day rhythm, open — six minute boxes and the live strip of
        * beats they produce (ADR 20260812-configurable-dock-day-rhythm). Its own
-       * capture for the same reason the address card has one: the row is closed
-       * in `settings-payments`, and this is the only place the form that
-       * replaced a single arrival-call box is looked at. The preview strip
+       * capture for the same reason the address card has one: this is the only
+       * place the form that replaced a single arrival-call box is looked at. The preview strip
        * underneath is the part worth a baseline — it is the same arithmetic the
        * diver's booking page renders, so a change to the model that quietly
        * stops matching shows up as pixels here.

@@ -27,7 +27,7 @@ export function MarketingNavLinks({
   const id = useId();
   useMenuDismissalEvents({ open, close, inside: [trigger, panel], returnFocus: trigger });
   return (
-    <div className={`lg:ms-auto ${compactMobile ? "max-lg:hidden" : ""}`}>
+    <div className={`print:hidden lg:ms-auto ${compactMobile ? "max-lg:hidden" : ""}`}>
       <button
         ref={trigger}
         type="button"

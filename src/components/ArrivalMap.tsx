@@ -45,7 +45,7 @@ export function ArrivalMap({ title, src }: { title: string; src: string }) {
       src={src}
       loading="lazy"
       referrerPolicy="no-referrer"
-      className="mb-5 block aspect-[16/9] w-full rounded-inset border-0 bg-surface-sunken"
+      className="mb-5 block aspect-[16/9] w-full rounded-inset border-0 bg-surface-sunken print:hidden"
     />
   );
 }

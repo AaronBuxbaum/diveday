@@ -24,6 +24,7 @@ import {
 } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
+import { SettingsSelection } from "./_components/SettingsSelection";
 import { CounterQrCard } from "./CounterQrCard";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";
 
@@ -623,8 +624,8 @@ describe("the page's footer", () => {
   it("sits in the page's section stack, a section's gap under the last card", async () => {
     const stacks = findElements<{ className?: string; children?: unknown }>(
       await renderSettings("owner"),
-      "div",
-    ).filter((div) => div.props.className === "space-y-10");
+      SettingsSelection,
+    );
     expect(stacks).toHaveLength(1);
     const children = [stacks[0]?.props.children].flat(Number.POSITIVE_INFINITY);
     const footer = children.at(-1) as ReactElement<{ className?: string }> | undefined;

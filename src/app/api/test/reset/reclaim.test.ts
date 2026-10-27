@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { capturedDemoResetPlan } from "@/db/demo-reset-snapshot";
 import { seededTestDb } from "@/test/db";
 
 // Only the db handle is stubbed: this exercises the *real* reset against a
@@ -22,65 +23,45 @@ function resetRequest() {
   });
 }
 
-/** Rows Postgres has deleted or superseded but not yet handed back to the allocator. */
-async function deadTuples(db: Awaited<ReturnType<typeof seededTestDb>>): Promise<number> {
+/** VACUUM reports its completed work directly, without pending DML counters. */
+async function vacuumCounts(db: Awaited<ReturnType<typeof seededTestDb>>) {
   const result = await db.execute(
-    sql`select coalesce(sum(n_dead_tup), 0)::bigint as dead from pg_stat_user_tables`,
+    sql`select relname, vacuum_count from pg_stat_user_tables where schemaname = 'public'`,
   );
-  const rows = (result as unknown as { rows: { dead: string }[] }).rows;
-  return Number(rows[0]?.dead ?? 0);
+  const rows = (result as unknown as { rows: { relname: string; vacuum_count: number }[] }).rows;
+  return new Map(rows.map((row) => [row.relname, Number(row.vacuum_count)]));
 }
 
-/**
- * One reset deletes and re-inserts roughly this many rows. PGlite ships no
- * autovacuum worker, so without the route reclaiming them every call left
- * another full round of dead tuples (measured: 4,411 in 2026-08, 4,751 by the
- * time a few more seed scenarios had landed — the figure creeps up with every
- * `src/db/seed-*.ts` added) and every sequential scan inside the next reset
- * got slower — 1.2s on the second call, 3.3s by the 60th, 8.6s by the 120th,
- * against a 15s per-test budget that `e2e/fixtures.ts` spends this endpoint
- * out of before every single test.
- */
-const ROWS_TOUCHED_PER_RESET = 5_000;
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("POST /api/test/reset — reclaiming what it deleted", () => {
-  it("does not accumulate dead tuples across repeated resets", async () => {
+  it("successfully vacuums every reset-owned table across repeated resets", async () => {
     const db = await seededTestDb();
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DIVEDAY_E2E_SECRET", SECRET);
     vi.mocked(getDb).mockResolvedValue(db as never);
 
-    for (let round = 0; round < 3; round++) {
+    const before = await vacuumCounts(db);
+    for (let round = 1; round <= 3; round++) {
       expect((await POST(resetRequest())).status).toBe(200);
+      const plan = capturedDemoResetPlan(db);
+      if (plan === null) throw new Error("Reset did not capture a replay plan");
+      const tables = new Set([...plan.inserts, ...plan.updates].map((step) => step.table));
+      expect(tables.size).toBeGreaterThan(0);
+      // Exercise the delayed-counter flush that made n_dead_tup unreliable.
+      await db.execute(sql`select pg_stat_force_next_flush()`);
+      const after = await vacuumCounts(db);
+      for (const table of tables) {
+        expect(after.get(table), `${table}, reset ${round}`).toBe((before.get(table) ?? 0) + round);
+      }
     }
 
-    // Three rounds without the reclaim leaves all three rounds' tuples dead
-    // (~14,000 and climbing); with it the count usually reads zero. But the
-    // route *deliberately* swallows a failed VACUUM (see reclaimDeadTuples:
-    // "never worth failing a reset over"), so one round's worth left dead is a
-    // state the route accepts, not a missing reclaim — a bound of one round
-    // (the original 4,000, by then below a single round's real size) turned
-    // exactly that accepted state into a CI-only flake. Two rounds' worth
-    // stays comfortably above any single round's residual while still less
-    // than half of what removal accumulates.
-    expect(await deadTuples(db)).toBeLessThan(2 * ROWS_TOUCHED_PER_RESET);
-
-    vi.unstubAllEnvs();
-    // Its own budget, not the 20s default.
-    //
-    // This is the most expensive test in the suite by wall clock: it hydrates
-    // an embedded Postgres and then runs three *real* resets through it,
-    // ~5,000 rows deleted and re-inserted each, because the growth it guards
-    // against is not observable any other way. Measured at **17.6s** on a
-    // quiet machine (three runs: 17.60/17.61/17.86) — 88% of the default
-    // budget, so any parallel load at all tips it over, and it does: it is the
-    // first thing to fail when the full suite runs alongside anything else.
-    //
-    // This is not a timeout widened to hide a race, which the e2e-hygiene rule
-    // rightly refuses. The assertion is deterministic and was already de-flaked
-    // once on its own terms (714b1555, which fixed the *bound*); what is left
-    // is simply a test whose honest runtime does not fit. Same reasoning, and
-    // the same shape, as `src/test/postgres.ts` (30s) and
-    // `src/lib/usage/alert-ledger.test.ts` (60s).
+    // n_dead_tup is an estimate: pending DELETE counters can flush after a
+    // successful VACUUM and add the reclaimed rows back to that estimate.
+    // vacuum_count instead proves each real command completed, including
+    // the full capture vacuum and every targeted snapshot replay vacuum.
+    // This hydrates Postgres and performs three real resets within its existing budget.
   }, 45_000);
 });

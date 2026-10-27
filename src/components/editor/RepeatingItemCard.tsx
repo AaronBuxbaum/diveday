@@ -31,10 +31,15 @@ export const repeatingItemRemoveClass = buttonClass({
   variant: "danger-ghost",
   size: "sm",
   flush: true,
+  className: "print:hidden",
 });
 
 /** The one "Add a …" under a list of these, whichever editor it belongs to. */
-export const repeatingItemAddClass = buttonClass({ variant: "secondary", size: "sm" });
+export const repeatingItemAddClass = buttonClass({
+  variant: "secondary",
+  size: "sm",
+  className: "print:hidden",
+});
 
 export function RepeatingItemCard({
   as: Tag = "div",

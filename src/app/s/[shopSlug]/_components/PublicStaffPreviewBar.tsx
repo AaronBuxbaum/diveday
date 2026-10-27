@@ -23,7 +23,7 @@ export function PublicStaffPreviewBar({
   const tail = clientPathname.startsWith(prefix) ? clientPathname.slice(prefix.length) : "";
   const tripId = tail && !tail.includes("/") ? tail : null;
   return (
-    <div role="status" className="border-b border-border bg-surface-sunken">
+    <div role="status" className="border-b border-border bg-surface-sunken print:hidden">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-x-4 gap-y-1.5 px-4 py-1.5 text-sm sm:flex-wrap sm:px-6">
         <p className="flex min-w-0 items-center text-muted sm:min-h-11">
           <span className="sm:hidden">{words.short}</span>

@@ -465,7 +465,7 @@ describe("the hidden bar's height", () => {
    * hidden by an inline `display: none`, so a `:has()` that finds the roll
    * call by its class alone kept hiding the tab bar on every page after it
    * until a reload. Each rule that reacts to the live manifest must step over
-   * a hidden trip shell and a hidden manifest wrapper.
+   * a hidden trip shell, paper identity wrapper and manifest wrapper.
    */
   it("reacts only to a manifest on screen, never one Activity has hidden", () => {
     const css = readGlobalsCss();
@@ -473,6 +473,7 @@ describe("the hidden bar's height", () => {
     expect(selectors.length, "the three manifest rules").toBe(3);
     for (const selector of selectors) {
       expect(selector).toContain('main:not([style*="display: none"])');
+      expect(selector).toContain('[data-departure-paper]:not([style*="display: none"])');
       expect(selector).toContain('div.boat-mode:not([style*="display: none"])');
     }
   });

@@ -554,6 +554,8 @@ export type ScheduleBuilderContext = {
    * open a whole page of form has to open something.
    */
   openAdd: "closed" | "quick" | "expanded";
+  createPage?: boolean;
+  returnWeek?: string;
   /**
    * The same departures read as a seven-column week, for `xl` and up (ADR
    * 20260827-clearwater-surface-language, decision 5). Null on a board with
@@ -582,6 +584,8 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
     initialSite,
     requestPlan,
     openAdd,
+    createPage = false,
+    returnWeek,
     week,
   } = context;
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
@@ -605,6 +609,10 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const cancelTopAdd = () => {
+    if (createPage) {
+      router.push(`/shop/${shopSlug}/schedule/board${returnWeek ? `?week=${returnWeek}` : ""}`);
+      return;
+    }
     setOpen(null);
     const params = new URLSearchParams(searchParams);
     for (const key of ["add", "date", "course", "requests", "site"]) params.delete(key);
@@ -623,7 +631,6 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   const weekDepartures: WeekDeparture[] = week
     ? [...week.days.flatMap((day) => day.entries), ...week.spans]
     : [];
-  const weekAdd = open?.startsWith("w:add:") ? open.slice("w:add:".length) : null;
   /**
    * **The panel a disclosure opens, resolved once.** It renders under the row
    * that opened it (`WeekBoard`'s `panel`), never at the foot of the week.
@@ -735,6 +742,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
   // What the top panel and every week-row panel share; each adds its own day.
   const addPanelBuilder: AddPanelBuilder = {
     locale,
+    returnWeek,
     addDraft,
     draftActions: actions.draft,
     loadPattern,
@@ -780,6 +788,7 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
           initialSite={initialSite}
           requestPlan={requestPlan}
           startExpanded={openAdd === "expanded"}
+          standalone={createPage}
           onCancel={cancelTopAdd}
         />
       ) : null}
@@ -813,58 +822,43 @@ export function ScheduleBuilder({ context }: { context: ScheduleBuilderContext }
             panel={
               !canConfigure
                 ? null
-                : weekAdd
+                : sharedPanel
                   ? {
-                      under: "day",
-                      dateIso: weekAdd,
+                      under: "departure",
+                      tripId: sharedPanel.trip.id,
                       node: (
-                        <AddPanel
-                          builder={addPanelBuilder}
-                          dateIso={weekAdd}
-                          initialCourse={null}
-                          requestPlan={null}
-                          startExpanded={false}
-                          onCancel={() => closePanel(`w:add:${weekAdd}`)}
-                        />
+                        <>
+                          {sharedPanel.kind === "move" ? (
+                            <MovePanel
+                              locale={locale}
+                              trip={sharedPanel.trip}
+                              copy={copy}
+                              action={actions.move}
+                              loadPreflight={loadMovePreflight}
+                              onCancel={() => closePanel(sharedPanel.closeKey)}
+                            />
+                          ) : null}
+                          {sharedPanel.kind === "copy" ? (
+                            <CopyPanel
+                              locale={locale}
+                              trip={sharedPanel.trip}
+                              copy={copy}
+                              action={actions.duplicate}
+                              onCancel={() => closePanel(sharedPanel.closeKey)}
+                            />
+                          ) : null}
+                          {sharedPanel.kind === "remove" ? (
+                            <RemovePanel
+                              trip={sharedPanel.trip}
+                              copy={copy}
+                              action={actions.remove}
+                              onCancel={() => closePanel(sharedPanel.closeKey)}
+                            />
+                          ) : null}
+                        </>
                       ),
                     }
-                  : sharedPanel
-                    ? {
-                        under: "departure",
-                        tripId: sharedPanel.trip.id,
-                        node: (
-                          <>
-                            {sharedPanel.kind === "move" ? (
-                              <MovePanel
-                                locale={locale}
-                                trip={sharedPanel.trip}
-                                copy={copy}
-                                action={actions.move}
-                                loadPreflight={loadMovePreflight}
-                                onCancel={() => closePanel(sharedPanel.closeKey)}
-                              />
-                            ) : null}
-                            {sharedPanel.kind === "copy" ? (
-                              <CopyPanel
-                                locale={locale}
-                                trip={sharedPanel.trip}
-                                copy={copy}
-                                action={actions.duplicate}
-                                onCancel={() => closePanel(sharedPanel.closeKey)}
-                              />
-                            ) : null}
-                            {sharedPanel.kind === "remove" ? (
-                              <RemovePanel
-                                trip={sharedPanel.trip}
-                                copy={copy}
-                                action={actions.remove}
-                                onCancel={() => closePanel(sharedPanel.closeKey)}
-                              />
-                            ) : null}
-                          </>
-                        ),
-                      }
-                    : null
+                  : null
             }
             copy={copy}
           />

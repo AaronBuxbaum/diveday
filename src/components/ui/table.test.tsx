@@ -116,8 +116,11 @@ describe("Table", () => {
     const rule = css.match(/\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(rule).toMatch(/animation-timeline:\s*scroll\(self inline\)/);
     expect(rule).toMatch(/mask-image:/);
-    const print = css.match(/@media print\s*\{\s*\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+    // Other print rules can precede the table override in the same block.
+    const printBlocks = css.match(/^@media print\s*\{[\s\S]*?^\}/gm) ?? [];
+    const print = printBlocks.join("\n").match(/\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(print).toMatch(/mask-image:\s*none/);
+    expect(print).toMatch(/animation:\s*none/);
   });
 });
 
