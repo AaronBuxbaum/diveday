@@ -29,15 +29,26 @@ test("a shop corrects and renews a crew credential on the same card", async ({
   await row.getByText(t("staffing.credentials.editOrRenew")).click();
   await row.getByLabel(t("staffing.credentials.issuedAt")).fill("2024-01-01");
   await row.getByLabel(t("staffing.credentials.renewsAt")).fill("2027-07-20");
-  await row.getByRole("button", { name: t("staffing.credentials.saveCorrection") }).click();
-  await expect(page).toHaveURL(/notice=credential-corrected/);
-  await page.goto(team);
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.headers()["x-action-redirect"]?.includes("notice=credential-corrected") === true,
+    ),
+    row.getByRole("button", { name: t("staffing.credentials.saveCorrection") }).click(),
+  ]);
+  await expect(person.getByText(t("staffing.notice.credentialCorrected"))).toBeVisible();
   await openRow();
+  await expect(row.getByLabel(t("staffing.credentials.renewsAt"))).toHaveValue("2027-07-20");
   await row.getByLabel(t("staffing.credentials.issuedAt")).fill("2026-07-20");
   await row.getByLabel(t("staffing.credentials.renewsAt")).fill("2029-07-20");
-  await row.getByRole("button", { name: t("staffing.credentials.saveRenewal") }).click();
-  await expect(page).toHaveURL(/notice=credential-renewed/);
-  await page.goto(team);
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.headers()["x-action-redirect"]?.includes("notice=credential-renewed") === true,
+    ),
+    row.getByRole("button", { name: t("staffing.credentials.saveRenewal") }).click(),
+  ]);
+  await expect(person.getByText(t("staffing.notice.credentialRenewed"))).toBeVisible();
   await openRow();
   await expect(row.getByLabel(t("staffing.credentials.renewsAt"))).toHaveValue("2029-07-20");
 });

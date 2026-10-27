@@ -229,7 +229,7 @@ function CredentialRow({
             <Field label={t("staffing.credentials.renewsAt")}>
               <DateField name="renewsAt" defaultValue={credential.renewsAt ?? ""} />
             </Field>
-            <div className="flex flex-wrap gap-3">
+            <div className="col-span-full flex flex-wrap gap-3">
               <SubmitButton
                 name="renewalOf"
                 value={credential.id}

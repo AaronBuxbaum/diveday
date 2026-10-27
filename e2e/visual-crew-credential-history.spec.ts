@@ -24,6 +24,13 @@ test.describe("light mode", () => {
       await expect(
         row.getByRole("button", { name: staffCopy("staffing.credentials.saveRenewal") }),
       ).toBeVisible();
+      const renewalDate = await row
+        .getByLabel(staffCopy("staffing.credentials.renewsAt"))
+        .boundingBox();
+      const save = await row
+        .getByRole("button", { name: staffCopy("staffing.credentials.saveRenewal") })
+        .boundingBox();
+      expect(renewalDate && save && save.y >= renewalDate.y + renewalDate.height).toBe(true);
       await capture(page, "team-credential-renewal-editor", "light");
     });
     test("Safety names unavailable crew evidence and links to current credentials", async ({
