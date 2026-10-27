@@ -140,6 +140,8 @@
     "popupBlocked": "Your browser blocked the print window. Allow pop-ups, then try again."
   },
   "printPacket": {
+    "changedHeading": "Packet needs refreshing",
+    "changed": "Departure {id} changed while this packet was being prepared. No departure sheets were included. Refresh and print again.",
     "title": "Trip packet",
     "divesHeading": "Dive plan",
     "diveNumber": "Dive {number}",

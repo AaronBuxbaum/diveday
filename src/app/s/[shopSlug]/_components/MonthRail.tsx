@@ -39,7 +39,7 @@ export function MonthRail({
           href={previous.href}
           aria-label={previous.label}
           scroll={false}
-          className={buttonClass({ variant: "ghost", size: "icon-sm" })}
+          className={buttonClass({ variant: "ghost", size: "icon-sm", className: "print:hidden" })}
         >
           <DiveDayIcon name="chevron-left" className="size-4" />
         </Link>
@@ -49,7 +49,7 @@ export function MonthRail({
           href={next.href}
           aria-label={next.label}
           scroll={false}
-          className={buttonClass({ variant: "ghost", size: "icon-sm" })}
+          className={buttonClass({ variant: "ghost", size: "icon-sm", className: "print:hidden" })}
         >
           <DiveDayIcon name="chevron-right" className="size-4" />
         </Link>

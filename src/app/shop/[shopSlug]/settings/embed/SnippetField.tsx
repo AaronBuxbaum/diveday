@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 import { Field, type TextareaRows, textareaClassFor } from "@/components/ui/form";
@@ -33,6 +33,7 @@ export function SnippetField({
   failedLabel: string;
 }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const id = useId();
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(resetTimer.current), []);
 
@@ -44,15 +45,22 @@ export function SnippetField({
   }
 
   return (
-    <Field label={label}>
+    <Field label={label} htmlFor={id}>
       <div className="relative">
         <textarea
+          id={id}
           readOnly
           rows={rows}
           value={snippet}
           onFocus={(event) => event.currentTarget.select()}
-          className={`${textareaClassFor(rows)} pe-24 font-mono text-xs`}
+          className={`${textareaClassFor(rows)} pe-24 font-mono text-xs print:hidden`}
         />
+        <span
+          data-print-snippet
+          className="hidden whitespace-pre-wrap break-all font-mono text-xs print:block"
+        >
+          {snippet}
+        </span>
         <button
           type="button"
           onClick={copy}

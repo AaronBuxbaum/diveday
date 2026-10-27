@@ -700,21 +700,24 @@ async function walkBoardWeeksFor(page: Page, title: string | RegExp): Promise<Lo
   // `aria-label` is copy, so `getByRole("region", { name: "Schedule builder" })`
   // waits forever on a Spanish run — which is how three visual captures went
   // red the first time this crawl was shared with `openTripFromBoard`.
-  await page.locator("[data-schedule-builder]").waitFor();
+  // Activity retains the creation page's builder after returning to the board.
+  // Only the visible builder and week belong to the route being searched.
+  await page.locator("[data-schedule-builder]").filter({ visible: true }).waitFor();
+  const board = page.locator("[data-week-board]").filter({ visible: true });
   for (let hops = 0; hops < MAX_WEEK_HOPS; hops++) {
-    const link = page.locator("[data-week-board]").getByRole("link", { name: title, exact: true });
+    const link = board.getByRole("link", { name: title, exact: true });
     if ((await link.count()) > 0) return link.first();
     // The step's own copy-free hook, not "a link with a week in its href": the
     // pager renders three of those — previous, next, and the way home — and a
     // positional pick among them is one reorder away from walking backwards
     // forever. A navigation rather than a click, so a step that has scrolled
     // out of view on a tall week is still followable.
-    const next = page.locator('[data-week-board] a[data-week-step="next"]');
+    const next = board.locator('a[data-week-step="next"]');
     if ((await next.count()) === 0) break;
     const nextHref = await next.getAttribute("href");
     if (!nextHref) break;
     await page.goto(nextHref);
-    await page.locator("[data-schedule-builder]").waitFor();
+    await page.locator("[data-schedule-builder]").filter({ visible: true }).waitFor();
   }
   throw new Error(`trip "${title}" not found on the schedule board after paging`);
 }

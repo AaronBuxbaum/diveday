@@ -111,6 +111,7 @@ describe("ScheduleBuilder week board", () => {
         weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index] ?? "",
         dayNumber: String(24 + index),
         label: `Day ${24 + index}`,
+        paperLabel: `${dateIso} · America/New_York`,
         isToday: dateIso === "2026-08-27",
         isPast: dateIso < "2026-08-27",
         boatWarning: null,

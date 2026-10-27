@@ -11,6 +11,7 @@ import { ARRIVAL_MAP_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { bookASeatAndOpenThread, openTripFromBoard } from "./helpers";
+import { staticPrintPage } from "./print-pdf";
 import {
   capturePrint,
   installVisualBuildGuard,
@@ -158,8 +159,10 @@ test.describe("print", () => {
     await expect(page.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
     await page.emulateMedia({ media: "print" });
     await expect(page.getByRole("button", { name: "Copy", exact: true })).not.toBeVisible();
-    await expect(snippet).toBeVisible();
-    await expect(snippet).toHaveValue(value);
+    await expect(snippet).not.toBeVisible();
+    const printedSnippet = page.locator("[data-print-snippet]");
+    await expect(printedSnippet).toBeVisible();
+    await expect(printedSnippet).toHaveText(value);
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "embed-code");
   });
@@ -219,16 +222,30 @@ test.describe("print", () => {
       .allTextContents();
     await expect(page.locator(".staffing-print-grid tbody")).toContainText("Needs crew");
     await expect(page.locator(".staffing-print-grid tbody")).toContainText("No divemaster");
-    // Exercise genuine populated rows over several sheets without changing shared DB data.
-    await page.locator(".staffing-print-grid tbody").evaluate((body) => {
+    const original = testInfo.outputPath("crew-original.pdf");
+    await page.pdf({
+      path: original,
+      format: "Letter",
+      preferCSSPageSize: true,
+      printBackground: true,
+    });
+    await assertCrewPdfPixels(original, labels, testInfo.outputPath("crew-original-pages"));
+    // Stress only a script-free copy; React keeps ownership of the source page.
+    const paper = await staticPrintPage(page);
+    await paper.locator(".staffing-print-grid tbody").evaluate((body) => {
       const rows = [...body.children];
       for (let copy = 0; copy < 2; copy++) {
         for (const row of rows) body.append(row.cloneNode(true));
       }
     });
-    await page.evaluate(() => document.fonts.ready);
     const pdf = testInfo.outputPath("crew-multipage.pdf");
-    await page.pdf({ path: pdf, format: "Letter", preferCSSPageSize: true, printBackground: true });
+    await paper.pdf({
+      path: pdf,
+      format: "Letter",
+      preferCSSPageSize: true,
+      printBackground: true,
+    });
+    await paper.close();
     await assertCrewPdfPixels(pdf, labels, testInfo.outputPath("crew-rendered-pages"));
     await testInfo.attach("crew-multipage", { path: pdf, contentType: "application/pdf" });
   });

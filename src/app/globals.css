@@ -1317,6 +1317,12 @@ select:not([multiple]):not([size]):dir(rtl) {
     break-inside: avoid;
   }
 
+  /* A switching-guide phase may be longer than a page; its own list of
+     numbered steps keeps each step intact without wasting a sheet per phase. */
+  .switching-move-phase {
+    break-inside: auto;
+  }
+
   /*
    * **A heading never ends a page.** A section title stranded at the foot of
    * one sheet with its table starting on the next reads, on the boat, as a
@@ -1328,6 +1334,7 @@ select:not([multiple]):not([size]):dir(rtl) {
   h3,
   h4 {
     break-after: avoid;
+    break-inside: avoid;
   }
 
   /*

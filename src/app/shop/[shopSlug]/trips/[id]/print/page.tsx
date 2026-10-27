@@ -9,6 +9,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { AutoPrint } from "../_components/AutoPrint";
+import { PacketSummary } from "./_components/PacketDocument";
 import { PACKET_READY_SELECTOR, PacketReady, TripPacket } from "./_components/TripPacket";
 
 export const metadata: Metadata = {
@@ -92,7 +93,7 @@ export default async function TripPrintPage({
           since #814 — so every print sat out `AutoPrint`'s five-second
           fallback before the dialog opened. */}
       <AutoPrint readySelector={PACKET_READY_SELECTOR} />
-      <header className="mb-10 border-b border-border pb-6 print:mb-6">
+      <PacketSummary openingPageName={packet.openingPageName}>
         <p className={EYEBROW_CLASS}>DiveDay</p>
         <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.title")}</h1>
         {/* The roll call on this paper is the moment it was printed, not the
@@ -103,8 +104,8 @@ export default async function TripPrintPage({
             date: formatDateTimeTz(nowDate(), locale, shop.timezone),
           })}
         </p>
-      </header>
-      {packet}
+      </PacketSummary>
+      {packet.document}
       <PacketReady />
     </div>
   );

@@ -133,3 +133,12 @@ Staff review covered 73 route templates and inspected 125 pages from 67 unique P
 - The audit included real paginated PDFs; it did not establish identical results in every browser, PDF viewer, printer, paper size, or extreme roster. The Crew regression checks a multi-sheet Letter PDF in CI with Poppler, with additional local PDFium and A4 checks.
 - External map tiles were unavailable in the controlled browser environment. Print outputs omit interactive maps where the accompanying address or site ledger is the useful paper record.
 - The CI visual comparison and current-head verification are reported on the pull request rather than inferred from these route inventories.
+
+## Paper-design follow-up
+
+The follow-up inspected paginated Letter PDFs for paper-specific design, including unnecessary actions, dark fills, excessive spacing, clipped ink, continuation context, and blank sheets. This is a separate visual pass from the route inventory above.
+
+- Public review raster-inspected 100 physical sheets from 36 PDFs. Two embedded-widget captures showed loading skeletons; a hydrated courses embed was subsequently inspected, while a hydrated reviews embed and current product feature instances remain unverified. Valid capability-state PDFs from the earlier audit are historical evidence, not a fresh recapture.
+- Staff review inspected 11 current sheets across Gear, Divers, Inbox, Schedule and Crew. A separate safety review inspected 25 sheets across the Dawn trip packet, manifest, prep, log, Crew rota, and an eight-sheet Wreck packet. The denser packet retained its passenger and crew names, warnings, emergency reference and repeated packing headers in the reviewed fixture. Oversized emergency plans, other dive/rider mixes, and after-dive reprints were not exercised.
+- Settings review inspected 25 sheets from 18 PDFs; the backups capture timed out. The corrected profile and embed views were recaptured as single Letter sheets, and Team was checked both collapsed and with credentials open. The review does not establish every role or every state.
+- Trip packet, manifest and departure-log continuation sheets now carry departure context and page numbers. Production PDF tests check the visible header ink and trip identity on every sheet, including a day packet with multiple departures and long names. The identity guard retries when the departure, boat or shop changes during packet assembly; it does not make the rest of the roster, rental or medical data a single database snapshot.

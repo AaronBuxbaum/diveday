@@ -98,7 +98,7 @@ export function FunnelCtas({
   return (
     <>
       <div
-        className={`flex ${width} ${hero ? "flex-wrap items-center gap-x-6 gap-y-2" : "flex-col gap-3 sm:flex-row"}${className ? ` ${className}` : ""}`}
+        className={`print:hidden flex ${width} ${hero ? "flex-wrap items-center gap-x-6 gap-y-2" : "flex-col gap-3 sm:flex-row"}${className ? ` ${className}` : ""}`}
       >
         <form action={enterDemoAction} className="contents">
           <FunnelTag source={source} />
@@ -124,7 +124,9 @@ export function FunnelCtas({
       </div>
       {footnotes ? (
         <>
-          <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
+          <p className="mt-3 text-sm font-medium text-muted print:hidden">
+            {t("marketing.common.demoNote")}
+          </p>
           <p className="mt-2 text-sm text-muted">{heroPriceLine(t, footnotes.offer, locale)}</p>
         </>
       ) : null}

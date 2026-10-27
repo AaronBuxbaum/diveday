@@ -100,6 +100,7 @@ function week(overrides: Partial<BuilderWeek> = {}, entries: WeekEntry[] = []): 
       weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index] ?? "",
       dayNumber: String(24 + index),
       label: `Day ${24 + index}`,
+      paperLabel: `${dateIso} · America/New_York`,
       isToday: dateIso === "2026-08-27",
       isPast: dateIso < "2026-08-27",
       boatWarning: null,
@@ -221,7 +222,7 @@ function firstLineCentre(box: Element, at: Width): number {
   let above = 0;
   for (
     let element: Element | null = box;
-    element && element.className !== WEEK_DAY_GRID_CLASS;
+    element && !element.className.startsWith(WEEK_DAY_GRID_CLASS);
     element = element.parentElement
   ) {
     above += spacing(element, ["mt", "my"], at) + spacing(element, ["pt", "py"], at);

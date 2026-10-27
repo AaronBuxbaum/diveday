@@ -290,6 +290,7 @@ export function weekFrom(days: FixtureDay[], overrides: Partial<BuilderWeek> = {
       weekday: day.parts.weekday,
       dayNumber: day.parts.day,
       label: day.label,
+      paperLabel: `${day.dateIso} · America/New_York`,
       isToday: false,
       isPast: false,
       boatWarning: day.boatWarning ?? null,
