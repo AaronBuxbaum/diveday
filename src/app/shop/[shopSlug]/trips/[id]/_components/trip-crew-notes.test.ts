@@ -26,6 +26,18 @@ describe("tripCrewNotes", () => {
     });
   });
 
+  it("asks staff to check a future-issued rating instead of calling it lapsed", () => {
+    const notes = tripCrewNotes({
+      crew: crew({ unverifiedCrew: [{ personId: "p1", fullName: "Alex" }] }),
+      diversPerDivemaster: 8,
+      locale: "en-US",
+      t,
+    });
+    expect(notes.ratingLapsedNote).toBe(
+      "Alex has a rating issued after this departure starts. Check the cards.",
+    );
+  });
+
   it("names the divers of a missing language, and who can brief a covered one", () => {
     const notes = tripCrewNotes({
       crew: crew({

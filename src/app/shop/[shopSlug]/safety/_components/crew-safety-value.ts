@@ -24,7 +24,7 @@ export function crewSafetyValue(safety: SafetyMonth, t: StaffTranslator) {
     safety.unrecordedSailings > 0
       ? t("incidents.safety.crewDetailUnrecorded", {
           unrecorded: safety.unrecordedSailings,
-          sailings: safety.crewSailings,
+          sailings: safety.crewSailings - unknown,
         })
       : null,
   ]

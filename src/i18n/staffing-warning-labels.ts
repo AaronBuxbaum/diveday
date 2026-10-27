@@ -33,6 +33,13 @@ export function staffingWarningText(
         hours: LONG_DAY_HOURS,
         day: formatCalendarDate(warning.day, context.locale),
       });
+    case "credential_not_yet_issued":
+      return t("desk.staffingWarnings.credentialNotYetIssued", {
+        name: warning.name,
+        title: warning.title,
+        credential: context.credentialWord(warning.kind),
+        date: formatCalendarDate(warning.issuedAt, context.locale),
+      });
     case "credential_expired": {
       // The kind labels are list headings ("Liability insurance"), so the
       // sentence sets one off after a colon rather than splicing it into a

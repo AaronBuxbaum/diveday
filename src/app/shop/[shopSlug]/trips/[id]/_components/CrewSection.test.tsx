@@ -107,6 +107,19 @@ describe("a rating that lapses before the departure", () => {
     ).toBe(INSET_NOTE_CLASS);
   });
 
+  it("does not claim booking is blocked when the roster has an instructor", () => {
+    render(
+      <CrewSection
+        {...props}
+        crewGapCode="no_instructor"
+        bookingInstructorPresent
+        copy={{ ...COPY, ratingLapsedNote: "Check the rating." }}
+      />,
+    );
+    expect(screen.getByText("Check the rating.")).toBeTruthy();
+    expect(screen.queryByText("This course needs an instructor.")).toBeNull();
+  });
+
   it("says nothing when no rating lapses", () => {
     render(<CrewSection {...props} crewGapCode="none" copy={COPY} />);
     expect(screen.queryByText(/isn’t current for this departure/)).toBeNull();

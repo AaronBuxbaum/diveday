@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
 import { canManageStaffAccounts, canReadCrewAwayNote, STAFF_ROLES } from "@/lib/authz";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import {
@@ -10,7 +10,12 @@ import {
   type CrewAssignmentRequest,
   type CrewRequestState,
 } from "@/lib/crew-requests";
-import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
+import {
+  inWaterCrewRole,
+  lapsedRungs,
+  lastDayOfDeparture,
+  unverifiedRungs,
+} from "@/lib/crew-roles";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
@@ -284,7 +289,11 @@ export async function listCrewAssignmentRequests(
         lapsedRungs:
           divesOn === undefined
             ? []
-            : lapsedRungs(credentials.get(request.personId) ?? [], divesOn),
+            : lapsedRungs(credentials.get(request.personId) ?? [], divesOn.last, divesOn.first),
+        unverifiedRungs:
+          divesOn === undefined
+            ? []
+            : unverifiedRungs(credentials.get(request.personId) ?? [], divesOn.first),
       }),
       state: (request.decision ?? "pending") as CrewRequestState,
       requestedAt: request.requestedAt,
@@ -300,15 +309,24 @@ async function lastDayByTrip(
   db: DbExecutor,
   shopId: string,
   tripIds: readonly string[],
-): Promise<Map<string, CalendarDate>> {
-  const byTrip = new Map<string, CalendarDate>();
+): Promise<Map<string, { first: CalendarDate; last: CalendarDate }>> {
+  const byTrip = new Map<string, { first: CalendarDate; last: CalendarDate }>();
   if (tripIds.length === 0) return byTrip;
   const rows = await db
-    .select({ id: trips.id, endsAt: trips.endsAt, timeZone: shops.timezone })
+    .select({
+      id: trips.id,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      timeZone: shops.timezone,
+    })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(trips.id, [...tripIds])));
-  for (const row of rows) byTrip.set(row.id, lastDayOfDeparture(row.endsAt, row.timeZone));
+  for (const row of rows)
+    byTrip.set(row.id, {
+      first: calendarDateInTimezone(row.startsAt, row.timeZone),
+      last: lastDayOfDeparture(row.endsAt, row.timeZone),
+    });
   return byTrip;
 }
 
