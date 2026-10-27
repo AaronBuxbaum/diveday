@@ -342,6 +342,19 @@ test.describe("schedule builder", () => {
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
 
+  test("adding from a future week returns to that week", async ({ page }) => {
+    await page.goto(`${BOARD}?week=${daysFromNow(21)}`);
+    const addDay = page.getByRole("link", { name: /^Add a departure on / }).first();
+    await addDay.click();
+    await expect(page.getByLabel("What is it")).toBeVisible();
+    const back = page.getByRole("main").getByRole("link", { name: "Schedule", exact: true });
+    const href = await back.getAttribute("href");
+    expect(href).toContain("?week=");
+    const returnUrl = new URL(href ?? "", page.url()).href;
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page).toHaveURL(returnUrl);
+  });
+
   test("opening and canceling the add/move panels manages keyboard focus", async ({ page }) => {
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
@@ -352,13 +365,15 @@ test.describe("schedule builder", () => {
     const addToggle = page.getByRole("link", { name: "Add a departure", exact: true });
     await addToggle.click();
     await expect(page.getByLabel("What is it")).toBeFocused();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Schedule", exact: true }),
+    ).toHaveAttribute("href", BOARD);
 
     // Cancelling hands focus back to the header link that opened the panel,
     // not to <body> — and clears ?add so the link works a second time.
     await page.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByLabel("What is it")).not.toBeVisible();
-    await expect(addToggle).toBeFocused();
-    await expect(page).not.toHaveURL(/add=/);
+    await expect(page).toHaveURL(new RegExp(`${BOARD}$`));
     await addToggle.click();
     await expect(page.getByLabel("What is it")).toBeFocused();
     await page.getByRole("button", { name: "Cancel" }).click();

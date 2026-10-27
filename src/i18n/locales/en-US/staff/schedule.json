@@ -70,6 +70,7 @@
     "departs": "Departs",
     "returns": "Returns",
     "seats": "Seats",
+    "boatCapacityWarning": "This exceeds the boat’s configured capacity ({count}).",
     "dives": "Dives",
     "price": "Price per diver",
     "priceDescription": "Divers see this the moment the departure reaches the public page.",

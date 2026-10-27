@@ -34,7 +34,10 @@ export function ServiceLogDoor({
   formOpen: boolean;
 }) {
   return (
-    <details className="group open:basis-full" open={formOpen || undefined}>
+    <details
+      className="group open:basis-full print:[&:not([open])]:hidden"
+      open={formOpen || undefined}
+    >
       <summary
         className={buttonClass({
           variant: "link",

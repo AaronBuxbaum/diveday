@@ -70,7 +70,12 @@ export function RequestReferenceRow({
         {openDeparture ? (
           <Link
             href={openDeparture.href}
-            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              flush: true,
+              className: "print:hidden",
+            })}
           >
             {openDeparture.label}
           </Link>

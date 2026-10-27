@@ -331,7 +331,7 @@ export default async function NewBookingPage({
         open={callNotice !== undefined || callDraft !== null}
         className={sectionCardClass({
           padding: "none",
-          className: "group/call mt-10 scroll-mt-24",
+          className: "group/call mt-10 scroll-mt-24 print:[&:not([open])]:hidden",
         })}
       >
         <summary className={cardSummaryClass({ className: "min-h-11 justify-between p-5 sm:p-6" })}>

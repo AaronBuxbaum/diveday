@@ -182,7 +182,11 @@ export function HelpRequestControl({
             aria-expanded={open}
             aria-controls={open ? editorId : undefined}
             onClick={() => setOpen((current) => !current)}
-            className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+            className={buttonClass({
+              variant: "secondary",
+              size: "sm",
+              className: "shrink-0 print:hidden",
+            })}
           >
             {open ? copy.cancel : label}
           </button>
@@ -193,7 +197,11 @@ export function HelpRequestControl({
             <input type="hidden" name="intent" value="complete" />
             <SubmitButton
               pendingLabel={copy.saving}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "shrink-0 print:hidden",
+              })}
             >
               {copy.complete}
             </SubmitButton>
@@ -206,7 +214,11 @@ export function HelpRequestControl({
           aria-expanded={open}
           aria-controls={open ? editorId : undefined}
           onClick={() => setOpen((current) => !current)}
-          className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+          className={buttonClass({
+            variant: "secondary",
+            size: "sm",
+            className: "shrink-0 print:hidden",
+          })}
         >
           {open ? copy.cancel : label}
         </button>
@@ -226,7 +238,7 @@ export function HelpRequestControl({
               closeEditor();
             }
           }}
-          className="w-full space-y-3 rounded-inset border border-border bg-surface-sunken p-3 sm:max-w-lg"
+          className="w-full space-y-3 rounded-inset border border-border bg-surface-sunken p-3 sm:max-w-lg print:hidden"
         >
           <input type="hidden" name="requestId" value={requestId} />
           <input type="hidden" name="expectedRevision" value={revision} />
@@ -334,7 +346,11 @@ export function HandledHelpRequests({
               <SubmitButton
                 pendingLabel={copy.saving}
                 ariaLabel={row.reopenAriaLabel}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "shrink-0 print:hidden",
+                })}
               >
                 {row.reopenLabel}
               </SubmitButton>

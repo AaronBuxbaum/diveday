@@ -8,6 +8,7 @@ import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { ChoiceRow, controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import {
+  CapacityField,
   CourseSelect,
   DayKindSelects,
   DescriptionAndPrivacy,
@@ -16,6 +17,7 @@ import {
   PatternCrew,
   PatternNote,
   PayAtBookingGroup,
+  PriceInputGroup,
   RepeatGroup,
   RequestPlanBrief,
 } from "./add-panel-groups";
@@ -37,6 +39,7 @@ import { useAddPanel } from "./use-add-panel";
 export type AddPanelBuilder = {
   /** The reader's language, for the time fields' readings. */
   locale: string;
+  returnWeek?: string;
   /** What this person had typed into the add panel when they last left it, if fresh. */
   addDraft: FormDraftProps["draft"];
   draftActions: FormDraftActions;
@@ -71,6 +74,7 @@ export function AddPanel({
   initialSite,
   requestPlan,
   startExpanded,
+  standalone = false,
   onCancel,
 }: {
   builder: AddPanelBuilder;
@@ -80,10 +84,12 @@ export function AddPanel({
   requestPlan?: BuilderRequestPlan | null;
   /** Opened straight into its full depth — a link that meant the whole form. */
   startExpanded: boolean;
+  standalone?: boolean;
   onCancel: () => void;
 }) {
   const {
     locale,
+    returnWeek,
     addDraft,
     draftActions,
     loadPattern,
@@ -138,14 +144,21 @@ export function AddPanel({
   });
   // Here rather than in the hook, so the check narrows `initialCourse` below.
   const onCourse = initialCourse !== null && courseId === initialCourse.id;
+  const selectedBoat =
+    diveMode === "boat" ? options?.boats?.find((boat) => boat.id === selectedBoatId) : undefined;
 
   return (
     <FieldGrid
       as="form"
       action={onAdd}
       columns={1}
-      className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
+      className={
+        standalone
+          ? "mt-3 gap-y-4"
+          : "mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
+      }
     >
+      {returnWeek ? <input type="hidden" name="boardWeek" value={returnWeek} /> : null}
       <span ref={patternAnchor} className="contents" />
       <PatternNote
         copy={copy}
@@ -242,18 +255,12 @@ export function AddPanel({
         setLensId={setLensId}
       />
       <FieldGrid columns={2} className="gap-y-4">
-        <Field label={copy.seats}>
-          <input
-            name="capacity"
-            type="number"
-            required
-            min={1}
-            max={60}
-            value={capacity}
-            onChange={(event) => setCapacity(Number(event.target.value))}
-            className={`${controlClass} tabular-nums`}
-          />
-        </Field>
+        <CapacityField
+          copy={copy}
+          capacity={capacity}
+          boatCapacity={selectedBoat?.capacity}
+          setCapacity={setCapacity}
+        />
         {/* Handed off, not duplicated: expanded, the count is the dive plan's
             own select. Two enabled boxes named `plannedDives` would let
             whichever is last in the DOM win silently, so this one goes
@@ -280,19 +287,7 @@ export function AddPanel({
           settled. The box is narrow, its helper line is not, so only the input
           is capped, by `max-w-28`: a `w-28` beside `controlClass`'s `w-full`
           races by stylesheet order and lost (visual review A33). */}
-      <FieldGrid columns={1}>
-        <Field label={copy.price} hint={copy.optional} description={copy.priceDescription}>
-          <input
-            name="priceDollars"
-            type="number"
-            step={price.step}
-            min={0}
-            max={price.max}
-            placeholder={price.placeholder}
-            className={`${controlClass} max-w-28 tabular-nums`}
-          />
-        </Field>
-      </FieldGrid>
+      <PriceInputGroup copy={copy} price={price} />
       <PayAtBookingGroup copy={copy} price={price} expanded={expanded} />
       {/* Two columns in both states: `columns={expanded ? 1 : 2}` made the
           Course select jump from half-width to full on every toggle. */}

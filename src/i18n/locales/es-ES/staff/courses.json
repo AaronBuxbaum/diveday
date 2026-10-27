@@ -22,7 +22,8 @@
       "notYet": "Aún no"
     },
     "pagination": {
-      "total": "{count, plural, one {# curso} other {# cursos}}"
+      "total": "{count, plural, one {# curso} other {# cursos}}",
+      "paperSubset": "{total, plural, one {{shown} de # curso en esta lista} other {{shown} de # cursos en esta lista}}"
     },
     "formsAwaitingTextSummary": "{count, plural, one {# curso necesita el texto de los formularios de su agencia.} other {# cursos necesitan el texto de los formularios de su agencia.}}",
     "formsAwaitingTextDoor": "Empieza por {title}"

@@ -153,7 +153,7 @@ test.describe("staff", () => {
     // country. The setting is display-and-entry only, so flipping it must
     // never move a stored number.
     await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
+    await openSettingsRow(page, "Units");
 
     const siteHref = await setSiteDepth(
       page,
@@ -202,7 +202,6 @@ test.describe("staff", () => {
     // share a card and a save button: switching only the temperature leaves
     // visibility in feet.
     await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
     await openSettingsRow(page, "Units");
     await page.getByLabel("Show water temperature in", { exact: true }).selectOption("celsius");
     await page.getByRole("button", { name: "Save units" }).click();

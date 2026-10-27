@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { MoreMenu, MoreMenuPrint } from "@/components/MoreMenu";
-import { PrintButton } from "@/components/PrintButton";
+import { MoreMenu } from "@/components/MoreMenu";
 import { buttonClass } from "@/components/ui/button";
 import { menuRowClass } from "@/components/ui/menu";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -20,16 +19,18 @@ export function BoardHeaderActions({
   st,
   shopSlug,
   canConfigure,
+  week,
 }: {
   st: StaffTranslator;
   shopSlug: string;
   canConfigure: boolean;
+  week?: string;
 }) {
   return (
     <>
       {canConfigure ? (
         <Link
-          href={`/shop/${shopSlug}/schedule/board?add=1`}
+          href={`/shop/${shopSlug}/schedule/board/new${week ? `?week=${encodeURIComponent(week)}` : ""}`}
           data-board-add
           scroll={false}
           className={buttonClass()}
@@ -50,7 +51,6 @@ export function BoardHeaderActions({
             {st("schedule.addBooking")}
           </Link>
         ) : null}
-        <PrintButton label={st("print.sheet.door")} />
         <Link href={publicSchedulePath(shopSlug)} className={buttonClass({ variant: "secondary" })}>
           {st("schedule.viewPublicPage")}
         </Link>
@@ -64,7 +64,6 @@ export function BoardHeaderActions({
             {st("schedule.addBooking")}
           </Link>
         ) : null}
-        <MoreMenuPrint label={st("print.sheet.door")} />
         <Link
           href={publicSchedulePath(shopSlug)}
           className={menuRowClass("quiet", { gutter: false })}

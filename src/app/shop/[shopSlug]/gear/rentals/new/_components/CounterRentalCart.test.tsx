@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -114,6 +116,41 @@ const gear = () => screen.getByRole("region", { name: props.words.gearHeading })
 const bill = () => screen.getByRole("list", { name: props.words.billHeading });
 const filter = () => screen.getByRole("searchbox", { name: props.words.filterLabel });
 const fill = (tank: PickerUnit) => screen.getByRole("combobox", { name: tank.fillAria ?? "" });
+
+describe("the rental total on paper", () => {
+  it("keeps the selected item count and total outside every staff print-hide rule", () => {
+    render(
+      <div id="shop-main-content">
+        <Cart />
+      </div>,
+    );
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    const footer = document.querySelector("[data-sticky-actions]");
+    expect(footer).toHaveTextContent("1 item");
+    expect(footer).toHaveTextContent("$10.00");
+    const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const hideRules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(
+        ([, selector, body]) =>
+          selector.trim().startsWith("#shop-main-content") && /display:\s*none/.test(body),
+      )
+      .map(([, selector]) => selector.trim());
+    expect(hideRules.length).toBeGreaterThan(0);
+    for (const selector of hideRules) {
+      expect(footer?.querySelector("p")?.closest(selector), selector).toBeNull();
+    }
+    const review = screen.getByRole("button", { name: props.words.review });
+    expect(hideRules.some((selector) => review.closest(selector) !== null)).toBe(true);
+    const editorActions = document.createElement("div");
+    editorActions.setAttribute("data-sticky-actions", "");
+    editorActions.innerHTML = '<button type="submit">Save</button>';
+    document.getElementById("shop-main-content")?.append(editorActions);
+    expect(hideRules.some((selector) => editorActions.matches(selector))).toBe(true);
+  });
+});
 
 describe("the counter cart's local lookup", () => {
   it("puts Gear before review and guides a sticky action to the first unresolved control", () => {
@@ -248,16 +285,31 @@ describe("issue 2723 refused cart", () => {
     }));
     const groups = [{ kind: "wetsuit" as const, kindLabel: "Wetsuit", units: suits }];
     render(<Cart groups={groups} />);
-    for (const suit of suits) {
-      fireEvent.click(within(gear()).getByRole("button", { name: `${suit.label}· L` }));
-      fireEvent.click(screen.getByRole("checkbox", { name: suit.confirmLabel }));
+    const pickButtons = within(gear()).getAllByRole("button", { name: /^Suit \d{3}· L$/ });
+    expect(pickButtons).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(pickButtons[index]).toHaveAccessibleName(`${suit.label}· L`);
     }
+    act(() => {
+      for (const button of pickButtons) fireEvent.click(button);
+    });
+    const confirmations = screen.getAllByRole("checkbox");
+    expect(confirmations).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(confirmations[index]).toHaveAccessibleName(suit.confirmLabel);
+    }
+    act(() => {
+      for (const confirmation of confirmations) fireEvent.click(confirmation);
+    });
     fireEvent.click(screen.getByRole("radio", { name: t("counterRentals.new.pay.none") }));
     fireEvent.submit(screen.getByRole("form", { name: "Rental" }));
     cleanup();
     render(<Cart groups={groups} restore />);
-    for (const suit of suits) {
-      expect(screen.getByRole("checkbox", { name: suit.confirmLabel })).toBeChecked();
+    const restoredConfirmations = screen.getAllByRole("checkbox");
+    expect(restoredConfirmations).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(restoredConfirmations[index]).toHaveAccessibleName(suit.confirmLabel);
+      expect(restoredConfirmations[index]).toBeChecked();
     }
   });
 

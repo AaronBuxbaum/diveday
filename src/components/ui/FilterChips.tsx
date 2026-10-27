@@ -54,9 +54,15 @@ export function FilterChips({
    */
   onNavigate?: () => void;
 }) {
+  const activeChip = chips.find((chip) => chip.active);
   return (
-    <nav aria-label={label} className={className || undefined}>
-      {/* One row that scrolls on a phone, wrapping only from `sm` up. Eleven
+    <>
+      {/* Paper needs the list's scope, not the navigation to other views. */}
+      {activeChip ? (
+        <p className={`hidden text-sm font-medium print:block ${className}`}>{activeChip.label}</p>
+      ) : null}
+      <nav aria-label={label} className={`print:hidden ${className}`}>
+        {/* One row that scrolls on a phone, wrapping only from `sm` up. Eleven
           gear kinds wrapped to four rows at 390px and pushed the list they
           narrow below the fold; a row a thumb can flick through keeps the
           control one line tall at every width. The negative margin lets the
@@ -88,25 +94,26 @@ export function FilterChips({
           `FilterChipsScroller` scrolls the row so the current chip is on
           screen when the row arrives: a view whose chip sits past the edge
           loaded with nothing naming it. */}
-      <FilterChipsScroller
-        activeKey={chips.find((chip) => chip.active)?.key}
-        className="chip-scroller flex items-center gap-2 max-sm:-mx-4 max-sm:-my-1.5 max-sm:scroll-px-6 max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:[scrollbar-width:none] sm:flex-wrap"
-      >
-        {chips.map((chip) => (
-          <Link
-            key={chip.key}
-            href={chip.href}
-            // The chips sit above the list they narrow; a scroll reset would
-            // throw the reader back to the top of the page on every view change.
-            scroll={false}
-            onClick={onNavigate}
-            aria-current={chip.active ? "true" : undefined}
-            className={chipClass(chip.active)}
-          >
-            {chip.label}
-          </Link>
-        ))}
-      </FilterChipsScroller>
-    </nav>
+        <FilterChipsScroller
+          activeKey={activeChip?.key}
+          className="chip-scroller flex items-center gap-2 max-sm:-mx-4 max-sm:-my-1.5 max-sm:scroll-px-6 max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:[scrollbar-width:none] sm:flex-wrap"
+        >
+          {chips.map((chip) => (
+            <Link
+              key={chip.key}
+              href={chip.href}
+              // The chips sit above the list they narrow; a scroll reset would
+              // throw the reader back to the top of the page on every view change.
+              scroll={false}
+              onClick={onNavigate}
+              aria-current={chip.active ? "true" : undefined}
+              className={chipClass(chip.active)}
+            >
+              {chip.label}
+            </Link>
+          ))}
+        </FilterChipsScroller>
+      </nav>
+    </>
   );
 }

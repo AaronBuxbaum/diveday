@@ -25,7 +25,8 @@ import { describe, expect, it } from "vitest";
  * five.
  *
  * The scan is deliberately syntactic: it asks whether a marker appears in the
- * route's own sources, never whether the href is correct. That is the half a
+ * route's own sources (or the explicit board-creation delegation below), never
+ * whether the href is correct. That is the half a
  * machine can hold. The *word* — the parent destination's own label from
  * `STAFF_DESTINATION_LABEL_KEYS`, never a second copy in the page's bundle —
  * is a reading, and it stays one.
@@ -91,7 +92,31 @@ function tsxFilesUnder(directory: string): string[] {
 
 /** Every `.tsx` file directly owned by one route: its page and its `_components`. */
 function routeSources(directory: string): string[] {
-  return [join(directory, "page.tsx"), ...tsxFilesUnder(join(directory, "_components"))];
+  // This shell belongs to both board routes, but links up only in creation mode.
+  // Count its link through the delegation contract below, never on the board.
+  const conditionalShell = join(SHOP_DIR, "schedule/board/_components/BoardPageShell.tsx");
+  return [join(directory, "page.tsx"), ...tsxFilesUnder(join(directory, "_components"))].filter(
+    (file) => file !== conditionalShell,
+  );
+}
+
+/** Follow the creation route's explicit opt-in through its shared board shell. */
+function boardCreationHasWayUp(): boolean {
+  const creation = readFileSync(join(SHOP_DIR, "schedule/board/new/page.tsx"), "utf8");
+  const board = readFileSync(join(SHOP_DIR, "schedule/board/page.tsx"), "utf8");
+  const shell = readFileSync(
+    join(SHOP_DIR, "schedule/board/_components/BoardPageShell.tsx"),
+    "utf8",
+  );
+  return (
+    /import ScheduleBoardPage from ["']\.\.\/page["']/.test(creation) &&
+    /return ScheduleBoardPage\(\{/.test(creation) &&
+    /searchParams: Promise\.resolve\(\{ \.\.\.query, _createPage: "1" \}\)/.test(creation) &&
+    /import \{ BoardPageShell \} from "\.\/_components\/BoardPageShell"/.test(board) &&
+    /const createPage = query\._createPage === "1"/.test(board) &&
+    /<BoardPageShell\s+createPage=\{createPage\}\s+boardHref=\{boardHref\}/.test(board) &&
+    /<ShopPageHeader[\s\S]*?eyebrowHref=\{createPage \? boardHref : undefined\}/.test(shell)
+  );
 }
 
 function staffRoutes(directory = SHOP_DIR): StaffRoute[] {
@@ -106,9 +131,9 @@ function staffRoutes(directory = SHOP_DIR): StaffRoute[] {
       found.push({
         key: segments.join("/"),
         depth: segments.length,
-        hasWayUp: sources.some((source) =>
-          WAY_UP_MARKERS.some((marker) => source.includes(marker)),
-        ),
+        hasWayUp:
+          sources.some((source) => WAY_UP_MARKERS.some((marker) => source.includes(marker))) ||
+          (segments.join("/") === "schedule/board/new" && boardCreationHasWayUp()),
       });
     }
   }

@@ -22,7 +22,7 @@ import {
  */
 export function SettingsRailSkeleton() {
   return (
-    <div className={SETTINGS_RAIL_COLUMN_CLASS} aria-hidden="true">
+    <div className={`hidden lg:block ${SETTINGS_RAIL_COLUMN_CLASS}`} aria-hidden="true">
       <div className={`${SETTINGS_RAIL_FRAME_CLASS} animate-pulse overflow-hidden`}>
         <div className={SETTINGS_RAIL_CONTENT_CLASS}>
           {SETTINGS_GROUPS.map((group) => (

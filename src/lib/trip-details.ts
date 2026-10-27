@@ -131,7 +131,6 @@ export type TripDetailsResult =
   | { ok: false; reason: "invalid" | "end_before_start" | "days_out_of_order" }
   // Carries the hull's number so the notice can say "Reef Runner holds 6"
   // rather than a bare "that didn't work".
-  | { ok: false; reason: "capacity_above_boat"; boatCapacity: number }
   // H-107: the certificate's number, so the notice can say it.
   | { ok: false; reason: "capacity_above_certificate"; limit: number }
   // Clearing the price off a departure that demands payment. See
@@ -162,28 +161,8 @@ export function tripDetailsPatch(
   // Day by day rather than one offset: a multi-day trip can straddle a DST
   // change, and what a shop promises is the wall-clock time — "back at the dock
   // at 12:30" on both days.
-  // **The hull is the ceiling, and nothing checked it until now.** A departure
-  // and a boat both carry a capacity; the only thing that ever joined them was
-  // the add panel's client-side prefill, which is help rather than a rule and
-  // loses to anything typed after it. So a shop could sell 24 seats on a boat
-  // it had recorded as holding 6 — and every gate downstream would defend that
-  // 24 faithfully, through waivers, cert checks and a manifest. On a US
-  // uninspected vessel the six-passenger limit is a legal line, and the app had
-  // the number that would catch it and was not looking at it.
-  //
-  // **Refused, never clamped.** Quietly lowering a number a staffer typed
-  // leaves a shop with fewer seats than it meant to sell and no way to find out
-  // why.
-  if (
-    fields.capacity !== undefined &&
-    fields.boatCapacity != null &&
-    fields.capacity > fields.boatCapacity
-  ) {
-    return { ok: false, reason: "capacity_above_boat", boatCapacity: fields.boatCapacity };
-  }
-  // **The certificate is a ceiling too** (H-107). Checked after the hull's own
-  // number, which is the one a shop chose; this one a boarding officer counts
-  // against. Same posture: refused, never clamped.
+  // Configured boat capacity is advisory; the separately recorded certificate remains a limit.
+  // The certified passenger limit is a separate ceiling (H-107).
   if (
     fields.capacity !== undefined &&
     fields.boatCertifiedPassengers != null &&

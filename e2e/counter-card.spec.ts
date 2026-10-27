@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openSettingsRow } from "./helpers";
 
 signedInAsOwner();
 
@@ -9,11 +10,11 @@ signedInAsOwner();
  */
 test("the counter card in Settings opens its own printable sheet", async ({ page }) => {
   await page.goto("/shop/blue-mantis/settings");
+  await openSettingsRow(page, "The counter card");
   const row = page
     .locator("details")
     .filter({ has: page.getByRole("heading", { name: "The counter card", exact: true }) })
     .first();
-  await row.locator("> summary").click();
   const print = row.getByRole("link", { name: "Print", exact: true });
   await expect(print).toHaveAttribute("href", "/shop/blue-mantis/print/counter-card");
 

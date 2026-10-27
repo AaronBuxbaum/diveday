@@ -14,6 +14,7 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { DeparturePaperIdentity } from "../_components/DeparturePaperIdentity";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
@@ -52,6 +53,7 @@ import {
   printedKitRegister,
 } from "./_components/PrintedBoatProcedure";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
+import { manifestPaperIdentity } from "./_components/paper-identity";
 import { personTrailIndex } from "./_components/person-trail";
 import { preDepartureCheckView } from "./_components/pre-departure-check-view";
 import { rollCallCopies } from "./_components/roll-call-copy";
@@ -222,88 +224,85 @@ export default async function TripManifestPage({
     stage: stageStrip.stage,
     seats: manifest.divers,
   };
-  // Only the trip packet composes this page as paper (`ManifestPaper`, B03).
+  const paperProps = manifestPaperIdentity(
+    shop,
+    departureManifest.trip,
+    vessel,
+    checkpoint,
+    locale,
+    t,
+  );
   if (paper) {
     return (
-      <ManifestPaper
-        cancelled={cancelled}
-        manifest={manifest}
-        vesselName={vessel?.name ?? null}
-        boatSafety={boatSafety ? { idPrefix, ...boatSafety } : null}
-        checklist={checklistProps}
-        rollCall={rollCall}
-        boatPaper={printedBoatPaper}
-        stage={stage}
-        dockDesk={dockDesk}
-        t={t}
-      />
+      <DeparturePaperIdentity {...paperProps}>
+        <ManifestPaper
+          cancelled={cancelled}
+          manifest={manifest}
+          vesselName={vessel?.name ?? null}
+          boatSafety={boatSafety ? { idPrefix, ...boatSafety } : null}
+          checklist={checklistProps}
+          rollCall={rollCall}
+          boatPaper={printedBoatPaper}
+          stage={stage}
+          dockDesk={dockDesk}
+          t={t}
+        />
+      </DeparturePaperIdentity>
     );
   }
 
   return (
-    <div className="boat-mode">
-      <SkipLink
-        href={scopedHash(idPrefix, "roll-call-list")}
-        label={t("manifest.skipToRollCall")}
-        level="page"
-      />
-      {/* The same header the other three tabs wear (`TripPageHeader`). This
-          page used to hand-roll its own, so switching to the Manifest redrew
-          the top of the page for no reason a reader could act on.
-          Deliberately without the seats badge the others carry: the whole body
-          below is a live head count, and a "3 seats left" pill above a roll
-          call reading "6 of 9 aboard" invites reading the seat count as a
-          boarding count. */}
-      <TripPageHeader
-        boardHref={shopPath(shopSlug, "schedule", "board")}
-        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-        today={{ href: shopPath(shopSlug), label: t(STAFF_DESTINATION_LABEL_KEYS.today) }}
-        trip={manifest.trip}
-        locale={locale}
-        timeZone={shop.timezone}
-        // No description line: "Divers and crew, with emergency contacts, at
-        // every checkpoint" captioned a page its tab already names; the
-        // checkpoint nav and the panel below say what to do, and the per-row
-        // summaries carry the contacts (copy-restraint, 2026-08-21).
-        // Printing belongs to the trip's main tab; a second printer here
-        // obscured whether it printed the full packet or only this live tab.
-        actionsClassName="lg:hidden"
-        actions={
-          <ManifestMoreMenu
-            variant="header"
-            label={t("manifest.emergencyMenuLabel")}
-            closeLabel={t("manifest.closeEmergencyReference")}
-          >
-            {/* In the popover, which lifts it: no bed of its own. */}
-            <EmergencyReferenceCard
-              className="mt-0"
-              headingId="emergency-reference-phone-heading"
-              inOverlay
-              reference={emergencyReference}
-              copy={emergencyCopy}
-            />
-          </ManifestMoreMenu>
-        }
-      />
-      {/* No stage pill here: the crew's own stage strip below is this tab's
+    <DeparturePaperIdentity {...paperProps}>
+      <div className="boat-mode">
+        <SkipLink
+          href={scopedHash(idPrefix, "roll-call-list")}
+          label={t("manifest.skipToRollCall")}
+          level="page"
+        />
+        <TripPageHeader
+          boardHref={shopPath(shopSlug, "schedule", "board")}
+          backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+          today={{ href: shopPath(shopSlug), label: t(STAFF_DESTINATION_LABEL_KEYS.today) }}
+          trip={manifest.trip}
+          locale={locale}
+          timeZone={shop.timezone}
+          actionsClassName="lg:hidden"
+          actions={
+            <ManifestMoreMenu
+              variant="header"
+              label={t("manifest.emergencyMenuLabel")}
+              closeLabel={t("manifest.closeEmergencyReference")}
+            >
+              {/* In the popover, which lifts it: no bed of its own. */}
+              <EmergencyReferenceCard
+                className="mt-0"
+                headingId="emergency-reference-phone-heading"
+                inOverlay
+                reference={emergencyReference}
+                copy={emergencyCopy}
+              />
+            </ManifestMoreMenu>
+          }
+        />
+        {/* No stage pill here: the crew's own stage strip below is this tab's
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
-      <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
-      <CancelledRollCallBanner state={cancelled} t={t} />
-      <PrintedSoulsOnBoard manifest={manifest} vesselName={vessel?.name ?? null} t={t} />
-      {/* **The catch-up strip**, under the masthead and above the instrument,
+        <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
+        <CancelledRollCallBanner state={cancelled} t={t} />
+        <PrintedSoulsOnBoard manifest={manifest} vesselName={vessel?.name ?? null} t={t} />
+        {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
           slice 16d). It renders nothing when there is nothing new, and nothing
           at all to somebody who has never worked this departure — so on most
           openings of most manifests this line costs the page no pixels. */}
-      {catchUpStrip ? (
-        <CatchUpStrip
-          idPrefix={idPrefix}
-          {...catchUpStrip}
-          dismissAction={actions.markTripCaughtUp}
-        />
-      ) : null}
-      {/* **The count leads** (ADR 20260827-the-departure-is-two-working-surfaces,
+        {catchUpStrip ? (
+          <CatchUpStrip
+            idPrefix={idPrefix}
+            {...catchUpStrip}
+            dismissAction={actions.markTripCaughtUp}
+          />
+        ) : null}
+        {/* **The count leads** (ADR 20260827-the-departure-is-two-working-surfaces,
           decision 2: the count is "always on screen"). This is the page's only
           count surface — the checkpoint's progress, the numbers behind it, and
           every line that says a person is
@@ -311,116 +310,116 @@ export default async function TripManifestPage({
           five-item checklist, so on a 390px phone the first thing a captain saw
           at the rail was a list of phone numbers for a call that has never been
           placed from this app. */}
-      <SummaryPanel
-        idPrefix={idPrefix}
-        checkpoint={checkpoint}
-        isDeparture={isDeparture}
-        rollCallComplete={completeness.complete}
-        completeness={completeness}
-        summary={manifest.summary}
-        {...headCountView({ manifest, checkpoint, isDeparture })}
-        t={t}
-      />
+        <SummaryPanel
+          idPrefix={idPrefix}
+          checkpoint={checkpoint}
+          isDeparture={isDeparture}
+          rollCallComplete={completeness.complete}
+          completeness={completeness}
+          summary={manifest.summary}
+          {...headCountView({ manifest, checkpoint, isDeparture })}
+          t={t}
+        />
 
-      {/* **Where the boat is** — ADR 20260904-reef-all-the-way-down, decision
+        {/* **Where the boat is** — ADR 20260904-reef-all-the-way-down, decision
           2, Budget rule 4. Under the head count: the same question asked of
           the boat, tapped at the rail. A safety surface: no drawing, no coral,
           no motion (`StageStrip`). */}
-      <StageStrip action={actions.setTripStage} {...stage} />
+        <StageStrip action={actions.setTripStage} {...stage} />
 
-      <CheckpointSwitch
-        manifests={completeManifests}
-        checkpoint={checkpoint}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        t={t}
-      />
+        <CheckpointSwitch
+          manifests={completeManifests}
+          checkpoint={checkpoint}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          t={t}
+        />
 
-      {/* **Every section from the boat check down, at one gap** (K-189). Each
+        {/* **Every section from the boat check down, at one gap** (K-189). Each
           used to bring its own top margin — `mt-5`, `mt-8`, `mt-9` and back —
           so sections of one kind stepped 21 to 42px apart. One `space-y-10` holds
           them and none carries a margin (docs/design/forms-and-controls.md); `mt-5`
           is the boat check's own step under the checkpoint switch. */}
-      <div className="mt-5 space-y-10">
-        {/* One line, under the checkpoint switch: the boat check happens once
+        <div className="mt-5 space-y-10">
+          {/* One line, under the checkpoint switch: the boat check happens once
             before the boat leaves rather than once per dive, so it is the last
             thing above the roll call and the first thing to step back once it is
             done — open until then at the dock (UX audit 2026-10-07, item 17) (ADR 20260827-the-departure-is-two-working-surfaces, decision 2 —
             the boat-check items are a "one tap away" concern). It used to stand
             fully expanded *above* the checkpoint switch, five full-width buttons
             between the masthead and the head count at every checkpoint. */}
-        {boatSafety ? <BoatSafetyNotices idPrefix={idPrefix} {...boatSafety} /> : null}
-        <PreDepartureCheckList {...checklistProps} />
-        {/* The page's job, as high as it can go: the divers, immediately under
+          {boatSafety ? <BoatSafetyNotices idPrefix={idPrefix} {...boatSafety} /> : null}
+          <PreDepartureCheckList {...checklistProps} />
+          {/* The page's job, as high as it can go: the divers, immediately under
             the panel that counts them. It used to be the *last* section, below
             the offline card, the tiles, the blocked banner, the crew and the
             whole buddy-team builder — so a captain on a phone scrolled past six
             screens of context to reach the first name at roll call. */}
-        <DiverRollCall context={rollCall.divers} />
+          <DiverRollCall context={rollCall.divers} />
 
-        {/* Crew close the checkpoint (DOM-H1) — straight after the divers, not
+          {/* Crew close the checkpoint (DOM-H1) — straight after the divers, not
             before them: the divers are the head count's heart, and a two-person
             crew list ahead of nine divers read as the page's subject. */}
-        <CrewRollCall {...rollCall.crew} />
-        <DockDesk {...dockDesk} />
+          <CrewRollCall {...rollCall.crew} />
+          <DockDesk {...dockDesk} />
 
-        {/* **The plan** (issue #1184, D24).
+          {/* **The plan** (issue #1184, D24).
             At the dock only: after a dive the log below owns this ground, and a
             read-only copy of the plan beside it would be a second answer to the
             same question. */}
-        {isDeparture ? (
-          <TripPlanSection
-            idPrefix={idPrefix}
-            heading={t("manifest.planChange.heading")}
-            {...tripPlanRows(t, shop, plannedDives, meetingPoint, siteHistory, locale)}
-          />
-        ) : null}
+          {isDeparture ? (
+            <TripPlanSection
+              idPrefix={idPrefix}
+              heading={t("manifest.planChange.heading")}
+              {...tripPlanRows(t, shop, plannedDives, meetingPoint, siteHistory, locale)}
+            />
+          ) : null}
 
-        {!isDeparture ? (
-          <ExecutedDiveLog
-            idPrefix={idPrefix}
-            {...executedDiveLogView({
-              plannedDives,
-              executedDives,
-              liveDiveSites,
-              catalogSpecies,
-              speciesBySite,
-              locale,
-              timeZone: shop.timezone,
-              depthUnit: shop.depthUnit,
-              t,
-            })}
-            action={actions.saveExecutedDive}
-            checkpoint={checkpoint}
-            sightingsOn={shop.sightingsEnabled}
-          />
-        ) : null}
+          {!isDeparture ? (
+            <ExecutedDiveLog
+              idPrefix={idPrefix}
+              {...executedDiveLogView({
+                plannedDives,
+                executedDives,
+                liveDiveSites,
+                catalogSpecies,
+                speciesBySite,
+                locale,
+                timeZone: shop.timezone,
+                depthUnit: shop.depthUnit,
+                t,
+              })}
+              action={actions.saveExecutedDive}
+              checkpoint={checkpoint}
+              sightingsOn={shop.sightingsEnabled}
+            />
+          ) : null}
 
-        {/* **The living reef**: what the crew saw, away from roll call and head count. It
+          {/* **The living reef**: what the crew saw, away from roll call and head count. It
             gates nothing, reaches the public trip page, and is gone while sightings are off. */}
-        {!isDeparture && seen ? <SeenGroup idPrefix={idPrefix} {...seen} /> : null}
+          {!isDeparture && seen ? <SeenGroup idPrefix={idPrefix} {...seen} /> : null}
 
-        {/* **The numbers a crew dials during** are a rare reference, behind the
+          {/* **The numbers a crew dials during** are a rare reference, behind the
             manifest-local ellipsis on a phone and a quiet footer line on desktop
             (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
             printed manifest is the fallback under the fallback, so its complete
             copy is rendered outside either interactive disclosure below. */}
-        {printedBoatPaper}
-        {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
+          {printedBoatPaper}
+          {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
             people happens before the boat leaves, while the lists above are
             worked at the rail. Below the lists, still expanded — the teams
             themselves ride on each member's row where roll call can see them. */}
-        <BuddyTeamsPanel
-          idPrefix={idPrefix}
-          defaultOpen={buddies === "open"}
-          intentLine={staffDiveIntentLine(t, diveIntents, locale)}
-          buddyTeamsList={buddyTeamsList}
-          {...buddy.panel}
-          {...actions.buddyTeams}
-          t={t}
-        />
+          <BuddyTeamsPanel
+            idPrefix={idPrefix}
+            defaultOpen={buddies === "open"}
+            intentLine={staffDiveIntentLine(t, diveIntents, locale)}
+            buddyTeamsList={buddyTeamsList}
+            {...buddy.panel}
+            {...actions.buddyTeams}
+            t={t}
+          />
 
-        {/* Everything this *device* does, in **one line** at the foot of the
+          {/* Everything this *device* does, in **one line** at the foot of the
             page: hold an offline copy, wake itself for a refresh, ignore spray on
             the glass, buzz. All four are per-phone preferences rather than
             anything about this departure, and decision 2 of ADR
@@ -432,43 +431,44 @@ export default async function TripManifestPage({
             pill on screen, because a stale copy that looks current is the failure mode this whole
             mechanism exists to prevent — and the component that computes that state is the only
             thing that can render it. The rest of the group rides in as its children. */}
-        <OfflineManifestManager
-          idPrefix={idPrefix}
-          locale={locale}
-          payload={offlineManifestPayload({
-            completeManifests,
-            shop: { ...shop, emergencyReference },
-            ...boatCheck,
-            boatSafety,
-            locale,
-            t,
-          })}
-          copy={offlineManifestManagerCopy(t)}
+          <OfflineManifestManager
+            idPrefix={idPrefix}
+            locale={locale}
+            payload={offlineManifestPayload({
+              completeManifests,
+              shop: { ...shop, emergencyReference },
+              ...boatCheck,
+              boatSafety,
+              locale,
+              t,
+            })}
+            copy={offlineManifestManagerCopy(t)}
+          >
+            <ManifestDeviceSettings tripId={tripId} t={t} reader={reader} />
+          </OfflineManifestManager>
+        </div>
+
+        <ManifestMoreMenu
+          variant="footer"
+          label={t("manifest.emergencyMenuLabel")}
+          closeLabel={t("manifest.closeEmergencyReference")}
         >
-          <ManifestDeviceSettings tripId={tripId} t={t} reader={reader} />
-        </OfflineManifestManager>
-      </div>
+          <EmergencyReferenceCard
+            className="mt-0"
+            headingId="emergency-reference-desktop-heading"
+            reference={emergencyReference}
+            copy={emergencyCopy}
+          />
+        </ManifestMoreMenu>
 
-      <ManifestMoreMenu
-        variant="footer"
-        label={t("manifest.emergencyMenuLabel")}
-        closeLabel={t("manifest.closeEmergencyReference")}
-      >
-        <EmergencyReferenceCard
-          className="mt-0"
-          headingId="emergency-reference-desktop-heading"
-          reference={emergencyReference}
-          copy={emergencyCopy}
+        <ManifestMilestones
+          tripId={tripId}
+          checkpoint={checkpoint}
+          summary={manifest.summary}
+          complete={completeness.complete}
+          t={t}
         />
-      </ManifestMoreMenu>
-
-      <ManifestMilestones
-        tripId={tripId}
-        checkpoint={checkpoint}
-        summary={manifest.summary}
-        complete={completeness.complete}
-        t={t}
-      />
-    </div>
+      </div>
+    </DeparturePaperIdentity>
   );
 }

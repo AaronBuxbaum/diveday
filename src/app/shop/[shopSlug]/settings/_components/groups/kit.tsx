@@ -63,7 +63,7 @@ export function SettingsGroup({
   children: ReactNode;
 }) {
   return (
-    <div>
+    <div data-settings-group={group.id}>
       <GroupLabel as="h2" id={group.id} className="mb-3 scroll-mt-24">
         {label}
       </GroupLabel>

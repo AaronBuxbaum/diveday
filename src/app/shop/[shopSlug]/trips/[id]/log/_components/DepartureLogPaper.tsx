@@ -5,7 +5,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 export function DepartureLogFrame({ children }: { children: ReactNode }) {
   return (
     <div data-departure-log className="space-y-10 print:space-y-4">
-      <style>{"@media print{main:has(>[data-departure-log]){padding-block-end:0}}"}</style>
+      <style>{"@media print{main:has([data-departure-log]){padding-block-end:0}}"}</style>
       {children}
     </div>
   );

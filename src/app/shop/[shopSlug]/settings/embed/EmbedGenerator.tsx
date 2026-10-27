@@ -112,7 +112,7 @@ export function EmbedGenerator({
   // that is there to see (visual review 2026-10-24, A45): an empty rounded
   // rectangle while the iframe loads read as a broken preview.
   const [loadedFrame, setLoadedFrame] = useState<string | null>(null);
-  const ids = { kind: useId(), look: useId(), platform: useId() };
+  const ids = { kind: useId(), look: useId(), platform: useId(), language: useId() };
 
   const options = { look, lang, show: show || null };
   // The QR code can point at one boat too — the counter's code for tonight's
@@ -244,7 +244,10 @@ export function EmbedGenerator({
                       radio's tap target, so it takes the 44px floor
                       (`min-h-11`, as `SegmentedControl`'s own options do):
                       it was `min-h-9`, 36px. */}
-                    <div className={segmentedTrackClass}>
+                    <p className="hidden text-sm print:block">
+                      {look === "site" ? copy.lookSite : copy.lookLight}
+                    </p>
+                    <div className={`${segmentedTrackClass} print:hidden`}>
                       {(["site", "light"] as const).map((value) => (
                         <label
                           key={value}
@@ -265,11 +268,12 @@ export function EmbedGenerator({
                       ))}
                     </div>
                   </Field>
-                  <Field label={copy.language}>
+                  <Field label={copy.language} htmlFor={ids.language}>
                     <select
+                      id={ids.language}
                       value={lang}
                       onChange={(event) => setLang(event.target.value)}
-                      className={controlClass}
+                      className={`${controlClass} print:hidden`}
                     >
                       <option value="auto">{copy.languageAuto}</option>
                       {locales.map((locale) => (
@@ -278,13 +282,16 @@ export function EmbedGenerator({
                         </option>
                       ))}
                     </select>
+                    <span className="hidden text-sm print:block">
+                      {lang === "auto" ? copy.languageAuto : (copy.languages[lang] ?? lang)}
+                    </span>
                   </Field>
                 </FieldGrid>
               ) : null}
             </div>
 
             {!showMissing ? (
-              <div className="@container">
+              <div className={`@container ${FRAMED.has(kind) ? "print:hidden" : ""}`}>
                 <p className={`mb-2 text-sm font-medium ${previewDrawn ? "" : "sr-only"}`}>
                   {copy.preview}
                 </p>
@@ -366,7 +373,8 @@ export function EmbedGenerator({
           {/* Each chip is its radio's tap target, so it takes the 44px floor
               the kind tiles and Look segments take; it was `min-h-9`, 36px,
               4px from the next (K-443). */}
-          <div className="mb-4 flex flex-wrap gap-2">
+          <p className="mb-4 hidden text-sm print:block">{copy.platforms[platform]}</p>
+          <div className="mb-4 flex flex-wrap gap-2 print:hidden">
             {PLATFORMS.map((p) => (
               <label
                 key={p}

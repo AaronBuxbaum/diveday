@@ -136,8 +136,7 @@ export default async function OrderDetailPage({
         eyebrowHref={shopPath(shopSlug, "orders")}
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
-        // **One overflow for the rare doors** (visual review A16): Print first,
-        // then the dispute sheet, then the Stripe acts on an open invoice.
+        // One overflow for the dispute sheet and Stripe acts on an open invoice.
         // Record payment stays in the receipt card as the one row of work.
         actions={
           <OrderMoreMenu

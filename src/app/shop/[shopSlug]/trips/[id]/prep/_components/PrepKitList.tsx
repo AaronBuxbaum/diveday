@@ -119,6 +119,7 @@ export function PrepKitList({
               className={buttonClass({
                 variant: "secondary",
                 size: "sm",
+                className: "print:hidden",
               })}
             >
               {t("tripPrep.rentalKitEmptyAction")}
