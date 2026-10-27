@@ -114,3 +114,42 @@ describe("the dock copy of a training dive", () => {
     }
   });
 });
+
+describe("junior safety advisories on a saved manifest", () => {
+  it("stores the worded advisory without storing card details or a birthday", () => {
+    const manifest = manifestWith({
+      depthAdvisory: { status: "verification_required", verificationReasons: ["card_status"] },
+    });
+    const payload = serializeManifests(
+      [manifest],
+      shop,
+      (b) => b.code,
+      [],
+      null,
+      undefined,
+      () => "Check the dive plan and supervision",
+    );
+    expect(payload.juniorAdvisoriesChecked).toBe(true);
+    expect(payload.manifests[0]?.divers[0]).toMatchObject({
+      safetyAdvisoryText: "Check the dive plan and supervision",
+    });
+    expect(JSON.stringify(payload)).not.toContain("card_status");
+  });
+
+  it("withholds the advisory for a held identity", () => {
+    const manifest = manifestWith({
+      identityWithheld: true,
+      depthAdvisory: { status: "verification_required", verificationReasons: ["card_status"] },
+    });
+    const payload = serializeManifests(
+      [manifest],
+      shop,
+      (b) => b.code,
+      [],
+      null,
+      undefined,
+      () => "Check the dive plan and supervision",
+    );
+    expect(payload.manifests[0]?.divers[0]?.safetyAdvisoryText).toBeUndefined();
+  });
+});

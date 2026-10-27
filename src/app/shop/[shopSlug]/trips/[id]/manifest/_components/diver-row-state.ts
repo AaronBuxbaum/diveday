@@ -155,7 +155,8 @@ export function diverRowState(
                 ? "medical"
                 : minorAge
                   ? "minor"
-                  : diver.depthAdvisory?.status === "exceeds"
+                  : diver.depthAdvisory?.status === "exceeds" ||
+                      diver.depthAdvisory?.status === "verification_required"
                     ? "depth"
                     : diver.birthday
                       ? "birthday"

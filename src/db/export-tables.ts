@@ -12,6 +12,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   buddyPairMembers,
+  certificationJuniorReviews,
   certifications,
   courseFormRecords,
   courseFormRequirements,
@@ -390,6 +391,14 @@ export const EXPORT_TABLES = {
     table: certifications,
     order: [asc(certifications.createdAt), asc(certifications.id)],
     scope: { shopColumn: certifications.shopId, personColumn: certifications.personId },
+  },
+  certificationJuniorReviews: {
+    table: certificationJuniorReviews,
+    order: [asc(certificationJuniorReviews.recordedAt), asc(certificationJuniorReviews.id)],
+    scope: {
+      shopColumn: certificationJuniorReviews.shopId,
+      personColumn: certificationJuniorReviews.personId,
+    },
   },
   specialtyCertifications: {
     table: specialtyCertifications,

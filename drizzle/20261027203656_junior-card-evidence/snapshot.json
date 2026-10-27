@@ -1,0 +1,779 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "810fa7fc-7e94-407d-b1c7-a3a530a63422",
+  "prevIds": [
+    "9331a880-836b-47c4-a7eb-ae6e3533ee2a"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "certification_junior_reviews"
+      ],
+      "writes": [
+        "s|tbl|public.certification_junior_reviews",
+        "n|tbl|public.certification_junior_reviews",
+        "e|tbl|public.certification_junior_reviews",
+        "n|rel|public.certification_junior_reviews",
+        "n|type|public.certification_junior_reviews",
+        "n|rel|public.certification_junior_reviews_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "certifications",
+        "junior_status"
+      ],
+      "writes": [
+        "s|col|public.certifications.junior_status",
+        "n|col|public.certifications.junior_status",
+        "e|col|public.certifications.junior_status"
+      ],
+      "reads": [
+        "n|tbl|public.certifications",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "certifications",
+        "junior_status_verified_at"
+      ],
+      "writes": [
+        "s|col|public.certifications.junior_status_verified_at",
+        "n|col|public.certifications.junior_status_verified_at",
+        "e|col|public.certifications.junior_status_verified_at"
+      ],
+      "reads": [
+        "n|tbl|public.certifications",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "certifications",
+        "junior_status_verified_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.certifications.junior_status_verified_by_person_id",
+        "n|col|public.certifications.junior_status_verified_by_person_id",
+        "e|col|public.certifications.junior_status_verified_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.certifications",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "require_adult_buddy_for_teens"
+      ],
+      "writes": [
+        "s|col|public.shops.require_adult_buddy_for_teens",
+        "n|col|public.shops.require_adult_buddy_for_teens",
+        "e|col|public.shops.require_adult_buddy_for_teens"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "certification_junior_reviews",
+        "certification_junior_reviews_person_idx"
+      ],
+      "writes": [
+        "s|idx|public.certification_junior_reviews_person_idx",
+        "n|idx|public.certification_junior_reviews_person_idx",
+        "e|idx|public.certification_junior_reviews_person_idx",
+        "n|rel|public.certification_junior_reviews_person_idx"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "certification_junior_reviews",
+        "certification_junior_reviews_recorder_idx"
+      ],
+      "writes": [
+        "s|idx|public.certification_junior_reviews_recorder_idx",
+        "n|idx|public.certification_junior_reviews_recorder_idx",
+        "e|idx|public.certification_junior_reviews_recorder_idx",
+        "n|rel|public.certification_junior_reviews_recorder_idx"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.recorded_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "certification_junior_reviews",
+        "certification_junior_reviews_card_idx"
+      ],
+      "writes": [
+        "s|idx|public.certification_junior_reviews_card_idx",
+        "n|idx|public.certification_junior_reviews_card_idx",
+        "e|idx|public.certification_junior_reviews_card_idx",
+        "n|rel|public.certification_junior_reviews_card_idx"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.shop_id",
+        "n|col|public.certification_junior_reviews.certification_id",
+        "n|col|public.certification_junior_reviews.recorded_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "certifications",
+        "certifications_junior_status_verifier_idx"
+      ],
+      "writes": [
+        "s|idx|public.certifications_junior_status_verifier_idx",
+        "n|idx|public.certifications_junior_status_verifier_idx",
+        "e|idx|public.certifications_junior_status_verifier_idx",
+        "n|rel|public.certifications_junior_status_verifier_idx"
+      ],
+      "reads": [
+        "n|tbl|public.certifications",
+        "n|sch|public",
+        "n|col|public.certifications.junior_status_verified_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "certification_junior_reviews"
+      ],
+      "writes": [
+        "s|fk|public.certification_junior_reviews.certification_junior_reviews_shop_id_shops_id_fkey",
+        "n|fk|public.certification_junior_reviews.certification_junior_reviews_shop_id_shops_id_fkey",
+        "e|fk|public.certification_junior_reviews.certification_junior_reviews_shop_id_shops_id_fkey",
+        "n|con|public.certification_junior_reviews.certification_junior_reviews_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "certification_junior_reviews"
+      ],
+      "writes": [
+        "s|fk|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey",
+        "n|fk|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey",
+        "e|fk|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey",
+        "n|con|public.certification_junior_reviews.certification_junior_reviews_fhxDHj1bkYkh_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|tbl|public.certifications",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.certification_id",
+        "n|col|public.certifications.id",
+        "e|uniqueness|public.certifications.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "certification_junior_reviews"
+      ],
+      "writes": [
+        "s|fk|public.certification_junior_reviews.certification_junior_reviews_person_id_people_id_fkey",
+        "n|fk|public.certification_junior_reviews.certification_junior_reviews_person_id_people_id_fkey",
+        "e|fk|public.certification_junior_reviews.certification_junior_reviews_person_id_people_id_fkey",
+        "n|con|public.certification_junior_reviews.certification_junior_reviews_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "certification_junior_reviews"
+      ],
+      "writes": [
+        "s|fk|public.certification_junior_reviews.certification_junior_reviews_XBkZaqg9nyJ5_fkey",
+        "n|fk|public.certification_junior_reviews.certification_junior_reviews_XBkZaqg9nyJ5_fkey",
+        "e|fk|public.certification_junior_reviews.certification_junior_reviews_XBkZaqg9nyJ5_fkey",
+        "n|con|public.certification_junior_reviews.certification_junior_reviews_XBkZaqg9nyJ5_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.certification_junior_reviews",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.certification_junior_reviews.recorded_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "certifications"
+      ],
+      "writes": [
+        "s|fk|public.certifications.certifications_uFx0uU65dfWX_fkey",
+        "n|fk|public.certifications.certifications_uFx0uU65dfWX_fkey",
+        "e|fk|public.certifications.certifications_uFx0uU65dfWX_fkey",
+        "n|con|public.certifications.certifications_uFx0uU65dfWX_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.certifications",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.certifications.junior_status_verified_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "certifications"
+      ],
+      "writes": [
+        "s|ck|public.certifications.certifications_junior_status_valid",
+        "n|ck|public.certifications.certifications_junior_status_valid",
+        "e|ck|public.certifications.certifications_junior_status_valid",
+        "n|con|public.certifications.certifications_junior_status_valid"
+      ],
+      "reads": [
+        "n|tbl|public.certifications",
+        "n|sch|public",
+        "n|col|public.certifications.junior_status"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "certifications"
+      ],
+      "writes": [
+        "s|ck|public.certifications.certifications_junior_status_evidence",
+        "n|ck|public.certifications.certifications_junior_status_evidence",
+        "e|ck|public.certifications.certifications_junior_status_evidence",
+        "n|con|public.certifications.certifications_junior_status_evidence"
+      ],
+      "reads": [
+        "n|tbl|public.certifications",
+        "n|sch|public",
+        "n|col|public.certifications.junior_status",
+        "n|col|public.certifications.junior_status_verified_at",
+        "n|col|public.certifications.junior_status_verified_by_person_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "certification_junior_reviews",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "recorded_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "junior_status",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certifications",
+        "name": "junior_status",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certifications",
+        "name": "junior_status_verified_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certifications",
+        "name": "junior_status_verified_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "require_adult_buddy_for_teens",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_person_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_recorder_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "recorded_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_card_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "certification_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "recorded_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certifications",
+        "name": "certifications_junior_status_verifier_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "junior_status_verified_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_fhxDHj1bkYkh_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "certification_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "certifications",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_XBkZaqg9nyJ5_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certifications",
+        "name": "certifications_uFx0uU65dfWX_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "junior_status_verified_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certification_junior_reviews",
+        "name": "certification_junior_reviews_status_valid",
+        "value": "\"junior_status\" in ('junior', 'full')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certifications",
+        "name": "certifications_junior_status_valid",
+        "value": "\"junior_status\" is null or \"junior_status\" in ('junior', 'full')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "certifications",
+        "name": "certifications_junior_status_evidence",
+        "value": "(\"junior_status\" is null and \"junior_status_verified_at\" is null and \"junior_status_verified_by_person_id\" is null) or (\"junior_status\" is not null and \"junior_status_verified_at\" is not null and \"junior_status_verified_by_person_id\" is not null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

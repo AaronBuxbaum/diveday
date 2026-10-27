@@ -538,6 +538,11 @@ export async function setShopDepthUnit(db: DbExecutor, shopId: string, unit: Dep
   return shop ?? null;
 }
 
+/** One-tap buddy policy only; it does not change boarding or admission. */
+export async function setShopJuniorBuddyPolicy(db: DbExecutor, shopId: string, required: boolean) {
+  await db.update(shops).set({ requireAdultBuddyForTeens: required }).where(eq(shops.id, shopId));
+}
+
 /**
  * Sets whether the shop reads water temperature in Celsius or Fahrenheit.
  * Presentation only, on the same terms as the depth unit above —

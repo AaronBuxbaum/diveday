@@ -87,6 +87,7 @@ const PARTY_LEFT_KEYS: Record<PartyLeftReason, StaffMessageKey> = {
   minor_age_conflict: "manifest.buddyPartyLeftReason.minor_age_conflict",
   minor_age_unknown: "manifest.buddyPartyLeftReason.minor_age_unknown",
   junior_without_adult: "manifest.buddyPartyLeftReason.junior_without_adult",
+  junior_requirements_unconfirmed: "manifest.buddyPartyLeftReason.junior_requirements_unconfirmed",
 };
 
 /** The reason a party was left, in the staff bundle's language. */

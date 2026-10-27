@@ -264,7 +264,10 @@ describe("agency-specific junior depth evidence", () => {
         birthday,
         TODAY,
       );
-      expect(checkDepthCeiling(null, limit)).toMatchObject({ status: "verification_required" });
+      expect(checkDepthCeiling(null, limit)).toMatchObject({
+        status: "verification_required",
+        verificationReasons: ["card_status"],
+      });
     }
   });
 
@@ -275,7 +278,10 @@ describe("agency-specific junior depth evidence", () => {
       "2012-01-01",
       TODAY,
     );
-    expect(checkDepthCeiling(12, limit)).toMatchObject({ status: "verification_required" });
+    expect(checkDepthCeiling(12, limit)).toMatchObject({
+      status: "verification_required",
+      verificationReasons: ["junior_limits"],
+    });
   });
 
   it("retains a confirmed NAUI junior card's 18 m condition after age 18", () => {

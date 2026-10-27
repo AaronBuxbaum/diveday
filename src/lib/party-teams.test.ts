@@ -26,6 +26,7 @@ const child = (age: number | null, overrides: Partial<PartyMember> = {}): PartyM
   age,
   declaredMinor: true,
   verifiedCard: true,
+  certifications: [{ agency: "padi", juniorStatus: "junior" }],
   ...overrides,
 });
 
@@ -239,7 +240,7 @@ describe("agency-specific junior safeguards", () => {
   it("leaves a known junior card in place after age 18 until its full replacement is verified", () => {
     const diver = {
       ...adult({ age: 25 }),
-      certifications: [{ agency: "naui", juniorStatus: "junior" }],
+      certifications: [{ agency: "naui", juniorStatus: "junior" as const }],
     };
     expect(partyLeftReason(FUN_DIVE, [adult(), diver])).toBe("junior_requirements_unconfirmed");
   });
@@ -253,8 +254,8 @@ describe("agency-specific junior safeguards", () => {
     const diver = {
       ...child(13),
       certifications: [
-        { agency: "padi", juniorStatus: "full" },
-        { agency: "naui", juniorStatus: "junior" },
+        { agency: "padi", juniorStatus: "full" as const },
+        { agency: "naui", juniorStatus: "junior" as const },
       ],
     };
     expect(partyLeftReason(FUN_DIVE, [adult(), diver])).toBe("junior_requirements_unconfirmed");

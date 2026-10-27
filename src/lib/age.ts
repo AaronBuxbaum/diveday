@@ -49,16 +49,15 @@ export const MINOR_AGE_CEILING = 17;
 export const ADULT_AGE = MINOR_AGE_CEILING + 1;
 
 /**
- * **The junior diving bands, in one place** (PADI and SSI): under
+ * **The PADI junior diving bands, in one place**: under
  * {@link JUNIOR_YOUNGEST_BAND_END} (10-11) a junior dives with a professional
  * or a certified parent or guardian, at most 12 m; under
  * {@link JUNIOR_AGE_END} (12-14) with a certified adult, at most 18 m or 21 m.
- * A junior card becomes the full rating on the diver's 15th birthday. Read by
- * the depth bands (`depth-ceiling.ts`), the agency check's junior upgrade
- * (`agency-check.ts`) and one-tap party teams (`party-teams.ts`).
+ * PADI's age-based uplift does not establish the upgrade status of cards from
+ * other agencies. Read by the depth bands and one-tap party teams.
  */
 export const JUNIOR_YOUNGEST_BAND_END = 12;
-/** The birthday a junior rating becomes the full one; under it the junior bands apply. */
+/** The birthday at which the PADI junior age bands end. */
 export const JUNIOR_AGE_END = 15;
 
 /**

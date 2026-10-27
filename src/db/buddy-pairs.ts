@@ -517,6 +517,7 @@ export async function planPartyTeams(
     .select({
       startsAt: trips.startsAt,
       timezone: shops.timezone,
+      requireAdultForTeens: shops.requireAdultBuddyForTeens,
       courseId: trips.courseId,
       intro: courses.isIntroCourse,
     })
@@ -526,7 +527,10 @@ export async function planPartyTeams(
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   const plan: PartyTeamPlan = {
-    departure: { course: departure?.courseId ? { intro: Boolean(departure.intro) } : null },
+    departure: {
+      course: departure?.courseId ? { intro: Boolean(departure.intro) } : null,
+      requireAdultForTeens: departure?.requireAdultForTeens ?? false,
+    },
     members: new Map(),
     parties: new Map(),
     teamable: [],
@@ -549,6 +553,9 @@ export async function planPartyTeams(
           fullName: people.fullName,
           dateOfBirth: people.dateOfBirth,
           verifiedCard: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null)`,
+          certifications: sql<
+            NonNullable<PartyMember["certifications"]>
+          >`coalesce((select json_agg(json_build_object('agency', ${certifications.agency}, 'juniorStatus', ${certifications.juniorStatus})) from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null), '[]'::json)`,
         })
         .from(bookings)
         .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
@@ -582,6 +589,7 @@ export async function planPartyTeams(
       age: seat.dateOfBirth ? ageOnDate(seat.dateOfBirth, tripDay) : null,
       declaredMinor: seat.declaredMinorAt !== null,
       verifiedCard: Boolean(seat.verifiedCard),
+      certifications: seat.certifications,
     };
     plan.members.set(seat.bookingId, member);
     if (onATeam.has(seat.bookingId)) continue;
@@ -641,26 +649,44 @@ export async function formPartyTeams(
     now?: Date;
   },
 ): Promise<number> {
-  const plan = await planPartyTeams(db, input.shopId, input.tripId);
-  const confirmed = new Set(input.confirmedAdultParties ?? []);
-  const teamable = [
-    ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
-    ...plan.ageUnconfirmed
-      .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
-      .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
-  ];
-  let formed = 0;
-  for (const { bookingIds, adultsConfirmed } of teamable) {
-    const outcome = await formBuddyTeam(db, {
-      shopId: input.shopId,
-      tripId: input.tripId,
-      members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
-      recordedByPersonId: input.recordedByPersonId,
-      adultsConfirmed,
-      now: input.now,
+  let formed: number;
+  try {
+    formed = await db.transaction(async (tx) => {
+      // A stale form must not bypass a policy enabled while it was open. Hold
+      // both the departure and shop policy while deriving and writing teams.
+      if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) return 0;
+      await tx
+        .select({ id: shops.id })
+        .from(shops)
+        .where(eq(shops.id, input.shopId))
+        .for("no key update");
+      const plan = await planPartyTeams(tx, input.shopId, input.tripId);
+      const confirmed = new Set(input.confirmedAdultParties ?? []);
+      const teamable = [
+        ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
+        ...plan.ageUnconfirmed
+          .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
+          .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
+      ];
+      let count = 0;
+      for (const { bookingIds, adultsConfirmed } of teamable) {
+        const outcome = await formBuddyTeamInTx(tx, {
+          shopId: input.shopId,
+          tripId: input.tripId,
+          members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
+          recordedByPersonId: input.recordedByPersonId,
+          adultsConfirmed,
+          now: input.now,
+        });
+        if (outcome.ok) count += 1;
+      }
+      return count;
     });
-    if (outcome.ok) formed += 1;
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return 0;
+    throw error;
   }
+  if (formed) await publishManifestEvent(db, input.shopId, input.tripId);
   return formed;
 }
 

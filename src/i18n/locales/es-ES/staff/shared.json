@@ -351,6 +351,8 @@
     "footerNote": "Elegir un sitio trae sus notas guardadas (mapa, referencias, guía de campo) al briefing de esa inmersión."
   },
   "offlineManifest": {
+    "juniorCheckRequired": "Revisa con el equipo el plan y la supervisión de este buceador.",
+    "juniorChecksUnavailable": "Esta copia se guardó antes de las verificaciones de titulaciones junior. Confirma con el equipo los límites de la titulación y de supervisión.",
     "freshnessCopy": {
       "current": "Esta copia está al día",
       "aging": "Esta copia es un poco antigua",

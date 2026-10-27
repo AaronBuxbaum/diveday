@@ -9,6 +9,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "contacts.csv": "settings.export.filePurposes.contacts",
   "people.csv": "settings.export.filePurposes.people",
   "certifications.csv": "settings.export.filePurposes.certifications",
+  "certification_junior_reviews.csv": "settings.export.filePurposes.certification_junior_reviews",
   "specialty_certifications.csv": "settings.export.filePurposes.specialty_certifications",
   "nitrox_certifications.csv": "settings.export.filePurposes.nitrox_certifications",
   "trips.csv": "settings.export.filePurposes.trips",

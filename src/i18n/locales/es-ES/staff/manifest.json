@@ -198,7 +198,8 @@
     "young_child": "un buceador menor de 12",
     "minor_age_conflict": "una casilla de menor que no cuadra con la fecha de nacimiento",
     "minor_age_unknown": "un menor sin fecha de nacimiento",
-    "junior_without_adult": "un junior sin adulto certificado registrado"
+    "junior_without_adult": "un junior sin adulto certificado registrado",
+    "junior_requirements_unconfirmed": "revisa la titulación y los requisitos de supervisión"
   },
   "buddyTeamLabel": "Pareja {number, number, ::00}",
   "buddyTeamCaution": "Revisa la pareja: {reason}.",

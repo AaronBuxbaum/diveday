@@ -131,7 +131,8 @@ export function DiverRowPrint({
           })}
         </ul>
       )}
-      {diver.depthAdvisory?.status === "exceeds" ? (
+      {diver.depthAdvisory?.status === "exceeds" ||
+      diver.depthAdvisory?.status === "verification_required" ? (
         <p className="mt-2 flex items-start gap-2 text-base">
           <StatusMark variant="warning" size="md" />
           <span>{depthWarningText(t, diver.depthAdvisory)}</span>

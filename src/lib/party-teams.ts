@@ -52,6 +52,8 @@ export type PartyMember = {
   declaredMinor: boolean;
   /** The person holds a verified card with this shop. */
   verifiedCard: boolean;
+  /** The shop's verified level cards; null status means the card's wording is unknown. */
+  certifications?: readonly { agency: string; juniorStatus: "junior" | "full" | null }[];
 };
 
 /** Why a party was left for the divemaster. Codes; the words are the manifest bundle's. */
@@ -62,10 +64,14 @@ export type PartyLeftReason =
   | "minor_age_conflict"
   | "minor_age_unknown"
   | "junior_without_adult"
+  | "junior_requirements_unconfirmed"
   | "too_large";
 
 /** The departure the party is on: its course, if it is one. */
-export type PartyDeparture = { course: { intro: boolean } | null };
+export type PartyDeparture = {
+  course: { intro: boolean } | null;
+  requireAdultForTeens?: boolean;
+};
 
 /**
  * Why this party needs a divemaster's decision, or null. One-tap planning
@@ -89,11 +95,32 @@ export function partyLeftReason(
   if (members.some((member) => member.age === null && member.declaredMinor)) {
     return "minor_age_unknown";
   }
+  // An age alone never proves that an agency issued a full replacement card.
+  // For a junior, the actual guardian/professional/qualified-supervisor facts
+  // are not recorded by this party suggestion. Leave it for staff to place.
+  if (
+    members.some((member) => {
+      const cards = member.certifications;
+      if (!cards) return member.age !== null && member.age < JUNIOR_AGE_END;
+      if (member.age !== null && member.age < JUNIOR_AGE_END && cards.length === 0) return true;
+      return cards.some((card) => {
+        if (card.agency === "padi") return false;
+        if (member.age !== null && member.age < JUNIOR_AGE_END) return true;
+        return card.juniorStatus !== "full";
+      });
+    })
+  )
+    return "junior_requirements_unconfirmed";
   const junior = members.some((member) => member.age !== null && member.age < JUNIOR_AGE_END);
+  const teen =
+    departure.requireAdultForTeens &&
+    members.some(
+      (member) => member.age !== null && member.age >= JUNIOR_AGE_END && member.age < ADULT_AGE,
+    );
   const certifiedAdult = members.some(
     (member) => member.age !== null && member.age >= ADULT_AGE && member.verifiedCard,
   );
-  if (junior && !certifiedAdult) return "junior_without_adult";
+  if ((junior || teen) && !certifiedAdult) return "junior_without_adult";
   if (members.length > PARTY_TEAM_MAX) return "too_large";
   return null;
 }

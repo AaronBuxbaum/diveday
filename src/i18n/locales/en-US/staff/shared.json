@@ -351,6 +351,8 @@
     "footerNote": "Choosing a site brings its saved notes (map, landmarks, field guide) into that dive’s briefing."
   },
   "offlineManifest": {
+    "juniorCheckRequired": "Check this diver’s dive plan and supervision with the crew.",
+    "juniorChecksUnavailable": "This saved copy predates junior card checks. Confirm the applicable card and supervision limits with the crew.",
     "freshnessCopy": {
       "current": "This copy is current",
       "aging": "This copy is a little old",

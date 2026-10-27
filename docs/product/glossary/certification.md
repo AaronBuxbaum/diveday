@@ -541,15 +541,13 @@
   Water → Sports Diver ≈ Advanced Open Water → Dive Leader ≈ Divemaster → Advanced Diver → First
   Class Diver** — was added because UK visitor traffic makes it the most common non-listed card on a
   Florida or Caribbean boat.
-- **Junior certification** — the age-linked form of a level for divers under 15: **Junior Open
-  Water**, **Junior Advanced Open Water**, **Junior Night Diver**, and so on. Same card, extra
-  restrictions — 10–11-year-olds are limited to 12 m and must dive with a PADI Professional or a
-  certified parent/guardian; 12–14-year-olds reach 18 m (21 m on an AOW deep dive) with any
-  certified adult. The restrictions lift at 15. They drive dock-side decisions, so course copy and
-  staff surfaces state them rather than implying the adult limits. **The certified adult here is
-  not the waiver's guardian** — see **Guardian co-signature** for the two senses of the word: this
-  one is a diver with a booking, a card and a place on the manifest, and nothing about them is
-  recorded on `waiver_records`.
+- **Junior certification** — an agency's conditional certification. Its depth, supervision and
+  upgrade rules differ by agency; a birthday or an agency lookup does not always establish that a
+  junior card became full. A level card's junior/full status is unknown until staff verify what the
+  card says, with their identity, time and correction history. The crew must check missing training
+  depth, guardian selection or supervision facts; a buddy-team suggestion is not the underwater
+  group. A shop can require an adult buddy for ages 15–17 in one-tap party teams; the setting is off
+  by default. See [junior card evidence](../../architecture/decisions/20261027-junior-card-evidence.md).
 - **Site maximum depth** — `dive_sites.max_depth_meters`, the site's deepest point, stored in
   **metres always** whatever unit the shop reads: the number a certification's depth ceiling is
   compared against. The **site depth range** is that number plus `dive_sites.depth_min_meters`, the
@@ -559,20 +557,13 @@
   survives as a free-text **depth note** (the migration cleared it where it could read a range out
   of it); it is shown only where a site records no depth, so it never names a second unit. A trip's
   depth is the deepest site it visits, across the primary site *and* every ordered dive.
-- **Depth ceiling** — how deep a certification trains a diver to go: Open Water 18 m/60 ft,
-  Advanced Open Water 30 m/100 ft, Rescue 30 m (a skills course, not a deeper one), Divemaster and
-  Instructor 40 m — the recreational limit. A verified **Deep** specialty lifts an Open Water diver
-  to 40 m; it can only raise a ceiling, never lower one. A **junior age band** overrides the card
-  outright: 10–11-year-olds are capped at 12 m, 12–14-year-olds at 18 m (21 m on an Advanced card),
-  and the restriction lifts on the 15th birthday, not on any new card. In DiveDay a site deeper
-  than a diver's ceiling is a **warning to staff, never a booking gate** (H-08) — an instructor may
-  deliberately keep a diver shallower than the site's maximum, and that is an ordinary correct
-  dive. No card on file, or no depth on file, produces no warning at all rather than a false one.
-  On screen that warning is the **depth advisory** — the sentence on a diver's roster card and
-  manifest row, and the "Depth advisory" chip a diver wears when the identical sentence applies to
-  much of the boat and is stated once above the list. Distinct from an **Admission advisory**,
-  which is about booking-time trust in a self-declared card, not depth.
-  See [20260730-site-depth-and-diver-age-surfaces](../../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md).
+- **Depth ceiling** — an advisory comparison of a site's maximum with the diver's documented
+  certification and applicable junior conditions. A verified Deep specialty may raise an adult
+  limit; a confirmed NAUI junior card retains its 18 m limit until a full card is verified.
+  When card status, training depth or supervision is unknown, staff are asked to check it even if
+  the site has no recorded depth. These cautions do not gate booking or boarding; a site maximum
+  does not state the planned dive depth. They appear on the roster and manifest, never on an
+  identity-held seat. See [junior card evidence](../../architecture/decisions/20261027-junior-card-evidence.md).
 - **Depth unit** — `shops.depth_unit`, whether a shop's staff read depths in metres or feet.
   Display and entry only: storage is canonical metres, so switching it moves no stored number.
   Florida crews say "sixty feet"; every agency standard DiveDay encodes is published in metres,

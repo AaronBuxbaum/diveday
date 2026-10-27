@@ -40,6 +40,8 @@ export const EXPORT_FILE_NOTES = {
   "people.csv":
     "Everyone the shop knows — divers and staff — with their roles. no_certification_declared_at is the date the person said on a public form that they hold no certification at all; it is their own word and never a certification. Read it with the two columns beside it: no_certification_cleared_at set means staff said the person never gave that answer, and it is superseded. A blank no_certification_cleared_at with no_certification_cleared_by_person_id set is not a contradiction — it means staff corrected it once and the person has stated it again since, so the answer stands and that column records who disagreed. contacts.csv resolves all three into one cell. drysuit_experience_seen_at is when a staff member recorded seeing the person dive dry, and drysuit_experience_seen_by_person_id who, with drysuit_experience_seen_note saying what they saw; it is staff-observed, never a drysuit card. last_dive_on is the last dive anywhere as a staff member recorded it; their dives with the shop are in bookings.csv, and the later of the two is their last known dive.",
   "certifications.csv": "Certification records with their verification status.",
+  "certification_junior_reviews.csv":
+    "Staff sightings of junior or full card status, including corrections.",
   "specialty_certifications.csv":
     "Specialty certifications (deep, wreck, night, drysuit) with verification status.",
   "nitrox_certifications.csv": "Nitrox (EANx) certifications with verification status.",

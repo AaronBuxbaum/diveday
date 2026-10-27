@@ -870,6 +870,7 @@ export async function getDiverProfile(
   const attestedBy = alias(people, "adult_attested_by");
   const drysuitSeenBy = alias(people, "drysuit_experience_seen_by");
   const levelReviewer = alias(people, "level_certification_reviewer");
+  const juniorReviewer = alias(people, "junior_card_reviewer");
   const specialtyReviewer = alias(people, "specialty_certification_reviewer");
   const nitroxReviewer = alias(people, "nitrox_certification_reviewer");
   const [personRow] = await db
@@ -931,9 +932,21 @@ export async function getDiverProfile(
     friendsBrought,
   ] = await Promise.all([
     db
-      .select({ card: certifications, reviewedByName: levelReviewer.fullName })
+      .select({
+        card: certifications,
+        reviewedByName: levelReviewer.fullName,
+        juniorStatusVerifiedByName: juniorReviewer.fullName,
+      })
       .from(certifications)
       .leftJoin(levelReviewer, eq(levelReviewer.id, certifications.reviewedByPersonId))
+      .leftJoin(
+        juniorReviewer,
+        and(
+          eq(juniorReviewer.id, certifications.juniorStatusVerifiedByPersonId),
+          eq(juniorReviewer.shopId, shopId),
+          isNull(juniorReviewer.anonymizedAt),
+        ),
+      )
       .where(
         and(
           eq(certifications.shopId, shopId),
@@ -1096,7 +1109,11 @@ export async function getDiverProfile(
     holdsStaffRole: staffRoleRows.length > 0,
     /** Distinct people who booked on a link from one of this diver's recaps. */
     friendsBrought,
-    certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),
+    certifications: levelCards.map(({ card, reviewedByName, juniorStatusVerifiedByName }) => ({
+      ...card,
+      reviewedByName,
+      juniorStatusVerifiedByName,
+    })),
     specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({
       ...card,
       reviewedByName,

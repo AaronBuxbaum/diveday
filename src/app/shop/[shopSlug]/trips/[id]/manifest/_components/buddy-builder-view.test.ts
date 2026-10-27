@@ -116,7 +116,12 @@ describe("buddyBuilderView", () => {
   );
 
   it("keeps a junior's certified adult context, and never treats a crew label as a card", () => {
-    const junior = { age: 13, declaredMinor: true, verifiedCard: true };
+    const junior = {
+      age: 13,
+      declaredMinor: true,
+      verifiedCard: true,
+      certifications: [{ agency: "padi", juniorStatus: "junior" as const }],
+    };
     const adult = { age: 40, declaredMinor: false, verifiedCard: true };
     expect(
       view(

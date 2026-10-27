@@ -3,6 +3,10 @@
 - **Status:** Accepted
 - **Date:** 2026-07-30
 
+> The junior age-only assumptions in this decision were amended by
+> [Junior card evidence](20261027-junior-card-evidence.md). Agency rules and
+> card upgrades require staff verification; age alone does not establish them.
+
 ## Context
 
 Two product-owner decisions landed together on 2026-07-30 (`docs/product/human-decisions/README.md`) and

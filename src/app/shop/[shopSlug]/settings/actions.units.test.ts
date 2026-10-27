@@ -37,7 +37,7 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { saveUnitsAction } = await import("./shop-actions");
+const { saveJuniorBuddyPolicyAction, saveUnitsAction } = await import("./shop-actions");
 
 async function context() {
   const { db, shop } = ctx;
@@ -73,6 +73,28 @@ async function unitsOf(db: AppDb, shopId: string) {
     currency: shop.currency,
   };
 }
+
+describe("teen buddy policy", () => {
+  it("starts off, accepts an explicit owner choice, and refuses a captain or an invalid value", async () => {
+    const { db, shop, owner, captain } = await context();
+    expect((await getShopById(db, shop.id))?.requireAdultBuddyForTeens).toBe(false);
+    const form = new FormData();
+    form.set("juniorBuddy", "required");
+    signIn(shop, captain);
+    expect(await redirectedTo(() => saveJuniorBuddyPolicyAction(form))).toContain("not-authorized");
+    expect((await getShopById(db, shop.id))?.requireAdultBuddyForTeens).toBe(false);
+    signIn(shop, owner);
+    expect(await redirectedTo(() => saveJuniorBuddyPolicyAction(form))).toContain(
+      "junior-buddy-saved",
+    );
+    expect((await getShopById(db, shop.id))?.requireAdultBuddyForTeens).toBe(true);
+    form.set("juniorBuddy", "anything");
+    expect(await redirectedTo(() => saveJuniorBuddyPolicyAction(form))).toContain(
+      "junior-buddy-invalid",
+    );
+    expect((await getShopById(db, shop.id))?.requireAdultBuddyForTeens).toBe(true);
+  });
+});
 
 /**
  * **A depth-unit switch carries the catalog's words with it** (issue #2683), as

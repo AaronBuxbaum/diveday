@@ -64,6 +64,8 @@ function noticeMessages(
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
+    "junior-buddy-saved": { tone: "success", text: t("settings.main.notice.juniorBuddySaved") },
+    "junior-buddy-invalid": { tone: "danger", text: t("settings.main.notice.juniorBuddyInvalid") },
     "units-saved-sites-left": {
       tone: "warning",
       text: t("settings.main.notice.unitsSavedSitesLeft", {

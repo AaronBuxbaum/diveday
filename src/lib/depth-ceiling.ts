@@ -56,19 +56,10 @@ const RECREATIONAL_LIMIT: DepthCeiling = { meters: 40, feet: 130 };
 const NO_CARD_LIMIT: DepthCeiling = { meters: 12, feet: 40 };
 
 /**
- * Junior certifications carry an age-linked ceiling that is *stricter* than the
- * card's own level, and it lifts on the diver's 15th birthday rather than on
- * any new card. Ages 10–11 are capped at 12 m/40 ft whatever they hold; 12–14
- * reach 18 m/60 ft, or 21 m/70 ft on a Junior Advanced Open Water card.
- *
- * Modeled on age rather than a `junior_*` enum member because that is how the
- * restriction actually works — the same plastic card means different depths on
- * either side of a birthday, and DiveDay stores one `certification_level`
- * ladder with no junior variants (src/db/schema.ts).
- *
- * **Depth is only half the junior rule.** The standards also require
- * supervision (10–11 with a professional or certified guardian; 12–14 with any
- * certified adult), which DiveDay does not model — see the ADR's Consequences.
+ * These conservative age bands use the published PADI junior limits. Other
+ * agencies can have different limits, upgrade rules and supervision conditions;
+ * staff must verify those facts. A confirmed NAUI junior card also carries its
+ * 18 m limit beyond age 15 until upgraded. See the junior-card evidence ADR.
  */
 const JUNIOR_AGE_CEILING = JUNIOR_AGE_END - 1;
 const JUNIOR_YOUNGEST_LIMIT: DepthCeiling = { meters: 12, feet: 40 };
@@ -76,13 +67,22 @@ const JUNIOR_OPEN_WATER_LIMIT: DepthCeiling = { meters: 18, feet: 60 };
 const JUNIOR_ADVANCED_LIMIT: DepthCeiling = { meters: 21, feet: 70 };
 
 /** Why a diver's ceiling is what it is — the UI needs to say which rule bit. */
-export type DepthLimitBasis = "certification" | "junior_age" | "deep_specialty" | "no_card";
+export type DepthLimitBasis =
+  | "certification"
+  | "junior_age"
+  | "junior_card"
+  | "deep_specialty"
+  | "no_card";
+
+export type JuniorVerificationReason = "card_status" | "junior_limits";
 
 export type DepthLimit = {
   ceiling: DepthCeiling;
   basis: DepthLimitBasis;
   /** The level the limit was read off; null when the diver holds no card. */
   level: CertificationLevel | null;
+  /** Card status, training depth or a supervision condition needs staff verification. */
+  verificationReasons?: JuniorVerificationReason[];
 };
 
 /** Under 15 on `onDate`: the diver's card is a Junior card, and the junior bands apply. */
@@ -109,6 +109,22 @@ export function diverDepthLimit(
   onDate?: CalendarDate | null,
 ): DepthLimit {
   const verified = certifications.filter(validVerifiedCertification);
+  const age = dateOfBirth && onDate ? ageOnDate(dateOfBirth, onDate) : null;
+  const cards = verified as readonly (Certification & {
+    juniorStatus?: "junior" | "full" | null;
+  })[];
+  const reasons = new Set<JuniorVerificationReason>();
+  for (const card of cards) {
+    if (!card.agency) continue;
+    if (card.agency !== "padi" && card.juniorStatus == null) reasons.add("card_status");
+    if (
+      (age !== null && age < JUNIOR_AGE_END) ||
+      (card.agency !== "padi" && card.juniorStatus === "junior")
+    ) {
+      reasons.add("junior_limits");
+    }
+  }
+  const uncertain = reasons.size ? { verificationReasons: [...reasons] } : {};
   const level =
     verified.length === 0
       ? null
@@ -129,18 +145,27 @@ export function diverDepthLimit(
   // of 10 is a typo or a bad import, not a licence, so it falls to the
   // strictest band rather than through to the adult ladder — the conservative
   // direction on a data-quality problem.
-  const age = dateOfBirth && onDate ? ageOnDate(dateOfBirth, onDate) : null;
+  const nauiJunior = cards.some(
+    (card) =>
+      card.agency === "naui" &&
+      (card.juniorStatus === "junior" || (age !== null && age < JUNIOR_AGE_END)),
+  );
   if (age !== null && age <= JUNIOR_AGE_CEILING) {
     if (age < JUNIOR_YOUNGEST_BAND_END)
-      return { ceiling: JUNIOR_YOUNGEST_LIMIT, basis: "junior_age", level };
+      return { ceiling: JUNIOR_YOUNGEST_LIMIT, basis: "junior_age", level, ...uncertain };
     return {
       ceiling:
-        level && certificationRank(level) >= certificationRank("advanced_open_water")
+        !nauiJunior && level && certificationRank(level) >= certificationRank("advanced_open_water")
           ? JUNIOR_ADVANCED_LIMIT
           : JUNIOR_OPEN_WATER_LIMIT,
       basis: "junior_age",
       level,
+      ...uncertain,
     };
+  }
+
+  if (nauiJunior) {
+    return { ceiling: JUNIOR_OPEN_WATER_LIMIT, basis: "junior_card", level, ...uncertain };
   }
 
   if (!level) return { ceiling: NO_CARD_LIMIT, basis: "no_card", level: null };
@@ -158,14 +183,15 @@ export function diverDepthLimit(
   );
   const levelLimit = LEVEL_DEPTH_LIMIT[level];
   if (hasDeep && levelLimit.meters < RECREATIONAL_LIMIT.meters) {
-    return { ceiling: RECREATIONAL_LIMIT, basis: "deep_specialty", level };
+    return { ceiling: RECREATIONAL_LIMIT, basis: "deep_specialty", level, ...uncertain };
   }
-  return { ceiling: levelLimit, basis: "certification", level };
+  return { ceiling: levelLimit, basis: "certification", level, ...uncertain };
 }
 
 export type DepthCeilingCheck =
   /** No site depth recorded, or nothing to measure. Say nothing. */
   | { status: "unknown" }
+  | { status: "verification_required"; verificationReasons: JuniorVerificationReason[] }
   | { status: "within"; siteDepth: number; limitDepth: number; unit: DepthUnit }
   | {
       status: "exceeds";
@@ -175,6 +201,7 @@ export type DepthCeilingCheck =
       unit: DepthUnit;
       basis: DepthLimitBasis;
       level: CertificationLevel | null;
+      verificationReasons?: JuniorVerificationReason[];
     };
 
 /**
@@ -197,10 +224,17 @@ export function checkDepthCeiling(
   limit: DepthLimit | null,
   unit: DepthUnit = "meters",
 ): DepthCeilingCheck {
-  if (!siteMaxDepthMeters || !limit) return { status: "unknown" };
+  if (!limit) return { status: "unknown" };
+  if (!siteMaxDepthMeters)
+    return limit.verificationReasons
+      ? { status: "verification_required", verificationReasons: limit.verificationReasons }
+      : { status: "unknown" };
   const siteDepth = depthInUnit(siteMaxDepthMeters, unit);
   const limitDepth = ceilingIn(limit.ceiling, unit);
-  if (siteDepth <= limitDepth) return { status: "within", siteDepth, limitDepth, unit };
+  if (siteDepth <= limitDepth)
+    return limit.verificationReasons
+      ? { status: "verification_required", verificationReasons: limit.verificationReasons }
+      : { status: "within", siteDepth, limitDepth, unit };
   return {
     status: "exceeds",
     siteDepth,
@@ -208,5 +242,6 @@ export function checkDepthCeiling(
     unit,
     basis: limit.basis,
     level: limit.level,
+    ...(limit.verificationReasons ? { verificationReasons: limit.verificationReasons } : {}),
   };
 }

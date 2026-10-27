@@ -223,6 +223,22 @@ describe("which parties one tap leaves for the divemaster", () => {
 
   const adult = { age: 40 } satisfies Member;
 
+  it("re-reads the off-by-default teen policy when the staffer taps", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    const ids = await party(db, shop.id, trip, [
+      { age: 15, minor: true },
+      { age: 17, minor: true },
+    ]);
+    expect((await planPartyTeams(db, shop.id, trip.id)).teamable).toEqual([ids]);
+    await db.update(shops).set({ requireAdultBuddyForTeens: true }).where(eq(shops.id, shop.id));
+    expect((await planPartyTeams(db, shop.id, trip.id)).left).toEqual([
+      { bookingIds: ids, reason: "junior_without_adult" },
+    ]);
+    expect(await tap(db, shop.id, trip.id)).toBe(0);
+    expect(await listTripBuddyTeams(db, shop.id, trip.id)).toEqual([]);
+  });
+
   it.each([
     { intro: null, age: 11, reason: "young_child" },
     { intro: true, age: 30, reason: "intro_course" },
