@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
@@ -19,7 +18,7 @@ import { uuidParam } from "@/lib/uuid";
 import { DeparturePaperIdentity, formatPaperDateTime } from "../_components/DeparturePaperIdentity";
 import { BoatAtDeparture } from "./_components/BoatAtDeparture";
 import { CertificationEvidence } from "./_components/CertificationEvidence";
-import { CrewAtDeparture, RollCallCell } from "./_components/CrewAtDeparture";
+import { CrewAtDeparture } from "./_components/CrewAtDeparture";
 import { CrewAwayWorkingLog } from "./_components/CrewAwayWorkingLog";
 import { DepartureLogHeader } from "./_components/DepartureLogHeader";
 import {
@@ -27,15 +26,12 @@ import {
   DepartureLogFooter,
   DepartureLogFrame,
 } from "./_components/DepartureLogPaper";
+import { DepartureRoster } from "./_components/DepartureRoster";
 import { ExecutedDivesTable } from "./_components/ExecutedDivesTable";
 import { IncidentReportsSection } from "./_components/IncidentReportsSection";
 import { incidentSummaryRows } from "./_components/incident-summary";
-import { NumberedName } from "./_components/NumberedName";
 import { PreDepartureRecord } from "./_components/PreDepartureRecord";
-import {
-  rollCallCheckpointPrintClass,
-  rollCallTableMinWidth,
-} from "./_components/roll-call-columns";
+import { rollCallCheckpointPrintClass } from "./_components/roll-call-columns";
 import { NoRollCallNote, RosterIntro, TimelineGroups } from "./_components/TimelineEntryText";
 import { WaiverLine, waiverHeaderText } from "./_components/WaiverLine";
 import { matchesWaiverHeader, sharedWaiverHeader } from "./_components/waiver-evidence";
@@ -157,92 +153,14 @@ export default async function IncidentExportPage({
             {t("incidentExport.rosterHeading")}
           </h2>
           <RosterIntro turnedAway={doc.turnedAway} t={t} />
-          <Table
-            minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)}
-            shellClassName="mt-3"
-          >
-            <THead>
-              <Th>{t("incidentExport.colDiver")}</Th>
-              <Th>{t("incidentExport.colEmergencyContact")}</Th>
-              <Th>{t("incidentExport.colBuddy")}</Th>
-              {doc.meta.checkpoints.map((checkpoint) => (
-                <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
-                  {checkpointText(checkpoint)}
-                </Th>
-              ))}
-            </THead>
-            <TBody>
-              {doc.roster.map((diver, index) => (
-                <tr key={diver.bookingId}>
-                  <Td>
-                    <NumberedName number={index + 1} name={diver.fullName} />
-                  </Td>
-                  {/* The name may wrap; the number may not. This is the one
-                    document a shop hands an insurer or an authority, and a
-                    phone number broken across lines at its hyphens is a number
-                    somebody has to reassemble while reading it aloud in a
-                    hurry (issue #1035). `Td numeric` would nowrap it, but it
-                    would also right-align the whole cell and make a name a
-                    figure — so the rule goes on the number itself. The dot
-                    before it is glued to the name by a no-break space, so a
-                    narrow cell never starts a line with "·". */}
-                  <Td muted>
-                    {/* A held seat's contact would be the matched person's next
-                      of kin (issue #2128): said, never "Not on file". */}
-                    {diver.identityWithheld ? (
-                      t("incidentExport.identityWithheld")
-                    ) : diver.emergencyContactName && diver.emergencyContactPhone ? (
-                      <>
-                        {diver.emergencyContactName}
-                        {"\u00a0"}·{" "}
-                        <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
-                      </>
-                    ) : (
-                      t("incidentExport.notOnFile")
-                    )}
-                  </Td>
-                  <Td muted>
-                    {diver.buddy ? (
-                      <>
-                        <span className="font-medium text-foreground">
-                          {t("incidentExport.buddyTeam", { number: diver.buddy.teamNumber })}
-                        </span>{" "}
-                        {/* Every other member, and crew marked as crew — the
-                            distinction this document exists to keep, since
-                            "accompanied by a divemaster" and "nobody paired
-                            them" used to print the same. */}
-                        {memberList.format(
-                          diver.buddy.members.map((member) =>
-                            member.isCrew
-                              ? `${member.fullName} (${t("incidentExport.buddyCrewTag")})`
-                              : member.fullName,
-                          ),
-                        )}
-                        <span className="block text-xs">
-                          {diver.buddy.pairedByName && diver.buddy.pairedAt
-                            ? t("incidentExport.buddyPairedBy", {
-                                name: diver.buddy.pairedByName,
-                                at: dateTime(diver.buddy.pairedAt),
-                              })
-                            : t("incidentExport.buddyPairedByUnknown")}
-                        </span>
-                      </>
-                    ) : (
-                      t("incidentExport.noBuddyRecorded")
-                    )}
-                  </Td>
-                  {diver.rollCall.map((result) => (
-                    <RollCallCell
-                      key={result.checkpoint}
-                      t={t}
-                      result={result}
-                      dateTime={dateTime}
-                    />
-                  ))}
-                </tr>
-              ))}
-            </TBody>
-          </Table>
+          <DepartureRoster
+            doc={doc}
+            t={t}
+            dateTime={dateTime}
+            checkpointText={checkpointText}
+            memberList={memberList}
+            checkpointPrintClass={checkpointPrintClass}
+          />
         </section>
 
         <CrewAtDeparture

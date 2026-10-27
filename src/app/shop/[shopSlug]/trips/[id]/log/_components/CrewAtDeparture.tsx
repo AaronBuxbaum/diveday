@@ -36,48 +36,110 @@ export function CrewAtDeparture({
       {doc.crew.length === 0 ? (
         <p className="mt-3 text-sm text-muted">{t("incidentExport.crewNone")}</p>
       ) : (
-        <Table minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)} shellClassName="mt-3">
-          <THead>
-            <Th>{t("incidentExport.colCrewMember")}</Th>
-            <Th>{t("incidentExport.colRoles")}</Th>
-            <Th>{t("incidentExport.colCrewTeams")}</Th>
-            {doc.meta.checkpoints.map((checkpoint) => (
-              <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
-                {checkpointText(checkpoint)}
-              </Th>
-            ))}
-          </THead>
-          <TBody>
-            {doc.crew.map((member, index) => (
-              <tr
-                // Two crew can share a full name, and the document carries
-                // no person id on purpose (the hash covers printed facts
-                // only). Static list, never reordered.
-                // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
-                key={index}
-              >
-                <Td className="font-semibold">{member.fullName}</Td>
-                <Td muted>{staffJobWithRatings(t, member.roles, member.currentRatings)}</Td>
-                {/* Plural on purpose: one divemaster commonly leads
-                    several groups on one boat, and this document must
-                    print all of them (ADR 20260804-buddy-teams). */}
-                <Td muted>
-                  {member.buddyTeamNumbers.length === 0
-                    ? t("incidentExport.crewNoTeams")
-                    : member.buddyTeamNumbers
-                        .map((number) => t("incidentExport.buddyTeam", { number }))
-                        .join(", ")}
-                </Td>
-                {member.rollCall.map((result) => (
-                  <RollCallCell key={result.checkpoint} t={t} result={result} dateTime={dateTime} />
-                ))}
-              </tr>
-            ))}
-          </TBody>
-        </Table>
+        <CrewTables
+          doc={doc}
+          t={t}
+          dateTime={dateTime}
+          checkpointText={checkpointText}
+          checkpointPrintClass={checkpointPrintClass}
+        />
       )}
       {children}
     </section>
+  );
+}
+
+type CrewTableProps = {
+  doc: Pick<IncidentExportDocument, "crew" | "meta">;
+  t: StaffTranslator;
+  dateTime: (value: string) => string;
+  checkpointText: (value: string) => string;
+  checkpointPrintClass: string;
+};
+
+function CrewTables(props: CrewTableProps) {
+  const checkpoints = props.doc.meta.checkpoints;
+  if (checkpoints.length <= 5)
+    return <CrewTable {...props} checkpoints={checkpoints} shellClassName="mt-3" />;
+  return (
+    <>
+      <CrewTable {...props} checkpoints={checkpoints} shellClassName="mt-3 print:hidden" />
+      {[0, 2, 4].map((start) => (
+        <CrewTable
+          key={start}
+          {...props}
+          checkpoints={checkpoints.slice(start, start + 2)}
+          shellClassName="mt-3 hidden print:block"
+          printSegment
+        />
+      ))}
+    </>
+  );
+}
+
+function CrewTable({
+  doc,
+  t,
+  dateTime,
+  checkpointText,
+  checkpointPrintClass,
+  checkpoints,
+  shellClassName,
+  printSegment,
+}: CrewTableProps & {
+  checkpoints: IncidentExportDocument["meta"]["checkpoints"];
+  shellClassName: string;
+  printSegment?: boolean;
+}) {
+  return (
+    <Table
+      minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)}
+      shellClassName={shellClassName}
+    >
+      <THead>
+        <Th>{t("incidentExport.colCrewMember")}</Th>
+        <Th>{t("incidentExport.colRoles")}</Th>
+        <Th>{t("incidentExport.colCrewTeams")}</Th>
+        {checkpoints.map((checkpoint) => (
+          <Th
+            key={checkpoint}
+            width="8rem"
+            className={printSegment ? "print:w-auto" : checkpointPrintClass}
+          >
+            {checkpointText(checkpoint)}
+          </Th>
+        ))}
+      </THead>
+      <TBody>
+        {doc.crew.map((member, index) => (
+          <tr
+            // Two crew can share a full name, and the document carries
+            // no person id on purpose (the hash covers printed facts
+            // only). Static list, never reordered.
+            // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
+            key={index}
+          >
+            <Td className="font-semibold">{member.fullName}</Td>
+            <Td muted>{staffJobWithRatings(t, member.roles, member.currentRatings)}</Td>
+            {/* Plural on purpose: one divemaster commonly leads
+                    several groups on one boat, and this document must
+                    print all of them (ADR 20260804-buddy-teams). */}
+            <Td muted>
+              {member.buddyTeamNumbers.length === 0
+                ? t("incidentExport.crewNoTeams")
+                : member.buddyTeamNumbers
+                    .map((number) => t("incidentExport.buddyTeam", { number }))
+                    .join(", ")}
+            </Td>
+            {member.rollCall
+              .filter((result) => checkpoints.includes(result.checkpoint))
+              .map((result) => (
+                <RollCallCell key={result.checkpoint} t={t} result={result} dateTime={dateTime} />
+              ))}
+          </tr>
+        ))}
+      </TBody>
+    </Table>
   );
 }
 
