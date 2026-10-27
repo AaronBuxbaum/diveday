@@ -1,29 +1,34 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MENU_PANEL, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { SEGMENT_CORNER } from "@/components/ui/segmented";
 import { LanguagePicker } from "./LanguagePicker";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const CHOICES = [
   { locale: "en-US", label: "English (US)" },
   { locale: "es-ES", label: "Español" },
 ];
 
-function openPicker() {
-  render(
+function openPicker(inHeader = false) {
+  const picker = (
     <LanguagePicker
       current="es-ES"
       currentLabel="Español"
       choices={CHOICES}
       setLocale={vi.fn()}
       copy={{ ariaLabel: "Change language", heading: "Language" }}
-    />,
+    />
   );
+  render(inHeader ? <header>{picker}</header> : picker);
   const trigger = screen.getByRole("button", { name: "Change language" });
   return userEvent.click(trigger).then(() => trigger.nextElementSibling as HTMLElement);
 }
@@ -99,5 +104,140 @@ describe("LanguagePicker — the open panel", () => {
     expect(screen.getByRole("button", { name: "Español" })).toContainElement(
       ticks[0] as unknown as HTMLElement,
     );
+  });
+});
+
+function mockPanel(triggerTop: number, panelHeight = 120) {
+  let viewportHeight = 800;
+  vi.spyOn(window, "innerHeight", "get").mockImplementation(() => viewportHeight);
+  vi.spyOn(window, "innerWidth", "get").mockReturnValue(390);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(326, triggerTop, 44, 44),
+  );
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.hasAttribute("data-language-menu")
+      ? Math.min(panelHeight, Number.parseFloat(this.style.maxHeight) || panelHeight)
+      : 44;
+  });
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.hasAttribute("data-language-menu") ? this.offsetHeight - 2 : 44;
+  });
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.hasAttribute("data-language-menu") ? panelHeight - 2 : 44;
+  });
+  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(160);
+  const resize = (height: number) => {
+    viewportHeight = height;
+    act(() => window.dispatchEvent(new Event("resize")));
+  };
+  return Object.assign(resize, {
+    moveTrigger(top: number) {
+      triggerTop = top;
+    },
+  });
+}
+
+describe("LanguagePicker viewport placement", () => {
+  it("preserves the below-trigger placement when the full panel fits", async () => {
+    mockPanel(200);
+    const panel = await openPicker();
+    expect(panel).toHaveAttribute("data-side", "below");
+    expect(panel.style.top).toBe("48px");
+    expect(panel.style.transformOrigin).toBe("top right");
+  });
+
+  it("flips above before paint when the lower side would clip it", async () => {
+    mockPanel(700);
+    const panel = await openPicker();
+    expect(panel).toHaveAttribute("data-side", "above");
+    expect(panel.style.top).toBe("-124px");
+    expect(panel.style.transformOrigin).toBe("bottom right");
+  });
+
+  it("caps a longer list to the larger side and keeps its content scrollable", async () => {
+    const resize = mockPanel(380, 1000);
+    const panel = await openPicker();
+    expect(panel).toHaveAttribute("data-side", "above");
+    expect(panel.style.maxHeight).toBe("368px");
+    expect(panel).toHaveClass("overflow-y-auto");
+    resize(900);
+    expect(panel).toHaveAttribute("data-side", "below");
+    expect(panel.style.maxHeight).toBe("464px");
+    resize(800);
+    expect(panel).toHaveAttribute("data-side", "above");
+    expect(panel.style.maxHeight).toBe("368px");
+  });
+
+  it("re-evaluates placement on resize and removes listeners when closed", async () => {
+    const resize = mockPanel(700);
+    resize(900);
+    const remove = vi.spyOn(window, "removeEventListener");
+    const panel = await openPicker();
+    expect(panel).toHaveAttribute("data-side", "below");
+    resize(800);
+    expect(panel).toHaveAttribute("data-side", "above");
+    cleanup();
+    expect(remove).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(remove).toHaveBeenCalledWith("scroll", expect.any(Function), true);
+  });
+
+  it("still dismisses with Escape and restores trigger focus", async () => {
+    mockPanel(700);
+    await openPicker();
+    await userEvent.keyboard("{Escape}");
+    const trigger = screen.getByRole("button", { name: "Change language" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
+  });
+
+  it("observes panel and trigger changes and disconnects on unmount", async () => {
+    mockPanel(700);
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe = observe;
+        disconnect = disconnect;
+      },
+    );
+    const panel = await openPicker();
+    expect(observe).toHaveBeenCalledWith(panel);
+    expect(observe).toHaveBeenCalledWith(screen.getByRole("button", { name: "Change language" }));
+    cleanup();
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("repositions when the enclosing header reflows without resizing the trigger", async () => {
+    const geometry = mockPanel(600);
+    const observed = new Set<Element>();
+    let resizeHeader = () => {};
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          resizeHeader = () => {
+            if ([...observed].some((element) => element.tagName === "HEADER")) callback();
+          };
+        }
+        observe(element: Element) {
+          observed.add(element);
+        }
+        disconnect() {
+          observed.clear();
+        }
+      },
+    );
+    const panel = await openPicker(true);
+    expect(panel).toHaveAttribute("data-side", "below");
+    geometry.moveTrigger(700);
+    act(resizeHeader);
+    expect(panel).toHaveAttribute("data-side", "above");
   });
 });

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { issueAccountToken } from "./account-tokens";
@@ -54,6 +54,15 @@ async function requireShop(db: Db, slug: string) {
 }
 
 describe("deleteDemoShopCascade", () => {
+  it("still removes a demo after the retired saved answers table has been dropped", async () => {
+    const { db } = ctx;
+    const { slug } = await createDemoShop(db, { history: false });
+    const shop = await requireShop(db, slug);
+    await db.execute(sql`drop table inbox_saved_answers`);
+    await deleteDemoShopCascade(db, shop.id);
+    expect(await findShop(db, slug)).toBeUndefined();
+  });
+
   /**
    * A shop that sold a package was the one reset could not clear: the cascade
    * deleted orders before the entitlements that name them, so every

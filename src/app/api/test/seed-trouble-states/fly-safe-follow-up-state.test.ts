@@ -37,6 +37,7 @@ it("seeds synthetic queued and failed guidance only behind the test and demo gua
   );
   await ctx.db.update(shops).set({ isDemo: false }).where(eq(shops.id, ctx.shop.id));
   expect((await POST(request())).status).toBe(404);
+  await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
   vi.stubEnv("DATABASE_URL", "postgres://production.invalid/database");
   expect((await POST(request())).status).toBe(404);
 });

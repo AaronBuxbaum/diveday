@@ -831,7 +831,8 @@
     "invalid": "Algo del formulario no llegó bien. Revísalo e inténtalo de nuevo.",
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
     "unavailable": "Ese centro no acepta registros en este momento.",
-    "switchedOff": "Pídele al personal del mostrador que te registre."
+    "switchedOff": "Pídele al personal del mostrador que te registre.",
+    "uncertified": "Sin certificación registrada"
   },
   "packages": {
     "title": "Paquetes de inmersiones",

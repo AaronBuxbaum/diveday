@@ -1,8 +1,8 @@
 /**
  * The schema, one module per domain, re-exported here so `@/db/schema` and
  * `./schema` imports read the whole of it. This file is also what both drizzle
- * configs point at, so a table that is not re-exported here does not exist as far
- * as `pnpm db:generate` is concerned.
+ * configs consume through the migration barrel. That barrel temporarily keeps
+ * one retired physical column which the running app no longer selects.
  *
  * The domain spine. Multi-tenant from day one: every domain table carries
  * shop_id (ADR-0005, docs/architecture/overview.md). People get roles, not

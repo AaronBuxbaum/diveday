@@ -37,7 +37,8 @@ import { type CalendarDate, calendarDaysBetween } from "./calendar-date";
 
 /**
  * How a request was closed (third UX review, item 13): a booking was made from
- * it, or a staffer marked it done. Mirrors the `course_inquiry_outcome` enum.
+ * it, or a staffer marked it done. These are the date-interest outcomes of
+ * `interest_closed_as`.
  */
 export type DateRequestOutcome = "booked" | "done";
 

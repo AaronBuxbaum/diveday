@@ -83,6 +83,7 @@ import {
   type ProcessorErasureTargetInput,
   recordProcessorErasureObligations,
 } from "./processor-erasure";
+import { withRetiredSavedAnswers } from "./retired-saved-answers";
 import type { ProcessorErasureObligation } from "./schema";
 import {
   accountSecurity,
@@ -3025,11 +3026,16 @@ async function scrubInbox(
   // the words were still written to this diver, so the copy goes too. A merge
   // leaves `source_person_id` on the merged-away record, so its shells count.
   const sources = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
-  await tx
-    .delete(inboxSavedAnswers)
-    .where(
-      and(eq(inboxSavedAnswers.shopId, shopId), inArray(inboxSavedAnswers.sourcePersonId, sources)),
-    );
+  await withRetiredSavedAnswers(tx, (answerTx) =>
+    answerTx
+      .delete(inboxSavedAnswers)
+      .where(
+        and(
+          eq(inboxSavedAnswers.shopId, shopId),
+          inArray(inboxSavedAnswers.sourcePersonId, sources),
+        ),
+      ),
+  );
   return [];
 }
 
