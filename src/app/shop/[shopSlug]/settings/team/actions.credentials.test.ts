@@ -2,8 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { getSafetyMonth, getSafetyYear } from "@/db/safety-report";
 import { people, personRoles, staffCredentials, tripAssignments, trips } from "@/db/schema";
-import { shiftCalendarDate } from "@/lib/calendar-date";
-import { lastDayOfDeparture } from "@/lib/crew-roles";
+import { ratingCredentialsByPerson } from "@/db/staff-credentials";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
+import { lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -109,6 +111,78 @@ describe("adding a staff credential", () => {
     expect(added.map((row) => row.kind).sort()).toEqual(
       ["assistant_instructor_rating", "first_aid_cpr", "captains_licence", "other"].sort(),
     );
+  });
+});
+
+describe("renewing annual professional status", () => {
+  it("accepts the same original issue date or no new issue date", async () => {
+    const { db, shop } = await setup();
+    const [member] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Renewed instructor" })
+      .returning();
+    if (!member) throw new Error("staff member missing");
+    await db.insert(personRoles).values({ personId: member.id, role: "instructor" });
+    const old = credentialForm(member.id, "instructor_rating", "2026-12-31");
+    old.set("identifier", "ANNUAL-STATUS");
+    old.set("issuedAt", "2010-05-01");
+    expect(await redirectedTo(() => saveStaffCredentialAction(old))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+    );
+    const [card] = (await savedFor(member.id)).filter((row) => row.identifier === "ANNUAL-STATUS");
+    if (!card) throw new Error("card missing");
+    const renewal = credentialForm(member.id, "instructor_rating", "2027-12-31");
+    renewal.set("identifier", "ANNUAL-STATUS");
+    renewal.set("issuedAt", "2010-05-01");
+    renewal.set("renewalOf", card.id);
+    renewal.set("revision", String(card.revision));
+    expect(await redirectedTo(() => saveStaffCredentialAction(renewal))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+    );
+    const [first] = (await savedFor(member.id)).filter((row) => row.id === card.id);
+    if (!first) throw new Error("renewed card missing");
+    const next = credentialForm(member.id, "instructor_rating", "2028-12-31");
+    next.set("identifier", "ANNUAL-STATUS");
+    next.set("renewalOf", card.id);
+    next.set("revision", String(first.revision));
+    expect(await redirectedTo(() => saveStaffCredentialAction(next))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+    );
+    const [second] = (await savedFor(member.id)).filter((row) => row.id === card.id);
+    expect(second?.issuedAt).toBe("2010-05-01");
+  });
+});
+
+describe("future-dated renewals", () => {
+  it("refuses renewal or correction issued after today and keeps the current crew warning", async () => {
+    const { db, shop } = await setup();
+    const [member] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Lapsed instructor" })
+      .returning();
+    if (!member) throw new Error("staff member missing");
+    await db.insert(personRoles).values({ personId: member.id, role: "instructor" });
+    const today = calendarDateInTimezone(nowDate(), shop.timezone);
+    const old = credentialForm(member.id, "instructor_rating", shiftCalendarDate(today, -1));
+    old.set("identifier", "FUTURE-RATING");
+    old.set("issuedAt", shiftCalendarDate(today, -365));
+    expect(await redirectedTo(() => saveStaffCredentialAction(old))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+    );
+    const [card] = (await savedFor(member.id)).filter((row) => row.identifier === "FUTURE-RATING");
+    if (!card) throw new Error("card missing");
+    for (const change of ["renewalOf", "correctionOf"]) {
+      const form = credentialForm(member.id, "instructor_rating", shiftCalendarDate(today, 365));
+      form.set("identifier", "FUTURE-RATING");
+      form.set("issuedAt", shiftCalendarDate(today, 1));
+      form.set(change, card.id);
+      form.set("revision", String(card.revision));
+      expect(await redirectedTo(() => saveStaffCredentialAction(form))).toBe(
+        `/shop/${shop.slug}/settings/team?notice=credential-invalid`,
+      );
+    }
+    const ratings = await ratingCredentialsByPerson(db, shop.id, [member.id]);
+    expect(lapsedRungs(ratings.get(member.id) ?? [], today)).toContain("instructor");
   });
 });
 

@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { RatingCredential } from "@/lib/crew-roles";
 import type { DbExecutor } from "./client";
@@ -7,6 +8,7 @@ import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   people,
   personRoles,
+  shops,
   staffCredentialHistory,
   staffCredentialKind,
   staffCredentials,
@@ -110,6 +112,17 @@ async function lockCredentialOwner(db: DbExecutor, shopId: string, personId: str
   return Boolean(role);
 }
 
+/** An issue date is not evidence of an issue that has not happened locally yet. */
+async function issueDateIsCurrent(db: DbExecutor, shopId: string, issuedAt: string | null) {
+  if (!issuedAt) return true;
+  const [shop] = await db
+    .select({ timezone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return Boolean(shop && issuedAt <= calendarDateInTimezone(nowDate(), shop.timezone));
+}
+
 export async function createStaffCredential(
   db: DbExecutor,
   input: {
@@ -143,6 +156,7 @@ export async function createStaffCredential(
     // bare 23505 there aborts it (issue #2295, the #1769 pattern).
     const [row] = await db.transaction(async (savepoint) => {
       if (!(await lockCredentialOwner(savepoint, input.shopId, input.personId))) return [];
+      if (!(await issueDateIsCurrent(savepoint, input.shopId, input.issuedAt ?? null))) return [];
       const inserted = await savepoint
         .insert(staffCredentials)
         .values({
@@ -222,7 +236,7 @@ export async function changeStaffCredential(
   },
 ) {
   if (input.issuedAt && input.renewsAt && input.renewsAt < input.issuedAt) return null;
-  if (input.change === "renewed" && (!input.issuedAt || !input.renewsAt)) return null;
+  if (input.change === "renewed" && !input.renewsAt) return null;
   try {
     return await db.transaction(async (tx) => {
       if (!(await lockCredentialOwner(tx, input.shopId, input.personId))) return null;
@@ -240,11 +254,22 @@ export async function changeStaffCredential(
         .for("update");
       if (!previous || previous.kind !== input.kind || previous.revision !== input.expectedRevision)
         return null;
+      const issuedAt =
+        input.change === "renewed" ? (input.issuedAt ?? previous.issuedAt) : input.issuedAt;
+      if (!(await issueDateIsCurrent(tx, input.shopId, issuedAt))) return null;
+      if (issuedAt && input.renewsAt && input.renewsAt < issuedAt) return null;
       if (
         input.change === "renewed" &&
         previous.issuedAt &&
-        input.issuedAt &&
-        input.issuedAt <= previous.issuedAt
+        issuedAt &&
+        issuedAt < previous.issuedAt
+      )
+        return null;
+      if (
+        input.change === "renewed" &&
+        previous.renewsAt &&
+        input.renewsAt &&
+        input.renewsAt <= previous.renewsAt
       )
         return null;
       await ensureCredentialBaseline(tx, previous);
@@ -255,7 +280,7 @@ export async function changeStaffCredential(
           revision: previous.revision + 1,
           issuingBody: input.issuingBody,
           identifier: input.identifier,
-          issuedAt: input.issuedAt,
+          issuedAt,
           renewsAt: input.renewsAt,
           status: "pending",
           reviewNote: null,
