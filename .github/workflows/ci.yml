@@ -473,8 +473,8 @@ jobs:
             pnpm exec playwright install chromium
           fi
           # Saved-record print assertions inspect actual PDF text. Only the
-          # shard assigned that spec needs Poppler; visual and fast-lane jobs
-          # install it separately for their own PDF captures.
+          # shard assigned that spec needs Poppler; the visual and fast-lane
+          # jobs install it separately when their selections require it.
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/staff-saved-print.spec.ts'; then
             if ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
@@ -676,15 +676,17 @@ jobs:
         run: pnpm build:sw
       - if: steps.plan.outputs.run == 'true'
         uses: ./.github/actions/playwright-shell
-      # The Crew paper regression rasterizes real PDF pages and checks their
-      # visible text. Install the test-only renderer when captures are selected.
+      # Crew captures and saved-record specs inspect actual PDF pages.
       - name: Install PDF rendering tools
-        if: ${{ !cancelled() && steps.plan.outputs.captures == 'true' }}
+        if: ${{ !cancelled() && (steps.plan.outputs.captures == 'true' || steps.plan.outputs.specs == 'true') }}
         timeout-minutes: 5
         run: |
-          if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends poppler-utils
+          if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
+             { [ -f fast-lane/specs.txt ] && grep -qx 'e2e/staff-saved-print.spec.ts' fast-lane/specs.txt; }; then
+            if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends poppler-utils
+            fi
           fi
       - name: Run the fast lane's specs
         if: steps.plan.outputs.specs == 'true'
