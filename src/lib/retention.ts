@@ -162,6 +162,7 @@ export type RetainedTable =
   | "push_subscriptions"
   | "trip_desk_events"
   | "trip_read_marks"
+  | "today_read_marks"
   | "form_drafts"
   | "demo_entries"
   | "inbound_messages"
@@ -360,6 +361,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * because `deleteTrip` is soft.
    */
   trip_read_marks: 30,
+  today_read_marks: 30,
   /**
    * 1 day. What a staffer had typed into a form when they were interrupted
    * (ADR 20260906-before-you-ask, decision 3): the reader already drops a draft

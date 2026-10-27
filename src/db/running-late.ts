@@ -2,6 +2,7 @@ import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
+import { recordDeskEvent } from "./desk-events";
 import { recordDiverActivity } from "./operations";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -44,58 +45,74 @@ async function stamp(
   now: Date,
   saidAt: Date = now,
 ): Promise<RunningLateOutcome> {
-  const [row] = await db
-    .select({
-      status: bookings.status,
-      runningLateAt: bookings.runningLateAt,
-      tripStatus: trips.status,
-      startsAt: trips.startsAt,
-    })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(trips.shopId, shopId),
-        eq(bookings.id, bookingId),
-        liveTrip(),
-      ),
-    )
-    .limit(1);
-  if (!row) return { status: "closed" };
-  if (
-    !canSayRunningLate({
-      bookingStatus: row.status,
-      tripStatus: row.tripStatus,
-      startsAt: row.startsAt,
-      now,
-    })
-  ) {
-    return { status: "closed" };
-  }
-  if (row.runningLateAt) return { status: "already", bookingId, at: row.runningLateAt };
-  const [updated] = await db
-    .update(bookings)
-    .set({ runningLateAt: saidAt })
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.id, bookingId),
-        eq(bookings.status, "booked"),
-        isNull(bookings.runningLateAt),
-      ),
-    )
-    .returning({ at: bookings.runningLateAt });
-  if (updated?.at) return { status: "marked", bookingId, at: updated.at };
-  // Lost a race: either a check-in (closed) or a concurrent tap (already).
-  const [after] = await db
-    .select({ status: bookings.status, at: bookings.runningLateAt })
-    .from(bookings)
-    .where(and(eq(bookings.shopId, shopId), eq(bookings.id, bookingId)))
-    .limit(1);
-  return after?.status === "booked" && after.at
-    ? { status: "already", bookingId, at: after.at }
-    : { status: "closed" };
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        status: bookings.status,
+        runningLateAt: bookings.runningLateAt,
+        tripStatus: trips.status,
+        startsAt: trips.startsAt,
+      })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          eq(trips.shopId, shopId),
+          eq(bookings.id, bookingId),
+          liveTrip(),
+        ),
+      )
+      .limit(1);
+    if (!row) return { status: "closed" };
+    if (
+      !canSayRunningLate({
+        bookingStatus: row.status,
+        tripStatus: row.tripStatus,
+        startsAt: row.startsAt,
+        now,
+      })
+    ) {
+      return { status: "closed" };
+    }
+    if (row.runningLateAt) return { status: "already", bookingId, at: row.runningLateAt };
+    const [updated] = await tx
+      .update(bookings)
+      .set({ runningLateAt: saidAt })
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          eq(bookings.id, bookingId),
+          eq(bookings.status, "booked"),
+          isNull(bookings.runningLateAt),
+        ),
+      )
+      .returning({
+        at: bookings.runningLateAt,
+        tripId: bookings.tripId,
+        personId: bookings.personId,
+      });
+    if (updated?.at) {
+      await recordDeskEvent(tx, {
+        shopId,
+        tripId: updated.tripId,
+        bookingId,
+        subjectPersonId: updated.personId,
+        kind: "running_late",
+        occurredAt: now,
+      });
+      return { status: "marked", bookingId, at: updated.at };
+    }
+    // Lost a race: either a check-in (closed) or a concurrent tap (already).
+    const [after] = await tx
+      .select({ status: bookings.status, at: bookings.runningLateAt })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shopId), eq(bookings.id, bookingId)))
+      .limit(1);
+    return after?.status === "booked" && after.at
+      ? { status: "already", bookingId, at: after.at }
+      : { status: "closed" };
+  });
 }
 
 /**

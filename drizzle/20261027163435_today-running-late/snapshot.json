@@ -1,0 +1,49 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9331a880-836b-47c4-a7eb-ae6e3533ee2a",
+  "prevIds": [
+    "d4286713-28d8-439b-82c3-136625f96ba9"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "trip_desk_event_kind"
+      ],
+      "writes": [
+        "s|enum|public.trip_desk_event_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"trip_desk_event_kind\"]",
+      "set": {
+        "values": [
+          "arrival",
+          "running_late",
+          "seat_taken",
+          "seat_released",
+          "gear_changed",
+          "pickup_set",
+          "help_request",
+          "meeting_point",
+          "plan_changed",
+          "now_diving",
+          "now_snorkeling",
+          "now_riding",
+          "balance_owed",
+          "seat_turned_away"
+        ]
+      }
+    }
+  ]
+}
