@@ -22,7 +22,7 @@ import {
   StickyFormActions,
 } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { isOneCoreSet, o2CleanWarnsForFill } from "@/lib/counter-rentals";
+import { isEnrichedFill, isOneCoreSet, o2CleanWarnsForFill } from "@/lib/counter-rentals";
 import { formatMoneyCents } from "@/lib/format";
 import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
@@ -95,6 +95,8 @@ export type CartWords = {
   fillLabel: string;
   fillOptions: { value: string; label: string }[];
   fillHint: string;
+  fillUnavailable: string;
+  fillRetained: string;
 };
 
 /**
@@ -129,6 +131,8 @@ type CounterRentalCartProps = {
   notice: ReactNode;
   /** How the shop fills nitrox (issue 3004): where the O2-clean warning starts. */
   nitroxFillMethod: NitroxFillMethod;
+  /** Advisory result from the same card predicate used at submit. */
+  canUseNitrox: boolean;
   refusal?: { code: string; unitId: string | null; message: string } | null;
   /**
    * The page came back with this form's refusal: put back the picks, prices
@@ -176,6 +180,7 @@ export function CounterRentalCart({
   words,
   notice,
   nitroxFillMethod,
+  canUseNitrox,
   refusal = null,
   restoreKept = null,
 }: CounterRentalCartProps) {
@@ -248,11 +253,17 @@ export function CounterRentalCart({
     setPickedIds((previous) =>
       previous.includes(id) ? previous.filter((other) => other !== id) : [...previous, id],
     );
-  const fillOf = (unit: PickerUnit) => fills[unit.id] ?? "";
+  const rawFillOf = (unit: PickerUnit) => fills[unit.id] ?? "";
+  // Keep an earlier EANx choice visible in the draft, but never submit it or
+  // silently replace it with air after the selected person loses eligibility.
+  const fillOf = (unit: PickerUnit) => {
+    const raw = rawFillOf(unit);
+    return !canUseNitrox && isEnrichedFill(Number(raw)) ? "" : raw;
+  };
   // Save the supported cart before per-row fields use up the 80-name draft.
   // Separate price fields let each raw price keep its own value-length budget.
   const keptPicked = picked.slice(0, KEPT_CART_UNITS_MAX);
-  const rowError = (unit: PickerUnit) => counterRentalRowError(unit, refusal, fillOf(unit));
+  const rowError = (unit: PickerUnit) => counterRentalRowError(unit, refusal, rawFillOf(unit));
   const updateInvoiceAddress = useCallback(() => {
     setInvoiceAddressInvalid(
       Boolean(reviewRef.current?.querySelector('input[name^="customerAddress"]:invalid')),
@@ -301,7 +312,7 @@ export function CounterRentalCart({
         name={CART_FILLS_FIELD}
         value={JSON.stringify(
           Object.fromEntries(
-            keptPicked.filter((unit) => unit.fillAria).map((unit) => [unit.id, fillOf(unit)]),
+            keptPicked.filter((unit) => unit.fillAria).map((unit) => [unit.id, rawFillOf(unit)]),
           ),
         )}
       />
@@ -368,6 +379,14 @@ export function CounterRentalCart({
                     inSet={asSet && coreKinds.includes(unit.kind)}
                     price={priceOf(unit)}
                     fill={fillOf(unit)}
+                    rawFill={rawFillOf(unit)}
+                    retainedFill={
+                      !canUseNitrox && isEnrichedFill(Number(rawFillOf(unit)))
+                        ? words.fillOptions.find((option) => option.value === rawFillOf(unit))
+                            ?.label
+                        : undefined
+                    }
+                    canUseNitrox={canUseNitrox}
                     confirmed={confirmed.includes(unit.id)}
                     hintId={`${billId}-fill-hint`}
                     {...{ payment, symbol, step, words, nitroxFillMethod }}
@@ -390,7 +409,7 @@ export function CounterRentalCart({
                 ))}
                 {picked.some((unit) => unit.fillAria !== null) && (
                   <li id={`${billId}-fill-hint`} className="py-2 text-base text-muted">
-                    {words.fillHint}
+                    {canUseNitrox ? words.fillHint : words.fillUnavailable}
                   </li>
                 )}
                 <li className="flex min-h-12 items-center gap-3 pt-3">
@@ -473,6 +492,9 @@ function TankFillField({
   hintId,
   words,
   nitroxFillMethod,
+  canUseNitrox,
+  retainedFill,
+  rawFill,
   value,
   onChange,
   error,
@@ -480,8 +502,11 @@ function TankFillField({
   unit: Pick<PickerUnit, "id" | "o2CleanWarning">;
   aria: string;
   hintId: string;
-  words: Pick<CartWords, "fillLabel" | "fillOptions">;
+  words: Pick<CartWords, "fillLabel" | "fillOptions" | "fillRetained">;
   nitroxFillMethod: NitroxFillMethod;
+  canUseNitrox: boolean;
+  retainedFill?: string;
+  rawFill: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
@@ -497,23 +522,30 @@ function TankFillField({
         onChange={(event) => onChange(event.currentTarget.value)}
         required
         aria-label={aria}
-        aria-describedby={hintId}
+        aria-describedby={retainedFill ? `${hintId} ${hintId}-${unit.id}-retained` : hintId}
         className={controlClass}
       >
-        {words.fillOptions.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.value === ""}>
-            {option.label}
-          </option>
-        ))}
+        {words.fillOptions
+          .filter((option) => canUseNitrox || option.value === "" || option.value === "21")
+          .map((option) => (
+            <option key={option.value} value={option.value} disabled={option.value === ""}>
+              {option.label}
+            </option>
+          ))}
       </select>
     </Field>
   );
   return (
     <>
       {field}
+      {retainedFill ? (
+        <p id={`${hintId}-${unit.id}-retained`} className="text-base text-muted">
+          {words.fillRetained} {retainedFill}
+        </p>
+      ) : null}
       <O2CleanWarning
         warning={unit.o2CleanWarning}
-        fill={value}
+        fill={retainedFill ? rawFill : value}
         nitroxFillMethod={nitroxFillMethod}
       />
     </>
@@ -579,6 +611,9 @@ function CounterRentalPickedItem({
   step,
   words,
   nitroxFillMethod,
+  canUseNitrox,
+  retainedFill,
+  rawFill,
   error,
   onPrice,
   onFill,
@@ -596,6 +631,9 @@ function CounterRentalPickedItem({
   step: string;
   words: CartWords;
   nitroxFillMethod: NitroxFillMethod;
+  canUseNitrox: boolean;
+  retainedFill?: string;
+  rawFill: string;
   error?: string;
   onPrice: (value: string) => void;
   onFill: (value: string) => void;
@@ -663,6 +701,9 @@ function CounterRentalPickedItem({
           hintId={hintId}
           words={words}
           nitroxFillMethod={nitroxFillMethod}
+          canUseNitrox={canUseNitrox}
+          retainedFill={retainedFill}
+          rawFill={rawFill}
           value={fill}
           onChange={onFill}
           error={error}

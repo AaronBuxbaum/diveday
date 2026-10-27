@@ -1,8 +1,10 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "./client";
 import {
   checkOutCounterRental,
   correctCounterTankFill,
+  counterRentalHasNitroxFillCard,
   getCounterRentalTicket,
   returnCounterRental,
 } from "./gear-counter-rentals";
@@ -42,6 +44,49 @@ async function nitroxCard(
 }
 
 describe("counter tank fills", () => {
+  it("refuses EANx without writes when the card is revoked after the picker was loaded", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await person(db, shop.id, "Revoked Rowan");
+    await nitroxCard(db, shop.id, diver.id);
+    expect(await counterRentalHasNitroxFillCard(db, shop.id, diver.id)).toBe(true);
+    await db
+      .update(nitroxCertifications)
+      .set({ deletedAt: new Date("2026-10-02T00:00:00Z") })
+      .where(eq(nitroxCertifications.personId, diver.id));
+    const tank = await unit(db, shop.id, "Tank #1", "tank");
+    expect(await lend(db, shop.id, diver.id, [tank.id], { tankFills: { [tank.id]: 32 } })).toEqual({
+      ok: false,
+      reason: "no_nitrox_card",
+    });
+    expect(await heldBy(db, diver.id)).toEqual([]);
+  });
+  it("reads the selected person's fill-authorizing card within the shop", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await person(db, shop.id, "Picker Pat");
+    const other = await person(db, shop.id, "Other Olly");
+    const otherShop = await insertShop(db, "picker-other-shop");
+    expect(await counterRentalHasNitroxFillCard(db, shop.id, diver.id)).toBe(false);
+    await nitroxCard(db, shop.id, diver.id, { status: "pending" });
+    expect(await counterRentalHasNitroxFillCard(db, shop.id, diver.id)).toBe(false);
+    await nitroxCard(db, shop.id, diver.id, {
+      identifier: "imported",
+      importedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    expect(await counterRentalHasNitroxFillCard(db, shop.id, diver.id)).toBe(false);
+    await nitroxCard(db, shop.id, diver.id, {
+      identifier: "deleted",
+      deletedAt: new Date("2026-10-02T00:00:00Z"),
+    });
+    expect(await counterRentalHasNitroxFillCard(db, shop.id, diver.id)).toBe(false);
+    await nitroxCard(db, shop.id, diver.id, {
+      identifier: "confirmed",
+      importedAt: new Date("2026-10-01T00:00:00Z"),
+      reviewedAt: new Date("2026-10-02T00:00:00Z"),
+    });
+    expect(await counterRentalHasNitroxFillCard(db, shop.id, diver.id)).toBe(true);
+    expect(await counterRentalHasNitroxFillCard(db, shop.id, other.id)).toBe(false);
+    expect(await counterRentalHasNitroxFillCard(db, otherShop.id, diver.id)).toBe(false);
+  });
   it("records air on a tank for anyone the card rule already lets have one", async () => {
     const { db, shop } = await rentalShop();
     const diver = await person(db, shop.id, "Air Ana");

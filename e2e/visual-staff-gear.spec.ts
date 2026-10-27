@@ -232,6 +232,22 @@ for (const scheme of ["light", "dark"] as const) {
         await captureStickyFoot(page, "counter-rental-form-foot", scheme);
       });
 
+      test(`a counter tank offers air when nitrox is unconfirmed (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Lena");
+        await page.getByRole("link", { name: "Rent to Lena Fischer" }).click();
+        await page
+          .getByRole("group", { name: "Kind of gear" })
+          .getByRole("button", { name: /^Tank\b/ })
+          .click();
+        const tank = page
+          .getByRole("button", { name: /^AL(?:80|63)-/ })
+          .and(page.locator(":enabled"))
+          .first();
+        await tank.click();
+        await expect(page.getByText(staffCopy("counterRentals.new.fillUnavailable"))).toBeVisible();
+        await capture(page, "counter-rental-unconfirmed-nitrox", scheme);
+      });
+
       // The ticket the person walks off with: who, the tags, the back-by
       // date, and on screen the acts. Rented here rather than seeded so the
       // capture is the ticket a counter lands on, notice and all. Priya has
