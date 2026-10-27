@@ -1,9 +1,13 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
-import { people, waiverRecords } from "@/db/schema";
+import { bookingCapabilities, bookings, people, trips, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { diverTranslator } from "@/i18n/messages";
+import { hashCapabilityToken } from "@/lib/booking-capabilities";
+import { nowDate } from "@/lib/clock";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 
@@ -37,8 +41,15 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 vi.mock("@/i18n/request", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/i18n/request")>();
-  return { ...actual, requestFirstHandLocale: vi.fn(async () => "en-US") };
+  return {
+    ...actual,
+    requestFirstHandLocale: vi.fn(async () => "en-US"),
+    requestLocale: vi.fn(async () => "en-US"),
+  };
 });
+vi.mock("@/lib/observability/render-connection", () => ({
+  connectionForRoute: vi.fn(async () => undefined),
+}));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const cookieJar = new Map<string, string>();
 vi.mock("next/headers", () => ({
@@ -55,6 +66,7 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { issueWaiverRequest } = await import("@/db/waivers");
 const { completeWaiverAction, saveWaiverDraftAction } = await import("./actions");
+const { default: WaiverPage } = await import("./page");
 
 async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
   try {
@@ -160,6 +172,172 @@ describe("the signing doors", () => {
     expect(record?.status).not.toBe("pending");
   });
 
+  it("keeps a standalone signed waiver on its receipt without granting trip prep", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Morgan Waiver",
+        email: "morgan.waiver@example.com",
+      },
+    ]);
+    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: party.bookings[0].bookingId,
+    });
+    if (!issued.ok) throw new Error("waiver request refused");
+    const before = await db
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, party.bookings[0].bookingId));
+    expect(
+      await redirectedTo(() =>
+        completeWaiverAction(
+          issued.token,
+          signedForm(shop, { signerName: "Morgan Waiver", acknowledged: "on" }),
+        ),
+      ),
+    ).toBe(`/waivers/${issued.token}`);
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record?.status).toBe("completed");
+    const after = await db
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, party.bookings[0].bookingId));
+    expect(after).toHaveLength(before.length);
+  });
+
+  it("returns a signer to their separately authorized trip prep", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Taylor Readiness",
+        email: "taylor.readiness@example.com",
+      },
+    ]);
+    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
+    const bookingId = party.bookings[0].bookingId;
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok || !readiness) throw new Error("links unavailable");
+    cookieJar.set("diveday_waiver_return", readiness.token);
+    const target = await redirectedTo(() =>
+      completeWaiverAction(
+        issued.token,
+        signedForm(shop, { signerName: "Taylor Readiness", acknowledged: "on" }),
+      ),
+    );
+    expect(target === `/ready/${readiness.token}`).toBe(true);
+    expect(cookieJar.has("diveday_waiver_return")).toBe(false);
+  });
+
+  it("shows a referred signer the waiver receipt before returning to their trip prep", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Sam Referral",
+        email: "sam.referral@example.com",
+      },
+    ]);
+    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
+    const bookingId = party.bookings[0].bookingId;
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok || !readiness) throw new Error("links unavailable");
+    cookieJar.set("diveday_waiver_return", readiness.token);
+    const form = signedForm(shop, { signerName: "Sam Referral", acknowledged: "on" });
+    form.set(medicalQuestionField("q3"), "yes");
+    const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
+    expect(target === `/waivers/${issued.token}`).toBe(true);
+    expect(cookieJar.has("diveday_waiver_return")).toBe(true);
+  });
+
+  it.each([
+    "other booking",
+    "wrong purpose",
+    "expired",
+    "revoked",
+    "cancelled booking",
+    "cancelled departure",
+  ] as const)(
+    "does not return through an independently held link that is %s",
+    async (condition) => {
+      const { db, shop } = ctx;
+      vi.mocked(getDb).mockResolvedValue(db);
+      const [trip] = await upcomingTripsWithCounts(db, shop.id);
+      if (!trip) throw new Error("seeded shop has no upcoming trip");
+      const party = await createBookingParty(db, [
+        {
+          actor: "public",
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: "Avery Scope",
+          email: "avery.scope@example.com",
+        },
+        { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Riley Scope" },
+      ]);
+      if (!party.ok || !party.bookings[0] || !party.bookings[1]) throw new Error("booking failed");
+      const bookingId = party.bookings[0].bookingId;
+      const readiness = await issueBookingCapability(db, {
+        shopId: shop.id,
+        bookingId: condition === "other booking" ? party.bookings[1].bookingId : bookingId,
+        purpose: condition === "wrong purpose" ? "confirm" : "readiness",
+      });
+      const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+      if (!issued.ok || !readiness) throw new Error("links unavailable");
+      if (condition === "expired" || condition === "revoked") {
+        await db
+          .update(bookingCapabilities)
+          .set(condition === "expired" ? { expiresAt: nowDate() } : { revokedAt: nowDate() })
+          .where(eq(bookingCapabilities.tokenHash, hashCapabilityToken(readiness.token)));
+      }
+      if (condition === "cancelled booking") {
+        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+      }
+      if (condition === "cancelled departure") {
+        await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+      }
+      cookieJar.set("diveday_waiver_return", readiness.token);
+      const target = await redirectedTo(() =>
+        completeWaiverAction(
+          issued.token,
+          signedForm(shop, { signerName: "Avery Scope", acknowledged: "on" }),
+        ),
+      );
+      expect(target === `/waivers/${issued.token}`).toBe(true);
+      expect(cookieJar.has("diveday_waiver_return")).toBe(false);
+    },
+  );
+
   /**
    * Dive-domain review F6 of layer r4-1: a parent who opened this from their
    * party panel lands back on it; a link that is not the seat's lead is
@@ -201,5 +379,70 @@ describe("the signing doors", () => {
       ),
     ).toBe(`/ready/${leadLink.token}#party-seats`);
     expect(cookieJar.has("diveday_party_return")).toBe(false);
+  });
+
+  it("shows a parent the referral instructions before returning to the party", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Rae Family",
+        email: "rae.family@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Sol Family",
+        minorDeclared: true,
+      },
+    ]);
+    if (!party.ok || !party.bookings[0] || !party.bookings[1]) throw new Error("party incomplete");
+    await db
+      .update(people)
+      .set({ dateOfBirth: "2014-05-01" })
+      .where(eq(people.id, party.bookings[1].personId));
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: party.bookings[0].bookingId,
+      purpose: "readiness",
+    });
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: party.bookings[1].bookingId,
+    });
+    if (!issued.ok || !readiness) throw new Error("links unavailable");
+    cookieJar.set("diveday_party_return", readiness.token);
+    const form = signedForm(shop, {
+      signerName: "Sol Family",
+      acknowledged: "on",
+      guardianName: "Rae Family",
+      guardianRelationship: "parent",
+      guardianAcknowledged: "on",
+    });
+    form.set(medicalQuestionField("q3"), "yes");
+    const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
+    expect(target === `/waivers/${issued.token}`).toBe(true);
+    expect(cookieJar.has("diveday_party_return")).toBe(true);
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record).toMatchObject({ status: "medical_review", guardianName: "Rae Family" });
+    const html = renderToStaticMarkup(
+      await WaiverPage({
+        params: Promise.resolve({ token: issued.token }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+    const t = diverTranslator("en-US");
+    expect(html).toContain(t("waiver.medicalReferralNext"));
+    expect(html).toContain(t("waiver.doctor.open"));
+    expect(html.includes(`/ready/${readiness.token}#party-seats`)).toBe(true);
   });
 });

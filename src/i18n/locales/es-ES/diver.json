@@ -1153,6 +1153,7 @@
     "medicalContactEmailOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "¿Dudas sobre los siguientes pasos? Escribe a {shop}.",
     "signedBody": "Tu exención está firmada y guardada.",
+    "prepLinkHelp": "Para ver los detalles de tu salida, abre la confirmación de tu reserva o contacta al centro.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
     "doctor": {
       "title": "Llévale esto a tu médico",
@@ -1256,7 +1257,9 @@
     "medicalDeclinedNext": "La evaluación médica archivada no te autoriza a bucear. Contacta al centro para saber cómo seguir.",
     "medicalFormWaiting": "Tu formulario médico se ha enviado. Espera a que el personal lo revise y confirme el siguiente paso. Aún no tienes autorización para bucear.",
     "medicalReferralNext": "Tu cuestionario requiere una evaluación médica por escrito antes de que puedas bucear.",
-    "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear."
+    "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear.",
+    "counterSigned": "Exención firmada",
+    "independentTitle": "Firma tu exención"
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",

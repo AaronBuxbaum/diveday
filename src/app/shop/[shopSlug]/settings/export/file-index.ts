@@ -26,6 +26,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "crew_away_acknowledgements.csv": "settings.export.filePurposes.crew_away_acknowledgements",
   "crew_assignment_requests.csv": "settings.export.filePurposes.crew_assignment_requests",
   "staff_credentials.csv": "settings.export.filePurposes.staff_credentials",
+  "staff_credential_history.csv": "settings.export.filePurposes.staff_credential_history",
   "bookings.csv": "settings.export.filePurposes.bookings",
   "trip_help_requests.csv": "settings.export.filePurposes.trip_help_requests",
   "interests.csv": "settings.export.filePurposes.interests",

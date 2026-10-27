@@ -1,0 +1,149 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "bf009522-bcc6-4547-99db-82b2b48d3273",
+  "prevIds": [
+    "f90cbd48-0ba2-4c03-a6de-04ff0f64718b"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_crew_events",
+        "credential_snapshot"
+      ],
+      "writes": [
+        "s|col|public.roll_call_crew_events.credential_snapshot",
+        "n|col|public.roll_call_crew_events.credential_snapshot",
+        "e|col|public.roll_call_crew_events.credential_snapshot"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_crew_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_crew_events",
+        "credential_snapshot_started_at"
+      ],
+      "writes": [
+        "s|col|public.roll_call_crew_events.credential_snapshot_started_at",
+        "n|col|public.roll_call_crew_events.credential_snapshot_started_at",
+        "e|col|public.roll_call_crew_events.credential_snapshot_started_at"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_crew_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_crew_events",
+        "credential_snapshot_captured_at"
+      ],
+      "writes": [
+        "s|col|public.roll_call_crew_events.credential_snapshot_captured_at",
+        "n|col|public.roll_call_crew_events.credential_snapshot_captured_at",
+        "e|col|public.roll_call_crew_events.credential_snapshot_captured_at"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_crew_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_crew_events"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_crew_events.roll_call_crew_credential_snapshot_shape",
+        "n|ck|public.roll_call_crew_events.roll_call_crew_credential_snapshot_shape",
+        "e|ck|public.roll_call_crew_events.roll_call_crew_credential_snapshot_shape",
+        "n|con|public.roll_call_crew_events.roll_call_crew_credential_snapshot_shape"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_crew_events",
+        "n|sch|public",
+        "n|col|public.roll_call_crew_events.credential_snapshot",
+        "n|col|public.roll_call_crew_events.credential_snapshot_started_at",
+        "n|col|public.roll_call_crew_events.credential_snapshot_captured_at",
+        "n|col|public.roll_call_crew_events.status",
+        "n|col|public.roll_call_crew_events.checkpoint",
+        "n|col|public.roll_call_crew_events.source"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_crew_events",
+        "name": "credential_snapshot",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_crew_events",
+        "name": "credential_snapshot_started_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_crew_events",
+        "name": "credential_snapshot_captured_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_crew_events",
+        "name": "roll_call_crew_credential_snapshot_shape",
+        "value": "(\"credential_snapshot\" is null and \"credential_snapshot_started_at\" is null and \"credential_snapshot_captured_at\" is null) or (\"credential_snapshot\" is not null and \"credential_snapshot_started_at\" is not null and \"credential_snapshot_captured_at\" is not null and \"credential_snapshot_started_at\" <= \"credential_snapshot_captured_at\" and \"status\" = 'boarded' and \"checkpoint\" = 'departure' and \"source\" = 'live' and jsonb_typeof(\"credential_snapshot\") = 'array')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

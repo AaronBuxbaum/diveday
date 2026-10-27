@@ -164,7 +164,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Type your full name").fill("Priya Sharma");
         await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
         await page.getByRole("button", { name: "Sign waiver" }).click();
-        await page.waitForURL(/\/ready\//);
+        await expect(page.getByText(diverCopy("waiver.signedBody"))).toBeVisible();
 
         await page.goto(waiverHref);
         await page.getByRole("link", { name: "Take this to your doctor" }).waitFor();

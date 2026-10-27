@@ -1523,7 +1523,7 @@ test("an instructor off the crew opens a medical alert in an emergency today, an
   await page.getByLabel("Type your full name").fill(diverName);
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page).toHaveURL(/\/ready\//);
+  await expect(page.getByText(diver("waiver.signedBody"))).toBeVisible();
 
   const instructorContext = await browser.newContext({
     baseURL: workerBaseURL,

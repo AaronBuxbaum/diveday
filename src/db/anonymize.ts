@@ -138,6 +138,7 @@ import {
   shopShoreAlertTokens,
   shops,
   specialtyCertifications,
+  staffCredentialHistory,
   staffCredentials,
   staffReplies,
   tips,
@@ -749,6 +750,36 @@ async function scrubPersonRecord(
   // an erased record as an active one of any kind.
   await tx.delete(personRoles).where(eq(personRoles.personId, personId));
 
+  // Versions retain personal credential dates even after the current row was deleted.
+  await tx.delete(staffCredentialHistory).where(
+    and(
+      eq(staffCredentialHistory.shopId, shopId),
+      inArray(
+        staffCredentialHistory.credentialId,
+        tx
+          .select({ id: staffCredentials.id })
+          .from(staffCredentials)
+          .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId))),
+      ),
+    ),
+  );
+
+  // Crew observations can exist without this person holding a booking.
+  await tx
+    .update(rollCallCrewEvents)
+    .set({
+      credentialSnapshot: null,
+      credentialSnapshotStartedAt: null,
+      credentialSnapshotCapturedAt: null,
+    })
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, shopId),
+        eq(rollCallCrewEvents.personId, personId),
+        isNotNull(rollCallCrewEvents.credentialSnapshot),
+      ),
+    );
+
   // Credentials belong to the staff member's operational record, but their
   // names and identifiers are still personal data when the target was later
   // entered as a diver. Retire those rows without leaving a credential tied
@@ -759,18 +790,14 @@ async function scrubPersonRecord(
       name: REDACTED_TEXT,
       issuingBody: null,
       identifier: null,
+      issuedAt: null,
+      renewsAt: null,
       reviewNote: null,
       deletedAt: now,
       deletedByPersonId: ctx.actorPersonId,
       updatedAt: now,
     })
-    .where(
-      and(
-        eq(staffCredentials.shopId, shopId),
-        eq(staffCredentials.personId, personId),
-        isNull(staffCredentials.deletedAt),
-      ),
-    );
+    .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId)));
   return [];
 }
 

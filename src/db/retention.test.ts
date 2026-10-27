@@ -1056,7 +1056,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // Its own clock is the expiry, which closes it; there is nothing left in it to age out.
   "shop_setup_links",
   "internal_notes",
-  "staff_credentials",
+  ...["staff_credentials", "staff_credential_history"],
   "staff_shifts",
   "crew_availability_blocks",
   "crew_assignment_requests",

@@ -405,6 +405,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             onShiftIds={cancelled ? null : onShiftIds}
             clashes={liveClashes}
             crewGapCode={cancelled ? "none" : crewGap.code}
+            bookingInstructorPresent={crew.rosterInWaterCrew.instructorCount > 0}
             updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
             copy={{
               heading: t("trips.crew.heading"),

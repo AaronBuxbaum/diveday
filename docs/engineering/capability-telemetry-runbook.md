@@ -337,15 +337,12 @@ identity;
 confirm token reach one booking's prep state and can self-cancel it;
 `/recap/<token>` reaches one booking's recap.
 
-Note the escalation that is easy to miss when reasoning about "used" tokens: a
-**completed** waiver link is not inert. `/waivers/[token]` still resolves a
-completed, non-superseded record and renders its confirmation — and that page
-mints a fresh `readiness` capability for the booking and puts the link on the
-screen (`issueBookingCapability`, `src/app/waivers/[token]/page.tsx`). That is
-deliberate and right for the diver who taps their own confirmation twice, but it
-means a signed-and-done waiver URL found in a log is still a working path to a
-readiness link, and from there to self-cancelling the booking. Treat a leaked
-waiver token as live regardless of whether it was already signed.
+A **completed** waiver link can still render its signed receipt and, when needed,
+the physician referral. It no longer issues readiness access: that requires a
+separate readiness link. A signer who came from readiness may return through the
+already-held link in the path-scoped cookie, after its purpose, booking, shop,
+expiry and revocation are verified again. Treat a leaked waiver token as sensitive
+even after signing because it can still reach its waiver's own information.
 
 ### Auditing the access logs
 
@@ -396,8 +393,8 @@ Stated precisely, because an overstated control is worse than an admitted gap.
 - **Single-use, but only where it says so.** The three `account_tokens`
   purposes are genuinely one-time (`consumeAccountToken`), and a successful seat
   claim revokes *every* capability on that booking, so a claim link is one-shot
-  in effect. A waiver token is **not** single-use in the sense that matters here
-  (see the completed-link escalation above), and readiness, confirm, recap and
+  in effect. A completed waiver token can still open its own receipt, and
+  readiness, confirm, recap and
   calendar tokens are replayable by design.
 - **Revocation exists for most of it, and is the real mitigation.**
   `revokeBookingCapabilities` for readiness/claim/confirm, reissue-supersedes for

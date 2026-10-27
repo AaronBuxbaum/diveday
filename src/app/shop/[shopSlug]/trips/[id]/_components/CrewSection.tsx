@@ -94,6 +94,7 @@ export function CrewSection({
   onShiftIds,
   clashes = [],
   crewGapCode,
+  bookingInstructorPresent = false,
   shopSlug,
   updateCrewAction,
   copy,
@@ -125,6 +126,8 @@ export function CrewSection({
    */
   clashes?: readonly { personId: string; otherTripId: string; otherTitle: string }[];
   crewGapCode: "none" | "no_instructor" | "over_ratio";
+  /** The separate roster claim used by the booking gate. */
+  bookingInstructorPresent?: boolean;
   shopSlug: string;
   /**
    * `refusal` is the reason the write gives when it turned the change down
@@ -163,7 +166,7 @@ export function CrewSection({
       {/* The departure's inset notes, one box whether warning or advice
           (`INSET_NOTE_BOX`): they were 16px in where the requirements and
           roster notes beside them are 12px. */}
-      {crewGapCode === "no_instructor" ? (
+      {crewGapCode === "no_instructor" && !bookingInstructorPresent ? (
         <p className={`${INSET_NOTE_BOX} bg-warning-tint font-medium text-warning-strong`}>
           {copy.courseNeedsInstructor}
         </p>

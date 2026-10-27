@@ -3,6 +3,7 @@ import { type AwayNoteReader, awayNoteFor } from "@/lib/crew-requests";
 import { EXPORT_FILE_NOTES } from "@/lib/export";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { ShopExportContext } from "./export";
+import { CREW_ROLL_CALL_CSV } from "./export-crew-roll-call";
 import {
   BOOKING_ARRIVAL_EVENTS_CSV,
   BOOKING_CHECKOUT_BOOKINGS_CSV,
@@ -1124,6 +1125,31 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["staff_credentials.csv"],
   },
+  {
+    file: "staff_credential_history.csv",
+    header: [
+      "seq",
+      "credential_id",
+      "event",
+      "kind",
+      "issued_at",
+      "renews_at",
+      "active",
+      "recorded_at",
+    ],
+    rows: ({ staffCredentialHistoryRows }) =>
+      staffCredentialHistoryRows.map((row) => [
+        row.seq,
+        row.credentialId,
+        row.event,
+        row.kind,
+        row.issuedAt,
+        row.renewsAt,
+        row.active,
+        row.recordedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["staff_credential_history.csv"],
+  },
   shopFile(BOOKINGS_CSV),
   {
     file: "trip_help_requests.csv",
@@ -1367,45 +1393,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   },
   shopFile(BOOKING_ARRIVAL_EVENTS_CSV),
   shopFile(ROLL_CALL_EVENTS_CSV),
-  {
-    file: "roll_call_crew_events.csv",
-    header: [
-      "id",
-      "trip_id",
-      "trip_title",
-      "trip_starts_at",
-      "person_id",
-      "person_name",
-      "status",
-      "checkpoint",
-      "source",
-      "client_event_id",
-      "recorded_by_person_id",
-      "recorded_by_name",
-      "note",
-      "occurred_at",
-      "created_at",
-    ],
-    rows: ({ personName, tripTitle, tripStartsAt, crewRollCallRows }) =>
-      crewRollCallRows.map((row) => [
-        row.id,
-        row.tripId,
-        tripTitle.get(row.tripId),
-        tripStartsAt.get(row.tripId),
-        row.personId,
-        personName.get(row.personId),
-        row.status,
-        row.checkpoint,
-        row.source,
-        row.clientEventId,
-        row.recordedByPersonId,
-        personName.get(row.recordedByPersonId),
-        row.note,
-        row.occurredAt,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["roll_call_crew_events.csv"],
-  },
+  CREW_ROLL_CALL_CSV,
   shopFile(BUDDY_PAIRS_CSV),
   {
     file: "waiver_templates.csv",

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { shiftCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { lastDayOfDeparture } from "@/lib/crew-roles";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -165,6 +165,51 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
     });
   });
 
+  it("keeps a later-issued rating unverified across a multi-day departure without gating the roster", async () => {
+    const { db, shop } = ctx;
+    const keiko = await instructor(db, shop.id, "Keiko Tanaka");
+    const startsAt = new Date(nowMs() + SESSION_OFFSET_MS);
+    const trip = await session(db, shop.id, [keiko], {
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 36 * HOUR_MS),
+    });
+    const firstDay = calendarDateInTimezone(startsAt, shop.timezone);
+    await rating(db, shop.id, keiko, "2099-01-01");
+    await db
+      .update(staffCredentials)
+      .set({ issuedAt: shiftCalendarDate(firstDay, 1) })
+      .where(eq(staffCredentials.personId, keiko));
+    const counts = await countsFor(db, shop.id, trip.id);
+    expect(counts.instructorCount).toBe(0);
+    expect(counts.roster.instructorCount).toBe(1);
+    expect(counts.lapsed).toEqual([]);
+    expect(counts.unverified).toEqual([
+      { personId: keiko, fullName: "Keiko Tanaka", lost: "instructor" },
+    ]);
+    const staffing = await getStaffingView(
+      db,
+      shop.id,
+      new Date(startsAt.getTime() - HOUR_MS),
+      new Date(trip.endsAt.getTime() + HOUR_MS),
+    );
+    expect(staffing.gapTrips).toEqual([
+      expect.objectContaining({ tripId: trip.id, ratingUnverified: true }),
+    ]);
+    expect(await tripCourseCrewCounts(db, trip.id)).toMatchObject({ instructorCount: 1 });
+    await expect(
+      createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Still Sold",
+        email: "future-rating-sold@example.com",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    expect((await getTripOverview(db, shop, trip.id, keiko))?.crew.unverifiedCrew).toEqual([
+      { personId: keiko, fullName: "Keiko Tanaka" },
+    ]);
+  });
+
   it("reads the departure's day in the shop's zone, not in UTC", async () => {
     const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
@@ -314,6 +359,50 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
     const row = work.actions.find((action) => action.id === `instructor:${trip.id}`);
     expect(row?.kind).toBe("instructor_missing");
     expect(row?.detail).toBe("Keiko Tanaka has a rating that isn’t current for this departure.");
+  });
+
+  it("asks to check the future-issued instructor rating on Today", async () => {
+    const { db, shop } = ctx;
+    const keiko = await instructor(db, shop.id, "Keiko Tanaka");
+    const backup = await divemaster(db, shop.id, "Divemaster Dee");
+    const startsAt = new Date(nowMs() + 3 * HOUR_MS);
+    const trip = await session(db, shop.id, [keiko, backup], {
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+    });
+    await seat(db, shop.id, trip.id, 2);
+    await rating(db, shop.id, keiko, "2099-01-01");
+    await db
+      .update(staffCredentials)
+      .set({ issuedAt: shiftCalendarDate(calendarDateInTimezone(startsAt, shop.timezone), 1) })
+      .where(eq(staffCredentials.personId, keiko));
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `instructor:${trip.id}`);
+    expect(row?.detail).toBe(
+      "Keiko Tanaka has a rating issued after this departure starts. Check the cards.",
+    );
+  });
+
+  it("does not describe an assigned instructor as absent when their future-issued rating is unverified", async () => {
+    const { db, shop } = ctx;
+    const keiko = await instructor(db, shop.id, "Keiko Tanaka");
+    const startsAt = new Date(nowMs() + 3 * HOUR_MS);
+    const trip = await session(db, shop.id, [keiko], {
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+    });
+    await seat(db, shop.id, trip.id, 2);
+    await rating(db, shop.id, keiko, "2099-01-01");
+    await db
+      .update(staffCredentials)
+      .set({ issuedAt: shiftCalendarDate(calendarDateInTimezone(startsAt, shop.timezone), 1) })
+      .where(eq(staffCredentials.personId, keiko));
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `uncrewed:${trip.id}`);
+    expect(row?.kindLabelKey).toBe("today.actionKind.crewRatingUnverified");
+    expect(row?.detail).toBe(
+      "Keiko Tanaka has a rating issued after this departure starts. Check the cards.",
+    );
   });
 
   it("names the lapsed instructor in the trip page's crew panel", async () => {

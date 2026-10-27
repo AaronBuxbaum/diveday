@@ -331,6 +331,7 @@
     "awayWithdraw": "Ya no trabaja en ella",
     "awayWithdrawing": "Guardando…",
     "courseNeedsInstructor": "Este curso no puede aceptar reservas hasta que un miembro de la tripulación asignado tenga el rol de instructor.",
+    "underTargetUnverified": "{divers, plural, one {# buceador} other {# buceadores}} sin supervisor confirmado. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "underTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasters, plural, =0 {ningún supervisor} one {# supervisor} other {# supervisores}}. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "Reservaron en {language}: {divers}. Nadie de esta tripulación tiene registrado {language}.",
     "languageCovered": "Charla en {language} para {divers}: {crew}.",
@@ -845,5 +846,30 @@
     "daysAgo": "hace {days} d",
     "emailSubject": "Hay una plaza libre en {tripTitle}",
     "emailBody": "Hola {firstName},\n\nHay una plaza libre en {tripTitle} ({tripWhen}) con {shopName}. Consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
+  },
+  "partyWaiverQueue": {
+    "title": "Exenciones del grupo",
+    "intro": "Muestra un código QR disponible para que la persona firme en su celular.",
+    "back": "Volver a la salida",
+    "show": "Mostrar código QR",
+    "showFor": "Mostrar código QR de la exención de {name}",
+    "scan": "Pide a esta persona que escanee el código con su propio celular.",
+    "close": "Cerrar",
+    "loading": "Preparando el código…",
+    "failed": "Esta exención ya no está disponible aquí. Actualiza y revisa la plaza.",
+    "needed": "Falta la exención",
+    "signed": "Exención firmada",
+    "medicalReview": "Exención firmada · requiere revisión médica",
+    "held": "Identidad pendiente de confirmación",
+    "notRequired": "No se requiere exención",
+    "unknown": "Revisar los requisitos de la salida",
+    "guardian": "También debe firmar un padre, madre o tutor.",
+    "medical": "También requiere revisión médica.",
+    "unnamed": "Plaza retenida",
+    "review": "Revisar exenciones del grupo",
+    "medicalNotCleared": "Exención firmada · sin autorización médica",
+    "notCleared": "Sin autorización médica.",
+    "confirmIdentity": "Confirmar identidad",
+    "reviewMedical": "Revisar estado médico"
   }
 }

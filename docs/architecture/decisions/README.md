@@ -420,5 +420,6 @@ script again.
 | 20261026-pending-sign-in-challenge | Use a single-use pending second-factor… |
 | 20261027-boarding-certification-evidence | Boarding certification evidence |
 | 20261027-server-staff-idle | End inactive staff sessions on… |
+| 20261027-staff-credential-history | Recorded staff credential history |
 
 <!-- adr-index:end -->

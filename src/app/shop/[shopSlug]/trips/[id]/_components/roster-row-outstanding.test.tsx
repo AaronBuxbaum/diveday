@@ -79,6 +79,14 @@ describe("rowOutstanding, from the seat's facts and three drawn parts", () => {
     expect(rowOutstanding({ ...seat, ...drawn }).hasWork).toBe(false);
   });
 
+  it("keeps the party waiver entry on a fully signed seat", () => {
+    const seat = seatFacts(entry("o", "Rene Marsh"), {
+      readiness: new Map([["o", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: signed,
+    });
+    expect(rowOutstanding({ ...seat, ...drawn, partyLeadId: "lead" }).hasWork).toBe(true);
+  });
+
   it("has work once the trip takes payment, so the control stays put either way", () => {
     const seat = seatFacts(entry("o", "Rene Marsh"), {
       readiness: new Map([["o", readinessRow("ready")]]) as ReadinessByBooking,

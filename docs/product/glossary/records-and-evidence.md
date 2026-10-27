@@ -172,7 +172,8 @@
 - **Staff credential** — a professional qualification a *staff member* holds (instructor rating,
   first-aid, boat licence), with an optional renewal date that raises a Today row as it approaches
   (`staff_credentials`). Distinct from a **certification**, which is always a diver's. Renewal is
-  a calendar date, so it is good through the end of its own shop-local day.
+  a calendar date, so it is good through the end of its own shop-local day. A renewal or correction
+  appends a recorded state; a preexisting card's baseline cannot establish what was recorded earlier.
 - **Supervision claim** — what Today, the staffing week and the trip page tell a staffer about who
   is supervising a departure in the water: the in-water crew count with each rostered
   professional's recorded ratings read (`courseCrewCountsByTrip`, `getTripOverview`). A rung is
@@ -182,7 +183,10 @@
   date on file, is not a lapse. Distinct from the **roster's claim** — the same count with no
   credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
   H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
-  #1853). A surface showing a gap the two claims disagree about names who lapsed.
+  #1853). A rating recorded as issued after the first shop-local dive day cannot support this
+  departure; if no other rating answers that rung, it is unverified and the surface asks staff to
+  check the card rather than calling it expired. An unknown issue date keeps the existing no-date
+  behavior. A surface showing a gap the two claims disagree about names who lapsed or is unverified.
 - **Sailed with no crew on record** — a departure that went back in the month with nobody on its
   crew counted as sailing (`SafetyMonth.noCrewDepartures`, `src/lib/safety-report.ts`; fourth
   review item 13). Its own figure on the Safety report, listed by name, because a departure with no
@@ -209,7 +213,11 @@
   says so. The roll-call figure keeps "not closed" apart from "no roll call taken" (review F2). The
   boarding caveat says what the dock count proves: the rail records nobody as boarded while
   readiness blocks them, and a seat whose readiness changed after boarding is not separated
-  (review F4). Credentials are read as the records stand today, with two limits: one issued after
-  a sailing never answers for it, so a renewal entered as a new record leaves the earlier lapsed
-  sailing lapsed (review F3); and a credential since deleted is gone from the record, so a sailing
-  once on a lapsed card reads as unrecorded instead, which errs toward attention (review N6).
+  (review F4). Live crew boarding marks can capture credential kind and dates in a single database
+  statement, with its observation interval. The lapse figure says it reads the live mark, not actual
+  departure; offline, unmarked and older records remain unavailable. An interval crossing midnight
+  in the shop's zone cannot establish the observation day and is also unavailable. Current credentials
+  remain on Team. The observed role is not captured, so the report identifies an empty credential
+  file but does not judge whether cards answered the role at the mark. Erasure removes version history
+  and boarding observations.
+  Crew assignments and other facts still read as the shop's records stand today.

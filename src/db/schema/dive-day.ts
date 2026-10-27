@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { BoatPaperRecord, BoatRadioRecord, BoatSafetyNotice } from "@/lib/boat-safety";
+import type { CrewCredentialSnapshot } from "@/lib/crew-credential-snapshot";
 import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
@@ -249,6 +250,14 @@ export const rollCallCrewEvents = pgTable(
      * is deliberately gone.
      */
     note: text("note"),
+    /** A live boarding mark's observed credential state, never an assertion of sailing time. */
+    credentialSnapshot: jsonb("credential_snapshot").$type<CrewCredentialSnapshot[]>(),
+    credentialSnapshotStartedAt: timestamp("credential_snapshot_started_at", {
+      withTimezone: true,
+    }),
+    credentialSnapshotCapturedAt: timestamp("credential_snapshot_captured_at", {
+      withTimezone: true,
+    }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: appNowTimestamp("created_at").notNull(),
     /**
@@ -272,6 +281,10 @@ export const rollCallCrewEvents = pgTable(
       table.checkpoint,
       table.personId,
       table.occurredAt,
+    ),
+    check(
+      "roll_call_crew_credential_snapshot_shape",
+      sql`(${table.credentialSnapshot} is null and ${table.credentialSnapshotStartedAt} is null and ${table.credentialSnapshotCapturedAt} is null) or (${table.credentialSnapshot} is not null and ${table.credentialSnapshotStartedAt} is not null and ${table.credentialSnapshotCapturedAt} is not null and ${table.credentialSnapshotStartedAt} <= ${table.credentialSnapshotCapturedAt} and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.credentialSnapshot}) = 'array')`,
     ),
     uniqueIndex("roll_call_crew_events_shop_client_event_unique").on(
       table.shopId,

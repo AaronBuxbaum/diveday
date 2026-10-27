@@ -52,6 +52,17 @@ describe("holdsCurrent", () => {
     ).toBe(true);
   });
 
+  it("does not count a future-issued oxygen card before its issue day", () => {
+    const card = { kind: "oxygen_provider", issuedAt: "2026-10-15", renewsAt: "2027-10-15" };
+    expect(holdsCurrent([card], "oxygen_provider", "2026-10-14")).toBe(false);
+    expect(holdsCurrent([card], "oxygen_provider", "2026-10-15")).toBe(true);
+  });
+
+  it("requires issuance by the first day of a multi-day departure", () => {
+    const card = { kind: "oxygen_provider", issuedAt: "2026-10-15", renewsAt: "2027-10-15" };
+    expect(holdsCurrent([card], "oxygen_provider", "2026-10-15", "2026-10-14")).toBe(false);
+  });
+
   it("is good through the end of its renewal day", () => {
     const creds = [{ kind: "oxygen_provider", renewsAt: "2026-10-14" }];
     expect(holdsCurrent(creds, "oxygen_provider", "2026-10-14")).toBe(true);
@@ -95,6 +106,54 @@ describe("expiredKinds", () => {
         "2026-10-14",
       ),
     ).toEqual([{ kind: "first_aid_cpr", renewsAt: "2026-06-01" }]);
+  });
+
+  it.each(["2026-10-04", "2027-10-03"])(
+    "does not call a mid-trip-issued credential expired when it renews %s",
+    (renewsAt) => {
+      const card = { kind: "captains_licence", issuedAt: "2026-10-03", renewsAt };
+      expect(expiredKinds([card], "2026-10-05", "2026-10-01")).toEqual([]);
+      const trip = departure({
+        meetings: [{ startsAt: at("2026-10-01", "09:00"), endsAt: at("2026-10-05", "17:00") }],
+      });
+      const warnings = warn({
+        departures: [trip],
+        people: [person({ credentials: [card] })],
+        now: at("2026-09-30", "09:00"),
+      });
+      expect(warnings).toContainEqual(
+        expect.objectContaining({
+          code: "credential_not_yet_issued",
+          kind: "captains_licence",
+          issuedAt: "2026-10-03",
+        }),
+      );
+      expect(warnings.some((warning) => warning.code === "credential_expired")).toBe(false);
+    },
+  );
+
+  it("reports the earlier eligible expiry instead of a later-issued renewal", () => {
+    const cards = [
+      { kind: "captains_licence", issuedAt: "2025-01-01", renewsAt: "2026-09-30" },
+      { kind: "captains_licence", issuedAt: "2026-10-03", renewsAt: "2027-10-03" },
+    ];
+    expect(expiredKinds(cards, "2026-10-05", "2026-10-01")).toEqual([
+      { kind: "captains_licence", renewsAt: "2026-09-30" },
+    ]);
+    const trip = departure({
+      meetings: [{ startsAt: at("2026-10-01", "09:00"), endsAt: at("2026-10-05", "17:00") }],
+    });
+    const warnings = warn({
+      departures: [trip],
+      people: [person({ credentials: cards })],
+      now: at("2026-09-30", "09:00"),
+    });
+    expect(warnings).toContainEqual(
+      expect.objectContaining({ code: "credential_expired", renewsAt: "2026-09-30" }),
+    );
+    expect(warnings).toContainEqual(
+      expect.objectContaining({ code: "credential_not_yet_issued", issuedAt: "2026-10-03" }),
+    );
   });
 
   it("says nothing when an undated record of the kind exists", () => {
@@ -258,6 +317,23 @@ describe("staffingWarnings: long days", () => {
       meetings: [{ startsAt: at("2026-10-11", "05:00"), endsAt: at("2026-10-11", "20:00") }],
     });
     expect(warn({ departures: [past], people: [person()] })).toEqual([]);
+  });
+});
+
+describe("staffingWarnings: future-issued credentials", () => {
+  it("flags a future-issued rating without presenting it as expired", () => {
+    const crew = person({
+      credentials: [{ kind: "instructor_rating", issuedAt: "2026-10-15", renewsAt: "2028-01-01" }],
+    });
+    expect(warn({ departures: [departure()], people: [crew] })).toContainEqual({
+      code: "credential_not_yet_issued",
+      personId: "p-1",
+      name: "Keiko Tanaka",
+      kind: "instructor_rating",
+      issuedAt: "2026-10-15",
+      tripId: "t-1",
+      title: "1 pm reef",
+    });
   });
 });
 
