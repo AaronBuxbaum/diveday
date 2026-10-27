@@ -72,6 +72,46 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today", scheme);
       });
 
+      if (scheme === "light") {
+        test("grouped departure links have a usable touch target and keyboard focus", async ({
+          page,
+        }) => {
+          for (const width of [390, 1280]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto("/shop/blue-mantis");
+            const link = page.locator('#needs-you h3 a[href*="/trips/"]').first();
+            await expect(link).toBeVisible();
+            const box = await link.boundingBox();
+            expect(box?.height).toBeGreaterThanOrEqual(44);
+            await link.focus();
+            await page.keyboard.press("Shift+Tab");
+            await page.keyboard.press("Tab");
+            await expect(link).toBeFocused();
+          }
+        });
+      }
+
+      test(`a course station shows the course total (${scheme})`, async ({ page }) => {
+        await createTrip(page, {
+          course: "Open Water Diver",
+          title: "Course price check",
+          date: daysFromNow(1),
+          departsAt: "08:00",
+          returnsAt: "17:00",
+        });
+        await page.goto("/shop/blue-mantis");
+        await page
+          .locator("summary")
+          .filter({ hasText: /^Tomorrow · / })
+          .first()
+          .click();
+        const station = page
+          .locator("li")
+          .filter({ has: page.getByRole("heading", { name: "Course price check" }) });
+        await expect(station).toContainText("$709");
+        await capture(page, "today-course-price", scheme);
+      });
+
       test(`the help editor opens beneath its person summary (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
         await page

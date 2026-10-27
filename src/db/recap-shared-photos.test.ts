@@ -6,11 +6,12 @@ import { createBookingParty } from "./bookings";
 import {
   addRecapPhoto,
   getRecapPageData,
+  getRecapPageState,
   listRecapPhotosForTrips,
   unshareRecapPhoto,
 } from "./recap";
-import { bookings, people } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { bookings, people, rollCallEvents } from "./schema";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -32,6 +33,43 @@ async function recapContext(diver: { fullName: string; email: string } = RAE) {
 
 describe("a photo shared with the boat (H-129)", () => {
   const SAM = { fullName: "Sam Shutter", email: "recap-sam@example.com" };
+
+  it("hides an ashore diver's photo until a later boarding, and still closes an ashore viewer's recap", async () => {
+    const { db, shop, reef, bookingId: sharer } = await recapContext();
+    const { bookingId: viewer } = await recapContext(SAM);
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("staff missing");
+    const photo = await addRecapPhoto(db, {
+      bookingId: sharer,
+      imageUrl: "https://img/shared.jpg",
+      shareWithBoat: true,
+    });
+    if (!photo.ok) throw new Error("photo not added");
+    let minute = 0;
+    const record = (bookingId: string, status: "boarded" | "not_boarded", checkpoint: string) =>
+      db.insert(rollCallEvents).values({
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId,
+        recordedByPersonId: staff.person.id,
+        status,
+        checkpoint,
+        occurredAt: new Date(reef.startsAt.getTime() + minute++ * 60_000),
+      });
+    await record(viewer, "boarded", "departure");
+    await record(sharer, "not_boarded", "departure");
+    const ashore = await getRecapPageState(db, viewer);
+    expect(ashore.kind).toBe("recap");
+    if (ashore.kind !== "recap") throw new Error("viewer recap closed");
+    expect(ashore.data.photos.some((entry) => entry.id === photo.photo.id)).toBe(false);
+    await record(sharer, "boarded", "after_dive_1");
+    const joined = await getRecapPageState(db, viewer);
+    expect(joined.kind).toBe("recap");
+    if (joined.kind !== "recap") throw new Error("viewer recap closed");
+    expect(joined.data.photos.some((entry) => entry.id === photo.photo.id)).toBe(true);
+    await record(viewer, "not_boarded", "departure");
+    expect((await getRecapPageState(db, viewer)).kind).toBe("dead");
+  });
 
   it("shows on the rest of the boat's recaps under the sharer's first name, and only when ticked", async () => {
     const { db, bookingId } = await recapContext();

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -213,6 +214,7 @@ function probeBound(what, ms, work, degraded) {
 const PROBE_TRANSITIONS_OFF =
   "*, *::before, *::after, *::backdrop, details::details-content { transition: none !important; }";
 const probeAtlasSeen = new Set();
+const probeAtlasRun = `${Date.now()}-${randomUUID()}`;
 const browser = await launch();
 fs.mkdirSync(out, { recursive: true });
 const written = [];
@@ -420,6 +422,7 @@ try {
               testFile: "",
               source: "dev",
               atlasSeen: probeAtlasSeen,
+              atlasRun: probeAtlasRun,
               bound: probeBound,
               budgets: {
                 collectMs: 30_000,

@@ -1,4 +1,8 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { claimAtlasSignature, latestAtlasRunDirectory } from "./atlas.mjs";
 import { stateCandidates } from "./probe.mjs";
 
 /**
@@ -52,5 +56,22 @@ describe("state candidates", () => {
     );
     expect(candidates).toEqual([0, 1]);
     expect([...hoverOnly]).toEqual([0]);
+  });
+});
+
+describe("atlas capture runs", () => {
+  it("deduplicates a signature between workers but allows a fresh capture in the next run", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "diveday-atlas-"));
+    try {
+      const firstWorker = new Set();
+      const secondWorker = new Set();
+      expect(claimAtlasSignature(root, "run-1", "abc", firstWorker)).toBe(true);
+      expect(claimAtlasSignature(root, "run-1", "abc", firstWorker)).toBe(true);
+      expect(claimAtlasSignature(root, "run-1", "abc", secondWorker)).toBe(false);
+      expect(claimAtlasSignature(root, "run-2", "abc", secondWorker)).toBe(true);
+      expect(latestAtlasRunDirectory(root)).toBe(path.join(root, "runs", "run-2"));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

@@ -854,7 +854,9 @@ function madeByTheList(db: AppDb): SQL {
  * it needs and the ratio its crew allows. An interest asks for a diver's seat, so the
  * divers-only limit binds. Every offer already out to someone who has not taken a
  * seat holds as many of those seats as their party asked for, so they are taken
- * off. **A row a deal made off the last-minute list does not count** (ADR
+ * off. A person-less date-request offer stops counting after 48 hours (#2914);
+ * this is advice for the next offer, not a reservation or booking gate.
+ * **A row a deal made off the last-minute list does not count** (ADR
  * 20261017-one-interest-with-a-scope, R2): one blast to forty people must not push a
  * three-seat departure to "0 invitable" and stop the roll inviting real
  * wait-listers. Only the rows the list made (`asked_by = 'shop'`, parent an
@@ -865,6 +867,7 @@ function madeByTheList(db: AppDb): SQL {
  * (agency review G5 of #2226).
  */
 export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promise<number> {
+  const anonymousOfferCutoff = new Date(nowDate().getTime() - 48 * HOUR_MS);
   const held = await heldSeatCounts(db, trip.shopId, trip.id);
   let room = (await sellableCapacity(db, trip)) - held.aboard;
   const diverLimit = diverSeatLimit(trip);
@@ -881,6 +884,7 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
         eq(interests.shopId, trip.shopId),
         eq(interests.tripId, trip.id),
         isNotNull(interests.offeredAt),
+        or(isNotNull(interests.personId), gt(interests.offeredAt, anonymousOfferCutoff)),
         or(isNull(interests.promoId), not(madeByTheList(db))),
         notExists(
           db

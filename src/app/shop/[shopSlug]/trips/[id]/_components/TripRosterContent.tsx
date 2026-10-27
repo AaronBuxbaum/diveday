@@ -30,6 +30,7 @@ import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
+import { MixedTrainingForTrip } from "./MixedTrainingAdvisory";
 import { moveSeatRefusalFor } from "./move-seat-refusal";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
@@ -418,34 +419,47 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
               />
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
-            <AddDiverSection
-              context={{
-                shopSlug,
-                full: isFull(seatsOnSale(trip)),
-                waitlistOn: guests.waitlistOn,
-                query: diverQuery,
-                candidates: diverCandidates,
-                tripId: trip.id,
-                addBookingAction: walkInOpen
-                  ? actions.walkInAddBookingAction
-                  : actions.addBookingAction,
-                addToWaitlistAction: actions.addToWaitlistAction,
-                addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
-                addExistingDiverAction: walkInOpen
-                  ? actions.walkInAddExistingDiverAction
-                  : actions.addExistingDiverAction,
-                offerAction: actions.createDirectTripInvitationAction,
-                status: noticeForForm(tripNotice, "add-diver"),
-                locale,
-                timeZone: timezone,
-                confirmName,
-                confirmEmail,
-                confirmPhone,
-                confirmMatches,
-                shopRentalItems,
-                walkInOpen,
-              }}
-            />
+            <div className="flex flex-col gap-4">
+              {!isFull(seatsOnSale(trip)) ? (
+                <Suspense fallback={null}>
+                  <MixedTrainingForTrip
+                    shopId={trip.shopId}
+                    tripId={trip.id}
+                    shopSlug={shopSlug}
+                    locale={locale}
+                    timeZone={timezone}
+                  />
+                </Suspense>
+              ) : null}
+              <AddDiverSection
+                context={{
+                  shopSlug,
+                  full: isFull(seatsOnSale(trip)),
+                  waitlistOn: guests.waitlistOn,
+                  query: diverQuery,
+                  candidates: diverCandidates,
+                  tripId: trip.id,
+                  addBookingAction: walkInOpen
+                    ? actions.walkInAddBookingAction
+                    : actions.addBookingAction,
+                  addToWaitlistAction: actions.addToWaitlistAction,
+                  addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
+                  addExistingDiverAction: walkInOpen
+                    ? actions.walkInAddExistingDiverAction
+                    : actions.addExistingDiverAction,
+                  offerAction: actions.createDirectTripInvitationAction,
+                  status: noticeForForm(tripNotice, "add-diver"),
+                  locale,
+                  timeZone: timezone,
+                  confirmName,
+                  confirmEmail,
+                  confirmPhone,
+                  confirmMatches,
+                  shopRentalItems,
+                  walkInOpen,
+                }}
+              />
+            </div>
           ),
         }}
       />

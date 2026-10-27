@@ -89,7 +89,8 @@ runs. Pass args directly. The shell guard refuses the bare form.
   Aaron's rule; the CI half dates from 2026-10-12, when 15 to 19 layers pushed together cost 126
   cancelled runs and 90 failed jobs. Push a layer, let its run finish, then push the next; a thread
   whose layer sits on another thread's stack leaves the push order to the thread that owns it. A
-  dependent chain (`src/db/schema/` + migration → the `src/db` reader → the surface) has no other
+  batch goes up in rounds of about 150 changed files at most, each green before the next; a fix
+  push carries only the fix (#2934). A dependent chain (`src/db/schema/` + migration → the `src/db` reader → the surface) has no other
   honest shape; unrelated work stacks because a second branch cut from `main` re-edits the same
   shared files (a `check:repo` row, a baseline, a message bundle), and on a stack those merge once,
   while the change is being written. Pixels are not an exception. Cut each branch from the one

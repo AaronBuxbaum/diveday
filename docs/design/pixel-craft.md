@@ -69,6 +69,8 @@ node scripts/pixel-probe-report.mjs --tiles <capture>
 node scripts/pixel-probe-report.mjs --atlas    # every control signature at rest, hover, focus
 ```
 
+An atlas belongs to one capture run. The report uses the latest run's crops and writes its sheets under `atlas-sheets/<run-id>/`; older runs remain separate and never fill gaps in the current atlas.
+
 `REPORT.md` groups flags by **cluster**: the check, the component signature, and the signature of
 the container it sits in. One shared component's flaw is one line listing every surface it
 reaches. The report also groups flags by surface family, and prints the command that re-probes
