@@ -472,6 +472,15 @@ jobs:
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
             pnpm exec playwright install chromium
           fi
+          # Saved-record print assertions inspect actual PDF text. Only the
+          # shard assigned that spec needs Poppler; visual and fast-lane jobs
+          # install it separately for their own PDF captures.
+          if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/staff-saved-print.spec.ts'; then
+            if ! command -v pdftotext >/dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends poppler-utils
+            fi
+          fi
           status=0
           pnpm exec playwright test "${spec_files[@]}" 2>&1 | tee shard.log || status=$?
           if [ "$status" -eq 0 ]; then
