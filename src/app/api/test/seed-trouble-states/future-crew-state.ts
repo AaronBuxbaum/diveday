@@ -18,8 +18,12 @@ export async function futureCrewStateResponse(request: Request, db: AppDb) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   const shop = await getShopBySlug(db, slug);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
-  const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id));
-  if (!course) throw new Error("future crew fixture needs a course");
+  const catalog = await db.select().from(courses).where(eq(courses.shopId, shop.id));
+  const course = catalog.find(
+    (row) =>
+      !row.isIntroCourse && row.agency.toLowerCase() === "padi" && !row.minimumCertificationLevel,
+  );
+  if (!course) throw new Error("future crew fixture needs an entry course");
   const [person] = await db
     .insert(people)
     .values({ shopId: shop.id, fullName: "Alex Future" })
