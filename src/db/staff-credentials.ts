@@ -71,6 +71,7 @@ export async function ratingCredentialsByPerson(
     .select({
       personId: staffCredentials.personId,
       kind: staffCredentials.kind,
+      issuedAt: staffCredentials.issuedAt,
       renewsAt: staffCredentials.renewsAt,
     })
     .from(staffCredentials)
@@ -83,7 +84,7 @@ export async function ratingCredentialsByPerson(
     );
   for (const row of rows) {
     const list = byPerson.get(row.personId) ?? [];
-    list.push({ kind: row.kind, renewsAt: row.renewsAt });
+    list.push({ kind: row.kind, issuedAt: row.issuedAt, renewsAt: row.renewsAt });
     byPerson.set(row.personId, list);
   }
   return byPerson;

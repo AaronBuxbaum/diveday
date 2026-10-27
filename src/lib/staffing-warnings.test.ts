@@ -52,6 +52,17 @@ describe("holdsCurrent", () => {
     ).toBe(true);
   });
 
+  it("does not count a future-issued oxygen card before its issue day", () => {
+    const card = { kind: "oxygen_provider", issuedAt: "2026-10-15", renewsAt: "2027-10-15" };
+    expect(holdsCurrent([card], "oxygen_provider", "2026-10-14")).toBe(false);
+    expect(holdsCurrent([card], "oxygen_provider", "2026-10-15")).toBe(true);
+  });
+
+  it("requires issuance by the first day of a multi-day departure", () => {
+    const card = { kind: "oxygen_provider", issuedAt: "2026-10-15", renewsAt: "2027-10-15" };
+    expect(holdsCurrent([card], "oxygen_provider", "2026-10-15", "2026-10-14")).toBe(false);
+  });
+
   it("is good through the end of its renewal day", () => {
     const creds = [{ kind: "oxygen_provider", renewsAt: "2026-10-14" }];
     expect(holdsCurrent(creds, "oxygen_provider", "2026-10-14")).toBe(true);
@@ -258,6 +269,23 @@ describe("staffingWarnings: long days", () => {
       meetings: [{ startsAt: at("2026-10-11", "05:00"), endsAt: at("2026-10-11", "20:00") }],
     });
     expect(warn({ departures: [past], people: [person()] })).toEqual([]);
+  });
+});
+
+describe("staffingWarnings: future-issued credentials", () => {
+  it("flags a future-issued rating without presenting it as expired", () => {
+    const crew = person({
+      credentials: [{ kind: "instructor_rating", issuedAt: "2026-10-15", renewsAt: "2028-01-01" }],
+    });
+    expect(warn({ departures: [departure()], people: [crew] })).toContainEqual({
+      code: "credential_not_yet_issued",
+      personId: "p-1",
+      name: "Keiko Tanaka",
+      kind: "instructor_rating",
+      issuedAt: "2026-10-15",
+      tripId: "t-1",
+      title: "1 pm reef",
+    });
   });
 });
 

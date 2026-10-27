@@ -183,7 +183,10 @@
   date on file, is not a lapse. Distinct from the **roster's claim** — the same count with no
   credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
   H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
-  #1853). A surface showing a gap the two claims disagree about names who lapsed.
+  #1853). A rating recorded as issued after the first shop-local dive day cannot support this
+  departure; if no other rating answers that rung, it is unverified and the surface asks staff to
+  check the card rather than calling it expired. An unknown issue date keeps the existing no-date
+  behavior. A surface showing a gap the two claims disagree about names who lapsed or is unverified.
 - **Sailed with no crew on record** — a departure that went back in the month with nobody on its
   crew counted as sailing (`SafetyMonth.noCrewDepartures`, `src/lib/safety-report.ts`; fourth
   review item 13). Its own figure on the Safety report, listed by name, because a departure with no

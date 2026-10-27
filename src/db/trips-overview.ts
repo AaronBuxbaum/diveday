@@ -1,3 +1,4 @@
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { crewLanguageBriefings } from "@/lib/crew-languages";
@@ -6,6 +7,8 @@ import {
   lapsedRungs,
   lastDayOfDeparture,
   narrowedByLapse,
+  rungLostToUnverified,
+  unverifiedRungs,
 } from "@/lib/crew-roles";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
@@ -242,17 +245,22 @@ export async function getTripOverview(
   // this same trip does not: it sells on the roster's claim (H-59).
   const { credentials, shiftCoverage } = crewEvidence;
   const divesOn = lastDayOfDeparture(trip.endsAt, shop.timezone);
+  const firstCrewDay = calendarDateInTimezone(trip.startsAt, shop.timezone);
   const crewMembers = assignedCrew.map((entry) => ({
     person: entry.person,
     tripRole: tripRoleByPerson.get(entry.person.id) ?? null,
     shopRoles: entry.roles,
-    lapsedRungs: lapsedRungs(credentials.get(entry.person.id) ?? [], divesOn),
+    lapsedRungs: lapsedRungs(credentials.get(entry.person.id) ?? [], divesOn, firstCrewDay),
+    unverifiedRungs: unverifiedRungs(credentials.get(entry.person.id) ?? [], firstCrewDay),
   }));
   const inWaterCrew = countInWaterCrew(crewMembers);
   // Who a lapse took down a rung, so the Crew panel can say why a list that
   // names an instructor still reads as short.
   const lapsedCrew = crewMembers
     .filter(narrowedByLapse)
+    .map((member) => ({ personId: member.person.id, fullName: member.person.fullName }));
+  const unverifiedCrew = crewMembers
+    .filter((member) => rungLostToUnverified(member) !== null)
     .map((member) => ({ personId: member.person.id, fullName: member.person.fullName }));
   // `courseCrewGap` is the one computation of "does this course session have
   // enough crew", also consumed by the staffing coverage list and the Today
@@ -340,6 +348,7 @@ export async function getTripOverview(
       tripRoleByPerson,
       inWaterCrew,
       lapsedCrew,
+      unverifiedCrew,
       crewGap,
       ratioGap,
       languageBriefings,

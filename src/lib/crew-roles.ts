@@ -81,13 +81,23 @@ export type TripCrewAssignment = {
    * function, two answers, and which one a caller gets is written at the call.
    */
   lapsedRungs?: readonly LapsedRung[];
+  /** Recorded ratings exist but none are issued by the first dive day. */
+  unverifiedRungs?: readonly LapsedRung[];
 };
 
 /**
  * One recorded staff credential, as much of it as currency needs
  * (`staff_credentials.kind` / `renews_at`).
  */
-export type RatingCredential = { kind: string; renewsAt: string | null };
+export type RatingCredential = { kind: string; issuedAt?: string | null; renewsAt: string | null };
+
+/** An unknown issue date retains the existing unknown-date behavior. */
+export function credentialIssuedBy(
+  issuedAt: string | null | undefined,
+  day: CalendarDate,
+): boolean {
+  return !issuedAt || !isValidCalendarDate(issuedAt) || issuedAt <= day;
+}
 
 /**
  * The kinds that must carry a renewal date when they are recorded (issue
@@ -202,11 +212,14 @@ export function rolesMissingCredential(
 export function lapsedRungs(
   credentials: readonly RatingCredential[],
   divesOn: CalendarDate,
+  firstDay: CalendarDate = divesOn,
 ): LapsedRung[] {
   const lapsed: LapsedRung[] = [];
   for (const rung of ["instructor", "certified_assistant"] as const) {
-    const evidence = credentials.filter((credential) =>
-      RUNG_EVIDENCE[rung].includes(credential.kind),
+    const evidence = credentials.filter(
+      (credential) =>
+        RUNG_EVIDENCE[rung].includes(credential.kind) &&
+        credentialIssuedBy(credential.issuedAt, firstDay),
     );
     const allLapsed =
       evidence.length > 0 &&
@@ -219,6 +232,19 @@ export function lapsedRungs(
     if (allLapsed) lapsed.push(rung);
   }
   return lapsed;
+}
+
+/** Rungs with recorded evidence, but no rating issued by the first dive day. */
+export function unverifiedRungs(
+  credentials: readonly RatingCredential[],
+  firstDay: CalendarDate,
+): LapsedRung[] {
+  return (["instructor", "certified_assistant"] as const).filter((rung) => {
+    const evidence = credentials.filter((card) => RUNG_EVIDENCE[rung].includes(card.kind));
+    return (
+      evidence.length > 0 && evidence.every((card) => !credentialIssuedBy(card.issuedAt, firstDay))
+    );
+  });
 }
 
 /**
@@ -253,7 +279,7 @@ export function inWaterCrewRole(member: TripCrewAssignment): InWaterCrewRole {
   // rest of this function never learns otherwise — so a lapse narrows exactly
   // the way a missing role does, and property 2 covers it for free: nothing
   // here can make a lapsed rating worth *more*.
-  const lapsed = member.lapsedRungs ?? [];
+  const lapsed = [...(member.lapsedRungs ?? []), ...(member.unverifiedRungs ?? [])];
   const holdsInstructor = member.shopRoles.includes("instructor") && !lapsed.includes("instructor");
   /**
    * **The two rungs that are worth an assistant and not an instructor.**
@@ -389,9 +415,18 @@ export function narrowedByLapse(member: TripCrewAssignment): boolean {
  */
 export function rungLostToLapse(member: TripCrewAssignment): LapsedRung | null {
   if (!member.lapsedRungs || member.lapsedRungs.length === 0) return null;
-  const roster = inWaterCrewRole({ ...member, lapsedRungs: undefined });
-  if (roster === "none" || inWaterCrewRole(member) === roster) return null;
+  const lapseOnly = { ...member, unverifiedRungs: undefined };
+  const roster = inWaterCrewRole({ ...lapseOnly, lapsedRungs: undefined });
+  if (roster === "none" || inWaterCrewRole(lapseOnly) === roster) return null;
   return roster;
+}
+
+/** The rung lost specifically because no rating was issued by the first dive day. */
+export function rungLostToUnverified(member: TripCrewAssignment): LapsedRung | null {
+  if (!member.unverifiedRungs?.length) return null;
+  const withoutUnverified = inWaterCrewRole({ ...member, unverifiedRungs: undefined });
+  if (withoutUnverified === "none" || inWaterCrewRole(member) === withoutUnverified) return null;
+  return withoutUnverified;
 }
 
 /**
@@ -406,7 +441,9 @@ export function countBothClaims(members: readonly TripCrewAssignment[]): {
 } {
   return {
     supervision: countInWaterCrew(members),
-    roster: countInWaterCrew(members.map((member) => ({ ...member, lapsedRungs: undefined }))),
+    roster: countInWaterCrew(
+      members.map((member) => ({ ...member, lapsedRungs: undefined, unverifiedRungs: undefined })),
+    ),
   };
 }
 

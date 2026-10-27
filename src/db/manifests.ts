@@ -2338,7 +2338,7 @@ export async function recordCrewRollCall(
         // still be closed by naming what happened to them, rather than only by
         // deleting them.
         const [assigned] = await tx
-          .select({ personId: tripAssignments.personId })
+          .select({ personId: tripAssignments.personId, anonymizedAt: people.anonymizedAt })
           .from(tripAssignments)
           .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
           .innerJoin(people, eq(people.id, tripAssignments.personId))
@@ -2483,7 +2483,8 @@ export async function recordCrewRollCall(
             checkpoint,
           }),
         );
-        const credentialSnapshotStartedAt = captureCredentials ? nowDate() : null;
+        const captureAssignedCredentials = captureCredentials && assigned.anonymizedAt === null;
+        const credentialSnapshotStartedAt = captureAssignedCredentials ? nowDate() : null;
         const [event] = await tx
           .insert(rollCallCrewEvents)
           .values({
@@ -2500,7 +2501,7 @@ export async function recordCrewRollCall(
             // and a crew member has no readiness to evidence. It is still an input
             // above, where the staleness bound is computed from it.
             note,
-            credentialSnapshot: captureCredentials
+            credentialSnapshot: captureAssignedCredentials
               ? crewCredentialSnapshot(input.shopId, assigned.personId)
               : null,
             credentialSnapshotStartedAt,

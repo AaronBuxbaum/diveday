@@ -146,11 +146,29 @@ describePostgres("crew boarding credential observation", () => {
     const [boarded, erased] = await Promise.all([board, erase]);
     expect(boarded).toMatchObject({ ok: true });
     expect(erased).toMatchObject({ ok: true });
+    expect(
+      await recordCrewRollCall(pg.db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: person.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "departure",
+        status: "boarded",
+        source: "live",
+      }),
+    ).toMatchObject({ ok: true });
     const events = await pg.db
       .select()
       .from(rollCallCrewEvents)
       .where(eq(rollCallCrewEvents.personId, person.id));
-    expect(events).toHaveLength(2);
-    expect(events.every((event) => event.credentialSnapshot === null)).toBe(true);
+    expect(events).toHaveLength(3);
+    expect(
+      events.every(
+        (event) =>
+          event.credentialSnapshot === null &&
+          event.credentialSnapshotStartedAt === null &&
+          event.credentialSnapshotCapturedAt === null,
+      ),
+    ).toBe(true);
   });
 });

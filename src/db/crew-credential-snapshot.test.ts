@@ -157,5 +157,31 @@ describe("crew credential evidence on live boarding marks", () => {
     expect(event?.credentialSnapshot).toBeNull();
     expect(event?.credentialSnapshotStartedAt).toBeNull();
     expect(event?.credentialSnapshotCapturedAt).toBeNull();
+    expect(
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: person.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "departure",
+        status: "boarded",
+        source: "live",
+      }),
+    ).toMatchObject({ ok: true });
+    const events = await db
+      .select()
+      .from(rollCallCrewEvents)
+      .where(
+        and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.personId, person.id)),
+      );
+    expect(events).toHaveLength(2);
+    expect(
+      events.every(
+        (row) =>
+          row.credentialSnapshot === null &&
+          row.credentialSnapshotStartedAt === null &&
+          row.credentialSnapshotCapturedAt === null,
+      ),
+    ).toBe(true);
   });
 });
