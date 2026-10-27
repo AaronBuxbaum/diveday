@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { CatchUpStrip } from "@/app/shop/[shopSlug]/trips/[id]/manifest/_components/CatchUpStrip";
 import { readTodayCatchUp } from "@/db/today-catch-up";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
-import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { groupCatchUp } from "@/lib/desk-events";
@@ -13,12 +12,11 @@ import { shopDayBounds } from "@/lib/zoned";
 import { InitializeTodayCatchUp } from "./InitializeTodayCatchUp";
 import { markTodayCatchUp } from "./today-catch-up-actions";
 
-export async function TodayCatchUp({ shopSlug }: { shopSlug: string }) {
+export async function TodayCatchUp({ shopSlug, locale }: { shopSlug: string; locale: string }) {
   const { db, shop, session } = await requireShopSurface(shopSlug);
   const { id: shopId, timezone: timeZone } = shop;
   const personId = session.user.personId;
   const now = nowDate();
-  const locale = await requestLocale(shop.defaultLocale);
   const result = await readTodayCatchUp(db, { shopId, personId, now, timeZone });
   const mode = result.mark ? "ack" : "initialize";
   const token = signTodayCatchUp(
@@ -59,10 +57,10 @@ export async function TodayCatchUp({ shopSlug }: { shopSlug: string }) {
   );
 }
 
-export function TodayCatchUpSlot({ shopSlug }: { shopSlug: string }) {
+export function TodayCatchUpSlot({ shopSlug, locale }: { shopSlug: string; locale: string }) {
   return (
     <Suspense fallback={null}>
-      <TodayCatchUp shopSlug={shopSlug} />
+      <TodayCatchUp shopSlug={shopSlug} locale={locale} />
     </Suspense>
   );
 }
