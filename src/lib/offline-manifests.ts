@@ -93,7 +93,7 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * so unlike the snapshot version above, this bump is *worth* the purge: there
  * is no queued roll call inside an app shell to lose, only stale bundles.
  */
-export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v3";
 
 /**
  * The query parameter the service worker puts on its own redirect to the
@@ -519,7 +519,12 @@ export type OfflineManifestPayload = {
            * warning, never a blocker. Optional and additive, no version bump;
            * absent on every other seat.
            */
-          trainingDive?: { courseTitle: string; instructorAboard: boolean; overRatio?: boolean };
+          trainingDive?: {
+            courseTitle: string;
+            instructorAboard: boolean;
+            overRatio?: boolean;
+            intro?: boolean;
+          };
           /**
            * A staffer cleared this seat's training mark with its course forms
            * unsigned, by name when the shop still has one: the crew boarding
@@ -1175,7 +1180,9 @@ export function serializeManifests(
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
         ...offlineMedicalAlert(diver),
-        ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
+        ...(!diver.identityWithheld && diver.trainingDive
+          ? { trainingDive: diver.trainingDive }
+          : {}),
         ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a

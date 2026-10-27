@@ -4,6 +4,7 @@ import type {
   seedOperationalTrust,
 } from "../src/app/api/test/seed-trouble-states/operational-states";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
 import { expect, test } from "./fixtures";
 import {
   manifestRow,
@@ -34,14 +35,14 @@ async function openOffline(page: Page, manifest: string) {
   await offlineCopySaved(page);
   await expect
     .poll(() =>
-      page.evaluate(async () => {
+      page.evaluate(async (version) => {
         const registration = await navigator.serviceWorker.getRegistration("/");
-        const cache = await caches.open("diveday-offline-manifest-shell-v2");
+        const cache = await caches.open(`diveday-offline-manifest-shell-${version}`);
         return (
           registration?.active?.state === "activated" &&
           (await cache.match("/offline-manifest")) !== undefined
         );
-      }),
+      }, OFFLINE_MANIFEST_SHELL_VERSION),
     )
     .toBe(true);
   await openOnThisPhone(page);

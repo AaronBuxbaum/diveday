@@ -403,7 +403,7 @@
   "addDiver": {
     "heading": "Agregar una reserva",
     "mixedTrainingTitle": "Posible coincidencia de formación",
-    "mixedTrainingBody": "Si los alumnos de estas sesiones entrenan juntos en una salida, revisa los grupos de instructores y la proporción de la actividad introductoria antes de bucear.",
+    "mixedTrainingBody": "Si los alumnos de estas sesiones entrenan juntos en una salida, revisa los grupos de instructores, la proporción y el límite de profundidad de la actividad introductoria antes de bucear.",
     "fullDescription": "El barco está lleno.",
     "findLabel": "Buscar un buceador habitual",
     "findPlaceholder": "Nombre, correo o teléfono",

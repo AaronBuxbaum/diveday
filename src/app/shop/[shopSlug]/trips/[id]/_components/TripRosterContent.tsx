@@ -32,6 +32,7 @@ import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { MixedTrainingForTrip } from "./MixedTrainingAdvisory";
 import { moveSeatRefusalFor } from "./move-seat-refusal";
+import { RosterMixedTrainingDepthWarning } from "./RosterMixedTrainingDepthWarning";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { FOOT_ROW_BODY, FOOT_ROW_SUMMARY } from "./TripAboutSection";
@@ -272,6 +273,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         </section>
       ) : null}
 
+      <RosterMixedTrainingDepthWarning marks={guests.trainingMarks?.bySeat} roster={roster} t={t} />
       <RosterSection
         trip={{
           shopSlug,

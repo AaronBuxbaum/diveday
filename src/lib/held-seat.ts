@@ -109,7 +109,8 @@ type ManifestDiver = TripManifest["divers"][number];
  * settle its rows once at the top and a component can still guard its own.
  */
 export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver {
-  if (diver.identityWithheld || !isHeldSeat(diver)) return diver;
+  if (diver.identityWithheld) return diver.trainingDive ? { ...diver, trainingDive: null } : diver;
+  if (!isHeldSeat(diver)) return diver;
   const own = diver.readiness.blockers.filter((blocker) =>
     SEAT_OWN_BLOCKER_CODES.has(blocker.code),
   );
@@ -135,6 +136,7 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     birthday: null,
     welcomeCue: null,
     depthAdvisory: undefined,
+    trainingDive: null,
     medicalWaiver: null,
     riderMedicalHold: null,
     readiness: { status: "blocked", blockers: kept },

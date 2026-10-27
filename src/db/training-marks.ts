@@ -344,6 +344,8 @@ export type TrainingMarkRosterSeat = {
   mark: {
     enrollmentBookingId: string;
     courseTitle: string | null;
+    /** Recorded course type, when known; this does not identify an underwater group. */
+    intro?: boolean;
     sessionStartsAt: Date | null;
     valid: boolean;
     /**
@@ -508,6 +510,7 @@ export async function trainingMarksForRoster(
         ? {
             enrollmentBookingId: enrollmentId,
             courseTitle: enrollment?.courseTitle ?? null,
+            ...(enrollment?.course && !seat.identityHeld ? { intro: enrollment.course.intro } : {}),
             sessionStartsAt: enrollment?.sessionStartsAt ?? null,
             valid,
             courseInstructorAboard:

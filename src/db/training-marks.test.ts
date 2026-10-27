@@ -9,11 +9,13 @@ import {
   seatBlockerCodes,
 } from "@/test/training-mark-context";
 import { getCourseFormsForBooking, recordPaperCourseForm, signCourseForm } from "./course-forms";
+import { getTripManifest } from "./manifests";
 import { getBookingReadiness } from "./readiness";
 import {
   activityEvents,
   bookings,
   courseFormRecords,
+  courses,
   people,
   tripAssignments,
   trips,
@@ -394,6 +396,7 @@ describe("training marks — a training dive on a charter (in-memory PGlite)", (
   });
 
   it("offers the roster the diver's course seat, then shows the mark and that no instructor is aboard", async () => {
+    // A known introductory course is carried to both readers without assuming a group.
     const ctx = await charterContext();
     const seatInput = async () => {
       const [row] = await ctx.db.select().from(bookings).where(eq(bookings.id, ctx.seat.id));
@@ -418,6 +421,10 @@ describe("training marks — a training dive on a charter (in-memory PGlite)", (
     expect(before.bySeat.get(ctx.seat.id)?.options.map((o) => o.enrollmentBookingId)).toEqual([
       ctx.course.bookingId,
     ]);
+    await ctx.db
+      .update(courses)
+      .set({ isIntroCourse: true })
+      .where(eq(courses.id, ctx.course.courseId));
     await mark(ctx);
     const after = await trainingMarksForRoster(ctx.db, ctx.shop.id, ctx.charter, [
       await seatInput(),
@@ -426,7 +433,21 @@ describe("training marks — a training dive on a charter (in-memory PGlite)", (
       enrollmentBookingId: ctx.course.bookingId,
       valid: true,
       courseInstructorAboard: false,
+      intro: true,
     });
+    const manifest = await getTripManifest(ctx.db, ctx.shop.id, ctx.charter.id);
+    expect(
+      manifest?.divers.find((diver) => diver.bookingId === ctx.seat.id)?.trainingDive,
+    ).toMatchObject({ intro: true });
     expect(after.bySeat.get(ctx.seat.id)?.options).toEqual([]);
+    // A later identity hold must not put this course onto the boat copy.
+    await ctx.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: ctx.now })
+      .where(eq(bookings.id, ctx.seat.id));
+    const heldManifest = await getTripManifest(ctx.db, ctx.shop.id, ctx.charter.id);
+    expect(
+      heldManifest?.divers.find((diver) => diver.bookingId === ctx.seat.id)?.trainingDive,
+    ).toBeNull();
   });
 });

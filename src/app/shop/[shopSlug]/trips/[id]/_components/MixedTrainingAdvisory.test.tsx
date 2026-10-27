@@ -22,6 +22,7 @@ describe("mixed training advisory", () => {
       }),
     );
     expect(screen.getByText(/If students from these sessions train together/)).toBeTruthy();
+    expect(screen.getByText(/intro program’s depth limit/)).toBeTruthy();
     expect(screen.getByRole("link", { name: /Open Water session/ }).getAttribute("href")).toBe(
       "/shop/blue-mantis/trips/other",
     );

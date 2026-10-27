@@ -245,6 +245,17 @@ export function trainingRoom(input: {
   return { seated, overRatio, spare };
 }
 
+/** A conditional depth prompt, not a claim about underwater groups or clearance. */
+export function mixedTrainingDepthAdvisory(courses: readonly { intro?: boolean }[]): boolean {
+  // Saved manifests from before course type was carried have unknown kinds.
+  // Two distinct marked seats may still be mixed, so ask rather than imply clearance.
+  return courses.some(
+    (course, index) =>
+      course.intro !== false &&
+      courses.some((other, otherIndex) => otherIndex !== index && other.intro !== true),
+  );
+}
+
 /** The ladder's order, as `certificationRank` (./readiness.ts) reads it; kept here so this module imports no gate. */
 const RANK: Record<CertificationLevel, number> = {
   open_water: 1,

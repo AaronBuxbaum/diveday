@@ -420,3 +420,25 @@ describe("the skip link's landing", () => {
     expect(section).toHaveClass(rollCallScrollMargin(isDeparture));
   });
 });
+
+describe("mixed training depth warning", () => {
+  it("shows the conditional depth check before the roll call rows", () => {
+    renderList({
+      divers: [
+        diver({
+          bookingId: "intro",
+          trainingDive: { courseTitle: "Intro", instructorAboard: false, intro: true },
+        }),
+        diver({
+          bookingId: "entry",
+          trainingDive: { courseTitle: "Open Water", instructorAboard: false, intro: false },
+        }),
+      ],
+    });
+    expect(
+      screen.getByText(
+        /If intro participants dive with other students, check the intro program’s depth limit/,
+      ),
+    ).toBeVisible();
+  });
+});

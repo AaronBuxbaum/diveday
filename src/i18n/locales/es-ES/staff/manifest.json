@@ -165,6 +165,7 @@
   "medicalEarlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior)",
   "trainingMarkCleared": "{hasName, select, yes {{name} quitó la marca de formación con formularios del curso sin firmar} other {Se quitó la marca de formación con formularios del curso sin firmar}}",
   "trainingMarkClearedInvalid": "{hasName, select, yes {{name} quitó la marca de formación cuando ya no correspondía a su plaza del curso} other {Se quitó la marca de formación cuando ya no correspondía a su plaza del curso}}",
+  "mixedTrainingDepthWarning": "Si los participantes de una actividad introductoria bucean con otros alumnos, revisa el límite de profundidad de la actividad introductoria antes de bucear.",
   "trainingDive": "Inmersión de formación para {course}",
   "trainingDiveNoInstructor": "Ningún instructor del curso a bordo para esta plaza",
   "trainingDiveOverRatio": "Supera la proporción del instructor para este curso; pasa a un alumno a otro grupo",

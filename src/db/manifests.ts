@@ -1044,12 +1044,14 @@ export async function listDepartureBoardedBookingIds(
 /** A standing training mark as the manifest prints it; null for none, or one that no longer stands. */
 function trainingDiveOf(
   mark: TrainingMarkState | undefined,
+  identityHeld: boolean,
 ): TripManifest["divers"][number]["trainingDive"] {
   // Aboard means the course's own instructor (issue #2731), the same answer
   // readiness reads to take the course's level.
-  return mark?.valid
+  return mark?.valid && !identityHeld
     ? {
         courseTitle: mark.enrollmentCourseTitle,
+        ...(mark.enrollmentCourse ? { intro: mark.enrollmentCourse.intro } : {}),
         instructorAboard: mark.courseInstructorAboard,
         overRatio: mark.overRatio ?? false,
       }
@@ -1308,7 +1310,10 @@ export async function getTripManifests(
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
-      trainingDive: trainingDiveOf(trainingMarks.get(booking.id)),
+      trainingDive: trainingDiveOf(
+        trainingMarks.get(booking.id),
+        booking.identityUnconfirmedAt !== null,
+      ),
       trainingMarkCleared: booking.trainingClearedAt
         ? {
             reason: booking.trainingClearedReason ?? "forms_owed",

@@ -165,6 +165,7 @@
   "medicalEarlierRefusal": "A physician did not clear this person on {date} (earlier waiver)",
   "trainingMarkCleared": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned} other {Training mark cleared with course forms unsigned}}",
   "trainingMarkClearedInvalid": "{hasName, select, yes {Training mark cleared by {name} after it stopped fitting its course seat} other {Training mark cleared after it stopped fitting its course seat}}",
+  "mixedTrainingDepthWarning": "If intro participants dive with other students, check the intro program’s depth limit before the dive.",
   "trainingDive": "Training dive for {course}",
   "trainingDiveNoInstructor": "No instructor of the course aboard for this seat",
   "trainingDiveOverRatio": "Over the instructor’s ratio for this course; move a student",

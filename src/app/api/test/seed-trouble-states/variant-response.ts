@@ -1,5 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { authStateResponse } from "./auth-state";
+import { mixedDepthStateResponse } from "./mixed-depth-state";
 import { mixedTrainingStateResponse } from "./mixed-training-state";
 import { operationalStateResponse } from "./operational-states";
 import { settingsStateResponse } from "./settings-state";
@@ -8,6 +9,7 @@ import { settingsStateResponse } from "./settings-state";
 export async function troubleVariantResponse(request: Request, db: AppDb) {
   return (
     (await authStateResponse(request, db)) ??
+    (await mixedDepthStateResponse(request, db)) ??
     (await mixedTrainingStateResponse(request, db)) ??
     (await settingsStateResponse(request, db)) ??
     (await operationalStateResponse(request, db))

@@ -88,6 +88,23 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
     expect(shown.depthAdvisory).toBeUndefined();
   });
 
+  it("withholds a previously marked course from a newly held seat", () => {
+    const shown = withholdHeldSeatParticulars({
+      ...held([{ code: "identity_unconfirmed" }]),
+      trainingDive: { courseTitle: "Intro", instructorAboard: false, intro: true },
+    });
+    expect(shown.trainingDive).toBeNull();
+  });
+
+  it("cleans stale course details even on an already-withheld row", () => {
+    const shown = withholdHeldSeatParticulars({
+      ...matchedPerson,
+      identityWithheld: true,
+      trainingDive: { courseTitle: "Intro", instructorAboard: false, intro: true },
+    });
+    expect(shown.trainingDive).toBeNull();
+  });
+
   it("keeps the seat: its name as booked, state, mark, desk flags, team and pickup", () => {
     const shown = withholdHeldSeatParticulars(held([{ code: "identity_unconfirmed" }]));
     expect(shown).toMatchObject({
