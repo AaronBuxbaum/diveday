@@ -39,7 +39,7 @@ export function bootstrapPnpm({
       {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
-        timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+      timeoutMs: SUBPROCESS_TIMEOUTS.packageManagerBootstrap,
       },
     );
     const output = `${result?.stdout ?? ""}${result?.stderr ?? ""}`;
