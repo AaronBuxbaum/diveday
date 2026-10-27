@@ -90,6 +90,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Saved trip-prep copy
 - Snag
 - Staff note
+- Today shop-day catch-up
 
 ## Modeling notes
 

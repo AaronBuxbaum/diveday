@@ -206,6 +206,38 @@ describe("listDeskEventsSince", () => {
     ).toBe(false);
   });
 
+  it("does not disclose a subject name belonging to another shop", async () => {
+    const { db, shop, reader, desk, trip } = await catchUpFixture();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({
+        name: "Other shop",
+        slug: "other-desk-event-shop",
+        timezone: "UTC",
+      })
+      .returning();
+    if (!otherShop) throw new Error("missing other shop");
+    const [subject] = await db
+      .insert(people)
+      .values({
+        shopId: otherShop.id,
+        fullName: "Other shop person",
+      })
+      .returning();
+    if (!subject) throw new Error("missing other subject");
+    await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
+    await recordDeskEvent(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "gear_changed",
+      subjectPersonId: subject.id,
+      actorPersonId: desk.id,
+    });
+    const seen = await listDeskEventsSince(db, shop.id, trip.id, reader.id);
+    expect(seen.events).toHaveLength(1);
+    expect(seen.events[0]?.subjectName).toBeNull();
+  });
+
   it("says nothing about a departure that has been taken off the board", async () => {
     const { db, shop, reader, desk, trip, seat } = await catchUpFixture();
     await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
