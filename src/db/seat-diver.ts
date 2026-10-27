@@ -16,7 +16,7 @@ import {
 } from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
-import { type FlySafeCorrectionOutcome, sendFlySafeCorrections } from "./fly-safe-correction";
+import { correctFlySafeForPerson, type FlySafeCorrectionOutcome } from "./fly-safe-correction";
 import { publishManifestEvent } from "./manifest-events";
 import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./notifications";
 import { recordSeatChange, type SeatChangeCode } from "./operations";
@@ -613,10 +613,9 @@ export async function moveSeat(
 
   let flySafe: FlySafeCorrectionOutcome | "failed";
   try {
-    flySafe = await sendFlySafeCorrections(db, {
+    flySafe = await correctFlySafeForPerson(db, {
       shopId: input.shopId,
-      tripId: moved.toTripId,
-      bookingId: input.bookingId,
+      personId: moved.personId,
       now: movedAt,
       emailProvider: notices.emailProvider,
     });

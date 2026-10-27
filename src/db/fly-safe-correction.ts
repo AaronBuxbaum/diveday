@@ -308,6 +308,41 @@ export async function retryOwedFlySafeCorrections(
   }
 }
 
+/** Recheck the current seats of the affected people after an itinerary change. */
+async function correctFlySafeForPeople(
+  db: AppDb,
+  input: { shopId: string; personIds: string[]; now?: Date; emailProvider?: NotificationProvider },
+): Promise<FlySafeCorrectionOutcome> {
+  const total: FlySafeCorrectionOutcome = { told: 0, failed: 0, unreached: [] };
+  if (!input.personIds.length) return total;
+  const seats = await db
+    .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        inArray(bookings.personId, input.personIds),
+        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        isNotNull(bookings.flySafeHoursTold),
+        isNull(bookings.flySafeCorrectedAt),
+      ),
+    );
+  for (const seat of seats) {
+    const result = await sendFlySafeCorrections(db, {
+      shopId: input.shopId,
+      tripId: seat.tripId,
+      bookingId: seat.id,
+      expectedPersonId: seat.personId,
+      now: input.now,
+      emailProvider: input.emailProvider,
+    });
+    total.told += result.told;
+    total.failed += result.failed;
+    total.unreached.push(...result.unreached);
+  }
+  return total;
+}
+
 /** Recheck every current seat of people whose itinerary includes a changed trip. */
 export async function correctFlySafeForTripChange(
   db: AppDb,
@@ -317,34 +352,18 @@ export async function correctFlySafeForTripChange(
     .select({ personId: bookings.personId })
     .from(bookings)
     .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
-  const total: FlySafeCorrectionOutcome = { told: 0, failed: 0, unreached: [] };
-  if (!affected.length) return total;
-  const seats = await db
-    .select({ id: bookings.id, tripId: bookings.tripId })
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, input.shopId),
-        inArray(
-          bookings.personId,
-          affected.map((value) => value.personId),
-        ),
-        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
-        isNotNull(bookings.flySafeHoursTold),
-        isNull(bookings.flySafeCorrectedAt),
-      ),
-    );
-  for (const seat of seats) {
-    const result = await sendFlySafeCorrections(db, {
-      ...input,
-      tripId: seat.tripId,
-      bookingId: seat.id,
-    });
-    total.told += result.told;
-    total.failed += result.failed;
-    total.unreached.push(...result.unreached);
-  }
-  return total;
+  return correctFlySafeForPeople(db, {
+    ...input,
+    personIds: [...new Set(affected.map((seat) => seat.personId))],
+  });
+}
+
+/** A moved seat changes both its former and new itinerary, not just its own reminder. */
+export async function correctFlySafeForPerson(
+  db: AppDb,
+  input: { shopId: string; personId: string; now?: Date; emailProvider?: NotificationProvider },
+): Promise<FlySafeCorrectionOutcome> {
+  return correctFlySafeForPeople(db, { ...input, personIds: [input.personId] });
 }
 
 /** Recheck the recipient provenance before a queued correction reaches a provider. */
@@ -676,6 +695,8 @@ export async function sendFlySafeCorrections(
     tripId: string;
     /** Limit a move or reminder reconciliation to the affected seat. */
     bookingId?: string;
+    /** Fence a seat discovered for a particular person against reassignment. */
+    expectedPersonId?: string;
     /** Limit background retries; an explicit staff action may try again. */
     automatic?: boolean;
     now?: Date;
@@ -717,6 +738,7 @@ export async function sendFlySafeCorrections(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, trip.id),
         input.bookingId ? eq(bookings.id, input.bookingId) : undefined,
+        input.expectedPersonId ? eq(bookings.personId, input.expectedPersonId) : undefined,
         inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
@@ -756,6 +778,7 @@ export async function sendFlySafeCorrections(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, trip.id),
+        input.expectedPersonId ? eq(bookings.personId, input.expectedPersonId) : undefined,
         inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
         inArray(bookings.id, stale),
@@ -816,6 +839,8 @@ export async function sendFlySafeCorrections(
         !seat ||
         seat.flySafeCorrectionLeaseId !== leaseId ||
         seat.tripId !== trip.id ||
+        (input.expectedPersonId && seat.personId !== input.expectedPersonId) ||
+        (seat.status !== "booked" && seat.status !== "checked_in") ||
         !seat.flySafeRecipientSealed
       )
         return false;
