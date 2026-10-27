@@ -886,15 +886,21 @@
     "reviewMedical": "Review medical status"
   },
   "trainingPlan": {
-    "title": "Training plan",
-    "scope": "Confirm the actual underwater groups and each program’s limits before diving.",
+    "title": "Planned instructor assignments",
+    "scope": "Confirm actual underwater groups and program limits before diving.",
     "instructor": "Instructor for {name}",
     "unassigned": "Unassigned",
     "save": "Save",
     "saving": "Saving…",
     "assistants": "Assistants",
     "students": "Students",
-    "unresolved": "Some assignments or course limits need review.",
-    "over": "Planned group for {name}: {students} students; limit {capacity}."
+    "over": "Planned group for {name}: {students} students; limit {capacity}.",
+    "limitsUnavailable": "Some course limits are unavailable.",
+    "chooseInstructor": "Choose an instructor.",
+    "instructorUnavailable": "The assigned instructor is unavailable. Choose another.",
+    "noInstructor": "Add an instructor to this departure.",
+    "noCourseInstructor": "No course instructor is available on this departure.",
+    "checkTrainingMark": "Review this training mark before assigning an instructor.",
+    "checkCourseLimit": "Check this course’s limits before diving."
   }
 }

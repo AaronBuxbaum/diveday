@@ -886,15 +886,21 @@
     "reviewMedical": "Revisar estado médico"
   },
   "trainingPlan": {
-    "title": "Plan de formación",
-    "scope": "Confirma los grupos bajo el agua y los límites de cada programa antes de bucear.",
+    "title": "Asignaciones previstas de instructores",
+    "scope": "Confirma los grupos bajo el agua y los límites del programa antes de bucear.",
     "instructor": "Instructor para {name}",
     "unassigned": "Sin asignar",
     "save": "Guardar",
     "saving": "Guardando…",
     "assistants": "Asistentes",
     "students": "Estudiantes",
-    "unresolved": "Revisa las asignaciones o los límites de algunos cursos.",
-    "over": "Grupo planeado para {name}: {students} estudiantes; límite {capacity}."
+    "over": "Grupo planeado para {name}: {students} estudiantes; límite {capacity}.",
+    "limitsUnavailable": "Algunos límites de cursos no están disponibles.",
+    "chooseInstructor": "Elige un instructor.",
+    "instructorUnavailable": "El instructor asignado no está disponible. Elige otro.",
+    "noInstructor": "Agrega un instructor a esta salida.",
+    "noCourseInstructor": "No hay un instructor del curso disponible en esta salida.",
+    "checkTrainingMark": "Revisa esta marca de formación antes de asignar un instructor.",
+    "checkCourseLimit": "Revisa los límites de este curso antes de bucear."
   }
 }

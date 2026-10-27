@@ -25,7 +25,9 @@ test.describe("mixed training depth warning", () => {
     await expect(
       plan.getByRole("heading", { name: staff("trips.trainingPlan.title") }),
     ).toBeVisible();
-    await expect(plan.getByText(staff("trips.trainingPlan.unresolved"))).toBeVisible();
+    await expect(
+      plan.getByText(staff("trips.trainingPlan.noCourseInstructor")).first(),
+    ).toBeVisible();
     const student = plan.getByLabel(staff("trips.trainingPlan.instructor", { name: "Maya" }));
     await expect(student).toHaveValue("");
     await student

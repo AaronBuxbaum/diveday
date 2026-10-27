@@ -103,6 +103,7 @@ export async function trainingPlanView(db: DbExecutor, shopId: string, tripId: s
       name: r.name,
       sessionTripId,
       instructorPersonId: r.instructorPersonId,
+      markValid: valid,
       rule: valid && enrollment ? ratioRuleOf(enrollment.course) : null,
       eligible,
     };
