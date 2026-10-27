@@ -207,6 +207,8 @@
     "certOverrides": "Seats made diving past a missing card",
     "certOverridesLink": "The month’s safety activity",
     "crew": "Crew sailing on a lapsed credential",
+    "currentCrewCredentials": "Current credentials on Team",
+    "crewHistoryUnavailable": "Credential history unavailable for {count, plural, one {# crew sailing} other {# crew sailings}}",
     "crewValue": "{lapsed} of {sailings}",
     "crewDetailUnrecorded": "Nothing on file for their role on {unrecorded} of {sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "crewDetail": "{sailings, plural, one {# crew sailing} other {# crew sailings}}",

@@ -172,7 +172,8 @@
 - **Staff credential** — a professional qualification a *staff member* holds (instructor rating,
   first-aid, boat licence), with an optional renewal date that raises a Today row as it approaches
   (`staff_credentials`). Distinct from a **certification**, which is always a diver's. Renewal is
-  a calendar date, so it is good through the end of its own shop-local day.
+  a calendar date, so it is good through the end of its own shop-local day. A renewal or correction
+  appends a recorded state; a preexisting card's baseline cannot establish what was recorded earlier.
 - **Supervision claim** — what Today, the staffing week and the trip page tell a staffer about who
   is supervising a departure in the water: the in-water crew count with each rostered
   professional's recorded ratings read (`courseCrewCountsByTrip`, `getTripOverview`). A rung is
@@ -209,7 +210,7 @@
   says so. The roll-call figure keeps "not closed" apart from "no roll call taken" (review F2). The
   boarding caveat says what the dock count proves: the rail records nobody as boarded while
   readiness blocks them, and a seat whose readiness changed after boarding is not separated
-  (review F4). Credentials are read as the records stand today, with two limits: one issued after
-  a sailing never answers for it, so a renewal entered as a new record leaves the earlier lapsed
-  sailing lapsed (review F3); and a credential since deleted is gone from the record, so a sailing
-  once on a lapsed card reads as unrecorded instead, which errs toward attention (review N6).
+  (review F4). Historical credential evidence is unavailable and excluded from the checked
+  denominator: issue dates and transaction timestamps cannot prove what was committed at departure.
+  Current credentials remain on Team. Erasure removes version history.
+  Crew assignments and other facts still read as the shop's records stand today.

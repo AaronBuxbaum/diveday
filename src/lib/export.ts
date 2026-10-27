@@ -71,6 +71,8 @@ export const EXPORT_FILE_NOTES = {
     "Which crew member asked to work which departure, and what the shop answered. An approval is a decision, not an assignment; trip_assignments.csv remains the authoritative crew list.",
   "staff_credentials.csv":
     "Staff-owned ratings, insurance, and safety credentials, including their review status and renewal dates.",
+  "staff_credential_history.csv":
+    "Recorded credential states and their recording times. A baseline marks where history begins; it does not establish earlier evidence.",
   "bookings.csv":
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time. status no_show is a released seat: with turned_away_at set, the desk saw the diver and turned them away, for the reason in turned_away_reason (medical, waiver, card, age, identity or payment — the category only, never the answers or card details; blank after the diver's erasure); with turned_away_at blank, the diver did not arrive. A removed seat with turned_away_at set was turned away, then removed: the diver did not cancel it.",
   "trip_help_requests.csv":

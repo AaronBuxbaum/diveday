@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type SafetyCrewMember,
@@ -18,7 +18,6 @@ import {
   personRoles,
   rollCallCrewEvents,
   rollCallEvents,
-  staffCredentials,
   tripAssignments,
   trips,
 } from "./schema";
@@ -159,24 +158,8 @@ export async function getSafetyMonth(
   ]);
 
   const crewIds = [...new Set(crew.map((row) => row.personId))];
-  const [credentials, names, shopRoleRows] = crewIds.length
+  const [names, shopRoleRows] = crewIds.length
     ? await queryAll(db, [
-        () =>
-          db
-            .select({
-              personId: staffCredentials.personId,
-              kind: staffCredentials.kind,
-              issuedAt: staffCredentials.issuedAt,
-              renewsAt: staffCredentials.renewsAt,
-            })
-            .from(staffCredentials)
-            .where(
-              and(
-                eq(staffCredentials.shopId, shopId),
-                inArray(staffCredentials.personId, crewIds),
-                isNull(staffCredentials.deletedAt),
-              ),
-            ),
         () =>
           db
             .select({ id: people.id, fullName: people.fullName })
@@ -191,7 +174,7 @@ export async function getSafetyMonth(
             .innerJoin(people, eq(people.id, personRoles.personId))
             .where(and(eq(people.shopId, shopId), inArray(personRoles.personId, crewIds))),
       ])
-    : [[], [], []];
+    : [[], []];
 
   const bookingsByTrip = new Map<string, string[]>();
   for (const row of roster) {
@@ -230,7 +213,9 @@ export async function getSafetyMonth(
     })),
     diverEvents,
     crewEvents,
-    credentials,
+    // Recorded transaction times do not prove commit before departure.
+    credentials: [],
+    unavailableCredentialPeople: new Set(crewIds),
     personNames: new Map(names.map((row) => [row.id, row.fullName])),
     certOverrides,
   });

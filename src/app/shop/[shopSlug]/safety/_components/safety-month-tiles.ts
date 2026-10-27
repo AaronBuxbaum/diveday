@@ -1,6 +1,7 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { SafetyMonth } from "@/lib/safety-report";
 import type { MonthFigure } from "../../reports/_components/MonthFigures";
+import { crewSafetyValue } from "./crew-safety-value";
 import { SAFETY_LIST_IDS } from "./SafetyLists";
 
 /**
@@ -19,6 +20,7 @@ export function safetyMonthTiles({
   drafts,
   activityHref,
   staffingHref,
+  teamHref,
 }: {
   t: StaffTranslator;
   safety: SafetyMonth;
@@ -27,6 +29,7 @@ export function safetyMonthTiles({
   activityHref: string;
   /** The crew schedule, or null when the shop runs without it. */
   staffingHref: string | null;
+  teamHref?: string;
 }): MonthFigure[] {
   const attention = (detail: string | null) =>
     detail ? { detail, detailTone: "attention" as const } : {};
@@ -69,21 +72,14 @@ export function safetyMonthTiles({
       : {
           key: "crew",
           label: t("incidents.safety.crew"),
-          value:
-            safety.crewSailings > 0 && safety.checkedSailings === 0
-              ? t("staffing.credentials.noneOnFile")
-              : t("incidents.safety.crewValue", {
-                  lapsed: safety.lapsedSailings.length,
-                  sailings: safety.checkedSailings,
-                }),
-          href: `#${safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length === 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
+          value: crewSafetyValue(safety, t).value,
+          ...(safety.unknownCredentialSailings && teamHref
+            ? { link: { href: teamHref, label: t("incidents.safety.currentCrewCredentials") } }
+            : {
+                href: `#${safety.lapsedSailings.length > 0 || safety.unrecordedCrew.length === 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
+              }),
           ...attention(
-            safety.unrecordedSailings > 0
-              ? t("incidents.safety.crewDetailUnrecorded", {
-                  unrecorded: safety.unrecordedSailings,
-                  sailings: safety.crewSailings,
-                })
-              : null,
+            crewSafetyValue(safety, t).attention ? crewSafetyValue(safety, t).detail : null,
           ),
         },
     {

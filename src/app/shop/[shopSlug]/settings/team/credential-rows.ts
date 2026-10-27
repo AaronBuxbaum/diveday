@@ -27,6 +27,7 @@ export type RenewalState = "not-recorded" | "current" | "due-soon" | "overdue";
 /** One person's credential, as their own card reads it. */
 export type CardCredential = {
   id: string;
+  revision?: number;
   name: string;
   kind: string;
   /** The kind and the issuer, joined: "Captain’s license · USCG". */
@@ -36,6 +37,10 @@ export type CardCredential = {
   renewal?: RenewalState;
   /** Somebody has looked at it; until then the card says "Needs review". */
   reviewed?: boolean;
+  identifier?: string | null;
+  issuingBody?: string | null;
+  issuedAt?: string | null;
+  renewsAt?: string | null;
 };
 
 /** Every credential, each renewal measured against the shop's own today. */
@@ -56,6 +61,7 @@ export function credentialRowsFor(
           : "current";
     return {
       id: credential.id,
+      revision: credential.revision,
       personId: person.id,
       name: credential.name,
       kind: credential.kind,
@@ -77,6 +83,10 @@ export function credentialRowsFor(
               : null,
       renewal,
       reviewed: credential.status === "verified",
+      identifier: credential.identifier,
+      issuingBody: credential.issuingBody,
+      issuedAt: credential.issuedAt,
+      renewsAt: credential.renewsAt,
     };
   });
 }

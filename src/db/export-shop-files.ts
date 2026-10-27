@@ -1124,6 +1124,31 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["staff_credentials.csv"],
   },
+  {
+    file: "staff_credential_history.csv",
+    header: [
+      "seq",
+      "credential_id",
+      "event",
+      "kind",
+      "issued_at",
+      "renews_at",
+      "active",
+      "recorded_at",
+    ],
+    rows: ({ staffCredentialHistoryRows }) =>
+      staffCredentialHistoryRows.map((row) => [
+        row.seq,
+        row.credentialId,
+        row.event,
+        row.kind,
+        row.issuedAt,
+        row.renewsAt,
+        row.active,
+        row.recordedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["staff_credential_history.csv"],
+  },
   shopFile(BOOKINGS_CSV),
   {
     file: "trip_help_requests.csv",

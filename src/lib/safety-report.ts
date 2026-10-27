@@ -66,6 +66,10 @@ export type SafetyCredential = {
    */
   issuedAt?: CalendarDate | null;
   renewsAt: string | null;
+  credentialId?: string;
+  recordedAt?: Date;
+  event?: "created" | "baseline" | "renewed" | "corrected" | "deleted";
+  historyUnavailable?: boolean;
 };
 
 export type SafetyMonthInput = {
@@ -76,6 +80,8 @@ export type SafetyMonthInput = {
   crewEvents: readonly SafetyRollCallEvent[];
   /** Live credentials of everybody on those crews. */
   credentials: readonly SafetyCredential[];
+  /** Credential history that cannot be proven at departure. */
+  unavailableCredentialPeople?: ReadonlySet<string>;
   personNames: ReadonlyMap<string, string>;
   /** Card checks written past (`participant_type_changed`, `certCheck` overridden). */
   certOverrides: number;
@@ -124,6 +130,8 @@ export type SafetyMonth = {
    * reads as clean.
    */
   checkedSailings: number;
+  /** Sailings whose credential history cannot be reconstructed. */
+  unknownCredentialSailings: number;
   /**
    * **Departures that sailed with no crew on record** (fourth review, item
    * 13): nobody on the crew list, or every one of them recorded ashore at the
@@ -299,6 +307,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   const noCrewDepartures: SafetyMonth["noCrewDepartures"] = [];
   let unrecordedSailings = 0;
   let nothingOnFileSailings = 0;
+  let unknownCredentialSailings = 0;
 
   // An occurrence nobody booked and nobody counted is a date on the board,
   // not a departure that sailed — the same skip the Today queue makes.
@@ -335,9 +344,17 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       if (crewResult(departure.tripId, personId, dock) === "not_boarded") continue;
       crewSailings += 1;
       // Only what was on file by the day they sailed (review F3).
-      const onFile = (credentialsByPerson.get(personId) ?? []).filter(
-        ({ issuedAt }) => !issuedAt || issuedAt <= divesOn,
-      );
+      const recorded = credentialsByPerson.get(personId) ?? [];
+      // A transaction's internal timestamp does not prove its state was committed
+      // before departure. Versions are retained, but cannot yet certify the past.
+      if (
+        input.unavailableCredentialPeople?.has(personId) ||
+        recorded.some((card) => card.credentialId)
+      ) {
+        unknownCredentialSailings += 1;
+        continue;
+      }
+      const onFile = recorded.filter(({ issuedAt }) => !issuedAt || issuedAt <= divesOn);
       if (onFile.length === 0) nothingOnFileSailings += 1;
       if (answersTheirJob(tripRole, shopRoles, onFile) === false) {
         unrecordedSailings += 1;
@@ -384,7 +401,8 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     lapsedSailings,
     unrecordedSailings,
     unrecordedCrew: [...unrecorded.values()],
-    checkedSailings: crewSailings - nothingOnFileSailings,
+    checkedSailings: crewSailings - nothingOnFileSailings - unknownCredentialSailings,
+    unknownCredentialSailings,
     noCrewDepartures: noCrewOnRecord ? [] : noCrewDepartures,
     noCrewOnRecord,
     boatsBack: departures.filter((departure) => departure.diveMode === "boat").length,
@@ -412,6 +430,7 @@ export function summarizeSafetyYear(months: readonly SafetyMonth[]): SafetyYear 
     certOverrides: sum((month) => month.certOverrides),
     crewSailings: sum((month) => month.crewSailings),
     lapsedSailings: months.flatMap((month) => month.lapsedSailings),
+    unknownCredentialSailings: sum((month) => month.unknownCredentialSailings),
     unrecordedSailings: sum((month) => month.unrecordedSailings),
     unrecordedCrew: [...unrecorded.values()],
     checkedSailings: sum((month) => month.checkedSailings),

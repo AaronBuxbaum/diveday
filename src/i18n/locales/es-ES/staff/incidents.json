@@ -207,6 +207,8 @@
     "certOverrides": "Plazas de buceo concedidas sin titulación",
     "certOverridesLink": "La actividad de seguridad del mes",
     "crew": "Tripulación con una acreditación caducada",
+    "currentCrewCredentials": "Credenciales actuales en Equipo",
+    "crewHistoryUnavailable": "Historial de acreditación no disponible para {count, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "crewValue": "{lapsed} de {sailings}",
     "crewDetailUnrecorded": "Sin acreditación registrada para su función en {unrecorded} de {sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "crewDetail": "{sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",

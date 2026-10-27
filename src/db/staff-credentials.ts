@@ -1,10 +1,16 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import type { RatingCredential } from "@/lib/crew-roles";
 import type { DbExecutor } from "./client";
 import { isUniqueConstraintViolation } from "./query-helpers";
-import { people, personRoles, staffCredentialKind, staffCredentials } from "./schema";
+import {
+  people,
+  personRoles,
+  staffCredentialHistory,
+  staffCredentialKind,
+  staffCredentials,
+} from "./schema";
 
 /**
  * Every kind a staff credential can be filed as, read from the column itself
@@ -81,6 +87,29 @@ export async function ratingCredentialsByPerson(
   return byPerson;
 }
 
+/** Lock the person before their credentials, matching erasure's order. */
+async function lockCredentialOwner(db: DbExecutor, shopId: string, personId: string) {
+  const [person] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .for("no key update");
+  if (!person) return false;
+  const [role] = await db
+    .select({ role: personRoles.role })
+    .from(personRoles)
+    .where(and(eq(personRoles.personId, personId), inArray(personRoles.role, [...STAFF_ROLES])))
+    .limit(1);
+  return Boolean(role);
+}
+
 export async function createStaffCredential(
   db: DbExecutor,
   input: {
@@ -112,8 +141,9 @@ export async function createStaffCredential(
     // In its own savepoint (a transaction when `db` is not one), so a refusal
     // rolls back only this insert and a caller's transaction stays usable: a
     // bare 23505 there aborts it (issue #2295, the #1769 pattern).
-    const [row] = await db.transaction((savepoint) =>
-      savepoint
+    const [row] = await db.transaction(async (savepoint) => {
+      if (!(await lockCredentialOwner(savepoint, input.shopId, input.personId))) return [];
+      const inserted = await savepoint
         .insert(staffCredentials)
         .values({
           shopId: input.shopId,
@@ -127,8 +157,10 @@ export async function createStaffCredential(
           status: "pending",
           updatedAt: nowDate(),
         })
-        .returning(),
-    );
+        .returning();
+      if (inserted[0]) await recordCredentialState(savepoint, inserted[0], "created");
+      return inserted;
+    });
     return row ?? null;
   } catch (error) {
     // `staff_credentials_live_identity_unique` covers (shop, person, kind,
@@ -142,6 +174,107 @@ export async function createStaffCredential(
   }
 }
 
+type CredentialRow = typeof staffCredentials.$inferSelect;
+type CredentialEvent = "created" | "baseline" | "renewed" | "corrected" | "deleted";
+
+async function recordCredentialState(db: DbExecutor, row: CredentialRow, event: CredentialEvent) {
+  await db.insert(staffCredentialHistory).values({
+    shopId: row.shopId,
+    credentialId: row.id,
+    event,
+    kind: row.kind,
+    issuedAt: row.issuedAt,
+    renewsAt: row.renewsAt,
+    active: event !== "deleted",
+    recordedAt: nowDate(),
+  });
+}
+
+async function ensureCredentialBaseline(db: DbExecutor, row: CredentialRow) {
+  const [existing] = await db
+    .select({ seq: staffCredentialHistory.seq })
+    .from(staffCredentialHistory)
+    .where(
+      and(
+        eq(staffCredentialHistory.shopId, row.shopId),
+        eq(staffCredentialHistory.credentialId, row.id),
+      ),
+    )
+    .limit(1);
+  if (!existing) await recordCredentialState(db, row, "baseline");
+}
+
+/** Renewal and correction preserve the previous recorded state under the same card number. */
+export async function changeStaffCredential(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    credentialId: string;
+    expectedRevision: number;
+    personId: string;
+    kind: CredentialRow["kind"];
+    name: string;
+    issuingBody: string | null;
+    identifier: string | null;
+    issuedAt: string | null;
+    renewsAt: string | null;
+    change: "renewed" | "corrected";
+  },
+) {
+  if (input.issuedAt && input.renewsAt && input.renewsAt < input.issuedAt) return null;
+  if (input.change === "renewed" && (!input.issuedAt || !input.renewsAt)) return null;
+  try {
+    return await db.transaction(async (tx) => {
+      if (!(await lockCredentialOwner(tx, input.shopId, input.personId))) return null;
+      const [previous] = await tx
+        .select()
+        .from(staffCredentials)
+        .where(
+          and(
+            eq(staffCredentials.id, input.credentialId),
+            eq(staffCredentials.shopId, input.shopId),
+            eq(staffCredentials.personId, input.personId),
+            isNull(staffCredentials.deletedAt),
+          ),
+        )
+        .for("update");
+      if (!previous || previous.kind !== input.kind || previous.revision !== input.expectedRevision)
+        return null;
+      if (
+        input.change === "renewed" &&
+        previous.issuedAt &&
+        input.issuedAt &&
+        input.issuedAt <= previous.issuedAt
+      )
+        return null;
+      await ensureCredentialBaseline(tx, previous);
+      const [updated] = await tx
+        .update(staffCredentials)
+        .set({
+          name: input.name,
+          revision: previous.revision + 1,
+          issuingBody: input.issuingBody,
+          identifier: input.identifier,
+          issuedAt: input.issuedAt,
+          renewsAt: input.renewsAt,
+          status: "pending",
+          reviewNote: null,
+          reviewedAt: null,
+          reviewedByPersonId: null,
+          updatedAt: nowDate(),
+        })
+        .where(and(eq(staffCredentials.id, previous.id), eq(staffCredentials.shopId, input.shopId)))
+        .returning();
+      if (!updated) return null;
+      await recordCredentialState(tx, updated, input.change);
+      return updated;
+    });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return null;
+    throw error;
+  }
+}
+
 export async function reviewStaffCredential(
   db: DbExecutor,
   input: {
@@ -150,6 +283,7 @@ export async function reviewStaffCredential(
     status: "pending" | "verified";
     reviewNote?: string | null;
     reviewedByPersonId: string;
+    expectedRevision?: number;
   },
 ) {
   const [row] = await db
@@ -160,10 +294,14 @@ export async function reviewStaffCredential(
       reviewedAt: nowDate(),
       reviewedByPersonId: input.reviewedByPersonId,
       updatedAt: nowDate(),
+      revision: sql`${staffCredentials.revision} + 1`,
     })
     .where(
       and(
         eq(staffCredentials.id, input.credentialId),
+        input.expectedRevision === undefined
+          ? undefined
+          : eq(staffCredentials.revision, input.expectedRevision),
         eq(staffCredentials.shopId, input.shopId),
         isNull(staffCredentials.deletedAt),
       ),
@@ -177,21 +315,40 @@ export async function deleteStaffCredential(
   shopId: string,
   credentialId: string,
   deletedByPersonId: string,
+  expectedRevision?: number,
 ) {
-  const [row] = await db
-    .update(staffCredentials)
-    .set({
-      deletedAt: nowDate(),
-      deletedByPersonId,
-      updatedAt: nowDate(),
-    })
-    .where(
-      and(
-        eq(staffCredentials.id, credentialId),
-        eq(staffCredentials.shopId, shopId),
-        isNull(staffCredentials.deletedAt),
-      ),
-    )
-    .returning({ id: staffCredentials.id });
-  return Boolean(row);
+  return db.transaction(async (tx) => {
+    const [owner] = await tx
+      .select({ personId: staffCredentials.personId })
+      .from(staffCredentials)
+      .where(and(eq(staffCredentials.id, credentialId), eq(staffCredentials.shopId, shopId)))
+      .limit(1);
+    if (!owner || !(await lockCredentialOwner(tx, shopId, owner.personId))) return false;
+    const [previous] = await tx
+      .select()
+      .from(staffCredentials)
+      .where(
+        and(
+          eq(staffCredentials.id, credentialId),
+          eq(staffCredentials.shopId, shopId),
+          isNull(staffCredentials.deletedAt),
+        ),
+      )
+      .for("update");
+    if (!previous || (expectedRevision !== undefined && previous.revision !== expectedRevision))
+      return false;
+    await ensureCredentialBaseline(tx, previous);
+    const [row] = await tx
+      .update(staffCredentials)
+      .set({
+        deletedAt: nowDate(),
+        deletedByPersonId,
+        updatedAt: nowDate(),
+      })
+      .where(and(eq(staffCredentials.id, credentialId), eq(staffCredentials.shopId, shopId)))
+      .returning();
+    if (!row) return false;
+    await recordCredentialState(tx, row, "deleted");
+    return true;
+  });
 }

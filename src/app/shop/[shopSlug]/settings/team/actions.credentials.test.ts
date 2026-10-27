@@ -30,7 +30,7 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { saveStaffCredentialAction } = await import("./actions");
+const { deleteStaffCredentialAction, saveStaffCredentialAction } = await import("./actions");
 
 /**
  * Issue #2172: a pro rating with no renewal date reads as current, so one old
@@ -113,7 +113,7 @@ describe("adding a staff credential", () => {
 });
 
 describe("renewing a staff credential", () => {
-  it("retains the same card number and the lapsed sailing on both month and year reports", async () => {
+  it("retains the card number and labels uncertain sailing evidence unavailable", async () => {
     const { db, shop } = await setup();
     const [sailing] = await db
       .select({ id: trips.id, endsAt: trips.endsAt })
@@ -151,26 +151,42 @@ describe("renewing a staff credential", () => {
     const from = new Date("2000-01-01T00:00:00Z");
     const to = new Date("2100-01-01T00:00:00Z");
     const before = await getSafetyMonth(db, shop.id, from, to, shop.timezone);
-    expect(
-      before.lapsedSailings.some((row) => row.personId === member.id && row.tripId === sailing.id),
-    ).toBe(true);
+    expect(before.unknownCredentialSailings).toBeGreaterThan(0);
+    expect(before.lapsedSailings.some((row) => row.personId === member.id)).toBe(false);
 
     const renewal = credentialForm(member.id, "captains_licence", shiftCalendarDate(day, 366));
     renewal.set("identifier", "LICENCE-123");
     renewal.set("issuedAt", shiftCalendarDate(day, 1));
     renewal.set("renewalOf", oldCard.id);
+    renewal.set("revision", String(oldCard.revision));
     expect(await redirectedTo(() => saveStaffCredentialAction(renewal))).toBe(
       `/shop/${shop.slug}/settings/team?notice=credential-saved`,
     );
     const cards = (await savedFor(member.id)).filter((card) => card.identifier === "LICENCE-123");
     expect(cards.some((card) => card.renewsAt === shiftCalendarDate(day, 366))).toBe(true);
+    const renewed = cards.find((card) => card.id === oldCard.id);
+    if (!renewed) throw new Error("expected current licence");
+    const correction = credentialForm(member.id, "captains_licence", shiftCalendarDate(day, 366));
+    correction.set("identifier", "LICENCE-123");
+    correction.set("issuedAt", shiftCalendarDate(day, -365));
+    correction.set("correctionOf", oldCard.id);
+    correction.set("revision", String(renewed.revision));
+    expect(await redirectedTo(() => saveStaffCredentialAction(correction))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-saved`,
+    );
+    const [corrected] = (await savedFor(member.id)).filter((card) => card.id === oldCard.id);
+    if (!corrected) throw new Error("expected corrected licence");
+    const deletion = new FormData();
+    deletion.set("credentialId", oldCard.id);
+    deletion.set("revision", String(corrected.revision));
+    expect(await redirectedTo(() => deleteStaffCredentialAction(deletion))).toBe(
+      `/shop/${shop.slug}/settings/team?notice=credential-deleted`,
+    );
     const after = await getSafetyMonth(db, shop.id, from, to, shop.timezone);
-    expect(
-      after.lapsedSailings.some((row) => row.personId === member.id && row.tripId === sailing.id),
-    ).toBe(true);
+    expect(after.unknownCredentialSailings).toBeGreaterThan(0);
+    expect(after.lapsedSailings.some((row) => row.personId === member.id)).toBe(false);
     const year = await getSafetyYear(db, shop.id, Number(day.slice(0, 4)), shop.timezone);
-    expect(
-      year.lapsedSailings.some((row) => row.personId === member.id && row.tripId === sailing.id),
-    ).toBe(true);
+    expect(year.unknownCredentialSailings).toBeGreaterThan(0);
+    expect(year.lapsedSailings.some((row) => row.personId === member.id)).toBe(false);
   });
 });

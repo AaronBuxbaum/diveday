@@ -28,7 +28,7 @@ import { settingsPaneClass } from "../_components/settings-pane";
 import { AddCredentialDisclosure } from "./_components/AddCredentialDisclosure";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { LanguageCheckboxes, StaffLanguagesValue } from "./_components/LanguageCheckboxes";
-import { StaffCardCredentials } from "./_components/StaffCardCredentials";
+import { StaffCardCredentialsWithActions as StaffCardCredentials } from "./_components/StaffCardCredentialsWithActions";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
