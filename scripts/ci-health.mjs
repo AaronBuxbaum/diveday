@@ -269,13 +269,23 @@ export function reconcileIssue({ health, since, until, runUrl, tracker, dryRun =
 }
 
 /** `gh api <endpoint>` as JSON, bounded; `jq` slims a page inside `gh`. */
-function ghJson(endpoint, jq) {
-  const result = runBounded("gh", ["api", endpoint, ...(jq ? ["--jq", jq] : [])], {
-    encoding: "utf8",
-    maxBuffer: GH_MAX_BUFFER,
-    stdio: ["ignore", "pipe", "pipe"],
-    timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
-  });
+export function ghJson(endpoint, jq, { run = runBounded, sleep = sleepSync } = {}) {
+  let result;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    result = run("gh", ["api", endpoint, ...(jq ? ["--jq", jq] : [])], {
+      encoding: "utf8",
+      maxBuffer: GH_MAX_BUFFER,
+      stdio: ["ignore", "pipe", "pipe"],
+      timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
+    });
+    if (
+      result?.status === 0 ||
+      !/\(HTTP 50[234]\)/.test(String(result?.stderr ?? "")) ||
+      attempt === 2
+    )
+      break;
+    sleep(250 * 2 ** attempt);
+  }
   if (result?.status !== 0) {
     const why =
       String(result?.stderr ?? "")
@@ -284,6 +294,10 @@ function ghJson(endpoint, jq) {
     throw new Error(`gh api ${endpoint} failed: ${why}`);
   }
   return JSON.parse(String(result.stdout ?? "").trim() || "null");
+}
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 const PR_FIELDS =
