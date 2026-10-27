@@ -208,3 +208,68 @@ describe("teamUpRefusal", () => {
     expect(teamUpRefusal(2, 0)).toBeNull();
   });
 });
+
+/** The card's junior/full state is a staff sighting, not something age proves. */
+describe("agency-specific junior safeguards", () => {
+  const sighted = (age: number, agency: string, juniorStatus: "junior" | "full" | null) => ({
+    ...child(age),
+    certifications: [{ agency, juniorStatus }],
+  });
+  const withTeenPolicy = { course: null, requireAdultForTeens: true };
+
+  it("leaves a NAUI junior for staff to check the guardian-selected buddy", () => {
+    expect(partyLeftReason(FUN_DIVE, [adult(), sighted(13, "naui", "junior")])).toBe(
+      "junior_requirements_unconfirmed",
+    );
+  });
+
+  it("leaves an SDI junior even with a certified adult when their relationship is unknown", () => {
+    expect(partyLeftReason(FUN_DIVE, [adult(), sighted(14, "sdi", "junior")])).toBe(
+      "junior_requirements_unconfirmed",
+    );
+  });
+
+  it("does not assume a NAUI junior card was upgraded at 15 or 18", () => {
+    for (const age of [15, 18, 25]) {
+      const diver = { ...adult({ age }), certifications: [{ agency: "naui", juniorStatus: null }] };
+      expect(partyLeftReason(FUN_DIVE, [adult(), diver])).toBe("junior_requirements_unconfirmed");
+    }
+  });
+
+  it("leaves a known junior card in place after age 18 until its full replacement is verified", () => {
+    const diver = {
+      ...adult({ age: 25 }),
+      certifications: [{ agency: "naui", juniorStatus: "junior" }],
+    };
+    expect(partyLeftReason(FUN_DIVE, [adult(), diver])).toBe("junior_requirements_unconfirmed");
+  });
+
+  it("leaves a minor when no verified agency is on file", () => {
+    const diver = { ...child(13, { verifiedCard: false }), certifications: [] };
+    expect(partyLeftReason(FUN_DIVE, [adult(), diver])).toBe("junior_requirements_unconfirmed");
+  });
+
+  it("does not let another agency's full card hide an unconfirmed junior card", () => {
+    const diver = {
+      ...child(13),
+      certifications: [
+        { agency: "padi", juniorStatus: "full" },
+        { agency: "naui", juniorStatus: "junior" },
+      ],
+    };
+    expect(partyLeftReason(FUN_DIVE, [adult(), diver])).toBe("junior_requirements_unconfirmed");
+  });
+
+  it("leaves BSAC juniors when the buddy's required qualification is not recorded", () => {
+    expect(partyLeftReason(FUN_DIVE, [adult(), sighted(13, "bsac", null)])).toBe(
+      "junior_requirements_unconfirmed",
+    );
+  });
+
+  it("keeps teen buddy policy off by default and applies it only when enabled", () => {
+    const party = [sighted(15, "padi", "full"), sighted(17, "padi", "full")];
+    expect(partyLeftReason(FUN_DIVE, party)).toBeNull();
+    expect(partyLeftReason(withTeenPolicy, party)).toBe("junior_without_adult");
+    expect(partyLeftReason(withTeenPolicy, [adult(), ...party])).toBeNull();
+  });
+});

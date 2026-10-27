@@ -237,3 +237,79 @@ describe("checkDepthCeiling", () => {
     });
   });
 });
+
+/** A card's stated junior status and upgrade cannot be recovered from age. */
+describe("agency-specific junior depth evidence", () => {
+  const sighted = (
+    level: CertificationLevel,
+    agency: Certification["agency"],
+    juniorStatus: "junior" | "full" | null,
+  ) => ({ ...card(level, { agency }), juniorStatus });
+
+  it("holds a NAUI junior Advanced card to 18 m instead of the PADI 21 m band", () => {
+    const limit = diverDepthLimit(
+      [sighted("advanced_open_water", "naui", "junior")],
+      [],
+      "2012-01-01",
+      TODAY,
+    );
+    expect(checkDepthCeiling(20, limit)).toMatchObject({ status: "exceeds", limitDepth: 18 });
+  });
+
+  it("asks staff to verify an unknown NAUI junior or full card without a site depth", () => {
+    for (const birthday of ["2011-07-24", "2008-07-24", "1990-01-01"] as const) {
+      const limit = diverDepthLimit(
+        [sighted("advanced_open_water", "naui", null)],
+        [],
+        birthday,
+        TODAY,
+      );
+      expect(checkDepthCeiling(null, limit)).toMatchObject({ status: "verification_required" });
+    }
+  });
+
+  it("asks staff to verify an SDI Advanced junior's actual training depth even at a shallow site", () => {
+    const limit = diverDepthLimit(
+      [sighted("advanced_open_water", "sdi", "junior")],
+      [],
+      "2012-01-01",
+      TODAY,
+    );
+    expect(checkDepthCeiling(12, limit)).toMatchObject({ status: "verification_required" });
+  });
+
+  it("retains a confirmed NAUI junior card's 18 m condition after age 18", () => {
+    const limit = diverDepthLimit(
+      [sighted("advanced_open_water", "naui", "junior")],
+      [],
+      "1990-01-01",
+      TODAY,
+    );
+    expect(checkDepthCeiling(20, limit)).toMatchObject({ status: "exceeds", limitDepth: 18 });
+  });
+
+  it("asks staff to check BSAC junior limits without an invented PADI-based depth", () => {
+    const limit = diverDepthLimit(
+      [sighted("advanced_open_water", "bsac", null)],
+      [],
+      "2012-01-01",
+      TODAY,
+    );
+    expect(checkDepthCeiling(null, limit)).toMatchObject({ status: "verification_required" });
+  });
+
+  it("does not let a deeper full card hide a NAUI junior card's 18 m condition", () => {
+    const limit = diverDepthLimit(
+      [sighted("advanced_open_water", "padi", "full"), sighted("open_water", "naui", "junior")],
+      [],
+      "2012-01-01",
+      TODAY,
+    );
+    expect(checkDepthCeiling(20, limit)).toMatchObject({ status: "exceeds", limitDepth: 18 });
+  });
+
+  it("allows a verified full adult card to use its ordinary limit", () => {
+    const limit = diverDepthLimit([sighted("open_water", "naui", "full")], [], "1990-01-01", TODAY);
+    expect(checkDepthCeiling(18, limit)).toMatchObject({ status: "within", limitDepth: 18 });
+  });
+});
