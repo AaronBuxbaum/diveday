@@ -6,7 +6,7 @@
     "resolve": "Marcar seguimiento resuelto",
     "resolving": "Guardando…",
     "intro": "Es posible que las indicaciones anteriores para volar ya no sean válidas.",
-    "queued": "Corrección en cola; pendiente de aceptación por el proveedor.",
+    "queued": "Corrección pendiente de envío.",
     "contact": "Contacta con el buceador y con quienes recibieron las indicaciones anteriores para confirmar las indicaciones actuales para volar."
   },
   "surfaces": {

@@ -27,11 +27,20 @@ test.describe("light mode", () => {
       `/api/test/seed-trouble-states?flySafeFollowUp=1&shop=${privateShop.slug}`,
     );
     expect(seeded.ok()).toBe(true);
-    const { flySafeFollowUp } = (await seeded.json()) as { flySafeFollowUp: { tripId: string } };
+    const { flySafeFollowUp } = (await seeded.json()) as {
+      flySafeFollowUp: { tripId: string; otherTripId: string };
+    };
     await page.goto(`/shop/${privateShop.slug}/trips/${flySafeFollowUp.tripId}`);
     const panel = page.getByRole("region", { name: t("trips.flySafeFollowUp.heading") });
-    await expect(panel.getByText(t("trips.flySafeFollowUp.queued"))).toBeVisible();
-    await expect(panel.getByText(t("trips.flySafeFollowUp.contact"))).toBeVisible();
+    const queued = panel.getByRole("listitem").filter({ hasText: "Queue Diver" });
+    const followUp = panel.getByRole("listitem").filter({ hasText: "Contact Diver" });
+    await expect(queued).toContainText(t("trips.flySafeFollowUp.queued"));
+    await expect(followUp).toContainText(t("trips.flySafeFollowUp.contact"));
+    await expect(queued.getByRole("link")).toHaveCount(0);
+    await expect(followUp.getByRole("link", { name: "Other flying day" })).toHaveAttribute(
+      "href",
+      `/shop/${privateShop.slug}/trips/${flySafeFollowUp.otherTripId}`,
+    );
     await capture(page, "trip-flying-guidance-follow-up", "light", {
       beforeScreenshot: async () => {
         const buttons = panel.getByRole("button");
@@ -39,13 +48,17 @@ test.describe("light mode", () => {
         for (const button of await buttons.all()) {
           const box = await button.boundingBox();
           expect(box?.height).toBeGreaterThanOrEqual(44);
+          expect(
+            await button.evaluate((element) =>
+              Number.parseFloat(getComputedStyle(element).fontSize),
+            ),
+          ).toBeGreaterThanOrEqual(16);
         }
       },
     });
     // Exercise acknowledgement on the phone viewport as well as the captured desktop.
     await page.setViewportSize({ width: 390, height: 844 });
-    const queued = panel.getByRole("listitem").filter({ hasText: "Queue Diver" });
-    const followUp = panel.getByRole("listitem").filter({ hasText: "Contact Diver" });
+
     await queued
       .getByRole("button", { name: t("trips.flySafeFollowUp.resolveFor", { name: "Queue Diver" }) })
       .click();

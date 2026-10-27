@@ -28,6 +28,19 @@ export async function flySafeFollowUpStateResponse(request: Request, db: AppDb) 
     })
     .returning();
   if (!trip) throw new Error("flying guidance fixture trip missing");
+  const [otherTrip] = await db
+    .insert(trips)
+    .values({
+      shopId: shop.id,
+      title: "Other flying day",
+      startsAt: new Date(startsAt.getTime() + HOUR_MS),
+      endsAt: new Date(startsAt.getTime() + 5 * HOUR_MS),
+      capacity: 8,
+      plannedDives: 2,
+      exceedsNoDecoLimits: true,
+    })
+    .returning();
+  if (!otherTrip) throw new Error("other flying guidance fixture trip missing");
   for (const [name, email] of [
     ["Queue Diver", "queue-diver@example.com"],
     ["Contact Diver", "contact-diver@example.com"],
@@ -42,7 +55,7 @@ export async function flySafeFollowUpStateResponse(request: Request, db: AppDb) 
       .insert(bookings)
       .values({
         shopId: shop.id,
-        tripId: trip.id,
+        tripId: name === "Queue Diver" ? trip.id : otherTrip.id,
         personId: person.id,
         bookedAs: "diver",
         participantType: "diver",
@@ -73,5 +86,14 @@ export async function flySafeFollowUpStateResponse(request: Request, db: AppDb) 
     now,
     emailProvider: provider,
   });
-  return NextResponse.json({ ok: true, flySafeFollowUp: { tripId: trip.id } });
+  await sendFlySafeCorrections(db, {
+    shopId: shop.id,
+    tripId: otherTrip.id,
+    now,
+    emailProvider: provider,
+  });
+  return NextResponse.json({
+    ok: true,
+    flySafeFollowUp: { tripId: trip.id, otherTripId: otherTrip.id },
+  });
 }

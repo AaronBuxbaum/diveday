@@ -41,10 +41,15 @@ export async function FlySafeFollowUps({
       <ul className="mt-3 space-y-3">
         {items.map((item) => (
           <li key={item.bookingId}>
-            {item.name} —{" "}
-            <Link className="underline" href={shopPath(shopSlug, "trips", item.tripId)}>
-              {item.tripTitle}
-            </Link>
+            {item.name}
+            {item.tripId !== tripId ? (
+              <>
+                {" — "}
+                <Link className="underline" href={shopPath(shopSlug, "trips", item.tripId)}>
+                  {item.tripTitle}
+                </Link>
+              </>
+            ) : null}
             :{" "}
             {t(
               item.status === "queued"
@@ -63,7 +68,7 @@ export async function FlySafeFollowUps({
             >
               <SubmitButton
                 pendingLabel={t("trips.flySafeFollowUp.resolving")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
+                className={buttonClass({ variant: "secondary" })}
                 ariaLabel={t("trips.flySafeFollowUp.resolveFor", { name: item.name })}
               >
                 {t("trips.flySafeFollowUp.resolve")}

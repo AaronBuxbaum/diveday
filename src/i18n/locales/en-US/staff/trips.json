@@ -6,7 +6,7 @@
     "resolve": "Mark follow-up resolved",
     "resolving": "Saving…",
     "intro": "Earlier flying guidance may no longer apply.",
-    "queued": "Correction queued; provider acceptance is pending.",
+    "queued": "Correction waiting to send.",
     "contact": "Contact the diver and anyone who received the earlier guidance to confirm current flying guidance."
   },
   "surfaces": {
