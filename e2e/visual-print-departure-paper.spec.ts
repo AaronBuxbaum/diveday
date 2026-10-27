@@ -215,3 +215,31 @@ test("changed-first and empty-day summaries do not create isolated cover sheets"
     expect(pdf.toString("latin1").match(/\/Type \/Page\b/g)).toHaveLength(1);
   }
 });
+
+test("a paused session prints no departure information and retry restores the document", async ({
+  page,
+}, info) => {
+  const id = await seededTripId(page, "blue-mantis", REEF_TRIP);
+  await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
+  await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
+  await page.emulateMedia({ media: "print" });
+  await page.route("**/api/staff-activity", (route) => route.fulfill({ status: 401 }));
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(page.getByRole("alertdialog", { name: "Session paused" })).toBeVisible();
+  const locked = info.outputPath("paused-manifest.pdf");
+  await page.pdf({ path: locked, format: "Letter", printBackground: true });
+  const text = poppler("pdftotext", ["-layout", locked, "-"]);
+  expect(text).toContain("Session paused");
+  expect(text).not.toContain(REEF_TRIP);
+  expect(text).not.toContain("Priya Sharma");
+  expect(text).not.toContain("+1-305-555-0231");
+  await page.unroute("**/api/staff-activity");
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
+  const restored = info.outputPath("restored-manifest.pdf");
+  await page.pdf({ path: restored, format: "Letter", printBackground: true });
+  const restoredText = poppler("pdftotext", ["-layout", restored, "-"]);
+  expect(restoredText).toContain(REEF_TRIP);
+  expect(restoredText).toContain("Priya Sharma");
+  expect(restoredText).toContain("+1-305-555-0231");
+});
