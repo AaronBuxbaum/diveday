@@ -267,7 +267,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
-        await page.getByRole("button", { name: "Record paper signature" }).click();
+        await Promise.all([
+          page.waitForURL(/notice=diver-clear/),
+          page.getByRole("button", { name: "Record paper signature" }).click(),
+        ]);
         // The earned moment is what says the ledger emptied — and it is the
         // page's one coral element (20260827-clearwater-surface-language,
         // decision 11).
@@ -657,6 +660,37 @@ for (const scheme of ["light", "dark"] as const) {
         // never photograph the row mid-swap.
         await page.getByRole("button", { name: "Record paper signature" }).waitFor();
         await capture(page, "diver-profile-paper-waiver", scheme);
+      });
+
+      test(`a recorded paper release and its signature log render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        const personId = page.url().match(/\/divers\/([^/?#]+)/)?.[1];
+        if (!personId) throw new Error("paper capture needs the diver identity");
+        await openDiverFileGroup(page, "Waiver");
+        await openPaperWaiverForm(page);
+        await page
+          .getByLabel("I have this diver’s signed release on file", { exact: false })
+          .check();
+        await Promise.all([
+          page.waitForURL(/notice=waiver-paper-recorded/),
+          page.getByRole("button", { name: "Record paper signature" }).click(),
+        ]);
+        const signed = page.locator(`a[href*="/divers/${personId}/waivers/"]`).first();
+        await expect(signed).toBeVisible();
+        const href = await signed.getAttribute("href");
+        const recordId = href?.split("/").at(-1);
+        if (!href || !recordId) throw new Error("paper capture needs the actual recorded release");
+        await page.goto(href);
+        await page.getByText(staffCopy("waiversStaff.record.paperEvidence")).waitFor();
+        await capture(page, "signed-paper-waiver-record", scheme);
+        await page.goto(`/shop/blue-mantis/waivers/signatures?record=${recordId}`);
+        await page
+          .locator(`#waiver-record-${recordId}`)
+          .getByText(staffCopy("waiversStaff.signatures.paperRecorded"), { exact: true })
+          .waitFor();
+        await capture(page, "waiver-signatures-paper-record", scheme);
       });
 
       /**

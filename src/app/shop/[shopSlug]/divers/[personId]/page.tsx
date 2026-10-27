@@ -206,6 +206,7 @@ export default async function DiverDetailPage({
     gate,
     card,
     personId,
+    personName: diver.person.fullName,
     locale,
     canRaiseInvoice: collectHasSomewhereToGo,
   });

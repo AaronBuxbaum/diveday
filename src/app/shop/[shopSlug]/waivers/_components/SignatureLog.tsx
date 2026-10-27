@@ -9,7 +9,7 @@ import type { SignedWaiverEntry } from "@/db/waivers";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 
 /**
  * **The signature log as a day-grouped ledger** (ADR 20260827-people-not-lists,
@@ -56,13 +56,30 @@ export function signatureRowId(recordId: string) {
 }
 
 function IntegrityBadge({ entry, t }: { entry: SignedWaiverEntry; t: StaffTranslator }) {
+  if (entry.integrity === "invalid")
+    return (
+      <Badge tone="danger" size="sm">
+        {t("waiversStaff.signatures.integrityInvalid")}
+      </Badge>
+    );
+  if (entry.signatureMethod === "in_person_attested") {
+    return (
+      <Badge tone="neutral" size="sm">
+        {t("waiversStaff.signatures.paperRecorded")}
+      </Badge>
+    );
+  }
+  if (entry.signatureMethod === "imported") {
+    return (
+      <Badge tone="neutral" size="sm">
+        {t("waiversStaff.record.howImported")}
+      </Badge>
+    );
+  }
   if (entry.integrity === "valid") return null;
-  const invalid = entry.integrity === "invalid";
   return (
-    <Badge tone={invalid ? "danger" : "warning"} size="sm" className="shrink-0">
-      {invalid
-        ? t("waiversStaff.signatures.integrityInvalid")
-        : t("waiversStaff.signatures.integrityUnsealed")}
+    <Badge tone="warning" size="sm" className="shrink-0">
+      {t("waiversStaff.signatures.integrityUnsealed")}
     </Badge>
   );
 }
@@ -136,7 +153,11 @@ function SignatureRow({
         }`
       : t("waiversStaff.signatures.noTrip");
   const flagged = entry.flaggedPrompts.length > 0;
-  const badged = entry.status === "medical_review" || entry.integrity !== "valid";
+  const badged =
+    entry.status === "medical_review" ||
+    entry.integrity !== "valid" ||
+    entry.signatureMethod === "in_person_attested" ||
+    entry.signatureMethod === "imported";
   // Each door is a 44px target around a 20px line, 12px of box unseen above
   // and below its words. The block's `gap-1` counts the room above; when the
   // doors end the block they sink the room below into its `pb-5`
@@ -216,8 +237,28 @@ function SignatureRow({
         </summary>
         <div className="flex flex-col gap-1 pb-5 text-sm">
           <p className="text-muted tabular-nums">
-            {t("waiversStaff.signatures.releaseVersion", { version: entry.templateVersion })}
+            {t("waiversStaff.record.releaseValue", {
+              title: entry.templateTitle,
+              version: entry.templateVersion,
+            })}
           </p>
+          {entry.signatureMethod === "in_person_attested" ? (
+            <>
+              <p>
+                {t("waiversStaff.record.paperRecorder", {
+                  name: entry.recorderName ?? t("waiversStaff.record.recorderUnknown"),
+                })}
+              </p>
+              {entry.recordedAt ? (
+                <p className="text-muted">
+                  {t("waiversStaff.record.recordedAt", {
+                    at: formatDateTimeTz(entry.recordedAt, locale, timezone),
+                  })}
+                </p>
+              ) : null}
+              <p className="text-muted">{t("waiversStaff.record.paperEvidence")}</p>
+            </>
+          ) : null}
           {/* A minor's release names its co-signer beside the version (ADR
               20260907-guardian-co-signature) — a reviewer reading the log back
               is asking exactly who signed, and the diver's name alone would
@@ -226,8 +267,11 @@ function SignatureRow({
             <p className="text-muted">{guardianCoSignedText(t, entry.guardian)}</p>
           ) : null}
           <div className={doorRow}>
-            <Link href={`/shop/${shopSlug}/divers/${entry.personId}`} className={door}>
-              {t("waiversStaff.signatures.openRecord")}
+            <Link
+              href={`/shop/${shopSlug}/divers/${entry.personId}/waivers/${entry.id}`}
+              className={door}
+            >
+              {t("waiversStaff.signatures.openSignedRecord")}
             </Link>
             {entry.tripId ? (
               <Link href={`/shop/${shopSlug}/trips/${entry.tripId}`} className={door}>

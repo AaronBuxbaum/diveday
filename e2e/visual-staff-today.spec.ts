@@ -12,6 +12,7 @@ import {
   createTrip,
   daysFromNow,
   disclosureSettled,
+  openBookingActions,
   openCounterFor,
   openPaperWaiverForm,
   openRosterDetails,
@@ -420,6 +421,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ hasText: uncountedSeat.personName })
           .first();
         await openRosterDetails(row);
+        await openBookingActions(row);
         await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
         await row.getByRole("status").filter({ hasText: "at the dock, so the boat may" }).waitFor();
         await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
@@ -438,6 +440,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ has: page.locator("summary", { hasText: /^\s*Remove booking\s*$/ }) })
           .first();
         await openRosterDetails(row);
+        await openBookingActions(row);
         await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
         await row.getByRole("status").filter({ hasText: "sailed on this departure" }).waitFor();
         await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);

@@ -794,6 +794,7 @@ export function resolveDiverNotice({
   locale,
   canRaiseInvoice = false,
   conflictDeparture,
+  personName,
 }: {
   notice?: string;
   /**
@@ -821,6 +822,8 @@ export function resolveDiverNotice({
    * identity the reader can check without trusting the query.
    */
   personId: string;
+  /** The stored name from this record, never a query parameter. */
+  personName?: string;
   locale: string;
   /**
    * Whether this reader sees the story's "New invoice" link
@@ -847,15 +850,19 @@ export function resolveDiverNotice({
     tone: banner.tone,
     text: banner.silent
       ? ""
-      : refusal
-        ? tripAdmissionRefusalText(t, refusal, locale)
-        : notice === "booked" && !canRaiseInvoice
-          ? t("divers.notices.bookedNoInvoice")
-          : notice === "booked-confirmed" && !canRaiseInvoice
-            ? t("divers.notices.bookedConfirmedNoInvoice")
-            : notice === "merge-booking-conflict" && conflictDeparture
-              ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
-              : t(banner.key as StaffMessageKey, banner.values),
+      : notice === "diver-clear"
+        ? t("divers.notices.cleared", {
+            name: personName?.trim() || t("shared.waiverSend.unnamedDiver"),
+          })
+        : refusal
+          ? tripAdmissionRefusalText(t, refusal, locale)
+          : notice === "booked" && !canRaiseInvoice
+            ? t("divers.notices.bookedNoInvoice")
+            : notice === "booked-confirmed" && !canRaiseInvoice
+              ? t("divers.notices.bookedConfirmedNoInvoice")
+              : notice === "merge-booking-conflict" && conflictDeparture
+                ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
+                : t(banner.key as StaffMessageKey, banner.values),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

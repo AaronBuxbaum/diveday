@@ -382,7 +382,7 @@ export async function readWeeklyDigestFacts(
   db: AppDb,
   shop: WeeklyDigestShop,
   now: Date = nowDate(),
-): Promise<{ weeks: DigestWeeks; grades: WeeklyDigestFactGrades }> {
+): Promise<{ weeks: DigestWeeks; grades: WeeklyDigestFactGrades; preparedAt: string }> {
   const weeks = digestWeeks(now, shop.timezone);
 
   // Last week and the same week a year before (fifth loop, item 29), read
@@ -496,6 +496,7 @@ export async function readWeeklyDigestFacts(
   };
   return {
     weeks,
+    preparedAt: now.toISOString(),
     grades: {
       reports: {
         ...shared,
@@ -604,6 +605,7 @@ function digestNotification(input: {
   recipient: WeeklyDigestRecipient;
   weeks: DigestWeeks;
   sections: WeeklyDigestEmailSection[];
+  preparedAt: string;
   read?: { section: string; text: string }[];
   origin: string;
   turnOffUrl: string;
@@ -611,6 +613,7 @@ function digestNotification(input: {
   const { shop, recipient, weeks } = input;
   return {
     kind: "weekly_digest",
+    preparedAt: input.preparedAt,
     shopId: shop.id,
     personId: recipient.personId,
     to: recipient.email,
@@ -649,7 +652,11 @@ export async function previewWeeklyDigest(
     (person) => person.personId === input.personId,
   );
   if (!recipient) return null;
-  const { weeks, grades } = await readWeeklyDigestFacts(db, input.shop, input.now ?? nowDate());
+  const { weeks, grades, preparedAt } = await readWeeklyDigestFacts(
+    db,
+    input.shop,
+    input.now ?? nowDate(),
+  );
   const grade = weeklyDigestGrade(recipient.roles);
   const sections = linkedGrades(grades, input.origin, input.shop.slug)[grade];
   if (sections.length === 0) return null;
@@ -664,6 +671,7 @@ export async function previewWeeklyDigest(
     shop: input.shop,
     recipient,
     weeks,
+    preparedAt,
     sections,
     read,
     origin: input.origin,
@@ -726,7 +734,7 @@ export async function sendWeeklyDigestForShop(
   // are the expensive half, and nobody is left to send them to.
   if (pending.length === 0) return summary;
 
-  const { weeks, grades } = await readWeeklyDigestFacts(db, shop, now);
+  const { weeks, grades, preparedAt } = await readWeeklyDigestFacts(db, shop, now);
   const linked = linkedGrades(grades, options.origin, shop.slug);
   if (linked.reports.length === 0 && linked.staff.length === 0) {
     summary.quiet = true;
@@ -779,6 +787,7 @@ export async function sendWeeklyDigestForShop(
         shop,
         recipient,
         weeks,
+        preparedAt,
         sections,
         read: await readFor(grade, recipientLocale(recipient.locale, shop.defaultLocale)),
         origin: options.origin,

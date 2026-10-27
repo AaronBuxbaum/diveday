@@ -89,25 +89,37 @@ export default async function SignedWaiverPage({
       ? formatCalendarDate(waiver.medicalClearanceEvaluatedOn, locale)
       : "";
   const seal =
-    waiver.integrity === "valid"
-      ? // Only the version 4 seal covers the redaction; on any other the
-        // stamp is a column beside the seal, not a fact the seal vouches for
-        // (security review F2).
-        waiver.integrityVersion === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED &&
-        waiver.guardianEmailErasedAt
-        ? t("waiversStaff.record.sealValidGuardianRedacted", {
-            date: when(waiver.guardianEmailErasedAt),
-          })
-        : t("waiversStaff.record.sealValid")
-      : waiver.integrity === "unsealed"
-        ? t("waiversStaff.signatures.integrityUnsealed")
-        : t("waiversStaff.signatures.integrityInvalid");
+    waiver.integrity === "invalid"
+      ? t("waiversStaff.signatures.integrityInvalid")
+      : waiver.signatureMethod === "in_person_attested"
+        ? t("waiversStaff.record.paperEvidence")
+        : waiver.integrity === "valid"
+          ? // Only the version 4 seal covers the redaction; on any other the
+            // stamp is a column beside the seal, not a fact the seal vouches for.
+            waiver.integrityVersion === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED &&
+            waiver.guardianEmailErasedAt
+            ? t("waiversStaff.record.sealValidGuardianRedacted", {
+                date: when(waiver.guardianEmailErasedAt),
+              })
+            : t("waiversStaff.record.sealValid")
+          : t("waiversStaff.signatures.integrityUnsealed");
   // `printOnly`: a fact the screen already says elsewhere — the diver's name is
   // the eyebrow there, a link back to their record, and paper drops links.
   const facts: { label: string; value: React.ReactNode; printOnly?: boolean }[] = [
     { label: t("waiversStaff.record.diverLabel"), value: waiver.personName, printOnly: true },
     ...(waiver.signedAt
       ? [{ label: t("waiversStaff.record.signedLabel"), value: when(waiver.signedAt) }]
+      : []),
+    ...(waiver.signatureMethod === "in_person_attested"
+      ? [
+          {
+            label: t("waiversStaff.record.recordedByLabel"),
+            value: waiver.recorderName ?? t("waiversStaff.record.recorderUnknown"),
+          },
+          ...(waiver.recordedAt
+            ? [{ label: t("waiversStaff.record.recordedAtLabel"), value: when(waiver.recordedAt) }]
+            : []),
+        ]
       : []),
     ...(waiver.signedName
       ? [{ label: t("waiversStaff.record.signedAsLabel"), value: waiver.signedName }]

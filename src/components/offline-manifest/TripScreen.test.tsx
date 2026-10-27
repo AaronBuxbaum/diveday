@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   appendOfflineRollCall,
   listOfflineManifests,
@@ -102,6 +103,20 @@ describe("OfflineManifestView — one column, one text edge", () => {
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
   }
+
+  it("offers visible roll-call context and an emergency return without recording a mark", async () => {
+    await renderTrip(richEnvelope("trip-1"));
+    const jump = screen.getByRole("link", { name: "Roll call" });
+    expect(jump).toHaveAttribute("href", "#offline-roll-call-context");
+    const context = document.getElementById("offline-roll-call-context");
+    expect(context).toHaveAttribute("tabindex", "-1");
+    expect(context?.querySelector("#offline-roll-call")).not.toBeNull();
+    expect(
+      screen.getByRole("link", { name: staffTranslator("en-US")("manifest.emergency.heading") }),
+    ).toHaveAttribute("href", "#offline-emergency-reference");
+    fireEvent.click(jump);
+    expect(appendOfflineRollCall).not.toHaveBeenCalled();
+  });
 
   function crewList(): HTMLElement {
     const list = document.getElementById("offline-crew-roll-call");

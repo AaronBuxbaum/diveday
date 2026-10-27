@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { buttonClass } from "@/components/ui/button";
 import type { TripUnitToCheckIn } from "@/db/gear";
 import type { TripPrep } from "@/db/trips";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { PrepGrouping } from "@/lib/dive-prep";
+import { scopedId } from "@/lib/element-id";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type NoticeTone, noticeCountParam, noticeFromParam } from "@/lib/staff-notices";
+import { assignmentCounts } from "./assignment-counts";
 import { PrepAssignedPaper, PrepAssignments } from "./PrepAssignments";
 import { PrepBackFromBoat } from "./PrepBackFromBoat";
 import { PrepFitGaps } from "./PrepFitGaps";
@@ -175,6 +178,10 @@ export function PrepBody({
     checklist.tanks.nitrox > 0 ||
     checklist.nitroxBlockers.length > 0;
 
+  const counts = assignmentCounts(assignmentRows, []);
+  const offersTasks =
+    !paper && !cancelled && !sailed && !home && gearFleetTotal > 0 && assignmentRows.length > 0;
+
   const gearCount = noticeCountParam(noticeCount);
   const gearNotice = noticeFromParam(notice, GEAR_NOTICES);
   const gearBanner =
@@ -194,6 +201,27 @@ export function PrepBody({
         emptyState
       ) : (
         <div className={className}>
+          {offersTasks ? (
+            <nav
+              aria-label={t("tripPrep.tasksLabel")}
+              className="flex flex-wrap gap-x-5 gap-y-1 print:hidden"
+            >
+              <a
+                href={`#${scopedId(idPrefix, "kit-heading")}`}
+                className={buttonClass({ variant: "link", flush: true })}
+              >
+                {t("tripPrep.pullList")}
+              </a>
+              {counts.missing > 0 ? (
+                <a
+                  href={`#${scopedId(idPrefix, "assignments-heading")}`}
+                  className={buttonClass({ variant: "link", flush: true })}
+                >
+                  {t("tripPrep.piecesToAssign", { count: counts.missing })}
+                </a>
+              ) : null}
+            </nav>
+          ) : null}
           {/* Once home, the answer to a "Back" tap sits over the list it was
               tapped in, which leads the page. */}
           {home ? banner : null}

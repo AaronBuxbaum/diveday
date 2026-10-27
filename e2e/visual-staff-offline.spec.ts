@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openOnThisPhone, openTripTab } from "./helpers";
 import {
@@ -103,6 +104,16 @@ for (const scheme of ["light", "dark"] as const) {
         // the shell renders its chrome before the store resolves.
         await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
         await capture(page, "offline-manifest-roll-call", scheme);
+        await page.getByRole("link", { name: "Roll call", exact: true }).click();
+        await expect(page.locator("#offline-roll-call-context")).toBeFocused();
+        await capture(page, "offline-manifest-roll-call-jump", scheme);
+        await page
+          .getByRole("link", {
+            name: staffTranslator("en-US")("manifest.emergency.heading"),
+            exact: true,
+          })
+          .click();
+        await expect(page.locator("#offline-emergency-reference")).toBeFocused();
       });
 
       /**

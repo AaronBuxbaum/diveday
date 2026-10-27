@@ -74,6 +74,7 @@ export default async function MergeDiverPage({
           notice,
           form,
           personId,
+          personName: preview.source.fullName,
           locale,
           conflictDeparture: conflictTrip
             ? `${conflictTrip.title} · ${formatDateTimeTz(conflictTrip.startsAt, locale, shop.timezone)}`

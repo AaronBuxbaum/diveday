@@ -5,6 +5,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openBookingActions,
   openRosterDetails,
   openTripAbout,
   openTripAboutRow,
@@ -418,6 +419,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
     // arm until the confirm actually renders instead of trusting one tap.
     await expect(async () => {
       await openRosterDetails(row);
+      await openBookingActions(row);
       await row.getByRole("button", { name: "Remove booking" }).click();
       await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible({
         timeout: 2_000,

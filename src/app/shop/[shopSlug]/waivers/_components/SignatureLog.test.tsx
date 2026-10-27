@@ -24,6 +24,10 @@ function entry(overrides: Partial<SignedWaiverEntry> & { id: string }): SignedWa
     status: "completed",
     signedAt: new Date("2026-08-28T02:41:00Z"),
     templateVersion: 4,
+    templateTitle: "Shop Release",
+    signatureMethod: "typed_name",
+    recorderName: null,
+    recordedAt: null,
     guardian: null,
     integrity: "valid",
     flaggedPrompts: [],
@@ -280,11 +284,14 @@ describe("the evidence block", () => {
   it("carries the release version and both doors", () => {
     const { container } = renderLog([entry({ id: "a", templateVersion: 3 })]);
     const row = rowFor(container, "a");
-    expect(within(row).getByText("Release version 3")).toBeInTheDocument();
-    expect(within(row).getByRole("link", { name: "Open the diver record" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers/person-a",
-    );
+    expect(
+      within(row).getByText(
+        t("waiversStaff.record.releaseValue", { title: "Shop Release", version: 3 }),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByRole("link", { name: t("waiversStaff.signatures.openSignedRecord") }),
+    ).toHaveAttribute("href", "/shop/blue-mantis/divers/person-a/waivers/a");
     expect(within(row).getByRole("link", { name: "Open the departure" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/trip-1",
@@ -440,5 +447,50 @@ describe("the evidence block's rhythm", () => {
     // Whole doors keep their own 12px, so wrapped lines need only the 4px.
     expect(doors[0]?.parentElement).toHaveClass("flex-wrap", "gap-y-1");
     expect(doors[0]?.parentElement).not.toHaveClass("gap-y-4");
+  });
+});
+
+describe("paper provenance", () => {
+  it("distinguishes recorded paper from digital integrity and names its recorder", () => {
+    const { container } = renderLog([
+      entry({
+        id: "paper",
+        signatureMethod: "in_person_attested",
+        integrity: "unsealed",
+        recorderName: "Dana Reyes",
+        recordedAt: new Date("2026-08-29T12:00:00Z"),
+      }),
+    ]);
+    expect(screen.getByText(t("waiversStaff.signatures.paperRecorded"))).toBeInTheDocument();
+    expect(
+      within(rowFor(container, "paper")).getByText(
+        t("waiversStaff.record.paperRecorder", { name: "Dana Reyes" }),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(t("waiversStaff.signatures.integrityUnsealed"))).toBeNull();
+    expect(
+      screen.getByRole("link", {
+        name: t("waiversStaff.signatures.openSignedRecord"),
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", "/shop/blue-mantis/divers/person-paper/waivers/paper");
+  });
+
+  it("does not mask a failed integrity check behind paper provenance", () => {
+    renderLog([
+      entry({ id: "paper-invalid", signatureMethod: "in_person_attested", integrity: "invalid" }),
+    ]);
+    expect(screen.getByText(t("waiversStaff.signatures.integrityInvalid"))).toBeInTheDocument();
+  });
+
+  it("states an unavailable recorder without inventing a name", () => {
+    renderLog([
+      entry({ id: "paper-unknown", signatureMethod: "in_person_attested", integrity: "unsealed" }),
+    ]);
+    expect(
+      screen.getByText(
+        t("waiversStaff.record.paperRecorder", { name: t("waiversStaff.record.recorderUnknown") }),
+      ),
+    ).toBeInTheDocument();
   });
 });

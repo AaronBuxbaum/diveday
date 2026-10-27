@@ -108,7 +108,7 @@ export function TripTabs({
                   aria-current={active ? "page" : undefined}
                   className={`grow ${sectionTabClass(active)}`}
                 >
-                  {copy.tabs[tab]}
+                  <span className="min-w-0 break-words">{copy.tabs[tab]}</span>
                 </Link>
               </li>
             );

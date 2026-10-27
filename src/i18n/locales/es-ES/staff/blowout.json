@@ -46,7 +46,8 @@
     "releasing": "Enviando…",
     "resend": "Reintentar los mensajes no enviados",
     "resending": "Reintentando…",
-    "empty": "No había nadie reservado cuando se llamó la cancelación"
+    "empty": "No había nadie reservado cuando se llamó la cancelación",
+    "offeredCount": "{count, plural, one {# salida ofrecida} other {# salidas ofrecidas}}"
   },
   "notices": {
     "called": "Cancelación llamada. La salida queda cancelada y el mensaje de cada buceador está en camino.",

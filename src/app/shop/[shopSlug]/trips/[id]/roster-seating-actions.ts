@@ -414,7 +414,12 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
   });
   if (!moved.ok) {
     if (moved.reason === "not_found") redirect(back);
-    revalidateAndRedirect(back, noticeUrl(back, MOVE_SEAT_NOTICE[moved.reason]));
+    revalidateAndRedirect(
+      back,
+      noticeUrl(`${back}#move-booking-${bookingId}`, MOVE_SEAT_NOTICE[moved.reason], {
+        bid: bookingId,
+      }),
+    );
   }
   revalidatePath(tripPath(shopSlug, toTripId));
   const notice =

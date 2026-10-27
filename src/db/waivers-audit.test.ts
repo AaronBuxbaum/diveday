@@ -118,6 +118,42 @@ describe("listWaiverIntegrityAudit search and views", () => {
     return record.id;
   }
 
+  it("projects paper method, exact release and separate signing/recording dates with a nullable recorder", async () => {
+    const ctx = await waiverContext();
+    const id = await importedRecord(ctx, "Paper Provenance");
+    const [recorder] = await ctx.db
+      .insert(people)
+      .values({ shopId: ctx.shop.id, fullName: "Historical Staff Recorder" })
+      .returning();
+    if (!recorder) throw new Error("recorder fixture missing");
+    const recordedAt = new Date(now.getTime() + 86_400_000);
+    await ctx.db
+      .update(waiverRecords)
+      .set({
+        signatureMethod: "in_person_attested",
+        recordedByPersonId: recorder.id,
+        completedAt: recordedAt,
+      })
+      .where(eq(waiverRecords.id, id));
+    const evidence = await getSignedWaiverRecordForShop(ctx.db, ctx.shop.id, id);
+    expect(evidence).toMatchObject({
+      signatureMethod: "in_person_attested",
+      recorderName: recorder.fullName,
+      signedAt: now,
+      recordedAt,
+    });
+    expect(evidence?.templateTitle).toBeTruthy();
+    expect(evidence).not.toHaveProperty("tokenHash");
+    expect(evidence).not.toHaveProperty("medicalAnswers");
+    await ctx.db
+      .update(people)
+      .set({ deletedAt: recordedAt, anonymizedAt: recordedAt })
+      .where(eq(people.id, recorder.id));
+    expect(await getSignedWaiverRecordForShop(ctx.db, ctx.shop.id, id)).toMatchObject({
+      recorderName: null,
+    });
+  });
+
   it("finds a diver's records by name, and counts only those", async () => {
     const ctx = await waiverContext();
     const id = await importedRecord(ctx, "Quillon Vasquez-Orr");
@@ -389,6 +425,16 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
       })
       .returning();
     if (!rivalRecord) throw new Error("rival record insert failed");
+
+    const localRecord = (await listWaiverIntegrityAudit(db, shop.id, { limit: 1 })).entries[0];
+    if (!localRecord) throw new Error("local signed record missing");
+    await db
+      .update(waiverRecords)
+      .set({ recordedByPersonId: rivalDiver.id })
+      .where(eq(waiverRecords.id, localRecord.id));
+    expect(await getSignedWaiverRecordForShop(db, shop.id, localRecord.id)).toMatchObject({
+      recorderName: null,
+    });
 
     // Shop A's own audit (well past a page's worth of seeded history) never
     // includes the rival's record.
