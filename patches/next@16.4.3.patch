@@ -1,0 +1,30 @@
+diff --git a/dist/client/components/segment-cache/cache.js b/dist/client/components/segment-cache/cache.js
+--- a/dist/client/components/segment-cache/cache.js
++++ b/dist/client/components/segment-cache/cache.js
+@@ -978,7 +978,10 @@ function fulfillRouteCacheEntry(now, entry, root, couldBeIntercepted, canonicalUrl,
+         fulfilledEntry.staleAt = now + _navigatereducer.STATIC_STALETIME_MS;
+     }
+     fulfilledEntry.couldBeIntercepted = couldBeIntercepted;
+-    fulfilledEntry.canonicalUrl = canonicalUrl;
++    // Route entries are shared across fragments. Hydration, action redirects,
++    // and retries may supply one; navigation appends the destination's hash.
++    // Keep encoded %23 in the pathname/search untouched.
++    fulfilledEntry.canonicalUrl = canonicalUrl.split('#', 1)[0];
+     fulfilledEntry.renderedSearch = renderedSearch;
+     fulfilledEntry.supportsPerSegmentPrefetching = supportsPerSegmentPrefetching;
+     pingBlockedTasks(entry);
+diff --git a/dist/esm/client/components/segment-cache/cache.js b/dist/esm/client/components/segment-cache/cache.js
+--- a/dist/esm/client/components/segment-cache/cache.js
++++ b/dist/esm/client/components/segment-cache/cache.js
+@@ -882,7 +882,10 @@ export function fulfillRouteCacheEntry(now, entry, root, couldBeIntercepted, canonica
+         fulfilledEntry.staleAt = now + STATIC_STALETIME_MS;
+     }
+     fulfilledEntry.couldBeIntercepted = couldBeIntercepted;
+-    fulfilledEntry.canonicalUrl = canonicalUrl;
++    // Route entries are shared across fragments. Hydration, action redirects,
++    // and retries may supply one; navigation appends the destination's hash.
++    // Keep encoded %23 in the pathname/search untouched.
++    fulfilledEntry.canonicalUrl = canonicalUrl.split('#', 1)[0];
+     fulfilledEntry.renderedSearch = renderedSearch;
+     fulfilledEntry.supportsPerSegmentPrefetching = supportsPerSegmentPrefetching;
+     pingBlockedTasks(entry);

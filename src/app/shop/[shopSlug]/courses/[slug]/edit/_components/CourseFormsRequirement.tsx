@@ -242,7 +242,7 @@ export function CourseFormsRequirement({
         <p className="text-sm">
           <Link
             href={`${waiversPath}#course-form-new`}
-            className="font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
           >
             {t("courses.edit.forms.writeLink")}
           </Link>
