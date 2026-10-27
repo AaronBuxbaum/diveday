@@ -275,7 +275,6 @@ const RESET_KEEPS: Record<string, string> = {
   crew_away_acknowledgements: "ON DELETE CASCADE from trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
-  today_read_marks: "ON DELETE CASCADE from shops or staff clears it",
   today_read_mark_events: "ON DELETE CASCADE from marks or desk events clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
   // What the bench said to customers and the orders it raised (ADR

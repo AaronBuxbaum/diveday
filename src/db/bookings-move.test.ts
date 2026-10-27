@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { tripRescheduledEmail } from "@/lib/notifications/email";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
@@ -8,6 +8,7 @@ import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { recordFlySafeTold } from "./fly-safe-correction";
+import { listDeskEventsSince, markTripCaughtUp } from "./desk-events";
 import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { listTripActivity } from "./operations";
 import {
@@ -23,6 +24,7 @@ import {
   trips,
 } from "./schema";
 import { moveSeat } from "./seat-diver";
+import { initializeTodayCatchUp, readTodayCatchUp } from "./today-catch-up";
 import {
   createTrip,
   getTripRoster,
@@ -123,6 +125,78 @@ describe("moveBooking", () => {
       .from(tripHelpRequests)
       .where(eq(tripHelpRequests.bookingId, seat.bookingId));
     expect(help?.tripId).toBe(to.id);
+  });
+
+  it("excludes a staff mover from catch-up while both crews see the move", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const staff = await listStaff(db, shop.id);
+    const actor = staff[0]?.person.id;
+    const observer = staff.find((entry) => entry.person.id !== actor)?.person.id;
+    if (!actor || !observer) throw new Error("expected two staff");
+    const from = await createTrip(db, {
+      shopId: shop.id,
+      title: "Move source today",
+      startsAt: new Date(nowMs() + 60 * 60 * 1000),
+      endsAt: new Date(nowMs() + 3 * 60 * 60 * 1000),
+      capacity: 6,
+    });
+    const to = await createTrip(db, {
+      shopId: shop.id,
+      title: "Move target today",
+      startsAt: new Date(nowMs() + 2 * 60 * 60 * 1000),
+      endsAt: new Date(nowMs() + 4 * 60 * 60 * 1000),
+      capacity: 6,
+    });
+    if (!from || !to) throw new Error("expected two trips");
+    const seat = await seatOn(db, shop.id, from.id, "Moving Diver");
+    for (const personId of [actor, observer]) {
+      const input = { shopId: shop.id, personId, now, timeZone: shop.timezone };
+      const initial = await readTodayCatchUp(db, input);
+      await initializeTodayCatchUp(db, { ...input, eventIds: initial.snapshotIds });
+      for (const tripId of [from.id, to.id]) {
+        await markTripCaughtUp(db, { shopId: shop.id, tripId, personId });
+      }
+    }
+    const moved = await moveBooking(db, {
+      shopId: shop.id,
+      fromTripId: from.id,
+      toTripId: to.id,
+      bookingId: seat.bookingId,
+      actorPersonId: actor,
+    });
+    expect(moved.ok).toBe(true);
+    const actorToday = await readTodayCatchUp(db, {
+      shopId: shop.id,
+      personId: actor,
+      now,
+      timeZone: shop.timezone,
+    });
+    const otherToday = await readTodayCatchUp(db, {
+      shopId: shop.id,
+      personId: observer,
+      now,
+      timeZone: shop.timezone,
+    });
+    expect(
+      actorToday.events.filter((event) => event.tripId === from.id || event.tripId === to.id),
+    ).toEqual([]);
+    expect(
+      otherToday.events
+        .filter((event) => event.tripId === from.id || event.tripId === to.id)
+        .map((event) => event.kind),
+    ).toEqual(["seat_released", "seat_taken"]);
+    for (const [tripId, kind] of [
+      [from.id, "seat_released"],
+      [to.id, "seat_taken"],
+    ] as const) {
+      expect((await listDeskEventsSince(db, shop.id, tripId, actor)).events).toEqual([]);
+      expect(
+        (await listDeskEventsSince(db, shop.id, tripId, observer)).events.map(
+          (event) => event.kind,
+        ),
+      ).toEqual([kind]);
+    }
   });
 
   it("refuses a full departure and leaves the seat where it was", async () => {
