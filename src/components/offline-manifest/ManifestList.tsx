@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { Wordmark } from "@/components/Logo";
 import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import {
   offlineTripHref,
 } from "@/lib/offline-manifests";
 import { deviceLocale, relativeAge } from "./shared";
+import { useOnline } from "./use-online";
 
 /**
  * **Every copy saved on this device**, the page `/offline-manifest` shows
@@ -48,6 +50,8 @@ export function OfflineManifestList({
    */
   readFailed?: boolean;
 }) {
+  const online = useOnline();
+  const unanswered = fallback !== null && online;
   const savedTrips = list ?? [];
   // Derived once, for the header's count, the header's shop name and the rows
   // alike: all three must be answers about the same set of copies. A record
@@ -102,11 +106,18 @@ export function OfflineManifestList({
                 ? t("shared.offlineManifest.list.readFailedHeading")
                 : t("shared.offlineManifest.list.headingEmpty")}
             </h1>
-            <p className="mt-2 text-muted text-pretty">
-              {readFailed
-                ? t("shared.offlineManifest.single.readFailedHint")
-                : t("shared.offlineManifest.list.emptyHint")}
-            </p>
+            {unanswered ? (
+              <p className="mt-2 text-muted text-pretty">
+                {t("shared.offlineManifest.list.unansweredEmpty")}
+              </p>
+            ) : null}
+            {readFailed || !unanswered ? (
+              <p className="mt-2 text-muted text-pretty">
+                {readFailed
+                  ? t("shared.offlineManifest.single.readFailedHint")
+                  : t("shared.offlineManifest.list.emptyHint")}
+              </p>
+            ) : null}
             {/* A door, not a dead end (UX review 2026-10-10, item 33). `/shop`
                 lands a signed-in staffer on their own Today (`src/proxy.ts`)
                 and anyone else on sign-in; a plain anchor, because this page
@@ -139,6 +150,13 @@ export function OfflineManifestList({
         description={oneShopName ?? undefined}
         meta={
           <>
+            {unanswered ? (
+              <p
+                className={`mt-4 ${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}
+              >
+                {t("shared.offlineManifest.single.unansweredBanner")}
+              </p>
+            ) : null}
             <p className="text-muted" role="status" aria-live="polite">
               {message}
             </p>
@@ -147,7 +165,7 @@ export function OfflineManifestList({
                 normally in. Said once here, for the group, it is both: the
                 reader is still told, and a pill below now only ever appears on
                 a copy that needs them. */}
-            {savedRows.length > 0 ? (
+            {savedRows.length > 0 && (!unanswered || needRefreshCount > 0) ? (
               <p className="mt-1 text-sm font-semibold">
                 {needRefreshCount > 0
                   ? t("shared.offlineManifest.list.freshnessNeedRefresh", {
