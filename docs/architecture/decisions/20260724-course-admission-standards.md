@@ -109,8 +109,10 @@ gap in the crew-assignment schema, not introduced here, but this ratio gate is t
 becomes safety-load-bearing rather than cosmetic — worth a dedicated look if DiveDay ever needs
 crew roles that are per-trip rather than global.
 
-Continuing-education courses (course row's `minimum_certification_level` set — AOW, Rescue,
-specialties) are **not** ratio-capped at booking. This does not mean there is no agency ratio:
+Non-intro continuing-education courses with `minimum_certification_level` set are **not**
+ratio-capped at booking. If a shop clears that prerequisite, a PADI continuing-education course
+can receive the entry-level booking cap; that cap is not evidence of its actual in-water ratio.
+This does not mean there is no agency ratio:
 the applicable standard may be tighter for a particular dive, age or equipment and cannot be
 reconstructed from the departure alone. See the 2026-10-27 amendment below.
 **One exception worth flagging, not resolving here:** Rescue Diver's in-water scenario/stress-test
@@ -201,10 +203,11 @@ scope and machinery around that figure, not the figure itself.
   actually lives.
 - A **non-intro** PADI course session with no `minimum_certification_level` (the Open Water
   training dives) keeps the original **8 base / +2 per assistant / 12 ceiling** figure, unchanged.
-- Continuing-education courses stay unratioed, unchanged.
-- Which ratio (if any) a session carries is decided in exactly one place — `courseRatioKind()`,
-  with `courseRatioRule()`/`courseSeatCapacity()` on top of it — consumed by every enforcing and
-  advisory caller (`src/db/bookings.ts` for both `createBookingRecord` and `restoreBooking`, and
+- Non-intro continuing-education courses with a prerequisite stay uncapped by this rule; clearing
+  the prerequisite can select the entry-level booking cap as described above.
+- Which booking-cap ratio (if any) a session carries is decided by `courseRatioKind()`,
+  with `courseRatioRule()`/`courseSeatCapacity()` on top of it — consumed by booking and staffing
+  advisory callers (`src/db/bookings.ts` for both `createBookingRecord` and `restoreBooking`, and
   `courseCrewGap`'s consumers in `src/db/staffing.ts`, `src/db/today.ts`, and the trip Overview
   page). The predicate was previously written inline in three of those, which is how it would
   drift again.
@@ -285,7 +288,9 @@ other adventure dives may differ. SSI's current [Advanced Adventurer standards](
 also vary by student age and dry-suit qualification. These sources were checked 2026-10-27; the
 older PADI manual is evidence of the conditional rule, not verification of its current edition.
 
-`trainingCourseRatioRule` is distinct from the booking cap. A higher certification rung or a
+`trainingCourseRatioRule` is distinct from the unchanged booking cap, which can still select an
+entry-level cap for a PADI continuing-education course whose prerequisite is blank. That booking
+cap does not verify the actual in-water ratio. A higher certification rung or a
 continuing-education template cannot become entry-level training merely by clearing the shop's
 prerequisite; an unclassified non-intro shop course is not assumed to be Open Water. A mark can
 still record the training relationship and its forms, but it does not claim ratio-backed coverage

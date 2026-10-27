@@ -713,8 +713,10 @@
   `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter,
   agency-independent DSD rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
   PADI's published number, and applying it to an SSI or NAUI course would be a
-  wrong-but-confident safety control. Continuing-education courses (AOW, Rescue, specialty) are not
-  ratio-capped at booking. Agency ratios exist, but can change with the dive, student age, equipment
+  wrong-but-confident safety control. A non-intro continuing-education course with a prerequisite
+  is not ratio-capped at booking; if that prerequisite is cleared, a PADI course can receive the
+  entry-level booking cap. That cap is not evidence of the actual in-water ratio. Agency ratios
+  exist, but can change with the dive, student age, equipment
   and conditions that DiveDay does not record. A training mark cannot claim entry-level ratio
   coverage for a known continuing-education template or a higher certification rung, even when a
   shop clears the course prerequisite. A non-intro shop course without a declared certification
