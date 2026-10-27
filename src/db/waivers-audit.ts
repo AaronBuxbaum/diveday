@@ -4,6 +4,7 @@
  * holds. Imported through the `./waivers` barrel.
  */
 import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { guardianSignatureOf } from "@/lib/guardian";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
@@ -17,6 +18,13 @@ import {
   WAIVER_STATE_COLUMNS,
   type WaiverStateRecord,
 } from "./waiver-record-columns";
+
+const recorder = alias(people, "waiver_recorder");
+const recorderScope = and(
+  eq(recorder.id, waiverRecords.recordedByPersonId),
+  eq(recorder.shopId, waiverRecords.shopId),
+  isNull(recorder.anonymizedAt),
+);
 
 /** How many audit rows the Signatures tab shows per page. */
 export const WAIVER_INTEGRITY_PAGE_SIZE = PAGE_SIZE.list;
@@ -32,6 +40,9 @@ type WaiverAuditJoinRow = {
   medicalClearedAt: Date | null;
   medicalClearanceDeclinedAt: Date | null;
   personName: string;
+  signatureMethod: string | null;
+  recorderName: string | null;
+  recordedAt: Date | null;
   tripId: string | null;
   tripTitle: string | null;
   tripStartsAt: Date | null;
@@ -60,6 +71,10 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
     id: row.record.id,
     personId: row.record.personId,
     personName: row.personName,
+    signatureMethod: row.signatureMethod,
+    recorderName: row.recorderName,
+    recordedAt: row.recordedAt,
+    templateTitle: row.record.templateTitle,
     tripId: row.tripId,
     tripTitle: row.tripTitle,
     tripStartsAt: row.tripStartsAt,
@@ -174,6 +189,9 @@ export async function listWaiverIntegrityAudit(
           record: WAIVER_SEALED_COLUMNS,
           ...AUDIT_CLEARANCE_COLUMNS,
           personName: people.fullName,
+          signatureMethod: waiverRecords.signatureMethod,
+          recorderName: recorder.fullName,
+          recordedAt: waiverRecords.completedAt,
           tripId: trips.id,
           tripTitle: trips.title,
           tripStartsAt: trips.startsAt,
@@ -183,6 +201,7 @@ export async function listWaiverIntegrityAudit(
           people,
           and(eq(people.id, waiverRecords.personId), eq(people.shopId, waiverRecords.shopId)),
         )
+        .leftJoin(recorder, recorderScope)
         .leftJoin(
           bookings,
           and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
@@ -222,6 +241,9 @@ export async function getSignedWaiverRecordForShop(
       record: WAIVER_SEALED_COLUMNS,
       ...AUDIT_CLEARANCE_COLUMNS,
       personName: people.fullName,
+      signatureMethod: waiverRecords.signatureMethod,
+      recorderName: recorder.fullName,
+      recordedAt: waiverRecords.completedAt,
       tripId: trips.id,
       tripTitle: trips.title,
       tripStartsAt: trips.startsAt,
@@ -231,6 +253,7 @@ export async function getSignedWaiverRecordForShop(
       people,
       and(eq(people.id, waiverRecords.personId), eq(people.shopId, waiverRecords.shopId)),
     )
+    .leftJoin(recorder, recorderScope)
     .leftJoin(
       bookings,
       and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
@@ -285,6 +308,7 @@ export async function getSignedWaiverForDiver(
     .select({
       record: waiverRecords,
       personName: people.fullName,
+      recorderName: recorder.fullName,
       tripId: trips.id,
       tripTitle: trips.title,
       tripStartsAt: trips.startsAt,
@@ -295,6 +319,7 @@ export async function getSignedWaiverForDiver(
       people,
       and(eq(people.id, waiverRecords.personId), eq(people.shopId, waiverRecords.shopId)),
     )
+    .leftJoin(recorder, recorderScope)
     .leftJoin(
       bookings,
       and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
@@ -330,6 +355,8 @@ export async function getSignedWaiverForDiver(
     signedAt: record.signedAt ?? record.completedAt,
     signedName: identityHeld ? null : record.signedName,
     signatureMethod: record.signatureMethod,
+    recorderName: row.recorderName,
+    recordedAt: record.completedAt,
     templateTitle: record.templateTitle,
     templateVersion: record.templateVersion,
     templateBody: record.templateBody,

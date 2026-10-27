@@ -39,8 +39,6 @@
     "noSignedRecords": "No signed records yet",
     "noSignatureDate": "No signature date",
     "noTrip": "Imported record",
-    "releaseVersion": "Release version {version}",
-    "openRecord": "Open the diver record",
     "openTrip": "Open the departure",
     "integrityInvalid": "Integrity mismatch",
     "integrityUnsealed": "Can’t be checked for changes",
@@ -60,7 +58,9 @@
     },
     "pagination": {
       "total": "{count, plural, one {# record} other {# records}}"
-    }
+    },
+    "paperRecorded": "Paper release recorded",
+    "openSignedRecord": "Open signed record"
   },
   "record": {
     "title": "Signed waiver",
@@ -120,7 +120,13 @@
     "medicalAlertShowing": "Showing…",
     "medicalAlertShowHint": "Opening it is noted on their record.",
     "medicalAlertNotReviewed": "Written by the diver. Nobody reviewed it, and it doesn’t change who can dive.",
-    "medicalAlertShowFailed": "The alert couldn’t be shown. Try again."
+    "medicalAlertShowFailed": "The alert couldn’t be shown. Try again.",
+    "paperRecorder": "Recorded by {name}",
+    "recorderUnknown": "Recorder unavailable",
+    "recordedAt": "Recorded {at}",
+    "recordedByLabel": "Recorded by",
+    "recordedAtLabel": "Recorded",
+    "paperEvidence": "Staff recorded a paper signature. The original paper is the signature evidence."
   },
   "courseForms": {
     "heading": "Course forms",

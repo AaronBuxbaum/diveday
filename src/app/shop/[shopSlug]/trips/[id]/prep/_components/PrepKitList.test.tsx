@@ -93,11 +93,11 @@ describe("the packing list's geometry", () => {
     expect(row.closest("tr")).toHaveClass("relative");
   });
 
-  it("draws each phone packing line as one row: the piece, who it is for, the count (UX review item 13)", () => {
+  it("keeps the piece, recipient and count together in each phone packing item", () => {
     // Twenty-three cards of a Size row and a For row ran a seeded boat's Gear
     // tab to 7,000px at 390. One card of rows now, three cells each, and the
-    // first column fixed so every name list starts at one x (K-147's rule,
-    // kept in a row instead of a card).
+    // recipient may wrap beneath the piece while quantity stays adjacent.
+    // Rendered geometry is verified by the phone capture.
     const { container } = renderKitList(everyPanelPrep());
     const card = container.querySelector("ul.sm\\:hidden");
     expect(card).not.toBeNull();
@@ -108,7 +108,6 @@ describe("the packing list's geometry", () => {
       expect(row.className).toBe(KIT_PHONE_ROW_CLASS);
       expect(row.children).toHaveLength(3);
     }
-    expect(KIT_PHONE_ROW_CLASS).toMatch(/grid-cols-\[[\d.]+rem_minmax\(0,1fr\)_auto\]/);
   });
 
   it("pins the quantity column narrow in both tables, so the names get the room (K-148)", () => {

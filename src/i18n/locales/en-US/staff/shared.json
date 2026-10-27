@@ -461,7 +461,8 @@
         "refusedNotBookable": "Not checked in: this seat is no longer on the boat’s list. It was either canceled or marked not here at the desk. Open the live counter.",
         "refusedBoarded": "Still checked in: the crew recorded them aboard.",
         "refusedGeneric": "DiveDay did not apply this tap. Open the live counter."
-      }
+      },
+      "rollCallJump": "Roll call"
     },
     "shellVersion": {
       "staleBanner": "This saved copy is from an older version of DiveDay. Refresh with signal to update it before boarding divers.",

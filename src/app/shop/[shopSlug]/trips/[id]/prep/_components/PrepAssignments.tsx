@@ -65,7 +65,11 @@ export function PrepAssignments({ view }: { view: PrepView }) {
           preamble before the first diver. */}
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <h2 id={scopedId(idPrefix, "assignments-heading")} className={SECTION_TITLE_CLASS}>
+          <h2
+            id={scopedId(idPrefix, "assignments-heading")}
+            tabIndex={-1}
+            className={`scroll-mt-28 ${SECTION_TITLE_CLASS}`}
+          >
             {t("gear.prep.heading")}
           </h2>
           {/* The cart, not a caption. What replaced a sentence restating
@@ -384,7 +388,11 @@ export function PrepAssignedPaper({ view }: { view: PrepView }) {
   if (rows.length === 0) return null;
   return (
     <section aria-labelledby={scopedId(idPrefix, "assignments-heading")}>
-      <h2 id={scopedId(idPrefix, "assignments-heading")} className={SECTION_TITLE_CLASS}>
+      <h2
+        id={scopedId(idPrefix, "assignments-heading")}
+        tabIndex={-1}
+        className={`scroll-mt-28 ${SECTION_TITLE_CLASS}`}
+      >
         {t("gear.prep.heading")}
       </h2>
       <ul

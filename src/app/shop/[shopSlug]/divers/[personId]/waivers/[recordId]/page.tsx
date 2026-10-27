@@ -101,7 +101,11 @@ export default async function SignedWaiverPage({
           })
         : t("waiversStaff.record.sealValid")
       : waiver.integrity === "unsealed"
-        ? t("waiversStaff.signatures.integrityUnsealed")
+        ? t(
+            waiver.signatureMethod === "in_person_attested"
+              ? "waiversStaff.record.paperEvidence"
+              : "waiversStaff.signatures.integrityUnsealed",
+          )
         : t("waiversStaff.signatures.integrityInvalid");
   // `printOnly`: a fact the screen already says elsewhere — the diver's name is
   // the eyebrow there, a link back to their record, and paper drops links.
@@ -109,6 +113,17 @@ export default async function SignedWaiverPage({
     { label: t("waiversStaff.record.diverLabel"), value: waiver.personName, printOnly: true },
     ...(waiver.signedAt
       ? [{ label: t("waiversStaff.record.signedLabel"), value: when(waiver.signedAt) }]
+      : []),
+    ...(waiver.signatureMethod === "in_person_attested"
+      ? [
+          {
+            label: t("waiversStaff.record.recordedByLabel"),
+            value: waiver.recorderName ?? t("waiversStaff.record.recorderUnknown"),
+          },
+          ...(waiver.recordedAt
+            ? [{ label: t("waiversStaff.record.recordedAtLabel"), value: when(waiver.recordedAt) }]
+            : []),
+        ]
       : []),
     ...(waiver.signedName
       ? [{ label: t("waiversStaff.record.signedAsLabel"), value: waiver.signedName }]

@@ -39,8 +39,6 @@
     "noSignedRecords": "Todavía no hay registros firmados",
     "noSignatureDate": "Sin fecha de firma",
     "noTrip": "Registro importado",
-    "releaseVersion": "Versión {version} de la exención",
-    "openRecord": "Abrir la ficha del buceador",
     "openTrip": "Abrir la salida",
     "integrityInvalid": "Integridad no coincide",
     "integrityUnsealed": "No se puede verificar si cambió",
@@ -60,7 +58,9 @@
     },
     "pagination": {
       "total": "{count, plural, one {# registro} other {# registros}}"
-    }
+    },
+    "paperRecorded": "Exención en papel registrada",
+    "openSignedRecord": "Abrir registro firmado"
   },
   "record": {
     "title": "Exención firmada",
@@ -120,7 +120,13 @@
     "medicalAlertShowing": "Mostrando…",
     "medicalAlertShowHint": "Abrirla queda anotado en su ficha.",
     "medicalAlertNotReviewed": "La escribió el buceador. Nadie la ha revisado y no cambia quién puede bucear.",
-    "medicalAlertShowFailed": "No se pudo mostrar la alerta. Vuelve a intentarlo."
+    "medicalAlertShowFailed": "No se pudo mostrar la alerta. Vuelve a intentarlo.",
+    "paperRecorder": "Registrada por {name}",
+    "recorderUnknown": "Responsable no disponible",
+    "recordedAt": "Registrada el {at}",
+    "recordedByLabel": "Registrada por",
+    "recordedAtLabel": "Registrada",
+    "paperEvidence": "El personal registró una firma en papel. El original en papel es la evidencia de la firma."
   },
   "courseForms": {
     "heading": "Formularios del curso",

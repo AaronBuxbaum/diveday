@@ -857,6 +857,16 @@ export async function openSettingsRow(page: Page, heading: string) {
  * not touch — so this checks before clicking rather than toggling blindly,
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
+/** Open the rare booking operations only when a flow actually needs them. */
+export async function openBookingActions(row: Locator): Promise<void> {
+  await openRosterDetails(row);
+  await openIfClosed(
+    row
+      .locator("details")
+      .filter({ has: row.page().locator(":scope > summary", { hasText: "Booking actions" }) }),
+  );
+}
+
 export async function openRosterDetails(row: Locator): Promise<void> {
   // The row's own disclosure, named by its mark — not the desk's "Not here"
   // door, which is also a direct `<details>` of the row once arrivals open.

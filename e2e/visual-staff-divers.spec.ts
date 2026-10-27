@@ -659,6 +659,31 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "diver-profile-paper-waiver", scheme);
       });
 
+      test(`a recorded paper release and its signature log render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        const personId = page.url().match(/\/divers\/([^/?#]+)/)?.[1];
+        if (!personId) throw new Error("paper capture needs the diver identity");
+        await openDiverFileGroup(page, "Waiver");
+        await openPaperWaiverForm(page);
+        await page
+          .getByLabel("I have this diver’s signed release on file", { exact: false })
+          .check();
+        await page.getByRole("button", { name: "Record paper signature" }).click();
+        const signed = page.locator(`a[href*="/divers/${personId}/waivers/"]`).first();
+        await expect(signed).toBeVisible();
+        const href = await signed.getAttribute("href");
+        const recordId = href?.split("/").at(-1);
+        if (!href || !recordId) throw new Error("paper capture needs the actual recorded release");
+        await page.goto(href);
+        await page.getByText(staffCopy("waiversStaff.record.paperEvidence")).waitFor();
+        await capture(page, "signed-paper-waiver-record", scheme);
+        await page.goto(`/shop/blue-mantis/waivers/signatures?record=${recordId}`);
+        await page.getByText(staffCopy("waiversStaff.signatures.paperRecorded")).waitFor();
+        await capture(page, "waiver-signatures-paper-record", scheme);
+      });
+
       /**
        * The same delivery row on a day when one of the ways failed: each button
        * wearing what we last knew about *its own* channel — a refused email

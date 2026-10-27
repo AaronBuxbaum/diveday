@@ -63,5 +63,8 @@
   "pickupHotelColumn": "Hotel / alojamiento",
   "pickupDiverColumn": "Buceador",
   "pickupTimeUnset": "Sin programar",
-  "cancelledNothingToPack": "La salida está cancelada. No hay nada que preparar."
+  "cancelledNothingToPack": "La salida está cancelada. No hay nada que preparar.",
+  "tasksLabel": "Secciones de preparación",
+  "pullList": "Lista de equipo",
+  "piecesToAssign": "{count, plural, one {# pieza por asignar} other {# piezas por asignar}}"
 }

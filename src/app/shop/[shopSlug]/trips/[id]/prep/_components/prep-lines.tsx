@@ -259,7 +259,7 @@ export const kitLineOpenClass = `${kitLineClass} sm:border-border sm:bg-surface`
 
 /** The grid a diver's kit lines sit in: rows on a phone, tiles from `sm`. */
 export const kitGridClass =
-  "mt-2 flex flex-col gap-1 text-sm sm:grid sm:grid-cols-2 sm:gap-2 lg:grid-cols-3";
+  "mt-2 flex flex-col gap-1 text-base sm:grid sm:grid-cols-2 sm:gap-2 lg:grid-cols-3";
 
 /**
  * **A packing line on a phone: one row, three facts** (UX review 2026-10-10,
@@ -268,7 +268,7 @@ export const kitGridClass =
  * column is fixed so every name list starts at one x down the card.
  */
 export const KIT_PHONE_ROW_CLASS =
-  "grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-2.5 text-sm";
+  "grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1 px-4 py-3 text-base [&>p:nth-child(2)]:col-span-2 [&>p:nth-child(2)]:row-start-2 [&>p:last-child]:col-start-2 [&>p:last-child]:row-start-1";
 
 /**
  * Years dry, beside the name, on exactly the terms the roster states it

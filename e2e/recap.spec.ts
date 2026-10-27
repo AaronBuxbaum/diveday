@@ -3,7 +3,13 @@ import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openRecapDoor, openRosterDetails, openSettingsRow, signOut } from "./helpers";
+import {
+  openBookingActions,
+  openRecapDoor,
+  openRosterDetails,
+  openSettingsRow,
+  signOut,
+} from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -206,6 +212,7 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   // sits behind the card's own "Details" disclosure.
   await openRosterDetails(diverRow);
   // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
+  await openBookingActions(diverRow);
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
   await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
   await expect(staffPage.getByRole("status")).toContainText("Booking canceled");

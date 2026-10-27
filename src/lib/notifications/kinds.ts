@@ -1316,6 +1316,8 @@ export type WeeklyDigestEmailSection = z.infer<typeof weeklyDigestSectionSchema>
 
 const weeklyDigestSchema = z.object({
   kind: z.literal("weekly_digest"),
+  /** Absent only on payloads queued before report-prepared time was recorded. */
+  preparedAt: z.iso.datetime().optional(),
   shopId: z.uuid(),
   /** The recipient — what keys one email per person per week. */
   personId: z.uuid(),

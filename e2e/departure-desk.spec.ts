@@ -5,6 +5,7 @@ import {
   counterPath,
   HELD_SEND_TIMEOUT_MS,
   manifestRow,
+  openBookingActions,
   openRosterDetails,
   openTripFromBoard,
   openTripTab,
@@ -136,6 +137,7 @@ test("Remove on a diver marked aboard a boat that has left says why and changes 
     .filter({ has: page.locator("summary", { hasText: remove }) })
     .first();
   await openRosterDetails(row);
+  await openBookingActions(row);
   await row.locator("summary", { hasText: remove }).click();
   // The sentence after the diver's name, from the bundle.
   const why = staff("trips.roster.removeAboard", { name: "" }).trim();

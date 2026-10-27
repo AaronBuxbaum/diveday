@@ -58,7 +58,17 @@ describe("the seat's foot row sits on the text column through flush", () => {
 describe("the move to another departure", () => {
   const moveSeat = {
     action: () => {},
-    targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT", seatsLeft: 3 }],
+    targets: [
+      {
+        id: "t-2",
+        label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT",
+        seatsLeft: 3,
+        startsAt: "2026-10-24T12:00:00Z",
+        localDay: "2026-10-24",
+        dayLabel: "Sat, Oct 24, 2026",
+        timeLabel: "8:00 AM EDT",
+      },
+    ],
     departed: false,
     started: false,
   };
@@ -69,7 +79,7 @@ describe("the move to another departure", () => {
     expect(screen.getByText("Move to another departure")).toBeInTheDocument();
     const select = screen.getByLabelText("Departure");
     expect(select).toHaveAttribute("name", "toTripId");
-    expect(screen.getByRole("option", { name: /Sat, Oct 24, 8:00 AM EDT/ })).toHaveValue("t-2");
+    expect(screen.getByRole("option", { name: /8:00 AM EDT/ })).toHaveValue("t-2");
     expect(screen.getByRole("button", { name: "Move" })).toBeInTheDocument();
   });
 
@@ -178,7 +188,17 @@ describe("Remove on a diver marked aboard at sea", () => {
 describe("a course seat that carries a charter seat", () => {
   const moveSeat = {
     action: () => {},
-    targets: [{ id: "t-2", label: "Advanced session · Sat, Oct 24, 8:00 AM EDT", seatsLeft: 3 }],
+    targets: [
+      {
+        id: "t-2",
+        label: "Advanced session · Sat, Oct 24, 8:00 AM EDT",
+        seatsLeft: 3,
+        startsAt: "2026-10-24T12:00:00Z",
+        localDay: "2026-10-24",
+        dayLabel: "Sat, Oct 24, 2026",
+        timeLabel: "8:00 AM EDT",
+      },
+    ],
     departed: false,
     started: false,
   };

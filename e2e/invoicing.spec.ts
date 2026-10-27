@@ -1,7 +1,7 @@
 import type { Page, Request as PlaywrightRequest } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { counterPath, openRosterDetails, seededTripId } from "./helpers";
+import { counterPath, openBookingActions, seededTripId } from "./helpers";
 
 /**
  * Staff invoicing — `/shop/[shopSlug]/orders/new`, the front desk's "bill this
@@ -63,7 +63,7 @@ async function postedInvoiceFieldsMatch(
 async function openFirstSeat(page: Page) {
   await page.goto(counterPath("blue-mantis", await seededTripId(page, "blue-mantis", ROSTER_TRIP)));
   const row = page.locator('#roster li[id^="booking-"]').first();
-  await openRosterDetails(row);
+  await openBookingActions(row);
   return row;
 }
 
@@ -290,7 +290,7 @@ test.describe("as owner", () => {
     const urls: string[] = [];
     for (let index = 0; index < 2; index++) {
       const seat = seats.nth(index);
-      await openRosterDetails(seat);
+      await openBookingActions(seat);
       const href = await seat
         .getByRole("link", { name: "Create order", exact: true })
         .getAttribute("href");
@@ -517,6 +517,7 @@ test.describe("as captain", () => {
     const seat = await openFirstSeat(page);
     // The seat's foot row is open — its other control is there — so the
     // missing link is the permission, not a closed disclosure.
+    await openBookingActions(seat);
     await expect(seat.getByRole("button", { name: "Remove booking" })).toBeVisible();
     await expect(seat.getByRole("link", { name: "Create order" })).toHaveCount(0);
   });

@@ -358,3 +358,37 @@ describe("RosterRow party payment", () => {
     expect(screen.queryByTestId("party-payment")).toBeNull();
   });
 });
+
+describe("blockers and information", () => {
+  it("keeps a certification remedy beside the blocker outside the guest-details fold", () => {
+    const { container } = render(
+      <ul>
+        <RosterRow entry={seat} settled={false} context={contextFor("blocked")} />
+      </ul>,
+    );
+    const remedy = screen.getByRole("link", { name: t("trips.roster.reviewCertificationsLink") });
+    expect(remedy.closest("details")).toBeNull();
+    expect(remedy).toHaveAttribute("href", "/shop/blue-mantis/divers/p-1#cards");
+    expect(container.querySelectorAll('a[href$="#cards"]')).toHaveLength(1);
+    expect(screen.getByText(t("trips.roster.cannotBoard"))).toBeInTheDocument();
+  });
+  it("does not call missing optional contact information a boarding blocker", () => {
+    const context = contextFor("ready");
+    context.rows.waiverByBooking = new Map([
+      ["b-1", { waiver: { status: "completed", completedAt: new Date("2026-08-28T10:00:00Z") } }],
+    ]) as WaiverByBooking;
+    const contactMissing = {
+      ...seat,
+      person: { ...seat.person, emergencyContactName: null, emergencyContactPhone: null },
+    };
+    render(
+      <ul>
+        <RosterRow entry={contactMissing} settled={false} context={context} />
+      </ul>,
+    );
+    expect(screen.queryByText(t("trips.roster.cannotBoard"))).toBeNull();
+    expect(screen.getAllByText(t("trips.roster.informationAndPreparation")).length).toBeGreaterThan(
+      0,
+    );
+  });
+});
