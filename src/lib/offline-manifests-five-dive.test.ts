@@ -93,3 +93,17 @@ describe("five-dive offline manifest", () => {
     expect(canRecordOfflineStatus(saved, "blocked", "boarded", "after_dive_6")).toBe(false);
   });
 });
+
+describe("saved training readiness from before the site-only policy", () => {
+  it("refuses an old departure verdict while retaining later headcounts", () => {
+    const saved = snapshot();
+    const departure = saved.manifests[0];
+    if (!departure?.divers[0]) throw new Error("departure diver missing");
+    departure.divers[0].trainingDive = { courseTitle: "Open Water", instructorAboard: true };
+    expect(canRecordOfflineStatus(saved, "ready", "boarded", "departure")).toBe(false);
+    expect(canRecordOfflineStatus(saved, "ready", "not_boarded", "departure")).toBe(true);
+    expect(canRecordOfflineStatus(saved, "ready", "boarded", "after_dive_1")).toBe(true);
+    saved.readinessPolicyVersion = 1;
+    expect(canRecordOfflineStatus(saved, "ready", "boarded", "departure")).toBe(true);
+  });
+});

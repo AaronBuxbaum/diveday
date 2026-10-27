@@ -3,7 +3,7 @@ import { type CourseRatioRule, courseRatioCapacity } from "./course-ratios";
 import { countInWaterCrew, inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
 import type { ParticipantType } from "./participant-types";
 import { isDiver } from "./participant-types";
-import type { Requirement } from "./requirement";
+import { type Requirement, requirementDemandsNothing } from "./requirement";
 
 /**
  * **A training mark** (issue #2275, ADR
@@ -313,6 +313,15 @@ export function trainingDiveAsksNoCard(
   if (required.requiresNitrox || required.requiredSpecialties.length > 0) return false;
   const level = required.minimumCertificationLevel;
   return level !== null && course !== null && trainingDiveRequiredLevel(level, course) === null;
+}
+
+/** The no-card wording is valid only when the trip itself asks for no card. */
+export function trainingDiveAsksNoCardForSite(
+  trip: Requirement | null | undefined,
+  site: Requirement | null | undefined,
+  course: TrainingDiveCourse | null,
+): boolean {
+  return requirementDemandsNothing(trip) && !!site && trainingDiveAsksNoCard(site, course);
 }
 
 /**

@@ -1049,6 +1049,7 @@ export async function listDepartureBoardedBookingIds(
 function trainingDiveOf(
   mark: TrainingMarkState | undefined,
   identityHeld: boolean,
+  siteAttributionUnknown: boolean,
 ): TripManifest["divers"][number]["trainingDive"] {
   // Aboard means the course's own instructor (issue #2731), the same answer
   // readiness reads to take the course's level.
@@ -1058,6 +1059,7 @@ function trainingDiveOf(
         ...(mark.enrollmentCourse ? { intro: mark.enrollmentCourse.intro } : {}),
         instructorAboard: mark.courseInstructorAboard,
         overRatio: mark.overRatio ?? false,
+        ...(siteAttributionUnknown ? { siteAttributionUnknown: true } : {}),
       }
     : null;
 }
@@ -1120,6 +1122,9 @@ export async function getTripManifests(
   );
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
+  );
+  const trainingAttributionByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.trainingSiteAttributionUnknown] as const),
   );
   const depthByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.depthAdvisory] as const),
@@ -1317,6 +1322,7 @@ export async function getTripManifests(
       trainingDive: trainingDiveOf(
         trainingMarks.get(booking.id),
         booking.identityUnconfirmedAt !== null,
+        trainingAttributionByBooking.get(booking.id) ?? true,
       ),
       trainingMarkCleared: booking.trainingClearedAt
         ? {

@@ -10,6 +10,7 @@ import {
   type TrainingMarkSeat,
   type TrainingMarkState,
   trainingDiveAsksNoCard,
+  trainingDiveAsksNoCardForSite,
   trainingDiveLevel,
   trainingDiveRequiredLevel,
   trainingMarkProblem,
@@ -263,6 +264,28 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
     expect(trainingDiveAsksNoCard(level("advanced_open_water"), aow)).toBe(false);
     expect(trainingDiveAsksNoCard(level(null), ow)).toBe(false);
     expect(trainingDiveAsksNoCard(level("open_water"), null)).toBe(false);
+  });
+
+  it("never says no card is asked when the trip itself requires one", () => {
+    const course: TrainingDiveCourse = {
+      minimumLevel: null,
+      certifiesLevel: "open_water",
+      intro: false,
+    };
+    const level = {
+      minimumCertificationLevel: "open_water" as const,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    };
+    const empty = { ...level, minimumCertificationLevel: null };
+    expect(trainingDiveAsksNoCardForSite(empty, level, course)).toBe(true);
+    expect(trainingDiveAsksNoCardForSite(level, level, course)).toBe(false);
+    expect(trainingDiveAsksNoCardForSite({ ...empty, requiresNitrox: true }, level, course)).toBe(
+      false,
+    );
+    expect(
+      trainingDiveAsksNoCardForSite({ ...empty, requiredSpecialties: ["wreck"] }, level, course),
+    ).toBe(false);
   });
 
   it("still asks a card when the departure also asks nitrox or a specialty", () => {

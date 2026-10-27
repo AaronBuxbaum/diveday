@@ -7,7 +7,7 @@ import type { TrainingDiveCourse } from "./training-mark";
 const now = new Date("2026-07-18T12:00:00.000Z");
 const requirement = {
   requiresWaiver: true,
-  minimumCertificationLevel: "advanced_open_water",
+  minimumCertificationLevel: null,
   requiredSpecialties: [],
 } as unknown as TripRequirement;
 const deepRequirement = {
@@ -33,6 +33,11 @@ describe("calculateReadiness — a marked training dive's level (issue #2731)", 
   const openWaterCard = [certification({ level: "open_water" })];
   const base = {
     requirement,
+    siteRequirement: {
+      minimumCertificationLevel: "advanced_open_water" as const,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    },
     waiver: signedWaiver,
     certifications: openWaterCard,
     timezone: "America/New_York",
@@ -41,7 +46,7 @@ describe("calculateReadiness — a marked training dive's level (issue #2731)", 
   const codes = (input: Parameters<typeof calculateReadiness>[0]) =>
     calculateReadiness(input).blockers.map((blocker) => blocker.code);
 
-  it("holds the diver to the departure's level without one", () => {
+  it("holds the diver to the site level without one", () => {
     expect(codes(base)).toContain("certification_insufficient");
   });
 

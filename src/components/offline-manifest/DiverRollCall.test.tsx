@@ -8,6 +8,25 @@ import { offlineTripView } from "./trip-view";
 afterEach(cleanup);
 
 describe("OfflineDiverRollCall", () => {
+  it("does not present an older training clearance as boardable", () => {
+    const copy = savedCopy();
+    const [diver] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.trainingDive = {
+      courseTitle: "Open Water",
+      instructorAboard: true,
+      siteAttributionUnknown: true,
+    };
+    diver.readiness = { status: "ready", blockers: [] };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("manifest missing");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+    expect(row?.textContent).toContain("This saved training clearance is out of date");
+    expect(row?.textContent).toContain("This mark does not identify which dive is training");
+    expect(trip.blockedAtRail[0]).toBe(true);
+  });
+
   it("keeps a medical capsule after a dive on a diver boarded over a physician's no, issue 2380", () => {
     const copy = savedCopy();
     const [first] = copy.snapshot.manifests[0]?.divers ?? [];

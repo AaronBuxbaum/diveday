@@ -99,7 +99,8 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
 
   it("never refuses a marked seat readiness clears on the course's level", () => {
     const readiness = calculateReadiness({
-      requirement: { ...advancedTrip, requiresWaiver: false } as unknown as TripRequirement,
+      requirement: { ...requirement(), requiresWaiver: false } as unknown as TripRequirement,
+      siteRequirement: site({ minimumCertificationLevel: "advanced_open_water" }),
       waiver: null,
       certifications: openWater.certifications,
       timezone: "UTC",
@@ -108,8 +109,8 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
     expect(readiness.blockers.filter((b) => b.code.startsWith("certification_"))).toEqual([]);
     expect(
       decideTripAdmission({
-        requirement: advancedTrip,
-        siteRequirement: null,
+        requirement: requirement(),
+        siteRequirement: site({ minimumCertificationLevel: "advanced_open_water" }),
         evidence: { ...openWater, trainingDives: [aow] },
       }).admitted,
     ).toBe(true);

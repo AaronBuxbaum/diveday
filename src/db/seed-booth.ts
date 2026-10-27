@@ -569,10 +569,10 @@ const SHOP_CERTIFIED_HULL = "Mantis I";
  * bottom and the missing-diver search on Sunday. `day` counts from 0.
  *
  * A Rescue Diver course, not Advanced Open Water: AOW is five adventure dives,
- * one of them a Deep dive past 18 m, and the demo can seat neither (a trip
- * plans at most four dives, and its only sites past 18 m ask a Deep card no
- * student holds), so a shop-issued AOW card would be a standards gap on
- * screen (dive-domain review of the demo reseed, item 4).
+ * one of them a Deep dive past 18 m. The demo cannot establish the actual
+ * underwater groups and agency-specific conditions that would permit its
+ * students to dive at a Deep-gated site, so it keeps the Rescue story until
+ * those facts can be recorded (dive-domain review of the demo reseed, item 4).
  */
 const SHOP_CERTIFIED_DIVES: readonly {
   title: string;

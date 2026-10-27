@@ -1,12 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { listExecutedDives, upsertExecutedDive } from "./executed-dives";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { bookings, courses, people, tripDives, trips } from "./schema";
 import { listStaff } from "./trips";
 import { createTrip, normalizedDiveCount } from "./trips-create";
+import { updateTrip } from "./trips-record";
+import { applyDetailsToFutureSeries, createTripSeries } from "./trips-series";
 
 const ctx = fileScopedShopContext();
 const tripDetails = {
@@ -123,6 +126,79 @@ describe("five-dive course sessions", () => {
     const manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_5");
     expect(manifest?.divers.find((entry) => entry.bookingId === booking.id)?.rollCall?.state).toBe(
       "not_boarded",
+    );
+  });
+
+  it("never removes the fifth checkpoint after dive five was logged", async () => {
+    const { db, shop } = ctx;
+    const trip = await createTrip(db, {
+      ...tripDetails,
+      shopId: shop.id,
+      courseId: await activeCourseId(),
+      plannedDives: 5,
+    });
+    const [staff] = await listStaff(db, shop.id);
+    if (!trip || !staff) throw new Error("course or recorder missing");
+    expect(
+      await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        diveNumber: 5,
+        recordedByPersonId: staff.person.id,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await updateTrip(db, shop.id, trip.id, { ...tripDetails, plannedDives: 4 }),
+    ).toMatchObject({
+      ok: false,
+      reason: "planned_dives_below_history",
+      detail: { recordedDiveCount: 5 },
+    });
+  });
+
+  it("never applies a shorter plan over a future sibling with a logged fifth dive", async () => {
+    const { db, shop } = ctx;
+    const [staff] = await listStaff(db, shop.id);
+    const series = await createTripSeries(db, {
+      shopId: shop.id,
+      courseId: await activeCourseId(),
+      title: "Weekend series",
+      capacity: 6,
+      plannedDives: 5,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      weekdays: weekdaySetFrom([1]),
+      anchorDate: "2030-09-02",
+      endsOn: "2030-09-09",
+      timeZone: "America/New_York",
+      template: {
+        startsAt: new Date("2030-09-02T11:00:00Z"),
+        endsAt: new Date("2030-09-02T15:00:00Z"),
+      },
+    });
+    const [source, sibling] = series?.trips ?? [];
+    if (!series || !source || !sibling || !staff) throw new Error("series or recorder missing");
+    expect(
+      await upsertExecutedDive(db, {
+        shopId: shop.id,
+        tripId: sibling.id,
+        diveNumber: 5,
+        recordedByPersonId: staff.person.id,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await updateTrip(db, shop.id, source.id, {
+        title: source.title,
+        startsAt: source.startsAt,
+        endsAt: source.endsAt,
+        capacity: source.capacity,
+        plannedDives: 4,
+      }),
+    ).toMatchObject({ ok: true });
+    const now = new Date("2030-09-09T10:00:00Z");
+    expect(now.getTime()).toBeLessThan(sibling.startsAt.getTime());
+    expect(await applyDetailsToFutureSeries(db, shop.id, series.series.id, source.id, now)).toEqual(
+      { updated: 0, skipped: 1 },
     );
   });
 

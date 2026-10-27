@@ -93,7 +93,7 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * so unlike the snapshot version above, this bump is *worth* the purge: there
  * is no queued roll call inside an app shell to lose, only stale bundles.
  */
-export const OFFLINE_MANIFEST_SHELL_VERSION = "v3";
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v4";
 
 /**
  * The query parameter the service worker puts on its own redirect to the
@@ -143,6 +143,8 @@ export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
+  /** Absent on copies made before site-only training readiness; queued events remain intact. */
+  readinessPolicyVersion?: 1;
   /**
    * `emergencyReference` rides here, and that is the point of carrying it at
    * all: this snapshot is the document a crew has with no signal, and until
@@ -523,6 +525,7 @@ export type OfflineManifestPayload = {
             courseTitle: string;
             instructorAboard: boolean;
             overRatio?: boolean;
+            siteAttributionUnknown?: boolean;
             intro?: boolean;
           };
           /**
@@ -1093,6 +1096,7 @@ export function serializeManifests(
   snags?: OfflineManifestPayload["snags"],
 ): OfflineManifestPayload {
   return {
+    readinessPolicyVersion: 1,
     shop,
     ...(boatSafety ? { boatSafety } : {}),
     ...(snags && snags.items.length > 0 ? { snags } : {}),
@@ -1331,6 +1335,14 @@ export function isOfflineManifestExpired(
  * diver means no boarding, rather than a readiness verdict borrowed from a
  * checkpoint the caller never named.
  */
+/** A saved training verdict predating the site-only rule cannot authorize boarding. */
+export function offlineTrainingReadinessStale(
+  snapshot: OfflineManifestSnapshot,
+  diver: OfflineManifestSnapshot["manifests"][number]["divers"][number],
+): boolean {
+  return snapshot.readinessPolicyVersion !== 1 && !!diver.trainingDive;
+}
+
 export function canRecordOfflineStatus(
   snapshot: OfflineManifestSnapshot,
   bookingId: string,
@@ -1374,7 +1386,7 @@ export function canRecordOfflineStatus(
     ?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
   if (checkpoint !== "departure") return true;
-  return diver.readiness.status === "ready";
+  return diver.readiness.status === "ready" && !offlineTrainingReadinessStale(snapshot, diver);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
 import { seatsWithinCertificate } from "@/lib/boat-safety";
 import {
   type CalendarDate,
@@ -33,6 +33,7 @@ import {
   bookingPayments,
   bookings,
   courses,
+  executedDives,
   people,
   shops,
   tripDives,
@@ -1442,6 +1443,24 @@ export async function applyDetailsToFutureSeries(
       checkpointsByTrip.set(row.tripId, list);
     }
 
+    const executedByTrip = new Map(
+      siblingIds.length === 0
+        ? []
+        : (
+            await tx
+              .select({ tripId: executedDives.tripId, lastDive: max(executedDives.diveNumber) })
+              .from(executedDives)
+              .where(
+                and(
+                  eq(executedDives.shopId, shopId),
+                  inArray(executedDives.tripId, siblingIds),
+                  isNull(executedDives.deletedAt),
+                ),
+              )
+              .groupBy(executedDives.tripId)
+          ).map((row) => [row.tripId, row.lastDive ?? 0] as const),
+    );
+
     // What each sibling's dive plan looks like *before* this apply, so the
     // calendar revision moves only for the ones whose sites actually change
     // (issue #1165). A sibling that already ran these sites is not a revision
@@ -1481,7 +1500,10 @@ export async function applyDetailsToFutureSeries(
         skipped += 1;
         continue;
       }
-      const recordedDiveCount = maxRecordedDiveNumber(checkpointsByTrip.get(sibling.id) ?? []);
+      const recordedDiveCount = Math.max(
+        maxRecordedDiveNumber(checkpointsByTrip.get(sibling.id) ?? []),
+        executedByTrip.get(sibling.id) ?? 0,
+      );
       if (source.plannedDives < recordedDiveCount) {
         skipped += 1;
         continue;

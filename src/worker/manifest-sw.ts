@@ -53,7 +53,7 @@ import {
  */
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_NAME = "diveday-offline-manifest-shell-v3";
+const CACHE_NAME = "diveday-offline-manifest-shell-v4";
 const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
 const OFFLINE_SHELL = "/offline-manifest";
 

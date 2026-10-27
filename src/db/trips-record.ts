@@ -6,6 +6,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  max,
   notInArray,
   type SQL,
   type SQLWrapper,
@@ -49,6 +50,7 @@ import {
   bookings,
   courses,
   diveSites,
+  executedDives,
   people,
   personRoles,
   rollCallCrewEvents,
@@ -634,7 +636,20 @@ export async function updateTrip(
     // Divers and crew alike (`recordedRollCallRows`): a crew member counted
     // after a dive is history this edit may not orphan either.
     const checkpointRows = await recordedRollCallRows(tx, shopId, [tripId]);
-    const recordedDiveCount = maxRecordedDiveNumber(checkpointRows);
+    const [executed] = await tx
+      .select({ lastDive: max(executedDives.diveNumber) })
+      .from(executedDives)
+      .where(
+        and(
+          eq(executedDives.shopId, shopId),
+          eq(executedDives.tripId, tripId),
+          isNull(executedDives.deletedAt),
+        ),
+      );
+    const recordedDiveCount = Math.max(
+      maxRecordedDiveNumber(checkpointRows),
+      executed?.lastDive ?? 0,
+    );
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
     }

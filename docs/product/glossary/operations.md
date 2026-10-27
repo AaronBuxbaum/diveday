@@ -1480,14 +1480,18 @@
   `training_mark_invalid` blocker until staff clear it. Clearing one with forms still owed takes a
   manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
   not In training**: it changes boarding only, and buying a seat never reads it. A mark that
-  stands lowers the departure's or site's level to the course's minimum, and only when the course
-  certifies that level: a course with no minimum (Open Water) asks no card for a level it
+  stands may lower a site's level to the course's minimum, and only when the course
+  certifies that level. A seat-level mark does not identify one of several planned dives, so
+  multi-dive departures and one-dive departures with conflicting site records retain their site
+  requirements; the roster and manifest explain why. An explicit
+  departure requirement always stands. A course with no minimum
+  (Open Water) asks no card for a site level it
   certifies; never past it, never for an intro session or a course that certifies none (issue
   #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted
   off at the dock, and the seat within the course's ratio: marked seats are counted per instructor
   across every session on the departure, a certified assistant raising the cap as on the session.
-  Today that lowers exactly one case: a PADI Open Water student on a charter that asks Open
-  Water, because continuing-education courses have no ratio rule yet and so never lower a level.
+  Today that lowers exactly one case: a PADI Open Water student on a one-dive charter whose site
+  asks Open Water, because continuing-education courses have no ratio rule yet and so never lower a level.
   An instructor's load is also held to the tightest ratio of every seat already on them: an
   Open Water seat marked after a Discover Scuba seat cannot take the instructor past the intro
   ratio.
