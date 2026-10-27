@@ -51,9 +51,11 @@ describe("staff activity", () => {
     render(<StaffActivity sessionId="one" copy={copy} />);
     expect(document.querySelector('[data-staff-session-check="pending"]')).not.toBeNull();
     await act(async () => {});
+    expect(document.body.lastElementChild).toHaveAttribute("data-staff-session-lock");
     await act(async () => {
       release(new Response(JSON.stringify({ remainingMs: 5000 })));
     });
+    expect(document.body.lastElementChild).not.toHaveAttribute("data-staff-session-lock");
     expect(document.querySelector('[data-staff-session-check="settled"]')).not.toBeNull();
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
