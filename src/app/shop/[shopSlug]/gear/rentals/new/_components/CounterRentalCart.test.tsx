@@ -285,16 +285,31 @@ describe("issue 2723 refused cart", () => {
     }));
     const groups = [{ kind: "wetsuit" as const, kindLabel: "Wetsuit", units: suits }];
     render(<Cart groups={groups} />);
-    for (const suit of suits) {
-      fireEvent.click(within(gear()).getByRole("button", { name: `${suit.label}· L` }));
-      fireEvent.click(screen.getByRole("checkbox", { name: suit.confirmLabel }));
+    const pickButtons = within(gear()).getAllByRole("button", { name: /^Suit \d{3}· L$/ });
+    expect(pickButtons).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(pickButtons[index]).toHaveAccessibleName(`${suit.label}· L`);
     }
+    act(() => {
+      for (const button of pickButtons) fireEvent.click(button);
+    });
+    const confirmations = screen.getAllByRole("checkbox");
+    expect(confirmations).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(confirmations[index]).toHaveAccessibleName(suit.confirmLabel);
+    }
+    act(() => {
+      for (const confirmation of confirmations) fireEvent.click(confirmation);
+    });
     fireEvent.click(screen.getByRole("radio", { name: t("counterRentals.new.pay.none") }));
     fireEvent.submit(screen.getByRole("form", { name: "Rental" }));
     cleanup();
     render(<Cart groups={groups} restore />);
-    for (const suit of suits) {
-      expect(screen.getByRole("checkbox", { name: suit.confirmLabel })).toBeChecked();
+    const restoredConfirmations = screen.getAllByRole("checkbox");
+    expect(restoredConfirmations).toHaveLength(suits.length);
+    for (const [index, suit] of suits.entries()) {
+      expect(restoredConfirmations[index]).toHaveAccessibleName(suit.confirmLabel);
+      expect(restoredConfirmations[index]).toBeChecked();
     }
   });
 
