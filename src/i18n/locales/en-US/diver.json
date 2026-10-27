@@ -1077,6 +1077,7 @@
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
+    "courseFormsNeedSigning": "Course forms still need signing.",
     "savedCourseForms": "Course forms signed",
     "groupDifferentDeparture": "Some group seats are on another departure.",
     "groupSummary": "{total, plural, one {# seat in your group} other {# seats in your group}} · {unclaimed, plural, one {# unclaimed} other {# unclaimed}}"

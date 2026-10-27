@@ -393,7 +393,7 @@ export function DateRequestForm({
             the real one a third of the choice. A diver who would rather write it
             themselves still can: the line underneath is the shop's own address
             and phone number, both live links. */}
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+        <div className="mt-8 flex flex-wrap items-center gap-3 print:hidden">
           <button
             type="button"
             disabled={pending}

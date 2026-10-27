@@ -31,6 +31,7 @@ import type { FormNotice } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
+import { BoatCapacityWarning } from "./BoatCapacityWarning";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
 /**
@@ -56,7 +57,7 @@ export type DetailsSectionContext = {
   /** One date per later day when the days are not consecutive; empty otherwise. */
   laterDates: string[];
   /** The shop's live fleet, for the hull select. Empty means no boat rows yet. */
-  boats: { id: string; name: string }[];
+  boats: { id: string; name: string; capacity: number }[];
   /** The shop's trip tags, in the order it wrote them. */
   lenses: { id: string; name: string }[];
   hasBoatDiving: boolean;
@@ -354,7 +355,16 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
         defaultLaterDates={laterDates}
       />
       <FieldGrid columns={3}>
-        <Field label={t("trips.details.capacityLabel")}>
+        <Field
+          label={t("trips.details.capacityLabel")}
+          description={
+            <BoatCapacityWarning
+              boats={boats}
+              initialMode={trip.diveMode ?? "boat"}
+              copy={t.raw("schedule.builder.boatCapacityWarning")}
+            />
+          }
+        >
           <input
             name="capacity"
             type="number"

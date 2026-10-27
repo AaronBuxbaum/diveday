@@ -1077,6 +1077,7 @@
     "intentHeading": "¿Para qué es esta inmersión?",
     "intentChoose": "Prefiero no decirlo",
     "signCourseForms": "Firmar formularios del curso",
+    "courseFormsNeedSigning": "Los formularios del curso siguen pendientes de firma.",
     "savedCourseForms": "Formularios del curso firmados",
     "groupDifferentDeparture": "Algunas plazas del grupo están en otra salida.",
     "groupSummary": "{total, plural, one {# plaza en tu grupo} other {# plazas en tu grupo}} · {unclaimed, plural, one {# sin reclamar} other {# sin reclamar}}"

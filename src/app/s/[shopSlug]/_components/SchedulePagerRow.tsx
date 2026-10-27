@@ -24,7 +24,7 @@ export function SchedulePagerRow({
 }) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 ${followsWeekLedger ? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"}`}
+      className={`print:hidden flex flex-wrap items-center gap-3 ${followsWeekLedger ? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"}`}
     >
       {pager.earlier ? (
         <Link href={pager.earlier} scroll={false} className={buttonClass({ variant: "secondary" })}>

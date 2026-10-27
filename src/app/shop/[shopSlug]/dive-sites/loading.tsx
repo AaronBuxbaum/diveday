@@ -5,7 +5,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
 /**
  * Body-shaped skeleton for the dive-site library (design principle 1), shaped
  * to the ledger it stands in for (ADR 20260827-the-shops-shelves): the search
- * box, then group labels over hairline rows, then the catalog's tail door —
+ * box, map, catalog door, then group labels over hairline rows —
  * not the bordered table this surface used to be, which would land the real
  * page a layout jump away from its own skeleton.
  *
@@ -34,6 +34,13 @@ export default function DiveSitesLoading() {
 
           {/* The ledger skeleton underneath the map */}
           <div className="w-full min-w-0">
+            {/* The catalog door: above the site rows */}
+            <div className="mb-8">
+              <div className={`flex min-h-13 items-center gap-3 ${ledgerRowBoxClass}`}>
+                <span className="block size-5 shrink-0 rounded bg-surface-sunken" />
+                <SiteLineBars nameWidth="w-52" metaWidth="w-32" />
+              </div>
+            </div>
             <div className="space-y-8">
               {[3, 2].map((rows, group) => (
                 <div key={rows}>
@@ -56,13 +63,6 @@ export default function DiveSitesLoading() {
                   </div>
                 </div>
               ))}
-            </div>
-            {/* The catalog door: the ledger's tail row */}
-            <div className="mt-10">
-              <div className={`flex min-h-13 items-center gap-3 ${ledgerRowBoxClass}`}>
-                <span className="block size-5 shrink-0 rounded bg-surface-sunken" />
-                <SiteLineBars nameWidth="w-52" metaWidth="w-32" />
-              </div>
             </div>
           </div>
         </div>

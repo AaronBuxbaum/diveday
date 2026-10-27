@@ -163,7 +163,7 @@ export default async function WorkOrderPage({
         {deleted ? null : (
           <Link
             href={`${board}/${workOrder.id}/tag`}
-            className={buttonClass({ variant: "secondary" })}
+            className={buttonClass({ variant: "secondary", className: "print:hidden" })}
           >
             {t("workOrders.detail.claimTag")}
           </Link>
@@ -172,7 +172,7 @@ export default async function WorkOrderPage({
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
-      <div className="mt-8 space-y-10">
+      <div className="mt-8 space-y-10 print:space-y-4">
         {detail.gearItemKind ? (
           <p className="text-muted">
             {t("workOrders.detail.ownUnitSubject", {

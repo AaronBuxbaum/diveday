@@ -178,7 +178,7 @@ export async function DivePackagesSection({
         id="package-new"
         openOnHash="package-new"
         open={notice === "package-invalid"}
-        className="group/package mt-4 scroll-mt-24"
+        className="group/package mt-4 scroll-mt-24 print:[&:not([open])]:hidden"
       >
         <summary
           className={`${buttonClass({ variant: "secondary", size: "sm" })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}

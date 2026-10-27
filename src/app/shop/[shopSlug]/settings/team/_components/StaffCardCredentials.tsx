@@ -120,7 +120,11 @@ export function StaffCardCredentials({
         ) : null}
         <Link
           href={`?credentialFor=${encodeURIComponent(personId)}#add-credential`}
-          className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+          className={buttonClass({
+            variant: "secondary",
+            size: "sm",
+            className: "mt-3 print:hidden",
+          })}
         >
           {t("staffing.credentials.add")}
         </Link>
@@ -166,7 +170,7 @@ function CredentialRow({
           {t("staffing.credentials.pending")}
         </Badge>
       )}
-      <span className="ms-auto flex flex-wrap items-center gap-x-6 gap-y-2">
+      <span className="ms-auto flex flex-wrap items-center gap-x-6 gap-y-2 print:hidden">
         {credential.reviewed ? null : (
           <form action={reviewAction}>
             <input type="hidden" name="credentialId" value={credential.id} />
