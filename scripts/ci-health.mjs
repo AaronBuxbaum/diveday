@@ -268,6 +268,8 @@ export function reconcileIssue({ health, since, until, runUrl, tracker, dryRun =
   return "opened";
 }
 
+export class TransientGitHubError extends Error {}
+
 /** `gh api <endpoint>` as JSON, bounded; `jq` slims a page inside `gh`. */
 export function ghJson(endpoint, jq, { run = runBounded, sleep = sleepSync } = {}) {
   let result;
@@ -291,7 +293,10 @@ export function ghJson(endpoint, jq, { run = runBounded, sleep = sleepSync } = {
       String(result?.stderr ?? "")
         .trim()
         .split("\n")[0] || `gh exited ${result?.status}`;
-    throw new Error(`gh api ${endpoint} failed: ${why}`);
+    const message = `gh api ${endpoint} failed: ${why}`;
+    if (/\(HTTP 50[234]\)/.test(String(result?.stderr ?? "")))
+      throw new TransientGitHubError(message);
+    throw new Error(message);
   }
   return JSON.parse(String(result.stdout ?? "").trim() || "null");
 }
@@ -304,6 +309,26 @@ const PR_FIELDS =
   "[.[] | {number, ref: .head.ref, created_at, updated_at, closed_at, merged_at, fork: (.head.repo.full_name != .base.repo.full_name)}]";
 const RUN_FIELDS =
   "[.workflow_runs[] | {id, head_sha, status, conclusion, created_at, run_started_at, updated_at, html_url}]";
+
+/** GitHub can 502 on a large job response even while smaller pages work. */
+export function readRunJobs(gh, repo, runId) {
+  const path = `repos/${repo}/actions/runs/${runId}/jobs`;
+  const fields = "[.jobs[] | {id, name, conclusion}]";
+  try {
+    const first = gh(`${path}?per_page=100`, fields) ?? [];
+    if (first.length < 100) return first;
+  } catch (error) {
+    if (!(error instanceof TransientGitHubError)) throw error;
+    console.warn(`ci-health: ${path} failed on the large page; reading smaller pages.`);
+  }
+  const jobs = [];
+  for (let page = 1; page <= 200; page += 1) {
+    const batch = gh(`${path}?per_page=5&page=${page}`, fields) ?? [];
+    jobs.push(...batch);
+    if (batch.length < 5) return jobs;
+  }
+  throw new Error(`ci-health: ${path} exceeded the 1,000-job pagination bound`);
+}
 
 /**
  * The window's pull requests with their runs, jobs and named tests, from GitHub. `gh` is
@@ -335,11 +360,7 @@ export function readWeek({ since, gh = ghJson, repo = REPO }) {
     );
     for (const run of pr.runs) {
       if (!isRed(run)) continue;
-      run.jobs =
-        gh(
-          `repos/${repo}/actions/runs/${run.id}/jobs?per_page=100`,
-          "[.jobs[] | {id, name, conclusion}]",
-        ) ?? [];
+      run.jobs = readRunJobs(gh, repo, run.id);
       run.named = namedTests(
         run.jobs,
         (job) =>
