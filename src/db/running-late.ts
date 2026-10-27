@@ -44,6 +44,7 @@ async function stamp(
   bookingId: string,
   now: Date,
   saidAt: Date = now,
+  actorPersonId?: string,
 ): Promise<RunningLateOutcome> {
   return db.transaction(async (tx) => {
     const [row] = await tx
@@ -98,6 +99,7 @@ async function stamp(
         tripId: updated.tripId,
         bookingId,
         subjectPersonId: updated.personId,
+        actorPersonId,
         kind: "running_late",
         occurredAt: now,
       });
@@ -199,8 +201,9 @@ async function stampWithParty(
   saidAt: Date = now,
   /** Collects the people of the party seats this call newly stamped. */
   stampedPeople?: string[],
+  actorPersonId?: string,
 ): Promise<RunningLateOutcome> {
-  const own = await stamp(db, shopId, bookingId, now, saidAt);
+  const own = await stamp(db, shopId, bookingId, now, saidAt, actorPersonId);
   if (own.status !== "marked") return own;
   const party = await db
     .select({ id: bookings.id, personId: bookings.personId })
@@ -213,7 +216,7 @@ async function stampWithParty(
       ),
     );
   for (const seat of party) {
-    const stamped = await stamp(db, shopId, seat.id, now, saidAt);
+    const stamped = await stamp(db, shopId, seat.id, now, saidAt, actorPersonId);
     if (stamped.status === "marked") stampedPeople?.push(seat.personId);
   }
   return own;
@@ -515,6 +518,7 @@ export async function markMessageRunningLate(
       input.now,
       input.receivedAt,
       partyPeople,
+      input.actorPersonId,
     );
     if (outcome.status === "marked") {
       for (const personId of new Set([input.personId, ...partyPeople])) {
