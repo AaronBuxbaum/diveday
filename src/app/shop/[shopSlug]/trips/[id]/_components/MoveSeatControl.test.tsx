@@ -34,6 +34,16 @@ const targets = [
     seatsLeft: 0,
     availability: "Full",
   },
+  {
+    id: "next-day",
+    label: "Reef",
+    startsAt: "2026-10-28T12:00:00Z",
+    localDay: "2026-10-28",
+    dayLabel: "Oct 28",
+    timeLabel: "8:00 AM EDT",
+    seatsLeft: 2,
+    availability: "2 seats left",
+  },
 ];
 function setup() {
   render(<MoveSeatControl bookingId="guest" targets={targets} action={vi.fn()} copy={copy} />);
@@ -44,6 +54,16 @@ function setup() {
   return { trigger, details };
 }
 describe("deliberate seat destinations", () => {
+  it("retains the actual day in a selected option after its optgroup closes", () => {
+    setup();
+    const select = screen.getByLabelText(copy.label);
+    fireEvent.change(select, { target: { value: "next-day" } });
+    const chosen = screen.getByRole("option", { selected: true });
+    expect(chosen).toHaveTextContent("Oct 28");
+    expect(chosen).toHaveTextContent("8:00 AM EDT");
+    expect(chosen).toHaveTextContent("Reef");
+  });
+
   it("requires an explicit usable choice and exposes full trips without selecting one", () => {
     setup();
     const select = screen.getByLabelText(copy.label);
