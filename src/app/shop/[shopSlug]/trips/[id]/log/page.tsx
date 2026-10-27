@@ -12,7 +12,7 @@ import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
-  formatDateTimeTz,
+  formatEvidenceDateTimeTz,
   formatShortDate,
   formatTimeRangeTz,
   formatTimeZoneName,
@@ -105,7 +105,7 @@ export default async function IncidentExportPage({
   if (!doc) notFound();
 
   const dateTime = (isoString: string) =>
-    formatDateTimeTz(new Date(isoString), locale, doc.meta.timezone);
+    formatEvidenceDateTimeTz(new Date(isoString), locale, doc.meta.timezone);
   const checkpointText = (checkpoint: string) =>
     rollCallCheckpointText(t, checkpoint as RollCallCheckpoint);
   // A checkpoint column is pinned narrow on screen (`width="8rem"`) and on

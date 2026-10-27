@@ -1,4 +1,3 @@
-import { rewriteBoardingSnapshotReviewer } from "./boarding-certification-snapshot";
 /**
  * Diver erasure — the destructive counterpart to `deleteDiver`'s reversible
  * removal (ADR 20260802-diver-data-erasure).
@@ -49,7 +48,7 @@ import { rewriteBoardingSnapshotReviewer } from "./boarding-certification-snapsh
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
@@ -70,6 +69,10 @@ import {
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
+import {
+  lockBoardingCertificationEvidence,
+  rewriteBoardingSnapshotReviewer,
+} from "./boarding-certification-snapshot";
 import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
 import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
@@ -165,7 +168,9 @@ export type AnonymizeDiverRefusal =
    * that is not the diver's data to begin with. Staff offboarding is a
    * different problem with a different answer.
    */
-  | "staff_member";
+  | "staff_member"
+  | "requires_delete"
+  | "name_mismatch";
 
 export type AnonymizeDiverResult =
   | {
@@ -184,7 +189,8 @@ export type AnonymizeDiverResult =
        */
       owedProcessorErasures: number;
     }
-  | { ok: false; reason: AnonymizeDiverRefusal };
+  | { ok: false; reason: AnonymizeDiverRefusal }
+  | { ok: false; reason: "merged"; survivorId: string };
 
 /** Every column `listDiverSummaries` already refuses to ship to the browser, plus the rest. */
 const ERASED_PERSON_COLUMNS = {
@@ -440,25 +446,57 @@ function logFuzzyMatch(
  */
 export async function anonymizeDiver(
   db: AppDb,
-  input: { shopId: string; personId: string; actorPersonId: string },
+  input: {
+    shopId: string;
+    personId: string;
+    actorPersonId: string;
+    /** A public erase confirmation must still match the locked target. */
+    confirmation?: { name: string; requireDeleted: true };
+  },
   options: { customerProvider?: CustomerProvider } = {},
 ): Promise<AnonymizeDiverResult> {
   const now = nowDate();
   const outcome = await db.transaction(async (tx) => {
+    // Serialize with merge before looking up the target; a stale source must
+    // never be erased successfully after its data moved to another person.
+    await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
+    // Authorization comes before the target read and does not lock rows.
+    if (!(await canPersonErasePersonalData(tx, input.shopId, input.actorPersonId))) {
+      return { ok: false, reason: "not_authorized" } as const;
+    }
+    if (input.actorPersonId === input.personId) return { ok: false, reason: "self" } as const;
+
+    // Match sign-in completion's account -> person lock order. The target is
+    // then re-read under its row lock, so restore or rename cannot invalidate
+    // the public action's earlier confirmation.
+    await boundLockWaits(tx);
+    await tx
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .innerJoin(people, eq(people.id, userAccounts.personId))
+      // diveday:allow-deleted-people: erasure owns live and removed records, authorized above.
+      .where(and(eq(userAccounts.personId, input.personId), eq(people.shopId, input.shopId)))
+      .for("update", { of: userAccounts });
     const [person] = await tx
       .select()
       .from(people)
       // diveday:allow-deleted-people: erasure acts on a removed record; it is the usual subject.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
-      .limit(1);
+      .limit(1)
+      // diveday:allow-update-lock: restore and rename must not invalidate an erasure confirmation after it is checked.
+      .for("update");
     if (!person) return { ok: false, reason: "not_found" } as const;
-    // Authorization is answered before anything else about the record is, so a
-    // caller with no standing here learns nothing from the reply — not even
-    // whether this person has already been erased.
-    if (!(await canPersonErasePersonalData(tx, input.shopId, input.actorPersonId))) {
-      return { ok: false, reason: "not_authorized" } as const;
+    if (person.mergedIntoPersonId) {
+      return { ok: false, reason: "merged", survivorId: person.mergedIntoPersonId } as const;
     }
-    if (input.actorPersonId === input.personId) return { ok: false, reason: "self" } as const;
+    if (input.confirmation && !person.deletedAt)
+      return { ok: false, reason: "requires_delete" } as const;
+    if (
+      input.confirmation &&
+      input.confirmation.name.trim().toLowerCase() !== person.fullName.trim().toLowerCase()
+    ) {
+      return { ok: false, reason: "name_mismatch" } as const;
+    }
     if (person.anonymizedAt) {
       return {
         ok: true,
@@ -468,7 +506,6 @@ export async function anonymizeDiver(
         bookkeeperCleared: false,
       } as const;
     }
-
     const roleRows = await tx
       .select({ role: personRoles.role })
       .from(personRoles)
@@ -476,18 +513,6 @@ export async function anonymizeDiver(
     if (roleRows.some((row) => STAFF_ROLES.includes(row.role))) {
       return { ok: false, reason: "staff_member" } as const;
     }
-
-    // Match sign-in completion's account -> person order. A request that
-    // resolved its challenge before Remove can still be entering its locks.
-    // Authorization and the staff/self refusals above remain unchanged.
-    await boundLockWaits(tx);
-    await tx
-      .select({ id: userAccounts.id })
-      .from(userAccounts)
-      .innerJoin(people, eq(people.id, userAccounts.personId))
-      // diveday:allow-deleted-people: erasure owns live and removed records, authorized above.
-      .where(and(eq(userAccounts.personId, person.id), eq(people.shopId, input.shopId)))
-      .for("update", { of: userAccounts });
 
     const result = await scrub(tx, {
       shopId: input.shopId,
@@ -1156,7 +1181,41 @@ async function scrubBookingRows(
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now, bookingIds, owned, retire } = ctx;
   // A reviewer can be erased even when they held no seat on these departures.
-  await rewriteBoardingSnapshotReviewer(tx, shopId, personId, null);
+  // Cards can still name a merged-away reviewer, including captures created
+  // after the merge, so scrub the entire chain just as the person sweep does.
+  const personChain = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  for (const reviewerId of personChain) {
+    await rewriteBoardingSnapshotReviewer(tx, shopId, reviewerId, null);
+  }
+  // A duplicate cancelled seat can remain on a merged-away person. Lock every
+  // seat first, so an in-flight boarding cannot insert a snapshot after this
+  // erasure scans the event table.
+  const snapshotSeats = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    // diveday:allow-update-lock: erasure serializes with the roll-call writer before clearing personal snapshots.
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.personId, personChain)))
+    .orderBy(asc(bookings.id))
+    .for("update");
+  if (snapshotSeats.length > 0) {
+    await tx
+      .update(rollCallEvents)
+      .set({
+        certificationSnapshot: null,
+        certificationSnapshotStartedAt: null,
+        certificationSnapshotCapturedAt: null,
+      })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(
+            rollCallEvents.bookingId,
+            snapshotSeats.map((seat) => seat.id),
+          ),
+          isNotNull(rollCallEvents.certificationSnapshot),
+        ),
+      );
+  }
   if (owned) {
     // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
     // diver said this departure's crew may know it is a first trip or a long
@@ -1248,7 +1307,12 @@ async function scrubBookingRows(
     // made while blocked. The shape check allows a `blocked` status with no list.
     await tx
       .update(rollCallEvents)
-      .set({ readinessBlockers: null, certificationSnapshot: null })
+      .set({
+        readinessBlockers: null,
+        certificationSnapshot: null,
+        certificationSnapshotStartedAt: null,
+        certificationSnapshotCapturedAt: null,
+      })
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),

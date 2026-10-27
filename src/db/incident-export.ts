@@ -32,6 +32,38 @@ import { listTripReadiness } from "./readiness";
 import { activityEvents, bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
 
+/** The newest departure mark owns its capture; a correction never reuses an earlier one. */
+function standingCertificationCaptures(
+  rows: readonly { event: typeof rollCallEvents.$inferSelect }[],
+) {
+  const boardingCards = new Map<
+    string,
+    {
+      cards: NonNullable<typeof rollCallEvents.$inferSelect.certificationSnapshot>;
+      startedAt: Date;
+      capturedAt: Date;
+    } | null
+  >();
+  for (const { event } of rows) {
+    if (event.checkpoint !== "departure") continue;
+    boardingCards.set(
+      event.bookingId,
+      event.status === "boarded" &&
+        event.certificationSnapshot !== null &&
+        event.certificationSnapshotStartedAt !== null &&
+        event.certificationSnapshotCapturedAt !== null
+        ? {
+            cards: event.certificationSnapshot,
+            startedAt: event.certificationSnapshotStartedAt,
+            capturedAt: event.certificationSnapshotCapturedAt,
+          }
+        : null,
+    );
+  }
+
+  return boardingCards;
+}
+
 /**
  * Assemble one departure's incident-ready export: the manifest roster, the
  * complete append-only roll-call history (corrections included — the document
@@ -137,17 +169,7 @@ export async function getIncidentExport(
     termsAsOf: lastBoarded,
   });
 
-  // Events are already ordered by occurredAt, createdAt and seq. Only the
-  // standing departure mark can own evidence; a later undo must not reuse an
-  // earlier boarding's snapshot. Legacy and offline events have no snapshot.
-  const boardingCards = new Map<string, typeof rollCallEvents.$inferSelect.certificationSnapshot>();
-  for (const { event } of diverEventRows) {
-    if (event.checkpoint !== "departure") continue;
-    boardingCards.set(
-      event.bookingId,
-      event.status === "boarded" ? event.certificationSnapshot : null,
-    );
-  }
+  const boardingCards = standingCertificationCaptures(diverEventRows);
 
   // A paper waiver and a certification review are accountable staff acts, not
   // anonymous completions. Resolve only the ids the governing evidence names,
@@ -335,10 +357,12 @@ export async function getIncidentExport(
       bookingId: row.booking.id,
       // The stored name is the one on the evidence when it was captured. The
       // internal person id is removed before producing the document.
-      certificationsAtBoarding:
+      certificationsStartedAt: boardingCards.get(row.booking.id)?.startedAt.toISOString() ?? null,
+      certificationsCapturedAt: boardingCards.get(row.booking.id)?.capturedAt.toISOString() ?? null,
+      certificationsAtCapture:
         boardingCards
           .get(row.booking.id)
-          ?.map(({ reviewedByPersonId: _reviewedByPersonId, ...card }) => card) ?? null,
+          ?.cards.map(({ reviewedByPersonId: _reviewedByPersonId, ...card }) => card) ?? null,
       certifications: row.certifications.map((card) => ({
         ...card,
         reviewedByName: card.reviewedByPersonId

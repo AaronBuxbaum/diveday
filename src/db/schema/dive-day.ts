@@ -97,6 +97,14 @@ export const rollCallEvents = pgTable(
       jsonb("certification_snapshot").$type<
         (IncidentCertificationEvidence & { reviewedByPersonId: string | null })[]
       >(),
+    /** The app clock before issuing the statement that reads the cards. */
+    certificationSnapshotStartedAt: timestamp("certification_snapshot_started_at", {
+      withTimezone: true,
+    }),
+    /** When the statement finished; it can be later than the snapshot it read. */
+    certificationSnapshotCapturedAt: timestamp("certification_snapshot_captured_at", {
+      withTimezone: true,
+    }),
     /** The blockers behind a `blocked` snapshot, as the engine raised them; null otherwise. */
     readinessBlockers: jsonb("readiness_blockers").$type<ReadinessBlocker[]>(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
@@ -147,7 +155,7 @@ export const rollCallEvents = pgTable(
     uniqueIndex("roll_call_events_shop_client_event_unique").on(table.shopId, table.clientEventId),
     check(
       "roll_call_events_certification_snapshot_shape",
-      sql`${table.certificationSnapshot} is null or (${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
+      sql`(${table.certificationSnapshot} is null and ${table.certificationSnapshotStartedAt} is null and ${table.certificationSnapshotCapturedAt} is null) or (${table.certificationSnapshot} is not null and ${table.certificationSnapshotStartedAt} is not null and ${table.certificationSnapshotCapturedAt} is not null and ${table.certificationSnapshotStartedAt} <= ${table.certificationSnapshotCapturedAt} and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
     ),
     check(
       "roll_call_events_readiness_snapshot_shape",

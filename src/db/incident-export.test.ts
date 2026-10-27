@@ -4,7 +4,6 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
 import { getIncidentExport } from "./incident-export";
 import {
   addIncidentAddendum,
@@ -20,15 +19,7 @@ import {
   recordPreDepartureCheck,
 } from "./pre-departure-check";
 import { createCertification, reviewCertification } from "./readiness";
-import {
-  activityEvents,
-  certifications,
-  people,
-  rollCallEvents,
-  shops,
-  waiverRecords,
-  waiverTemplates,
-} from "./schema";
+import { activityEvents, rollCallEvents, shops, waiverRecords, waiverTemplates } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -329,168 +320,6 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
  * every other surface writes.
  */
 describe("the departure log's roster changes and incident reports", () => {
-  it("labels current cards separately when historic evidence cannot be reconstructed", async () => {
-    const { db, shop, reef, staff } = await exportContext();
-    const [first] = await getTripRoster(db, shop.id, reef.id);
-    if (!first) throw new Error("demo booking missing");
-    const card = await createCertification(db, {
-      shopId: shop.id,
-      personId: first.person.id,
-      agency: "padi",
-      level: "rescue",
-      identifier: "LATE-REVIEW",
-    });
-    if (!card) throw new Error("expected card");
-    await reviewCertification(db, {
-      shopId: shop.id,
-      certificationId: card.id,
-      status: "verified",
-      reviewedByPersonId: staff.id,
-    });
-    await db.insert(rollCallEvents).values({
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: first.booking.id,
-      recordedByPersonId: staff.id,
-      status: "boarded",
-      checkpoint: "departure",
-      source: "offline",
-      occurredAt: nowDate(),
-      clientEventId: "11111111-1111-4111-8111-111111111111",
-    });
-    const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
-    const entry = doc?.roster.find((row) => row.bookingId === first.booking.id);
-    expect(entry?.certificationsAtBoarding).toBeNull();
-    expect(entry?.certifications.find((row) => row.identifier === "LATE-REVIEW")).toMatchObject({
-      status: "verified",
-      reviewedByName: staff.fullName,
-    });
-  });
-  it("keeps the live boarding's card evidence when a later review changes", async () => {
-    const { db, shop, reef, staff } = await exportContext();
-    const [first] = await getTripRoster(db, shop.id, reef.id);
-    if (!first) throw new Error("demo booking missing");
-    const card = await createCertification(db, {
-      shopId: shop.id,
-      personId: first.person.id,
-      agency: "padi",
-      level: "rescue",
-      identifier: "BOARD-CARD",
-    });
-    if (!card) throw new Error("expected card");
-    await reviewCertification(db, {
-      shopId: shop.id,
-      certificationId: card.id,
-      status: "verified",
-      reviewedByPersonId: staff.id,
-    });
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
-    if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
-      signerName: first.person.fullName,
-      agreed: true,
-      medicalAnswers: clearAnswers,
-    });
-    expect(
-      await recordRollCall(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: first.booking.id,
-        recordedByPersonId: staff.id,
-        status: "boarded",
-      }),
-    ).toMatchObject({ ok: true });
-    const before = await getIncidentExport(db, shop.id, reef.id, staff.id);
-    await db
-      .update(certifications)
-      .set({ status: "pending", reviewedAt: null, reviewedByPersonId: null })
-      .where(eq(certifications.id, card.id));
-    const after = await getIncidentExport(db, shop.id, reef.id, staff.id);
-    const entry = after?.roster.find((row) => row.bookingId === first.booking.id);
-    expect(
-      entry?.certificationsAtBoarding?.find((row) => row.identifier === "BOARD-CARD"),
-    ).toMatchObject({ status: "verified", reviewedByName: staff.fullName });
-    expect(entry?.certifications.find((row) => row.identifier === "BOARD-CARD")).toMatchObject({
-      status: "pending",
-    });
-    expect(after?.contentHash).toBe(before?.contentHash);
-    expect(
-      await recordRollCall(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: first.booking.id,
-        recordedByPersonId: staff.id,
-        status: "cleared",
-      }),
-    ).toMatchObject({ ok: true });
-    const undone = await getIncidentExport(db, shop.id, reef.id, staff.id);
-    expect(
-      undone?.roster.find((row) => row.bookingId === first.booking.id)?.certificationsAtBoarding,
-    ).toBeNull();
-  });
-  it("erases a reviewer from another seat's snapshot and removes the subject's snapshot", async () => {
-    const { db, shop, reef, staff } = await exportContext();
-    const [first] = await getTripRoster(db, shop.id, reef.id);
-    if (!first) throw new Error("demo booking missing");
-    const [reviewer] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Former reviewer" })
-      .returning();
-    if (!reviewer) throw new Error("reviewer missing");
-    const [event] = await db
-      .insert(rollCallEvents)
-      .values({
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: first.booking.id,
-        recordedByPersonId: staff.id,
-        status: "boarded",
-        checkpoint: "departure",
-        source: "live",
-        occurredAt: nowDate(),
-        certificationSnapshot: [
-          {
-            kind: "level",
-            agency: "padi",
-            level: "rescue",
-            specialty: null,
-            identifier: "PRIVATE-CARD",
-            status: "verified",
-            reviewedAt: nowDate().toISOString(),
-            reviewedByName: reviewer.fullName,
-            reviewedByPersonId: reviewer.id,
-            imported: false,
-            selfDeclared: false,
-          },
-        ],
-      })
-      .returning();
-    if (!event) throw new Error("event missing");
-    expect(
-      await anonymizeDiver(db, { shopId: shop.id, personId: reviewer.id, actorPersonId: staff.id }),
-    ).toMatchObject({ ok: true });
-    const [scrubbedReviewer] = await db
-      .select()
-      .from(rollCallEvents)
-      .where(eq(rollCallEvents.id, event.id));
-    expect(scrubbedReviewer?.certificationSnapshot?.[0]).toMatchObject({
-      reviewedByName: null,
-      reviewedByPersonId: null,
-      identifier: "PRIVATE-CARD",
-    });
-    expect(
-      await anonymizeDiver(db, {
-        shopId: shop.id,
-        personId: first.person.id,
-        actorPersonId: staff.id,
-      }),
-    ).toMatchObject({ ok: true });
-    const [scrubbedDiver] = await db
-      .select()
-      .from(rollCallEvents)
-      .where(eq(rollCallEvents.id, event.id));
-    expect(scrubbedDiver?.certificationSnapshot).toBeNull();
-  });
   it("states a waiver link as it stood when the boat was due out, whenever the log is printed", async () => {
     // Domain re-review 2026-10-16, item 3: a link that lapsed between two
     // printings changed the version-2 code under unchanged records.

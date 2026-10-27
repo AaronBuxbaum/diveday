@@ -105,7 +105,7 @@ export function RollCallCell({
         {rollCallLabelText(t, result.label)}
       </span>
       {result.occurredAt && result.recordedByName ? (
-        <span className="mt-0.5 block text-xs text-muted">
+        <span className="mt-0.5 block text-xs text-muted [overflow-wrap:anywhere]">
           {t("incidentExport.resultRecordedBy", {
             date: dateTime(result.occurredAt),
             name: result.recordedByName,

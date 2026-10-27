@@ -14,13 +14,15 @@ describe("departure-log certification evidence", () => {
           certifications: [],
           specialtyCertifications: [],
           nitroxCertifications: [],
-          certificationsAtBoarding: [],
+          certificationsStartedAt: "2026-08-04T13:00:00.000Z",
+          certificationsCapturedAt: "2026-08-04T13:00:00.000Z",
+          certificationsAtCapture: [],
           waiver: null,
         },
       ],
     });
-    expect(missing.roster[0]?.certificationsAtBoarding).toBeNull();
-    expect(captured.roster[0]?.certificationsAtBoarding).toEqual([]);
+    expect(missing.roster[0]?.certificationsAtCapture).toBeNull();
+    expect(captured.roster[0]?.certificationsAtCapture).toEqual([]);
     expect(captured.contentHash).not.toBe(missing.contentHash);
     expect(() => incidentExportContentHash(captured, 1)).toThrow(/boarding certification evidence/);
     expect(() => incidentExportContentHash(captured, 2)).toThrow(/boarding certification evidence/);
@@ -33,7 +35,9 @@ describe("departure-log certification evidence", () => {
       certifications: [],
       specialtyCertifications: [],
       nitroxCertifications: [],
-      certificationsAtBoarding: [],
+      certificationsStartedAt: "2026-08-04T13:00:00.000Z",
+      certificationsCapturedAt: "2026-08-04T13:00:00.000Z",
+      certificationsAtCapture: [],
       waiver: null,
     };
     const before = buildIncidentExport({ ...input, diverEvidence: [evidence] });

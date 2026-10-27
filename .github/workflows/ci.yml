@@ -1571,7 +1571,7 @@ jobs:
       # sees it; if it ever matches nothing, vitest exits non-zero rather than
       # reporting a cheerful zero tests.
       - name: Migrations and concurrency against a real server
-        run: pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts
+        run: pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts 'src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts'
         env:
           # Deliberately *not* `DATABASE_URL`. That variable is what `getDb()`
           # reads, and both `vitest.config.ts` and `src/test/global-setup.ts` pin

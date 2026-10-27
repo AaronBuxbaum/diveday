@@ -23,7 +23,10 @@ import {
 import { normalizePersonName, personNamesMatch } from "@/lib/person-name";
 import { hasReturned } from "@/lib/trips";
 import { isStandingRefusal, isUnresolvedMedicalHold } from "@/lib/waivers";
-import { rewriteBoardingSnapshotReviewer } from "./boarding-certification-snapshot";
+import {
+  lockBoardingCertificationEvidence,
+  rewriteBoardingSnapshotReviewer,
+} from "./boarding-certification-snapshot";
 import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
 import { refileWaiverRecords } from "./waiver-refile";
@@ -1200,6 +1203,7 @@ export async function mergeDiverRecords(input: {
         return { ok: false, reason: "not_found" };
       }
 
+      await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
       const lockedIds = [input.personId, input.survivorId].sort();
       const locked = await tx
         .select()

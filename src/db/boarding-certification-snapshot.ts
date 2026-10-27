@@ -1,5 +1,6 @@
 import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import {
   certifications,
   nitroxCertifications,
@@ -8,12 +9,42 @@ import {
   specialtyCertifications,
 } from "./schema";
 
+/**
+ * A per-shop transaction lock serializes person merge/erasure with a live
+ * boarding capture before any person or booking locks. Shared boardings do
+ * not block one another. The namespace is distinct from other advisory locks;
+ * hash collisions only serialize unrelated shops, never weaken isolation.
+ */
+export async function lockBoardingCertificationEvidence(
+  tx: DbExecutor,
+  shopId: string,
+  mode: "boarding" | "rewrite",
+): Promise<void> {
+  await boundLockWaits(tx);
+  if (mode === "boarding") {
+    const isolation = await tx.execute(
+      sql`select current_setting('transaction_isolation') as isolation`,
+    );
+    if ((isolation.rows[0] as { isolation: string } | undefined)?.isolation !== "read committed") {
+      throw new Error("Boarding certification capture requires a READ COMMITTED transaction");
+    }
+    await tx.execute(
+      sql`select pg_advisory_xact_lock_shared(hashtext('boarding_certification_evidence'), hashtext(${shopId}))`,
+    );
+  } else {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('boarding_certification_evidence'), hashtext(${shopId}))`,
+    );
+  }
+}
+
 type Cards = typeof certifications | typeof specialtyCertifications | typeof nitroxCertifications;
 
 /**
- * One INSERT statement reads all card tables from one database snapshot.
- * Reviewer rows are held through commit so concurrent erasure cannot scrub
- * before this snapshot is inserted and leave the reviewer's old name behind.
+ * One INSERT statement reads all card tables and reviewer names from one
+ * READ COMMITTED database snapshot. The shop advisory lock prevents merge or
+ * erasure until this transaction commits; this must not run in an outer
+ * REPEATABLE READ transaction whose snapshot predates that lock.
  */
 export function boardingCertificationSnapshot(shopId: string, personId: string): SQL {
   const cards = (table: Cards, kind: string, level: SQL, specialty: SQL, selfDeclared: SQL) => sql`
@@ -26,12 +57,8 @@ export function boardingCertificationSnapshot(shopId: string, personId: string):
       'imported', ${table.importedAt} is not null, 'selfDeclared', ${selfDeclared}
     ) as card
     from ${table}
-    left join lateral (
-      select id, full_name from ${people}
-      where id = ${table.reviewedByPersonId} and shop_id = ${shopId}
-        and anonymized_at is null
-      for share
-    ) as reviewer on true
+    left join ${people} as reviewer on reviewer.id = ${table.reviewedByPersonId}
+      and reviewer.shop_id = ${shopId} and reviewer.anonymized_at is null
     where ${table.shopId} = ${shopId} and ${table.personId} = ${personId}
       and ${table.deletedAt} is null`;
   const unsighted = (table: typeof certifications | typeof nitroxCertifications) =>

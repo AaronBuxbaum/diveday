@@ -31,11 +31,18 @@ export function CertificationEvidence({
     );
   return (
     <>
-      <p className="mt-2 text-sm font-medium">{t("incidentExport.certAtBoarding")}</p>
-      {diver.certificationsAtBoarding === null ? (
+      <p className="mt-2 text-sm font-medium">
+        {diver.certificationsStartedAt && diver.certificationsCapturedAt
+          ? t("incidentExport.certCapturedAt", {
+              start: dateTime(diver.certificationsStartedAt),
+              end: dateTime(diver.certificationsCapturedAt),
+            })
+          : t("incidentExport.certAtBoarding")}
+      </p>
+      {diver.certificationsAtCapture === null ? (
         <p className="text-sm text-muted">{t("incidentExport.certBoardingUnavailable")}</p>
       ) : (
-        list(diver.certificationsAtBoarding)
+        list(diver.certificationsAtCapture)
       )}
       <p className="mt-2 text-sm font-medium">{t("incidentExport.certCurrent")}</p>
       {list(diver.certifications)}

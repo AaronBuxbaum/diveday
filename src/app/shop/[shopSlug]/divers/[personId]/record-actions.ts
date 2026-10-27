@@ -5,6 +5,7 @@ import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver }
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
 import { deleteDiver, getDiverProfile, restoreDiver } from "@/db/divers";
 import { eraseGuardianEmail } from "@/db/guardian-erasure";
+import { getMergedIntoPersonId } from "@/db/people";
 import { countCrewDeparturesNotHome } from "@/db/trips";
 import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -216,7 +217,23 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     shopId: staff.user.shopId,
     personId,
     actorPersonId: staff.user.personId,
+    confirmation: { name: typed, requireDeleted: true },
   });
+  if (!result.ok && result.reason === "merged") {
+    const survivor =
+      (await getMergedIntoPersonId(db, staff.user.shopId, personId)) ?? result.survivorId;
+    const kept = shopPath(shopSlug, "divers", survivor);
+    revalidateAndRedirect(kept, noticeUrl(kept, "merged-record-moved"));
+    return;
+  }
+  if (!result.ok && result.reason === "requires_delete") {
+    revalidateAndRedirect(base, backTo(base, "erase-requires-delete"));
+    return;
+  }
+  if (!result.ok && result.reason === "name_mismatch") {
+    revalidateAndRedirect(base, backTo(base, "erase-name-mismatch", "erase"));
+    return;
+  }
   // "Erased" and "erased, but Stripe still owes something" are different facts,
   // and a compliance action must not report the weaker one as the stronger
   // (ADR 20260803-processor-erasure-obligations). The outstanding work is on the

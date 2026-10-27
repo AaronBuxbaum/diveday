@@ -947,7 +947,8 @@
   **pre-departure checklist**'s own answer for each shop-defined item (checked, by whom, when, or
   explicitly not checked), the
   complete append-only roll-call timeline (corrections included), certification evidence captured
-  by each live departure boarding, separately from cards held now (an older or offline boarding has
+  for each live departure boarding request, labeled with its read interval separately from cards held now
+  (the read may follow the tap and may wait while a card changes; an older or offline boarding has
   no captured card evidence and says unavailable; an empty capture says no cards were on file),
   waiver **status** (state, date, template version — never the medical questionnaire's answers),
   the **buddy pair** staff recorded for the departure — a stable team number, the buddy's name,

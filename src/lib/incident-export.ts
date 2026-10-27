@@ -243,8 +243,10 @@ export type IncidentRosterEntry = {
   rollCall: IncidentRollCallResult[];
   /** Cards as they stand now, separately labeled and outside the version-3 integrity code. */
   certifications: IncidentCertificationEvidence[];
-  /** Null means boarding evidence is unavailable; an empty array means no cards were captured. */
-  certificationsAtBoarding: IncidentCertificationEvidence[] | null;
+  /** Null means no capture is available; an empty array means no cards were captured. */
+  certificationsStartedAt: string | null;
+  certificationsCapturedAt: string | null;
+  certificationsAtCapture: IncidentCertificationEvidence[] | null;
   /** Null only on a held seat (`identityWithheld`): withheld, never a stated absence. */
   waiver: IncidentWaiverStatus | null;
 };
@@ -656,7 +658,9 @@ export function rosterChangeFromActivity(row: {
 
 export type IncidentDiverEvidenceInput = {
   bookingId: string;
-  certificationsAtBoarding?: IncidentCertificationEvidence[] | null;
+  certificationsStartedAt?: string | null;
+  certificationsCapturedAt?: string | null;
+  certificationsAtCapture?: IncidentCertificationEvidence[] | null;
   certifications: readonly (Certification & { reviewedByName?: string | null })[];
   specialtyCertifications: readonly (SpecialtyCertification & { reviewedByName?: string | null })[];
   nitroxCertifications: readonly (NitroxCertification & { reviewedByName?: string | null })[];
@@ -1030,7 +1034,9 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
               manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
           ),
           certifications: [],
-          certificationsAtBoarding: null,
+          certificationsStartedAt: null,
+          certificationsCapturedAt: null,
+          certificationsAtCapture: null,
           // Null, not `not_sent`: the hashed document states no waiver fact
           // about a seat whose waiver read is somebody else's.
           waiver: null,
@@ -1051,7 +1057,9 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         // No evidence entry at all reads the same as empty evidence: an
         // explicit "nothing on file", never a crash and never a filtered row.
         certifications: evidence ? certificationEvidence(evidence) : [],
-        certificationsAtBoarding: evidence?.certificationsAtBoarding ?? null,
+        certificationsStartedAt: evidence?.certificationsStartedAt ?? null,
+        certificationsCapturedAt: evidence?.certificationsCapturedAt ?? null,
+        certificationsAtCapture: evidence?.certificationsAtCapture ?? null,
         waiver: waiverStatus(
           evidence?.waiver ?? null,
           departureAt,
@@ -1302,7 +1310,7 @@ export function incidentExportContentHash(
     Partial<Pick<IncidentExportDocument, "incidentReports">>,
   version: IncidentExportHashVersion = INCIDENT_EXPORT_HASH_VERSION,
 ): string {
-  if (version < 3 && body.roster.some((entry) => entry.certificationsAtBoarding != null)) {
+  if (version < 3 && body.roster.some((entry) => entry.certificationsAtCapture != null)) {
     throw new Error("A log with boarding certification evidence has no earlier integrity code.");
   }
   const { tripId: _tripId, shopSlug: _shopSlug, ...meta } = body.meta;
@@ -1310,10 +1318,21 @@ export function incidentExportContentHash(
     meta: version === 1 ? meta : unsealedMeta(meta),
     departureSummary: body.departureSummary,
     roster: body.roster.map((row) => {
-      const { bookingId: _bookingId, certificationsAtBoarding, ...entry } = row;
+      const {
+        bookingId: _bookingId,
+        certificationsStartedAt,
+        certificationsCapturedAt,
+        certificationsAtCapture,
+        ...entry
+      } = row;
       if (version !== 3) return entry;
       const { certifications: _currentCards, ...historical } = entry;
-      return { ...historical, certificationsAtBoarding };
+      return {
+        ...historical,
+        certificationsStartedAt,
+        certificationsCapturedAt,
+        certificationsAtCapture,
+      };
     }),
     // Only when there is one, like the snags below.
     ...(body.turnedAway.length > 0

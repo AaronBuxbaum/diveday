@@ -1,6 +1,8 @@
 /** The departure log separates captured boarding evidence from today's cards. */
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { formatEvidenceDateTimeTz } from "../src/lib/format";
 import { expect, test } from "./fixtures";
+import { e2eNow } from "./helpers";
 import {
   capture,
   capturePrint,
@@ -25,14 +27,24 @@ for (const scheme of ["light", "dark"] as const) {
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
       const response = await request.post(
-        `/api/test/seed-trouble-states?operationalTrust=capacity&shop=${privateShop.slug}`,
+        `/api/test/seed-trouble-states?operationalTrust=capacity&certificationInterval=1&shop=${privateShop.slug}`,
       );
       expect(response.ok()).toBe(true);
       const { operationalTrust } = await response.json();
       await page.goto(`/shop/${privateShop.slug}/trips/${operationalTrust.tripId}/log`);
       const t = staffTranslator("en-US");
       const evidence = page.getByRole("listitem").filter({ hasText: "Ari Vale" });
-      await expect(evidence.getByText(t("incidentExport.certAtBoarding"))).toBeVisible();
+      const at = e2eNow().getTime();
+      const stamp = (offset: number) =>
+        formatEvidenceDateTimeTz(new Date(at + offset), "en-US", "America/New_York");
+      await expect(
+        evidence.getByText(
+          t("incidentExport.certCapturedAt", { start: stamp(45_125), end: stamp(45_175) }),
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("row").filter({ hasText: "Ari Vale" }).getByText(stamp(1), { exact: false }),
+      ).toBeVisible();
       await expect(evidence.getByText(t("incidentExport.certCurrent"))).toBeVisible();
       await expect(evidence.getByText("OPERATIONAL-capacity-0", { exact: true })).toHaveCount(2);
       const rider = page.getByRole("listitem").filter({ hasText: "Dax Reed" });
