@@ -70,6 +70,7 @@ test("touch booking and guardian signing stay complete after reload", async ({ p
   await page.getByLabel("I am this diver’s parent or legal guardian", { exact: false }).tap();
   await page.getByRole("button", { name: "Sign waiver", exact: true }).tap();
   await expect(page).toHaveURL(/\/ready\//);
+  expect(new URL(page.url()).pathname === readyPath).toBe(true);
   await page.goto(readyPath, { waitUntil: "domcontentloaded" });
   await expect(
     page.locator("li[data-thread-step='sign']").filter({ visible: true }),

@@ -3,7 +3,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { medicalAlertPrefill } from "@/db/medical-alerts";
 import { getShopById } from "@/db/shops";
@@ -19,7 +18,6 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { isCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { formatDateTimeTz } from "@/lib/format";
@@ -159,15 +157,6 @@ export default async function WaiverPage({
 
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
-    const readyCapability =
-      bookingId && !isCounterWaiverToken(token)
-        ? await issueBookingCapability(db, {
-            shopId: state.record.shopId,
-            bookingId,
-            purpose: "readiness",
-          })
-        : null;
-    const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     // The same gate the doctor's page opens on, so the door never leads to a redirect.
     const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
     const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
@@ -178,7 +167,7 @@ export default async function WaiverPage({
         locale={locale}
         waiverOnly={isCounterWaiverToken(token)}
         medicalState={completedMedicalState(state.record)}
-        readyPath={readyPath}
+        showPrepHelp={Boolean(bookingTripId) && !isCounterWaiverToken(token)}
         doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}

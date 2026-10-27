@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
-import { issueBookingCapability } from "@/db/booking-capabilities";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
 import type { MedicalAnswers } from "@/db/schema";
@@ -40,7 +40,11 @@ import {
 } from "@/lib/medical";
 import { MEDICAL_ALERT_FIELD, readMedicalAlert } from "@/lib/medical-alert";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { PARTY_RETURN_COOKIE, partyReturnCookiePath } from "@/lib/party-return";
+import {
+  PARTY_RETURN_COOKIE,
+  partyReturnCookiePath,
+  WAIVER_RETURN_COOKIE,
+} from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { buildShopAnswers, type ShopQuestion, shopAnswerField } from "@/lib/waiver-questions";
@@ -616,10 +620,7 @@ export async function completeWaiverAction(token: string, formData: FormData) {
       recordId: record.id,
     }).catch(() => undefined);
   });
-  // A diver who just signed goes straight to "what's left" instead of a
-  // signed-waiver page whose only forward path is the same link — the
-  // completed-state render below still shows that page for anyone who
-  // revisits this token afterward.
+  // A waiver link is authority to sign that waiver, not to issue trip prep access.
   if (isCounterWaiverToken(token)) revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
   const db = await getDb();
   // A parent who opened this from their party panel goes back to it, so the
@@ -627,16 +628,27 @@ export async function completeWaiverAction(token: string, formData: FormData) {
   const partyReturn = recordBookingId
     ? await partyReturnPath(db, { shopId: record.shopId, seatBookingId: recordBookingId, token })
     : null;
-  if (partyReturn) revalidateAndRedirect(`/waivers/${token}`, partyReturn);
-  const readyCapability = recordBookingId
-    ? await issueBookingCapability(db, {
-        shopId: record.shopId,
-        bookingId: recordBookingId,
-        purpose: "readiness",
-      })
+  const ownReturn = recordBookingId
+    ? await ownReturnPath(db, { shopId: record.shopId, bookingId: recordBookingId, token })
     : null;
-  const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
-  revalidateAndRedirect(`/waivers/${token}`, readyPath ?? `/waivers/${token}`);
+  if (partyReturn) revalidateAndRedirect(`/waivers/${token}`, partyReturn);
+  if (ownReturn) revalidateAndRedirect(`/waivers/${token}`, ownReturn);
+  revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
+}
+
+/** Return only an independently held, live readiness link for this same booking. */
+async function ownReturnPath(
+  db: Awaited<ReturnType<typeof getDb>>,
+  input: { shopId: string; bookingId: string; token: string },
+): Promise<string | null> {
+  const jar = await cookies();
+  const readyToken = jar.get(WAIVER_RETURN_COOKIE)?.value;
+  if (!readyToken) return null;
+  jar.delete({ name: WAIVER_RETURN_COOKIE, path: partyReturnCookiePath(input.token) });
+  const capability = await verifyBookingCapability(db, { token: readyToken, purpose: "readiness" });
+  return capability?.shopId === input.shopId && capability.bookingId === input.bookingId
+    ? readinessLinkPath(readyToken)
+    : null;
 }
 
 /**

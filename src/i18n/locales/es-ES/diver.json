@@ -1153,6 +1153,7 @@
     "medicalContactEmailOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "¿Dudas sobre los siguientes pasos? Escribe a {shop}.",
     "signedBody": "Tu exención está firmada y guardada.",
+    "prepLinkHelp": "Para ver los detalles de tu salida, abre la confirmación de tu reserva o contacta al centro.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
     "doctor": {
       "title": "Llévale esto a tu médico",

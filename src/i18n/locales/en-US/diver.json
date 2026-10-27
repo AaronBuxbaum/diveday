@@ -1153,6 +1153,7 @@
     "medicalContactEmailOnly": "Questions about next steps? Reach out to {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "Questions about next steps? Reach out to {shop}.",
     "signedBody": "Your waiver is signed and saved.",
+    "prepLinkHelp": "For trip details, open your booking confirmation or contact the shop.",
     "seeWhatsLeft": "See what’s left before you sail",
     "doctor": {
       "title": "Take this to your doctor",

@@ -13,8 +13,8 @@ import { railDoneLabel, railLabels } from "./waiver-rail-copy";
 
 /**
  * **Paperwork done**: the release this link carried is signed. What the page
- * decided about it (`medicalState`, the rail's closing frame, the readiness
- * link) arrives decided; this only says it. The medical hold is the page's
+ * decided about it (`medicalState`, the rail's closing frame) arrives decided;
+ * this only says it. The medical hold is the page's
  * gate, kept beside the read it rests on.
  *
  * The `<main>` wears the same gutter as the signing form this diver just came
@@ -26,7 +26,7 @@ export function WaiverCompleted({
   t,
   locale,
   medicalState,
-  readyPath,
+  showPrepHelp,
   doctorPath,
   signedRail,
   diveSitesList,
@@ -41,7 +41,7 @@ export function WaiverCompleted({
   t: DiverTranslator;
   locale: string;
   medicalState: CompletedMedicalState;
-  readyPath: string | null;
+  showPrepHelp: boolean;
   /** "Take this to your doctor", while the release waits on a physician (H-127). */
   doctorPath: string | null;
   signedRail: WaiverRailProgress;
@@ -83,17 +83,7 @@ export function WaiverCompleted({
             <MedicalReviewContact shop={shop} t={t} />
           </div>
         ) : null}
-        {readyPath ? (
-          <Link
-            href={readyPath}
-            className={buttonClass({
-              variant: needsReview ? "secondary" : "primary",
-              className: "mt-5",
-            })}
-          >
-            {t("waiver.seeWhatsLeft")}
-          </Link>
-        ) : null}
+        {showPrepHelp ? <p className="mt-5">{t("waiver.prepLinkHelp")}</p> : null}
       </EarnedMoment>
 
       {/* The rail's closing frame: the same three segments the signing page

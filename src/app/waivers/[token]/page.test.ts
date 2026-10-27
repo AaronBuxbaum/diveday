@@ -97,12 +97,44 @@ describe("the actual completed waiver branch", () => {
     expect(html).not.toContain("media.example.test");
     expect(html).not.toContain(t("waiver.doctor.open"));
   });
-  it("a signed clear release keeps its receipt and preparation door", async () => {
-    const { render } = await signed(clearAnswers);
+  it("a signed standalone release keeps its receipt without granting trip prep", async () => {
+    const { db, booking, render } = await signed(clearAnswers);
+    const before = await db
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, booking.id));
     const html = await render();
     expect(html).toContain(t("waiver.signedBody"));
-    expect(html).toContain(t("waiver.seeWhatsLeft"));
+    expect(html).not.toContain("/ready/");
+    expect(html).not.toContain(t("waiver.seeWhatsLeft"));
     expect(html).not.toContain("data-medical-next=");
+    const after = await db
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, booking.id));
+    expect(after).toHaveLength(before.length);
+  });
+  it.each(["seat", "departure"] as const)(
+    "keeps the signed receipt without trip-preparation guidance after %s cancellation",
+    async (cancelled) => {
+      const { db, booking, render } = await signed(clearAnswers);
+      if (cancelled === "seat") {
+        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+      } else {
+        await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, booking.tripId));
+      }
+      const html = await render();
+      expect(html).toContain(t("waiver.signedBody"));
+      expect(html).not.toContain(t("waiver.prepLinkHelp"));
+      expect(html).not.toContain("/ready/");
+    },
+  );
+  it("keeps an expired signed waiver's receipt without issuing trip prep", async () => {
+    const { db, where, render } = await signed(clearAnswers);
+    await db.update(waiverRecords).set({ expiresAt: nowDate() }).where(where);
+    const html = await render();
+    expect(html).toContain(t("waiver.signedBody"));
+    expect(html).not.toContain("/ready/");
   });
   it("a lead's counter receipt cannot mint readiness after completion, expiry or supersession", async () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
