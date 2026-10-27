@@ -293,7 +293,7 @@ test.describe("as owner", () => {
    * surface (ADR 20260803-public-shop-namespace).
    */
   async function pricedTripAsVisitor(page: Page, title: string) {
-    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
     await page.getByLabel("What is it").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(6));
     await page.getByLabel("Departs").fill("08:00");
