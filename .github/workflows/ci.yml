@@ -682,7 +682,7 @@ jobs:
         timeout-minutes: 5
         run: |
           if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
-             { [ -f fast-lane/specs.txt ] && grep -qx 'e2e/staff-saved-print.spec.ts' fast-lane/specs.txt; }; then
+             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/staff-saved-print[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
             if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
               sudo apt-get install -y --no-install-recommends poppler-utils
