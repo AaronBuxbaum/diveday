@@ -263,6 +263,50 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     expect(screen.getByLabelText("Dives")).toHaveValue(4);
   });
 
+  it("keeps a five-dive course plan in sync across quick, expanded and ordinary modes", async () => {
+    const { container } = renderBuilder({
+      openAdd: "quick",
+      initialCourse: {
+        id: "course-1",
+        title: "Open Water Diver",
+        requirement: "No existing C-card required",
+      },
+    });
+    const course = await screen.findByLabelText(/^Course/);
+    const quick = screen.getByLabelText("Dives");
+    expect(quick).toHaveAttribute("max", "5");
+    await userEvent.clear(quick);
+    await userEvent.type(quick, "5");
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    const detailed = screen.getByLabelText("Number of dives");
+    expect(detailed).toHaveValue("5");
+    const fifth = container.querySelector<HTMLInputElement>('input[name="dive-5-title"]');
+    if (!fifth) throw new Error("fifth dive control missing");
+    await userEvent.type(fifth, "Deep practice");
+
+    await userEvent.selectOptions(course, "");
+    expect(detailed).toHaveValue("4");
+    expect(fifth).toBeDisabled();
+    const form = container.querySelector("form");
+    if (!form) throw new Error("trip form missing");
+    expect(new FormData(form).get("plannedDives")).toBe("4");
+    expect(new FormData(form).get("dive-5-title")).toBeNull();
+    await userEvent.selectOptions(course, "course-1");
+    expect(detailed).toHaveValue("5");
+    expect(fifth).toHaveValue("Deep practice");
+
+    await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
+    expect(quick).toHaveValue(5);
+    await userEvent.clear(quick);
+    await userEvent.type(quick, "4");
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    expect(detailed).toHaveValue("4");
+    expect(fifth).toBeDisabled();
+    await userEvent.selectOptions(detailed, "5");
+    expect(fifth).toHaveValue("Deep practice");
+    expect(new FormData(form).get("dive-5-title")).toBe("Deep practice");
+  });
+
   it("opens already pointed at the course a catalog link named", async () => {
     renderBuilder({
       openAdd: "quick",

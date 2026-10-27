@@ -6,7 +6,7 @@ import { listExecutedDives, upsertExecutedDive } from "./executed-dives";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { bookings, courses, people, tripDives, trips } from "./schema";
 import { listStaff } from "./trips";
-import { createTrip } from "./trips-create";
+import { createTrip, normalizedDiveCount } from "./trips-create";
 
 const ctx = fileScopedShopContext();
 const tripDetails = {
@@ -28,6 +28,14 @@ async function activeCourseId() {
 }
 
 describe("five-dive course sessions", () => {
+  it("accepts five only for a course when validating the planned count", () => {
+    expect(normalizedDiveCount(4)).toBe(4);
+    expect(normalizedDiveCount(5)).toBeNull();
+    expect(normalizedDiveCount(5, true)).toBe(5);
+    expect(normalizedDiveCount(6, true)).toBeNull();
+    expect(normalizedDiveCount(1.5, true)).toBeNull();
+  });
+
   it("creates a course session with all five planned dive records", async () => {
     const { db, shop } = ctx;
     const trip = await createTrip(db, {

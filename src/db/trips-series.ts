@@ -393,15 +393,15 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
     }
     if (!isValidCalendarDate(input.anchorDate)) return null;
     if (input.endsOn !== null && !isValidCalendarDate(input.endsOn)) return null;
-    const plannedDives = normalizedDiveCount(input.plannedDives);
+    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
+    if (!ok) return null;
+    const plannedDives = normalizedDiveCount(input.plannedDives, course !== null);
     if (!plannedDives) return null;
     const drafts = normalizedDiveDrafts(
       plannedDives,
       input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
     );
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
-    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
-    if (!ok) return null;
 
     const [series] = await tx
       .insert(tripSeries)

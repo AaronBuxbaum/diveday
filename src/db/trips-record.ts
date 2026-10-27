@@ -577,7 +577,7 @@ export async function updateTrip(
   let timeMoved = false;
   let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
-    const plannedDives = normalizedDiveCount(patch.plannedDives);
+    const plannedDives = normalizedDiveCount(patch.plannedDives, true);
     if (!plannedDives) return { ok: false, reason: "invalid" };
 
     const [existing] = await tx
@@ -612,6 +612,9 @@ export async function updateTrip(
       .limit(1)
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
+    if (!normalizedDiveCount(plannedDives, existing.courseId !== null)) {
+      return { ok: false, reason: "invalid" };
+    }
 
     // `seatHeld`, the same predicate `getTripWithBooked` above shows the
     // staffer and `createBookingRecord` enforces capacity with. Counting every

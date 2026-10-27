@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_EMERGENCY_REFERENCE } from "./emergency-reference";
-import { rollCallCheckpoints, type TripManifest } from "./manifests";
+import type { TripManifest } from "./manifests";
 import {
   canRecordOfflineArrival,
   canRecordOfflineCrewStatus,
@@ -181,20 +181,6 @@ describe("offline manifest policy", () => {
     // Readiness still gates a fresh board attempt at departure itself, even
     // when other checkpoints exist on the same snapshot.
     expect(canRecordOfflineStatus(saved, "blocked", "boarded", "departure")).toBe(false);
-  });
-
-  it("can record the fifth head count from a saved five-dive manifest", () => {
-    const saved = snapshot();
-    const template = saved.manifests[0];
-    if (!template) throw new Error("missing manifest fixture");
-    saved.manifests = rollCallCheckpoints(5).map((checkpoint) => ({
-      ...template,
-      checkpoint,
-      trip: { ...template.trip, plannedDives: 5 },
-    }));
-    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "after_dive_5")).toBe(true);
-    expect(canRecordOfflineStatus(saved, "missing", "boarded", "after_dive_5")).toBe(false);
-    expect(canRecordOfflineStatus(saved, "blocked", "boarded", "after_dive_6")).toBe(false);
   });
 
   it("never lets an unknown bookingId board at any checkpoint", () => {

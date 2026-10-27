@@ -37,6 +37,7 @@ import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
+import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { tripPath } from "./roster-booking";
 import { requireTripConfig } from "./trip-config";
@@ -60,7 +61,7 @@ const detailsSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
-  plannedDives: z.coerce.number().int().min(1).max(4),
+  plannedDives: z.coerce.number().int().min(1).max(MAX_COURSE_DIVES),
   // **The departure's own three**, editable since 2026-08-22 (issue #681).
   // They were writable only at creation, which made the commonest real edit —
   // "the boat that was going to run this is in for service" — impossible, with

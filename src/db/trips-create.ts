@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import type { AppTransaction, DbExecutor } from "./client";
 import type { Course } from "./schema";
 import {
@@ -72,11 +73,11 @@ export type TripDiveDraft = {
   travelMinutes?: number | null;
 };
 
-const MAX_TRIP_DIVES = 4;
-
-export function normalizedDiveCount(plannedDives?: number) {
+export function normalizedDiveCount(plannedDives?: number, courseSession = false) {
   const count = plannedDives ?? 2;
-  return Number.isInteger(count) && count >= 1 && count <= MAX_TRIP_DIVES ? count : null;
+  return Number.isInteger(count) && count >= 1 && count <= maxPlannedDives(courseSession)
+    ? count
+    : null;
 }
 
 export function normalizedDiveDrafts(plannedDives: number, drafts: TripDiveDraft[] | undefined) {
@@ -385,7 +386,9 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
 // atomic seed transaction) opens a savepoint instead of a second connection.
 export async function createTrip(db: DbExecutor, input: NewTrip) {
   return db.transaction(async (tx) => {
-    const plannedDives = normalizedDiveCount(input.plannedDives);
+    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
+    if (!ok) return null;
+    const plannedDives = normalizedDiveCount(input.plannedDives, course !== null);
     if (!plannedDives) return null;
     const drafts = normalizedDiveDrafts(
       plannedDives,
@@ -393,8 +396,6 @@ export async function createTrip(db: DbExecutor, input: NewTrip) {
     );
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
     if (!(await validateBoat(tx, input.shopId, input.boatId))) return null;
-    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
-    if (!ok) return null;
     return insertTripInstance(tx, {
       lensId: input.lensId ?? null,
       shopId: input.shopId,
