@@ -847,7 +847,7 @@
   },
   "partyWaiverQueue": {
     "title": "Party waivers",
-    "intro": "Each person can scan their own code and sign on their phone.",
+    "intro": "Show an available QR code for signing on the person’s phone.",
     "back": "Back to departure",
     "show": "Show QR code",
     "showFor": "Show waiver QR code for {name}",

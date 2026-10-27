@@ -847,7 +847,7 @@
   },
   "partyWaiverQueue": {
     "title": "Exenciones del grupo",
-    "intro": "Cada persona puede escanear su código y firmar en su propio celular.",
+    "intro": "Muestra un código QR disponible para que la persona firme en su celular.",
     "back": "Volver a la salida",
     "show": "Mostrar código QR",
     "showFor": "Mostrar código QR de la exención de {name}",
