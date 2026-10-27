@@ -15,6 +15,9 @@ import { describe, expect, it } from "vitest";
  * `e2e` drives the real thing.
  */
 const CSS = readFileSync(path.join(import.meta.dirname, "globals.css"), "utf8");
+// Top-level media blocks close in column one; nested rules are indented.
+// Only an exact print query is exempt: `print, screen` must retain the guard.
+const PRINT_BLOCK = /^@media print \{[\s\S]*?^\}/gm;
 
 const rule = (selector: string) => {
   const start = CSS.indexOf(`${selector} {`);
@@ -78,8 +81,30 @@ describe("the disclosure body's motion", () => {
    * `min-width: 40rem` query — went with the legacy branch it existed for.
    */
   it("never re-opens a closed disclosure at a breakpoint", () => {
-    expect(CSS).not.toContain("content-visibility: visible !important");
+    const screenCss = CSS.replace(PRINT_BLOCK, "");
+    expect(screenCss).not.toMatch(/content-visibility\s*:\s*visible\s*!important/);
     expect(CSS).not.toContain(".diver-file-group");
+  });
+
+  it.each(["screen", "(min-width: 40rem)", "print, screen"])(
+    "keeps %s overrides in the screen guard's scope",
+    (query) => {
+      const override = "content-visibility: visible !important";
+      const css = `@media ${query} {\n  details::details-content { ${override}; }\n}`;
+      expect(css.replace(PRINT_BLOCK, "")).toContain(override);
+    },
+  );
+
+  it("prints closed marketing capability lists where readers cannot open them", () => {
+    const printCss = [...CSS.matchAll(PRINT_BLOCK)].map(([block]) => block).join("\n");
+    const content = printCss.match(
+      /\.marketing-capability-lines::details-content\s*\{([^}]+)\}/,
+    )?.[1];
+    expect(content).toBeDefined();
+    expect(content).toMatch(/content-visibility\s*:\s*visible\s*!important/);
+    expect(content).toContain("display: block");
+    expect(content).toContain("height: auto");
+    expect(content).toContain("opacity: 1");
   });
 
   /**
