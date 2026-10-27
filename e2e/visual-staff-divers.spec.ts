@@ -267,7 +267,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
-        await page.getByRole("button", { name: "Record paper signature" }).click();
+        await Promise.all([
+          page.waitForURL(/notice=waiver-paper-recorded/),
+          page.getByRole("button", { name: "Record paper signature" }).click(),
+        ]);
         // The earned moment is what says the ledger emptied — and it is the
         // page's one coral element (20260827-clearwater-surface-language,
         // decision 11).
@@ -680,7 +683,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText(staffCopy("waiversStaff.record.paperEvidence")).waitFor();
         await capture(page, "signed-paper-waiver-record", scheme);
         await page.goto(`/shop/blue-mantis/waivers/signatures?record=${recordId}`);
-        await page.getByText(staffCopy("waiversStaff.signatures.paperRecorded")).waitFor();
+        await page
+          .locator(`#waiver-record-${recordId}`)
+          .getByText(staffCopy("waiversStaff.signatures.paperRecorded"), { exact: true })
+          .waitFor();
         await capture(page, "waiver-signatures-paper-record", scheme);
       });
 

@@ -9,6 +9,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
 import type { ShopAnswer, ShopQuestion } from "@/lib/waiver-questions";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -120,6 +121,7 @@ async function renderAs(
     recordInAnotherShop?: boolean;
     /** Columns to write onto the record first: the shop's answers, a paper signature. */
     recordPatch?: Partial<typeof waiverRecords.$inferInsert>;
+    sealCurrentRecord?: boolean;
     /**
      * The questions the version this record was signed on asked: written as
      * an earlier, retired version of the shop's release, and the record
@@ -173,6 +175,15 @@ async function renderAs(
       .where(eq(waiverRecords.id, record.id));
   }
 
+  if (options.sealCurrentRecord) {
+    const [current] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
+    if (!current) throw new Error("record disappeared before sealing");
+    await db
+      .update(waiverRecords)
+      .set({ integrityVersion: 1, integrityHash: computeWaiverIntegrityHash(current) })
+      .where(eq(waiverRecords.id, record.id));
+  }
+
   const email = viewerRoles.includes("owner") ? SEEDED_OWNER_EMAIL : SEEDED_CAPTAIN_EMAIL;
   const viewer = await seededStaffPersonId(db, shop.id, email);
   await db.delete(personRoles).where(eq(personRoles.personId, viewer));
@@ -215,6 +226,28 @@ async function renderAs(
 }
 
 describe("a signed release's medical answers", () => {
+  it("keeps paper provenance distinct when the staff-recorded data has a valid seal", async () => {
+    const staff = staffTranslator("en-US");
+    const { text } = await renderAs(["owner"], {
+      recordPatch: { signatureMethod: "in_person_attested", integrityVersion: 1 },
+      sealCurrentRecord: true,
+    });
+    expect(text).toContain(staff("waiversStaff.record.paperEvidence"));
+    expect(text).not.toContain(staff("waiversStaff.record.sealValid"));
+  });
+
+  it("retains an invalid-integrity warning on a changed paper record", async () => {
+    const staff = staffTranslator("en-US");
+    const { text } = await renderAs(["owner"], {
+      recordPatch: {
+        signatureMethod: "in_person_attested",
+        integrityVersion: 1,
+        integrityHash: "0".repeat(64),
+      },
+    });
+    expect(text).toContain(staff("waiversStaff.signatures.integrityInvalid"));
+    expect(text).not.toContain(staff("waiversStaff.record.paperEvidence"));
+  });
   // Issue #2157: no render carries the full questionnaire, for anyone. An
   // owner or manager reads the physician and gets "Show answers", whose action
   // records the read before it sends every answer back.

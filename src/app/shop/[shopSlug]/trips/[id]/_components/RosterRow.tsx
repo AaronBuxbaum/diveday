@@ -105,7 +105,8 @@ export function RosterRow({
         blocker?.code === "guardian_signature_missing")
     ) {
       waiverPlaced = true;
-      return { ...line, actions: s6.waiverRemedy };
+      // Delivery changes the reason text, but must retain the send result's state.
+      return { ...line, key: "waiver-remedy", actions: s6.waiverRemedy };
     }
     if (!certificationPlaced && blocker && BLOCKER_CATEGORY[blocker.code] === "certification") {
       certificationPlaced = true;

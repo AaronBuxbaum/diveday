@@ -62,7 +62,11 @@ test.describe("weather blow-out cascade", () => {
     // The cascade record: per-diver rows with message, money, offers, and
     // resolution state. With no provider configured every message reads
     // "Not sent" and every diver is unresolved — the retry affordance shows.
-    await expect(page.getByRole("columnheader", { name: "Diver" })).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: /^Unresolved/ })
+        .getByRole("columnheader", { name: "Diver" }),
+    ).toBeVisible();
     const rows = page.locator("tbody tr");
     expect(await rows.count()).toBeGreaterThan(0);
     await expect(page.getByText("Not sent").first()).toBeVisible();

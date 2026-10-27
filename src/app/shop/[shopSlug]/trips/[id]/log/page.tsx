@@ -26,6 +26,11 @@ import { BoatAtDeparture } from "./_components/BoatAtDeparture";
 import { CertificationLine } from "./_components/CertificationLine";
 import { CrewAtDeparture, RollCallCell } from "./_components/CrewAtDeparture";
 import { CrewAwayWorkingLog } from "./_components/CrewAwayWorkingLog";
+import {
+  DepartureLogClosing,
+  DepartureLogFooter,
+  DepartureLogFrame,
+} from "./_components/DepartureLogPaper";
 import { ExecutedDivesTable } from "./_components/ExecutedDivesTable";
 import { IncidentReportsSection } from "./_components/IncidentReportsSection";
 import { incidentSummaryRows } from "./_components/incident-summary";
@@ -122,7 +127,7 @@ export default async function IncidentExportPage({
   // margin of its own (docs/design/forms-and-controls.md): they used to step
   // `mt-7`, `mt-8`, `mt-10`, three gaps where the page has one.
   return (
-    <div className="space-y-10">
+    <DepartureLogFrame>
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -398,23 +403,17 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      <IncidentReportsSection
-        reports={doc.incidentReports}
-        reportHref={(reportId) => shopPath(shopSlug, "trips", tripId, "incidents", reportId)}
-        t={t}
-        locale={locale}
-        timeZone={doc.meta.timezone}
-      />
+      <DepartureLogClosing emptyReports={doc.incidentReports.length === 0}>
+        <IncidentReportsSection
+          reports={doc.incidentReports}
+          reportHref={(reportId) => shopPath(shopSlug, "trips", tripId, "incidents", reportId)}
+          t={t}
+          locale={locale}
+          timeZone={doc.meta.timezone}
+        />
 
-      <footer className="break-inside-avoid border-t border-border pt-4 text-sm">
-        {/* The recipe's version beside the code: an old printout is checked with its own. */}
-        <p className="font-semibold">
-          {t("incidentExport.footerHashLabel")}
-          {"\u00a0"}· {t("incidentExport.footerHashVersion", { version: doc.hashVersion })}
-        </p>
-        <p className="mt-1 font-mono text-xs break-all">{doc.contentHash}</p>
-        <p className="mt-2 max-w-prose text-muted">{t("incidentExport.footerHashExplainer")}</p>
-      </footer>
-    </div>
+        <DepartureLogFooter hash={doc.contentHash} version={doc.hashVersion} t={t} />
+      </DepartureLogClosing>
+    </DepartureLogFrame>
   );
 }

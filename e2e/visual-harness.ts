@@ -19,6 +19,7 @@ import {
 } from "../src/lib/offline-manifests";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { offlineCopySaved, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
+import { capturePrintPdfs } from "./print-pdf";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { auditInitialPaint, INITIAL_PAINT_FALLBACK } from "./visual-audit-initial-paint";
 import { PHONE_VIEWPORT, schemeViewports, VIEWPORTS } from "./visual-viewports";
@@ -1935,14 +1936,9 @@ export async function capturePrint(page: Page, name: string) {
     await page.emulateMedia({ media: "print" });
     if (process.env.VISUAL_EXHAUSTIVE_AUDIT === "1") {
       // Save real pagination before the screenshot-only long-sheet rule.
-      // A6 documents keep their own CSS size; other documents use Letter.
+      // Small documents keep their own CSS size; others get Letter and A4.
       await paintWholeDocument(page);
-      await page.pdf({
-        path: `e2e/screenshots/${name}-print.pdf`,
-        format: "Letter",
-        preferCSSPageSize: true,
-        printBackground: true,
-      });
+      await capturePrintPdfs(page, name);
     }
     const statesItsOwnPaper = (await page.locator("style[data-print-sheet]").count()) > 0;
     if (!statesItsOwnPaper) {

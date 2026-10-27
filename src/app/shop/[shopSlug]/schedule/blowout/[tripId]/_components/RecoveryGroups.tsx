@@ -127,9 +127,8 @@ export function RecoveryGroups({
                                       href={shopPath(shopSlug, "trips", offer.id)}
                                       className={buttonClass({
                                         variant: "link",
-                                        size: "sm",
+                                        size: "md",
                                         flush: true,
-                                        className: "text-base",
                                       })}
                                     >
                                       {offer.title}
