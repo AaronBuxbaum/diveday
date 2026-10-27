@@ -169,6 +169,24 @@ for (const locale of ["en-US", "es-ES"] as const) {
           await expect(page).toHaveURL(/#find-my-booking$/);
           const target = page.locator("#find-my-booking");
           await expect(target).toBeInViewport();
+          await expect
+            .poll(() =>
+              target.evaluate((element) => ({
+                opacity: Number.parseFloat(getComputedStyle(element, "::details-content").opacity),
+                moving: element
+                  .getAnimations({ subtree: true })
+                  .some((animation) => animation.playState === "running"),
+              })),
+            )
+            .toEqual({ opacity: 1, moving: false });
+          const anchorState = await target.evaluate((element) => ({
+            opacity: getComputedStyle(element, "::details-content").opacity,
+            bounds: element.getBoundingClientRect().toJSON(),
+          }));
+          await writeFile(
+            test.info().outputPath(`anchor-text-${scale}.json`),
+            JSON.stringify(anchorState, null, 2),
+          );
           const clearance = await target.evaluate((element) => {
             const bar = document.querySelector("[data-chrome-natural]");
             return element.getBoundingClientRect().top - (bar?.getBoundingClientRect().bottom ?? 0);
@@ -278,5 +296,57 @@ test.describe("leaving the public layout as a shop owner", () => {
         return Math.abs(element.getBoundingClientRect().height - baseline);
       }),
     ).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe("public header print integration", () => {
+  test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
+  test("paper hides the open header menu and screen restores measured offsets", async ({
+    page,
+  }) => {
+    await page.goto("/s/blue-mantis/register");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    const header = await settledHeader(page);
+    const before = await header.evaluate((element) => element.getBoundingClientRect().height);
+    const words = diverTranslator("es-ES");
+    const trigger = header.getByRole("button", { name: words("shopChrome.languageAriaLabel") });
+    await trigger.click();
+    const menu = page.locator("[data-language-menu]").filter({ visible: true });
+    await expect(menu).toBeVisible();
+    await page.emulateMedia({ media: "print" });
+    await expect(header).not.toBeVisible();
+    await expect(page.locator("[data-language-menu]")).not.toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.style.getPropertyValue("--public-chrome-h")),
+      )
+      .toBe("");
+    expect(
+      await page.locator("footer").evaluate((element) => getComputedStyle(element).breakInside),
+    ).toBe("avoid");
+    await page.screenshot({
+      path: test.info().outputPath("header-print-hidden.png"),
+      animations: "disabled",
+    });
+    await page.emulateMedia({ media: "screen" });
+    const restored = await settledHeader(page);
+    expect(
+      Math.abs(
+        (await restored.evaluate((element) => element.getBoundingClientRect().height)) - before,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await expect(menu).toBeVisible();
+    await expect
+      .poll(() => menu.evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity)))
+      .toBe(1);
+    await page.screenshot({
+      path: test.info().outputPath("header-screen-restored.png"),
+      animations: "disabled",
+    });
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });

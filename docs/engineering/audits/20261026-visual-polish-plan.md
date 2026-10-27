@@ -23,25 +23,29 @@ choices.
 
 ## Execution update — 27 October 2026
 
-
 74 of the 75 implementation proposals are merged, including R01, RP02, RP03 and RP06 in
 [PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). This was verified on main
 `87f5bdece9f9be4ce03825955b6f6b39ee786d96`; it does not claim deployment.
 The 7 already-done and 3 owner-retained proposals require no implementation.
+
+### Reviewed backup — original candidate
+
+The following local acceptance applies to backup `04775c03790a92a6b5b768d043e4abc47d01bf10` on
+`codex/visual-polish-10-registration`. Main integration has separate evidence below.
 
 RP04 is the final implementation proposal, tracked separately in
 [issue #3101](https://github.com/AaronBuxbaum/diveday/issues/3101). On 27 October the owner
 confirmed: “You can assume JS.” JavaScript-enabled registration is therefore the acceptance
 scope. Accessible disclosure, keyboard use, refusal recovery and declaration safety remain
 required. The historical no-JavaScript delivery failure remains recorded as a failure; it is
-neither a current requirement nor passing evidence. The candidate is under implementation and
-review on `codex/visual-polish-10-registration`; integration and exact hosted CI are pending.
+neither a current requirement nor passing evidence. The backup is locally accepted; its source and
+historical failures remain preserved independently of the main integration candidate.
 
-The candidate passes 36 focused tests, static checks, a production build and all eight registration
-journey tests. Security review and two differently framed domain reviews found no source findings.
+That backup passes 36 registration-focused tests, static checks, a production build and eight
+registration journey tests. Security review and two differently framed domain reviews found no source findings.
 Independent visual review found a Spanish heading overflow at 200% text size; a registration-local
-word-wrap repair passed fresh geometry checks. Historical enlarged-text page checks failed for pre-existing
-shared public-navigation overflow, tracked in
+word-wrap repair passed fresh geometry checks. Historical enlarged-text page checks failed for
+pre-existing shared public-navigation overflow, tracked in
 [issue #3116](https://github.com/AaronBuxbaum/diveday/issues/3116). Its robust repair requires a
 measured header-height contract to keep sticky offsets aligned. On 27 October the owner explicitly
 approved that fix. The implemented header measures its natural height for sticky offsets, keeps
@@ -56,9 +60,46 @@ inspections. All ten remaining probe candidates were dismissed with measured rea
 or unclear visual finding remains. Historical failed captures are preserved as failures, not
 relabelled as passing. Focused tests, lint, typecheck and repository guards pass.
 
-This is local acceptance only. The candidate has not been published as a PR or merged; the newest
-unrelated stack still has failed CI checks. Refresh main and the live parent, integrate, and verify
-the exact publication head before claiming completion.
+This is local acceptance of the backup, not hosted CI, merge or deployment evidence.
+
+### Main integration candidate — separate verification
+
+The integration branch `codex/visual-polish-10-registration-main` starts from main
+`0ae69067a047f239de66c617bcdd49a7725efc6b`, including print PR #3097 and bootstrap PR #3114.
+The two source picks are `9829c90e1` and `dd80ca913c382b6a4edf2a7de7fa60599a68d797`.
+Only the surfaces document and this audit required conflict resolution. Newer main waiver/doctor
+sections and every historical proposal ledger remain. The application source retains main's print
+CSS, visible-manifest wrapper guard, public-footer print rule and locale copy; registration and
+measured-header behavior match the accepted backup.
+
+A frozen prefer-offline install updated Better Auth to 1.7.14 and Vercel tooling to 65.4.0, reusing
+68 packages with no downloads. Fresh focused checks pass 107 tests: 86 registration/header tests
+and 21 auth-prerender/session tests. Both TypeScript projects and repository guards pass; lint
+passes with the existing preview-workflow regex warning.
+
+The fresh production build has fingerprint
+`40af51bf083c3be2f78cf6244f18832c36c14495cd0208a8b84380f57c8c4521` and build ID
+`5zSc86b18O8Q8uptZZKHs`. It validates runtime source from `dd80ca913`; later edits are test and
+execution-record changes. The exact final runtime fingerprint is checked again after those edits.
+Serial one-worker checks pass seven header journeys, eight registration flows, five auth/public
+schedule print smoke tests and five registration visual tests. The added print check hides an open
+enlarged header/popup, releases its height token, retains the footer's paper rule, then restores
+screen measurement and Escape focus. Existing sign-in, sign-out and cold-cookie-cache session
+checks pass on the new dependency graph. Schedule Letter/A4 PDFs were generated; this smoke is not
+new pagination acceptance of every print surface.
+
+The integrated review packet contains 45 native PNGs: 18 registration and 27 header/menu/sticky/
+anchor/print-screen images. All 18 registration images and 18 header images carry exact accepted
+hashes and dimensions; nine header images have fresh evidence. Eight recovery-anchor captures
+positively wait for disclosure opacity 1 and completed entrance animation before recording geometry
+and pixels. The interim transition captures remain preserved separately. Independent Sol medium
+review accepts all 45 integrated images using 36 exact hash/dimension carries and nine fresh native
+inspections. All eight recovery bodies have recorded opacity 1; the earlier settling limit is closed.
+All ten probe candidates were dismissed with measured reasons; no confirmed or unclear integration
+visual finding remains. This review is local evidence, separate from hosted Linux visual comparison.
+
+The main integration candidate has not been pushed, published as a PR or merged. Publication policy
+for the unrelated failed stack and exact hosted CI remain parent-owned; no deployment is claimed.
 
 The original mapping and per-proposal observations below are the 26 October planning snapshot.
 Their queued/readiness labels describe that snapshot, not current delivery status. This update
@@ -69,9 +110,9 @@ the interactive artifact's execution ledger.
 
 At that review snapshot, 70 of 75 implementation proposals had merged with CI and visual review
 verified. Four diver proposals were published in PR #3105 and remained partial pending final visual
-verification. RP04 was separately held for an owner decision. Seven proposals were already done and three remain as requested. Historical
-authorization and readiness counts remain separate and unchanged: 72 ready, 3 requiring
-verification, 7 already done, and 3 retained. The later explicit JavaScript acceptance decision
+verification. RP04 was separately held for an owner decision. Seven proposals were already done
+and three remained as requested. Historical authorization and readiness counts remain separate and
+unchanged: 72 ready, 3 requiring verification, 7 already done, and 3 retained. The later explicit JavaScript acceptance decision
 supersedes the snapshot’s no-JavaScript requirement; its historical failure remains preserved.
 
 | Execution issue | Scope and state at that snapshot |
@@ -83,7 +124,7 @@ supersedes the snapshot’s no-JavaScript requirement; its historical failure re
 | #3072 | Ten IDs merged; CI and visual review complete |
 | #3073 / #3096 | Thirteen boat IDs and repair PR #3099 merged externally |
 | #3074 | Four IDs in PR #3105; CI passed at 7d9515, offline visual repair pending final verification |
-| #3101 | RP04 and its full original requirements; owner decision pending |
+| #3101 | RP04 and its original requirements; owner decision pending at that snapshot |
 
 Boat repair PR #3099 merged externally at 2026-10-27T06:06:37Z as
 `20324bd4cfe1131db869d94b1249e2ab4869e979`; root did not merge it. Exact tree
@@ -116,7 +157,8 @@ caches required local styles and fonts before publishing a saved copy and preser
 when saves finish out of order. Cancellation, terminal responses and delayed cache writes have
 focused regression coverage. Native phone and desktop font preservation is verified; final hosted
 comparison of the repaired source remains required. The prior failing captures and test results
-remain evidence, not accepted baselines. #3074 owns only R01, RP02, RP03 and RP06; #3101 owns RP04. The original requirements and failure are preserved below, with the later explicit JavaScript
+remain evidence, not accepted baselines. #3074 owns only R01, RP02, RP03 and RP06; #3101 owns RP04.
+The original requirements and failure are preserved below, with the later explicit JavaScript
 acceptance decision recorded separately. No deployment is claimed by this historical review.
 
 RP04's complete original requirements moved from #3074 to
@@ -124,11 +166,11 @@ RP04's complete original requirements moved from #3074 to
 deciding no-JavaScript delivery,” then classified half-done and ready for the human decision.
 Its complete source and actual JavaScript-disabled RED test remain in the full backup. The owner
 subsequently approved JavaScript-enabled acceptance and the measured public-header repair, as
-recorded above; no separate nonstreaming delivery architecture is required. Map U1 remains unverified with diagnostic
-permission pending after automatic rejection for provider-metadata egress, without bypass.
+recorded above; no separate nonstreaming delivery architecture is required. Map U1 remains
+unverified with diagnostic permission pending after automatic rejection for provider-metadata egress, without bypass.
 
-Main at that historical review was the externally merged boat commit `20324bd4cfe1131db869d94b1249e2ab4869e979`. The
-original audit scope is available at an [immutable historical
+Main at that historical review was the externally merged boat commit
+`20324bd4cfe1131db869d94b1249e2ab4869e979`. The original audit scope is available at an [immutable historical
 snapshot](https://github.com/AaronBuxbaum/diveday/blob/ca57514595faf55d57ff2bfdd03c6dfc9df7d47e/docs/engineering/audits/20261026-visual-polish-plan.md).
 Both old publication branches were deleted. Proposal anchors, original scope, owner decisions, and
 audit narrative remain preserved; current execution targets are given above and at each proposal.
@@ -3547,8 +3589,9 @@ Historical scope mapping: issue #3074 explicitly includes RP03. Current implemen
 
 **Current execution (27 October):** #3101 owns RP04; #3074 is historical context. The owner
 explicitly approved JavaScript-enabled acceptance and the measured public-header repair. Local
-production and independent visual review pass on the original candidate; main integration and
-exact hosted CI remain pending. Full d700 source and actual no-JavaScript RED remain preserved.
+production and independent visual review pass on backup `04775c037`. Fresh main integration checks
+pass, and independent integration visual review accepts the final packet. Publication and exact
+hosted CI remain pending. Full d700 source and actual no-JavaScript RED remain preserved.
 
 **Only ask certification details when the diver has a certification**
 
@@ -3556,8 +3599,8 @@ exact hosted CI remain pending. Full d700 source and actual no-JavaScript RED re
 existing certified agency selection, preserve values when switched back; do not infer verification.
 
 **Execution (27 October):** Implemented in [issue #3101](https://github.com/AaronBuxbaum/diveday/issues/3101).
-Local production and independent visual review pass on the original candidate; main integration
-and exact hosted CI remain pending.
+Local production and independent visual review pass on backup `04775c037`; fresh main integration
+checks and independent integration visual review pass. Publication and exact hosted CI remain pending.
 
 **Audit assessment (25 October):** still-open. Current register capture still shows Level and Card
 number immediately under Agency: Not certified yet. The fields remain unconditional.
