@@ -379,6 +379,7 @@
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
       "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",
+      "unansweredEmpty": "DiveDay no respondió.",
       "freshnessAllCurrent": "Todas al día.",
       "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
       "savedAgo": "Guardada {ago}",

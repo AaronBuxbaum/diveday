@@ -379,6 +379,7 @@
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
       "emptyHint": "Open a departure’s manifest while online and it is kept here.",
+      "unansweredEmpty": "DiveDay didn’t answer.",
       "freshnessAllCurrent": "All up to date.",
       "freshnessNeedRefresh": "{count, plural, one {# copy needs refreshing.} other {# copies need refreshing.}}",
       "savedAgo": "Saved {ago}",
