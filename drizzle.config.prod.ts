@@ -13,8 +13,8 @@ if (!url) {
 }
 
 export default defineConfig({
-  // One module per domain under src/db/schema/; index.ts re-exports them all.
-  schema: ["./src/db/schema/index.ts", "./src/db/schema/retired.ts"],
+  // Match the migration generator's staged physical schema.
+  schema: ["./src/db/migration-schema.ts"],
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: { url: withExplicitSslMode(url) },

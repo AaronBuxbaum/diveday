@@ -170,19 +170,27 @@ async function recordDeletedTables(
   work: (recorder: DbExecutor) => Promise<void>,
 ): Promise<Set<string>> {
   const deleted = new Set<string>();
-  const recorder = new Proxy(db, {
-    get(target, property, receiver) {
-      if (property === "delete") {
-        return (table: Parameters<AppDb["delete"]>[0]) => {
-          deleted.add(getTableName(table));
-          return target.delete(table);
-        };
-      }
-      const value = Reflect.get(target, property, receiver);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
-  }) as unknown as DbExecutor;
-  await work(recorder);
+  const wrap = <T extends object>(target: T): T =>
+    new Proxy(target, {
+      get(inner, property, receiver) {
+        if (property === "delete") {
+          return (table: Parameters<AppDb["delete"]>[0]) => {
+            deleted.add(getTableName(table));
+            return (inner as AppDb).delete(table);
+          };
+        }
+        if (property === "transaction") {
+          return (callback: (tx: object) => Promise<unknown>, ...rest: unknown[]) =>
+            (inner as AppDb).transaction(
+              ((tx: object) => callback(wrap(tx))) as never,
+              ...(rest as []),
+            );
+        }
+        const value = Reflect.get(inner, property, receiver);
+        return typeof value === "function" ? value.bind(inner) : value;
+      },
+    });
+  await work(wrap(db) as DbExecutor);
   return deleted;
 }
 

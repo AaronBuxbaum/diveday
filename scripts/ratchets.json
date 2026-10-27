@@ -446,7 +446,7 @@
     "src/db/course-forms.test.ts": 1234,
     "src/db/courses.test.ts": 1719,
     "src/db/dive-sites.test.ts": 1156,
-    "src/db/diver-merge.test.ts": 1277,
+    "src/db/diver-merge.test.ts": 1270,
     "src/db/divers.test.ts": 3056,
     "src/db/erasure-coverage.test.ts": 1181,
     "src/db/executed-dives.test.ts": 1085,

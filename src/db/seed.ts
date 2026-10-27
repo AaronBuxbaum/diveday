@@ -14,6 +14,7 @@ import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
 import { isUniqueConstraintViolation } from "./query-helpers";
+import { withRetiredSavedAnswers } from "./retired-saved-answers";
 import {
   accountSecurity,
   accountSessions,
@@ -1528,7 +1529,9 @@ export async function clearDemoSchedule(
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
   // Retired saved answers name people, so a database seeded before they went
   // still clears them ahead of the people they point at.
-  await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
+  await withRetiredSavedAnswers(db, (tx) =>
+    tx.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId)),
+  );
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and
