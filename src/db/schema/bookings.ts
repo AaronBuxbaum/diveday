@@ -365,11 +365,14 @@ export const bookings = pgTable(
     rescheduleMissedPlace: boolean("reschedule_missed_place").notNull().default(false),
     /**
      * **The fly-safe wait the night-before email told this seat, in hours**
-     * (issue #2927; H-150). Written once that email is sent with the line, so
-     * a departure later marked as decompression diving knows exactly who holds
-     * a figure that no longer applies. Null on every seat told nothing.
+     * (issue #2927; H-150). A sent or ambiguously failed attempt may have
+     * exposed this figure; a later itinerary change can then correct it.
      */
     flySafeHoursTold: integer("fly_safe_hours_told"),
+    /** Encrypted possible-exposure ledger bound to its shop and seat; absent for older reminders. */
+    flySafeRecipientSealed: text("fly_safe_recipient_sealed"),
+    /** An exposure whose original recipient or sealed ledger cannot be recovered. */
+    flySafeRecipientUnknown: boolean("fly_safe_recipient_unknown").notNull().default(false),
     /** A correction was accepted by the provider or persisted for retry. */
     flySafeCorrectedAt: timestamp("fly_safe_corrected_at", { withTimezone: true }),
     /** Generation fenced against an older queued retry failing. */

@@ -14,6 +14,7 @@ import {
   rememberFlySafeTold,
   sendFlySafeCorrections,
 } from "./fly-safe-correction";
+import { openFlySafeExposures } from "./fly-safe-exposures";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { sendDueReminders } from "./reminders";
 import { bookings, notificationSendQueue, people, trips as tripRows } from "./schema";
@@ -38,7 +39,7 @@ async function toldSeat(email = "flysafe-pat@example.com") {
   ]);
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
   const bookingId = party.bookings[0].bookingId;
-  await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 24 });
+  await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 24, recipientEmail: email });
   return { db, shop, reef, bookingId, email };
 }
 
@@ -126,6 +127,62 @@ describe("sendFlySafeCorrections (#2927)", () => {
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
   });
 
+  it("marks a legacy queued correction for staff follow-up when its recipient cannot be proven", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    const legacy: Notification = {
+      kind: "fly_safe_correction",
+      seatId: bookingId,
+      shopId: shop.id,
+      to: "flysafe-pat@example.com",
+      locale: "en-US",
+      shopName: shop.name,
+      tripTitle: reef.title,
+      startsAt: reef.startsAt,
+      timezone: shop.timezone,
+    };
+    await sendNotification(db, legacy, fakeEmail({ status: "failed", retryable: true }).provider);
+    await db
+      .update(bookings)
+      .set({ flySafeRecipientSealed: null, flySafeCorrectedAt: now })
+      .where(eq(bookings.id, bookingId));
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    const retry = fakeEmail();
+    await drainNotificationRetries(db, { now, provider: retry.provider });
+    expect(retry.sent).toHaveLength(0);
+    const after = await seat(db, bookingId);
+    expect(after.flySafeCorrectedAt).toBeNull();
+    expect(after.flySafeRecipientUnknown).toBe(true);
+  });
+
+  it("does not deliver an already-claimed correction after its seat loses recipient provenance", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId,
+      now,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    await db
+      .update(bookings)
+      .set({ flySafeRecipientSealed: null, flySafeRecipientUnknown: true })
+      .where(eq(bookings.id, bookingId));
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    const retry = fakeEmail();
+    await drainNotificationRetries(db, { now, provider: retry.provider });
+    expect(retry.sent).toHaveLength(0);
+  });
+
   it("does not mark corrected if a queued attempt is rejected before its worker finishes", async () => {
     const { db, shop, reef, bookingId } = await toldSeat();
     await markDeco(db, reef.id);
@@ -151,7 +208,7 @@ describe("sendFlySafeCorrections (#2927)", () => {
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
   });
 
-  it("does not let an old rejected queue item re-arm a newer accepted correction", async () => {
+  it("re-arms the rejected exposure while preserving a newer accepted correction", async () => {
     const { db, shop, reef, bookingId } = await toldSeat();
     await markDeco(db, reef.id);
     const now = new Date(reef.startsAt.getTime() - HOUR_MS);
@@ -161,7 +218,12 @@ describe("sendFlySafeCorrections (#2927)", () => {
       now,
       emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
     });
-    await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 18 });
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "flysafe-pat@example.com",
+    });
     await sendFlySafeCorrections(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -176,7 +238,12 @@ describe("sendFlySafeCorrections (#2927)", () => {
       now,
       provider: fakeEmail({ status: "failed", retryable: false }).provider,
     });
-    expect((await seat(db, bookingId)).flySafeCorrectedAt).toEqual(now);
+    const state = await seat(db, bookingId);
+    expect(state.flySafeCorrectedAt).toBeNull();
+    if (!state.flySafeRecipientSealed) throw new Error("ledger missing");
+    const entries = openFlySafeExposures(state.flySafeRecipientSealed, shop.id, bookingId);
+    expect(entries?.find((entry) => entry.hours === 24)?.corrected).toBe(false);
+    expect(entries?.find((entry) => entry.hours === 18)?.corrected).toBe(true);
   });
 
   it("stops automatic retry after three correction claims", async () => {
@@ -250,7 +317,12 @@ describe("sendFlySafeCorrections (#2927)", () => {
     const now = new Date(reef.startsAt.getTime() - HOUR_MS);
     const provider: NotificationProvider = {
       async send() {
-        await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 18 });
+        await recordFlySafeTold(db, {
+          shopId: shop.id,
+          bookingId,
+          hours: 18,
+          recipientEmail: "flysafe-pat@example.com",
+        });
         return { status: "sent", providerMessageId: "accepted" };
       },
     };
@@ -348,7 +420,12 @@ describe("sendFlySafeCorrections (#2927)", () => {
       now,
       emailProvider: mail.provider,
     });
-    await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 18 });
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "flysafe-pat@example.com",
+    });
     await sendFlySafeCorrections(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -431,7 +508,12 @@ describe("sendFlySafeCorrections (#2927)", () => {
     });
     expect(untold.sent).toHaveLength(0);
 
-    await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 24 });
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 24,
+      recipientEmail: "flysafe-pat@example.com",
+    });
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
     const cancelled = fakeEmail();
     await sendFlySafeCorrections(db, {
@@ -465,7 +547,7 @@ describe("sendFlySafeCorrections (#2927)", () => {
     });
   });
 
-  it("names a diver with no address as unreached, and keeps them owed", async () => {
+  it("uses the recorded original address when the current address is removed", async () => {
     const { db, shop, reef, bookingId } = await toldSeat("flysafe-noaddress@example.com");
     await markDeco(db, reef.id);
     const row = await seat(db, bookingId);
@@ -477,15 +559,130 @@ describe("sendFlySafeCorrections (#2927)", () => {
         tripId: reef.id,
         emailProvider: mail.provider,
       }),
-    ).toEqual({ told: 0, failed: 1, unreached: ["Pat Party"] });
+    ).toEqual({ told: 1, failed: 0, unreached: [] });
+    expect(mail.sent).toMatchObject([{ to: "flysafe-noaddress@example.com" }]);
+    expect((await seat(db, bookingId)).flySafeCorrectedAt).not.toBeNull();
+  });
+
+  it("reports an unknown historical recipient for staff follow-up", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    await db
+      .update(bookings)
+      .set({ flySafeRecipientSealed: null })
+      .where(eq(bookings.id, bookingId));
+    const mail = fakeEmail();
+    const result = await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      emailProvider: mail.provider,
+    });
+    expect(result.unreached).toEqual(["Pat Party"]);
     expect(mail.sent).toHaveLength(0);
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
+  });
+
+  it("corrects every inbox that received an uncorrected numeric reminder", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "second-inbox@example.com",
+    });
+    await markDeco(db, reef.id);
+    const mail = fakeEmail();
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId,
+      emailProvider: mail.provider,
+    });
+    expect(mail.sent.filter((n) => n.kind === "fly_safe_correction").map((n) => n.to)).toEqual(
+      expect.arrayContaining(["flysafe-pat@example.com", "second-inbox@example.com"]),
+    );
+  });
+
+  it("retries only an uncorrected inbox after a partial provider failure", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "second-inbox@example.com",
+    });
+    await markDeco(db, reef.id);
+    const seen: string[] = [];
+    const provider: NotificationProvider = {
+      async send(notification) {
+        if (!("to" in notification)) throw new Error("recipient missing");
+        seen.push(notification.to);
+        return notification.to === "second-inbox@example.com"
+          ? { status: "failed", retryable: false }
+          : { status: "sent", providerMessageId: "accepted" };
+      },
+    };
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId,
+      emailProvider: provider,
+    });
+    expect(seen).toEqual(["flysafe-pat@example.com", "second-inbox@example.com"]);
+    const retry = fakeEmail();
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId,
+      emailProvider: retry.provider,
+    });
+    expect(retry.sent).toMatchObject([{ to: "second-inbox@example.com" }]);
+  });
+
+  it("refuses a recipient snapshot copied from a different seat", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    const other = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Other Diver",
+        email: "other-snapshot@example.com",
+      },
+    ]);
+    if (!other.ok) throw new Error("other seat missing");
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId: other.bookings[0].bookingId,
+      hours: 24,
+      recipientEmail: "other-snapshot@example.com",
+    });
+    const copied = await seat(db, other.bookings[0].bookingId);
+    await db
+      .update(bookings)
+      .set({ flySafeRecipientSealed: copied.flySafeRecipientSealed })
+      .where(eq(bookings.id, bookingId));
+    await markDeco(db, reef.id);
+    const mail = fakeEmail();
+    const result = await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId,
+      emailProvider: mail.provider,
+    });
+    expect(result.unreached).toEqual(["Pat Party"]);
+    expect(mail.sent).toHaveLength(0);
   });
 
   it("remembers the figure for a sent or queued night-before email, not a refused one", async () => {
     const { db, shop, bookingId } = await toldSeat("flysafe-queued@example.com");
     await db.update(bookings).set({ flySafeHoursTold: null }).where(eq(bookings.id, bookingId));
-    const notification = { kind: "trip_reminder_24h", flySafeHours: 18 } as Notification;
+    const notification = {
+      kind: "trip_reminder_24h",
+      flySafeHours: 18,
+      to: "flysafe-queued@example.com",
+      personId: (await seat(db, bookingId)).personId,
+    } as Notification;
     await rememberFlySafeTold(db, {
       shopId: shop.id,
       bookingId,

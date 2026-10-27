@@ -115,15 +115,16 @@
   dive, and longer if you make decompression stops", only when this is the diver's last seat with
   the shop (any later seat, however far ahead, silences it) and silent wherever the planned form
   is (`readReminderFlySafeHours`, `src/db/fly-safe-plan.ts`). A seat that email told records the
-  hours (`bookings.fly_safe_hours_told`), sent or queued to send; when staff then tick
-  **Decompression diving** on the departure, the Details form says how many divers hold a figure,
-  and every save of the departure with it ticked (`updateTrip`) sends each one a **fly-safe
-  correction**, once and up to 48 hours after the boat is due back, to the address the figure went
-  to, held seat or not: the figure no longer applies, ask the crew (`fly_safe_correction`,
-  `src/db/fly-safe-correction.ts`, issue #2927). A diver it could not reach is counted back to the
-  staffer to call, and the save stands whatever the send does. Both before-the-dive sentences end
-  on the decompression clause, because they are read before anyone knows whether the dive will
-  need stops, and DAN gives no figure for one that does. The
+  hours (`bookings.fly_safe_hours_told`) and a sealed ledger of each recipient and interval. A
+  possible exposure is reserved before sending; confirmed provider acceptance is recorded separately.
+  After a move, reminder delivery, or trip edit, each uncorrected exposure is compared to the
+  current itinerary; when it changes or becomes unavailable, its recipient is asked to check with
+  the crew.
+  A historical or unreadable recipient cannot be inferred from a current address: staff are asked
+  to review the affected departure's roster and contact its divers. The save stands whatever the
+  send does. Correction claims expire and retry; provider acceptance and mailbox order are distinct.
+  Both before-the-dive sentences end on the decompression clause, because they are read before
+  anyone knows whether the dive will need stops, and DAN gives no figure for one that does. The
   sentence states its reason on the two routes a diver cannot check for themselves — the earlier
   day, which is nowhere on a recap of today, and the multi-dive *plan*, whose figure can be more
   than the diver dived — because neither surface carries a dive count at all: the record card

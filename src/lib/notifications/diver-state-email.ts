@@ -84,9 +84,9 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
     // One sentence, no link: the figure in the diver's inbox no longer
     // applies, and only the crew can give the right one (DAN gives no
     // preflight figure for a dive that took stops, H-84).
-    const sentence = t("notifications.flySafeCorrection.body", { tripTitle: input.tripTitle });
+    const sentence = t("notifications.flySafeCorrection.body");
     return {
-      subject: t("notifications.flySafeCorrection.subject", { tripTitle: input.tripTitle }),
+      subject: t("notifications.flySafeCorrection.subject"),
       text: `${sentence}\n`,
       html: `<p>${escapeHtml(sentence)}</p>`,
     };

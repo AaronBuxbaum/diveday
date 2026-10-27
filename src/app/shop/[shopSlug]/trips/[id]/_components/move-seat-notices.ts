@@ -1,4 +1,9 @@
 export const MOVE_SEAT_NOTICES = {
+  "identity-repointed-fly-safe": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.identityRepointedFlySafe",
+  },
   "seat-moved-fly-safe-unreached": {
     form: "roster",
     tone: "warning",

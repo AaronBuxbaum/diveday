@@ -46,6 +46,8 @@ import { courseMaterialsDoneByPerson } from "./course-materials";
 import {
   correctFlySafeForBooking,
   deliveryCarriesFigure,
+  discardRefusedFlySafeExposure,
+  prepareFlySafeExposure,
   rememberFlySafeTold,
   retryOwedFlySafeCorrections,
 } from "./fly-safe-correction";
@@ -351,7 +353,12 @@ async function nightBeforeFlySafe(
     trip: { id: string; startsAt: Date };
     shop: { id: string; timezone: string };
   },
-): Promise<{ flySafeHours?: number; tripId?: string; personId?: string }> {
+): Promise<{
+  flySafeHours?: number;
+  tripId?: string;
+  personId?: string;
+  flySafeExposureId?: string;
+}> {
   if (kind !== "trip_reminder_24h") return {};
   const flySafeHours = await readReminderFlySafeHours(db, {
     shop: { id: seat.shop.id },
@@ -361,7 +368,12 @@ async function nightBeforeFlySafe(
   });
   return flySafeHours === null
     ? {}
-    : { flySafeHours, tripId: seat.trip.id, personId: seat.person.id };
+    : {
+        flySafeHours,
+        tripId: seat.trip.id,
+        personId: seat.person.id,
+        flySafeExposureId: crypto.randomUUID(),
+      };
 }
 
 /**
@@ -398,7 +410,9 @@ async function settleReminderEmail(
     kind: work.kind,
     delivery,
   });
-  await rememberFlySafeTold(db, { ...work, delivery });
+  if (delivery.status === "not_configured" || (delivery.status === "failed" && !delivery.retryable))
+    await discardRefusedFlySafeExposure(db, work.notification);
+  else await rememberFlySafeTold(db, { ...work, delivery });
   if (
     work.notification.kind !== "trip_reminder_24h" ||
     work.notification.flySafeHours === undefined ||
@@ -413,6 +427,20 @@ async function settleReminderEmail(
       count: correction.unreached.length,
     });
   }
+}
+
+async function sendPreparedReminderBatch(
+  db: AppDb,
+  work: Array<{ notification: Notification }>,
+  provider: NotificationProvider,
+) {
+  for (const entry of work)
+    entry.notification = await prepareFlySafeExposure(db, entry.notification);
+  return sendNotificationBatch(
+    db,
+    work.map((entry) => entry.notification),
+    provider,
+  );
 }
 
 async function reminderClockAndCorrections(db: AppDb, options: SendDueRemindersOptions) {
@@ -796,11 +824,7 @@ export async function sendDueReminders(
       }
     }
 
-    const emailDeliveries = await sendNotificationBatch(
-      db,
-      emailWork.map((work) => work.notification),
-      emailProvider,
-    );
+    const emailDeliveries = await sendPreparedReminderBatch(db, emailWork, emailProvider);
     for (let index = 0; index < emailWork.length; index += 1) {
       const work = emailWork[index];
       const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };

@@ -5461,8 +5461,8 @@
       "finishPaying": "Terminar de pagar"
     },
     "flySafeCorrection": {
-      "subject": "Cambio en cuándo puedes volar: {tripTitle}",
-      "body": "La salida {tripTitle} ahora incluye inmersiones con descompresión, así que el tiempo para volar de nuestro recordatorio ya no aplica. Pregúntale a la tripulación cuánto esperar antes de volar."
+      "subject": "Una actualización sobre cuándo puedes volar",
+      "body": "El intervalo para volar de nuestro recordatorio anterior podría ya no aplicar. Pregúntale a la tripulación cuánto esperar antes de volar."
     },
     "tripReminder": {
       "weekSubject": "Sales esta semana: {tripTitle}",

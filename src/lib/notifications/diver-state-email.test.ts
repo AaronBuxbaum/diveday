@@ -392,10 +392,10 @@ describe("diverStateEmail: fly_safe_correction (#2927)", () => {
 
   it("says the figure no longer applies and to ask the crew, in one sentence and no figure", () => {
     const email = diverStateEmail(base);
-    expect(email.subject).toBe("A change to when you can fly: Two-Tank Reef");
+    expect(email.subject).toBe("An update to your flying guidance");
     expect(email.text).toBe(
       [
-        "Two-Tank Reef now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly.",
+        "The flying interval in our earlier reminder may no longer apply. Ask the crew how long to wait before you fly.",
         "",
       ].join("\n"),
     );
@@ -406,9 +406,9 @@ describe("diverStateEmail: fly_safe_correction (#2927)", () => {
 
   it("speaks the diver's language and escapes the shop's words", () => {
     const es = diverStateEmail({ ...base, locale: "es-ES", tripTitle: "Arrecife <dos>" });
-    expect(es.subject).toBe("Cambio en cuándo puedes volar: Arrecife <dos>");
+    expect(es.subject).toBe("Una actualización sobre cuándo puedes volar");
     expect(es.text).toContain("Pregúntale a la tripulación cuánto esperar antes de volar.");
-    expect(es.html).toContain("Arrecife &lt;dos&gt;");
+    expect(es.html).not.toContain("Arrecife");
     expect(es.html).not.toContain("<dos>");
   });
 });

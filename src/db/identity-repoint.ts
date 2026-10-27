@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { hasReturned } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
@@ -86,6 +86,7 @@ export type RepointHeldBookingResult =
       tripId: string;
       /** The bookings that moved, this one first. */
       seatIds: string[];
+      flySafeFollowUp?: true;
     }
   | {
       ok: false;
@@ -190,6 +191,7 @@ export async function repointHeldBooking(
     ok: true,
     tripId: first?.tripId ?? "",
     seatIds: outcome.seats.map((seat) => seat.bookingId),
+    ...(outcome.flySafeFollowUp ? { flySafeFollowUp: true as const } : {}),
   };
 }
 
@@ -199,6 +201,7 @@ type RepointOutcome =
       refused: null;
       fromPersonId: string;
       bookedAs: string;
+      flySafeFollowUp: boolean;
       seats: Array<{ bookingId: string; tripId: string }>;
     };
 
@@ -312,6 +315,17 @@ async function repointInTransaction(
   ).filter((seat) => requested.has(seat.bookingId));
   const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
   const seatIds = seats.map((seat) => seat.bookingId);
+  const [priorFlyingAdvice] = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        inArray(bookings.id, seatIds),
+        isNotNull(bookings.flySafeHoursTold),
+      ),
+    )
+    .limit(1);
 
   // `bookings_trip_person_unique` holds a cancelled row too, so any row of
   // theirs on a moving departure refuses the move.
@@ -354,7 +368,15 @@ async function repointInTransaction(
   // name it was booked under and how it was matched.
   await tx
     .update(bookings)
-    .set({ personId: input.toPersonId })
+    .set({
+      personId: input.toPersonId,
+      flySafeRecipientSealed: null,
+      flySafeRecipientUnknown: sql`${bookings.flySafeHoursTold} is not null or ${bookings.flySafeRecipientUnknown}`,
+      flySafeCorrectedAt: null,
+      flySafeCorrectionId: null,
+      flySafeCorrectionLeaseId: null,
+      flySafeCorrectionLeaseUntil: null,
+    })
     .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
   await tx
     .update(waiverRecords)
@@ -392,20 +414,30 @@ async function repointInTransaction(
   for (const bookingId of seatIds) {
     await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId, now });
   }
-  await tx
-    .delete(notificationSendQueue)
-    .where(
-      and(
-        eq(notificationSendQueue.shopId, input.shopId),
+  await tx.delete(notificationSendQueue).where(
+    and(
+      eq(notificationSendQueue.shopId, input.shopId),
+      or(
         inArray(notificationSendQueue.bookingId, seatIds),
-        eq(notificationSendQueue.status, "queued"),
+        inArray(
+          notificationSendQueue.idempotencyKey,
+          seatIds.map((id) => `fly-safe-correction/${id}`),
+        ),
       ),
-    );
+      eq(notificationSendQueue.status, "queued"),
+    ),
+  );
   await tx
     .update(gearReservations)
     .set({ personId: input.toPersonId })
     .where(
       and(eq(gearReservations.shopId, input.shopId), inArray(gearReservations.bookingId, seatIds)),
     );
-  return { refused: null, fromPersonId: booking.personId, bookedAs, seats };
+  return {
+    refused: null,
+    fromPersonId: booking.personId,
+    bookedAs,
+    seats,
+    flySafeFollowUp: !!priorFlyingAdvice,
+  };
 }

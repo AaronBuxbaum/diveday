@@ -52,6 +52,9 @@ import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
 import {
   correctFlySafeForBooking,
+  discardRefusedFlySafeExposure,
+  prepareFlySafeExposure,
+  queuedFlySafeCorrectionState,
   rearmFailedFlySafeCorrection,
   rememberFlySafeTold,
 } from "./fly-safe-correction";
@@ -355,7 +358,12 @@ async function queueRetry(
       recipientEmail: "to" in input ? input.to : null,
       subjectEmail: notificationSubjectEmail(input),
       subjectPhone: notificationSubjectPhone(input),
-      bookingId: "bookingId" in input ? (input.bookingId ?? null) : null,
+      bookingId:
+        input.kind === "fly_safe_correction"
+          ? input.seatId
+          : "bookingId" in input
+            ? (input.bookingId ?? null)
+            : null,
       status: "queued",
       nextAttemptAt: retryDueAt(delivery),
       httpStatus: delivery.httpStatus ?? null,
@@ -713,6 +721,55 @@ async function refreshQueuedFlySafe(db: AppDb, notification: Notification): Prom
   return hours === null
     ? { ...withoutHours, flySafeAskCrew: true }
     : { ...withoutHours, flySafeHours: hours, flySafeAskCrew: false };
+}
+
+async function settleRetriedFlySafe(
+  db: AppDb,
+  notification: Notification,
+  delivery: NotificationDelivery,
+  now: Date,
+  provider: NotificationProvider,
+): Promise<void> {
+  if (
+    delivery.status === "not_configured" ||
+    (delivery.status === "failed" && !delivery.retryable)
+  ) {
+    await discardRefusedFlySafeExposure(db, notification);
+  }
+  // The provider may have accepted a numeric reminder while the trip changed.
+  // Reconcile against the current seat after the send; delivery order remains external.
+  if (
+    notification.kind === "trip_reminder_24h" &&
+    notification.flySafeHours !== undefined &&
+    delivery.status === "sent"
+  ) {
+    try {
+      await rememberFlySafeTold(db, {
+        shopId: notification.shopId,
+        bookingId: notification.bookingId,
+        notification,
+        delivery,
+      });
+      const correction = await correctFlySafeForBooking(db, {
+        shopId: notification.shopId,
+        bookingId: notification.bookingId,
+        now,
+        emailProvider: provider,
+      });
+      if (correction.unreached.length)
+        log("notification.retry_fly_safe_correction_unreached", "error", {
+          shopId: notification.shopId,
+          bookingId: notification.bookingId,
+          count: correction.unreached.length,
+        });
+    } catch (error) {
+      log("notification.retry_fly_safe_reconciliation_failed", "error", {
+        shopId: notification.shopId,
+        bookingId: notification.bookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+  }
 }
 
 /** Recover a correction from its tenant-scoped queue key when its sealed payload is lost. */
@@ -1083,7 +1140,7 @@ export async function drainNotificationRetries(
       continue;
     }
 
-    const notification = await refreshQueuedFlySafe(db, reviveQueuedNotification(opened));
+    let notification = await refreshQueuedFlySafe(db, reviveQueuedNotification(opened));
     const switchedOff = await switchedOffSinceQueued(db, notification);
     if (switchedOff || (await courtesyRecipientOptedOut(db, notification))) {
       // Finished, so it drops its handles like every other finished write. Not
@@ -1117,12 +1174,26 @@ export async function drainNotificationRetries(
       summary.failed += 1;
       continue;
     }
+    if (notification.kind === "trip_reminder_24h" && notification.flySafeHours !== undefined) {
+      notification = await prepareFlySafeExposure(db, {
+        ...notification,
+        flySafeExposureId: crypto.randomUUID(),
+      });
+    }
     let delivery: NotificationDelivery;
     try {
-      // A queued retry about a rehearsal is held like a first send.
-      delivery = (await notificationHeldForRehearsal(db, notification))
-        ? REHEARSAL_HELD_DELIVERY
-        : await notify(await withShopSender(db, notification, senders), provider);
+      const correctionState =
+        notification.kind === "fly_safe_correction"
+          ? await queuedFlySafeCorrectionState(db, notification)
+          : "valid";
+      delivery =
+        correctionState === "stale"
+          ? { status: "failed", retryable: false, errorCode: "stale_correction" }
+          : correctionState === "unavailable"
+            ? { status: "failed", retryable: true, errorCode: "recipient_snapshot_unavailable" }
+            : (await notificationHeldForRehearsal(db, notification))
+              ? REHEARSAL_HELD_DELIVERY
+              : await notify(await withShopSender(db, notification, senders), provider);
     } catch (error) {
       delivery = {
         status: "failed",
@@ -1131,40 +1202,7 @@ export async function drainNotificationRetries(
         detail: thrownErrorDetail(error),
       };
     }
-    // The provider may have accepted a numeric reminder while the trip changed.
-    // Reconcile against the current seat after the send; delivery order remains external.
-    if (
-      notification.kind === "trip_reminder_24h" &&
-      notification.flySafeHours !== undefined &&
-      delivery.status === "sent"
-    ) {
-      try {
-        await rememberFlySafeTold(db, {
-          shopId: notification.shopId,
-          bookingId: notification.bookingId,
-          notification,
-          delivery,
-        });
-        const correction = await correctFlySafeForBooking(db, {
-          shopId: notification.shopId,
-          bookingId: notification.bookingId,
-          now,
-          emailProvider: provider,
-        });
-        if (correction.unreached.length)
-          log("notification.retry_fly_safe_correction_unreached", "error", {
-            shopId: notification.shopId,
-            bookingId: notification.bookingId,
-            count: correction.unreached.length,
-          });
-      } catch (error) {
-        log("notification.retry_fly_safe_reconciliation_failed", "error", {
-          shopId: notification.shopId,
-          bookingId: notification.bookingId,
-          errorCode: error instanceof Error ? error.name : "unknown_error",
-        });
-      }
-    }
+    await settleRetriedFlySafe(db, notification, delivery, now, provider);
     const tracked = "bookingId" in notification ? (notification as TrackedNotification) : null;
     if (tracked) {
       try {

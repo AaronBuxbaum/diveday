@@ -1226,6 +1226,18 @@ async function scrubBookingRows(
     .for("update");
   if (snapshotSeats.length > 0) {
     await tx
+      .update(bookings)
+      .set({ flySafeRecipientSealed: null, flySafeRecipientUnknown: false })
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(
+            bookings.id,
+            snapshotSeats.map((seat) => seat.id),
+          ),
+        ),
+      );
+    await tx
       .update(rollCallEvents)
       .set({
         certificationSnapshot: null,
@@ -2598,14 +2610,18 @@ async function scrubPiiBlob(
     logFuzzyMatch(ctx, "send_queue_subject_phone", droppedByPhone.length);
   }
   if (owned) {
-    await tx
-      .delete(notificationSendQueue)
-      .where(
-        and(
-          eq(notificationSendQueue.shopId, shopId),
+    await tx.delete(notificationSendQueue).where(
+      and(
+        eq(notificationSendQueue.shopId, shopId),
+        or(
           inArray(notificationSendQueue.bookingId, bookingIds),
+          inArray(
+            notificationSendQueue.idempotencyKey,
+            bookingIds.map((id) => `fly-safe-correction/${id}`),
+          ),
         ),
-      );
+      ),
+    );
   }
   return [];
 }

@@ -8,21 +8,20 @@ import {
   recipientLocale,
 } from "@/lib/notifications";
 import type { AppDb, DbExecutor } from "./client";
+import {
+  type FlySafeExposure,
+  openFlySafeExposures,
+  sealFlySafeExposures,
+} from "./fly-safe-exposures";
+import { readReminderFlySafeHours } from "./fly-safe-plan";
 import { notificationProviderForDb, sendNotification } from "./notifications";
 import { bookings, people, shops, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
- * **Correcting a fly-safe wait a diver was told** (issue #2927, Aaron's
- * decision of 2026-10-22).
- *
- * The night-before email tells a diver on their last boat with the shop how
- * many hours to wait before flying (H-150), from the planned no-decompression
- * rule. When staff then mark that departure as decompression diving, the
- * figure in the diver's inbox no longer applies and `/ready` stops promising
- * one. So the seat records the hours it was told (`bookings.fly_safe_hours_told`),
- * staff see how many divers hold a figure as they tick the box, and each of
- * those divers gets one short correction, once (`fly_safe_corrected_at`).
+ * Correct an interval that no longer matches the diver's current itinerary.
+ * The provider's actual recipient is sealed with shop and seat identifiers;
+ * legacy or unreadable snapshots are left for staff to follow up.
  */
 
 /** Seats still on the boat: the ones a correction speaks to. */
@@ -42,19 +41,107 @@ const MAX_AUTOMATIC_CORRECTION_CLAIMS = 3;
 /** The night-before email went out carrying the fly-safe line: remember what it said. */
 export async function recordFlySafeTold(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; hours: number },
-): Promise<void> {
-  await db
-    .update(bookings)
-    .set({
-      flySafeHoursTold: input.hours,
-      flySafeCorrectedAt: null,
-      flySafeCorrectionId: null,
-      flySafeCorrectionAttempts: 0,
-      flySafeCorrectionLeaseId: null,
-      flySafeCorrectionLeaseUntil: null,
-    })
-    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+  input: {
+    shopId: string;
+    bookingId: string;
+    hours: number;
+    recipientEmail?: string;
+    recipientPersonId?: string;
+    exposureId?: string;
+    accepted?: boolean;
+  },
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [locked] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      // diveday:allow-update-lock: serialize exposure recording with seat erasure and identity repointing.
+      .for("update");
+    if (!locked) return false;
+    // Erasure must lock and clear this seat before it commits. A non-locking
+    // person read here cannot deadlock with its person-first lock order.
+    const [person] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .where(
+        and(
+          eq(people.id, locked.personId),
+          eq(people.shopId, input.shopId),
+          livePerson(),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .limit(1);
+    if (!person) return false;
+    const reassigned = !!input.recipientPersonId && input.recipientPersonId !== person.id;
+    if (reassigned) {
+      await tx
+        .update(bookings)
+        .set({
+          flySafeRecipientSealed: null,
+          flySafeRecipientUnknown: true,
+          flySafeHoursTold: input.hours,
+          flySafeCorrectedAt: null,
+          flySafeCorrectionId: null,
+          flySafeCorrectionLeaseId: null,
+          flySafeCorrectionLeaseUntil: null,
+        })
+        .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+      return false;
+    }
+    if (!input.recipientEmail) return false;
+    const previous = locked.flySafeRecipientSealed
+      ? openFlySafeExposures(locked.flySafeRecipientSealed, input.shopId, input.bookingId)
+      : [];
+    if (!previous) return false;
+    const exposureId = input.exposureId ?? crypto.randomUUID();
+    const existing = previous.find((exposure) => exposure.id === exposureId);
+    if (existing) {
+      if (input.accepted && !existing.accepted) {
+        existing.accepted = true;
+        const updated = sealFlySafeExposures(previous, input.shopId, input.bookingId);
+        if (!updated) return false;
+        await tx
+          .update(bookings)
+          .set({ flySafeRecipientSealed: updated })
+          .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+      }
+      return true;
+    }
+    const exposure: FlySafeExposure = {
+      id: exposureId,
+      email: input.recipientEmail,
+      hours: input.hours,
+      correctionId: null,
+      corrected: false,
+      accepted: input.accepted ?? true,
+    };
+    const sealed = sealFlySafeExposures([...previous, exposure], input.shopId, input.bookingId);
+    if (!sealed) return false;
+    await tx
+      .update(bookings)
+      .set({
+        flySafeHoursTold: input.hours,
+        flySafeRecipientSealed: sealed,
+        flySafeRecipientUnknown:
+          locked.flySafeRecipientUnknown ||
+          (locked.flySafeHoursTold !== null && !locked.flySafeRecipientSealed),
+        flySafeCorrectedAt: null,
+        flySafeCorrectionId: null,
+        flySafeCorrectionAttempts: 0,
+        flySafeCorrectionLeaseId: null,
+        flySafeCorrectionLeaseUntil: null,
+      })
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.personId, person.id),
+        ),
+      );
+    return true;
+  });
 }
 
 /**
@@ -88,6 +175,84 @@ export async function rememberFlySafeTold(
     shopId: input.shopId,
     bookingId: input.bookingId,
     hours: notification.flySafeHours,
+    recipientEmail: notification.personId ? notification.to : undefined,
+    recipientPersonId: notification.personId,
+    exposureId: notification.flySafeExposureId,
+    accepted: input.delivery.status === "sent",
+  });
+}
+
+/** Persist a possible exposure before crossing the provider boundary. */
+export async function prepareFlySafeExposure(
+  db: AppDb,
+  notification: Notification,
+): Promise<Notification> {
+  if (notification.kind !== "trip_reminder_24h" || notification.flySafeHours === undefined)
+    return notification;
+  const id = notification.flySafeExposureId ?? crypto.randomUUID();
+  const candidate = { ...notification, flySafeExposureId: id };
+  try {
+    if (
+      candidate.personId &&
+      (await recordFlySafeTold(db, {
+        shopId: candidate.shopId,
+        bookingId: candidate.bookingId,
+        hours: notification.flySafeHours,
+        recipientEmail: candidate.to,
+        recipientPersonId: candidate.personId,
+        exposureId: id,
+        accepted: false,
+      }))
+    )
+      return candidate;
+  } catch (error) {
+    log("reminder.fly_safe_exposure_record_failed", "error", {
+      shopId: candidate.shopId,
+      bookingId: candidate.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
+  const { flySafeHours: _hours, ...withoutHours } = candidate;
+  return { ...withoutHours, flySafeAskCrew: true };
+}
+
+/** Remove a pre-send reservation when the provider definitively refused it. */
+export async function discardRefusedFlySafeExposure(
+  db: AppDb,
+  notification: Notification,
+): Promise<void> {
+  if (notification.kind !== "trip_reminder_24h" || !notification.flySafeExposureId) return;
+  await db.transaction(async (tx) => {
+    const [seat] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, notification.bookingId), eq(bookings.shopId, notification.shopId)))
+      // diveday:allow-update-lock: retract only this refused reminder reservation.
+      .for("update");
+    if (!seat?.flySafeRecipientSealed) return;
+    const entries = openFlySafeExposures(
+      seat.flySafeRecipientSealed,
+      notification.shopId,
+      notification.bookingId,
+    );
+    if (!entries) return;
+    const exposure = entries.find((entry) => entry.id === notification.flySafeExposureId);
+    if (!exposure || exposure.corrected || exposure.correctionId) return;
+    const remaining = entries.filter((entry) => entry.id !== notification.flySafeExposureId);
+    const sealed = remaining.length
+      ? sealFlySafeExposures(remaining, notification.shopId, notification.bookingId)
+      : null;
+    if (remaining.length && !sealed) return;
+    await tx
+      .update(bookings)
+      .set({
+        flySafeRecipientSealed: sealed,
+        flySafeHoursTold:
+          remaining.at(-1)?.hours ?? (seat.flySafeRecipientUnknown ? seat.flySafeHoursTold : null),
+      })
+      .where(
+        and(eq(bookings.id, notification.bookingId), eq(bookings.shopId, notification.shopId)),
+      );
   });
 }
 
@@ -120,7 +285,6 @@ export async function retryOwedFlySafeCorrections(
         isNotNull(bookings.flySafeHoursTold),
         isNull(bookings.flySafeCorrectedAt),
         eq(trips.status, "scheduled"),
-        eq(trips.exceedsNoDecoLimits, true),
         liveTrip(),
         notRehearsal(),
         gte(trips.endsAt, new Date(input.now.getTime() - FLY_SAFE_CORRECTION_WINDOW_MS)),
@@ -143,26 +307,127 @@ export async function retryOwedFlySafeCorrections(
   }
 }
 
+/** Recheck every current seat of people whose itinerary includes a changed trip. */
+export async function correctFlySafeForTripChange(
+  db: AppDb,
+  input: { shopId: string; tripId: string; now?: Date; emailProvider?: NotificationProvider },
+): Promise<FlySafeCorrectionOutcome> {
+  const affected = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
+  const total: FlySafeCorrectionOutcome = { told: 0, failed: 0, unreached: [] };
+  if (!affected.length) return total;
+  const seats = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        inArray(
+          bookings.personId,
+          affected.map((value) => value.personId),
+        ),
+        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        isNotNull(bookings.flySafeHoursTold),
+        isNull(bookings.flySafeCorrectedAt),
+      ),
+    );
+  for (const seat of seats) {
+    const result = await sendFlySafeCorrections(db, {
+      ...input,
+      tripId: seat.tripId,
+      bookingId: seat.id,
+    });
+    total.told += result.told;
+    total.failed += result.failed;
+    total.unreached.push(...result.unreached);
+  }
+  return total;
+}
+
+/** Recheck the recipient provenance before a queued correction reaches a provider. */
+export async function queuedFlySafeCorrectionState(
+  db: DbExecutor,
+  notification: Extract<Notification, { kind: "fly_safe_correction" }>,
+): Promise<"valid" | "stale" | "unavailable"> {
+  const [seat] = await db
+    .select({ sealed: bookings.flySafeRecipientSealed })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.id, notification.seatId),
+        eq(bookings.shopId, notification.shopId),
+        inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
+        livePerson(),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .limit(1);
+  if (!seat) return "stale";
+  if (!notification.correctionId) {
+    await db
+      .update(bookings)
+      .set({ flySafeRecipientUnknown: true, flySafeCorrectedAt: null })
+      .where(
+        and(
+          eq(bookings.id, notification.seatId),
+          eq(bookings.shopId, notification.shopId),
+          isNotNull(bookings.flySafeHoursTold),
+        ),
+      );
+    return "stale";
+  }
+  if (!seat.sealed) return "stale";
+  const entries = openFlySafeExposures(seat.sealed, notification.shopId, notification.seatId);
+  if (!entries) return "unavailable";
+  return entries.some(
+    (entry) => entry.correctionId === notification.correctionId && entry.email === notification.to,
+  )
+    ? "valid"
+    : "stale";
+}
+
 /** A rejected outbox row can only re-arm the recommendation it belongs to. */
 export async function rearmFailedFlySafeCorrection(
   db: DbExecutor,
   input: { shopId: string; bookingId: string; correctionId: string },
 ): Promise<void> {
-  await db
-    .update(bookings)
-    .set({
-      flySafeCorrectedAt: null,
-      flySafeCorrectionId: null,
-      flySafeCorrectionLeaseId: null,
-      flySafeCorrectionLeaseUntil: null,
-    })
-    .where(
-      and(
-        eq(bookings.shopId, input.shopId),
-        eq(bookings.id, input.bookingId),
-        eq(bookings.flySafeCorrectionId, input.correctionId),
-      ),
-    );
+  await db.transaction(async (tx) => {
+    const [seat] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.shopId, input.shopId), eq(bookings.id, input.bookingId)))
+      // diveday:allow-update-lock: fence a rejected outbox generation against new exposures and workers.
+      .for("update");
+    if (!seat) return;
+    const entries = seat.flySafeRecipientSealed
+      ? openFlySafeExposures(seat.flySafeRecipientSealed, input.shopId, input.bookingId)
+      : null;
+    const exposure = entries?.find((value) => value.correctionId === input.correctionId);
+    if (!exposure && seat.flySafeCorrectionId !== input.correctionId) return;
+    if (exposure) {
+      exposure.corrected = false;
+      exposure.correctionId = null;
+    }
+    const sealed = entries ? sealFlySafeExposures(entries, input.shopId, input.bookingId) : null;
+    await tx
+      .update(bookings)
+      .set({
+        flySafeCorrectedAt: null,
+        flySafeRecipientSealed: sealed ?? seat.flySafeRecipientSealed,
+        flySafeRecipientUnknown: seat.flySafeRecipientUnknown || !entries || !sealed,
+        ...(seat.flySafeCorrectionId === input.correctionId
+          ? {
+              flySafeCorrectionId: null,
+              flySafeCorrectionLeaseId: null,
+              flySafeCorrectionLeaseUntil: null,
+            }
+          : {}),
+      })
+      .where(and(eq(bookings.shopId, input.shopId), eq(bookings.id, input.bookingId)));
+  });
 }
 
 /**
@@ -196,11 +461,10 @@ export type FlySafeCorrectionOutcome = { told: number; failed: number; unreached
 /**
  * **Send each diver told a fly-safe wait the one correction** (issue #2927).
  *
- * Only while the departure is live, scheduled, not a rehearsal, marked as
- * decompression diving, and not more than `FLY_SAFE_CORRECTION_WINDOW_MS`
- * past its end. Only to a seat still on the boat that the night-before email
- * told a figure, held identity or not, by the email on that seat's own person
- * record (the only channel that carried the figure).
+ * Only for a live, scheduled, non-rehearsal departure within the 48-hour
+ * window, and a live seat whose recorded interval differs from the current
+ * full-itinerary plan or no longer has a numeric plan. The correction goes
+ * to the protected original reminder recipient, including held seats.
  *
  * A lease prevents concurrent workers from sending the same correction. A
  * crashed worker's lease expires; a crash after provider acceptance may send
@@ -233,15 +497,21 @@ export async function sendFlySafeCorrections(
       and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
     )
     .limit(1);
-  if (row?.trip.status !== "scheduled" || !row.trip.exceedsNoDecoLimits) return outcome;
+  if (row?.trip.status !== "scheduled") return outcome;
   // diveday:allow-departure-offset: the longest fly-safe wait after the boat is due back, not a lateness grace.
   if (now.getTime() > row.trip.endsAt.getTime() + FLY_SAFE_CORRECTION_WINDOW_MS) return outcome;
   const { trip, shop } = row;
 
-  // A held seat (identity unconfirmed) is corrected too: the figure went to
-  // the address on the seat's person, so the correction goes to the same one.
+  // A held seat is corrected too, using the original recipient snapshot.
   const owed = await db
-    .select({ id: bookings.id })
+    .select({
+      id: bookings.id,
+      personId: bookings.personId,
+      participantType: bookings.participantType,
+      hours: bookings.flySafeHoursTold,
+      recipient: bookings.flySafeRecipientSealed,
+      unknown: bookings.flySafeRecipientUnknown,
+    })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
     .where(
@@ -255,7 +525,26 @@ export async function sendFlySafeCorrections(
         livePerson(),
       ),
     );
-  if (owed.length === 0) return outcome;
+  const plans = new Map<string, number | null>();
+  const stale: string[] = [];
+  for (const seat of owed) {
+    const hours = await readReminderFlySafeHours(db, {
+      shop: { id: shop.id },
+      person: { id: seat.personId },
+      participantType: seat.participantType,
+      detail: { shop: { timezone: shop.timezone }, trip: { id: trip.id, startsAt: trip.startsAt } },
+    });
+    const entries = seat.recipient ? openFlySafeExposures(seat.recipient, shop.id, seat.id) : null;
+    if (
+      seat.unknown ||
+      !entries ||
+      entries.some((entry) => !entry.corrected && entry.hours !== hours)
+    ) {
+      stale.push(seat.id);
+      plans.set(seat.id, hours);
+    }
+  }
+  if (stale.length === 0) return outcome;
   const leaseId = crypto.randomUUID();
   const claimed = await db
     .update(bookings)
@@ -271,10 +560,7 @@ export async function sendFlySafeCorrections(
         eq(bookings.tripId, trip.id),
         inArray(bookings.status, [...LIVE_SEAT_STATUSES]),
         isNotNull(bookings.flySafeHoursTold),
-        inArray(
-          bookings.id,
-          owed.map((seat) => seat.id),
-        ),
+        inArray(bookings.id, stale),
         isNull(bookings.flySafeCorrectedAt),
         input.automatic
           ? lt(bookings.flySafeCorrectionAttempts, MAX_AUTOMATIC_CORRECTION_CLAIMS)
@@ -285,7 +571,11 @@ export async function sendFlySafeCorrections(
         ),
       ),
     )
-    .returning({ id: bookings.id, personId: bookings.personId });
+    .returning({
+      id: bookings.id,
+      personId: bookings.personId,
+      recipient: bookings.flySafeRecipientSealed,
+    });
   if (claimed.length === 0) return outcome;
 
   const recipients = await db
@@ -312,26 +602,54 @@ export async function sendFlySafeCorrections(
   // correction went or was queued; whatever is left when the loop ends, by
   // any exit including a throw, has its claim put back for the next save.
   const unsent = new Set(claimed.map((seat) => seat.id));
-  const finish = async (seatId: string, correctionId: string) => {
-    const [finished] = await db
-      .update(bookings)
-      .set({
-        flySafeCorrectedAt: now,
-        flySafeCorrectionId: correctionId,
-        flySafeCorrectionLeaseId: null,
-        flySafeCorrectionLeaseUntil: null,
-      })
-      .where(
-        and(
-          eq(bookings.id, seatId),
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.tripId, trip.id),
-          eq(bookings.flySafeCorrectionLeaseId, leaseId),
-        ),
+  const mutate = async (
+    seatId: string,
+    change: (entries: FlySafeExposure[]) => void,
+    finish = false,
+  ) =>
+    db.transaction(async (tx) => {
+      const [seat] = await tx
+        .select()
+        .from(bookings)
+        .where(and(eq(bookings.id, seatId), eq(bookings.shopId, shop.id)))
+        // diveday:allow-update-lock: serialize exposure receipt with a reminder or terminal outbox retry.
+        .for("update");
+      if (
+        !seat ||
+        seat.flySafeCorrectionLeaseId !== leaseId ||
+        seat.tripId !== trip.id ||
+        !seat.flySafeRecipientSealed
       )
-      .returning({ id: bookings.id });
-    if (finished) unsent.delete(seatId);
-  };
+        return false;
+      const entries = openFlySafeExposures(seat.flySafeRecipientSealed, shop.id, seatId);
+      if (!entries) return false;
+      change(entries);
+      const sealed = sealFlySafeExposures(entries, shop.id, seatId);
+      if (!sealed) return false;
+      await tx
+        .update(bookings)
+        .set({
+          flySafeRecipientSealed: sealed,
+          ...(finish
+            ? {
+                flySafeCorrectionLeaseId: null,
+                flySafeCorrectionLeaseUntil: null,
+                flySafeCorrectedAt:
+                  !seat.flySafeRecipientUnknown && entries.every((entry) => entry.corrected)
+                    ? now
+                    : null,
+              }
+            : {}),
+        })
+        .where(
+          and(
+            eq(bookings.id, seatId),
+            eq(bookings.shopId, shop.id),
+            eq(bookings.flySafeCorrectionLeaseId, leaseId),
+          ),
+        );
+      return true;
+    });
   const unreached = (personId: string) => {
     outcome.failed += 1;
     outcome.unreached.push(personById.get(personId)?.fullName ?? "");
@@ -339,41 +657,72 @@ export async function sendFlySafeCorrections(
   try {
     for (const seat of claimed) {
       const person = personById.get(seat.personId);
-      // The figure only ever went by email; a seat with no address now has
-      // nobody to correct by email, and staff are told to call.
-      if (!person?.email) {
+      const entries = seat.recipient
+        ? openFlySafeExposures(seat.recipient, shop.id, seat.id)
+        : null;
+      const plan = plans.get(seat.id);
+      if (!person || !entries) {
         unreached(seat.personId);
         continue;
       }
-      const correctionId = leaseId;
-      const delivery = await send(
-        db,
-        {
-          kind: "fly_safe_correction",
-          correctionId,
-          seatId: seat.id,
-          shopId: shop.id,
-          to: person.email,
-          locale: recipientLocale(person.locale, shop.defaultLocale),
-          shopName: shop.name,
-          tripTitle: trip.title,
-          startsAt: trip.startsAt,
-          timezone: shop.timezone,
-        },
-        provider,
-      );
-      if (delivery.status === "sent") {
-        outcome.told += 1;
-        await finish(seat.id, correctionId);
-        continue;
+      const [current] = await db
+        .select({ unknown: bookings.flySafeRecipientUnknown })
+        .from(bookings)
+        .where(and(eq(bookings.id, seat.id), eq(bookings.shopId, shop.id)));
+      if (current?.unknown) unreached(seat.personId);
+      for (const exposure of entries) {
+        if (exposure.corrected || exposure.hours === plan) continue;
+        if (!exposure.email) {
+          unreached(seat.personId);
+          continue;
+        }
+        const correctionId = crypto.randomUUID();
+        const prepared = await mutate(seat.id, (values) => {
+          const entry = values.find((value) => value.id === exposure.id);
+          if (entry && !entry.corrected) entry.correctionId = correctionId;
+        });
+        if (!prepared) break;
+        await db
+          .update(bookings)
+          .set({ flySafeCorrectionId: correctionId })
+          .where(
+            and(
+              eq(bookings.id, seat.id),
+              eq(bookings.shopId, shop.id),
+              eq(bookings.flySafeCorrectionLeaseId, leaseId),
+            ),
+          );
+        const delivery = await send(
+          db,
+          {
+            kind: "fly_safe_correction",
+            correctionId,
+            seatId: seat.id,
+            shopId: shop.id,
+            to: exposure.email,
+            locale: recipientLocale(person.locale, shop.defaultLocale),
+            shopName: shop.name,
+            tripTitle: trip.title,
+            startsAt: trip.startsAt,
+            timezone: shop.timezone,
+          },
+          provider,
+        );
+        if (
+          delivery.status === "sent" ||
+          (delivery.status === "failed" && delivery.retryable && delivery.retryQueued === true)
+        ) {
+          await mutate(seat.id, (values) => {
+            const entry = values.find(
+              (value) => value.id === exposure.id && value.correctionId === correctionId,
+            );
+            if (entry) entry.corrected = true;
+          });
+          if (delivery.status === "sent") outcome.told += 1;
+          else outcome.failed += 1;
+        } else unreached(seat.personId);
       }
-      // A persisted retry holds the claim while the queue tries it.
-      if (delivery.status === "failed" && delivery.retryable && delivery.retryQueued === true) {
-        await finish(seat.id, correctionId);
-        outcome.failed += 1;
-        continue;
-      }
-      unreached(seat.personId);
+      if (await mutate(seat.id, () => {}, true)) unsent.delete(seat.id);
     }
   } finally {
     if (unsent.size > 0) {

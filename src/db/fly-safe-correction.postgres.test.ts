@@ -10,7 +10,8 @@ import {
   recordFlySafeTold,
   sendFlySafeCorrections,
 } from "./fly-safe-correction";
-import { bookings, trips } from "./schema";
+import { openFlySafeExposures } from "./fly-safe-exposures";
+import { bookings, people, trips } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { createTrip } from "./trips";
@@ -42,7 +43,12 @@ describePostgres("fly-safe correction leases across connections", () => {
     ]);
     if (!party.ok) throw new Error(`seat failed: ${party.reason}`);
     const bookingId = party.bookings[0].bookingId;
-    await recordFlySafeTold(pg.db, { shopId: shop.id, bookingId, hours: 24 });
+    await recordFlySafeTold(pg.db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 24,
+      recipientEmail: "concurrent-flysafe@example.com",
+    });
     await pg.db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, reef.id));
     const now = new Date(reef.startsAt.getTime() - HOUR_MS);
     let started!: () => void;
@@ -86,7 +92,12 @@ describePostgres("fly-safe correction leases across connections", () => {
     expect(after?.flySafeCorrectedAt).toEqual(now);
     if (!after?.flySafeCorrectionId) throw new Error("generation missing");
     const oldGeneration = after.flySafeCorrectionId;
-    await recordFlySafeTold(pg.db, { shopId: shop.id, bookingId, hours: 18 });
+    await recordFlySafeTold(pg.db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "concurrent-flysafe@example.com",
+    });
     await sendFlySafeCorrections(pg.db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -99,7 +110,11 @@ describePostgres("fly-safe correction leases across connections", () => {
       correctionId: oldGeneration,
     });
     const [newer] = await pg.db.select().from(bookings).where(eq(bookings.id, bookingId));
-    expect(newer?.flySafeCorrectedAt).toEqual(now);
+    expect(newer?.flySafeCorrectedAt).toBeNull();
+    if (!newer?.flySafeRecipientSealed) throw new Error("ledger missing");
+    const entries = openFlySafeExposures(newer.flySafeRecipientSealed, shop.id, bookingId);
+    expect(entries?.find((entry) => entry.hours === 18)?.corrected).toBe(true);
+    expect(entries?.find((entry) => entry.hours === 24)?.corrected).toBe(false);
     await pg.db
       .update(bookings)
       .set({ flySafeCorrectedAt: null, flySafeCorrectionAttempts: 3 })
@@ -120,5 +135,72 @@ describePostgres("fly-safe correction leases across connections", () => {
       emailProvider: capped.provider,
     });
     expect(capped.sent).toHaveLength(1);
+    await Promise.all([
+      recordFlySafeTold(pg.connect(), {
+        shopId: shop.id,
+        bookingId,
+        hours: 18,
+        recipientEmail: "first-race@example.com",
+      }),
+      recordFlySafeTold(pg.connect(), {
+        shopId: shop.id,
+        bookingId,
+        hours: 24,
+        recipientEmail: "second-race@example.com",
+      }),
+    ]);
+    const two = fakeEmail();
+    await sendFlySafeCorrections(pg.connect(), {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: two.provider,
+    });
+    expect(two.sent.map((value) => ("to" in value ? value.to : ""))).toEqual(
+      expect.arrayContaining(["first-race@example.com", "second-race@example.com"]),
+    );
+
+    let locked!: () => void;
+    let unlock!: () => void;
+    const enteredErasure = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const blockedErasure = new Promise<void>((resolve) => {
+      unlock = resolve;
+    });
+    const erase = pg.connect().transaction(async (tx) => {
+      await tx
+        .update(people)
+        .set({ deletedAt: now, anonymizedAt: now })
+        .where(eq(people.id, party.bookings[0].personId));
+      locked();
+      await blockedErasure;
+      await tx
+        .update(bookings)
+        .set({ flySafeRecipientSealed: null })
+        .where(eq(bookings.id, bookingId));
+    });
+    await enteredErasure;
+    try {
+      await recordFlySafeTold(pg.connect(), {
+        shopId: shop.id,
+        bookingId,
+        hours: 24,
+        recipientEmail: "late@example.com",
+      });
+    } finally {
+      unlock();
+      await erase;
+    }
+    const [erased] = await pg.db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(erased?.flySafeRecipientSealed).toBeNull();
+    await recordFlySafeTold(pg.connect(), {
+      shopId: shop.id,
+      bookingId,
+      hours: 24,
+      recipientEmail: "late@example.com",
+    });
+    const [afterErasure] = await pg.db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(afterErasure?.flySafeRecipientSealed).toBeNull();
   });
 });

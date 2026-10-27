@@ -44,7 +44,12 @@ async function threeToldSeats() {
     ]);
     if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
     const bookingId = party.bookings[0].bookingId;
-    await recordFlySafeTold(db, { shopId: shop.id, bookingId, hours: 24 });
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 24,
+      recipientEmail: `flysafe-throw-${name.toLowerCase()}@example.com`,
+    });
     ids.push(bookingId);
   }
   await db.update(tripRows).set({ exceedsNoDecoLimits: true }).where(eq(tripRows.id, reef.id));

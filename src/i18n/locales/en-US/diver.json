@@ -5461,8 +5461,8 @@
       "finishPaying": "Finish paying"
     },
     "flySafeCorrection": {
-      "subject": "A change to when you can fly: {tripTitle}",
-      "body": "{tripTitle} now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly."
+      "subject": "An update to your flying guidance",
+      "body": "The flying interval in our earlier reminder may no longer apply. Ask the crew how long to wait before you fly."
     },
     "tripReminder": {
       "weekSubject": "You sail this week: {tripTitle}",

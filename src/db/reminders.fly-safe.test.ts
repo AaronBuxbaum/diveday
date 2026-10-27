@@ -4,6 +4,8 @@ import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
+import { sendFlySafeCorrections } from "./fly-safe-correction";
+import { openFlySafeExposures } from "./fly-safe-exposures";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { sendDueReminders } from "./reminders";
 import { bookings, notificationSendQueue, people, trips } from "./schema";
@@ -222,6 +224,131 @@ describe("sendDueReminders and the fly-safe hours", () => {
     await drainNotificationRetries(db, { provider: retried.provider });
     expect(retried.sent[0]).toMatchObject({ flySafeAskCrew: true });
     expect(retried.sent[0]).not.toHaveProperty("flySafeHours");
+  });
+
+  it("records the potential numeric exposure before the provider can accept it", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    let recordedBeforeSend = false;
+    const provider: NotificationProvider = {
+      async send(value) {
+        if (
+          value.kind === "trip_reminder_24h" &&
+          value.bookingId === bookingId &&
+          value.flySafeHours !== undefined
+        ) {
+          const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+          const entries = seat?.flySafeRecipientSealed
+            ? openFlySafeExposures(seat.flySafeRecipientSealed, shop.id, bookingId)
+            : null;
+          recordedBeforeSend = entries?.some((entry) => !entry.accepted) ?? false;
+        }
+        return { status: "sent", providerMessageId: "accepted" };
+      },
+    };
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
+      emailProvider: provider,
+      appOrigin: null,
+    });
+    expect(recordedBeforeSend).toBe(true);
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    const entries = seat?.flySafeRecipientSealed
+      ? openFlySafeExposures(seat.flySafeRecipientSealed, shop.id, bookingId)
+      : null;
+    expect(entries?.some((entry) => entry.accepted)).toBe(true);
+  });
+
+  it("does not attach the original address to a different person after an in-flight reassignment", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const [other] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Other Diver", email: "other-diver@example.com" })
+      .returning();
+    if (!other) throw new Error("other person missing");
+    const provider: NotificationProvider = {
+      async send(value) {
+        if (value.kind === "trip_reminder_24h" && value.bookingId === bookingId) {
+          await db.update(bookings).set({ personId: other.id }).where(eq(bookings.id, bookingId));
+          await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, reef.id));
+        }
+        return { status: "sent", providerMessageId: "accepted" };
+      },
+    };
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
+      emailProvider: provider,
+      appOrigin: null,
+    });
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(seat?.flySafeRecipientSealed).toBeNull();
+    expect(seat?.flySafeRecipientUnknown).toBe(true);
+  });
+
+  it("corrects the reminder's actual recipient after the person changes their email", async () => {
+    const { db, shop, reef, bookingId, personId } = await reminderContext();
+    const now = new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000);
+    await sendDueReminders(db, { now, emailProvider: fakeEmail().provider, appOrigin: null });
+    await db
+      .update(people)
+      .set({ email: "new-address@example.com" })
+      .where(eq(people.id, personId));
+    await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, reef.id));
+    const correction = fakeEmail();
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: correction.provider,
+    });
+    expect(correction.sent).toMatchObject([
+      { kind: "fly_safe_correction", seatId: bookingId, to: "reminders-pat@example.com" },
+    ]);
+  });
+
+  it("corrects the later reminder when an earlier dive becomes decompression during delivery", async () => {
+    const { db, shop, reef, bookingId } = await reminderContext();
+    const earlierStart = new Date(reef.startsAt.getTime() + 24 * 60 * 60 * 1000);
+    const earlier = await createTrip(db, {
+      shopId: shop.id,
+      title: "Earlier dive",
+      startsAt: earlierStart,
+      endsAt: new Date(earlierStart.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!earlier) throw new Error("earlier trip missing");
+    const seat = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: earlier.id,
+        fullName: "Pat Party",
+        email: "reminders-pat@example.com",
+      },
+    ]);
+    if (!seat.ok) throw new Error(`earlier seat missing: ${seat.reason}`);
+    await db
+      .update(trips)
+      .set({
+        startsAt: new Date(reef.startsAt.getTime() - 24 * 60 * 60 * 1000),
+        endsAt: new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000),
+      })
+      .where(eq(trips.id, earlier.id));
+    const seen: Notification[] = [];
+    const provider: NotificationProvider = {
+      async send(value) {
+        seen.push(value);
+        if (value.kind === "trip_reminder_24h" && value.bookingId === bookingId)
+          await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, earlier.id));
+        return { status: "sent", providerMessageId: "accepted" };
+      },
+    };
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
+      emailProvider: provider,
+      appOrigin: null,
+    });
+    expect(seen.some((n) => n.kind === "fly_safe_correction" && n.seatId === bookingId)).toBe(true);
   });
 
   it("corrects a figure when the trip becomes decompression during provider delivery", async () => {

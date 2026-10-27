@@ -543,6 +543,7 @@ const tripReminder24hSchema = z.object({
   ...tripReminderFields,
   tripId: z.uuid().optional(),
   personId: z.uuid().optional(),
+  flySafeExposureId: z.uuid().optional(),
   flySafeAskCrew: z.boolean().optional(),
 });
 
