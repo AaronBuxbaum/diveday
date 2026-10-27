@@ -63,7 +63,7 @@ export function ProposedUnit({
             variant: "ghost",
             size: "sm",
             flush: true,
-            className: "min-w-11 max-w-full whitespace-normal break-words",
+            className: "min-w-12 max-w-full whitespace-normal break-words",
           })}
         >
           {copy.reveal}
