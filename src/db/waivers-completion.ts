@@ -165,6 +165,10 @@ async function saveWaiverDraftLocked(
           await getWaiverTemplateQuestions(db, state.record.shopId, state.record.templateId),
           (id) => shopAnswers[id],
         );
+  // Template-question reads can wait on I/O; the bearer must still be live
+  // at the write even though its row stayed locked throughout.
+  if ((await getWaiverForToken(db, token, input.now ?? nowDate())).state !== "available")
+    return false;
   const [saved] = await db
     .update(waiverRecords)
     .set({
@@ -679,6 +683,14 @@ async function completeWaiverLocked(
   if (!medicalAlert.ok) return { ok: false, reason: "invalid_medical_alert" };
   const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);
   const status = medicalReviewRequired ? ("medical_review" as const) : ("completed" as const);
+  // The questionnaire and template reads above can wait past either the
+  // wrapper's or the underlying link's expiry. Recheck at the write boundary.
+  const atWrite = await getWaiverForToken(db, token, input.now ?? nowDate());
+  if (atWrite.state === "unavailable") return { ok: false, reason: "unavailable" };
+  if (atWrite.state === "expired") return { ok: false, reason: "expired" };
+  if (atWrite.state === "held") return { ok: false, reason: "identity_unconfirmed" };
+  if (atWrite.state === "completed")
+    return { ok: true, status: completedStatus(atWrite.record.status), idempotent: true };
   const [saved] = await db
     .update(waiverRecords)
     .set({
