@@ -306,6 +306,17 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
       timeZone: envelope.snapshot.shop.timezone,
     }).formatToParts(new Date(envelope.snapshot.savedAt)),
   );
+  const savedAtHeader = keepUnitsWhole(
+    cachedFormatter("dtz-header", Intl.DateTimeFormat, deviceLocale(), {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone: envelope.snapshot.shop.timezone,
+    }).formatToParts(new Date(envelope.snapshot.savedAt)),
+  );
   return {
     envelope,
     checkpoint,
@@ -342,6 +353,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     previousGaps,
     dateTime,
     savedAtZoned,
+    savedAtHeader,
   };
 }
 

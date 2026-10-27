@@ -354,7 +354,7 @@
       "current": "Copia reciente",
       "currentOnline": "Copia reciente · en línea",
       "aging": "Copia antigua",
-      "stale": "Copia caducada"
+      "stale": "Copia desactualizada"
     },
     "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo…",
     "openingHeading": "Abriendo la copia guardada en este dispositivo",
