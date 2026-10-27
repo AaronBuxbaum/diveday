@@ -15,7 +15,7 @@ const SHOP = "blue-mantis";
 
 test("staff add a rehearsal from the builder, and its trip page says so", async ({ page }) => {
   const title = `Training Drill ${e2eNow().getTime()}`;
-  await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
+  await page.goto(`/shop/${SHOP}/schedule/board/new?add=full`);
   await page.getByLabel("What is it").fill(title);
   await page.getByLabel("Date").fill(daysFromNow(2));
   await page.getByLabel("Departs").fill("09:00");

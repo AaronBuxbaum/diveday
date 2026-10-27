@@ -925,7 +925,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The first (and only-ever-first) departure, dated off the frozen
         // clock so the card and queue rows render pixel-identically per run.
-        await page.goto(`/shop/${unique}/schedule/board?add=1`);
+        await page.goto(`/shop/${unique}/schedule/board/new`);
         const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10);

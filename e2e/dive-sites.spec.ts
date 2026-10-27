@@ -96,7 +96,7 @@ test.describe("staff", () => {
     // Saving lands on the site's own page, whose header is its name.
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
-    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
     await page.getByLabel("What is it").fill(tripTitle);
     // Dive one's site, by name: expanded, the panel keeps the quick row's
     // single "Dive site" select mounted-but-hidden (so nothing typed is lost on
@@ -409,7 +409,7 @@ test.describe("staff", () => {
     await expect(page.getByText(/^3 waypoints/)).toBeVisible();
 
     // And it reaches the diver, which is the only reason to draw it.
-    await page.goto("/shop/blue-mantis/schedule/board?add=full");
+    await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
     await page.getByLabel("What is it").fill(tripTitle);
     // By name, like the flow above: the collapsed quick row keeps its own
     // "Dive site" select mounted, so a label match finds the wrong one.
