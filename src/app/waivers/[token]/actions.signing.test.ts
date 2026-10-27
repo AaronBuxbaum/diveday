@@ -1,9 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
 import { bookingCapabilities, bookings, people, trips, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { diverTranslator } from "@/i18n/messages";
 import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
@@ -39,8 +41,15 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 vi.mock("@/i18n/request", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/i18n/request")>();
-  return { ...actual, requestFirstHandLocale: vi.fn(async () => "en-US") };
+  return {
+    ...actual,
+    requestFirstHandLocale: vi.fn(async () => "en-US"),
+    requestLocale: vi.fn(async () => "en-US"),
+  };
 });
+vi.mock("@/lib/observability/render-connection", () => ({
+  connectionForRoute: vi.fn(async () => undefined),
+}));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const cookieJar = new Map<string, string>();
 vi.mock("next/headers", () => ({
@@ -57,6 +66,7 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { issueWaiverRequest } = await import("@/db/waivers");
 const { completeWaiverAction, saveWaiverDraftAction } = await import("./actions");
+const { default: WaiverPage } = await import("./page");
 
 async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
   try {
@@ -384,9 +394,19 @@ describe("the signing doors", () => {
         fullName: "Rae Family",
         email: "rae.family@example.com",
       },
-      { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Sol Family" },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Sol Family",
+        minorDeclared: true,
+      },
     ]);
     if (!party.ok || !party.bookings[0] || !party.bookings[1]) throw new Error("party incomplete");
+    await db
+      .update(people)
+      .set({ dateOfBirth: "2014-05-01" })
+      .where(eq(people.id, party.bookings[1].personId));
     const readiness = await issueBookingCapability(db, {
       shopId: shop.id,
       bookingId: party.bookings[0].bookingId,
@@ -398,10 +418,31 @@ describe("the signing doors", () => {
     });
     if (!issued.ok || !readiness) throw new Error("links unavailable");
     cookieJar.set("diveday_party_return", readiness.token);
-    const form = signedForm(shop, { signerName: "Sol Family", acknowledged: "on" });
+    const form = signedForm(shop, {
+      signerName: "Sol Family",
+      acknowledged: "on",
+      guardianName: "Rae Family",
+      guardianRelationship: "parent",
+      guardianAcknowledged: "on",
+    });
     form.set(medicalQuestionField("q3"), "yes");
     const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
     expect(target === `/waivers/${issued.token}`).toBe(true);
     expect(cookieJar.has("diveday_party_return")).toBe(true);
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record).toMatchObject({ status: "medical_review", guardianName: "Rae Family" });
+    const html = renderToStaticMarkup(
+      await WaiverPage({
+        params: Promise.resolve({ token: issued.token }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+    const t = diverTranslator("en-US");
+    expect(html).toContain(t("waiver.medicalReferralNext"));
+    expect(html).toContain(t("waiver.doctor.open"));
+    expect(html.includes(`/ready/${readiness.token}#party-seats`)).toBe(true);
   });
 });
