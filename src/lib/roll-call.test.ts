@@ -6,6 +6,7 @@ import {
   cancelledRollCall,
   carryForwardNotBoarded,
   isNotBackAboard,
+  isRollCallCheckpoint,
   medicalHoldAfterDive,
   RETRACTION_SUPERSEDED,
   ROLL_CALL_NOTE_MAX,
@@ -97,6 +98,22 @@ describe("rollCallNoteAllowed", () => {
     const [, carried] = carryForwardNotBoarded([standing("not_boarded"), undefined]);
     expect(carried).toEqual({ state: "not_boarded", implied: true });
     expect(rollCallNoteAllowed(AFTER_DIVE, "boarded", carried)).toBe(false);
+  });
+});
+
+describe("a five-dive course session", () => {
+  it("retains an independent roll call after every planned dive", () => {
+    expect(rollCallCheckpoints(5)).toEqual([
+      "departure",
+      "after_dive_1",
+      "after_dive_2",
+      "after_dive_3",
+      "after_dive_4",
+      "after_dive_5",
+    ]);
+    expect(isRollCallCheckpoint("after_dive_5", 5)).toBe(true);
+    expect(isRollCallCheckpoint("after_dive_6", 5)).toBe(false);
+    expect(isNotBackAboard("after_dive_5", standing("not_boarded"))).toBe(true);
   });
 });
 
