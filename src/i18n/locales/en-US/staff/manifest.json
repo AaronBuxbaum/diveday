@@ -228,6 +228,7 @@
   "buddyErrorAlreadyTeamed": "One of those divers is already on a buddy team. Dissolve it first.",
   "buddyErrorTooFew": "A buddy team needs at least two people.",
   "buddyErrorGeneric": "That team changed: someone left this departure or the team was edited on another screen. The teams below are current; pick again.",
+  "buddyErrorBusy": "Another change is in progress. Try teaming the parties again.",
   "boardedCheck": "Boarded",
   "boardedCheckAriaLabel": "Boarded — tap again to undo",
   "markBoarded": "Mark boarded",

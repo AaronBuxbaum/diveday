@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { ageOnDate } from "@/lib/age";
 import { isStaff } from "@/lib/authz";
@@ -16,6 +16,7 @@ import {
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { isLockWaitRefusal } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import { survivingPersonNames } from "./people";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
@@ -218,6 +219,7 @@ async function resolveMembers(
               eq(bookings.shopId, shopId),
               eq(bookings.tripId, tripId),
               ne(bookings.status, "cancelled"),
+              isNull(people.anonymizedAt),
             ),
           )
       : [];
@@ -564,6 +566,7 @@ export async function planPartyTeams(
             eq(bookings.shopId, shopId),
             eq(bookings.tripId, tripId),
             ne(bookings.status, "cancelled"),
+            isNull(people.anonymizedAt),
           ),
         )
         // diveday:allow-time-id-order: the order seats are grouped into parties; no reader sees it.
@@ -648,78 +651,87 @@ export async function formPartyTeams(
     confirmedAdultParties?: readonly string[];
     now?: Date;
   },
-): Promise<number> {
-  let formed: number;
-  try {
-    formed = await db.transaction(async (tx) => {
-      // A stale form must not bypass a policy enabled while it was open. Hold
-      // both the departure and shop policy while deriving and writing teams.
-      if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) return 0;
-      await tx
-        .select({ id: shops.id })
-        .from(shops)
-        .where(eq(shops.id, input.shopId))
-        .for("no key update");
-      // Match the card-sighting writer's person-then-card order. Lock seated
-      // people and existing cards before reading the plan. Sort each set so
-      // different departures cannot invert it. Card writers take the same
-      // person lock before introducing a new row.
-      const seatedPeople = tx
-        .select({ id: bookings.personId })
-        .from(bookings)
-        .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
-      const lockedPeople = await tx
-        .select({ id: people.id })
-        .from(people)
-        .where(
-          // diveday:allow-deleted-people: lock every seated person, including removed records.
-          and(eq(people.shopId, input.shopId), inArray(people.id, seatedPeople)),
-        )
-        .orderBy(asc(people.id))
-        .for("no key update");
-      if (lockedPeople.length) {
+): Promise<number | "busy"> {
+  let formed: number | "busy" = "busy";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      formed = await db.transaction(async (tx) => {
+        // A stale form must not bypass a policy enabled while it was open. Hold
+        // both the departure and shop policy while deriving and writing teams.
+        if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) return 0;
         await tx
-          .select({ id: certifications.id })
-          .from(certifications)
+          .select({ id: shops.id })
+          .from(shops)
+          .where(eq(shops.id, input.shopId))
+          .for("no key update", { noWait: true });
+        // Match the card-sighting writer's person-then-card order. Lock seated
+        // people and existing cards before reading the plan. Sort each set so
+        // different departures cannot invert it. Card writers take the same
+        // person lock before introducing a new row. Never wait while holding
+        // the trip: erasure and other writers can already hold a person or card
+        // and subsequently need this trip. A failed attempt rolls back every
+        // lock before a bounded retry starts.
+        const seatedPeople = tx
+          .select({ id: bookings.personId })
+          .from(bookings)
+          .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
+        const lockedPeople = await tx
+          .select({ id: people.id })
+          .from(people)
           .where(
-            and(
-              eq(certifications.shopId, input.shopId),
-              inArray(
-                certifications.personId,
-                lockedPeople.map((person) => person.id),
-              ),
-            ),
+            // diveday:allow-deleted-people: lock every seated person, including removed records.
+            and(eq(people.shopId, input.shopId), inArray(people.id, seatedPeople)),
           )
-          .orderBy(asc(certifications.id))
-          .for("update");
-      }
-      const plan = await planPartyTeams(tx, input.shopId, input.tripId);
-      const confirmed = new Set(input.confirmedAdultParties ?? []);
-      const teamable = [
-        ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
-        ...plan.ageUnconfirmed
-          .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
-          .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
-      ];
-      let count = 0;
-      for (const { bookingIds, adultsConfirmed } of teamable) {
-        const outcome = await formBuddyTeamInTx(tx, {
-          shopId: input.shopId,
-          tripId: input.tripId,
-          members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
-          recordedByPersonId: input.recordedByPersonId,
-          adultsConfirmed,
-          now: input.now,
-        });
-        if (outcome.ok) count += 1;
-      }
-      return count;
-    });
-  } catch (error) {
-    if (isUniqueConstraintViolation(error)) return 0;
-    throw error;
+          .orderBy(asc(people.id))
+          .for("no key update", { noWait: true });
+        if (lockedPeople.length) {
+          await tx
+            .select({ id: certifications.id })
+            .from(certifications)
+            .where(
+              and(
+                eq(certifications.shopId, input.shopId),
+                inArray(
+                  certifications.personId,
+                  lockedPeople.map((person) => person.id),
+                ),
+              ),
+            )
+            .orderBy(asc(certifications.id))
+            .for("update", { noWait: true });
+        }
+        const plan = await planPartyTeams(tx, input.shopId, input.tripId);
+        const confirmed = new Set(input.confirmedAdultParties ?? []);
+        const teamable = [
+          ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
+          ...plan.ageUnconfirmed
+            .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
+            .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
+        ];
+        let count = 0;
+        for (const { bookingIds, adultsConfirmed } of teamable) {
+          const outcome = await formBuddyTeamInTx(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
+            recordedByPersonId: input.recordedByPersonId,
+            adultsConfirmed,
+            now: input.now,
+          });
+          if (outcome.ok) count += 1;
+        }
+        return count;
+      });
+      break;
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) return 0;
+      if (!isLockWaitRefusal(error)) throw error;
+      if (attempt === 2) return "busy";
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
   }
-  if (formed) await publishManifestEvent(db, input.shopId, input.tripId);
+  if (typeof formed === "number" && formed > 0)
+    await publishManifestEvent(db, input.shopId, input.tripId);
   return formed;
 }
 

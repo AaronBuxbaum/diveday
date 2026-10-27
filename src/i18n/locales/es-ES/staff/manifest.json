@@ -228,6 +228,7 @@
   "buddyErrorAlreadyTeamed": "Uno de esos buceadores ya tiene pareja de buceo. Deshaz esa pareja primero.",
   "buddyErrorTooFew": "Una pareja de buceo necesita al menos dos personas.",
   "buddyErrorGeneric": "Esa pareja cambió: alguien dejó esta salida o la pareja se editó en otra pantalla. Las parejas de abajo están al día; elige de nuevo.",
+  "buddyErrorBusy": "Hay otro cambio en curso. Vuelve a formar las parejas.",
   "boardedCheck": "Embarcado",
   "boardedCheckAriaLabel": "Embarcado — toca de nuevo para deshacer",
   "markBoarded": "Marcar embarcado",

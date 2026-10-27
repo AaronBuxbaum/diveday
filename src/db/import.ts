@@ -323,23 +323,32 @@ export async function commitContactImport(
     // A merge row may add a card without updating the person. Hold the same
     // person locks as one-tap planning, in stable order, for the whole import.
     // People created below are already owned by this transaction.
-    if (existingPeople.length) {
-      await tx
-        .select({ id: people.id })
-        .from(people)
-        .where(
-          and(
-            eq(people.shopId, shopId),
-            isNull(people.deletedAt),
-            inArray(
-              people.id,
-              existingPeople.map((person) => person.id),
+    const lockedPeople = existingPeople.length
+      ? await tx
+          .select({ id: people.id })
+          .from(people)
+          .where(
+            and(
+              eq(people.shopId, shopId),
+              isNull(people.deletedAt),
+              inArray(
+                people.id,
+                existingPeople.map((person) => person.id),
+              ),
             ),
-          ),
-        )
-        .orderBy(asc(people.id))
-        .for("no key update");
-    }
+          )
+          .orderBy(asc(people.id))
+          .for("no key update")
+      : [];
+    const lockedIds = new Set(lockedPeople.map((person) => person.id));
+    // An erasure or removal can commit while the lock waits. Do not use the
+    // earlier lookup to write back into that record or recreate it in this
+    // import; skip every row for that now-unavailable match.
+    const unavailableEmails = new Set(
+      existingPeople.flatMap((person) =>
+        person.email && !lockedIds.has(person.id) ? [person.email.toLowerCase()] : [],
+      ),
+    );
     const personIdByEmail = new Map(
       existingPeople.flatMap((p) => (p.email ? [[p.email.toLowerCase(), p.id] as const] : [])),
     );
@@ -411,6 +420,10 @@ export async function commitContactImport(
 
     for (const row of rows) {
       const emailKey = row.email?.toLowerCase();
+      if (emailKey && unavailableEmails.has(emailKey)) {
+        summary.rowsSkipped += 1;
+        continue;
+      }
       let personId = emailKey ? personIdByEmail.get(emailKey) : undefined;
 
       // A `merge` row is the same diver as an earlier row in this file (a

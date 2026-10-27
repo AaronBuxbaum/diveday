@@ -815,6 +815,7 @@ export async function teamUpPartiesAction(ctx: ManifestActionContext, formData: 
     recordedByPersonId: staff.user.personId,
     confirmedAdultParties,
   });
+  if (formed === "busy") redirect(`${manifestBack(ctx)}&buddyError=busy`);
   // A tap that teamed nobody while a party waited on its tick says so.
   const awaiting =
     formed === 0

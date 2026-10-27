@@ -63,6 +63,9 @@ function team(bookingIds: string[], crewId?: string): TripBuddyTeam {
 }
 
 describe("buddyBuilderView", () => {
+  it("explains a busy one-tap attempt without claiming a team was formed", () => {
+    expect(view("busy").panel.buddyErrorText).toBe(t("manifest.buddyErrorBusy"));
+  });
   it.each([
     { departure: { course: null }, age: 11 },
     { departure: { course: { intro: true } }, age: 35 },
