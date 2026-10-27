@@ -39,18 +39,16 @@ const SHOP = "blue-mantis";
 /** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`). */
 const SEEDED_DIVER = "Tyler Brooks";
 const DEPARTURE = /Two-Tank Reef — French Reef/;
-const CERTIFIED = "SSI shows this certification. Marked certified.";
-const LISTED_LEAD = "SSI also shows these certifications. Add them? Each waits for Mark certified.";
+const PADI_CERTIFIED = "PADI shows this certification. Marked certified.";
+const LISTED_LEAD =
+  "PADI also shows these certifications. Add them? Each waits for Mark certified.";
 
 /** What the fake agency pages answer, and what reached them. */
 type AgencyPages = {
-  /** SSI's result lists nitrox and Deep under the level card. */
-  ssiListsMore: boolean;
-  /**
-   * SSI's lookup as it is, with its boxes renamed past recognising (a
-   * redesign), or with reCAPTCHA's box drawn on its form (its frame).
-   */
-  ssiForm: "as-is" | "renamed" | "captcha";
+  /** SSI's terms gate, or a redesigned page with no expected form. */
+  ssiForm: "as-is" | "renamed";
+  /** Include additional cards in the PADI result. */
+  padiListsMore: boolean;
   /**
    * DiveChek, on pro.padi.com. Signed out: it shows its sign-in form, or sends
    * the tab to PADI's sign-in host. Signed in: it sends the tab on to the same
@@ -59,12 +57,6 @@ type AgencyPages = {
    * shows, and the search is answered with the sign-in form.
    */
   padi: "sign-in-form" | "sign-in-redirect" | "signed-in-on-pros" | "expires-on-search";
-  /**
-   * Holds SSI's answer to every lookup after the first `after` ones until
-   * `open` resolves, so a state that lasts only as long as a lookup (the
-   * second card of a "Check all") stays on screen for as long as a test needs.
-   */
-  ssiHold: { after: number; open: Promise<void> } | null;
   /** The card number DiveChek's result row shows. */
   padiCardNumber: string;
   /** Every request a fake agency page received, as `METHOD url`. */
@@ -100,40 +92,24 @@ function escapeHtml(value: string): string {
   );
 }
 
-/** SSI's public Online Diver Check: name and card number, then the diver's record. */
-function ssiPage(url: URL, listsMore: boolean, form: AgencyPages["ssiForm"]): string {
-  const name = url.searchParams.get("diver_name");
-  const number = url.searchParams.get("card_number");
-  if (name === null || number === null) {
-    if (form === "renamed") {
-      return html(
-        "Online Diver Check",
-        `<h1>Online Diver Check</h1>
-        <form method="get" action="/online_diver_check">
-          <label>Taucher <input name="q1"></label>
-          <label>Ausweis <input name="q2"></label>
-          <button type="submit">Search</button>
-        </form>`,
-      );
-    }
-    return html(
-      "Online Diver Check",
-      `<h1>Online Diver Check</h1>
-      <form method="get" action="/online_diver_check">
-        <label>Diver name <input name="diver_name"></label>
-        <label>Card number <input name="card_number"></label>
-        ${form === "captcha" ? '<div class="g-recaptcha"><iframe title="reCAPTCHA" width="304" height="78" src="/recaptcha/api2/anchor?k=stand-in"></iframe></div>' : ""}
-        <button type="submit">Search</button>
-      </form>`,
-    );
-  }
+/** SSI's public lookup hides its form until the staffer accepts its terms. */
+function ssiPage(form: AgencyPages["ssiForm"]): string {
+  if (form === "renamed") return html("Online Diver Check", "<h1>Lookup changed</h1>");
   return html(
     "Online Diver Check",
-    `<h1>Online Diver Check</h1>
-    <p>${escapeHtml(name)}</p>
-    <p>Card ${escapeHtml(number)}</p>
-    <p>Open Water Diver</p>
-    ${listsMore ? "<p>Enriched Air Nitrox · Deep Diving</p>" : ""}`,
+    `<style>#show_diver_check.out { display: none }</style>
+    <h1>Online Diver Check</h1>
+    <form method="get" action="/online_diver_check">
+      <label>Accept terms <input type="checkbox" name="accept_tou"></label>
+      <div id="show_diver_check" class="collapse out">
+        <label>First Name <input name="firstname" id="firstname"></label>
+        <label>Last Name <input name="lastname" id="lastname"></label>
+        <label>SSI Master ID <input type="number" id="verify-mid"></label>
+        <label>Birthday <input name="dob" id="dob" placeholder="YYYY-MM-DD"></label>
+        <button type="submit">Submit Search</button>
+      </div>
+    </form>
+    <script>document.querySelector('[name=accept_tou]').addEventListener('change', () => document.querySelector('#show_diver_check').classList.remove('out'));</script>`,
   );
 }
 
@@ -162,7 +138,7 @@ const PADI_SIGN_IN = html(
  * DiveChek signed in: its form, then the one diver's record. PADI's own
  * instructions name the button "Run Report".
  */
-function divechekPage(url: URL, cardNumber: string): string {
+function divechekPage(url: URL, cardNumber: string, listsMore: boolean): string {
   const first = url.searchParams.get("first_name");
   const last = url.searchParams.get("last_name");
   const born = url.searchParams.get("dob");
@@ -184,7 +160,8 @@ function divechekPage(url: URL, cardNumber: string): string {
     <p>1 diver found</p>
     <p>${escapeHtml(first)} ${escapeHtml(last)}</p>
     <p>Date of Birth: ${escapeHtml(born)}</p>
-    <p>Open Water Diver 06/15/2015 ${escapeHtml(cardNumber)}</p>`,
+    <p>Open Water Diver 06/15/2015 ${escapeHtml(cardNumber)}</p>
+    ${listsMore ? "<p>Enriched Air Diver · Deep Diver</p>" : ""}`,
   );
 }
 
@@ -249,13 +226,7 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
         response.end(body);
       };
       if (url.hostname === "my.divessi.com" && url.pathname === "/online_diver_check") {
-        const lookups = pages.requests.filter((each) => each.includes("diver_name=")).length;
-        if (url.search.includes("diver_name=") && pages.ssiHold && lookups > pages.ssiHold.after) {
-          pages.ledger.push([Date.now(), `agency:held lookup ${lookups}`]);
-          await pages.ssiHold.open;
-          pages.ledger.push([Date.now(), `agency:released lookup ${lookups}`]);
-        }
-        return send(200, ssiPage(url, pages.ssiListsMore, pages.ssiForm));
+        return send(200, ssiPage(pages.ssiForm));
       }
       if (PADI_HOSTS.includes(url.hostname) && url.pathname === "/__typed") {
         pages.typedIntoSignIn.push(url.searchParams.get("box") ?? "?");
@@ -272,11 +243,11 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
       if (url.hostname === "pros.padi.com" && url.pathname === "/divechek") {
         if (pages.padi === "expires-on-search") {
           return url.search === ""
-            ? send(200, divechekPage(url, pages.padiCardNumber))
+            ? send(200, divechekPage(url, pages.padiCardNumber, pages.padiListsMore))
             : send(200, PADI_SIGN_IN);
         }
         return pages.padi === "signed-in-on-pros"
-          ? send(200, divechekPage(url, pages.padiCardNumber))
+          ? send(200, divechekPage(url, pages.padiCardNumber, pages.padiListsMore))
           : send(200, PADI_SIGN_IN);
       }
       if (url.hostname === "login.padi.com") return send(200, PADI_SIGN_IN);
@@ -334,9 +305,8 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires the destructuring pattern.
   agencyPages: async ({}, use) => {
     await use({
-      ssiListsMore: false,
       ssiForm: "as-is",
-      ssiHold: null,
+      padiListsMore: false,
       padi: "sign-in-form",
       padiCardNumber: "",
       requests: [],
@@ -452,11 +422,13 @@ const extensionVersion = publishedManifest.version;
 async function diverWithPendingSsiCard(page: Page, prefix: string) {
   const stamp = Date.now();
   const name = `${prefix} Realext${stamp}`;
-  await page.goto(`/shop/${SHOP}/divers/new`);
-  await page.getByLabel("Full name").fill(name);
-  await page.getByLabel("Email").fill(`realext-${stamp}@example.com`);
-  await page.getByRole("button", { name: "Add diver" }).click();
-  await page.waitForURL(new RegExp(`/shop/${SHOP}/divers/[0-9a-f-]{36}`));
+  await page.goto(`/shop/${SHOP}/divers`);
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(name);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
+  await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
+  await page.getByLabel("Date of birth").fill("1990-04-12");
+  await page.getByRole("button", { name: "Save details" }).click();
+  await expect(page.getByRole("status")).toContainText("Diver details updated");
   const group = await openDiverFileGroup(page, "Certification records");
   await group.getByText("Add certification", { exact: true }).click();
   const form = page
@@ -519,30 +491,29 @@ test("DiveDay sees the installed extension, and settings says this browser has i
   await expect(row.getByText("Not added", { exact: true })).toHaveCount(0);
 });
 
-test("Check with SSI fills SSI's page, certifies on a clear match, and Undo puts it back", async ({
+test("SSI opens a manual lookup and fills after the staffer reveals the form", async ({
   page,
+  context,
   extensionId,
   agencyPages,
 }) => {
   test.setTimeout(60_000);
   void extensionId;
-  const { name, cardNumber, cards } = await diverWithPendingSsiCard(page, "Ada");
-
+  const { name, cards } = await diverWithPendingSsiCard(page, "Ada");
+  const opened = context.waitForEvent("page");
   await cards.getByRole("button", { name: "Check with SSI" }).click();
-
-  const toast = page.getByRole("status").filter({ hasText: CERTIFIED });
-  await expect(toast).toBeVisible({ timeout: 20_000 });
-  await expect(cards.getByText(/^Checked with SSI by /)).toBeVisible();
-  // The extension typed the diver's name and card number into SSI's form.
-  const searched = new URL(
-    "https://my.divessi.com/online_diver_check?" +
-      new URLSearchParams({ diver_name: name, card_number: cardNumber }).toString(),
-  );
-  expect(agencyPages.requests).toContain(`GET ${searched.href}`);
-
-  await toast.getByRole("button", { name: "Undo" }).click();
-  await expect(cards.getByRole("button", { name: "Check with SSI" })).toBeVisible();
+  const lookup = await opened;
+  await expect(cards.getByText(/Review SSI’s terms and complete the check/)).toBeVisible();
+  await expect(lookup.getByLabel("Accept terms")).not.toBeChecked();
+  await expect(lookup.locator("#firstname")).toHaveValue("");
+  // This is the loopback fake's checkbox, not SSI's real terms.
+  await lookup.getByLabel("Accept terms").check();
+  await expect(lookup.locator("#firstname")).toHaveValue("Ada");
+  await expect(lookup.locator("#lastname")).toHaveValue(name.split(" ").at(-1) ?? "");
+  await expect(lookup.locator("#dob")).toHaveValue("1990-04-12");
+  await expect(cards.getByRole("button", { name: "Mark certified" })).toBeVisible();
   await expect(cards.getByText(/^Checked with SSI by /)).toHaveCount(0);
+  expect(agencyPages.requests.filter((request) => request.includes("?"))).toEqual([]);
 });
 
 test("signed out of PADI, the check says to sign in first and types nothing into PADI's sign-in", async ({
@@ -641,13 +612,8 @@ test("signed out of PADI between the form and its answer, the check says to sign
   await expect(cards.getByText(/^Checked with PADI by /)).toHaveCount(0);
 });
 
-// diveday:quarantine #2878 until 2026-10-28: CI can stall on the first SSI lookup before filling its form; nightly retains the exact check.
-test("Check all on a departure settles its rows one at a time through the extension @quarantine", async ({
-  page,
-  extensionId,
-  agencyPages,
-}) => {
-  test.setTimeout(120_000);
+test("SSI cards are excluded from Check all", async ({ page, extensionId }) => {
+  test.setTimeout(90_000);
   void extensionId;
   const { name: newcomer } = await diverWithPendingSsiCard(page, "Rory");
   const trip = await findTripOnBoard(page, SHOP, DEPARTURE);
@@ -663,86 +629,50 @@ test("Check all on a departure settles its rows one at a time through the extens
   await expect(
     rosterRow(page, SEEDED_DIVER).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();
-  const settled = page
-    .getByRole("region", { name: "Divers", exact: true })
-    .locator("li")
-    .filter({ hasText: CERTIFIED });
-  // "Checking 2 of 2…" lasts only as long as the second lookup, a few seconds
-  // that a loaded runner can spend between two polls. SSI holds that answer
-  // until the first card has been seen settled and the second still checking.
-  let openSecondLookup = () => {};
-  agencyPages.ssiHold = {
-    after: 1,
-    open: new Promise<void>((resolve) => {
-      openSecondLookup = resolve;
-    }),
-  };
-
-  await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
-
-  // One card at a time: while the second is being looked up, only the first has settled.
-  await expect(page.getByText("Checking 2 of 2…")).toBeVisible({ timeout: 20_000 });
-  await expect(settled).toHaveCount(1);
-  openSecondLookup();
-  await expect(page.getByText("Checked 2. Certified: 2.")).toBeVisible({ timeout: 20_000 });
-  for (const diver of [SEEDED_DIVER, newcomer]) {
-    await expect(rosterRow(page, diver).getByText(CERTIFIED)).toBeVisible();
-    await expect(
-      rosterRow(page, diver).getByRole("button", { name: "Check with SSI" }),
-    ).toHaveCount(0);
-  }
-  expect(agencyPages.requests.filter((request) => request.includes("diver_name="))).toHaveLength(2);
+  await expect(page.getByRole("button", { name: /^Check all/ })).toHaveCount(0);
 });
 
-test("after a match, the other cards SSI's page lists are offered, and the ticked ones land pending", async ({
+test("other PADI cards shown after an automatic match remain pending until confirmed", async ({
   page,
   extensionId,
   agencyPages,
 }) => {
   test.setTimeout(60_000);
   void extensionId;
-  agencyPages.ssiListsMore = true;
-  const { cards } = await diverWithPendingSsiCard(page, "Mae");
-
-  await cards.getByRole("button", { name: "Check with SSI" }).click();
-  await expect(page.getByRole("status").filter({ hasText: CERTIFIED })).toBeVisible({
+  agencyPages.padi = "signed-in-on-pros";
+  agencyPages.padiListsMore = true;
+  const { cards, cardNumber } = await diverWithPendingPadiCard(page);
+  agencyPages.padiCardNumber = cardNumber;
+  await cards.getByRole("button", { name: "Check with PADI" }).click();
+  await expect(page.getByRole("status").filter({ hasText: PADI_CERTIFIED })).toBeVisible({
     timeout: 20_000,
   });
   const offer = cards.getByRole("group", { name: LISTED_LEAD });
-  await expect(offer.getByRole("checkbox", { name: "Enriched Air Nitrox" })).toBeChecked();
-  await expect(offer.getByRole("checkbox", { name: "Deep Diving" })).toBeChecked();
-
-  await offer.getByRole("checkbox", { name: "Deep Diving" }).uncheck();
+  await expect(offer.getByRole("checkbox", { name: "Enriched Air Diver" })).toBeChecked();
+  await expect(offer.getByRole("checkbox", { name: "Deep Diver" })).toBeChecked();
+  await offer.getByRole("checkbox", { name: "Deep Diver" }).uncheck();
   await offer.getByRole("button", { name: "Add" }).click();
-  await expect(cards.getByText("Added")).toBeVisible();
-
-  const nitrox = cards.getByRole("listitem").filter({ hasText: "SSI · Nitrox" });
-  await expect(nitrox.getByText("Listed on SSI’s page.")).toBeVisible();
+  const nitrox = cards.getByRole("listitem").filter({ hasText: "PADI · Nitrox" });
+  await expect(nitrox.getByText("Listed on PADI’s page.")).toBeVisible();
   await expect(nitrox.getByRole("button", { name: "Mark certified" })).toBeVisible();
-  await expect(cards.getByRole("listitem").filter({ hasText: "SSI · Deep" })).toHaveCount(0);
+  await expect(cards.getByRole("listitem").filter({ hasText: "PADI · Deep" })).toHaveCount(0);
 });
 
-test("a captcha on SSI's form is the staffer's to answer: nothing is typed, and the row says so", async ({
-  page,
-  extensionId,
-  agencyPages,
-}) => {
+test("SSI leaves a staff-edited identity untouched", async ({ page, context, extensionId }) => {
   test.setTimeout(60_000);
   void extensionId;
   const { cards } = await diverWithPendingSsiCard(page, "Cy");
-  agencyPages.ssiForm = "captcha";
-  agencyPages.requests.length = 0;
-
+  const opened = context.waitForEvent("page");
   await cards.getByRole("button", { name: "Check with SSI" }).click();
-
-  await expect(cards.getByText("SSI is asking if you’re human. Check on its page.")).toBeVisible({
-    timeout: 20_000,
+  const lookup = await opened;
+  await expect(cards.getByText(/Review SSI’s terms and complete the check/)).toBeVisible();
+  await lookup.locator("#firstname").evaluate((input: HTMLInputElement) => {
+    input.value = "Another";
   });
-  await expect(cards.getByRole("link", { name: "Check with SSI" })).toBeVisible();
-  // The form was opened and never sent.
-  expect(agencyPages.requests).toContain("GET https://my.divessi.com/online_diver_check");
-  expect(agencyPages.requests.filter((request) => request.includes("diver_name="))).toEqual([]);
-  await expect(cards.getByText(/^Checked with SSI by /)).toHaveCount(0);
+  await lookup.getByLabel("Accept terms").check();
+  await expect(lookup.locator("#firstname")).toHaveValue("Another");
+  await expect(lookup.locator("#lastname")).toHaveValue("");
+  await expect(lookup.locator("#dob")).toHaveValue("");
 });
 
 test("SSI's page with its boxes renamed reads as a changed page, and nothing is sent", async ({

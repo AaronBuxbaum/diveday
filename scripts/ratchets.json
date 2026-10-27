@@ -198,13 +198,12 @@
       {
         "why": "cert-check extension specs (#2625) merged to main before the long-literal ratchet landed",
         "files": {
-          "e2e/agency-check-extension.spec.ts": "0 -> 8",
           "e2e/agency-check.spec.ts": "0 -> 1"
         }
       }
     ],
     "e2e/add-diver.spec.ts": 6,
-    "e2e/agency-check-extension.spec.ts": 8,
+    "e2e/agency-check-extension.spec.ts": 7,
     "e2e/agency-check-padi.spec.ts": 7,
     "e2e/agency-check-roster.spec.ts": 3,
     "e2e/agency-check.spec.ts": 1,

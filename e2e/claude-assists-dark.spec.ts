@@ -17,7 +17,7 @@ test.describe("the front-of-house assists, dark", () => {
   }) => {
     await page.goto("/shop/blue-mantis/inbox");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Make a request/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Draft a booking request/ })).toHaveCount(0);
     await expect(page.getByText("Urgent", { exact: true })).toHaveCount(0);
 
     await page.goto("/shop/blue-mantis/bookings/new#call");

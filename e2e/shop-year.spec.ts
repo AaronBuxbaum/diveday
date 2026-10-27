@@ -42,11 +42,15 @@ test.describe("the year on Reports", () => {
     // **The year's money is its own row** (fourth UX review, item 25): net
     // revenue, tax and tips for the owner, apart from the four figures, which
     // stay the card's (divers, boats and sites, never money: ADR
-    // 20260908-one-hand). The year CSV sits beside it.
+    // 20260908-one-hand). The export menu downloads the year on screen.
     await expect(figures.getByText("Net revenue")).toHaveCount(0);
     const money = page.getByRole("region", { name: "The year’s money" });
     await expect(money.getByText("Tax collected")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Download the year (CSV)" })).toBeVisible();
+    await page.getByRole("button", { name: "Export", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Download CSV" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/reports/download?year=2026",
+    );
   });
 
   test("the month page is one tap back", { tag: READ_ONLY }, async ({ page }) => {
@@ -66,7 +70,7 @@ test.describe("the year on Reports", () => {
     const card = page.getByRole("link", { name: "Print the card" });
     await expect(card).toBeVisible();
     const href = await card.getAttribute("href");
-    expect(href).toBe("/shop/blue-mantis/reports/card");
+    expect(href).toBe("/shop/blue-mantis/reports/card?year=2026");
     const response = await request.get(href ?? "");
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toContain("image/png");
