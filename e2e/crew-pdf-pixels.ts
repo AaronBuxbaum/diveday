@@ -4,13 +4,15 @@ import path from "node:path";
 import sharp from "sharp";
 
 const normalize = (text: string) => text.replace(/\s/gu, "").toLowerCase();
-const decode = (text: string) =>
-  text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+const XML_ENTITIES: Readonly<Record<string, string>> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&apos;": "'",
+};
+export const decode = (text: string) =>
+  text.replace(/&(?:amp|lt|gt|quot|apos);/g, (entity) => XML_ENTITIES[entity]);
 
 /** English seeded rota: assert actual paper ink, including repeated context and warnings. */
 export async function assertCrewPdfPixels(
