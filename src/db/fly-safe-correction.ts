@@ -16,6 +16,7 @@ import {
 } from "./fly-safe-exposures";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import { notificationProviderForDb, sendNotification } from "./notifications";
+import { queryAll } from "./query-helpers";
 import { bookings, notificationSendQueue, people, shops, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
@@ -42,24 +43,29 @@ const FLY_SAFE_QUERY_CONCURRENCY = 4;
 
 /** Preserve input order while keeping database-backed work to a small fixed fan-out. */
 export async function mapFlySafeConcurrent<T, R>(
+  db: DbExecutor,
   items: readonly T[],
   concurrency: number,
   work: (item: T, index: number) => Promise<R>,
 ): Promise<R[]> {
   const results = new Array<R>(items.length);
   const indexedItems = items.map((item, index) => ({ item, index }));
-  let nextIndex = 0;
-  const workers = Array.from(
-    { length: Math.min(items.length, Math.max(1, concurrency)) },
-    async () => {
-      while (true) {
-        const next = indexedItems[nextIndex++];
-        if (!next) return;
-        results[next.index] = await work(next.item, next.index);
-      }
-    },
-  );
-  await Promise.all(workers);
+  const limit = Math.max(1, concurrency);
+  for (let start = 0; start < indexedItems.length; start += limit) {
+    const batch = indexedItems.slice(start, start + limit);
+    const batchResults = await queryAll(
+      db,
+      batch.map(
+        ({ item, index }) =>
+          () =>
+            work(item, index),
+      ),
+    );
+    for (let offset = 0; offset < batch.length; offset += 1) {
+      const entry = batch[offset];
+      if (entry) results[entry.index] = batchResults[offset] as R;
+    }
+  }
   return results;
 }
 
@@ -561,6 +567,7 @@ async function readFlySafeFollowUps(
     : [];
   const queueByKey = new Map(queued.map((row) => [row.key, row.status]));
   const resultBySeat = await mapFlySafeConcurrent(
+    db,
     entriesBySeat,
     FLY_SAFE_QUERY_CONCURRENCY,
     async ({ seat, entries }) => {
@@ -686,12 +693,16 @@ export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: strin
         isNotNull(bookings.flySafeHoursTold),
       ),
     );
-  const groups = await mapFlySafeConcurrent(candidates, FLY_SAFE_QUERY_CONCURRENCY, async (trip) =>
-    (await readFlySafeFollowUps(db, { shopId: input.shopId, tripId: trip.id })).map((item) => ({
-      ...item,
-      tripId: trip.id,
-      tripTitle: trip.title,
-    })),
+  const groups = await mapFlySafeConcurrent(
+    db,
+    candidates,
+    FLY_SAFE_QUERY_CONCURRENCY,
+    async (trip) =>
+      (await readFlySafeFollowUps(db, { shopId: input.shopId, tripId: trip.id })).map((item) => ({
+        ...item,
+        tripId: trip.id,
+        tripTitle: trip.title,
+      })),
   );
   return groups.flat();
 }
@@ -769,6 +780,7 @@ export async function sendFlySafeCorrections(
   const plans = new Map<string, number | null>();
   const stale: string[] = [];
   const plansForSeats = await mapFlySafeConcurrent(
+    db,
     owed,
     FLY_SAFE_QUERY_CONCURRENCY,
     async (seat) => {
