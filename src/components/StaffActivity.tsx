@@ -34,6 +34,9 @@ export function StaffActivity({
     let inFlight: Promise<void> | undefined;
     let generation = 0;
     const root = document.createElement("div");
+    // An empty block after a named print page creates a trailing blank sheet.
+    // The portal still hosts the fixed lock dialog without its own layout box.
+    root.style.display = "contents";
     document.body.append(root);
     setPortal(root);
     const previousInert = new Map<HTMLElement, boolean>();
@@ -53,6 +56,8 @@ export function StaffActivity({
     observer.observe(document.body, { childList: true });
     const lock = (value: boolean) => {
       if (stopped) return;
+      // Print protection must start before React commits the lock dialog.
+      root.toggleAttribute("data-staff-session-lock", value);
       isLocked = value;
       if (value) coverBody();
       else {
@@ -163,6 +168,7 @@ export function StaffActivity({
           <div
             ref={dialogRef}
             className="fixed inset-0 z-50 grid place-items-center bg-surface p-6"
+            data-staff-session-lock
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="staff-session-title"

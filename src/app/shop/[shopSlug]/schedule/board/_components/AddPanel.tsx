@@ -124,6 +124,7 @@ export function AddPanel({
     patternAnchor,
     pattern,
     patternApplied,
+    markPatternEdited,
     lensId,
     setLensId,
     crew,
@@ -151,6 +152,8 @@ export function AddPanel({
     <FieldGrid
       as="form"
       action={onAdd}
+      onInputCapture={markPatternEdited}
+      onChangeCapture={markPatternEdited}
       columns={1}
       className={
         standalone

@@ -13,6 +13,7 @@ import {
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ShopSearchField } from "@/components/ShopSearchField";
+import { StaffActivity } from "@/components/StaffActivity";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -21,7 +22,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
-import { staffDestinationGates } from "@/lib/authz";
+import { isStaff, staffDestinationGates } from "@/lib/authz";
 import { REFUSED_SHOP_SLUG_HEADER, REQUEST_PATH_HEADER } from "@/lib/embed-routes";
 import {
   FIND_YOUR_BOOKING_PATH,
@@ -178,13 +179,30 @@ async function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: L
   const t = staffTranslator(locale);
   const [session, shop] = await Promise.all([auth(), shopBySlugCached(shopSlug)]);
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+    <main
+      id="staff-session-content"
+      className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center"
+    >
       <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("shared.notFound.heading")}</h1>
       <Link href={shopPath(shopSlug)} className={buttonClass({ className: "mt-6" })}>
         {t("shared.notFound.backToToday")}
       </Link>
-      {session?.user && shop ? (
+      {session?.user &&
+      shop &&
+      session.user.shopId === shop.id &&
+      isStaff(session.user.roles) &&
+      session.user.sessionId &&
+      session.idleRemainingMs !== undefined ? (
         <div className="mt-8 w-full">
+          <StaffActivity
+            sessionId={session.user.sessionId}
+            copy={{
+              title: t("shared.sessionIdle.title"),
+              body: t("shared.sessionIdle.body"),
+              retry: t("shared.sessionIdle.retry"),
+              signIn: t("shared.sessionIdle.signIn"),
+            }}
+          />
           <ShopSearchField
             shopSlug={shopSlug}
             navGates={staffDestinationGates(session.user.roles, shop)}
