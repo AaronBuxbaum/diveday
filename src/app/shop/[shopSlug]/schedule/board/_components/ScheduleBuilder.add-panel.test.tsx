@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -341,6 +341,25 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     expect(also).not.toBeChecked();
     expect(also).toHaveAttribute("name", "alsoUsualStart");
     expect(also).toHaveAttribute("value", "13:00");
+  });
+
+  it("does not overwrite the desk's edits when a weekday pattern arrives late", async () => {
+    let resolvePattern!: (value: typeof pattern) => void;
+    const delayed = new Promise<typeof pattern>((resolve) => {
+      resolvePattern = resolve;
+    });
+    renderBuilder({ loadPattern: () => delayed });
+    const title = await screen.findByLabelText("What is it");
+    await userEvent.type(title, "My trip");
+    await userEvent.clear(screen.getByLabelText("Seats"));
+    await userEvent.type(screen.getByLabelText("Seats"), "6");
+    await act(async () => {
+      resolvePattern(pattern);
+      await delayed;
+    });
+    expect(title).toHaveValue("My trip");
+    expect(screen.getByLabelText("Seats")).toHaveValue(6);
+    expect(screen.queryByText(/Filled from your last/)).not.toBeInTheDocument();
   });
 
   it("starts blank on request: the fields empty, the crew gone, the line gone", async () => {
