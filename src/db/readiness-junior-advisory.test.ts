@@ -125,3 +125,23 @@ it("keeps unclassified PADI Advanced card and age checks visible without gating 
     expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
   }
 });
+
+it("keeps unclassified PADI card evidence visible for a known adult without gating boarding", async () => {
+  const { db, shop, reef, seat, card } = await fixture();
+  await db.update(people).set({ dateOfBirth: "1990-01-01" }).where(eq(people.id, seat.person.id));
+  await db
+    .update(certifications)
+    .set({ level: "advanced_open_water" })
+    .where(eq(certifications.id, card.id));
+  for (const depth of [12, 25, null]) {
+    await db.update(diveSites).set({ maxDepthMeters: depth }).where(eq(diveSites.shopId, shop.id));
+    const diver = (await listTripReadiness(db, shop.id, reef.id)).find(
+      (row) => row.booking.id === seat.booking.id,
+    );
+    expect(diver?.depthAdvisory).toMatchObject({
+      status: "verification_required",
+      verificationReasons: expect.arrayContaining(["card_status"]),
+    });
+    expect(diver?.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
+  }
+});

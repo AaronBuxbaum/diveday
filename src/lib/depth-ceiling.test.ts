@@ -248,6 +248,52 @@ describe("agency-specific junior depth evidence", () => {
     juniorStatus: "junior" | "full" | null,
   ) => ({ ...card(level, { agency }), juniorStatus });
 
+  it.each(["2011-07-24", "2009-01-01", "1990-01-01"])(
+    "asks staff to verify an unclassified PADI card at age 15 or above (%s)",
+    (birthday) => {
+      const limit = diverDepthLimit(
+        [sighted("advanced_open_water", "padi", null)],
+        [],
+        birthday,
+        TODAY,
+      );
+      for (const siteDepth of [25, null]) {
+        expect(checkDepthCeiling(siteDepth, limit)).toMatchObject({
+          status: "verification_required",
+          verificationReasons: ["card_status"],
+        });
+      }
+    },
+  );
+
+  it("does not let a known PADI card hide another unclassified PADI card at a known adult age", () => {
+    for (const status of ["full", "junior"] as const) {
+      const limit = diverDepthLimit(
+        [sighted("advanced_open_water", "padi", status), sighted("open_water", "padi", null)],
+        [],
+        "1990-01-01",
+        TODAY,
+      );
+      expect(checkDepthCeiling(null, limit)).toMatchObject({
+        status: "verification_required",
+        verificationReasons: ["card_status"],
+      });
+    }
+  });
+
+  it("does not request a card-status check for a known full or junior PADI card at a known adult age", () => {
+    for (const status of ["full", "junior"] as const) {
+      const limit = diverDepthLimit(
+        [sighted("open_water", "padi", status)],
+        [],
+        "1990-01-01",
+        TODAY,
+      );
+      expect(checkDepthCeiling(18, limit)).toMatchObject({ status: "within" });
+      expect(checkDepthCeiling(null, limit)).toEqual({ status: "unknown" });
+    }
+  });
+
   it("asks staff to check card and age for an unclassified PADI Advanced card without a birthday", () => {
     const limit = diverDepthLimit([sighted("advanced_open_water", "padi", null)], [], null, TODAY);
     for (const siteDepth of [25, null]) {

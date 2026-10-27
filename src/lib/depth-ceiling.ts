@@ -118,8 +118,7 @@ export function diverDepthLimit(
   if (age === null && verified.length === 0) reasons.add("junior_limits");
   for (const card of cards) {
     if (!card.agency) continue;
-    if (card.juniorStatus == null && (card.agency !== "padi" || age === null))
-      reasons.add("card_status");
+    if (card.juniorStatus == null) reasons.add("card_status");
     if (
       age === null ||
       (card.agency === "bsac" && age < ADULT_AGE) ||

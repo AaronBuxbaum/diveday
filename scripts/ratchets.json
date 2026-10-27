@@ -358,12 +358,6 @@
         }
       },
       {
-        "why": "label-maps table rows for DEPTH_RANGE_KEYS (#2426): a list that cannot live in a sibling",
-        "files": {
-          "src/db/readiness.test.ts": "1519 -> 1522"
-        }
-      },
-      {
         "why": "merge of the ready-for-human batch's worker branches (#2611 tests from two sides)",
         "files": {
           "src/lib/trip-admission.test.ts": "984 -> 992"
@@ -460,7 +454,7 @@
     "src/db/notifications.test.ts": 1871,
     "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1195,
-    "src/db/readiness.test.ts": 1522,
+    "src/db/readiness.test.ts": 1512,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1151,
     "src/db/reminders.test.ts": 981,

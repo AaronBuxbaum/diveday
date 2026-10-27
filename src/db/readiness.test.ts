@@ -773,11 +773,6 @@ describe("depth advisory (H-08 — a warning, never a gate)", () => {
     return { db, shop, reef, rosterEntry, diver };
   }
 
-  it("stays quiet when every site on the trip is within the diver's ceiling", async () => {
-    const { diver } = await withAllSiteDepths(12);
-    expect(diver.depthAdvisory).toMatchObject({ status: "within", siteDepth: 12, unit: "meters" });
-  });
-
   it("warns when the trip goes deeper than the card trains for", async () => {
     const { diver } = await withAllSiteDepths(30);
     expect(diver.depthAdvisory).toMatchObject({
@@ -796,11 +791,6 @@ describe("depth advisory (H-08 — a warning, never a gate)", () => {
     const { diver } = await withAllSiteDepths(30);
     expect(diver.depthAdvisory.status).toBe("exceeds");
     expect(diver.readiness.blockers.some((blocker) => blocker.code.includes("depth"))).toBe(false);
-  });
-
-  it("says nothing at all when no site on the trip has a depth on file", async () => {
-    const { diver } = await withAllSiteDepths(null);
-    expect(diver.depthAdvisory).toEqual({ status: "unknown" });
   });
 
   it("takes the deepest site the trip visits, not just the first", async () => {
