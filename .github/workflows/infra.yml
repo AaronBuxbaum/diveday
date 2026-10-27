@@ -71,7 +71,7 @@ jobs:
             echo "Base commit '${BASE_SHA}' is unresolvable — running the infra check anyway." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          changed_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- infra cdk.json .github/workflows/infra.yml)
+          changed_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- infra cdk.json config/postgres-image/Dockerfile .github/workflows/infra.yml)
           if [ -n "${changed_paths}" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             {

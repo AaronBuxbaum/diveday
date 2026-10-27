@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { stepUpChallengeUrl } from "../src/lib/security-step-up";
 import { TOTP_DRIFT_STEPS, TOTP_STEP_SECONDS, totpCode } from "../src/lib/totp";
@@ -18,6 +19,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 import type { AuditCapture } from "./visual-audit-capture";
 
 const copy = staffTranslator("en-US");
+const diverCopy = diverTranslator("en-US");
 
 export function registerStaffAuditCaptures(capture: AuditCapture, flowTimeout: number) {
   test.describe("light mode — staff interactive outcomes", () => {
@@ -190,6 +192,9 @@ globalThis.Date = new Proxy(__RealDate, {
           { timeout: 30_000 },
         )
         .toBeGreaterThan(0);
+      await page
+        .getByRole("button", { name: diverCopy("ready.offlineRemove"), exact: true })
+        .waitFor();
       await context.setOffline(true);
       try {
         await page.reload();

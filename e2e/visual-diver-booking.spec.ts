@@ -396,7 +396,16 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
         await expect(page).toHaveURL(/\/ready\//);
         await page.getByRole("heading", { name: "Your group’s seats" }).waitFor();
+        const summary = page.getByRole("link", {
+          name: diverCopy("ready.groupSummary", { total: 2, unclaimed: 1 }),
+        });
+        await expect(summary).toBeVisible();
         await capture(page, "party-organizer-confirmation", scheme);
+        await summary.click();
+        await expect(
+          page.locator("#party-seats li").filter({ hasText: "Sam Reyes" }),
+        ).toBeFocused();
+        await capture(page, "party-organizer-seat-target", scheme);
 
         // Collapsed disclosure — the token never renders as pixels (that's
         // what keeps this capture stable run to run), but the text is in the
@@ -503,7 +512,10 @@ for (const scheme of ["light", "dark"] as const) {
         }
 
         await page.goto(readyUrl);
-        await page.getByRole("button", { name: "Ask to move" }).waitFor();
+        await page.getByRole("link", { name: diverCopy("ready.moveAsk.changePlans") }).waitFor();
+        await capture(page, "ready-change-plans-date", scheme);
+        await page.getByRole("link", { name: diverCopy("ready.moveAsk.changePlans") }).click();
+        await expect(page.locator("#move-ask")).toBeFocused();
         await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
         await capture(page, "ready-ask-to-move", scheme);
 
@@ -518,6 +530,11 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(receipt.getByText(diverCopy("ready.moveAsk.bookingUnchanged"))).toBeVisible();
         await expect(receipt.locator("time")).toHaveAttribute("datetime", e2eNow().toISOString());
         await capture(page, "ready-asked-to-move", scheme);
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await expect(
+          page.getByRole("link", { name: diverCopy("ready.moveAsk.requestPending") }),
+        ).toBeVisible();
+        await capture(page, "ready-move-request-date-pending", scheme);
       });
 
       /**

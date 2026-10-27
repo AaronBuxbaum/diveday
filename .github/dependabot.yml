@@ -34,3 +34,12 @@ updates:
       github-actions:
         patterns:
           - "*"
+  # Both the database dump and restore drill read this pinned image reference.
+  - package-ecosystem: docker
+    directory: /config/postgres-image
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: docker/library/postgres
+        versions:
+          - ">=18"

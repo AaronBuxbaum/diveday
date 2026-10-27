@@ -4,7 +4,8 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
-import { makeActivitySafe, test } from "./fixtures";
+import { RSTC_QUESTIONNAIRE } from "../src/lib/medical";
+import { expect, makeActivitySafe, test } from "./fixtures";
 import {
   daysFromNow,
   openDiverFileGroup,
@@ -15,6 +16,7 @@ import {
 import {
   capture,
   capturePrint,
+  diverCopy,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
   REEF_TRIP,
@@ -167,11 +169,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(waiverHref);
         await page.getByRole("link", { name: "Take this to your doctor" }).waitFor();
         await page.mouse.move(0, 0);
+        await expect(page.getByText(diverCopy("waiver.medicalReferralNext"))).toBeVisible();
         await capture(page, "waiver-medical-held", scheme);
 
         await page.getByRole("link", { name: "Take this to your doctor" }).click();
         await page.getByTestId("doctor-evaluation-form").waitFor();
         await page.mouse.move(0, 0);
+        await expect(
+          page.getByRole("link", { name: diverCopy("waiver.doctor.formLink") }),
+        ).toHaveAttribute("href", RSTC_QUESTIONNAIRE.published.url);
+        await expect(
+          page.getByRole("button", { name: diverCopy("waiver.doctor.print") }),
+        ).toBeVisible();
         await capture(page, "waiver-doctor", scheme);
         if (scheme === "light") {
           await page.setViewportSize({ width: 816, height: 1056 });
