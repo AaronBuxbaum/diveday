@@ -38,7 +38,7 @@ export function PartySection({
 }) {
   if (seats.length === 0 && !addSeatAction) return null;
   return (
-    <div id="party-seats" className="scroll-mt-8 space-y-3">
+    <div id="party-seats" tabIndex={-1} className="scroll-mt-8 space-y-3">
       <PartyClaimPanel
         locale={locale}
         seats={seats}

@@ -27,6 +27,7 @@ import { questionnaireForJurisdiction } from "@/lib/medical";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction } from "./actions";
+import { completedMedicalState } from "./completed-medical-state";
 import { EmergencyContactSection } from "./EmergencyContactSection";
 import { GuardianCard } from "./GuardianCard";
 import { MEDICAL_ALERT_ANCHOR, MedicalAlertSection } from "./MedicalAlertSection";
@@ -35,13 +36,13 @@ import { medicalDraftState } from "./medical-draft-state";
 import { ShopQuestionsSection } from "./ShopQuestionsSection";
 import { SignatureCard } from "./SignatureCard";
 import { isShopQuestionRefusal, shopQuestionsForPage } from "./shop-questions-state";
-import { WaiverCompleted } from "./WaiverCompleted";
+import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
 import { ExpiredLink, HeldWaiverCard, UnavailableWaiverLink } from "./WaiverDoorCards";
 import { WaiverHelpLine } from "./WaiverHelpLine";
 import { WaiverPacing } from "./WaiverPacing";
 import { WaiverRelease } from "./WaiverRelease";
 import { WaiverSignBlock } from "./WaiverSignBlock";
-import { refusalRailAnchors, waiverRailProgress } from "./WaiverStepRail";
+import { refusalRailAnchors } from "./WaiverStepRail";
 import { WaiverTripMeta } from "./WaiverTripMeta";
 import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
 import { railLabels } from "./waiver-rail-copy";
@@ -167,23 +168,13 @@ export default async function WaiverPage({
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     // The same gate the doctor's page opens on, so the door never leads to a redirect.
     const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
-    // **The medical step does not tick on a hold**: the record is signed but its
-    // medical side is open, and "3 of 3 done" under "a doctor must confirm" would
-    // turn the blocking state into a checkbox (glossary, **Waiver / release**).
-    const signedRail = waiverRailProgress({
-      medicalAnswered: 0,
-      medicalTotal: 0,
-      medicalStillOpen: needsReview,
-      signed: true,
-      // The Questions step stood on this page only when the version asked any.
-      shopQuestions: state.record.shopAnswers ? { requiredRemaining: 0, reached: true } : undefined,
-    });
+    const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
     return (
       <WaiverCompleted
         shop={shop}
         t={t}
         locale={locale}
-        needsReview={needsReview}
+        medicalState={completedMedicalState(state.record)}
         readyPath={readyPath}
         doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
         signedRail={signedRail}

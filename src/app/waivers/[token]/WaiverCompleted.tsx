@@ -6,13 +6,14 @@ import { buttonClass } from "@/components/ui/button";
 import type { TripSitePeek } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DepthUnit } from "@/lib/depth-units";
+import type { CompletedMedicalState } from "./completed-medical-state";
 import { MedicalReviewContact } from "./MedicalReviewContact";
-import { type WaiverRailProgress, WaiverStepRail } from "./WaiverStepRail";
+import { type WaiverRailProgress, WaiverStepRail, waiverRailProgress } from "./WaiverStepRail";
 import { railDoneLabel, railLabels } from "./waiver-rail-copy";
 
 /**
  * **Paperwork done**: the release this link carried is signed. What the page
- * decided about it (`needsReview`, the rail's closing frame, the readiness
+ * decided about it (`medicalState`, the rail's closing frame, the readiness
  * link) arrives decided; this only says it. The medical hold is the page's
  * gate, kept beside the read it rests on.
  *
@@ -24,7 +25,7 @@ export function WaiverCompleted({
   shop,
   t,
   locale,
-  needsReview,
+  medicalState,
   readyPath,
   doctorPath,
   signedRail,
@@ -38,7 +39,7 @@ export function WaiverCompleted({
   };
   t: DiverTranslator;
   locale: string;
-  needsReview: boolean;
+  medicalState: CompletedMedicalState;
   readyPath: string | null;
   /** "Take this to your doctor", while the release waits on a physician (H-127). */
   doctorPath: string | null;
@@ -46,6 +47,15 @@ export function WaiverCompleted({
   diveSitesList: TripSitePeek[];
 }) {
   const shopName = shop.name;
+  const needsReview = medicalState !== "complete";
+  const nextKey =
+    medicalState === "referral"
+      ? "waiver.medicalReferralNext"
+      : medicalState === "form_sent"
+        ? "waiver.medicalFormWaiting"
+        : medicalState === "declined"
+          ? "waiver.medicalDeclinedNext"
+          : "waiver.medicalShopReviewNext";
   return (
     <main className={THREAD_MEASURE_CLASS}>
       <EarnedMoment
@@ -53,29 +63,26 @@ export function WaiverCompleted({
         eyebrow={shopName}
         title={needsReview ? t("capability.waiverReceived") : t("capability.waiverDone")}
       >
-        <p>{needsReview ? t("waiver.medicalReview") : t("waiver.signedBody")}</p>
+        <p>{t("waiver.signedBody")}</p>
         {needsReview ? (
-          <>
-            {/* Corrected copy from the 2026-07-30 UX persona review (task
-              44): a "yes" answer needs a *physician's* written
-              clearance — the shop only receives and checks for that
-              sign-off, it never grants medical clearance itself, and
-              this never promises a timeline the diver's own doctor
-              controls. */}
-            <p className="mt-3">{t("waiver.medicalReviewNext")}</p>
-            <MedicalReviewContact shop={shop} t={t} />
-            {doctorPath ? (
-              <Link
-                href={doctorPath}
-                className={buttonClass({ variant: "secondary", className: "mt-5 me-3" })}
-              >
+          <div className="mt-5 text-base" data-medical-next={medicalState}>
+            <p className="font-medium">{t(nextKey)}</p>
+            {medicalState === "referral" && doctorPath ? (
+              <Link href={doctorPath} className={buttonClass({ className: "mt-4" })}>
                 {t("waiver.doctor.open")}
               </Link>
             ) : null}
-          </>
+            <MedicalReviewContact shop={shop} t={t} />
+          </div>
         ) : null}
         {readyPath ? (
-          <Link href={readyPath} className={buttonClass({ className: "mt-5" })}>
+          <Link
+            href={readyPath}
+            className={buttonClass({
+              variant: needsReview ? "secondary" : "primary",
+              className: "mt-5",
+            })}
+          >
             {t("waiver.seeWhatsLeft")}
           </Link>
         ) : null}
@@ -104,4 +111,16 @@ export function WaiverCompleted({
       />
     </main>
   );
+}
+
+/** A signature does not complete an unresolved medical step. */
+export function completedWaiverRail(needsReview: boolean, hasShopQuestions: boolean) {
+  return waiverRailProgress({
+    medicalAnswered: 0,
+    medicalTotal: 0,
+    medicalStillOpen: needsReview,
+    signed: true,
+    // Questions exists only when this release version asked them.
+    shopQuestions: hasShopQuestions ? { requiredRemaining: 0, reached: true } : undefined,
+  });
 }

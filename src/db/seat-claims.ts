@@ -6,6 +6,7 @@ import { seatListPriceCents } from "@/lib/deposits";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
+import { seatIsHeld } from "@/lib/no-show";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
@@ -666,6 +667,10 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
 /** One party seat as the organizer's claim panel shows it. */
 export type PartySeatClaim = {
   bookingId: string;
+  /** This authorized companion sails on a different departure from the lead. */
+  differentDeparture: boolean;
+  /** Current capacity fact for the header summary; the panel also retains released rows. */
+  seatHeld: boolean;
   /** The name currently on the seat — the organizer's own typing until claimed, the claimant after. */
   seatName: string;
   claimed: boolean;
@@ -884,6 +889,8 @@ export async function issuePartySeatClaims(
     });
     seats.push({
       bookingId: row.booking.id,
+      differentDeparture: row.booking.tripId !== row.leadTripId,
+      seatHeld: seatIsHeld(row.booking.status),
       // A held seat goes by the name it was booked under: the matched
       // record's name would tell whoever typed the email whose it is (#2125).
       seatName: seatName(row.person.fullName, row.booking),

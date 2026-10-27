@@ -43,6 +43,10 @@ describe("PartyClaimPanel", () => {
     expect(
       rendersFlush(screen.getByRole("button", { name: "Copy reminder link" }), "ghost", "sm"),
     ).toBe(true);
+    const target = screen.getByText("Maya Alvarez").closest("li");
+    expect(target).toHaveAttribute("id", "party-seat-seat-1");
+    expect(target).toHaveAttribute("tabindex", "-1");
+    expect(target?.querySelector("details")).not.toHaveAttribute("open");
     expect(screen.getAllByText("Waiver still needed")).toHaveLength(2);
     expect(screen.getByText("Waiver complete")).toBeInTheDocument();
     expect(
