@@ -658,6 +658,7 @@ function probeContext(page: Page, capture: string, scheme: "light" | "dark", wid
     exhaustiveAudit: process.env.VISUAL_EXHAUSTIVE_AUDIT === "1",
     initialPaintAudit: process.env.VISUAL_AUDIT_INITIAL_PAINT === "1",
     atlasSeen: PROBE_ATLAS_SEEN,
+    atlasRun: process.env.PIXEL_PROBE_RUN_ID ?? "",
     bound: <T>(what: string, ms: number, work: Promise<T>, degraded: T) =>
       withRendererBound(page, what, ms, work, degraded),
     budgets: {

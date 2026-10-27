@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
 import { chromiumLaunchOptions } from "./e2e/browser";
 import {
@@ -18,6 +19,10 @@ import {
 // and a worker server verifies it. Pin one resolved value into the environment
 // before anything.
 process.env.AUTH_SECRET ??= "diveday-e2e-secret";
+// The runner creates this once; its workers inherit the same atlas run.
+if (process.env.PIXEL_PROBE === "1") {
+  process.env.PIXEL_PROBE_RUN_ID ??= `${Date.now()}-${randomUUID()}`;
+}
 
 // Every worker server shares one read-only production build but owns an
 // isolated in-memory database, so the suite runs fully parallel. `next start`

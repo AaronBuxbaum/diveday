@@ -541,8 +541,10 @@ async function cutTiles(capture) {
 // Atlas sheets.
 
 async function atlasSheets() {
-  const atlasDir = path.join(OUT, "atlas");
-  const sheetsDir = path.join(OUT, "atlas-sheets");
+  const { latestAtlasRunDirectory } = await import("./pixel-probe/atlas.mjs");
+  const atlasDir = latestAtlasRunDirectory(path.join(OUT, "atlas"));
+  if (!atlasDir) throw new Error("No state atlas run found; capture with PIXEL_PROBE=1 first");
+  const sheetsDir = path.join(OUT, "atlas-sheets", path.basename(atlasDir));
   fs.mkdirSync(sheetsDir, { recursive: true });
   const entries = fs
     .readdirSync(atlasDir)
@@ -553,6 +555,7 @@ async function atlasSheets() {
     }))
     .filter((entry) => fs.existsSync(path.join(atlasDir, `${entry.hash}-rest.png`)))
     .sort((a, b) => String(a.sig).localeCompare(String(b.sig)));
+  if (entries.length === 0) throw new Error("The latest atlas run has no completed entries");
   const MAX = 1568;
   const PIXELS = 1_150_000;
   const GAP = 8;
@@ -603,7 +606,8 @@ async function atlasSheets() {
   const index = [
     "# State atlas",
     "",
-    "Each control signature, once, at rest | hover | focus (desktop, light).",
+    `Each control signature, once, at rest | hover | focus (desktop, light). Run: ${path.basename(atlasDir)}.`,
+    `Sheets: \`atlas-sheets/${path.basename(atlasDir)}/\`.`,
     "",
   ];
   for (const [s, sheet] of sheets.entries()) {
