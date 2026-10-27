@@ -102,6 +102,7 @@ describe("diverDepthLimit", () => {
         ceiling: { meters: 12, feet: 40 },
         basis: "junior_age",
         level: "open_water",
+        verificationReasons: ["junior_limits"],
       });
       expect(diverDepthLimit([card("advanced_open_water")], [], "2015-01-01", TODAY)).toMatchObject(
         { ceiling: { meters: 12 } },
@@ -245,6 +246,28 @@ describe("agency-specific junior depth evidence", () => {
     agency: Certification["agency"],
     juniorStatus: "junior" | "full" | null,
   ) => ({ ...card(level, { agency }), juniorStatus });
+
+  it("asks staff to verify age, depth and supervision for a PADI junior card without a birthday", () => {
+    const limit = diverDepthLimit([sighted("open_water", "padi", "junior")], [], null, TODAY);
+    for (const siteDepth of [18, null]) {
+      expect(checkDepthCeiling(siteDepth, limit)).toMatchObject({
+        status: "verification_required",
+        verificationReasons: ["junior_limits"],
+      });
+    }
+  });
+
+  it("asks staff to verify junior limits for an 11-year-old with no verified card", () => {
+    for (const cards of [[], [card("open_water", { status: "pending" })]]) {
+      const limit = diverDepthLimit(cards, [], "2015-01-01", TODAY);
+      for (const siteDepth of [8, null]) {
+        expect(checkDepthCeiling(siteDepth, limit)).toMatchObject({
+          status: "verification_required",
+          verificationReasons: ["junior_limits"],
+        });
+      }
+    }
+  });
 
   it("holds a NAUI junior Advanced card to 18 m instead of the PADI 21 m band", () => {
     const limit = diverDepthLimit(

@@ -521,7 +521,7 @@
     "depthWarningJuniorCard": "Reaches {site} {unit}, deeper than the {limit} {unit} limit on their junior card. Plan shallower or confirm the guide keeps them within limits.",
     "depthWarningUnconfirmed": "The site reaches {site} {unit}. Check this diver’s depth limit.",
     "depthVerificationCard": "Check whether the card is junior or full before planning the dive.",
-    "depthVerificationLimits": "Check the junior card’s depth and supervision requirements with the instructor.",
+    "depthVerificationLimits": "Check age, depth and supervision requirements with the instructor.",
     "depthWarningNoCard": "Reaches {site} {unit} with no certification on file to measure against; {limit} {unit} is the entry-level limit. This is not a block: check what they hold, or confirm the guide keeps them within limits.",
     "detailsSummaryLabel": "Details for {name}",
     "editPickup": "Edit pickup",

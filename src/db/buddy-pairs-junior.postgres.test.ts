@@ -192,6 +192,27 @@ describePostgres("one-tap party decisions against junior evidence changes", () =
     expect(await formPartyTeams(pg.connect(), input)).toBe(1);
   });
 
+  it("backs out if a seat is locked, then teams after it is released", async () => {
+    const { pg, shop, trip, staff } = await fixture();
+    const [seat] = await pg.db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.tripId, trip.id));
+    if (!seat) throw new Error("seat missing");
+    const gate = await holdRowLock(
+      pg,
+      sql`select id from bookings where id = ${seat.id} for update`,
+    );
+    const input = { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id };
+    try {
+      expect(await formPartyTeams(pg.connect(), input)).toBe("busy");
+      expect(await listTripBuddyTeams(pg.db, shop.id, trip.id)).toHaveLength(0);
+    } finally {
+      await gate.release();
+    }
+    expect(await formPartyTeams(pg.connect(), input)).toBe(1);
+  });
+
   for (const change of ["date of birth", "card status", "new card", "restored card"] as const) {
     it(`refuses an in-flight ${change} correction and then plans from the committed facts`, async () => {
       const { pg, shop, trip, first, staff, card } = await fixture();

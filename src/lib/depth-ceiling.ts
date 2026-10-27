@@ -85,7 +85,7 @@ export type DepthLimit = {
   verificationReasons?: JuniorVerificationReason[];
 };
 
-/** Under 15 on `onDate`: the diver's card is a Junior card, and the junior bands apply. */
+/** Under 15 on `onDate`; age does not establish what the card says. */
 export function isJuniorOnDate(dateOfBirth: CalendarDate, onDate: CalendarDate): boolean {
   return ageOnDate(dateOfBirth, onDate) <= JUNIOR_AGE_CEILING;
 }
@@ -114,13 +114,11 @@ export function diverDepthLimit(
     juniorStatus?: "junior" | "full" | null;
   })[];
   const reasons = new Set<JuniorVerificationReason>();
+  if (age !== null && age < JUNIOR_AGE_END) reasons.add("junior_limits");
   for (const card of cards) {
     if (!card.agency) continue;
     if (card.agency !== "padi" && card.juniorStatus == null) reasons.add("card_status");
-    if (
-      (age !== null && age < JUNIOR_AGE_END) ||
-      (card.agency !== "padi" && card.juniorStatus === "junior")
-    ) {
+    if (card.juniorStatus === "junior" && (card.agency !== "padi" || age === null)) {
       reasons.add("junior_limits");
     }
   }
@@ -168,7 +166,7 @@ export function diverDepthLimit(
     return { ceiling: JUNIOR_OPEN_WATER_LIMIT, basis: "junior_card", level, ...uncertain };
   }
 
-  if (!level) return { ceiling: NO_CARD_LIMIT, basis: "no_card", level: null };
+  if (!level) return { ceiling: NO_CARD_LIMIT, basis: "no_card", level: null, ...uncertain };
 
   // A Deep specialty is exactly the training that lifts an Open Water diver past
   // 18 m, so it raises the ceiling to the recreational limit — but it can only

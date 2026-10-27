@@ -521,7 +521,7 @@
     "depthWarningJuniorCard": "Llega a {site} {unit}, más profundo que el límite de {limit} {unit} de su titulación junior. Planifica más somero o confirma que el guía respete esos límites.",
     "depthWarningUnconfirmed": "El sitio alcanza {site} {unit}. Verifica el límite de profundidad de este buceador.",
     "depthVerificationCard": "Verifica si la titulación es junior o completa antes de planificar la inmersión.",
-    "depthVerificationLimits": "Verifica con el instructor los límites de profundidad y supervisión de la titulación junior.",
+    "depthVerificationLimits": "Verifica con el instructor los requisitos de edad, profundidad y supervisión.",
     "depthWarningNoCard": "Llega a {site} {unit} y no hay certificación registrada con la que compararlo; {limit} {unit} es el límite de iniciación. No es un bloqueo: verifica qué titulación consta en su ficha o confirma que el guía respete esos límites.",
     "detailsSummaryLabel": "Detalles de {name}",
     "editPickup": "Editar recogida",

@@ -204,6 +204,8 @@ async function lockTeamPeople(
             inArray(bookings.id, bookingIds),
           ),
         )
+        .orderBy(asc(bookings.id))
+        .for("no key update", { noWait: true })
     : [];
   const ids = [
     ...new Set([...crewIds, ...seats.flatMap((seat) => (seat.personId ? [seat.personId] : []))]),
@@ -752,17 +754,20 @@ export async function formPartyTeams(
           .from(shops)
           .where(eq(shops.id, input.shopId))
           .for("no key update", { noWait: true });
-        // Match the card-sighting writer's person-then-card order. Lock seated
-        // people and existing cards before reading the plan. Sort each set so
+        // Lock seats before people, matching held-seat repointing. Then match
+        // the card-sighting writer's person-then-card order. Sort each set so
         // different departures cannot invert it. Card writers take the same
         // person lock before introducing a new row. Never wait while holding
         // the trip: erasure and other writers can already hold a person or card
         // and subsequently need this trip. A failed attempt rolls back every
         // lock before a bounded retry starts.
-        const seatedPeople = tx
+        const seats = await tx
           .select({ id: bookings.personId })
           .from(bookings)
-          .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
+          .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)))
+          .orderBy(asc(bookings.id))
+          .for("no key update", { noWait: true });
+        const seatedPeople = seats.flatMap((seat) => (seat.id ? [seat.id] : []));
         const lockedPeople = await tx
           .select({ id: people.id })
           .from(people)
