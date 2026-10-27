@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
+import { forgetTrainingPlanPeople } from "@/db/training-plan-privacy";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import {
@@ -1245,6 +1246,8 @@ export async function mergeDiverRecords(input: {
       }
 
       await rewriteBoardingSnapshotReviewer(tx, input.shopId, source.id, survivor.id);
+      // A new identity must not inherit an unconfirmed instructor plan.
+      await forgetTrainingPlanPeople(tx, input.shopId, [source.id]);
       const mergedAt = nowDate();
       const mergedSpokenLanguages = [
         ...new Set([...survivor.spokenLanguages, ...source.spokenLanguages]),

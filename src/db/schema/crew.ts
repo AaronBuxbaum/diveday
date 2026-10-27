@@ -169,6 +169,12 @@ export const tripAssignments = pgTable(
     assignedByPersonId: uuid("assigned_by_person_id").references(() => people.id, {
       onDelete: "set null",
     }),
+    /** Staff's plan for this assistant; it is not evidence of an underwater group. */
+    trainingPlanInstructorPersonId: uuid("training_plan_instructor_person_id").references(
+      () => people.id,
+    ),
+    trainingPlanByPersonId: uuid("training_plan_by_person_id").references(() => people.id),
+    trainingPlanAt: timestamp("training_plan_at", { withTimezone: true }),
   },
   (table) => [
     primaryKey({ columns: [table.tripId, table.personId] }),
@@ -177,6 +183,8 @@ export const tripAssignments = pgTable(
     // 2026-10-11, item 27).
     index("trip_assignments_person_idx").on(table.personId),
     index("trip_assignments_assigned_by_idx").on(table.assignedByPersonId),
+    index("trip_assignments_training_plan_instructor_idx").on(table.trainingPlanInstructorPersonId),
+    index("trip_assignments_training_plan_by_idx").on(table.trainingPlanByPersonId),
   ],
 );
 

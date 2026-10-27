@@ -421,6 +421,18 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.trainingEnrollmentBookingId,
     },
+    // Staff plan, not a record of the underwater group.
+    {
+      header: "training_plan_instructor_person_id",
+      in: "shop",
+      value: (row) => row.trainingPlanInstructorPersonId,
+    },
+    {
+      header: "training_plan_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingPlanByPersonId,
+    },
+    { header: "training_plan_at", in: "shop", value: (row) => row.trainingPlanAt },
     { header: "fly_safe_acknowledged_at", in: "shop", value: (row) => row.flySafeAcknowledgedAt },
     {
       header: "fly_safe_acknowledged_by_person_id",

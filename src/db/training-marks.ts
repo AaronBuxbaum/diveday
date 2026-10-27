@@ -301,6 +301,9 @@ export async function clearTrainingDive(
         .update(bookings)
         .set({
           trainingEnrollmentBookingId: null,
+          trainingPlanInstructorPersonId: null,
+          trainingPlanByPersonId: null,
+          trainingPlanAt: null,
           trainingMarkedAt: null,
           trainingMarkedByPersonId: null,
           // This clear's own stamp, replacing any earlier one: null when it

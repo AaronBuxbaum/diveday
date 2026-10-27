@@ -153,6 +153,7 @@ import {
   workOrders,
 } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
+import { forgetTrainingPlanPeople } from "./training-plan-privacy";
 import { customerProviderFromEnvironment } from "./stripe-providers";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
@@ -3133,6 +3134,16 @@ async function scrubClaudeCallContent(
   return [];
 }
 
+/** Planning assignments are personal records, not a permanent group history. */
+async function scrubTrainingPlans(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const chain = [ctx.personId, ...(await mergedIntoChain(tx, ctx.shopId, ctx.personId))];
+  await forgetTrainingPlanPeople(tx, ctx.shopId, chain);
+  return [];
+}
+
 /**
  * Every sweep of the erasure, in the order it runs. Each takes the transaction
  * and the diver's context and hands back the Stripe objects it found standing
@@ -3165,6 +3176,7 @@ const SCRUB_SECTIONS = [
   scrubInbox,
   scrubIncidentReports,
   scrubClaudeCallContent,
+  scrubTrainingPlans,
 ] as const;
 
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {

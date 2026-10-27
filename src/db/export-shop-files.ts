@@ -951,6 +951,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "trip_role",
       "assigned_by_person_id",
       "assigned_by_name",
+      "training_plan_instructor_person_id",
+      "training_plan_by_person_id",
+      "training_plan_at",
     ],
     rows: ({ personName, personRolesText, tripTitle, tripStartsAt, assignmentRows }) =>
       assignmentRows.map((row) => [
@@ -963,6 +966,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.tripRole,
         row.assignedByPersonId,
         row.assignedByPersonId ? personName.get(row.assignedByPersonId) : null,
+        row.trainingPlanInstructorPersonId,
+        row.trainingPlanByPersonId,
+        row.trainingPlanAt,
       ]),
     note: EXPORT_FILE_NOTES["trip_assignments.csv"],
   },

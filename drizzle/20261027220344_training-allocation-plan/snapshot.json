@@ -1,0 +1,566 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9cda2960-b307-4407-8e4b-578d9a7bdc71",
+  "prevIds": [
+    "dea3b228-f01a-468b-b3d3-f5f16bd4486d",
+    "3cf6d43e-af49-4a48-9353-86f2516bb753"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "training_plan_instructor_person_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.training_plan_instructor_person_id",
+        "n|col|public.bookings.training_plan_instructor_person_id",
+        "e|col|public.bookings.training_plan_instructor_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "training_plan_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.training_plan_by_person_id",
+        "n|col|public.bookings.training_plan_by_person_id",
+        "e|col|public.bookings.training_plan_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "training_plan_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.training_plan_at",
+        "n|col|public.bookings.training_plan_at",
+        "e|col|public.bookings.training_plan_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trip_assignments",
+        "training_plan_instructor_person_id"
+      ],
+      "writes": [
+        "s|col|public.trip_assignments.training_plan_instructor_person_id",
+        "n|col|public.trip_assignments.training_plan_instructor_person_id",
+        "e|col|public.trip_assignments.training_plan_instructor_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.trip_assignments",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trip_assignments",
+        "training_plan_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.trip_assignments.training_plan_by_person_id",
+        "n|col|public.trip_assignments.training_plan_by_person_id",
+        "e|col|public.trip_assignments.training_plan_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.trip_assignments",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trip_assignments",
+        "training_plan_at"
+      ],
+      "writes": [
+        "s|col|public.trip_assignments.training_plan_at",
+        "n|col|public.trip_assignments.training_plan_at",
+        "e|col|public.trip_assignments.training_plan_at"
+      ],
+      "reads": [
+        "n|tbl|public.trip_assignments",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "bookings",
+        "bookings_training_plan_instructor_idx"
+      ],
+      "writes": [
+        "s|idx|public.bookings_training_plan_instructor_idx",
+        "n|idx|public.bookings_training_plan_instructor_idx",
+        "e|idx|public.bookings_training_plan_instructor_idx",
+        "n|rel|public.bookings_training_plan_instructor_idx"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|col|public.bookings.training_plan_instructor_person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "bookings",
+        "bookings_training_plan_by_idx"
+      ],
+      "writes": [
+        "s|idx|public.bookings_training_plan_by_idx",
+        "n|idx|public.bookings_training_plan_by_idx",
+        "e|idx|public.bookings_training_plan_by_idx",
+        "n|rel|public.bookings_training_plan_by_idx"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|col|public.bookings.training_plan_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trip_assignments",
+        "trip_assignments_training_plan_instructor_idx"
+      ],
+      "writes": [
+        "s|idx|public.trip_assignments_training_plan_instructor_idx",
+        "n|idx|public.trip_assignments_training_plan_instructor_idx",
+        "e|idx|public.trip_assignments_training_plan_instructor_idx",
+        "n|rel|public.trip_assignments_training_plan_instructor_idx"
+      ],
+      "reads": [
+        "n|tbl|public.trip_assignments",
+        "n|sch|public",
+        "n|col|public.trip_assignments.training_plan_instructor_person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trip_assignments",
+        "trip_assignments_training_plan_by_idx"
+      ],
+      "writes": [
+        "s|idx|public.trip_assignments_training_plan_by_idx",
+        "n|idx|public.trip_assignments_training_plan_by_idx",
+        "e|idx|public.trip_assignments_training_plan_by_idx",
+        "n|rel|public.trip_assignments_training_plan_by_idx"
+      ],
+      "reads": [
+        "n|tbl|public.trip_assignments",
+        "n|sch|public",
+        "n|col|public.trip_assignments.training_plan_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_training_plan_instructor_person_id_people_id_fkey",
+        "n|fk|public.bookings.bookings_training_plan_instructor_person_id_people_id_fkey",
+        "e|fk|public.bookings.bookings_training_plan_instructor_person_id_people_id_fkey",
+        "n|con|public.bookings.bookings_training_plan_instructor_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.bookings.training_plan_instructor_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_training_plan_by_person_id_people_id_fkey",
+        "n|fk|public.bookings.bookings_training_plan_by_person_id_people_id_fkey",
+        "e|fk|public.bookings.bookings_training_plan_by_person_id_people_id_fkey",
+        "n|con|public.bookings.bookings_training_plan_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.bookings.training_plan_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_assignments"
+      ],
+      "writes": [
+        "s|fk|public.trip_assignments.trip_assignments_3aJnSAzIDZmj_fkey",
+        "n|fk|public.trip_assignments.trip_assignments_3aJnSAzIDZmj_fkey",
+        "e|fk|public.trip_assignments.trip_assignments_3aJnSAzIDZmj_fkey",
+        "n|con|public.trip_assignments.trip_assignments_3aJnSAzIDZmj_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trip_assignments",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.trip_assignments.training_plan_instructor_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_assignments"
+      ],
+      "writes": [
+        "s|fk|public.trip_assignments.trip_assignments_training_plan_by_person_id_people_id_fkey",
+        "n|fk|public.trip_assignments.trip_assignments_training_plan_by_person_id_people_id_fkey",
+        "e|fk|public.trip_assignments.trip_assignments_training_plan_by_person_id_people_id_fkey",
+        "n|con|public.trip_assignments.trip_assignments_training_plan_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trip_assignments",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.trip_assignments.training_plan_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "training_plan_instructor_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "training_plan_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "training_plan_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_assignments",
+        "name": "training_plan_instructor_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_assignments",
+        "name": "training_plan_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_assignments",
+        "name": "training_plan_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_training_plan_instructor_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "training_plan_instructor_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_training_plan_by_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "training_plan_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_assignments",
+        "name": "trip_assignments_training_plan_instructor_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "training_plan_instructor_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_assignments",
+        "name": "trip_assignments_training_plan_by_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "training_plan_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_training_plan_instructor_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "training_plan_instructor_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_training_plan_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "training_plan_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_assignments",
+        "name": "trip_assignments_3aJnSAzIDZmj_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "training_plan_instructor_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_assignments",
+        "name": "trip_assignments_training_plan_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "training_plan_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

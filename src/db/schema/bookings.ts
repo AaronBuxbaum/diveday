@@ -536,6 +536,12 @@ export const bookings = pgTable(
     trainingEnrollmentBookingId: uuid("training_enrollment_booking_id"),
     trainingMarkedAt: timestamp("training_marked_at", { withTimezone: true }),
     trainingMarkedByPersonId: uuid("training_marked_by_person_id").references(() => people.id),
+    /** Planned instructor for this marked student; not proof of an underwater group. */
+    trainingPlanInstructorPersonId: uuid("training_plan_instructor_person_id").references(
+      () => people.id,
+    ),
+    trainingPlanByPersonId: uuid("training_plan_by_person_id").references(() => people.id),
+    trainingPlanAt: timestamp("training_plan_at", { withTimezone: true }),
     /**
      * **Who cleared a training mark that relaxed a boarding block, when, and
      * why**: its course forms still owed (`forms_owed`), or every form signed
@@ -561,6 +567,8 @@ export const bookings = pgTable(
       foreignColumns: [table.shopId, table.id],
     }),
     uniqueIndex("bookings_shop_id_id_unique").on(table.shopId, table.id),
+    index("bookings_training_plan_instructor_idx").on(table.trainingPlanInstructorPersonId),
+    index("bookings_training_plan_by_idx").on(table.trainingPlanByPersonId),
     // The charter seats marked as training on one enrollment, and the foreign
     // key's probe when a booking is deleted.
     index("bookings_training_enrollment_idx")
