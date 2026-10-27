@@ -34,19 +34,6 @@ test.describe("as the owner", () => {
   test("prints the signed waiver as a clean document", async ({ page }) => {
     await openRowansWaiver(page);
     const main = page.locator("main");
-    // The Print button opens the browser's own dialog; a stub stands in for
-    // it, so the test proves the tap reaches `window.print` and nothing else.
-    await page.evaluate(() => {
-      (window as unknown as { printed: number }).printed = 0;
-      window.print = () => {
-        (window as unknown as { printed: number }).printed += 1;
-      };
-    });
-    await page.getByRole("button", { name: "Print / save PDF" }).click();
-    await expect
-      .poll(() => page.evaluate(() => (window as unknown as { printed: number }).printed))
-      .toBe(1);
-
     // On screen the diver's name is the way back to their record, and the
     // page carries no line of its own naming the shop.
     await expect(main.getByRole("link", { name: "Rowan Pike" })).toBeVisible();
@@ -70,10 +57,9 @@ test.describe("as the owner", () => {
     await expect(main.getByText(/\b(EDT|EST)\b/).first()).toBeVisible();
     // An owner reads the physician's name, on paper as on screen.
     await expect(main.getByText("Physician: Dr. Imani Reyes")).toBeVisible();
-    // No door reaches paper: not Print, not the way back up.
-    await expect(
-      page.getByRole("button", { name: "Print / save PDF" }).filter({ visible: true }),
-    ).toHaveCount(0);
+    // Ordinary browser printing keeps the record and drops the way back up.
+    const pdf = await page.pdf({ format: "Letter", preferCSSPageSize: true });
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
     await expect(
       main.getByRole("link", { name: "Rowan Pike" }).filter({ visible: true }),
     ).toHaveCount(0);

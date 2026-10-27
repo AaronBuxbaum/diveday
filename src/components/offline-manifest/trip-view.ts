@@ -21,6 +21,7 @@ import {
   offlineArrivalEvents,
   offlineCounterIsOver,
   offlineManifestFreshness,
+  offlineTrainingReadinessStale,
   pendingOfflineEventCount,
   refusedOfflineArrival,
   rejectedOfflineEventCount,
@@ -98,7 +99,9 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
            */
           const seat = {
             bookingStatus: diver.notHere ? "no_show" : arrival ? "checked_in" : "booked",
-            readiness: diver.readiness,
+            readiness: offlineTrainingReadinessStale(envelope.snapshot, diver)
+              ? { ...diver.readiness, status: "blocked" as const }
+              : diver.readiness,
           };
           return {
             diver,
@@ -148,7 +151,9 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   );
   const blockedAtRail = manifest.divers.map((diver, index) =>
     rowBlockedAtRail({
-      ready: diver.readiness.status === "ready",
+      ready:
+        diver.readiness.status === "ready" &&
+        !offlineTrainingReadinessStale(envelope.snapshot, diver),
       isDeparture: checkpoint === "departure",
       boardedEarlier: boardedEarlier[index],
       notBackAboard: isNotBackAboard(checkpoint, localStates[index]),

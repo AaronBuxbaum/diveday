@@ -12,6 +12,7 @@ import {
   courses,
   people,
   personRoles,
+  rollCallEvents,
   tripAssignments,
   tripRequirements,
   trips,
@@ -46,7 +47,27 @@ export async function operationalStateResponse(request: Request, db: AppDb) {
   // here; a caller can never choose a real shop, even with the harness secret.
   const shop = await getShopBySlug(db, params.get("shop") ?? DEMO_SHOP_SLUG);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
-  const operationalTrust = await seedOperationalTrust(db, shop, state, nowDate());
+  const now = nowDate();
+  const operationalTrust = await seedOperationalTrust(db, shop, state, now);
+  if (state === "capacity" && params.get("certificationInterval") === "1") {
+    // A true same-minute ordering: a tap, then a read that starts and ends later.
+    const seat = operationalTrust.seats[0];
+    if (!seat) throw new Error("certification fixture seat missing");
+    await db
+      .update(rollCallEvents)
+      .set({
+        occurredAt: new Date(now.getTime() + 1),
+        certificationSnapshotStartedAt: new Date(now.getTime() + 45_125),
+        certificationSnapshotCapturedAt: new Date(now.getTime() + 45_175),
+      })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shop.id),
+          eq(rollCallEvents.bookingId, seat.bookingId),
+          eq(rollCallEvents.checkpoint, "departure"),
+        ),
+      );
+  }
   return NextResponse.json({ ok: true, operationalTrust });
 }
 

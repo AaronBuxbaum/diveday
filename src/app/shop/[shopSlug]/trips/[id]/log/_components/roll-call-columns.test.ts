@@ -4,10 +4,10 @@ import { rollCallCheckpointPrintClass, rollCallTableMinWidth } from "./roll-call
 
 /**
  * The departure log's two roll-call tables are three text columns plus one per
- * checkpoint, and a checkpoint is a dive: `rollCallCheckpoints` clamps to two
- * to five of them, so these cover every table the log can print.
+ * checkpoint, and a checkpoint is a dive: `rollCallCheckpoints` allows two
+ * to six of them, so these cover every table the log can print.
  */
-const CHECKPOINT_COUNTS = [1, 2, 3, 4].map((dives) => rollCallCheckpoints(dives).length);
+const CHECKPOINT_COUNTS = [1, 2, 3, 4, 5].map((dives) => rollCallCheckpoints(dives).length);
 
 /** The printed table's share one checkpoint column takes. */
 function printShare(checkpointCount: number): number {
@@ -21,12 +21,13 @@ function printShare(checkpointCount: number): number {
 
 describe("the roll-call tables on screen", () => {
   it("scroll against a floor that grows with the checkpoints", () => {
-    expect(CHECKPOINT_COUNTS).toEqual([2, 3, 4, 5]);
+    expect(CHECKPOINT_COUNTS).toEqual([2, 3, 4, 5, 6]);
     expect(CHECKPOINT_COUNTS.map(rollCallTableMinWidth)).toEqual([
       "56rem",
       "56rem",
       "72rem",
       "72rem",
+      "80rem",
     ]);
   });
 });

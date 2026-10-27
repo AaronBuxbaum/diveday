@@ -1,0 +1,39 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5e6a3c4a-1863-40c1-a894-cb2ea0c31f09",
+  "prevIds": [
+    "8c3068cf-5db7-44df-ba8e-08111ade3868"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "trips"
+      ],
+      "writes": [
+        "s|ck|public.trips.trips_planned_dives_range"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.trips.planned_dives",
+        "n|col|public.trips.course_id",
+        "e|col|public.trips.planned_dives"
+      ],
+      "sqlHash": "c6eb1ab532654488"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"trips\",\"trips_planned_dives_range\"]",
+      "set": {
+        "value": "\"planned_dives\" between 1 and 4 or (\"course_id\" is not null and \"planned_dives\" = 5)"
+      }
+    }
+  ]
+}

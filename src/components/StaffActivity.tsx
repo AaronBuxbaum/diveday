@@ -157,6 +157,7 @@ export function StaffActivity({
     <div
       ref={dialogRef}
       className="fixed inset-0 z-50 grid place-items-center bg-surface p-6"
+      data-staff-session-lock
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="staff-session-title"

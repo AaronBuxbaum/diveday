@@ -108,6 +108,17 @@ describe("adding a course that meets on named days", () => {
     ]);
   });
 
+  it("refuses a forged five-dive ordinary departure or an unknown course", async () => {
+    const { db, shop } = await signedInOwner();
+    for (const courseId of ["", "00000000-0000-4000-8000-000000000000"]) {
+      const form = courseForm(shop.timezone, [1], { plannedDives: "5", courseId });
+      expect(await redirectedTo(() => addDepartureAction(shop.slug, form))).toContain(
+        "builder=invalid",
+      );
+      expect(await departures(db, shop.id)).toEqual([]);
+    }
+  });
+
   it("refuses a course with two weeks between its days and adds nothing", async () => {
     const { db, shop } = await signedInOwner();
     const form = courseForm(shop.timezone, [14]);

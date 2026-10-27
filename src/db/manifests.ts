@@ -40,6 +40,10 @@ import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
+import {
+  boardingCertificationSnapshot,
+  lockBoardingCertificationEvidence,
+} from "./boarding-certification-snapshot";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
@@ -1045,6 +1049,7 @@ export async function listDepartureBoardedBookingIds(
 function trainingDiveOf(
   mark: TrainingMarkState | undefined,
   identityHeld: boolean,
+  siteAttributionUnknown: boolean,
 ): TripManifest["divers"][number]["trainingDive"] {
   // Aboard means the course's own instructor (issue #2731), the same answer
   // readiness reads to take the course's level.
@@ -1054,6 +1059,7 @@ function trainingDiveOf(
         ...(mark.enrollmentCourse ? { intro: mark.enrollmentCourse.intro } : {}),
         instructorAboard: mark.courseInstructorAboard,
         overRatio: mark.overRatio ?? false,
+        ...(siteAttributionUnknown ? { siteAttributionUnknown: true } : {}),
       }
     : null;
 }
@@ -1116,6 +1122,9 @@ export async function getTripManifests(
   );
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
+  );
+  const trainingAttributionByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.trainingSiteAttributionUnknown] as const),
   );
   const depthByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.depthAdvisory] as const),
@@ -1313,6 +1322,7 @@ export async function getTripManifests(
       trainingDive: trainingDiveOf(
         trainingMarks.get(booking.id),
         booking.identityUnconfirmedAt !== null,
+        trainingAttributionByBooking.get(booking.id) ?? true,
       ),
       trainingMarkCleared: booking.trainingClearedAt
         ? {
@@ -1923,6 +1933,9 @@ async function writeRollCall(
   const source = input.source ?? "live";
   const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
+  if (source === "live" && checkpoint === "departure" && input.status === "boarded") {
+    await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+  }
 
   if (source === "offline" && input.clientEventId) {
     const replayed = replayVerdict(
@@ -1966,6 +1979,7 @@ async function writeRollCall(
       status: bookings.status,
       personId: bookings.personId,
       participantType: bookings.participantType,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       turnedAwayAt: bookings.turnedAwayAt,
       plannedDives: trips.plannedDives,
       shopId: trips.shopId,
@@ -2088,6 +2102,12 @@ async function writeRollCall(
     }
   }
 
+  const captureCards =
+    source === "live" &&
+    checkpoint === "departure" &&
+    input.status === "boarded" &&
+    booking.identityUnconfirmedAt === null;
+  const capturedAt = captureCards ? nowDate() : null;
   const [event] = await tx
     .insert(rollCallEvents)
     .values({
@@ -2110,10 +2130,25 @@ async function writeRollCall(
       ),
       readinessStatus: readinessSnapshot?.status ?? null,
       readinessBlockers: readinessSnapshot?.blockers ?? null,
+      // Offline sync observes today, not the cards the device saw at the tap.
+      certificationSnapshot: captureCards
+        ? boardingCertificationSnapshot(input.shopId, booking.personId)
+        : null,
+      certificationSnapshotStartedAt: capturedAt,
+      certificationSnapshotCapturedAt: capturedAt,
       occurredAt,
     })
     .returning({ id: rollCallEvents.id });
   if (!event) throw new Error("recordRollCall: insert returned no row");
+  if (captureCards && capturedAt) {
+    // The statement can wait before it completes. A clock adjustment must not
+    // make completion precede the start or reject an otherwise valid count.
+    const finishedAt = nowDate();
+    await tx
+      .update(rollCallEvents)
+      .set({ certificationSnapshotCapturedAt: finishedAt < capturedAt ? capturedAt : finishedAt })
+      .where(and(eq(rollCallEvents.id, event.id), eq(rollCallEvents.shopId, input.shopId)));
+  }
   await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
   // The rail has contradicted the desk. Nothing above refused it and nothing
   // here does either (the docblock says why); what happens instead is that

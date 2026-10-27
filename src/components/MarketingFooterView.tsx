@@ -27,7 +27,7 @@ export function MarketingFooterView({
 }) {
   const t = diverTranslator(locale);
   return (
-    <footer className="border-t border-border">
+    <footer className="border-t border-border print:break-inside-avoid">
       {/* One row only when the tagline and the links fit side by side, which
           no breakpoint says for every language: en-US needs 897px, es-ES
           about 1173. Switching at sm, and then at lg, wrapped the tagline and
@@ -36,16 +36,16 @@ export function MarketingFooterView({
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-muted">
         <Wordmark variant="inline"> {t("nav.tagline")}</Wordmark>
         <div className="-mx-2 flex flex-wrap">
-          <Link href="/product" className={footerLinkClass}>
+          <Link href="/product" className={`${footerLinkClass} print:hidden`}>
             {t("nav.product")}
           </Link>
-          <Link href="/pricing" className={footerLinkClass}>
+          <Link href="/pricing" className={`${footerLinkClass} print:hidden`}>
             {t("nav.pricing")}
           </Link>
-          <Link href="/switching" className={footerLinkClass}>
+          <Link href="/switching" className={`${footerLinkClass} print:hidden`}>
             {t("nav.switch")}
           </Link>
-          <Link href="/about" className={footerLinkClass}>
+          <Link href="/about" className={`${footerLinkClass} print:hidden`}>
             {t("nav.about")}
           </Link>
           {/* The status page shipped on 2026-09-07 with nothing pointing at
@@ -54,7 +54,7 @@ export function MarketingFooterView({
               bookings just broke does not (issue #1475). Beside About, and not
               in the staff chrome: `staff-destinations.ts` is places inside a
               shop. */}
-          <Link href="/status" className={footerLinkClass}>
+          <Link href="/status" className={`${footerLinkClass} print:hidden`}>
             {t("nav.status")}
           </Link>
           {/* The only route to either legal page from anywhere on the site.
@@ -62,13 +62,16 @@ export function MarketingFooterView({
               they were reachable by typed URL alone -- and the SES
               production-access case names both by URL, which is a claim a
               reviewer checks by looking for the link. */}
-          <Link href="/privacy" className={footerLinkClass}>
+          <Link href="/privacy" className={`${footerLinkClass} print:hidden`}>
             {t("nav.privacy")}
           </Link>
-          <Link href="/terms" className={footerLinkClass}>
+          <Link href="/terms" className={`${footerLinkClass} print:hidden`}>
             {t("nav.terms")}
           </Link>
-          <Link href={shopSlug ? staffShopRoot(shopSlug) : "/sign-in"} className={footerLinkClass}>
+          <Link
+            href={shopSlug ? staffShopRoot(shopSlug) : "/sign-in"}
+            className={`${footerLinkClass} print:hidden`}
+          >
             {shopSlug ? t("nav.goToShop") : t("nav.signIn")}
           </Link>
           <a href={`mailto:${SUPPORT_EMAIL}`} className={footerLinkClass} title={t("nav.sayHello")}>

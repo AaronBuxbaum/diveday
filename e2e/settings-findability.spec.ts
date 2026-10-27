@@ -1,7 +1,7 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, test } from "./fixtures";
-import { openSettingsRow } from "./helpers";
+import { openSettingsRail, openSettingsRow } from "./helpers";
 
 /**
  * Settings used to be the longest page in the staff app — three groups of
@@ -33,9 +33,8 @@ test.describe("as owner", () => {
   }) => {
     await page.goto(`/shop/${SHOP}/settings`);
 
-    // The directory no longer renders a separate jump navigation. The group
-    // headings remain the stable anchors for deep links and the cards expose
-    // the actual doors.
+    // Existing group deep links remain usable.
+    await page.goto(`/shop/${SHOP}/settings#money`);
     await expect(page.locator("h2#money")).toBeVisible();
     await page.goto(`/shop/${SHOP}/settings#data`);
     await expect(page.locator("h2#data")).toBeVisible();
@@ -43,7 +42,8 @@ test.describe("as owner", () => {
     // Team: the row an owner opening Settings to add a colleague looks for.
     // The heading is the link now — a door row carries no separate CTA label.
     await page.goto(`/shop/${SHOP}/settings`);
-    await page.getByRole("main").getByRole("link", { name: "Team", exact: true }).click();
+    const rail = await openSettingsRail(page);
+    await rail.getByRole("link", { name: "Team", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/settings/team`);
     await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
 
@@ -87,25 +87,36 @@ test.describe("as owner", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
     ).toBeVisible();
-    // On the hub the page is the map, so the rail stands down rather than
-    // list every row twice (fifth-loop ideas, item 58).
-    await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
+    // The hub retains the same rail and shows the selected setting.
+    await expect(page.getByRole("navigation", { name: "Settings sections" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Timezone", exact: true })).toBeVisible();
   });
 
-  test("the rail is a desktop column and the phone keeps its list", async ({ page }) => {
-    // The other half of the same decision. A 390px viewport is the dock test's
-    // device, and a directory stacked above the content there is the card that
-    // was deleted.
+  test("the phone opens the same rail and returns to its selected setting", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/shop/${SHOP}/settings`);
+    const rail = await openSettingsRail(page);
+    const toggle = rail.getByRole("button", { name: "Settings sections" });
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await rail.getByRole("link", { name: "Units", exact: true }).click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByLabel("Show depths in", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Timezone", exact: true })).toHaveCount(0);
+  });
+
+  test("back and forward restore the selected setting", async ({ page }) => {
+    await page.goto(`/shop/${SHOP}/settings`);
+    await openSettingsRow(page, "Units");
+    await openSettingsRow(page, "Shop address");
+    await page.goBack();
+    await expect(page.getByLabel("Show depths in", { exact: true })).toBeVisible();
     await expect(
-      page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
-    ).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Settings sections" })).toBeHidden();
-    // The grouped list is still the whole surface, doors and all.
-    await expect(
-      page.getByRole("main").getByRole("link", { name: "Team", exact: true }),
-    ).toBeVisible();
+      page
+        .getByRole("navigation", { name: "Settings sections" })
+        .getByRole("link", { name: "Units", exact: true }),
+    ).toHaveAttribute("aria-current", "true");
+    await page.goForward();
+    await expect(page.getByRole("heading", { name: "Shop address", exact: true })).toBeVisible();
   });
 });
 

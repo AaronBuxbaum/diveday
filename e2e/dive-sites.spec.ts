@@ -574,7 +574,7 @@ test.describe("staff", () => {
     // from — that is the site page's line, not the library's.
     await expect(library.getByText(/DiveDay template v/)).toHaveCount(0);
 
-    // The catalog is a door at the ledger's tail now, carrying the size of what
+    // The catalog is a door above the library, carrying the size of what
     // sits behind it; the header's secondary action retired with its arrival,
     // so there is exactly one way in from here.
     const catalogDoor = page.getByRole("link", { name: "Browse the DiveDay catalog" });

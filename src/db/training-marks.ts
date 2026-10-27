@@ -10,7 +10,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
-import { activityEvents, bookings, courses, people, shops, trips } from "./schema";
+import { activityEvents, bookings, courses, people, shops, tripDives, trips } from "./schema";
 import {
   aboardKey,
   readTrainingEnrollments,
@@ -356,6 +356,8 @@ export type TrainingMarkRosterSeat = {
      * warns when not.
      */
     courseInstructorAboard: boolean;
+    /** A seat-level mark cannot identify one dive on a multi-dive departure. */
+    siteAttributionUnknown?: boolean;
     markedAt: Date;
     markedByName: string | null;
   } | null;
@@ -396,7 +398,14 @@ type RosterSeatInput = {
 export async function trainingMarksForRoster(
   db: DbExecutor,
   shopId: string,
-  trip: { id: string; courseId: string | null; startsAt: Date; endsAt: Date },
+  trip: {
+    id: string;
+    courseId: string | null;
+    startsAt: Date;
+    endsAt: Date;
+    plannedDives: number;
+    diveSiteId: string | null;
+  },
   seats: readonly RosterSeatInput[],
   now: Date = nowDate(),
 ): Promise<{ bySeat: Map<string, TrainingMarkRosterSeat> }> {
@@ -412,6 +421,17 @@ export async function trainingMarksForRoster(
           !seat.identityHeld &&
           seat.participantType === "diver",
       );
+  const plannedSites =
+    marked.length === 0
+      ? []
+      : await db
+          .select({ id: tripDives.diveSiteId })
+          .from(tripDives)
+          .where(eq(tripDives.tripId, trip.id));
+  const siteIds = new Set(
+    [trip.diveSiteId, ...plannedSites.map((site) => site.id)].filter(Boolean),
+  );
+  const siteAttributionUnknown = trip.plannedDives !== 1 || siteIds.size !== 1;
   const staffIds = [
     ...new Set(
       seats.flatMap((seat) =>
@@ -516,6 +536,7 @@ export async function trainingMarksForRoster(
             courseInstructorAboard:
               enrollment !== undefined &&
               seatWithinRoom(room.get(aboardKey(trip.id, enrollment.tripId)), seat.bookingId),
+            ...(siteAttributionUnknown ? { siteAttributionUnknown: true } : {}),
             markedAt: seat.trainingMarkedAt,
             markedByName: seat.trainingMarkedByPersonId
               ? (nameById.get(seat.trainingMarkedByPersonId) ?? null)

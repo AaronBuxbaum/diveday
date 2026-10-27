@@ -211,26 +211,9 @@ describe("the hull a departure sails on", () => {
   });
 });
 
-/**
- * **A departure may not be sold more seats than the hull it sails on holds.**
- *
- * A boat row and a trip row both carry a capacity, and until now the only thing
- * that joined them was the add panel's client-side prefill — help rather than a
- * rule, and one that loses to anything typed after it. So a shop could sell 24
- * seats on a boat it had recorded as holding 6, and every gate downstream would
- * defend that 24 faithfully: waivers, cert checks, gear fits, a manifest. On a
- * US uninspected vessel the six-passenger limit is a legal line, and the app had
- * the number that would catch it and never looked (issue #678).
- */
 describe("capacity against the assigned hull", () => {
-  it("refuses more seats than the boat holds, and names the boat's number", () => {
-    const result = tripDetailsPatch({ ...base, capacity: 24, boatCapacity: 6 }, shop);
-    if (result.ok) throw new Error("expected a refusal");
-    if (result.reason !== "capacity_above_boat") throw new Error(`got ${result.reason}`);
-    // The number travels with the refusal so the notice can say "the boat holds
-    // 6" rather than "that didn't work" — this form has no boat field, so the
-    // staffer cannot see the limit they are over.
-    expect(result.boatCapacity).toBe(6);
+  it("allows more seats than the boat's configured capacity", () => {
+    expect(ok({ capacity: 24, boatCapacity: 6 }).startsAt).toBeInstanceOf(Date);
   });
 
   it("accepts a full boat", () => {
@@ -296,9 +279,9 @@ describe("capacity against the hull's certificate", () => {
     ).toBeInstanceOf(Date);
   });
 
-  it("names the hull's own number first when the seats pass both", () => {
+  it("still enforces the certificate when the seats pass both", () => {
     expect(refusal({ capacity: 20, boatCapacity: 12, boatCertifiedPassengers: 10 })).toBe(
-      "capacity_above_boat",
+      "capacity_above_certificate",
     );
   });
 

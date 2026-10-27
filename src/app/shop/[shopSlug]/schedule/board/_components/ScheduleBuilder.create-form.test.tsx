@@ -54,7 +54,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
           copy: COPY,
           more: MORE,
           initialCourse: null,
-          openAdd: "closed",
+          openAdd: "quick",
           ...overrides,
         }}
       />,
@@ -70,7 +70,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("keeps the rare half collapsed, and reveals the whole trip form on request", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
 
     // Collapsed: the questions the board is for are live, the rest inert.
     // (Inert, not absent — the disclosure hides rather than unmounts. What is
@@ -110,7 +109,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
    */
   it("starts More options and Fewer options on the form's column", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     const more = screen.getByRole("button", { name: /More options/ });
     expect(rendersFlush(more, "link", "sm")).toBe(true);
     await userEvent.click(more);
@@ -130,7 +128,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
    */
   it("draws the private and self-guided boxes as rows, with no empty caption on a phone", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
 
     for (const name of ["isPrivate", "selfGuided"]) {
@@ -153,7 +150,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     // so "not on screen" has to mean "disabled" or a collapsed submission would
     // carry a hidden `dayCount`, deposit, and cadence nobody chose.
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
     await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
 
@@ -179,7 +175,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     const enabled = (name: string) =>
       container.querySelectorAll(`[name="${name}"]:not(:disabled)`).length;
 
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(enabled("plannedDives")).toBe(1);
     expect(enabled("diveSiteId")).toBe(1);
 
@@ -192,7 +187,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("carries the quick dive count and site into the dive plan on first expand", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await screen.findByRole("option", { name: "Molasses Reef" });
 
     await userEvent.clear(screen.getByLabelText("Dives"));
@@ -212,7 +206,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("loses nothing across expand → collapse → expand", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await screen.findByRole("option", { name: "Molasses Reef" });
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
 
@@ -238,7 +231,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
   // between Pay at booking and Repeat (pixel-craft K-95).
   it("frames the dive plan exactly like Pay at booking and Repeat around it", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
 
     const frame = (element: Element | null) => element?.getAttribute("class");
@@ -253,7 +245,6 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
 
   it("mirrors the dive plan's count back to the quick box on the way down", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: /More options/ }));
     await userEvent.selectOptions(screen.getByLabelText("Number of dives"), "4");
     await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
@@ -261,6 +252,50 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     // Collapsed, the quick box is what submits — it must agree with what the
     // staff member last chose, not with the default it was mounted at.
     expect(screen.getByLabelText("Dives")).toHaveValue(4);
+  });
+
+  it("keeps a five-dive course plan in sync across quick, expanded and ordinary modes", async () => {
+    const { container } = renderBuilder({
+      openAdd: "quick",
+      initialCourse: {
+        id: "course-1",
+        title: "Open Water Diver",
+        requirement: "No existing C-card required",
+      },
+    });
+    const course = await screen.findByLabelText(/^Course/);
+    const quick = screen.getByLabelText("Dives");
+    expect(quick).toHaveAttribute("max", "5");
+    await userEvent.clear(quick);
+    await userEvent.type(quick, "5");
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    const detailed = screen.getByLabelText("Number of dives");
+    expect(detailed).toHaveValue("5");
+    const fifth = container.querySelector<HTMLInputElement>('input[name="dive-5-title"]');
+    if (!fifth) throw new Error("fifth dive control missing");
+    await userEvent.type(fifth, "Deep practice");
+
+    await userEvent.selectOptions(course, "");
+    expect(detailed).toHaveValue("4");
+    expect(fifth).toBeDisabled();
+    const form = container.querySelector("form");
+    if (!form) throw new Error("trip form missing");
+    expect(new FormData(form).get("plannedDives")).toBe("4");
+    expect(new FormData(form).get("dive-5-title")).toBeNull();
+    await userEvent.selectOptions(course, "course-1");
+    expect(detailed).toHaveValue("5");
+    expect(fifth).toHaveValue("Deep practice");
+
+    await userEvent.click(screen.getByRole("button", { name: /Fewer options/ }));
+    expect(quick).toHaveValue(5);
+    await userEvent.clear(quick);
+    await userEvent.type(quick, "4");
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+    expect(detailed).toHaveValue("4");
+    expect(fifth).toBeDisabled();
+    await userEvent.selectOptions(detailed, "5");
+    expect(fifth).toHaveValue("Deep practice");
+    expect(new FormData(form).get("dive-5-title")).toBe("Deep practice");
   });
 
   it("opens already pointed at the course a catalog link named", async () => {

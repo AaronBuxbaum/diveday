@@ -1074,9 +1074,9 @@ describe("recurring trip series (in-memory PGlite)", () => {
 
   it("rejects a series with an invalid dive count", async () => {
     const { db, shop } = ctx;
-    expect(
-      await createTripSeries(db, seriesInput({ shopId: shop.id, plannedDives: 9 })),
-    ).toBeNull();
+    for (const plannedDives of [9, 5]) {
+      expect(await createTripSeries(db, seriesInput({ shopId: shop.id, plannedDives }))).toBeNull();
+    }
   });
 
   it("rejects a cadence that names no weekday at all", async () => {

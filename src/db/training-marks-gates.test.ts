@@ -218,6 +218,7 @@ describe("training marks — the gates the build review closed (in-memory PGlite
       instructorAboard: false,
       intro: false,
       overRatio: false,
+      siteAttributionUnknown: true,
     });
     // Read from the crew at read time. An instructor who does not teach the
     // session is not the course's (issue #2731); once they teach it, they are,

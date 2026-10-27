@@ -36,7 +36,8 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
-import { tripDetailsPatch } from "@/lib/trip-details";
+import { firstOfferedDiveMode, shopOffersDiveMode, tripDetailsPatch } from "@/lib/trip-details";
+import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { tripPath } from "./roster-booking";
 import { requireTripConfig } from "./trip-config";
@@ -60,7 +61,7 @@ const detailsSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
-  plannedDives: z.coerce.number().int().min(1).max(4),
+  plannedDives: z.coerce.number().int().min(1).max(MAX_COURSE_DIVES),
   // **The departure's own three**, editable since 2026-08-22 (issue #681).
   // They were writable only at creation, which made the commonest real edit —
   // "the boat that was going to run this is in for service" — impossible, with
@@ -187,7 +188,18 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   // A departure with no boat, or a shore or pool dive, yields no capacity and
   // is not checked.
   const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
-  const nextBoatId = diveMode && diveMode !== "boat" ? null : (boatId ?? tripNow?.boatId ?? null);
+  // A blank submitted selector clears the hull; an absent selector preserves it.
+  // In a single-mode shop the form omits diveMode, but its boat selector can
+  // still change the hull, so carry the current mode through the shared patch.
+  const hasBoatSelector = formData.has("boatId");
+  const patchDiveMode = diveMode ?? (hasBoatSelector ? (tripNow?.diveMode ?? "boat") : undefined);
+  const nextMode = patchDiveMode
+    ? shopOffersDiveMode(shopNow, patchDiveMode)
+      ? patchDiveMode
+      : firstOfferedDiveMode(shopNow)
+    : tripNow?.diveMode;
+  const nextBoatId =
+    nextMode === "boat" ? (hasBoatSelector ? (boatId ?? null) : (tripNow?.boatId ?? null)) : null;
   const nextBoat = nextBoatId ? await getBoatById(dbi, s.user.shopId, nextBoatId) : null;
   // The same tenant rule the hull above obeys: a lens id arriving on this form
   // has to be one of *this* shop's live words, or the select becomes a
@@ -228,8 +240,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       boatCapacity: nextBoat?.capacity ?? null,
       // And its certificate (H-107): no seat above it is sold.
       boatCertifiedPassengers: nextBoat?.certifiedPassengers ?? null,
-      diveMode,
-      boatId,
+      diveMode: patchDiveMode,
+      boatId: nextBoatId,
       requiresPayment: gate?.requiresPayment ?? false,
     },
     shopNow,
@@ -359,14 +371,6 @@ function redirectDetailsRefusal(
   if (details.reason === "capacity_above_certificate") {
     redirect(
       noticeUrl(back, "capacity-above-certificate", { count: details.limit, form: "details" }),
-    );
-  }
-  if (details.reason === "capacity_above_boat") {
-    redirect(
-      noticeUrl(back, "capacity-above-boat", {
-        count: details.boatCapacity,
-        form: "details",
-      }),
     );
   }
   redirect(noticeUrl(back, "invalid", { form: "details" }));

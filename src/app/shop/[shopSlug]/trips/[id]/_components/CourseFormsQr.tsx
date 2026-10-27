@@ -34,7 +34,6 @@ export function CourseFormsQrProvider({
   action: (bookingId: string) => Promise<QrResult>;
   copy: Copy;
 }) {
-  const router = useRouter();
   const [selected, setSelected] = useState<Selection | null>(null);
   const [result, setResult] = useState<QrResult | null>(null);
   const [monitoring, setMonitoring] = useState(false);
@@ -49,7 +48,6 @@ export function CourseFormsQrProvider({
     generation.current++;
     setResult(null);
     setSelected(null);
-    router.refresh();
   };
   const show = (selection: Selection) => {
     const current = ++generation.current;
@@ -70,40 +68,59 @@ export function CourseFormsQrProvider({
     <QrContext.Provider value={{ show, label: copy.show, labelFor: copy.showFor }}>
       {children}
       {monitoring ? <LiveRefresh holdAfterTapMs={5000} /> : null}
-      <Modal open={selected !== null} onClose={close} title={copy.title} className="print:hidden">
-        {selected ? (
-          <>
-            <p className="font-semibold">{selected.name}</p>
-            <p className="mt-2">{copy.scan}</p>
-            {result === null ? (
-              <p role="status" className="mt-4">
-                {copy.loading}
-              </p>
-            ) : result.ok ? (
-              // biome-ignore lint/performance/noImgElement: local data URL, never a remote image.
-              <img
-                src={result.qr}
-                alt={copy.title}
-                width={256}
-                height={256}
-                className="mt-4 size-64 max-w-full"
-              />
-            ) : (
-              <p role="alert" className="mt-4">
-                {copy.failed}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={close}
-              className={buttonClass({ variant: "secondary", className: "mt-4" })}
-            >
-              {copy.close}
-            </button>
-          </>
-        ) : null}
-      </Modal>
+      {selected ? (
+        <CourseFormsQrDialog selected={selected} result={result} copy={copy} onClose={close} />
+      ) : null}
     </QrContext.Provider>
+  );
+}
+
+function CourseFormsQrDialog({
+  selected,
+  result,
+  copy,
+  onClose,
+}: {
+  selected: Selection;
+  result: QrResult | null;
+  copy: Copy;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const close = () => {
+    onClose();
+    router.refresh();
+  };
+  return (
+    <Modal open onClose={close} title={copy.title} className="print:hidden">
+      <p className="font-semibold">{selected.name}</p>
+      <p className="mt-2">{copy.scan}</p>
+      {result === null ? (
+        <p role="status" className="mt-4">
+          {copy.loading}
+        </p>
+      ) : result.ok ? (
+        // biome-ignore lint/performance/noImgElement: local data URL, never a remote image.
+        <img
+          src={result.qr}
+          alt={copy.title}
+          width={256}
+          height={256}
+          className="mt-4 size-64 max-w-full"
+        />
+      ) : (
+        <p role="alert" className="mt-4">
+          {copy.failed}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={close}
+        className={buttonClass({ variant: "secondary", className: "mt-4" })}
+      >
+        {copy.close}
+      </button>
+    </Modal>
   );
 }
 
