@@ -38,6 +38,42 @@ test.describe("counter rental lookup at 390px", () => {
   test.use({ viewport: { width: 390, height: 844 } });
   signedInAsOwner();
 
+  test("offers gas choices for the selected diver's confirmed card", async ({
+    page,
+    request,
+  }, info) => {
+    const seeded = await request.post("/api/test/seed-trouble-states?rentalLookup=1");
+    expect(seeded.ok()).toBe(true);
+    const { rentalLookup } = (await seeded.json()) as { rentalLookup: RentalLookupFleet };
+    const chooseTank = async () => {
+      const gear = page.getByRole("region", { name: t("counterRentals.new.gearHeading") });
+      await gear.getByRole("button", { name: gearItemKindLabel(t, "tank"), exact: true }).click();
+      await gear
+        .getByRole("searchbox", { name: t("counterRentals.new.filterLabel") })
+        .fill(rentalLookup.tankTarget);
+      await gear
+        .getByRole("button", { name: `${rentalLookup.tankTarget} · AL80`, exact: true })
+        .click();
+      return page.getByRole("combobox", {
+        name: t("counterRentals.new.fillAria", { label: rentalLookup.tankTarget }),
+      });
+    };
+    await page.goto(`/shop/blue-mantis/gear/rentals/new?personId=${rentalLookup.personId}`);
+    const certifiedFill = await chooseTank();
+    await expect(certifiedFill.locator('option[value="32"]')).toHaveCount(1);
+    await page.goto("/shop/blue-mantis/gear/rentals/new?q=Lena");
+    await page.getByRole("link", { name: "Rent to Lena Fischer" }).click();
+    const unconfirmedFill = await chooseTank();
+    await expect(unconfirmedFill.locator('option[value="32"]')).toHaveCount(0);
+    await expect(unconfirmedFill.locator('option[value="21"]')).toHaveCount(1);
+    await expect(page.getByText(t("counterRentals.new.fillUnavailable"))).toBeVisible();
+    await unconfirmedFill.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath("nitrox-picker-mobile.png") });
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await unconfirmedFill.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath("nitrox-picker-desktop.png") });
+  });
+
   test("compares unfiltered and filtered lookup in the synthetic fleet", async ({
     page,
     request,
