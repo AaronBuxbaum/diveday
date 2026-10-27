@@ -24,7 +24,8 @@ export function setMockPathname(next: string) {
 }
 // The top add panel's Cancel clears the `?add` that opened it via
 // router.replace; the tests only need the calls to exist, not a router.
-export const useRouter = vi.fn(() => ({ replace: routerReplace }));
+export const routerPush = vi.fn();
+export const useRouter = vi.fn(() => ({ replace: routerReplace, push: routerPush }));
 export const useSearchParams = vi.fn(() => new URLSearchParams());
 
 export const COPY: BuilderCopy = {
@@ -95,6 +96,7 @@ export const COPY: BuilderCopy = {
   departs: "Departs",
   returns: "Returns",
   seats: "Seats",
+  boatCapacityWarning: "This exceeds the boat’s configured capacity ({count}).",
   dives: "Dives",
   price: "Price per diver",
   priceDescription: "Divers see this on the public page.",

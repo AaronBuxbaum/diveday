@@ -833,15 +833,26 @@ export async function seededTripId(
  * opens the row first. A row that is already open — a save redirects back
  * with `?saved=<section>`, which re-renders it open — is left alone.
  */
+/** Open the same settings rail at any viewport width. */
+export async function openSettingsRail(page: Page): Promise<Locator> {
+  const rail = page.getByRole("navigation", { name: "Settings sections" });
+  await expect(rail).toBeVisible();
+  const toggle = rail.getByRole("button", { name: "Settings sections" });
+  if (await toggle.isVisible()) {
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  }
+  return rail;
+}
+
 export async function openSettingsRow(page: Page, heading: string) {
+  const rail = await openSettingsRail(page);
+  await rail.getByRole("link", { name: heading, exact: true }).click();
   const details = page
     .locator("details")
     .filter({ has: page.getByRole("heading", { level: 3, name: heading, exact: true }) })
     .first();
-  const isOpen = await details.evaluate((node) => node.hasAttribute("open"));
-  // `> summary` for the same reason as `openIfClosed` below: a settings row can
-  // hold its own nested disclosures, and only a direct summary opens this one.
-  if (!isOpen) await details.locator("> summary").click();
+  await expect(details).toBeVisible();
+  await expect(details).toHaveAttribute("open", "");
 }
 
 /**

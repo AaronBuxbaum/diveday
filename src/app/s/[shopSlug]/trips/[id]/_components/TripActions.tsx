@@ -70,7 +70,7 @@ export function TripActions({
     // until 2026-08-28, which still read as controls: a button-shaped thing
     // sitting between the price and the one primary action competes with it
     // however light its fill is. A convenience gets link weight.
-    <fieldset className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+    <fieldset className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm print:hidden">
       <legend className="sr-only">{t("planAndShare")}</legend>
       <a href={calendarUrl} className={QUIET_LINK_CLASS}>
         {t("addToCalendar")}

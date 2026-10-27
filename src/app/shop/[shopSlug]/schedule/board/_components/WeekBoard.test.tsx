@@ -294,7 +294,7 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     // spent four extra rows on them.
     board(week());
     const line = screen.getAllByText("No boats").at(-1)?.parentElement as HTMLElement;
-    expect(within(line).getByRole("button", { name: /^Add a departure on / })).toBeTruthy();
+    expect(within(line).getByRole("link", { name: /^Add a departure on / })).toBeTruthy();
   });
 
   /** The Logbook restart decorates only what carries data (ADR 20261001-logbook). */

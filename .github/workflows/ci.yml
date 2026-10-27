@@ -667,6 +667,16 @@ jobs:
         run: pnpm build:sw
       - if: steps.plan.outputs.run == 'true'
         uses: ./.github/actions/playwright-shell
+      # The Crew paper regression rasterizes real PDF pages and checks their
+      # visible text. Install the test-only renderer when captures are selected.
+      - name: Install PDF rendering tools
+        if: ${{ !cancelled() && steps.plan.outputs.captures == 'true' }}
+        timeout-minutes: 5
+        run: |
+          if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends poppler-utils
+          fi
       - name: Run the fast lane's specs
         if: steps.plan.outputs.specs == 'true'
         run: |
@@ -815,8 +825,15 @@ jobs:
       # would silently bake "no service worker" into the visual baseline.
       - run: pnpm build:sw
       - uses: ./.github/actions/playwright-shell
-      # Only captures screenshots into e2e/screenshots — nothing here asserts,
-      # so a visual change never fails this step. The reg-suit compare against
+      - name: Install PDF rendering tools
+        timeout-minutes: 5
+        run: |
+          if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends poppler-utils
+          fi
+      # Capture screenshots into e2e/screenshots; state and paper-integrity
+      # assertions can fail this step. The reg-suit compare against
       # the S3 baseline runs once, in visual-report below, over every shard's
       # screenshots merged back together; reg-suit has no shard-aware mode of
       # its own to run per shard.

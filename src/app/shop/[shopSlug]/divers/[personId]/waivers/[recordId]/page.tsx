@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -197,7 +196,6 @@ export default async function SignedWaiverPage({
         eyebrow={waiver.personName}
         eyebrowHref={`${shopPath(shopSlug, "divers", waiver.personId)}#waiver`}
         title={t("waiversStaff.record.title")}
-        actions={<PrintButton label={t("shared.printButton.label")} />}
       />
       {waiver.supersededAt ? (
         <p className="mt-4 text-sm text-muted">

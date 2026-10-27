@@ -188,7 +188,7 @@ function SignatureRow({
               it truncated to a few words and the date never showed. The name
               then pushes the time and caret to the first line's end. */}
           <span className="font-medium max-sm:me-auto sm:w-52 sm:shrink-0">{entry.personName}</span>
-          <span className="min-w-0 flex-1 text-sm text-muted max-sm:order-last max-sm:basis-full sm:truncate">
+          <span className="min-w-0 flex-1 text-sm text-muted max-sm:order-last max-sm:basis-full sm:truncate print:overflow-visible print:whitespace-normal">
             {trip}
           </span>
           {/* On a phone the badges, the exception, take a line of their own

@@ -59,7 +59,7 @@ export function SnippetField({
           className={buttonClass({
             variant: "secondary",
             size: "sm",
-            className: "absolute end-2 top-2",
+            className: "absolute end-2 top-2 print:hidden",
           })}
         >
           <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>

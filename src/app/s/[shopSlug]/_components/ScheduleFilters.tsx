@@ -140,7 +140,7 @@ export function ScheduleFilters({
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((was) => !was)}
-          className="group/filters inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-brand hover:text-primary focus-visible:focus-ring"
+          className="group/filters inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-brand hover:text-primary focus-visible:focus-ring print:hidden"
         >
           {copy.disclosure}
           <DisclosureCaret

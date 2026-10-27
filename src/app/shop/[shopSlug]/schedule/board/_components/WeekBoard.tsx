@@ -847,16 +847,12 @@ export function WeekBoard({
             const { day } = row;
             const spans = spansByDay.get(day.dateIso) ?? [];
             const empty = day.entries.length === 0 && spans.length === 0;
-            const addKey = `w:add:${day.dateIso}`;
             // Never on a day that has already been: a departure is put on the
             // board, and the board is ahead.
             const addButton =
               canConfigure && !day.isPast ? (
-                <button
-                  type="button"
-                  ref={registerToggle(addKey)}
-                  onClick={() => onToggle(addKey)}
-                  aria-expanded={openKey === addKey}
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board/new?date=${encodeURIComponent(day.dateIso)}&week=${encodeURIComponent(day.dateIso)}`}
                   aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
                   className={buttonClass({
                     variant: "ghost",
@@ -865,7 +861,7 @@ export function WeekBoard({
                   })}
                 >
                   <span aria-hidden="true">+</span> {copy.add}
-                </button>
+                </Link>
               ) : null;
             const panelUnder = (tripId: string) =>
               panel?.under === "departure" && panel.tripId === tripId ? panel.node : null;

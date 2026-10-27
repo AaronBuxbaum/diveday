@@ -163,7 +163,7 @@ export default async function WorkOrderPage({
         {deleted ? null : (
           <Link
             href={`${board}/${workOrder.id}/tag`}
-            className={buttonClass({ variant: "secondary" })}
+            className={buttonClass({ variant: "secondary", className: "print:hidden" })}
           >
             {t("workOrders.detail.claimTag")}
           </Link>

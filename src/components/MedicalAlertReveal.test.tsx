@@ -46,6 +46,19 @@ function savedCopyWith(text: string | undefined): OfflineManifestEnvelope {
 
 /** Issue #2960: the words are read on purpose, never at rest. */
 describe("MedicalAlertReveal", () => {
+  it("keeps revealed screen-only medical words off paper after Show alert", async () => {
+    render(
+      <MedicalAlertReveal
+        show={async () => ({ ok: true, text: ALERT })}
+        unreadable={UNREADABLE}
+        copy={copy}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: copy.show }));
+    const words = await screen.findByText(/EpiPen in the blue dry bag/);
+    expect(words).toBeVisible();
+    expect(words.closest('[class~="print:hidden"]')).not.toBeNull();
+  });
   it("shows nothing of the alert until the tap, then the diver's words and that nobody reviewed them", async () => {
     const show = vi.fn(async () => ({ ok: true as const, text: ALERT }));
     render(<MedicalAlertReveal show={show} unreadable={UNREADABLE} copy={copy} />);
