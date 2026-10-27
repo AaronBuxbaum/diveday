@@ -157,8 +157,23 @@ function errorInfoFromResponse(status: number, rawBody: string): WhatsAppErrorIn
   };
 }
 
-function sleep(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+function sleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, milliseconds);
+    function done() {
+      signal?.removeEventListener("abort", done);
+      resolve();
+    }
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        done();
+      },
+      { once: true },
+    );
+  });
 }
 
 function retryDelayMs(attempt: number, random: () => number): number {
@@ -177,8 +192,10 @@ async function postWhatsAppMessage(
   body: unknown,
   fetchImpl: typeof fetch,
   options: Required<WhatsAppProviderOptions>,
+  signal?: AbortSignal,
 ): Promise<CourtesyDelivery> {
   for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
+    if (signal?.aborted) return { status: "failed", retryable: true, errorCode: "timeout" };
     let info: WhatsAppErrorInfo;
     try {
       const response = await fetchImpl(endpoint, {
@@ -188,6 +205,7 @@ async function postWhatsAppMessage(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
+        ...(signal ? { signal } : {}),
       });
       const rawBody = await response.text();
       if (response.ok) {
@@ -207,7 +225,9 @@ async function postWhatsAppMessage(
       };
     }
     if (info.retryable && attempt < options.maxAttempts) {
-      await options.sleep(retryDelayMs(attempt, options.random));
+      await (signal
+        ? sleep(retryDelayMs(attempt, options.random), signal)
+        : options.sleep(retryDelayMs(attempt, options.random)));
       continue;
     }
     // Never log the body or the recipient — a courtesy message names a
@@ -240,7 +260,10 @@ function sendEndpoint(phoneNumberId: string): string {
 const MAX_TEXT_LENGTH = 4096;
 
 export interface WhatsAppTextSender {
-  sendText(message: { to: string; body: string }): Promise<CourtesyDelivery>;
+  sendText(
+    message: { to: string; body: string },
+    options?: { signal?: AbortSignal },
+  ): Promise<CourtesyDelivery>;
 }
 
 /**
@@ -259,7 +282,7 @@ export function whatsAppTextSender(
   const options = resolvedOptions(providerOptions);
   const endpoint = sendEndpoint(credentials.phoneNumberId);
   return {
-    async sendText(message) {
+    async sendText(message, sendOptions) {
       const to = whatsAppRecipient(message.to);
       if (!to) return { status: "failed", retryable: false, errorCode: "invalid_recipient" };
       const text = message.body.trim();
@@ -276,6 +299,7 @@ export function whatsAppTextSender(
         },
         fetchImpl,
         options,
+        sendOptions?.signal,
       );
     },
   };
@@ -300,7 +324,10 @@ export function whatsAppProvider(
   const endpoint = sendEndpoint(credentials.phoneNumberId);
 
   return {
-    async send(message: CourtesyMessage): Promise<CourtesyDelivery> {
+    async send(
+      message: CourtesyMessage,
+      providerOptions?: { signal?: AbortSignal },
+    ): Promise<CourtesyDelivery> {
       const to = whatsAppRecipient(message.to);
       if (!to) {
         return { status: "failed", retryable: false, errorCode: "invalid_recipient" };
@@ -324,7 +351,14 @@ export function whatsAppProvider(
           ],
         },
       };
-      return postWhatsAppMessage(endpoint, credentials.accessToken, body, fetchImpl, options);
+      return postWhatsAppMessage(
+        endpoint,
+        credentials.accessToken,
+        body,
+        fetchImpl,
+        options,
+        providerOptions?.signal,
+      );
     },
   };
 }

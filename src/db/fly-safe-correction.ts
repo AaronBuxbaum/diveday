@@ -6,9 +6,12 @@ import {
   type Notification,
   type NotificationDelivery,
   type NotificationProvider,
+  notificationProviderSignal,
   recipientLocale,
 } from "@/lib/notifications";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import {
   type FlySafeExposure,
   openFlySafeExposures,
@@ -40,6 +43,34 @@ export const FLY_SAFE_CORRECTION_WINDOW_MS = 48 * HOUR_MS;
 export const FLY_SAFE_CORRECTION_LEASE_MS = 15 * 60 * 1000;
 const MAX_AUTOMATIC_CORRECTION_CLAIMS = 3;
 const FLY_SAFE_QUERY_CONCURRENCY = 4;
+
+async function lockLiveFlySafeBooking(tx: DbExecutor, shopId: string, bookingId: string) {
+  await lockBoardingCertificationEvidence(tx, shopId, "boarding");
+  const [snapshot] = await tx
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)));
+  if (!snapshot) return null;
+  const [person] = await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.id, snapshot.personId),
+        eq(people.shopId, shopId),
+        livePerson(),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .for("no key update");
+  if (!person) return null;
+  const [seat] = await tx
+    .select()
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .for("update");
+  return seat?.personId === person.id ? seat : null;
+}
 
 /** Preserve input order while keeping database-backed work to a small fixed fan-out. */
 export async function mapFlySafeConcurrent<T, R>(
@@ -83,29 +114,9 @@ export async function recordFlySafeTold(
   },
 ): Promise<boolean> {
   return db.transaction(async (tx) => {
-    const [locked] = await tx
-      .select()
-      .from(bookings)
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
-      // diveday:allow-update-lock: serialize exposure recording with seat erasure and identity repointing.
-      .for("update");
+    const locked = await lockLiveFlySafeBooking(tx, input.shopId, input.bookingId);
     if (!locked) return false;
-    // Erasure must lock and clear this seat before it commits. A non-locking
-    // person read here cannot deadlock with its person-first lock order.
-    const [person] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .where(
-        and(
-          eq(people.id, locked.personId),
-          eq(people.shopId, input.shopId),
-          livePerson(),
-          isNull(people.anonymizedAt),
-        ),
-      )
-      .limit(1);
-    if (!person) return false;
-    const reassigned = !!input.recipientPersonId && input.recipientPersonId !== person.id;
+    const reassigned = !!input.recipientPersonId && input.recipientPersonId !== locked.personId;
     if (reassigned) {
       await tx
         .update(bookings)
@@ -168,7 +179,7 @@ export async function recordFlySafeTold(
         and(
           eq(bookings.id, input.bookingId),
           eq(bookings.shopId, input.shopId),
-          eq(bookings.personId, person.id),
+          eq(bookings.personId, locked.personId),
         ),
       );
     return true;
@@ -254,12 +265,7 @@ export async function discardRefusedFlySafeExposure(
 ): Promise<void> {
   if (notification.kind !== "trip_reminder_24h" || !notification.flySafeExposureId) return;
   await db.transaction(async (tx) => {
-    const [seat] = await tx
-      .select()
-      .from(bookings)
-      .where(and(eq(bookings.id, notification.bookingId), eq(bookings.shopId, notification.shopId)))
-      // diveday:allow-update-lock: retract only this refused reminder reservation.
-      .for("update");
+    const seat = await lockLiveFlySafeBooking(tx, notification.shopId, notification.bookingId);
     if (!seat?.flySafeRecipientSealed) return;
     const entries = openFlySafeExposures(
       seat.flySafeRecipientSealed,
@@ -445,12 +451,7 @@ export async function rearmFailedFlySafeCorrection(
   input: { shopId: string; bookingId: string; correctionId: string },
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    const [seat] = await tx
-      .select()
-      .from(bookings)
-      .where(and(eq(bookings.shopId, input.shopId), eq(bookings.id, input.bookingId)))
-      // diveday:allow-update-lock: fence a rejected outbox generation against new exposures and workers.
-      .for("update");
+    const seat = await lockLiveFlySafeBooking(tx, input.shopId, input.bookingId);
     if (!seat) return;
     const entries = seat.flySafeRecipientSealed
       ? openFlySafeExposures(seat.flySafeRecipientSealed, input.shopId, input.bookingId)
@@ -707,6 +708,116 @@ export async function listShopFlySafeFollowUps(db: AppDb, input: { shopId: strin
   return groups.flat();
 }
 
+async function mutateFlySafeExposure(
+  db: AppDb,
+  input: {
+    seatId: string;
+    shopId: string;
+    tripId: string;
+    leaseId: string;
+    expectedPersonId?: string;
+    now: Date;
+    change: (entries: FlySafeExposure[]) => void;
+    finish?: boolean;
+    executor?: DbExecutor;
+  },
+): Promise<boolean> {
+  const update = async (tx: DbExecutor) => {
+    const seat = await lockLiveFlySafeBooking(tx, input.shopId, input.seatId);
+    if (
+      !seat ||
+      seat.flySafeCorrectionLeaseId !== input.leaseId ||
+      seat.tripId !== input.tripId ||
+      (input.expectedPersonId && seat.personId !== input.expectedPersonId) ||
+      (seat.status !== "booked" && seat.status !== "checked_in") ||
+      !seat.flySafeRecipientSealed
+    )
+      return false;
+    const entries = openFlySafeExposures(seat.flySafeRecipientSealed, input.shopId, input.seatId);
+    if (!entries) return false;
+    input.change(entries);
+    const sealed = sealFlySafeExposures(entries, input.shopId, input.seatId);
+    if (!sealed) return false;
+    await tx
+      .update(bookings)
+      .set({
+        flySafeRecipientSealed: sealed,
+        ...(input.finish
+          ? {
+              flySafeCorrectionLeaseId: null,
+              flySafeCorrectionLeaseUntil: null,
+              flySafeCorrectedAt:
+                !seat.flySafeRecipientUnknown && entries.every((entry) => entry.corrected)
+                  ? input.now
+                  : null,
+            }
+          : {}),
+      })
+      .where(
+        and(
+          eq(bookings.id, input.seatId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.flySafeCorrectionLeaseId, input.leaseId),
+        ),
+      );
+    return true;
+  };
+  const executor = input.executor ?? db;
+  return "$client" in executor ? executor.transaction(update) : update(executor);
+}
+
+async function sendFlySafeCorrectionUnderFence(
+  db: AppDb,
+  input: {
+    notification: Notification;
+    provider: NotificationProvider;
+    expectedPersonId: string;
+    expectedTripId: string;
+    exposureId: string;
+    leaseId: string;
+    now: Date;
+  },
+): Promise<NotificationDelivery | null> {
+  const notification = input.notification;
+  if (notification.kind !== "fly_safe_correction") return null;
+  return withErasureCoordinatedBookingSend(
+    db,
+    {
+      shopId: notification.shopId,
+      bookingId: notification.seatId,
+      expectedPersonId: input.expectedPersonId,
+      expectedTripId: input.expectedTripId,
+    },
+    async (tx) => {
+      const delivery = await sendNotification(tx, notification, input.provider, {
+        signal: notificationProviderSignal(),
+      });
+      if (
+        delivery.status === "sent" ||
+        (delivery.status === "failed" && delivery.retryable && delivery.retryQueued === true)
+      ) {
+        await mutateFlySafeExposure(db, {
+          seatId: notification.seatId,
+          shopId: notification.shopId,
+          tripId: input.expectedTripId,
+          leaseId: input.leaseId,
+          expectedPersonId: input.expectedPersonId,
+          now: input.now,
+          change: (values) => {
+            const entry = values.find(
+              (value) =>
+                value.id === input.exposureId && value.correctionId === notification.correctionId,
+            );
+            if (entry) entry.corrected = true;
+          },
+          executor: tx,
+        });
+      }
+      return delivery;
+    },
+  );
+}
+
 /**
  * **Send each diver told a fly-safe wait the one correction** (issue #2927).
  *
@@ -734,7 +845,11 @@ export async function sendFlySafeCorrections(
     now?: Date;
     emailProvider?: NotificationProvider;
     /** The one send door; a test passes one that throws to prove the put-back. */
-    send?: typeof sendNotification;
+    send?: (
+      db: AppDb,
+      notification: Notification,
+      provider?: NotificationProvider,
+    ) => Promise<NotificationDelivery>;
   },
 ): Promise<FlySafeCorrectionOutcome> {
   const outcome: FlySafeCorrectionOutcome = { told: 0, failed: 0, unreached: [] };
@@ -871,56 +986,6 @@ export async function sendFlySafeCorrections(
   // correction went or was queued; whatever is left when the loop ends, by
   // any exit including a throw, has its claim put back for the next save.
   const unsent = new Set(claimed.map((seat) => seat.id));
-  const mutate = async (
-    seatId: string,
-    change: (entries: FlySafeExposure[]) => void,
-    finish = false,
-  ) =>
-    db.transaction(async (tx) => {
-      const [seat] = await tx
-        .select()
-        .from(bookings)
-        .where(and(eq(bookings.id, seatId), eq(bookings.shopId, shop.id)))
-        // diveday:allow-update-lock: serialize exposure receipt with a reminder or terminal outbox retry.
-        .for("update");
-      if (
-        !seat ||
-        seat.flySafeCorrectionLeaseId !== leaseId ||
-        seat.tripId !== trip.id ||
-        (input.expectedPersonId && seat.personId !== input.expectedPersonId) ||
-        (seat.status !== "booked" && seat.status !== "checked_in") ||
-        !seat.flySafeRecipientSealed
-      )
-        return false;
-      const entries = openFlySafeExposures(seat.flySafeRecipientSealed, shop.id, seatId);
-      if (!entries) return false;
-      change(entries);
-      const sealed = sealFlySafeExposures(entries, shop.id, seatId);
-      if (!sealed) return false;
-      await tx
-        .update(bookings)
-        .set({
-          flySafeRecipientSealed: sealed,
-          ...(finish
-            ? {
-                flySafeCorrectionLeaseId: null,
-                flySafeCorrectionLeaseUntil: null,
-                flySafeCorrectedAt:
-                  !seat.flySafeRecipientUnknown && entries.every((entry) => entry.corrected)
-                    ? now
-                    : null,
-              }
-            : {}),
-        })
-        .where(
-          and(
-            eq(bookings.id, seatId),
-            eq(bookings.shopId, shop.id),
-            eq(bookings.flySafeCorrectionLeaseId, leaseId),
-          ),
-        );
-      return true;
-    });
   const unreached = (personId: string) => {
     outcome.failed += 1;
     outcome.unreached.push(personById.get(personId)?.fullName ?? "");
@@ -948,9 +1013,17 @@ export async function sendFlySafeCorrections(
           continue;
         }
         const correctionId = crypto.randomUUID();
-        const prepared = await mutate(seat.id, (values) => {
-          const entry = values.find((value) => value.id === exposure.id);
-          if (entry && !entry.corrected) entry.correctionId = correctionId;
+        const prepared = await mutateFlySafeExposure(db, {
+          seatId: seat.id,
+          shopId: shop.id,
+          tripId: trip.id,
+          leaseId,
+          expectedPersonId: input.expectedPersonId,
+          now,
+          change: (values) => {
+            const entry = values.find((value) => value.id === exposure.id);
+            if (entry && !entry.corrected) entry.correctionId = correctionId;
+          },
         });
         if (!prepared) break;
         await db
@@ -963,37 +1036,74 @@ export async function sendFlySafeCorrections(
               eq(bookings.flySafeCorrectionLeaseId, leaseId),
             ),
           );
-        const delivery = await send(
-          db,
-          {
-            kind: "fly_safe_correction",
-            correctionId,
+        const notification: Notification = {
+          kind: "fly_safe_correction",
+          correctionId,
+          seatId: seat.id,
+          shopId: shop.id,
+          to: exposure.email,
+          locale: recipientLocale(person.locale, shop.defaultLocale),
+          shopName: shop.name,
+          tripTitle: trip.title,
+          startsAt: trip.startsAt,
+          timezone: shop.timezone,
+        };
+        const delivery = input.send
+          ? await send(db, notification, provider)
+          : await sendFlySafeCorrectionUnderFence(db, {
+              notification,
+              provider,
+              expectedPersonId: seat.personId,
+              expectedTripId: trip.id,
+              exposureId: exposure.id,
+              leaseId,
+              now,
+            });
+        if (delivery === null) {
+          unreached(seat.personId);
+          continue;
+        }
+        if (
+          input.send &&
+          (delivery.status === "sent" ||
+            (delivery.status === "failed" && delivery.retryable && delivery.retryQueued === true))
+        ) {
+          await mutateFlySafeExposure(db, {
             seatId: seat.id,
             shopId: shop.id,
-            to: exposure.email,
-            locale: recipientLocale(person.locale, shop.defaultLocale),
-            shopName: shop.name,
-            tripTitle: trip.title,
-            startsAt: trip.startsAt,
-            timezone: shop.timezone,
-          },
-          provider,
-        );
+            tripId: trip.id,
+            leaseId,
+            expectedPersonId: input.expectedPersonId,
+            now,
+            change: (values) => {
+              const entry = values.find(
+                (value) => value.id === exposure.id && value.correctionId === correctionId,
+              );
+              if (entry) entry.corrected = true;
+            },
+          });
+        }
         if (
           delivery.status === "sent" ||
           (delivery.status === "failed" && delivery.retryable && delivery.retryQueued === true)
         ) {
-          await mutate(seat.id, (values) => {
-            const entry = values.find(
-              (value) => value.id === exposure.id && value.correctionId === correctionId,
-            );
-            if (entry) entry.corrected = true;
-          });
           if (delivery.status === "sent") outcome.told += 1;
           else outcome.failed += 1;
         } else unreached(seat.personId);
       }
-      if (await mutate(seat.id, () => {}, true)) unsent.delete(seat.id);
+      if (
+        await mutateFlySafeExposure(db, {
+          seatId: seat.id,
+          shopId: shop.id,
+          tripId: trip.id,
+          leaseId,
+          expectedPersonId: input.expectedPersonId,
+          now,
+          change: () => {},
+          finish: true,
+        })
+      )
+        unsent.delete(seat.id);
     }
   } finally {
     if (unsent.size > 0) {

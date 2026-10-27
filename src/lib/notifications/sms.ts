@@ -30,7 +30,7 @@ export type SmsMessage = {
 export type SmsDelivery = CourtesyDelivery;
 
 export interface SmsProvider {
-  send(message: SmsMessage): Promise<SmsDelivery>;
+  send(message: SmsMessage, options?: { signal?: AbortSignal }): Promise<SmsDelivery>;
 }
 
 type SmsEnvironment = Readonly<Record<string, string | undefined>>;
@@ -62,11 +62,15 @@ type SnsConfig = {
  * with a plain object instead of standing up (or mocking) the real SDK client.
  */
 export interface SnsPublishClient {
-  send(command: PublishCommand): Promise<{ MessageId?: string }>;
+  send(
+    command: PublishCommand,
+    options?: { abortSignal?: AbortSignal },
+  ): Promise<{ MessageId?: string }>;
 }
 
 export type SnsProviderOptions = {
   client?: SnsPublishClient;
+  maxAttempts?: number;
 };
 
 const snsConfigSchema = z.object({
@@ -127,9 +131,10 @@ export function snsSmsProvider(config: SnsConfig, options: SnsProviderOptions = 
     new SNSClient({
       region: config.region,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+      ...(options.maxAttempts === undefined ? {} : { maxAttempts: options.maxAttempts }),
     });
   return {
-    async send(message) {
+    async send(message, providerOptions) {
       try {
         const result = await client.send(
           new PublishCommand({
@@ -148,6 +153,7 @@ export function snsSmsProvider(config: SnsConfig, options: SnsProviderOptions = 
                 : {}),
             },
           }),
+          ...(providerOptions?.signal ? [{ abortSignal: providerOptions.signal }] : []),
         );
         if (!result.MessageId) {
           return { status: "failed", retryable: true, errorCode: "invalid_response" };

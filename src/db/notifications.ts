@@ -33,6 +33,7 @@ import {
   notificationIdempotencyKey,
   notificationIsQueueable,
   notificationProviderFromEnvironment,
+  notificationProviderSignal,
   notificationSchema,
   notificationSubjectEmail,
   notificationSubjectPhone,
@@ -46,10 +47,12 @@ import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/no
 import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { issueBookingCapability } from "./booking-capabilities";
 import { settledPartyPayment } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import {
   correctFlySafeForBooking,
   discardRefusedFlySafeExposure,
@@ -336,7 +339,7 @@ function thrownErrorDetail(error: unknown): string {
 }
 
 async function queueRetry(
-  db: AppDb,
+  db: DbExecutor,
   input: Notification,
   delivery: Extract<NotificationDelivery, { status: "failed" }>,
 ): Promise<"queued" | QueueRefusal> {
@@ -349,20 +352,55 @@ async function queueRetry(
   // anyway. `queueSealingKey` has already said so in the log.
   const key = queueSealingKey("queue");
   if (!key) return "queue_seal_unavailable";
-  if (input.kind === "fly_safe_correction") {
-    return db.transaction(async (tx) => {
-      const [seat] = await tx
-        .select({ id: bookings.id })
+  const persist = async (tx: DbExecutor): Promise<"queued" | QueueRefusal> => {
+    const bookingId =
+      input.kind === "fly_safe_correction"
+        ? input.seatId
+        : "bookingId" in input
+          ? (input.bookingId ?? null)
+          : null;
+    let recipientPersonId: string | null = null;
+    let recipientTripId: string | null = null;
+    if (bookingId) {
+      await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+      const [snapshot] = await tx
+        .select({ personId: bookings.personId, tripId: bookings.tripId })
         .from(bookings)
-        .where(and(eq(bookings.id, input.seatId), eq(bookings.shopId, input.shopId)))
-        // diveday:allow-update-lock: serialize retry insertion with erasure and identity repointing.
+        .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, input.shopId)));
+      if (!snapshot) return "stale_recipient";
+      const [subject] = await tx
+        .select({ id: people.id, email: people.email, anonymizedAt: people.anonymizedAt })
+        .from(people)
+        .where(and(eq(people.id, snapshot.personId), eq(people.shopId, input.shopId), livePerson()))
+        .for("no key update");
+      const [seat] = await tx
+        .select({ personId: bookings.personId, tripId: bookings.tripId, status: bookings.status })
+        .from(bookings)
+        .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, input.shopId)))
         .for("update");
-      if (!seat || (await queuedFlySafeCorrectionState(tx, input)) !== "valid")
+      if (
+        !subject ||
+        subject.anonymizedAt ||
+        !seat ||
+        seat.personId !== snapshot.personId ||
+        seat.tripId !== snapshot.tripId ||
+        seat.status === "cancelled" ||
+        ("personId" in input && input.personId && input.personId !== subject.id) ||
+        ("tripId" in input && input.tripId && input.tripId !== seat.tripId) ||
+        ("to" in input && input.to && input.to !== subject.email)
+      )
         return "stale_recipient";
-      return persistQueuedRetry(tx, input, delivery, key);
-    });
-  }
-  return persistQueuedRetry(db, input, delivery, key);
+      recipientPersonId = subject.id;
+      recipientTripId = seat.tripId;
+      if (
+        input.kind === "fly_safe_correction" &&
+        (await queuedFlySafeCorrectionState(tx, input)) !== "valid"
+      )
+        return "stale_recipient";
+    }
+    return persistQueuedRetry(tx, input, delivery, key, { recipientPersonId, recipientTripId });
+  };
+  return "$client" in db ? db.transaction(persist) : persist(db);
 }
 
 async function persistQueuedRetry(
@@ -370,6 +408,7 @@ async function persistQueuedRetry(
   input: Notification & { shopId: string },
   delivery: Extract<NotificationDelivery, { status: "failed" }>,
   key: SecretKey,
+  subject: { recipientPersonId: string | null; recipientTripId: string | null },
 ): Promise<"queued" | QueueRefusal> {
   const [inserted] = await db
     .insert(notificationSendQueue)
@@ -391,6 +430,8 @@ async function persistQueuedRetry(
           : "bookingId" in input
             ? (input.bookingId ?? null)
             : null,
+      recipientPersonId: subject.recipientPersonId,
+      recipientTripId: subject.recipientTripId,
       status: "queued",
       nextAttemptAt: retryDueAt(delivery),
       httpStatus: delivery.httpStatus ?? null,
@@ -412,7 +453,7 @@ async function persistQueuedRetry(
  * and those include the recipient's address.
  */
 async function queueRetryOrLog(
-  db: AppDb,
+  db: DbExecutor,
   input: Notification,
   delivery: Extract<NotificationDelivery, { status: "failed" }>,
 ): Promise<boolean> {
@@ -438,7 +479,7 @@ async function queueRetryOrLog(
  * a shop with neither on file, and for a shop id that matches no row.
  */
 export async function shopSenderFor(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
 ): Promise<NotificationSender | undefined> {
   const [shop] = await db
@@ -473,7 +514,7 @@ export async function shopSenderFor(
  * shop once.
  */
 async function withShopSender(
-  db: AppDb,
+  db: DbExecutor,
   notification: Notification,
   cache: Map<string, NotificationSender | undefined> = new Map(),
 ): Promise<Notification> {
@@ -507,7 +548,7 @@ function withSentBy(input: Notification, actor: SendActor | null): Notification 
 }
 
 async function withShopProfile(
-  db: AppDb,
+  db: DbExecutor,
   input: Notification,
   cache: Map<string, NotificationSender | undefined>,
 ): Promise<Notification> {
@@ -529,9 +570,10 @@ async function withShopProfile(
 
 /** Send immediately and retain retryable failures for the next worker pass. */
 export async function sendNotification(
-  db: AppDb,
+  db: DbExecutor,
   notification: Notification,
   provider?: NotificationProvider,
+  options?: { signal?: AbortSignal },
 ): Promise<NotificationDelivery> {
   const input = withSentBy(notification, await currentSendActor());
   // Checked here rather than left to `notify`'s own hard `parse` below. A
@@ -565,7 +607,11 @@ export async function sendNotification(
   try {
     // Left catching everything on purpose: `withShopSender` reads the database
     // and can still throw, and that genuinely is retryable.
-    delivery = await notify(await withShopSender(db, input), notificationProviderForDb(provider));
+    const addressed = await withShopSender(db, input);
+    const resolved = notificationProviderForDb(provider);
+    delivery = options?.signal
+      ? await notify(addressed, resolved, { signal: options.signal })
+      : await notify(addressed, resolved);
   } catch (error) {
     delivery = {
       status: "failed",
@@ -954,6 +1000,119 @@ async function switchedOffSinceQueued(db: AppDb, notification: Notification): Pr
 }
 
 /** Drain durable transient failures; safe for overlapping cron invocations. */
+async function requeueExpiredNotificationClaims(db: AppDb, now: Date): Promise<void> {
+  await db
+    .update(notificationSendQueue)
+    .set({ status: "queued", lockedUntil: null, updatedAt: nowDate() })
+    .where(
+      and(
+        eq(notificationSendQueue.status, "processing"),
+        lt(notificationSendQueue.lockedUntil, new Date(now.getTime() - LOCK_GRACE_MS)),
+      ),
+    );
+}
+
+async function dueNotificationRetries(db: AppDb, now: Date, limit: number) {
+  return db
+    .select()
+    .from(notificationSendQueue)
+    .where(
+      and(
+        drainableStatus(),
+        lte(notificationSendQueue.nextAttemptAt, now),
+        or(isNull(notificationSendQueue.lockedUntil), lt(notificationSendQueue.lockedUntil, now)),
+      ),
+    )
+    .orderBy(asc(notificationSendQueue.nextAttemptAt))
+    .limit(limit);
+}
+
+async function dispatchQueuedRetry(
+  db: AppDb,
+  claimed: typeof notificationSendQueue.$inferSelect,
+  notification: Notification,
+  provider: NotificationProvider,
+  senders: Map<string, NotificationSender | undefined>,
+): Promise<{
+  delivery: NotificationDelivery;
+  suppressed: boolean;
+  trackingSuppressed: boolean;
+}> {
+  let delivery: NotificationDelivery;
+  let suppressed = false;
+  try {
+    const correctionState =
+      notification.kind === "fly_safe_correction"
+        ? await queuedFlySafeCorrectionState(db, notification)
+        : "valid";
+    if (correctionState === "stale") {
+      delivery = { status: "failed", retryable: false, errorCode: "stale_correction" };
+    } else if (correctionState === "unavailable") {
+      delivery = { status: "failed", retryable: true, errorCode: "recipient_snapshot_unavailable" };
+    } else if (await notificationHeldForRehearsal(db, notification)) {
+      delivery = REHEARSAL_HELD_DELIVERY;
+    } else if (claimed.bookingId) {
+      const fenced = await withErasureCoordinatedBookingSend(
+        db,
+        {
+          shopId: claimed.shopId,
+          bookingId: claimed.bookingId,
+          expectedPersonId: claimed.recipientPersonId as string,
+          expectedTripId: claimed.recipientTripId as string,
+          expectedEmail: "to" in notification ? notification.to : undefined,
+        },
+        async (tx) =>
+          notify(await withShopSender(tx, notification, senders), provider, {
+            signal: notificationProviderSignal(),
+          }),
+      );
+      suppressed = fenced === null;
+      delivery = fenced ?? { status: "failed", retryable: false, errorCode: "stale_recipient" };
+    } else {
+      delivery = await notify(await withShopSender(db, notification, senders), provider);
+    }
+  } catch (error) {
+    delivery = {
+      status: "failed",
+      retryable: true,
+      errorCode: "worker_error",
+      detail: thrownErrorDetail(error),
+    };
+  }
+  if (suppressed) return { delivery, suppressed, trackingSuppressed: false };
+
+  const tracked = "bookingId" in notification ? (notification as TrackedNotification) : null;
+  if (!tracked) return { delivery, suppressed, trackingSuppressed: false };
+  try {
+    const recorded = await withErasureCoordinatedBookingSend(
+      db,
+      {
+        shopId: claimed.shopId,
+        bookingId: claimed.bookingId as string,
+        expectedPersonId: claimed.recipientPersonId as string,
+        expectedTripId: claimed.recipientTripId as string,
+        expectedEmail: "to" in notification ? notification.to : undefined,
+      },
+      (tx) =>
+        recordNotificationDelivery(tx, {
+          shopId: tracked.shopId,
+          bookingId: tracked.bookingId,
+          kind: tracked.kind,
+          delivery,
+          isRetry: true,
+        }),
+    );
+    return { delivery, suppressed, trackingSuppressed: recorded === null };
+  } catch (error) {
+    log("notification.retry_status_record_failed", "error", {
+      bookingId: tracked.bookingId,
+      kind: tracked.kind,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return { delivery, suppressed, trackingSuppressed: false };
+  }
+}
+
 export async function drainNotificationRetries(
   db: AppDb,
   options: { now?: Date; limit?: number; provider?: NotificationProvider } = {},
@@ -985,27 +1144,8 @@ export async function drainNotificationRetries(
   // #1297 sealed it, a payload that never reaches the `payload_sealed = null`
   // every terminal path writes. Hand it back to the queue before selecting, so
   // the ordinary claim below picks it up and its attempt count still bounds it.
-  await db
-    .update(notificationSendQueue)
-    .set({ status: "queued", lockedUntil: null, updatedAt: nowDate() })
-    .where(
-      and(
-        eq(notificationSendQueue.status, "processing"),
-        lt(notificationSendQueue.lockedUntil, new Date(now.getTime() - LOCK_GRACE_MS)),
-      ),
-    );
-  const candidates = await db
-    .select()
-    .from(notificationSendQueue)
-    .where(
-      and(
-        drainableStatus(),
-        lte(notificationSendQueue.nextAttemptAt, now),
-        or(isNull(notificationSendQueue.lockedUntil), lt(notificationSendQueue.lockedUntil, now)),
-      ),
-    )
-    .orderBy(asc(notificationSendQueue.nextAttemptAt))
-    .limit(options.limit ?? RETRY_QUEUE_LIMIT);
+  await requeueExpiredNotificationClaims(db, now);
+  const candidates = await dueNotificationRetries(db, now, options.limit ?? RETRY_QUEUE_LIMIT);
   summary.scanned = candidates.length;
   if (candidates.length === 0) return summary;
   const provider = notificationProviderForDb(options.provider);
@@ -1066,6 +1206,8 @@ export async function drainNotificationRetries(
           subjectEmail: null,
           subjectPhone: null,
           bookingId: null,
+          recipientPersonId: null,
+          recipientTripId: null,
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
@@ -1137,6 +1279,8 @@ export async function drainNotificationRetries(
                 subjectEmail: null,
                 subjectPhone: null,
                 bookingId: null,
+                recipientPersonId: null,
+                recipientTripId: null,
               }
             : {}),
           updatedAt: nowDate(),
@@ -1168,6 +1312,36 @@ export async function drainNotificationRetries(
     }
 
     let notification = await refreshQueuedFlySafe(db, reviveQueuedNotification(opened));
+    const payloadBookingId =
+      notification.kind === "fly_safe_correction"
+        ? notification.seatId
+        : "bookingId" in notification
+          ? (notification.bookingId ?? null)
+          : null;
+    if (
+      (payloadBookingId &&
+        (claimed.bookingId !== payloadBookingId ||
+          !claimed.recipientPersonId ||
+          !claimed.recipientTripId)) ||
+      (claimed.bookingId && !payloadBookingId)
+    ) {
+      // Old queue rows have no durable binding to the person/trip that owned
+      // their sealed content. Do not infer that identity from today's booking
+      // or contact: a seat may have been repointed while this payload waited.
+      // Keep its sealed payload and erasure handles for follow-up/sweep.
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          lockedUntil: null,
+          errorCode: "retry_subject_unbound",
+          lastError: null,
+          updatedAt: nowDate(),
+        })
+        .where(eq(notificationSendQueue.id, claimed.id));
+      summary.failed += 1;
+      continue;
+    }
     const switchedOff = await switchedOffSinceQueued(db, notification);
     if (switchedOff || (await courtesyRecipientOptedOut(db, notification))) {
       // Finished, so it drops its handles like every other finished write. Not
@@ -1181,6 +1355,8 @@ export async function drainNotificationRetries(
           subjectEmail: null,
           subjectPhone: null,
           bookingId: null,
+          recipientPersonId: null,
+          recipientTripId: null,
           lockedUntil: null,
           httpStatus: null,
           errorCode: switchedOff ? "switched_off" : "opted_out",
@@ -1207,50 +1383,37 @@ export async function drainNotificationRetries(
         flySafeExposureId: crypto.randomUUID(),
       });
     }
-    let delivery: NotificationDelivery;
-    try {
-      const correctionState =
-        notification.kind === "fly_safe_correction"
-          ? await queuedFlySafeCorrectionState(db, notification)
-          : "valid";
-      delivery =
-        correctionState === "stale"
-          ? { status: "failed", retryable: false, errorCode: "stale_correction" }
-          : correctionState === "unavailable"
-            ? { status: "failed", retryable: true, errorCode: "recipient_snapshot_unavailable" }
-            : (await notificationHeldForRehearsal(db, notification))
-              ? REHEARSAL_HELD_DELIVERY
-              : await notify(await withShopSender(db, notification, senders), provider);
-    } catch (error) {
-      delivery = {
-        status: "failed",
-        retryable: true,
-        errorCode: "worker_error",
-        detail: thrownErrorDetail(error),
-      };
+    const dispatch = await dispatchQueuedRetry(db, claimed, notification, provider, senders);
+    if (dispatch.suppressed) {
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          lockedUntil: null,
+          errorCode: "stale_recipient",
+          lastError: null,
+          updatedAt: nowDate(),
+        })
+        .where(eq(notificationSendQueue.id, claimed.id));
+      summary.failed += 1;
+      continue;
     }
+    if (dispatch.trackingSuppressed) {
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          lockedUntil: null,
+          errorCode: "stale_recipient",
+          lastError: null,
+          updatedAt: nowDate(),
+        })
+        .where(eq(notificationSendQueue.id, claimed.id));
+      summary.failed += 1;
+      continue;
+    }
+    const delivery = dispatch.delivery;
     await settleRetriedFlySafe(db, notification, delivery, now, provider);
-    const tracked = "bookingId" in notification ? (notification as TrackedNotification) : null;
-    if (tracked) {
-      try {
-        await recordNotificationDelivery(db, {
-          shopId: tracked.shopId,
-          bookingId: tracked.bookingId,
-          kind: tracked.kind,
-          delivery,
-          isRetry: true,
-        });
-      } catch (error) {
-        // The error's name only, as in `queueRetryOrLog`: these writes bind
-        // `delivery.detail`, which can be a provider's raw message quoting the
-        // recipient, and a driver error can quote its bound parameters.
-        log("notification.retry_status_record_failed", "error", {
-          bookingId: tracked.bookingId,
-          kind: tracked.kind,
-          errorCode: error instanceof Error ? error.name : "unknown_error",
-        });
-      }
-    }
     try {
       await recordIndependentWaiverDelivery(db, notification, delivery);
     } catch (error) {
@@ -1271,6 +1434,8 @@ export async function drainNotificationRetries(
           subjectEmail: null,
           subjectPhone: null,
           bookingId: null,
+          recipientPersonId: null,
+          recipientTripId: null,
           lockedUntil: null,
           providerMessageId: delivery.providerMessageId,
           // A `sent` row says nothing about why it once failed. It used to keep
@@ -1325,6 +1490,8 @@ export async function drainNotificationRetries(
           subjectEmail: null,
           subjectPhone: null,
           bookingId: null,
+          recipientPersonId: null,
+          recipientTripId: null,
           lockedUntil: null,
           httpStatus: delivery.status === "failed" ? (delivery.httpStatus ?? null) : null,
           errorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
@@ -1395,7 +1562,7 @@ async function recordIndependentWaiverDelivery(
  * tenant-safe even when invoked outside a route action.
  */
 export async function recordNotificationDelivery(
-  db: AppDb,
+  db: DbExecutor,
   input: RecordNotificationDeliveryInput,
 ) {
   const [booking] = await db
@@ -1459,13 +1626,13 @@ export async function recordNotificationDelivery(
  * booking or waiver operation that triggered it.
  */
 export async function sendAndRecordNotification(
-  db: AppDb,
+  db: DbExecutor,
   input: Notification,
-  options: { isRetry?: boolean; provider?: NotificationProvider } = {},
+  options: { isRetry?: boolean; provider?: NotificationProvider; signal?: AbortSignal } = {},
 ) {
   let delivery: NotificationDelivery;
   try {
-    delivery = await sendNotification(db, input, options.provider);
+    delivery = await sendNotification(db, input, options.provider, { signal: options.signal });
   } catch {
     delivery = { status: "failed" };
   }

@@ -237,6 +237,7 @@ async function deliverCourseFormsLink(
   const issued = await issueCourseFormsCapability(db, {
     shopId,
     bookingId,
+    expectedPersonId: ctx.person.id,
     now: options.now,
   });
   if (!issued) return null;

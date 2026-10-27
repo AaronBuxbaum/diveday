@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { fakeEmail } from "@/test/fakes";
-import { describePostgres, postgresTestDb } from "@/test/postgres";
+import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
 import {
@@ -95,15 +95,16 @@ describePostgres("flying guidance erasure races", () => {
       now,
       emailProvider: provider,
     });
+    let erase: Promise<unknown> | undefined;
     try {
       await entered.promise;
-      expect(
-        await anonymizeDiver(pg.connect(), { shopId: shop.id, personId, actorPersonId: owner.id }),
-      ).toMatchObject({ ok: true });
+      erase = anonymizeDiver(pg.connect(), { shopId: shop.id, personId, actorPersonId: owner.id });
+      await waitForLockWaiters(pg.db, 1);
     } finally {
       release.resolve();
       await send;
     }
+    await expect(erase).resolves.toMatchObject({ ok: true });
     expect(
       await pg.db
         .select()
@@ -167,20 +168,21 @@ describePostgres("flying guidance erasure races", () => {
       now,
       emailProvider: provider,
     });
+    let repoint: Promise<unknown> | undefined;
     try {
       await entered.promise;
-      expect(
-        await repointHeldBooking(pg.connect(), {
-          shopId: shop.id,
-          bookingId,
-          actorPersonId: owner.id,
-          toPersonId: replacement.id,
-        }),
-      ).toMatchObject({ ok: true });
+      repoint = repointHeldBooking(pg.connect(), {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: owner.id,
+        toPersonId: replacement.id,
+      });
+      await waitForLockWaiters(pg.db, 1);
     } finally {
       release.resolve();
       await send;
     }
+    await expect(repoint).resolves.toMatchObject({ ok: true });
     expect(
       await pg.db
         .select()

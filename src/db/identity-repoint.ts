@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { hasReturned } from "@/lib/trips";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { movableSameNameSeats } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
@@ -14,7 +15,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
 /**
@@ -211,6 +212,7 @@ async function repointInTransaction(
   input: RepointHeldBookingInput,
 ): Promise<RepointOutcome> {
   const now = nowDate();
+  await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
   // Only a seat on a departure still to come (security review Y4): one that
   // is deleted, cancelled or back has nobody left to re-point.
   const [booking] = await tx
@@ -232,9 +234,26 @@ async function repointInTransaction(
         ne(bookings.status, "cancelled"),
       ),
     )
-    .limit(1)
-    .for("update", { of: bookings });
+    .limit(1);
   if (!booking) return { refused: "not_held" };
+  const personIds = [booking.personId, input.toPersonId].sort();
+  await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, input.shopId), inArray(people.id, personIds), livePerson()))
+    .orderBy(asc(people.id))
+    .for("no key update");
+  const [lockedBooking] = await tx
+    .select({ personId: bookings.personId, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .for("update");
+  if (
+    !lockedBooking ||
+    lockedBooking.personId !== booking.personId ||
+    lockedBooking.tripId !== booking.tripId
+  )
+    return { refused: "not_held" };
   if (
     booking.tripDeletedAt ||
     booking.tripStatus !== "scheduled" ||
@@ -266,8 +285,7 @@ async function repointInTransaction(
         eq(people.shopId, input.shopId),
         inArray(people.id, [booking.personId, input.toPersonId]),
       ),
-    )
-    .for("share");
+    );
   const from = named.find((row) => row.id === booking.personId);
   const to = named.find((row) => row.id === input.toPersonId);
   if (

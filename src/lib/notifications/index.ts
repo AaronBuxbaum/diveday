@@ -40,9 +40,12 @@ import { DEFAULT_SENDER, formatSender, sesConfigSchema, sesNotificationProvider 
 export async function notify(
   input: Notification,
   provider = notificationProviderFromEnvironment(),
+  options?: { signal?: AbortSignal },
 ): Promise<NotificationDelivery> {
   const notification = notificationSchema.parse(input);
-  return provider.send(notification);
+  return options?.signal
+    ? provider.send(notification, { signal: options.signal })
+    : provider.send(notification);
 }
 
 /**
@@ -85,7 +88,12 @@ export {
   notificationSubjectPhone,
   recipientLocale,
 } from "./kinds";
-export type { NotificationDelivery, NotificationProvider } from "./provider";
+export {
+  NOTIFICATION_PROVIDER_TIMEOUT_MS,
+  type NotificationDelivery,
+  type NotificationProvider,
+  notificationProviderSignal,
+} from "./provider";
 export {
   deliverableShopContactEmail,
   type ShopSenderSource,

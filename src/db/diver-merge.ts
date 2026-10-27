@@ -5,6 +5,7 @@ import type { AppDb, DbExecutor } from "@/db/client";
 import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import {
   activityEvents,
+  bookingCapabilities,
   bookings,
   people,
   personRoles,
@@ -1409,6 +1410,26 @@ export async function mergeDiverRecords(input: {
         fromPersonId: source.id,
         toPersonId: survivor.id,
       });
+      const transferredBookings = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(and(eq(bookings.shopId, input.shopId), eq(bookings.personId, source.id)));
+      if (transferredBookings.length > 0) {
+        const transferredAt = nowDate();
+        await tx
+          .update(bookingCapabilities)
+          .set({ revokedAt: transferredAt, expiresAt: transferredAt, tokenSealed: null })
+          .where(
+            and(
+              eq(bookingCapabilities.shopId, input.shopId),
+              inArray(
+                bookingCapabilities.bookingId,
+                transferredBookings.map(({ id }) => id),
+              ),
+              isNull(bookingCapabilities.revokedAt),
+            ),
+          );
+      }
       for (const tableName of DIVER_HISTORY_TABLES) {
         if (tableName === "waiver_records" || tableName === "course_form_records") continue;
         // A seat that is already over, on a departure the kept record also

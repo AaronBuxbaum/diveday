@@ -75,7 +75,7 @@ export type CourtesySend = CourtesyMessage & {
 };
 
 export interface CourtesyProvider {
-  send(message: CourtesyMessage): Promise<CourtesyDelivery>;
+  send(message: CourtesyMessage, options?: { signal?: AbortSignal }): Promise<CourtesyDelivery>;
 }
 
 /**
@@ -83,7 +83,10 @@ export interface CourtesyProvider {
  * free of a cycle with `./sms` (which takes its `SmsDelivery` from here).
  */
 export interface PlainTextProvider {
-  send(message: { to: string; body: string }): Promise<CourtesyDelivery>;
+  send(
+    message: { to: string; body: string },
+    options?: { signal?: AbortSignal },
+  ): Promise<CourtesyDelivery>;
 }
 
 export type CourtesyResult = {
@@ -120,11 +123,14 @@ export type CourtesyProviders = {
 export async function sendCourtesyMessage(
   message: CourtesySend,
   providers: CourtesyProviders,
+  options?: { signal?: AbortSignal },
 ): Promise<CourtesyResult> {
+  const providerOptions = options?.signal ? { signal: options.signal } : undefined;
   const { smsStopLine, ...courtesy } = message;
   const whatsAppDelivery = providers.whatsapp
     ? await providers.whatsapp.send(
         courtesy.whatsAppBody ? { ...courtesy, body: courtesy.whatsAppBody } : courtesy,
+        providerOptions,
       )
     : { status: "not_configured" as const };
   if (whatsAppDelivery.status === "sent") {
@@ -138,10 +144,13 @@ export async function sendCourtesyMessage(
     });
   }
 
-  const smsDelivery = await providers.sms.send({
-    to: message.to,
-    body: `${message.body} ${smsStopLine}`,
-  });
+  const smsDelivery = await providers.sms.send(
+    {
+      to: message.to,
+      body: `${message.body} ${smsStopLine}`,
+    },
+    providerOptions,
+  );
   if (smsDelivery.status === "not_configured" && whatsAppDelivery.status === "failed") {
     return { channel: "whatsapp", delivery: whatsAppDelivery };
   }

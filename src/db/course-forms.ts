@@ -41,6 +41,7 @@ import {
 } from "@/lib/signatures";
 import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
@@ -1417,22 +1418,41 @@ export async function lockCourseFormSeatRows(
   bookingId: string,
 ): Promise<{ enrollmentId: string | null; personId: string } | null> {
   await boundLockWaits(tx);
+  // Keep course-form QR issuance on erasure's shared lock order before either
+  // person or departure rows are held.
+  await lockBoardingCertificationEvidence(tx, shopId, "boarding");
   const [snapshot] = await tx
-    .select({ tripId: bookings.tripId, enrollmentId: bookings.trainingEnrollmentBookingId })
+    .select({
+      tripId: bookings.tripId,
+      enrollmentId: bookings.trainingEnrollmentBookingId,
+      personId: bookings.personId,
+    })
     .from(bookings)
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   if (!snapshot) return null;
   let enrollmentTripId: string | null = null;
+  let enrollmentPersonId: string | null = null;
   if (snapshot.enrollmentId && snapshot.enrollmentId !== bookingId) {
     const [enrollment] = await tx
-      .select({ tripId: bookings.tripId })
+      .select({ tripId: bookings.tripId, personId: bookings.personId })
       .from(bookings)
       .where(and(eq(bookings.id, snapshot.enrollmentId), eq(bookings.shopId, shopId)))
       .limit(1);
     if (!enrollment) return null;
     enrollmentTripId = enrollment.tripId;
+    enrollmentPersonId = enrollment.personId;
   }
+  const subjectIds = [
+    ...new Set([snapshot.personId, ...(enrollmentPersonId ? [enrollmentPersonId] : [])]),
+  ].sort();
+  const subjectRows = await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), inArray(people.id, subjectIds), livePerson()))
+    .orderBy(people.id)
+    .for("no key update");
+  if (subjectRows.length !== subjectIds.length) return null;
   const tripIds = [
     ...new Set([snapshot.tripId, ...(enrollmentTripId ? [enrollmentTripId] : [])]),
   ].sort();
@@ -1469,17 +1489,23 @@ export async function lockCourseFormSeatRows(
     !seat ||
     seat.tripId !== snapshot.tripId ||
     seat.enrollmentId !== snapshot.enrollmentId ||
+    seat.personId !== snapshot.personId ||
     (!seat.courseId && !seat.enrollmentId)
   )
     return null;
   if (seat.enrollmentId && seat.enrollmentId !== bookingId) {
     const [enrollment] = await tx
-      .select({ tripId: bookings.tripId })
+      .select({ tripId: bookings.tripId, personId: bookings.personId })
       .from(bookings)
       .where(and(eq(bookings.id, seat.enrollmentId), eq(bookings.shopId, shopId)))
       .limit(1)
       .for("update");
-    if (!enrollment || enrollment.tripId !== enrollmentTripId) return null;
+    if (
+      !enrollment ||
+      enrollment.tripId !== enrollmentTripId ||
+      enrollment.personId !== enrollmentPersonId
+    )
+      return null;
   }
   return { enrollmentId: seat.enrollmentId, personId: seat.personId };
 }

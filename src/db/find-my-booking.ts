@@ -2,11 +2,13 @@ import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { notificationProviderSignal } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { hasLiveReadinessCapability, issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
@@ -129,56 +131,55 @@ export async function sendFindMyBookingLinks(
       // and mint inside one transaction holding the booking row, so two
       // concurrent requests for the same address cannot both race past the
       // live-link guard and double-issue.
-      const issued = await db.transaction(async (tx) => {
-        await tx
-          .select({ id: bookings.id })
-          .from(bookings)
-          .innerJoin(people, eq(people.id, bookings.personId))
-          .where(
-            and(
-              eq(bookings.id, row.bookingId),
-              eq(bookings.shopId, input.shopId),
-              isNull(people.anonymizedAt),
-            ),
-          )
-          .for("update", { of: people });
-        if (
-          await hasLiveReadinessCapability(tx, {
-            shopId: input.shopId,
-            bookingId: row.bookingId,
-            now,
-          })
-        ) {
-          return null;
-        }
-        return issueBookingCapability(tx, {
+      const result = await withErasureCoordinatedBookingSend(
+        db,
+        {
           shopId: input.shopId,
           bookingId: row.bookingId,
-          purpose: "readiness",
-          now,
-          delivered: true,
-        });
-      });
-      // A live link already exists (nothing to send — the diver already has
-      // working mail sitting in their inbox somewhere) or the booking went
-      // away between the read above and the write. Either way, silently skip:
-      // this loop's whole point is "resend what already exists", never a
-      // reason to surface a difference to the requester.
-      if (!issued) continue;
-
-      const result = await sendAndRecordNotification(db, {
-        kind: "readiness_link",
-        bookingId: row.bookingId,
-        shopId: input.shopId,
-        to: email,
-        locale: recipientLocale(row.personLocale, shop.defaultLocale),
-        diverName: row.diverName,
-        shopName: shop.name,
-        tripTitle: row.tripTitle,
-        readinessUrl: new URL(readinessLinkPath(issued.token), `${input.origin}/`).toString(),
-        expiresAt: issued.expiresAt,
-        timezone: shop.timezone,
-      }).catch(() => null);
+          expectedPersonId: row.personId,
+          expectedTripId: row.tripId,
+          expectedEmail: email,
+        },
+        async (tx) => {
+          if (
+            await hasLiveReadinessCapability(tx, {
+              shopId: input.shopId,
+              bookingId: row.bookingId,
+              now,
+            })
+          ) {
+            return null;
+          }
+          const issued = await issueBookingCapability(tx, {
+            shopId: input.shopId,
+            bookingId: row.bookingId,
+            purpose: "readiness",
+            expectedPersonId: row.personId,
+            expectedTripId: row.tripId,
+            now,
+            delivered: true,
+          });
+          if (!issued) return null;
+          return sendAndRecordNotification(
+            tx,
+            {
+              kind: "readiness_link",
+              bookingId: row.bookingId,
+              shopId: input.shopId,
+              to: email,
+              locale: recipientLocale(row.personLocale, shop.defaultLocale),
+              diverName: row.diverName,
+              shopName: shop.name,
+              tripTitle: row.tripTitle,
+              readinessUrl: new URL(readinessLinkPath(issued.token), `${input.origin}/`).toString(),
+              expiresAt: issued.expiresAt,
+              timezone: shop.timezone,
+            },
+            { signal: notificationProviderSignal() },
+          );
+        },
+      ).catch(() => null);
+      if (!result || result === null) continue;
       // Quiet, best-effort, same shape as `claimed their seat`
       // (seat-claims.ts) — a diver-initiated line on the trip's own trail,
       // never the reason a link that did go out fails to look sent.

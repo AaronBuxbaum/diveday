@@ -13,7 +13,9 @@ import { forecastText } from "@/lib/night-before-brief";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type Notification,
+  type NotificationDelivery,
   type NotificationProvider,
+  notificationProviderSignal,
   publicAppUrl,
   recipientLocale,
 } from "@/lib/notifications";
@@ -43,6 +45,7 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import {
   correctFlySafeForBooking,
   deliveryCarriesFigure,
@@ -55,7 +58,7 @@ import { readReminderFlySafeHours } from "./fly-safe-plan";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
-  sendNotificationBatch,
+  sendNotification,
 } from "./notifications";
 import { listTripsReadiness } from "./readiness";
 import { type ReminderLink, ReminderLinks } from "./reminder-links";
@@ -104,6 +107,35 @@ export type ReminderRunSummary = {
 type ReminderContent = {
   checklist: ReturnType<typeof buildDiverChecklist> | null;
   materialsDue: ReturnType<typeof readLearningMaterials>;
+};
+
+type EmailReminderWork = {
+  bookingId: string;
+  personId: string;
+  tripId: string;
+  email: string;
+  shopId: string;
+  shopName: string;
+  kind: ReminderKind;
+  phone: string | null;
+  smsBody: string;
+  smsStopLine: string;
+  whatsAppBody: string;
+  notification: Notification;
+};
+
+type SmsReminderWork = {
+  bookingId: string;
+  personId: string;
+  tripId: string;
+  email: string | null;
+  shopId: string;
+  shopName: string;
+  kind: ReminderKind;
+  phone: string;
+  smsBody: string;
+  smsStopLine: string;
+  whatsAppBody: string;
 };
 
 export type SendDueRemindersOptions = {
@@ -269,7 +301,8 @@ async function mintReminderLinks(
     row: {
       shop: { id: string };
       booking: { id: string };
-      person: { email: string | null; phone: string | null };
+      trip: { id: string };
+      person: { id: string; email: string | null; phone: string | null };
     };
   }>,
   now: Date,
@@ -288,21 +321,29 @@ async function mintReminderLinks(
       return phone ? [phone] : [];
     }),
   );
-  const byShop = new Map<string, string[]>();
+  const byShop = new Map<string, Array<{ bookingId: string; personId: string; tripId: string }>>();
   for (const {
-    row: { shop, booking, person },
+    row: { shop, booking, person, trip },
   } of seats) {
     // Only a seat the send loop can reach: a diver with no email and no
     // textable phone gets a `not_configured` row, not a live token.
     const phone = smsRecipient(person.phone);
     if (!person.email && !phone) continue;
     if (!person.email && phone && stopped.has(phone) && !whatsAppShopIds.has(shop.id)) continue;
-    byShop.set(shop.id, [...(byShop.get(shop.id) ?? []), booking.id]);
+    byShop.set(shop.id, [
+      ...(byShop.get(shop.id) ?? []),
+      { bookingId: booking.id, personId: person.id, tripId: trip.id },
+    ]);
   }
-  for (const [shopId, bookingIds] of byShop) {
+  for (const [shopId, expectedRows] of byShop) {
+    const bookingIds = expectedRows.map(({ bookingId }) => bookingId);
     const issued = await issueBookingCapabilities(db, {
       shopId,
       bookingIds,
+      expectedPersonIds: new Map(
+        expectedRows.map(({ bookingId, personId }) => [bookingId, personId]),
+      ),
+      expectedTripIds: new Map(expectedRows.map(({ bookingId, tripId }) => [bookingId, tripId])),
       purpose: "readiness",
       now,
       delivered: true,
@@ -418,12 +459,6 @@ async function settleReminderEmail(
   delivery: Parameters<typeof recordNotificationDelivery>[1]["delivery"],
   options: { now: Date; emailProvider: NotificationProvider },
 ): Promise<void> {
-  await recordNotificationDelivery(db, {
-    shopId: work.shopId,
-    bookingId: work.bookingId,
-    kind: work.kind,
-    delivery,
-  });
   if (delivery.status === "not_configured" || (delivery.status === "failed" && !delivery.retryable))
     await discardRefusedFlySafeExposure(db, work.notification);
   else await rememberFlySafeTold(db, { ...work, delivery });
@@ -445,16 +480,66 @@ async function settleReminderEmail(
 
 async function sendPreparedReminderBatch(
   db: AppDb,
-  work: Array<{ notification: Notification }>,
+  work: Array<{
+    bookingId: string;
+    personId: string;
+    tripId: string;
+    email: string;
+    shopId: string;
+    kind: ReminderKind;
+    notification: Notification;
+  }>,
   provider: NotificationProvider,
-) {
-  for (const entry of work)
-    entry.notification = await prepareFlySafeExposure(db, entry.notification);
-  return sendNotificationBatch(
-    db,
-    work.map((entry) => entry.notification),
-    provider,
-  );
+  options: { now: Date; emailProvider: NotificationProvider },
+): Promise<Array<{ delivery: NotificationDelivery; notification: Notification } | null>> {
+  const results: Array<{ delivery: NotificationDelivery; notification: Notification } | null> = [];
+  for (const entry of work) {
+    const preparedNotification = await prepareFlySafeExposure(db, entry.notification);
+    const result = await withErasureCoordinatedBookingSend(
+      db,
+      {
+        shopId: entry.shopId,
+        bookingId: entry.bookingId,
+        expectedPersonId: entry.personId,
+        expectedTripId: entry.tripId,
+        expectedEmail: entry.email,
+      },
+      async (tx) => {
+        const delivery = await sendNotification(tx, preparedNotification, provider, {
+          signal: notificationProviderSignal(),
+        });
+        return { delivery, notification: preparedNotification };
+      },
+    );
+    if (result) {
+      const tracked = await withErasureCoordinatedBookingSend(
+        db,
+        {
+          shopId: entry.shopId,
+          bookingId: entry.bookingId,
+          expectedPersonId: entry.personId,
+          expectedTripId: entry.tripId,
+          expectedEmail: entry.email,
+        },
+        (tx) =>
+          recordNotificationDelivery(tx, {
+            shopId: entry.shopId,
+            bookingId: entry.bookingId,
+            kind: entry.kind,
+            delivery: result.delivery,
+          }),
+      );
+      if (tracked)
+        await settleReminderEmail(
+          db,
+          { ...entry, notification: result.notification },
+          result.delivery,
+          options,
+        );
+    }
+    results.push(result);
+  }
+  return results;
 }
 
 async function reminderClockAndCorrections(db: AppDb, options: SendDueRemindersOptions) {
@@ -462,6 +547,118 @@ async function reminderClockAndCorrections(db: AppDb, options: SendDueRemindersO
   const emailProvider = notificationProviderForDb(options.emailProvider);
   await retryOwedFlySafeCorrections(db, { now, emailProvider });
   return { now, emailProvider };
+}
+
+async function deliverReminderChannels(
+  db: AppDb,
+  input: {
+    emailWork: EmailReminderWork[];
+    smsWork: SmsReminderWork[];
+    emailProvider: NotificationProvider;
+    smsProvider: SmsProvider;
+    whatsAppProviders: Map<string, CourtesyProvider>;
+    now: Date;
+    links: Awaited<ReturnType<typeof mintReminderLinks>>;
+    summary: ReminderRunSummary;
+  },
+): Promise<void> {
+  const emailDeliveries = await sendPreparedReminderBatch(
+    db,
+    input.emailWork,
+    input.emailProvider,
+    {
+      now: input.now,
+      emailProvider: input.emailProvider,
+    },
+  );
+  for (let index = 0; index < input.emailWork.length; index += 1) {
+    const work = input.emailWork[index];
+    const result = emailDeliveries[index];
+    if (!result) {
+      input.summary.skipped += 1;
+      continue;
+    }
+    const { delivery } = result;
+    work.notification = result.notification;
+    if (delivery.status === "sent" && work.phone) {
+      const phone = work.phone;
+      await withErasureCoordinatedBookingSend(
+        db,
+        {
+          shopId: work.shopId,
+          bookingId: work.bookingId,
+          expectedPersonId: work.personId,
+          expectedTripId: work.tripId,
+          expectedEmail: work.email,
+          expectedPhone: phone,
+        },
+        async () =>
+          sendCourtesyMessage(
+            {
+              to: phone,
+              body: work.smsBody,
+              smsStopLine: work.smsStopLine,
+              whatsAppBody: work.whatsAppBody,
+              shopName: work.shopName,
+            },
+            { sms: input.smsProvider, whatsapp: input.whatsAppProviders.get(work.shopId) ?? null },
+            { signal: notificationProviderSignal() },
+          ),
+      );
+    }
+    input.links.settle(input.summary, work.bookingId, delivery);
+  }
+
+  for (const work of input.smsWork) {
+    const delivery = await withErasureCoordinatedBookingSend(
+      db,
+      {
+        shopId: work.shopId,
+        bookingId: work.bookingId,
+        expectedPersonId: work.personId,
+        expectedTripId: work.tripId,
+        expectedEmail: work.email,
+        expectedPhone: work.phone,
+      },
+      async () => {
+        const result = await sendCourtesyMessage(
+          {
+            to: work.phone,
+            body: work.smsBody,
+            smsStopLine: work.smsStopLine,
+            whatsAppBody: work.whatsAppBody,
+            shopName: work.shopName,
+          },
+          { sms: input.smsProvider, whatsapp: input.whatsAppProviders.get(work.shopId) ?? null },
+          { signal: notificationProviderSignal() },
+        );
+        return result.delivery;
+      },
+    );
+    if (!delivery) {
+      input.summary.skipped += 1;
+      continue;
+    }
+    await withErasureCoordinatedBookingSend(
+      db,
+      {
+        shopId: work.shopId,
+        bookingId: work.bookingId,
+        expectedPersonId: work.personId,
+        expectedTripId: work.tripId,
+        expectedEmail: work.email,
+        expectedPhone: work.phone,
+      },
+      (tx) =>
+        recordNotificationDelivery(tx, {
+          shopId: work.shopId,
+          bookingId: work.bookingId,
+          kind: work.kind,
+          delivery,
+        }),
+    );
+    input.links.settle(input.summary, work.bookingId, delivery);
+  }
 }
 
 /**
@@ -568,27 +765,8 @@ export async function sendDueReminders(
     sentByBooking.set(row.bookingId, set);
   }
 
-  const emailWork: Array<{
-    bookingId: string;
-    shopId: string;
-    shopName: string;
-    kind: ReminderKind;
-    phone: string | null;
-    smsBody: string;
-    smsStopLine: string;
-    whatsAppBody: string;
-    notification: Notification;
-  }> = [];
-  const smsWork: Array<{
-    bookingId: string;
-    shopId: string;
-    shopName: string;
-    kind: ReminderKind;
-    phone: string;
-    smsBody: string;
-    smsStopLine: string;
-    whatsAppBody: string;
-  }> = [];
+  const emailWork: EmailReminderWork[] = [];
+  const smsWork: SmsReminderWork[] = [];
 
   // Which cadence, if any, each booking is due for — decided up front so the
   // readiness batch below only covers trips with something to send.
@@ -789,6 +967,9 @@ export async function sendDueReminders(
       if (person.email) {
         emailWork.push({
           bookingId: booking.id,
+          personId: person.id,
+          tripId: trip.id,
+          email: person.email,
           shopId: shop.id,
           shopName: shop.name,
           kind: cadence.kind,
@@ -820,6 +1001,9 @@ export async function sendDueReminders(
       } else if (phone) {
         smsWork.push({
           bookingId: booking.id,
+          personId: person.id,
+          tripId: trip.id,
+          email: person.email,
           shopId: shop.id,
           shopName: shop.name,
           kind: cadence.kind,
@@ -840,52 +1024,16 @@ export async function sendDueReminders(
       }
     }
 
-    const emailDeliveries = await sendPreparedReminderBatch(db, emailWork, emailProvider);
-    for (let index = 0; index < emailWork.length; index += 1) {
-      const work = emailWork[index];
-      const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
-      // A textable phone gets a courtesy text only when the email actually sent,
-      // so the once-per-booking dedup row keeps it from re-firing next run. Its
-      // outcome is deliberately not recorded: email is the tracked channel here,
-      // and a courtesy text that failed must not overwrite a delivered email.
-      if (delivery.status === "sent" && work.phone) {
-        await sendCourtesyMessage(
-          {
-            to: work.phone,
-            body: work.smsBody,
-            smsStopLine: work.smsStopLine,
-            whatsAppBody: work.whatsAppBody,
-            shopName: work.shopName,
-          },
-          { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
-        );
-      }
-      await settleReminderEmail(db, work, delivery, { now, emailProvider });
-      links.settle(summary, work.bookingId, delivery);
-    }
-
-    for (const work of smsWork) {
-      // Phone-only diver: the courtesy text is the tracked channel, whichever of
-      // WhatsApp or SMS carried it. CourtesyDelivery is the same shape as
-      // NotificationDelivery, so it records through the same seam.
-      const { delivery } = await sendCourtesyMessage(
-        {
-          to: work.phone,
-          body: work.smsBody,
-          smsStopLine: work.smsStopLine,
-          whatsAppBody: work.whatsAppBody,
-          shopName: work.shopName,
-        },
-        { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
-      );
-      await recordNotificationDelivery(db, {
-        shopId: work.shopId,
-        bookingId: work.bookingId,
-        kind: work.kind,
-        delivery,
-      });
-      links.settle(summary, work.bookingId, delivery);
-    }
+    await deliverReminderChannels(db, {
+      emailWork,
+      smsWork,
+      emailProvider,
+      smsProvider,
+      whatsAppProviders,
+      now,
+      links,
+      summary,
+    });
   });
 
   return summary;

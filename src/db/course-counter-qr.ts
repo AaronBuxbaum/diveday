@@ -19,7 +19,8 @@ export async function issueCounterCourseForms(
 ): Promise<{ token: string; expiresAt: Date } | null> {
   return db.transaction(async (tx) => {
     // Lock trips in the same order as seat moves, then both relevant seats.
-    if (!(await lockCourseFormSeatRows(tx, input.shopId, input.bookingId))) return null;
+    const lockedSeat = await lockCourseFormSeatRows(tx, input.shopId, input.bookingId);
+    if (!lockedSeat) return null;
     const [seat] = await tx
       .select({ id: bookings.id, endsAt: trips.endsAt })
       .from(bookings)
@@ -47,6 +48,11 @@ export async function issueCounterCourseForms(
       !forms.outstanding.length
     )
       return null;
-    return issueCourseFormsCapability(tx, { shopId: input.shopId, bookingId: seat.id, now });
+    return issueCourseFormsCapability(tx, {
+      shopId: input.shopId,
+      bookingId: seat.id,
+      expectedPersonId: lockedSeat.personId,
+      now,
+    });
   });
 }

@@ -439,6 +439,10 @@ export const notificationSendQueue = pgTable(
     subjectEmail: text("subject_email"),
     subjectPhone: text("subject_phone"),
     bookingId: uuid("booking_id"),
+    /** Current expected booking subject when this sealed retry was queued. */
+    recipientPersonId: uuid("recipient_person_id"),
+    /** Trip snapshot for messages whose content names a departure. */
+    recipientTripId: uuid("recipient_trip_id"),
     status: notificationQueueStatus("status").notNull().default("queued"),
     /** Every drain pass that has claimed this row, incremented at the claim. */
     attempts: integer("attempts").notNull().default(0),

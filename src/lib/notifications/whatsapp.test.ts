@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { NOTIFICATION_PROVIDER_TIMEOUT_MS, notificationProviderSignal } from "./provider";
 import {
   DEFAULT_WHATSAPP_TEMPLATE_NAME,
   metaLanguageCode,
@@ -155,6 +156,25 @@ describe("whatsAppProvider", () => {
       errorCode: "invalid_recipient",
     });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("settles an aborted request without running another provider retry", async () => {
+    const fetchImpl = vi.fn(
+      (_url: string | URL | Request, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+            once: true,
+          });
+        }),
+    );
+    const signal = notificationProviderSignal();
+    const startedAt = performance.now();
+    const delivery = await whatsAppProvider(credentials, fetchImpl).send(message, { signal });
+
+    expect(NOTIFICATION_PROVIDER_TIMEOUT_MS).toBe(4_000);
+    expect(performance.now() - startedAt).toBeLessThan(4_500);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(delivery).toMatchObject({ status: "failed", retryable: true });
   });
 
   it("reports an expired token as a non-retryable failure carrying Meta's code", async () => {
