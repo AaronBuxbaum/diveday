@@ -10,6 +10,7 @@ const LOCKED: DoctorAnswersState = { status: "locked" };
 
 export type DoctorAnswersCopy = {
   prompt: string;
+  printOmitted: string;
   birthdate: string;
   submit: string;
   submitting: string;
@@ -63,7 +64,8 @@ export function DoctorAnswers({ token, copy }: { token: string; copy: DoctorAnsw
 
   return (
     <>
-      <p className="mt-3 text-base text-muted">{copy.prompt}</p>
+      <p className="mt-3 text-base text-muted print:hidden">{copy.prompt}</p>
+      <p className="mt-3 hidden text-base text-muted print:block">{copy.printOmitted}</p>
       <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3 print:hidden">
         <Field label={copy.birthdate} error={refusal} className="min-w-56">
           <DateField name="birthdate" required autoComplete="bday" />

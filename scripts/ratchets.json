@@ -263,7 +263,7 @@
     "e2e/visual-staff-roll-call.spec.ts": 4,
     "e2e/visual-staff-trips.spec.ts": 1,
     "e2e/waiver-print.spec.ts": 1,
-    "e2e/waivers.spec.ts": 15,
+    "e2e/waivers.spec.ts": 14,
     "e2e/whatsapp-settings.spec.ts": 1,
     "e2e/work-orders.spec.ts": 4
   },
@@ -582,7 +582,7 @@
   "page-length": {
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/page.tsx": 440,
-    "src/app/ready/[token]/page.tsx": 649,
+    "src/app/ready/[token]/page.tsx": 633,
     "src/app/s/[shopSlug]/page.tsx": 794,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 500,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
