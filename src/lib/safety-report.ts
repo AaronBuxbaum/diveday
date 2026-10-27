@@ -112,7 +112,7 @@ export type SafetyMonth = {
   certOverrides: number;
   /** One crew member on one departure. */
   crewSailings: number;
-  /** …of which sailed with a recorded credential lapsed on the day. */
+  /** Observations with a credential lapsed on the observed local day. */
   lapsedSailings: {
     tripId: string;
     title: string;
@@ -123,14 +123,9 @@ export type SafetyMonth = {
     observationStartedAt?: Date;
     observationCapturedAt?: Date;
   }[];
-  /**
-   * …of which sailed with no credential on file that answers the job they
-   * sailed as: a captain with only a first-aid card, an instructor with only
-   * insurance (issue #2548; `ROLE_CREDENTIAL_KINDS`). A job no credential can
-   * answer (a deckhand) is unrecorded only when nothing at all is on file.
-   * Absence is not a clean record: the lapsed count can only judge what was
-   * recorded, so the tile says how much it could not judge (third review,
-   * item 2).
+  /** Live observations with no credentials on file. A role is not captured, so
+   * the report cannot determine whether the cards answered the job at the mark.
+   * Nonhistorical callers can still compare a supplied role to supplied cards.
    */
   unrecordedSailings: number;
   /** The people behind `unrecordedSailings`, once each, in the order they first sailed. */
@@ -388,11 +383,16 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
           : null;
       let onFile: readonly SafetyCredential[];
       let checkedDay = divesOn;
-      if (validSnapshot && observationDay && snapshot) {
+      const hasObservedState = validSnapshot && observationDay && snapshot;
+      if (hasObservedState) {
         checkedDay = observationDay;
-        onFile = snapshot
-          .filter((card) => !card.issuedAt || card.issuedAt <= checkedDay)
-          .map((card) => ({ ...card, personId }));
+        // A future-issued legacy card may have replaced an older one, so it
+        // cannot establish either the prior lapse or an empty file.
+        if (snapshot.some((card) => card.issuedAt && card.issuedAt > checkedDay)) {
+          unknownCredentialSailings += 1;
+          continue;
+        }
+        onFile = snapshot.map((card) => ({ ...card, personId }));
       } else {
         // A transaction timestamp cannot prove what was committed at sailing.
         if (
@@ -405,7 +405,9 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
         onFile = recorded.filter(({ issuedAt }) => !issuedAt || issuedAt <= divesOn);
       }
       if (onFile.length === 0) nothingOnFileSailings += 1;
-      if (answersTheirJob(tripRole, shopRoles, onFile) === false) {
+      // Only cards were captured, not the crew role at the mark. A later
+      // assignment cannot establish what credential answered the role then.
+      if (hasObservedState ? onFile.length === 0 : !answersTheirJob(tripRole, shopRoles, onFile)) {
         unrecordedSailings += 1;
         const entry = unrecorded.get(personId) ?? {
           personId,

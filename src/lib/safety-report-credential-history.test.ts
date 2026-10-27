@@ -109,6 +109,38 @@ describe("historical crew credentials", () => {
     });
     expect(result.unknownCredentialSailings).toBe(0);
   });
+  it("does not infer a historical role from today's assignment", () => {
+    const mark = {
+      tripId: "trip",
+      subjectId: "crew",
+      checkpoint: "departure",
+      status: "boarded" as const,
+      credentialSnapshot: [
+        { kind: "first_aid_cpr", issuedAt: "2024-01-01", renewsAt: "2028-01-01" },
+      ],
+      credentialSnapshotStartedAt: new Date("2026-10-03T14:00:00Z"),
+      credentialSnapshotCapturedAt: new Date("2026-10-03T14:00:01Z"),
+    };
+    const result = summarizeSafetyMonth({ ...input([]), crewEvents: [mark] });
+    expect(result.unrecordedSailings).toBe(0);
+    expect(result.unknownCredentialSailings).toBe(0);
+  });
+  it("leaves a future-issued captured card unavailable", () => {
+    const mark = {
+      tripId: "trip",
+      subjectId: "crew",
+      checkpoint: "departure",
+      status: "boarded" as const,
+      credentialSnapshot: [
+        { kind: "captains_licence", issuedAt: "2026-10-04", renewsAt: "2028-01-01" },
+      ],
+      credentialSnapshotStartedAt: new Date("2026-10-03T14:00:00Z"),
+      credentialSnapshotCapturedAt: new Date("2026-10-03T14:00:01Z"),
+    };
+    const result = summarizeSafetyMonth({ ...input([]), crewEvents: [mark] });
+    expect(result.unknownCredentialSailings).toBe(1);
+    expect(result.unrecordedSailings).toBe(0);
+  });
   it("leaves an observation spanning midnight unavailable", () => {
     const mark = {
       tripId: "trip",

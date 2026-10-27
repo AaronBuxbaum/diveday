@@ -214,5 +214,7 @@
   statement, with its observation interval. The lapse figure says it reads the live mark, not actual
   departure; offline, unmarked and older records remain unavailable. An interval crossing midnight
   in the shop's zone cannot establish the observation day and is also unavailable. Current credentials
-  remain on Team. Erasure removes version history and boarding observations.
+  remain on Team. The observed role is not captured, so the report identifies an empty credential
+  file but does not judge whether cards answered the role at the mark. Erasure removes version history
+  and boarding observations.
   Crew assignments and other facts still read as the shop's records stand today.
