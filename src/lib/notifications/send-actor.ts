@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { isStaff } from "@/lib/authz";
 
 /** The signed-in staff member and the shop their session belongs to. */
@@ -22,6 +21,7 @@ export async function currentSendActor(): Promise<SendActor | null> {
   try {
     // A send with no request cannot have a staff session. Check this before
     // loading the auth graph, which is expensive for workers and tests.
+    const { headers } = await import("next/headers");
     await headers();
     const { auth } = await import("@/lib/auth");
     const session = await auth();

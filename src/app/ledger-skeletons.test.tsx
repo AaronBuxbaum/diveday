@@ -462,14 +462,11 @@ describe("a loading skeleton standing in for ledger rows", () => {
  * 378px higher than its bar at 1280.
  *
  * And its rows are the loaded rows. A loaded row is the `<li>`'s 1px rule over
- * a summary with a 51px floor (`min-h-12.75`): 52px from `sm` up, where it is
- * one line, and 65px below `sm`, where the departure takes a line of its own
- * (8 + the name's 24 + 4 + the departure's 20 + 8, under the rule). A skeleton
- * row of one fixed-height line (`h-13`) was 52px at every width, so on a phone
- * each row landed 13px taller than its bar and the second day's label moved
- * 39px on arrival. The skeleton draws the same two boxes in the same grammar,
- * so it matches at every width, the group's last row and its closing rule
- * included.
+ * a summary with a 51px floor (`min-h-12.75`). The departure takes its own
+ * full-width line even on desktop so its full identity can wrap. The skeleton
+ * reserves the name's 24px line and the departure's 20px line at every width,
+ * without fixing the loaded row's height when longer text needs more room.
+ * Both keep the rule on the outer box, including the group's closing rule.
  */
 describe("the waivers skeleton", () => {
   it("draws the closed release door as one 48px bar, and no editor card", () => {
@@ -486,7 +483,7 @@ describe("the waivers skeleton", () => {
     expect(door?.children).toHaveLength(0);
   });
 
-  it("draws each log row in the loaded row's grammar: one 52px line from sm up, two lines on a phone", () => {
+  it("draws each log row with the departure on its own full-width line at every width", () => {
     // The row's height is set by these, on the summary under the rule.
     const HEIGHT = ["flex", "flex-wrap", "min-h-12.75", "gap-y-1", "py-2"];
     const loaded = render(
@@ -522,8 +519,8 @@ describe("the waivers skeleton", () => {
     const summary = loaded.querySelector("summary");
     expect(summary).toHaveClass(...HEIGHT);
     const [name, trip] = [...(summary?.children ?? [])];
-    expect(name).toHaveClass("max-sm:me-auto");
-    expect(trip).toHaveClass("max-sm:order-last", "max-sm:basis-full");
+    expect(name).toHaveClass("min-w-0", "flex-1", "break-words");
+    expect(trip).toHaveClass("order-last", "basis-full", "min-w-0", "break-words");
     cleanup();
 
     const { container } = render(<WaiversLoading />);
@@ -540,12 +537,10 @@ describe("the waivers skeleton", () => {
       expect(line).toHaveClass(...HEIGHT);
       expect(line).not.toHaveClass("h-13");
       const [nameBar, tripBar, timeBar] = [...(line?.children ?? [])];
-      // The name's 24px line: a 16px bar and 4px each side. It pushes the time
-      // to the first line's end on a phone, as the name does.
-      expect(nameBar).toHaveClass("h-4", "my-1", "max-sm:me-auto");
-      // The departure's 20px `text-sm` line, a full-width line of its own on a
-      // phone, as the departure is.
-      expect(tripBar).toHaveClass("h-4", "my-0.5", "max-sm:order-last", "max-sm:basis-full");
+      // The name's 24px line fills the space before the time at every width.
+      expect(nameBar).toHaveClass("h-4", "my-1", "min-w-0", "flex-1");
+      // The departure reserves its own 20px `text-sm` line at every width.
+      expect(tripBar).toHaveClass("h-4", "my-0.5", "min-w-0", "order-last", "basis-full");
       expect(timeBar).toHaveClass("h-4", "shrink-0");
     }
   });

@@ -206,14 +206,15 @@ function SignatureRow({
         <summary className="-mx-2 flex min-h-12.75 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken/60 focus-visible:focus-ring-inset">
           {/* The full departure and its date distinguish repeated names even
               in the narrower desktop ledger. Name, time and caret retain the
-              first line; departure and exceptional badges wrap below it. */}
+              first line; departure takes its own line, while badges use the
+              space beside the name when the viewport allows it. */}
           <span className="min-w-0 flex-1 break-words font-medium">{entry.personName}</span>
           <span className="order-last basis-full min-w-0 break-words text-sm text-muted">
             {trip}
           </span>
-          {/* Only an exceptional row needs the separate badge line. */}
+          {/* Phones give badges their own line; wider rows let them wrap naturally. */}
           {badged ? (
-            <span className="order-last flex basis-full flex-wrap gap-x-3 gap-y-1">
+            <span className="order-last flex basis-full flex-wrap gap-x-3 gap-y-1 sm:order-none sm:basis-auto">
               <IntegrityBadge entry={entry} t={t} />
               {/* The summary badge only — never the answers, which sit in the
                   block below and are read by opening the row. */}

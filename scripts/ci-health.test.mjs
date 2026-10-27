@@ -4,6 +4,7 @@ import { findIssueProblems } from "./check-follow-ups.mjs";
 import {
   breaches,
   computeHealth,
+  ghJson,
   ISSUE_TITLE,
   issueBody,
   jobKind,
@@ -79,6 +80,48 @@ const WEEK = [
   // Cancelled runs are no verdict, and a pull request with none has no CI.
   { number: 4, runs: [{ ...run("d1", "success"), conclusion: "cancelled" }] },
 ];
+
+describe("GitHub API reads", () => {
+  it("retries a transient gateway error and returns the successful response", () => {
+    const responses = [
+      { status: 1, stderr: "gh: Server Error (HTTP 502)" },
+      { status: 1, stderr: "gh: Server Error (HTTP 503)" },
+      { status: 0, stdout: '{"ok":true}' },
+    ];
+    const delays = [];
+    expect(
+      ghJson("repos/example", undefined, {
+        run: () => responses.shift(),
+        sleep: (ms) => delays.push(ms),
+      }),
+    ).toEqual({ ok: true });
+    expect(delays).toEqual([250, 500]);
+    expect(responses).toHaveLength(0);
+  });
+
+  it("stops after three transient failures and does not retry a client error", () => {
+    let calls = 0;
+    const fail = (stderr) => () => {
+      calls += 1;
+      return { status: 1, stderr };
+    };
+    expect(() =>
+      ghJson("repos/example", undefined, {
+        run: fail("gh: Server Error (HTTP 504)"),
+        sleep: () => {},
+      }),
+    ).toThrow("HTTP 504");
+    expect(calls).toBe(3);
+    calls = 0;
+    expect(() =>
+      ghJson("repos/example", undefined, {
+        run: fail("gh: Not Found (HTTP 404)"),
+        sleep: () => {},
+      }),
+    ).toThrow("HTTP 404");
+    expect(calls).toBe(1);
+  });
+});
 
 describe("computeHealth", () => {
   const health = computeHealth(WEEK);
