@@ -15,6 +15,7 @@ import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/f
 import { QuietDay } from "@/app/shop/[shopSlug]/_components/today/QuietDay";
 import { ReleaseStillSample } from "@/app/shop/[shopSlug]/_components/today/ReleaseStillSample";
 import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
+import { TodayCatchUpSlot } from "@/app/shop/[shopSlug]/_components/today/TodayCatchUp";
 import { TodayFirstBookable } from "@/app/shop/[shopSlug]/_components/today/TodayFirstBookable";
 import { TodayHeaderNotes } from "@/app/shop/[shopSlug]/_components/today/TodayHeaderNotes";
 import { TodayNoticeStack } from "@/app/shop/[shopSlug]/_components/today/TodayNoticeStack";
@@ -204,8 +205,7 @@ async function TodayBody({
 }) {
   const db = await getDb();
   const shop = await shopByIdCached(db, session.user.shopId);
-  // Staff read dates in the language their own device asks for, same
-  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
+  // Staff and public pages negotiate locale alike (ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
   // A session pointing at a shop row that is gone is a page that does not
   // exist, not a blank 200. Settled on `notFound()` app-wide alongside
@@ -430,7 +430,6 @@ async function TodayBody({
     canOpenLog,
     firstEver: firstBoatEver,
   };
-  const eveningNotice = noticeFromParam(notice, EVENING_NOTICES);
   // The page's one idea is the work (ADR 20260720-today-work-queue), so
   // instructional content sizes itself against whether any exists: a station,
   // a queue row, or — under the instructor lens — a session block means
@@ -450,10 +449,7 @@ async function TodayBody({
           utcToWallTime(now, shop.timezone).day,
           locale,
         )}
-        // The day in one line, said once. It used to be said twice — the
-        // summary under the old greeting and again in the body — and under a
-        // sky that is already the day, the second one was a caption on a
-        // picture of itself.
+        // The day in one line, said once.
         summary={
           showFirstRunChecklist
             ? t("shopHome.firstRun.pageTitle")
@@ -461,13 +457,8 @@ async function TodayBody({
               ? t("shopHome.spine.quietSentence")
               : (daySummaryText ?? "")
         }
-        // **The paper day** (N-54). One document holding every departure of
-        // today — manifest, emergency card, waiver state, packing list — so a
-        // dead tablet costs a printer rather than the day. It is the header's
-        // one action rather than a lone link floating right above the first
-        // station with nothing beside it, which is where it read as a stray
-        // (principle 10: chrome defers, and a control belongs with the page it
-        // is about). Only on a day that has boats on it, and never on paper.
+        // The paper day (N-54) holds today’s departures in one printable document.
+        // Its header link appears only when there are boats, never on paper.
         //
         // A link rather than `PrintTripBundleButton`'s form: that one records
         // the click server-side and so has to `window.open`, which a popup
@@ -493,6 +484,8 @@ async function TodayBody({
         <TodayUpdated t={t} time={formatTime(now, locale, shop.timezone)} />
       </DayHeader>
 
+      <TodayCatchUpSlot shopSlug={shopSlug} locale={locale} />
+
       {created && firstBookableMoment ? (
         <TodayFirstBookable
           shopSlug={shopSlug}
@@ -510,7 +503,7 @@ async function TodayBody({
         reset={reset}
         email={email}
         authNoticeKey={authNoticeKey}
-        eveningNotice={eveningNotice}
+        eveningNotice={noticeFromParam(notice, EVENING_NOTICES)}
         t={t}
       />
 

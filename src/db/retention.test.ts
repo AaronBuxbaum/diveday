@@ -25,6 +25,7 @@ import {
   userAccounts,
 } from "./schema";
 import { insertShoreAlertToken } from "./shore-alert-test-fixtures";
+import { writeTodayReadMark } from "./today-catch-up-retention-fixture";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -726,6 +727,7 @@ const STALE_AND_FRESH = {
         .values({ shopId: shop.id, tripId: reef.id, personId: people[n], lastSeenAt: at })
         .returning({ id: schema.tripReadMarks.id }),
     ),
+  today_read_marks: writeTodayReadMark,
   form_drafts: async ({ db, shop, people }, at) =>
     idOf(
       await db
@@ -1006,10 +1008,10 @@ describe("every retention window deletes", () => {
  * than a reason to add a name below.
  */
 const OUTSIDE_RETENTION: readonly string[] = [
+  "today_read_mark_events", // junction rows cascade with the 30-day mark or event; no independent clock
   "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
   "claude_call_content_erasures", // one per-shop erasure stamp, overwritten, never a trail
-  // The shop's own catalogue and configuration: what a shop sets up, edits,
-  // and deletes when it stops being true. Nothing here ages.
+  // Shop configuration stays until the shop edits or deletes it.
   "shops",
   "boats",
   "trip_lenses",
@@ -1028,9 +1030,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "shop_text_translations", // the shop's own words in Spanish, kept while the original is
   "trip_series_skips",
   "trip_schedule_days",
-  // DiveDay's own shared catalogue, and a shop asking for an addition to it.
-  // Vendor-side content rather than a shop's records, and pruning a species
-  // would break the shops whose copies point at it.
+  // Shared catalogue content is not a shop record; pruning breaks shop copies.
   "global_dive_sites",
   "global_dive_site_versions",
   "marine_life_requests",

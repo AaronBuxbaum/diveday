@@ -152,3 +152,8 @@
   later ("Molasses: last dived Mon, Oct 12 (Sal Moretti): visibility 40 ft"). Never the
   departure's own log; deleted dives and departures are left out. Informs, gates nothing
   (`lastAtSites`, `src/lib/site-history.ts`).
+
+- **Today shop-day catch-up** — the staff member's view of new desk events across the shop's
+  departures for one local day. Each reader has an independent first-view snapshot and acknowledges
+  only the events shown; their own actions are not news to them. Today marks are separate from the
+  per-reader, per-departure manifest catch-up marks, so acknowledging one does not clear the other.

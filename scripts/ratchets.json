@@ -584,7 +584,7 @@
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 500,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 727,
-    "src/app/shop/[shopSlug]/page.tsx": 627,
+    "src/app/shop/[shopSlug]/page.tsx": 620,
     "src/app/shop/[shopSlug]/promos/page.tsx": 564,
     "src/app/shop/[shopSlug]/reports/page.tsx": 492,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,

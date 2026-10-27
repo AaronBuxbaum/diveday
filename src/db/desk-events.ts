@@ -154,7 +154,7 @@ export async function listDeskEventsSince(
     })
     .from(tripDeskEvents)
     .innerJoin(trips, eq(trips.id, tripDeskEvents.tripId))
-    .leftJoin(people, eq(people.id, tripDeskEvents.subjectPersonId))
+    .leftJoin(people, and(eq(people.id, tripDeskEvents.subjectPersonId), eq(people.shopId, shopId)))
     .leftJoin(bookings, and(eq(bookings.id, tripDeskEvents.bookingId), eq(bookings.shopId, shopId)))
     .leftJoin(
       tripHelpRequests,
@@ -171,6 +171,7 @@ export async function listDeskEventsSince(
         liveTrip(),
         gt(tripDeskEvents.seq, mark.seq),
         rosterStillSaysIt(),
+        ne(tripDeskEvents.kind, "running_late"),
         // A null actor is a diver acting on their own link, which is news to
         // every staffer — `ne` alone would drop those rows, since SQL's
         // three-valued logic makes `null <> '…'` neither true nor false.
@@ -187,8 +188,16 @@ export async function listDeskEventsSince(
  * bear them out (see {@link listDeskEventsSince}). Every other kind is a
  * statement about something that happened, which stays true once it has.
  */
-function rosterStillSaysIt() {
+export function rosterStillSaysIt() {
   return and(
+    or(
+      ne(tripDeskEvents.kind, "running_late"),
+      and(
+        eq(bookings.tripId, tripDeskEvents.tripId),
+        eq(bookings.status, "booked"),
+        sql`${bookings.runningLateAt} is not null`,
+      ),
+    ),
     or(
       ne(tripDeskEvents.kind, "arrival"),
       and(eq(bookings.tripId, tripDeskEvents.tripId), eq(bookings.status, "checked_in")),

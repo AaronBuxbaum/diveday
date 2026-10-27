@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+
 import { clearCourseForms } from "./course-form-only";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
@@ -24,6 +25,7 @@ import {
   seededTripId,
   writeCourseForm,
 } from "./helpers";
+import { todayCatchUpScenario } from "./today-catch-up-helper";
 import {
   capture,
   FLOW_TIMEOUT_MS,
@@ -64,6 +66,31 @@ for (const scheme of ["light", "dark"] as const) {
             .waitFor();
           await capture(page, "today-captain-your-week", scheme);
         });
+      });
+
+      test(`Today catches up on a walk-in (${scheme})`, async ({
+        browser,
+        page,
+        workerBaseURL,
+      }) => {
+        const { reader, readerContext } = await todayCatchUpScenario(browser, page, workerBaseURL);
+        try {
+          await expect(reader.getByRole("region", { name: /Since / })).toContainText(
+            "Today Catchup Diver took a seat.",
+          );
+          await capture(reader, "today-catch-up", scheme, {
+            beforeScreenshot: async () => {
+              await expect(reader.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(
+                0,
+              );
+              await expect(reader.getByRole("region", { name: /Since / })).toContainText(
+                "Today Catchup Diver took a seat.",
+              );
+            },
+          });
+        } finally {
+          await readerContext.close();
+        }
       });
 
       test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
