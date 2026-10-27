@@ -13,6 +13,7 @@ export type PartyWaiverState =
   | "needed"
   | "signed"
   | "medical_review"
+  | "medical_not_cleared"
   | "held"
   | "not_required"
   | "unknown";
@@ -21,7 +22,7 @@ export type PartyWaiverMember = {
   name: string | null;
   state: PartyWaiverState;
   guardianRequired: boolean;
-  medicalReview: boolean;
+  medicalState: "review" | "not_cleared" | null;
 };
 
 const WAIVER_GAPS = new Set([
@@ -75,23 +76,25 @@ export async function getPartyWaiverQueue(
           name: row.booking.identityBookedAs ?? null,
           state: "held",
           guardianRequired: false,
-          medicalReview: false,
+          medicalState: null,
         };
       const guardianRequired = guardianSignatureRequired(
         row.person.dateOfBirth,
         signingDate(now, lead.timezone),
         row.booking.minorDeclaredAt !== null,
       );
-      const medicalReview = row.readiness.blockers.some(
-        (b) => b.code === "medical_review" || b.code === "medical_not_cleared",
-      );
+      const medicalState = row.readiness.blockers.some((b) => b.code === "medical_not_cleared")
+        ? "not_cleared"
+        : row.readiness.blockers.some((b) => b.code === "medical_review")
+          ? "review"
+          : null;
       if (!row.requirement)
         return {
           bookingId: row.booking.id,
           name: row.person.fullName,
           state: "unknown",
           guardianRequired,
-          medicalReview,
+          medicalState,
         };
       if (!row.requirement.requiresWaiver)
         return {
@@ -99,7 +102,7 @@ export async function getPartyWaiverQueue(
           name: row.person.fullName,
           state: "not_required",
           guardianRequired,
-          medicalReview,
+          medicalState,
         };
       const guardianMissing =
         row.waiver &&
@@ -112,13 +115,19 @@ export async function getPartyWaiverQueue(
         !row.waiver ||
         guardianMissing ||
         row.readiness.blockers.some((b) => WAIVER_GAPS.has(b.code));
-      const state = needs ? "needed" : medicalReview ? "medical_review" : "signed";
+      const state = needs
+        ? "needed"
+        : medicalState === "not_cleared"
+          ? "medical_not_cleared"
+          : medicalState === "review"
+            ? "medical_review"
+            : "signed";
       return {
         bookingId: row.booking.id,
         name: row.person.fullName,
         state,
         guardianRequired,
-        medicalReview,
+        medicalState,
       };
     });
   return { tripTitle: lead.title, members };

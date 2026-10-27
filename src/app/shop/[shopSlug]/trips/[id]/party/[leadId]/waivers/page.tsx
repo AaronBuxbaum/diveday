@@ -34,6 +34,7 @@ export default async function PartyWaiversPage({
     needed: t("trips.partyWaiverQueue.needed"),
     signed: t("trips.partyWaiverQueue.signed"),
     medical_review: t("trips.partyWaiverQueue.medicalReview"),
+    medical_not_cleared: t("trips.partyWaiverQueue.medicalNotCleared"),
     held: t("trips.partyWaiverQueue.held"),
     not_required: t("trips.partyWaiverQueue.notRequired"),
     unknown: t("trips.partyWaiverQueue.unknown"),
@@ -74,8 +75,14 @@ export default async function PartyWaiversPage({
                     {member.guardianRequired && member.state === "needed" ? (
                       <p>{t("trips.partyWaiverQueue.guardian")}</p>
                     ) : null}
-                    {member.medicalReview && member.state !== "medical_review" ? (
-                      <p>{t("trips.partyWaiverQueue.medical")}</p>
+                    {member.medicalState &&
+                    member.state !== "medical_review" &&
+                    member.state !== "medical_not_cleared" ? (
+                      <p>
+                        {member.medicalState === "not_cleared"
+                          ? t("trips.partyWaiverQueue.notCleared")
+                          : t("trips.partyWaiverQueue.medical")}
+                      </p>
                     ) : null}
                   </div>
                   {member.state === "needed" && member.name ? (

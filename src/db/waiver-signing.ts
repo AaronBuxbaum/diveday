@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, trips } from "./schema";
 
@@ -41,7 +41,13 @@ export async function getBookingTripId(
   const [row] = await db
     .select({ tripId: bookings.tripId })
     .from(bookings)
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
     .limit(1);
   return row?.tripId ?? null;
 }

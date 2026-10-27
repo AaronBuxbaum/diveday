@@ -410,6 +410,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
   // Whether the panel's first band has anything in it — every condition
   // `outstanding` draws on, so an empty band never leaves its rule behind.
   const hasWork =
+    Boolean(partyLeadId && !record) ||
     Boolean(arrival && identityContact) ||
     deskPrivateLines.length > 0 ||
     Boolean(arrival && booking.reEntryAsk) ||

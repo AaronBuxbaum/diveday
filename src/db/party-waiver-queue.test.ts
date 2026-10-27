@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
+import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
 import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
 import { listTripReadiness } from "./readiness";
@@ -9,7 +10,8 @@ import { bookings, people, personRoles, waiverRecords } from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
-import { clearAnswers } from "./waivers-test-fixtures";
+import { recordMedicalEvaluation } from "./waivers-medical";
+import { clearAnswers, medicalReferralAnswers } from "./waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
 
@@ -40,7 +42,7 @@ async function family() {
   if (!result.ok || result.seats.length !== 3) throw new Error("family not seated");
   const [lead, minor, third] = result.seats;
   if (!lead || !minor || !third) throw new Error("family missing");
-  return { db, shop, trip, lead, minor, third, stamp };
+  return { db, shop, trip, lead, minor, third, staff, stamp };
 }
 
 describe("party release QR handoff", () => {
@@ -210,5 +212,46 @@ describe("party release QR handoff", () => {
       .set({ supersededAt: nowDate() })
       .where(eq(waiverRecords.bookingId, f.lead.bookingId));
     expect((await getWaiverForToken(f.db, envelope)).state).toBe("unavailable");
+  });
+  it("distinguishes a pending medical review from a physician's refusal", async () => {
+    const f = await family();
+    const input = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.lead.bookingId,
+    };
+    const issued = await issuePartyWaiver(f.db, input);
+    if (!issued) throw new Error("link missing");
+    const signed = await completeWaiver(f.db, issued.token, {
+      signerName: `Ana ${f.stamp}`,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+    });
+    expect(signed).toMatchObject({ ok: true, status: "medical_review" });
+    let queue = await getPartyWaiverQueue(f.db, input);
+    expect(queue?.members.find((member) => member.bookingId === f.lead.bookingId)).toMatchObject({
+      state: "medical_review",
+      medicalState: "review",
+    });
+    const [booking] = await f.db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, f.lead.bookingId));
+    if (!booking) throw new Error("booking missing");
+    const evaluated = await recordMedicalEvaluation(f.db, {
+      outcome: "not_cleared",
+      shopId: f.shop.id,
+      personId: booking.personId,
+      recordedByPersonId: f.staff.id,
+      evaluatedOn: signingDate(nowDate(), f.shop.timezone),
+      physicianName: "Dr. Example",
+    });
+    expect(evaluated.ok).toBe(true);
+    queue = await getPartyWaiverQueue(f.db, input);
+    expect(queue?.members.find((member) => member.bookingId === f.lead.bookingId)).toMatchObject({
+      state: "medical_not_cleared",
+      medicalState: "not_cleared",
+    });
   });
 });

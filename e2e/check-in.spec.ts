@@ -284,6 +284,10 @@ test("a counter walk-in family is seated together from one form", async ({ page 
   for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
     await expect(deskRow(page, name)).toHaveCount(1);
   }
+  const lead = deskRow(page, "Quillon Brightwater");
+  await openRosterDetails(lead);
+  await lead.getByRole("link", { name: "Review party waivers" }).click();
+  await expect(page.getByRole("heading", { name: "Party waivers" })).toBeVisible();
 });
 
 /**

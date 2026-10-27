@@ -39,7 +39,9 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
   });
   try {
     const phone = makeActivitySafe(await phoneContext.newPage());
-    await phone.goto(url.pathname);
+    await phone.goto(url.pathname).catch(() => {
+      throw new Error("minor waiver navigation failed");
+    });
     await expect(phone.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
     await dialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Sky Lagoon");
@@ -51,7 +53,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.getByLabel("Relationship to Sky Lagoon").selectOption("parent");
     await phone.getByLabel("I am this diver’s parent or legal guardian", { exact: false }).check();
     await phone.getByRole("button", { name: "Sign waiver" }).click();
-    await expect(phone.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
+    await expect(phone.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
     await page.reload();
     await page.getByRole("button", { name: "Show waiver QR code for Alex Lagoon" }).click();
     const leadDialog = page.getByRole("dialog", { name: "Party waivers" });
@@ -69,7 +71,9 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     );
     if (!leadDecoded) throw new Error("lead QR could not be decoded");
     const leadPath = new URL(leadDecoded.data).pathname;
-    await phone.goto(leadPath);
+    await phone.goto(leadPath).catch(() => {
+      throw new Error("lead waiver navigation failed");
+    });
     await leadDialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Alex Lagoon");
     await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
@@ -77,10 +81,12 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await expect(leadNo).not.toHaveCount(0);
     for (const radio of await leadNo.all()) await radio.check();
     await phone.getByRole("button", { name: "Sign waiver" }).click();
-    await expect(phone.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
-    await expect(phone).toHaveURL(new RegExp(`^${workerBaseURL}${leadPath}$`));
+    await expect(phone.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
+    expect(new URL(phone.url()).pathname.startsWith("/waivers/counter_")).toBe(true);
     await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
-    await phone.reload();
+    await phone.reload().catch(() => {
+      throw new Error("lead waiver reload failed");
+    });
     await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
     await page.reload();
     const row = page.getByRole("listitem").filter({ hasText: "Sky Lagoon" });

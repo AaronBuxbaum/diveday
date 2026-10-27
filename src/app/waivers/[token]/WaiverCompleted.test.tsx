@@ -79,6 +79,24 @@ describe("signed waiver receipt", () => {
       /cleared to dive|all done|off your mind|see you at the dock/i,
     );
   });
+  it("calls only the waiver signed for a counter handoff", () => {
+    render(
+      <WaiverCompleted
+        shop={shop}
+        t={t}
+        locale="en-US"
+        medicalState="complete"
+        readyPath={null}
+        doctorPath={null}
+        signedRail={completedWaiverRail(false, false)}
+        diveSitesList={[]}
+        waiverOnly
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
+    expect(screen.queryByText(t("capability.waiverDone"))).toBeNull();
+    expect(screen.queryByRole("link", { name: t("waiver.seeWhatsLeft") })).toBeNull();
+  });
   it("retains contact with no booking or doctor door", () => {
     render(receipt("referral", null, null));
     expect(screen.getByText(t("waiver.medicalReferralNext"))).toBeVisible();

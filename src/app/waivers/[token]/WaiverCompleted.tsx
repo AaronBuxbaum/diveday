@@ -30,6 +30,7 @@ export function WaiverCompleted({
   doctorPath,
   signedRail,
   diveSitesList,
+  waiverOnly = false,
 }: {
   shop: {
     name: string;
@@ -45,6 +46,7 @@ export function WaiverCompleted({
   doctorPath: string | null;
   signedRail: WaiverRailProgress;
   diveSitesList: TripSitePeek[];
+  waiverOnly?: boolean;
 }) {
   const shopName = shop.name;
   const needsReview = medicalState !== "complete";
@@ -61,7 +63,13 @@ export function WaiverCompleted({
       <EarnedMoment
         as="h1"
         eyebrow={shopName}
-        title={needsReview ? t("capability.waiverReceived") : t("capability.waiverDone")}
+        title={
+          needsReview
+            ? t("capability.waiverReceived")
+            : waiverOnly
+              ? t("waiver.counterSigned")
+              : t("capability.waiverDone")
+        }
       >
         <p>{t("waiver.signedBody")}</p>
         {needsReview ? (

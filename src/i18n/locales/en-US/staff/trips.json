@@ -864,6 +864,8 @@
     "guardian": "A parent or guardian must also sign.",
     "medical": "Medical review also needed.",
     "unnamed": "Held seat",
-    "review": "Review party waivers"
+    "review": "Review party waivers",
+    "medicalNotCleared": "Waiver signed · not medically cleared",
+    "notCleared": "Not medically cleared."
   }
 }

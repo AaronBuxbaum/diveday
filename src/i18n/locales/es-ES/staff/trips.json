@@ -864,6 +864,8 @@
     "guardian": "También debe firmar un padre, madre o tutor.",
     "medical": "También requiere revisión médica.",
     "unnamed": "Plaza retenida",
-    "review": "Revisar exenciones del grupo"
+    "review": "Revisar exenciones del grupo",
+    "medicalNotCleared": "Exención firmada · sin autorización médica",
+    "notCleared": "Sin autorización médica."
   }
 }

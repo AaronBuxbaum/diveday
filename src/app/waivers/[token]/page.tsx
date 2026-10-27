@@ -176,6 +176,7 @@ export default async function WaiverPage({
         shop={shop}
         t={t}
         locale={locale}
+        waiverOnly={isCounterWaiverToken(token)}
         medicalState={completedMedicalState(state.record)}
         readyPath={readyPath}
         doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
