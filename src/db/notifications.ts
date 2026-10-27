@@ -48,7 +48,7 @@ import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
 import { settledPartyPayment } from "./checkouts";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
 import {
   correctFlySafeForBooking,
@@ -318,7 +318,12 @@ function openQueuedPayload(sealed: string, key: SecretKey): Notification | null 
  * a refused retry is a message that will never go out and the caller logs it
  * as one (`queueRetryOrLog`).
  */
-type QueueRefusal = "no_shop" | "not_queueable" | "queue_seal_unavailable" | "queue_conflict";
+type QueueRefusal =
+  | "no_shop"
+  | "not_queueable"
+  | "queue_seal_unavailable"
+  | "queue_conflict"
+  | "stale_recipient";
 
 /**
  * What a thrown send is recorded as: the error's class, never its message
@@ -344,6 +349,28 @@ async function queueRetry(
   // anyway. `queueSealingKey` has already said so in the log.
   const key = queueSealingKey("queue");
   if (!key) return "queue_seal_unavailable";
+  if (input.kind === "fly_safe_correction") {
+    return db.transaction(async (tx) => {
+      const [seat] = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(and(eq(bookings.id, input.seatId), eq(bookings.shopId, input.shopId)))
+        // diveday:allow-update-lock: serialize retry insertion with erasure and identity repointing.
+        .for("update");
+      if (!seat || (await queuedFlySafeCorrectionState(tx, input)) !== "valid")
+        return "stale_recipient";
+      return persistQueuedRetry(tx, input, delivery, key);
+    });
+  }
+  return persistQueuedRetry(db, input, delivery, key);
+}
+
+async function persistQueuedRetry(
+  db: DbExecutor,
+  input: Notification & { shopId: string },
+  delivery: Extract<NotificationDelivery, { status: "failed" }>,
+  key: SecretKey,
+): Promise<"queued" | QueueRefusal> {
   const [inserted] = await db
     .insert(notificationSendQueue)
     .values({

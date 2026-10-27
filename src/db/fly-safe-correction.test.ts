@@ -221,38 +221,6 @@ describe("sendFlySafeCorrections (#2927)", () => {
     expect((await seat(db, bookingId)).flySafeCorrectedAt).toBeNull();
   });
 
-  it("marks a legacy queued correction for staff follow-up when its recipient cannot be proven", async () => {
-    const { db, shop, reef, bookingId } = await toldSeat();
-    await markDeco(db, reef.id);
-    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
-    const legacy: Notification = {
-      kind: "fly_safe_correction",
-      seatId: bookingId,
-      shopId: shop.id,
-      to: "flysafe-pat@example.com",
-      locale: "en-US",
-      shopName: shop.name,
-      tripTitle: reef.title,
-      startsAt: reef.startsAt,
-      timezone: shop.timezone,
-    };
-    await sendNotification(db, legacy, fakeEmail({ status: "failed", retryable: true }).provider);
-    await db
-      .update(bookings)
-      .set({ flySafeRecipientSealed: null, flySafeCorrectedAt: now })
-      .where(eq(bookings.id, bookingId));
-    await db
-      .update(notificationSendQueue)
-      .set({ nextAttemptAt: new Date(0) })
-      .where(eq(notificationSendQueue.shopId, shop.id));
-    const retry = fakeEmail();
-    await drainNotificationRetries(db, { now, provider: retry.provider });
-    expect(retry.sent).toHaveLength(0);
-    const after = await seat(db, bookingId);
-    expect(after.flySafeCorrectedAt).toBeNull();
-    expect(after.flySafeRecipientUnknown).toBe(true);
-  });
-
   it("does not deliver an already-claimed correction after its seat loses recipient provenance", async () => {
     const { db, shop, reef, bookingId } = await toldSeat();
     await markDeco(db, reef.id);

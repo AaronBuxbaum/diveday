@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
+import type { Notification } from "@/lib/notifications";
+import { sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
@@ -167,5 +169,51 @@ describe("flying guidance follow-up", () => {
       .set({ anonymizedAt: after, deletedAt: after })
       .where(eq(people.id, (await seat(db, bookingId)).personId));
     expect(await listShopFlySafeFollowUps(db, { shopId: shop.id, now: after })).toEqual([]);
+  });
+  it("marks a legacy queued correction for staff follow-up when its recipient cannot be proven", async () => {
+    const { db, shop, reef, bookingId } = await toldSeat();
+    await markDeco(db, reef.id);
+    const now = new Date(reef.startsAt.getTime() - HOUR_MS);
+    const legacy: Notification = {
+      kind: "fly_safe_correction",
+      seatId: bookingId,
+      shopId: shop.id,
+      to: "flysafe-pat@example.com",
+      locale: "en-US",
+      shopName: shop.name,
+      tripTitle: reef.title,
+      startsAt: reef.startsAt,
+      timezone: shop.timezone,
+    };
+    // Construct the legacy outbox row directly: new sends refuse an unproven recipient.
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      now,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    const key = secretKeyFromEnvironment();
+    if (key.status !== "ok") throw new Error("test key missing");
+    await db
+      .update(notificationSendQueue)
+      .set({
+        payloadSealed: sealSecret(JSON.stringify(legacy), key.key),
+        idempotencyKey: `fly-safe-correction/${bookingId}`,
+      })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    await db
+      .update(bookings)
+      .set({ flySafeRecipientSealed: null, flySafeCorrectedAt: now })
+      .where(eq(bookings.id, bookingId));
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    const retry = fakeEmail();
+    await drainNotificationRetries(db, { now, provider: retry.provider });
+    expect(retry.sent).toHaveLength(0);
+    const after = await seat(db, bookingId);
+    expect(after.flySafeCorrectedAt).toBeNull();
+    expect(after.flySafeRecipientUnknown).toBe(true);
   });
 });

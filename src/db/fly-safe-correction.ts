@@ -588,13 +588,6 @@ export async function acknowledgeFlySafeFollowUp(
   },
 ): Promise<boolean> {
   return db.transaction(async (tx) => {
-    const [seat] = await tx
-      .select()
-      .from(bookings)
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
-      // diveday:allow-update-lock: fence the reviewed exposure state against concurrent ledger changes and erasure.
-      .for("update");
-    if (!seat) return false;
     const [actor] = await tx
       .select({ id: people.id })
       .from(people)
@@ -606,8 +599,17 @@ export async function acknowledgeFlySafeFollowUp(
           isNull(people.anonymizedAt),
         ),
       )
-      .limit(1);
+      .limit(1)
+      // A shared lock blocks erasure but is compatible with identity repointing's person reads.
+      .for("share");
     if (!actor) return false;
+    const [seat] = await tx
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      // diveday:allow-update-lock: fence the reviewed exposure state against concurrent ledger changes and erasure.
+      .for("update");
+    if (!seat) return false;
     const task = (
       await readFlySafeFollowUps(tx, {
         shopId: input.shopId,
