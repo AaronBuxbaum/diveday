@@ -21,10 +21,10 @@ owner input in #3101. M02 still adds no new Product hero scene, and RGS04 adds n
 Browser review Skip and notes retain precedence; this record does not overwrite browser-only
 choices.
 
-Current execution reconciliation — 27 October 2026 (draft for publication)
+Current execution reconciliation — 27 October 2026 (PR #3105 review snapshot)
 
 Of 75 implementation proposals, 70 have merged with CI and visual review verified. Four diver
-proposals remain partial pending integrated verification and publication. RP04 is separately held
+proposals are published in PR #3105 and remain partial pending final visual verification. RP04 is separately held
 for an owner decision. Seven proposals were already done and three remain as requested. Historical
 authorization and readiness counts remain separate and unchanged: 72 ready, 3 requiring
 verification, 7 already done, and 3 retained. No acceptance criterion has changed.
@@ -37,7 +37,7 @@ verification, 7 already done, and 3 retained. No acceptance criterion has change
 | #3071 | Thirteen IDs merged; CI and visual review complete |
 | #3072 | Ten IDs merged; CI and visual review complete |
 | #3073 / #3096 | Thirteen boat IDs and repair PR #3099 merged externally |
-| #3074 | Four-ID construction and local checks complete; subset runtime and hosted proof pending |
+| #3074 | Four IDs in PR #3105; CI passed at 7d9515, offline visual repair pending final verification |
 | #3101 | RP04 and its full original requirements; owner decision pending |
 
 Boat repair PR #3099 merged externally at 2026-10-27T06:06:37Z as
@@ -57,14 +57,22 @@ All 34 desktop-shift flags were dismissed using exact geometry; all six final me
 independently accepted. These are local evidence results, not validation of the newly integrated
 publication branch.
 
-Four-ID construction is complete at `/private/tmp/diveday-polish-09-diver-journeys-20261027`, branch
-`codex/visual-polish-09-diver-journeys`, based on `688495158087f0a684cd258744ec14cc4f2b6cef`. The
-subset retains 36 paths: 33 byte-identical to the full backed-up source, and 3 mixed files with
-RP04-only material removed. Its 168 focused tests in 16 files, lint, both TypeScript projects,
-repository guards, and regeneration passed. These checks do not establish exact-subset production,
-browser, or hosted acceptance. Parent PR #3103 at 688 completed CI with all jobs passed or intentionally skipped. Current
-#3074 owns only R01, RP02, RP03, and RP06; #3101 owns RP04 and all original requirements. No
-publication or integrated runtime result is presumed.
+The four-ID subset is published in [PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105),
+branch `codex/visual-polish-09-diver-journeys`, based on parent #3103 at
+`688495158087f0a684cd258744ec14cc4f2b6cef`. Parent CI passed before publication. Initial local checks
+passed 168 tests in 16 files, lint, both TypeScript projects, repository guards and regeneration.
+The first hosted run exposed two stale composition tests and a missing real organizer reload in a
+journey test. Four test files were repaired; 46 focused tests passed. The repaired head
+`7d9515a7e28f4973286daa54216323750134f978` passed CI run 40463968405.
+
+Independent review of all 59 first-head visual differences accepted 57 and rejected two offline
+captures for fallback typography. A native reproduction proved missing cached fonts. The repair
+caches required local styles and fonts before publishing a saved copy and preserves newer copies
+when saves finish out of order. Cancellation, terminal responses and delayed cache writes have
+focused regression coverage. Native phone and desktop font preservation is verified; final hosted
+comparison of the repaired source remains required. The prior failing captures and test results
+remain evidence, not accepted baselines. #3074 owns only R01, RP02, RP03 and RP06; #3101 owns RP04
+and all its original requirements. No merge or deployment of this PR is claimed.
 
 RP04's complete original requirements moved from #3074 to
 [#3101](https://github.com/AaronBuxbaum/diveday/issues/3101), “Finish registration disclosure after
@@ -2181,9 +2189,9 @@ Safety preamble shortened to linked count tiles; audit resolves original scope.
 
 ## R01
 
-**Current execution (27 October):** Current target #3074 owns R01/RP02/RP03/RP06. Four-ID
-construction is complete with 36 paths and local focused/static checks passed. Exact-subset
-production/browser/hosted evidence remains pending.
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
 
 **Expose Change plans beside the trip date**
 
@@ -3388,9 +3396,9 @@ Historical scope mapping: issue #3069 explicitly includes RP01. Current implemen
 
 ## RP02
 
-**Current execution (27 October):** Current target #3074 owns R01/RP02/RP03/RP06. Four-ID
-construction is complete with 36 paths and local focused/static checks passed. Exact-subset
-production/browser/hosted evidence remains pending.
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
 
 **Make the doctor referral action open the actual form**
 
@@ -3441,9 +3449,9 @@ Historical scope mapping: issue #3074 explicitly includes RP02. Current implemen
 
 ## RP03
 
-**Current execution (27 October):** Current target #3074 owns R01/RP02/RP03/RP06. Four-ID
-construction is complete with 36 paths and local focused/static checks passed. Exact-subset
-production/browser/hosted evidence remains pending.
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
 
 **Make unresolved medical review the next action after signing**
 
@@ -3580,9 +3588,9 @@ Historical scope mapping: issue #3070 explicitly includes RP05. Current implemen
 
 ## RP06
 
-**Current execution (27 October):** Current target #3074 owns R01/RP02/RP03/RP06. Four-ID
-construction is complete with 36 paths and local focused/static checks passed. Exact-subset
-production/browser/hosted evidence remains pending.
+**Current execution (27 October):** #3074 owns R01/RP02/RP03/RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). CI passed at 7d9515. The offline
+typography repair still requires final hosted visual verification; this proposal remains partial.
 
 **Surface unclaimed group seats beside the organizer confirmation**
 
