@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
 import { listShopFlySafeFollowUps } from "@/db/fly-safe-correction";
@@ -37,7 +38,7 @@ export async function FlySafeFollowUps({
       </h2>
       <p>{t("trips.flySafeFollowUp.intro")}</p>
       <p>{t("trips.flySafeFollowUp.resolveHelp")}</p>
-      <ul className="mt-2 list-inside list-disc">
+      <ul className="mt-3 space-y-3">
         {items.map((item) => (
           <li key={item.bookingId}>
             {item.name} —{" "}
@@ -51,6 +52,7 @@ export async function FlySafeFollowUps({
                 : "trips.flySafeFollowUp.contact",
             )}
             <form
+              className="mt-1"
               action={acknowledgeFlySafeAction.bind(
                 null,
                 shopSlug,
@@ -59,7 +61,11 @@ export async function FlySafeFollowUps({
                 item.fingerprint,
               )}
             >
-              <SubmitButton pendingLabel={t("trips.flySafeFollowUp.resolving")}>
+              <SubmitButton
+                pendingLabel={t("trips.flySafeFollowUp.resolving")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+                ariaLabel={t("trips.flySafeFollowUp.resolveFor", { name: item.name })}
+              >
                 {t("trips.flySafeFollowUp.resolve")}
               </SubmitButton>
             </form>

@@ -2,6 +2,7 @@
   "flySafeFollowUp": {
     "heading": "Seguimiento de las indicaciones para volar",
     "resolveHelp": "Marca como resuelto solo después de contactar con el buceador o resolver de otro modo las indicaciones para volar. Esto no confirma la entrega del correo.",
+    "resolveFor": "Marcar seguimiento resuelto para {name}",
     "resolve": "Marcar seguimiento resuelto",
     "resolving": "Guardando…",
     "intro": "Es posible que las indicaciones anteriores para volar ya no sean válidas.",
