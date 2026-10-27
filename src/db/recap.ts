@@ -383,9 +383,14 @@ export async function getRecapPageState(
   // reads and discloses nothing; an open one, the common shape, no longer
   // waits for the gate first. Stripe is the exception and waits: it is asked
   // only for an open recap's pending tip.
+  // The dock reader returns the whole departure, not just this booking. Share
+  // that same read with the gallery's check of other divers' shared photos.
+  const leftAtDock = bookingsLeftAtTheDock(db, [
+    { booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } },
+  ]);
   const [bySeat, loaded] = await Promise.all([
-    recapClosedBySeat(db, row, bookingId, now),
-    loadRecapPageData(db, row, bookingId),
+    recapClosedBySeat(db, row, bookingId, now, leftAtDock),
+    loadRecapPageData(db, row, bookingId, leftAtDock),
   ]);
   if (bySeat) return closedRecapState(bySeat, shop);
   if (!loaded) return { kind: "dead", shop };
@@ -521,12 +526,13 @@ async function recapClosedBySeat(
   row: Pick<RecapRow, "shopId" | "tripId">,
   bookingId: string,
   now: Date,
+  leftAtDock?: Promise<Set<string>>,
 ): Promise<"dead" | "waiting" | null> {
   const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
   // Both asked at once, then answered in the disclosure order above: the dock
   // before the wait (code review 2026-10-13, item 29).
   const [leftAtTheDock, waitingOnAMissingPerson] = await Promise.all([
-    bookingsLeftAtTheDock(db, one),
+    leftAtDock ?? bookingsLeftAtTheDock(db, one),
     bookingsWaitingOnAMissingPerson(db, one, now),
   ]);
   if (leftAtTheDock.has(bookingId)) return "dead";
@@ -706,6 +712,7 @@ async function loadRecapPageData(
   db: AppDb,
   row: RecapRow,
   bookingId: string,
+  leftAtDock: Promise<Set<string>>,
 ): Promise<{
   data: Omit<RecapPageData, "tip">;
   latestTip: Awaited<ReturnType<typeof getLatestTipForBooking>>;
@@ -773,7 +780,7 @@ async function loadRecapPageData(
       })
       .from(priorVisits)
       .where(and(eq(priorVisits.shopId, row.shopId), eq(priorVisits.personId, row.personId))),
-    listRecapPhotosForBooking(db, row.shopId, bookingId, row.tripId),
+    listRecapPhotosForBooking(db, row.shopId, bookingId, row.tripId, leftAtDock),
     getShopStripeAccount(db, row.shopId),
     getLatestTipForBooking(db, row.shopId, bookingId),
     // **The overclaim guard, as a query** (issues #1196, #1205). Three
@@ -1005,6 +1012,7 @@ async function listRecapPhotosForBooking(
   shopId: string,
   bookingId: string,
   tripId?: string,
+  leftAtDock?: Promise<Set<string>>,
 ): Promise<RecapPhotoView[]> {
   const [diverRows, crewRows] = await Promise.all([
     // The diver's own photos and the boat's shared ones in one read: the
@@ -1052,14 +1060,15 @@ async function listRecapPhotosForBooking(
   // §3), asked only when somebody shared anything at all.
   const ashore =
     shared.length > 0 && tripId
-      ? await bookingsLeftAtTheDock(
-          db,
-          [...new Set(shared.map((row) => row.bookingId))].map((id) => ({
-            booking: { id },
-            shop: { id: shopId },
-            trip: { id: tripId },
-          })),
-        )
+      ? await (leftAtDock ??
+          bookingsLeftAtTheDock(
+            db,
+            [...new Set(shared.map((row) => row.bookingId))].map((id) => ({
+              booking: { id },
+              shop: { id: shopId },
+              trip: { id: tripId },
+            })),
+          ))
       : new Set<string>();
   return [
     ...own.map(({ id, imageUrl, caption, sharedWithBoatAt, createdAt }) =>
