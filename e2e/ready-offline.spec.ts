@@ -99,9 +99,13 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   await expect(page.getByRole("heading", { name: diver("ready.cancelledHeading") })).toBeVisible();
   await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBe(0);
 
-  // And with no signal again there is nothing saved to show.
+  // The cache is empty. A no-signal navigation can fail or remain pending
+  // while the worker waits for a slow network; either way it must not render
+  // the forgotten page during this bounded navigation.
   await context.setOffline(true);
-  await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
+  await expect(
+    page.goto(readyPath, { waitUntil: "domcontentloaded", timeout: 10_000 }),
+  ).rejects.toThrow();
   await context.setOffline(false);
 });
 
@@ -123,10 +127,14 @@ test("Remove saved copy takes the page off this device", async ({ page, context 
   ).not.toContain("/ready/");
 
   // With no signal there is nothing saved to show, however often it is opened.
-  // (A reload would only repeat the browser's own error page, which resolves.)
+  // Use fresh navigations; a reload could repeat a browser error page instead.
   await context.setOffline(true);
-  await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
-  await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
+  await expect(
+    page.goto(readyPath, { waitUntil: "domcontentloaded", timeout: 10_000 }),
+  ).rejects.toThrow();
+  await expect(
+    page.goto(readyPath, { waitUntil: "domcontentloaded", timeout: 10_000 }),
+  ).rejects.toThrow();
 
   // "Until you next open this link": opening it again with signal keeps it
   // again, and the page says so rather than still saying "Removed".
