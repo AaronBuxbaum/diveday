@@ -54,7 +54,7 @@ export function BrandPreview({
     : null;
   const fontFamily = face ? brandDisplayFontFamily(face) : undefined;
   return (
-    <figure className="mt-2">
+    <figure className="mt-2 print:hidden">
       {face ? (
         <link rel="stylesheet" href={brandDisplayFontStylesheet(face)} precedence="brand-font" />
       ) : null}

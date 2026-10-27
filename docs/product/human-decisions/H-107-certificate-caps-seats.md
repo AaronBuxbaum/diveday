@@ -5,7 +5,7 @@
 
 ## Decision or approval needed
 
-**May DiveDay refuse to sell a seat above a boat's certificate passenger limit?** Until now `boats.certified_passengers` only informed: the fleet row said "14 seats on sale; the certificate allows 12", and the manifest carried a danger line once the people booked passed it. The one capacity block was a departure's seats against the boat's own `capacity` (ADR 20260804-boat-resource-model).
+**May DiveDay refuse to sell a seat above a boat's certificate passenger limit?** Until now `boats.certified_passengers` only informed: the fleet row said "14 seats on sale; the certificate allows 12", and the manifest carried a danger line once the people booked passed it. At the time, a departure’s seats were also blocked against the boat’s configured `capacity` (ADR 20260804-boat-resource-model).
 
 ## Minimum outcome to record
 
@@ -17,12 +17,19 @@ Whether the certificate refuses; which saves it refuses; and what happens to a b
 
 - Saving a boat whose seats on sale are above its certificate is refused with a field error on that row, and so is lowering the certificate under the seats.
 - Lowering the certificate under the seats an upcoming departure on that boat still sells is refused the same way, naming how many departures.
-- Adding a departure in the schedule builder and editing one refuse seats above the assigned boat's certificate, beside the existing refusal above the boat's own capacity.
+- Adding a departure in the schedule builder and editing one refuse seats above the assigned boat’s certificate.
 - **Rows already over the limit keep their row, never their extra seats.** They sail and their manifest says so, the fleet row says so in danger ink, and the next save of the row must fix it — but the seats above the certificate are never sold.
 - **The point of sale is the ceiling.** The booking transaction sells at most the lower of the departure's `capacity` and its boat's certificate, read under the trip-row lock (`sellableCapacity`, `src/db/trips-queries.ts`); a roster undo, a no-show undo and the wait list measure the same number. A copied departure and every date a series rolls forward start at the certificate, and "apply to the rest of the series" gives a date on a smaller hull the details with its seats capped at the certificate; only a date holding more seats than that, or with a roll call past the new dive count, is left alone (#2322).
 - Capacity and the certificate count the same people: everyone aboard who is not crew (`boatSafetyNotices` counts passengers crew excluded), so they compare directly.
 
 Built in `boatSeatsRefusal` and `sellableSeats` (`src/lib/boat-safety.ts`), `tripDetailsPatch` (`src/lib/trip-details.ts`) and `sellableCapacity` (`src/db/trips-queries.ts`); recorded as an amendment on [20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md).
+
+## Amendment 2026-10-26 — configured capacity is advisory
+
+Aaron directed that a departure over the boat’s configured `capacity` receives a warning and may
+still be saved. The schedule creation and departure details forms show that warning. This changes
+the configured-capacity refusal described in the historical decision context above; the distinct
+certificate limits and point-of-sale ceiling remain in force.
 
 ## Unblocks / follow-up
 

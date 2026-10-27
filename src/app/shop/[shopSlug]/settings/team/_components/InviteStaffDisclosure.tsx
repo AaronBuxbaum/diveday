@@ -75,7 +75,7 @@ export function InviteStaffDisclosure({
       id="invite"
       openOnHash="invite"
       open={Boolean(emailError || status)}
-      className="mt-4 scroll-mt-24"
+      className="mt-4 scroll-mt-24 print:hidden"
     >
       <summary
         className={buttonClass({

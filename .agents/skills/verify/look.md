@@ -4,6 +4,9 @@ Part of the **verify** skill ([SKILL.md](SKILL.md)). Read it whenever UI changed
 
 ## 3. UI changed: look at it
 
+For print CSS or paper documents, use [print review](../e2e-and-visual/print.md): inspect the
+paginated PDFs as well as the print screenshots.
+
 Never ship UI you haven't seen. The visual spec asserts nothing — it writes PNGs at both the
 phone and desktop widths — so a filtered run of it is the capture step. Look in light only; dark
 joins it only when the change is colour work (a token, a tint, a hue — the owner's rule,

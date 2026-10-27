@@ -1,10 +1,18 @@
 import type { ReactNode } from "react";
+import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
+import { readTripPaperIdentity } from "@/db/trip-paper-identity";
 import { getTripOverview, type TripOverviewShop } from "@/db/trips";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
+import { stablePacket } from "@/lib/stable-packet";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
+import {
+  DeparturePaperIdentity,
+  formatPaperDateTime,
+} from "../../_components/DeparturePaperIdentity";
 import { TripPageHeader } from "../../_components/TripPageHeader";
 import {
   PAPER_PACKET,
@@ -13,6 +21,7 @@ import {
 import TripManifestPage from "../../manifest/page";
 import TripPrepPage from "../../prep/page";
 import { PacketDives } from "./PacketDives";
+import type { PacketDocument } from "./PacketDocument";
 
 /**
  * The marker `AutoPrint` waits for before it opens the print dialog: the last
@@ -45,17 +54,9 @@ export function PacketReady() {
  * for the single-trip packet, whose whole subject it is; on the day's sheet it
  * is one boat of several, and the honest answer is to print the rest.
  */
-export async function TripPacket({
-  shopSlug,
-  shop,
-  tripId,
-  actorPersonId,
-  locale,
-  t,
-  printedMedicalAlerts,
-}: {
+type TripPacketProps = {
   shopSlug: string;
-  shop: TripOverviewShop;
+  shop: TripOverviewShop & { name: string };
   /** Already validated as a UUID by the caller. */
   tripId: string;
   actorPersonId: string;
@@ -67,7 +68,17 @@ export async function TripPacket({
    * other caller (the packet, the day's paper) leaves it out: the flag only.
    */
   printedMedicalAlerts?: PrintedMedicalAlerts;
-}): Promise<ReactNode> {
+};
+
+async function composeTripPacket({
+  shopSlug,
+  shop,
+  tripId,
+  actorPersonId,
+  locale,
+  t,
+  printedMedicalAlerts,
+}: TripPacketProps): Promise<ReactNode> {
   const params = Promise.resolve({ shopSlug, id: tripId });
   // **The composed pages scope their own element ids to this departure.** Both
   // carry fixed ids (`roll-call-list`, `tanks-heading`, …) that are correct on
@@ -95,6 +106,15 @@ export async function TripPacket({
   const details = await getTripOverview(db, shop, tripId, actorPersonId);
   if (!details) return null;
 
+  const vessel = (await departureVessels(db, shop.id, [tripId])).get(tripId);
+  const identity = [
+    shop.name,
+    details.trip.title,
+    `${formatPaperDateTime(details.trip.startsAt, locale, shop.timezone)} · ${shop.timezone}`,
+    vessel?.name ?? "",
+  ];
+  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(nowDate(), locale, shop.timezone) })} · ${shop.timezone}`;
+
   const [manifest, prep] = await Promise.all([
     TripManifestPage({ params, searchParams }),
     TripPrepPage({ params, searchParams }),
@@ -118,28 +138,34 @@ export async function TripPacket({
       {/* Section ids carry the trip id: the day's sheet holds one of these
           blocks per departure, and a repeated `aria-labelledby` target would
           point every heading at the first boat's. */}
-      <section aria-labelledby={`print-dives-${tripId}`} className="print-bundle-page">
-        <h2 id={`print-dives-${tripId}`} className="sr-only">
-          {t("shared.printPacket.divesHeading")}
-        </h2>
-        {/* Each section breaks onto its own page, so page one has to say which
+      <DeparturePaperIdentity
+        pageName={`departure-${tripId}-dives`}
+        identity={[...identity, t("shared.printPacket.divesHeading")]}
+        printed={printed}
+      >
+        <section aria-labelledby={`print-dives-${tripId}`} className="print-bundle-page">
+          <h2 id={`print-dives-${tripId}`} className="sr-only">
+            {t("shared.printPacket.divesHeading")}
+          </h2>
+          {/* Each section breaks onto its own page, so page one has to say which
             departure it is — through the same header its sub-pages wear, not a
             hand-rolled title line that would drift from them. */}
-        {header}
-        <PacketDives
-          dives={details.tripDiveList.map(({ dive, diveSite }) => ({
-            diveNumber: dive.diveNumber,
-            heading: diveSite?.name ?? dive.title,
-            travelMinutes: dive.travelMinutes,
-            description: dive.description,
-          }))}
-          description={details.trip.description}
-          meetingPointLabel={details.trip.meetingPointLabel}
-          meetingPointAddress={details.trip.meetingPointAddress}
-          conditions={details.trip.conditionsSummary}
-          t={t}
-        />
-      </section>
+          {header}
+          <PacketDives
+            dives={details.tripDiveList.map(({ dive, diveSite }) => ({
+              diveNumber: dive.diveNumber,
+              heading: diveSite?.name ?? dive.title,
+              travelMinutes: dive.travelMinutes,
+              description: dive.description,
+            }))}
+            description={details.trip.description}
+            meetingPointLabel={details.trip.meetingPointLabel}
+            meetingPointAddress={details.trip.meetingPointAddress}
+            conditions={details.trip.conditionsSummary}
+            t={t}
+          />
+        </section>
+      </DeparturePaperIdentity>
       <section
         aria-labelledby={`print-manifest-${tripId}`}
         className="print-bundle-page print-bundle-continues"
@@ -149,13 +175,56 @@ export async function TripPacket({
         </h2>
         {manifest}
       </section>
-      <section aria-labelledby={`print-prep-${tripId}`} className="print-bundle-page">
-        <h2 id={`print-prep-${tripId}`} className="sr-only">
-          {t("trips.surfaces.prep")}
-        </h2>
-        <div className="hidden print:block">{header}</div>
-        {prep}
-      </section>
+      <DeparturePaperIdentity
+        pageName={`departure-${tripId}-prep`}
+        identity={[...identity, t("trips.surfaces.prep")]}
+        printed={printed}
+      >
+        <section aria-labelledby={`print-prep-${tripId}`} className="print-bundle-page">
+          <h2 id={`print-prep-${tripId}`} className="sr-only">
+            {t("trips.surfaces.prep")}
+          </h2>
+          <div className="hidden print:block">{header}</div>
+          {prep}
+        </section>
+      </DeparturePaperIdentity>
     </>
   );
+}
+
+/** Identity rows must stay unchanged throughout all independently composed readers. */
+export async function TripPacket(props: TripPacketProps): Promise<PacketDocument | null> {
+  const db = await getDb();
+  const result = await stablePacket(
+    () => readTripPaperIdentity(db, props.shop.id, props.tripId),
+    async (identity) => {
+      // The composed routes resolve the same authenticated shop; an identity edit
+      // after that resolution must never be papered over with a newer header.
+      if (identity.shopName !== props.shop.name || identity.timezone !== props.shop.timezone)
+        return null;
+      return composeTripPacket(props);
+    },
+  );
+  if (result.status === "missing") return null;
+  if (result.status === "stable" && result.packet)
+    return {
+      document: result.packet,
+      openingPageName: `departure-${props.tripId.toLowerCase()}-dives`,
+    };
+  const openingPageName = `departure-${props.tripId.toLowerCase()}-changed`;
+  return {
+    openingPageName,
+    document: (
+      <DeparturePaperIdentity
+        pageName={openingPageName}
+        identity={[props.shop.name, props.t("shared.printPacket.changedHeading"), props.tripId]}
+        printed={`${formatPaperDateTime(nowDate(), props.locale, props.shop.timezone)} · ${props.shop.timezone}`}
+      >
+        <section className="print-bundle-page" role="alert">
+          <h2>{props.t("shared.printPacket.changedHeading")}</h2>
+          <p>{props.t("shared.printPacket.changed", { id: props.tripId })}</p>
+        </section>
+      </DeparturePaperIdentity>
+    ),
+  };
 }

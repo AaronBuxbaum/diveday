@@ -1,7 +1,8 @@
 import { and, eq, gt, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { createBoat } from "@/db/boats";
 import type { AppDb } from "@/db/client";
-import { activityEvents, bookings, trips } from "@/db/schema";
+import { activityEvents, boats, bookings, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
@@ -142,6 +143,113 @@ describe("the details form in the activity log", () => {
       ),
     ).toContain("notice=saved");
     expect(await movedLines(db, trip.id)).toEqual([]);
+  });
+});
+
+describe("saving details after changing the assigned boat", () => {
+  async function onCertifiedBoat() {
+    const result = await context();
+    const boat = await createBoat(result.db, result.shop.id, "Six seats", 6);
+    await result.db.update(boats).set({ certifiedPassengers: 6 }).where(eq(boats.id, boat.id));
+    await result.db
+      .update(trips)
+      .set({ boatId: boat.id, diveMode: "boat", capacity: 6 })
+      .where(eq(trips.id, result.trip.id));
+    return { ...result, boat };
+  }
+
+  it("clears a selected boat before checking its certificate", async () => {
+    const { db, shop, trip } = await onCertifiedBoat();
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("diveMode", "boat");
+    form.set("boatId", "");
+    form.set("capacity", "8");
+    expect(await redirectedTo(() => saveDetails(shop.slug, trip.id, form))).toContain(
+      "notice=saved",
+    );
+    const [saved] = await db
+      .select({ boatId: trips.boatId, capacity: trips.capacity })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(saved).toEqual({ boatId: null, capacity: 8 });
+  });
+
+  it("keeps and checks the existing boat when the form omits its selector", async () => {
+    const { db, shop, trip, boat } = await onCertifiedBoat();
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("capacity", "8");
+    expect(await redirectedTo(() => saveDetails(shop.slug, trip.id, form))).toContain(
+      "notice=capacity-above-certificate",
+    );
+    const [saved] = await db
+      .select({ boatId: trips.boatId, capacity: trips.capacity })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(saved).toEqual({ boatId: boat.id, capacity: 6 });
+  });
+
+  it("keeps the existing boat when only the mode is submitted", async () => {
+    const { db, shop, trip, boat } = await onCertifiedBoat();
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("diveMode", "boat");
+    form.set("capacity", "6");
+    expect(await redirectedTo(() => saveDetails(shop.slug, trip.id, form))).toContain(
+      "notice=saved",
+    );
+    const [saved] = await db
+      .select({ boatId: trips.boatId })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(saved?.boatId).toBe(boat.id);
+  });
+
+  it("saves the chosen boat when the shop has only one dive mode", async () => {
+    const { db, shop, trip } = await onCertifiedBoat();
+    const replacement = await createBoat(db, shop.id, "Twelve seats", 12);
+    await db.update(boats).set({ certifiedPassengers: 12 }).where(eq(boats.id, replacement.id));
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("boatId", replacement.id);
+    form.set("capacity", "8");
+    expect(await redirectedTo(() => saveDetails(shop.slug, trip.id, form))).toContain(
+      "notice=saved",
+    );
+    const [saved] = await db
+      .select({ boatId: trips.boatId, capacity: trips.capacity })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(saved).toEqual({ boatId: replacement.id, capacity: 8 });
+  });
+
+  it("refuses against the selected boat’s certificate and keeps the old boat", async () => {
+    const { db, shop, trip, boat } = await onCertifiedBoat();
+    const smaller = await createBoat(db, shop.id, "Four seats", 4);
+    await db.update(boats).set({ certifiedPassengers: 4 }).where(eq(boats.id, smaller.id));
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("boatId", smaller.id);
+    form.set("capacity", "8");
+    const redirect = await redirectedTo(() => saveDetails(shop.slug, trip.id, form));
+    expect(redirect).toContain("notice=capacity-above-certificate");
+    expect(redirect).toContain("count=4");
+    const [saved] = await db
+      .select({ boatId: trips.boatId, capacity: trips.capacity })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(saved).toEqual({ boatId: boat.id, capacity: 6 });
+  });
+
+  it("clears the boat when the shop has only one dive mode", async () => {
+    const { db, shop, trip } = await onCertifiedBoat();
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("boatId", "");
+    form.set("capacity", "8");
+    expect(await redirectedTo(() => saveDetails(shop.slug, trip.id, form))).toContain(
+      "notice=saved",
+    );
+    const [saved] = await db
+      .select({ boatId: trips.boatId, capacity: trips.capacity })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(saved).toEqual({ boatId: null, capacity: 8 });
   });
 });
 

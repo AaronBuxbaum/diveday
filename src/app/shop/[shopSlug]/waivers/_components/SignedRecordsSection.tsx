@@ -162,13 +162,24 @@ export function SignedRecordsSection({
               t={t}
             />
           </div>
-          <Pager
-            page={auditPage.page}
-            pageCount={auditPage.pageCount}
-            href={pageHref}
-            total={t("waiversStaff.signatures.pagination.total", { count: auditPage.total })}
-            words={staffPagerWords(t)}
-          />
+          <p className="mt-4 hidden text-sm text-muted print:block">
+            {t("waiversStaff.signatures.pagination.paperSubset", {
+              shown: auditPage.entries.length,
+              total: auditPage.total,
+            })}
+            {pinned && !auditPage.entries.some((entry) => entry.id === pinned.id) ? (
+              <> · {t("waiversStaff.signatures.pagination.paperPinned")}</>
+            ) : null}
+          </p>
+          <div className="print:hidden">
+            <Pager
+              page={auditPage.page}
+              pageCount={auditPage.pageCount}
+              href={pageHref}
+              total={t("waiversStaff.signatures.pagination.total", { count: auditPage.total })}
+              words={staffPagerWords(t)}
+            />
+          </div>
         </>
       )}
     </section>
