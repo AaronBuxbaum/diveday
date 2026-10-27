@@ -2238,6 +2238,7 @@ export async function moveBooking(
         kind: "seat_released",
         bookingId: booking.id,
         subjectPersonId: booking.personId,
+        actorPersonId: input.actorPersonId,
       });
     }
     await recordDeskEvent(tx, {
@@ -2246,6 +2247,7 @@ export async function moveBooking(
       kind: "seat_taken",
       bookingId: booking.id,
       subjectPersonId: booking.personId,
+      actorPersonId: input.actorPersonId,
     });
     // Each departure's trail says what happened to its own roster, committed
     // with the move so neither line can be missing from the log.

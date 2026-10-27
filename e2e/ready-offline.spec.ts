@@ -106,7 +106,8 @@ test("the saved /ready copy shows with no signal, and a cancel landing forgets i
   await expect(
     page.goto(readyPath, { waitUntil: "domcontentloaded", timeout: 10_000 }),
   ).rejects.toThrow();
-  await context.setOffline(false);
+  // This test's context is disposed after the test. Restoring its network here
+  // can wait indefinitely on the timed-out navigation still in Chromium.
 });
 
 /**

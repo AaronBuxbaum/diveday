@@ -13,6 +13,7 @@ import {
   messageSeats,
 } from "./running-late";
 import { activityEvents, bookings, people, shops, tripDeskEvents, trips } from "./schema";
+import { initializeTodayCatchUp, readTodayCatchUp } from "./today-catch-up";
 import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -470,6 +471,13 @@ describe("one statement for the people travelling together", () => {
     if (!lead || !member) throw new Error("party seats missing");
     await markBookingRunningLate(db, { shopId: shop.id, bookingId: lead.bookingId, now });
     expect(await lateAt(member.bookingId)).toEqual(now);
+    const events = await db
+      .select()
+      .from(tripDeskEvents)
+      .where(eq(tripDeskEvents.kind, "running_late"));
+    expect(
+      events.filter((event) => [lead.bookingId, member.bookingId].includes(event.bookingId ?? "")),
+    ).toMatchObject([{ actorPersonId: null }, { actorPersonId: null }]);
     // A member's own tap speaks for that member alone.
     await db.update(bookings).set({ runningLateAt: null }).where(eq(bookings.id, lead.bookingId));
     await db.update(bookings).set({ runningLateAt: null }).where(eq(bookings.id, member.bookingId));
@@ -526,6 +534,15 @@ describe("one statement for the people travelling together", () => {
     const [lead, member] = party.bookings;
     if (!lead || !member) throw new Error("party seats missing");
     const receivedAt = new Date(now.getTime() - 5 * MINUTE_MS);
+    const observer = (await listStaff(db, shop.id)).find(
+      (staff) => staff.person.id !== actorPersonId,
+    )?.person.id;
+    if (!observer) throw new Error("expected another staff reader");
+    for (const personId of [actorPersonId, observer]) {
+      const input = { shopId: shop.id, personId, now, timeZone: shop.timezone };
+      const snapshot = await readTodayCatchUp(db, input);
+      await initializeTodayCatchUp(db, { ...input, eventIds: snapshot.snapshotIds });
+    }
     expect(
       await markMessageRunningLate(db, {
         shopId: shop.id,
@@ -537,6 +554,31 @@ describe("one statement for the people travelling together", () => {
       }),
     ).toMatchObject({ status: "marked", bookingId: lead.bookingId });
     expect(await lateAt(member.bookingId)).toEqual(receivedAt);
+    const events = await db
+      .select()
+      .from(tripDeskEvents)
+      .where(eq(tripDeskEvents.kind, "running_late"));
+    expect(
+      events.filter((event) => [lead.bookingId, member.bookingId].includes(event.bookingId ?? "")),
+    ).toMatchObject([{ actorPersonId }, { actorPersonId }]);
+    const actorView = await readTodayCatchUp(db, {
+      shopId: shop.id,
+      personId: actorPersonId,
+      now,
+      timeZone: shop.timezone,
+    });
+    const observerView = await readTodayCatchUp(db, {
+      shopId: shop.id,
+      personId: observer,
+      now,
+      timeZone: shop.timezone,
+    });
+    expect(actorView.events.filter((event) => event.kind === "running_late")).toEqual([]);
+    expect(
+      observerView.events
+        .filter((event) => event.kind === "running_late")
+        .map((event) => event.subjectName),
+    ).toEqual(["Eve Organizer", "Finn Member"]);
     // The member's "said {time}" is the staffer's doing too, so it is on their trail.
     expect(await lateLines(lead.personId)).toHaveLength(1);
     expect(await lateLines(member.personId)).toEqual([
