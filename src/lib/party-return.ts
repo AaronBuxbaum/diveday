@@ -8,6 +8,9 @@
  */
 export const PARTY_RETURN_COOKIE = "diveday_party_return";
 
+/** The signer's own readiness link, when they opened their release from it. */
+export const WAIVER_RETURN_COOKIE = "diveday_waiver_return";
+
 /** An hour: long enough to read and sign a release, short enough to forget. */
 export const PARTY_RETURN_MAX_AGE_SECONDS = 60 * 60;
 

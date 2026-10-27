@@ -7,6 +7,7 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
+import { recordFlySafeTold } from "./fly-safe-correction";
 import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { listTripActivity } from "./operations";
 import {
@@ -355,6 +356,77 @@ describe("moveBooking", () => {
 });
 
 describe("moveSeat (the consequence path)", () => {
+  it("corrects only the moved diver when the destination already requires decompression", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("owner missing");
+    const other = await seatOn(db, shop.id, to.id, "Ada Other");
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId: seat.bookingId,
+      hours: 24,
+      recipientEmail: "nora-quinn@example.com",
+    });
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId: other.bookingId,
+      hours: 24,
+      recipientEmail: "ada-other@example.com",
+    });
+    await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, to.id));
+    const email = fakeEmail();
+    const moved = await moveSeat(
+      db,
+      {
+        shopId: shop.id,
+        fromTripId: from.id,
+        toTripId: to.id,
+        bookingId: seat.bookingId,
+        actorPersonId: owner.person.id,
+      },
+      { emailProvider: email.provider, appOrigin: null },
+    );
+    expect(moved.ok).toBe(true);
+    expect(email.sent.filter((item) => item.kind === "fly_safe_correction")).toMatchObject([
+      { seatId: seat.bookingId, to: "nora-quinn@example.com" },
+    ]);
+    const [untouched] = await db
+      .select({ corrected: bookings.flySafeCorrectedAt })
+      .from(bookings)
+      .where(eq(bookings.id, other.bookingId));
+    expect(untouched?.corrected).toBeNull();
+  });
+
+  it("corrects an 18-hour reminder when a seat moves to a two-dive departure", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("owner missing");
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId: seat.bookingId,
+      hours: 18,
+      recipientEmail: "nora-quinn@example.com",
+    });
+    const email = fakeEmail();
+    const moved = await moveSeat(
+      db,
+      {
+        shopId: shop.id,
+        fromTripId: from.id,
+        toTripId: to.id,
+        bookingId: seat.bookingId,
+        actorPersonId: owner.person.id,
+      },
+      { emailProvider: email.provider, appOrigin: null },
+    );
+    expect(moved.ok).toBe(true);
+    expect(
+      email.sent.some(
+        (item) => item.kind === "fly_safe_correction" && item.seatId === seat.bookingId,
+      ),
+    ).toBe(true);
+  });
+
   it("tells the diver at their own address, and writes both trails", async () => {
     const { db, shop, from, to, seat } = await setup();
     const staff = await listStaff(db, shop.id);

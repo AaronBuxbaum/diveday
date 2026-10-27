@@ -339,10 +339,18 @@ export function findParentUpdateLocks(contents) {
 export const REAL_SERVER_SUITE = /^src\/(?:db|features\/[^/]+)\/[^/]+\.postgres\.test\.ts$/;
 const REAL_SERVER_NAMES = /\b(describePostgres|postgresTestDb)\b/;
 const REAL_SERVER_HOME = "src/test/postgres.ts";
+// The real action race is listed explicitly in the real-postgres CI job.
+const REAL_SERVER_ACTION =
+  "src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts";
 
 export function findMisplacedRealServerSuites(file, contents) {
   const normalized = file.split(path.sep).join("/");
-  if (normalized === REAL_SERVER_HOME || REAL_SERVER_SUITE.test(normalized)) return [];
+  if (
+    normalized === REAL_SERVER_HOME ||
+    normalized === REAL_SERVER_ACTION ||
+    REAL_SERVER_SUITE.test(normalized)
+  )
+    return [];
   const findings = [];
   for (const [index, raw] of contents.split("\n").entries()) {
     const text = raw.trim();
@@ -399,7 +407,7 @@ async function main() {
       `A real-Postgres suite outside the database or feature-module PostgreSQL globs:\n${misplaced.map((v) => `- ${v}`).join("\n")}`,
     );
     console.error(
-      "describePostgres skips without DIVEDAY_TEST_POSTGRES_URL, and CI's real-postgres job sets it only for src/db/*.postgres.test.ts and src/features/*/*.postgres.test.ts, so this suite runs nowhere. Move it into a <module>.postgres.test.ts file beside the module.",
+      "describePostgres skips without DIVEDAY_TEST_POSTGRES_URL, and CI's real-postgres job runs db and feature suites plus its explicitly listed action race, so this suite runs nowhere. Move it into a <module>.postgres.test.ts file beside the module.",
     );
   }
 

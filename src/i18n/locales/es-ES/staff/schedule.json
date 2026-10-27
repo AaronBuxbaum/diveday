@@ -70,6 +70,7 @@
     "departs": "Sale",
     "returns": "Vuelve",
     "seats": "Plazas",
+    "boatCapacityWarning": "Supera la capacidad configurada del barco ({count}).",
     "dives": "Inmersiones",
     "price": "Precio por buceador",
     "priceDescription": "Los buceadores lo ven en cuanto la salida llega a la página pública.",

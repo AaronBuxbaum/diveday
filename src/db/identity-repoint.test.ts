@@ -3,12 +3,14 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { fakeEmail } from "@/test/fakes";
 import { createBooking, splitBookingIdentity } from "./bookings";
 import type { AppDb } from "./client";
+import { recordFlySafeTold, sendFlySafeCorrections } from "./fly-safe-correction";
 import { otherSameNamePeople, repointHeldBooking } from "./identity-repoint";
 import { listTripActivity, pagedDiverActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
-import { bookings, people, shops, trips, waiverRecords } from "./schema";
+import { bookings, notificationSendQueue, people, shops, trips, waiverRecords } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
@@ -81,6 +83,92 @@ describe("otherSameNamePeople", () => {
 });
 
 describe("repointHeldBooking", () => {
+  it("drops an older queued correction whose outbox row has no booking id", async () => {
+    const { db, shop, trip, second, bookingId, staff } = await namesakes();
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "original@example.com",
+    });
+    await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, trip.id));
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    await db
+      .update(notificationSendQueue)
+      .set({ bookingId: null, idempotencyKey: `fly-safe-correction/${bookingId}` })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    await repointHeldBooking(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      toPersonId: second,
+    });
+    expect(
+      await db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id)),
+    ).toHaveLength(0);
+  });
+
+  it("drops a queued flying correction when its held seat changes identity", async () => {
+    const { db, shop, trip, second, bookingId, staff } = await namesakes();
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "original@example.com",
+    });
+    await db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, trip.id));
+    await sendFlySafeCorrections(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      emailProvider: fakeEmail({ status: "failed", retryable: true }).provider,
+    });
+    const before = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(before).toHaveLength(1);
+    await repointHeldBooking(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      toPersonId: second,
+    });
+    const after = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(after).toHaveLength(0);
+  });
+
+  it("does not carry an original recipient snapshot onto a different person's record", async () => {
+    const { db, shop, second, bookingId, staff } = await namesakes();
+    await recordFlySafeTold(db, {
+      shopId: shop.id,
+      bookingId,
+      hours: 18,
+      recipientEmail: "original@example.com",
+    });
+    const result = await repointHeldBooking(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      toPersonId: second,
+    });
+    expect(result).toMatchObject({ ok: true, flySafeFollowUp: true });
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(seat?.flySafeRecipientSealed).toBeNull();
+    expect(seat?.flySafeRecipientUnknown).toBe(true);
+  });
+
   it("moves the seat to the other namesake and keeps it held", async () => {
     const { db, shop, trip, first, second, bookingId, staff } = await namesakes();
     const result = await repointHeldBooking(db, {

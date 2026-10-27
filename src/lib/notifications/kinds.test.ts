@@ -566,3 +566,29 @@ describe("the seat offer notification schema", () => {
     expect(notificationSchema.parse(notification)).toMatchObject(notification);
   });
 });
+
+describe("fly-safe correction queue identity", () => {
+  it("keeps retries together while distinct corrections for the same seat remain distinct", () => {
+    const base = {
+      kind: "fly_safe_correction",
+      seatId: "00000000-0000-4000-8000-000000000011",
+      shopId: "00000000-0000-4000-8000-000000000012",
+      to: "ana@example.com",
+      locale: "en-US",
+      shopName: "Blue Mantis",
+      tripTitle: "Reef",
+      startsAt: new Date("2031-03-12T12:00:00Z"),
+      timezone: "America/New_York",
+    };
+    const first = notificationSchema.parse({
+      ...base,
+      correctionId: "00000000-0000-4000-8000-000000000021",
+    });
+    const second = notificationSchema.parse({
+      ...base,
+      correctionId: "00000000-0000-4000-8000-000000000022",
+    });
+    expect(notificationIdempotencyKey(first)).not.toBe(notificationIdempotencyKey(second));
+    expect(notificationIdempotencyKey(first)).toBe(notificationIdempotencyKey(first));
+  });
+});

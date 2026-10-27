@@ -21,7 +21,11 @@ import {
   rollCallRecordedTone,
   rollCallRowState,
 } from "@/lib/manifests";
-import { latestOfflineArrival, offlineArrivalEvents } from "@/lib/offline-manifests";
+import {
+  latestOfflineArrival,
+  offlineArrivalEvents,
+  offlineTrainingReadinessStale,
+} from "@/lib/offline-manifests";
 import { joinedDiving, leftDiving } from "@/lib/participant-types";
 import { runningLateOnManifest } from "@/lib/running-late";
 import type { OfflineTripControls } from "./controls";
@@ -91,7 +95,8 @@ function OfflineDiverRow({
   // The one answer the head count above this row was built from
   // (`offlineTripView`); a second call here could drift from it.
   const state = view.localStates[index];
-  const ready = diver.readiness.status === "ready";
+  const staleTrainingReadiness = offlineTrainingReadinessStale(view.envelope.snapshot, diver);
+  const ready = diver.readiness.status === "ready" && !staleTrainingReadiness;
   // The live manifest's own derivation, not a second copy of it
   // (`src/lib/manifests.ts`). The copy this replaces got two things
   // wrong that only showed on the water: it keyed the *boarded* fill
@@ -106,7 +111,8 @@ function OfflineDiverRow({
   // (`blockedAtRail`, issue #2286): at the dock a diver readiness has not
   // cleared is blocked, and so is one after a dive with no earlier boarding;
   // aboard over that block keeps the blocked tone rather than the boarded green.
-  const blockedAtDock = view.blockedAtRail[index] ?? !ready;
+  const blockedAtDock =
+    (isDeparture && staleTrainingReadiness) || (view.blockedAtRail[index] ?? !ready);
   // Same condition the live page passes as `showBoardControl`: divers
   // only board at departure once readiness clears them, so a blocked
   // diver's circle is a drawn held ring with no tap.
@@ -216,7 +222,11 @@ function OfflineDiverRow({
           >
             {offlineDiverStatusLine({
               stateWord,
-              blockerTexts: ready ? null : diver.readiness.blockers.map((blocker) => blocker.text),
+              blockerTexts: staleTrainingReadiness
+                ? [t("manifest.trainingReadinessStale")]
+                : ready
+                  ? null
+                  : diver.readiness.blockers.map((blocker) => blocker.text),
               blockedWord: t("shared.offlineManifest.single.blockedBadge"),
               notHereWord: diver.notHere
                 ? diver.turnedAway

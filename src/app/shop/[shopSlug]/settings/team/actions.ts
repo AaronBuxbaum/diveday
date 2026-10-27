@@ -19,6 +19,7 @@ import {
   setStaffRoles,
 } from "@/db/staff-accounts";
 import {
+  changeStaffCredential,
   createStaffCredential,
   deleteStaffCredential,
   reviewStaffCredential,
@@ -515,7 +516,19 @@ export async function saveStaffCredentialAction(formData: FormData) {
   if (RENEWAL_DATE_REQUIRED_KINDS.includes(parsed.data.kind) && !parsed.data.renewsAt) {
     redirect(noticeUrl(path, "credential-renewal-required"));
   }
-  const row = await createStaffCredential(await getDb(), {
+  const renewalOf = formData.get("renewalOf");
+  const correctionOf = formData.get("correctionOf");
+  if (renewalOf && correctionOf) redirect(noticeUrl(path, "credential-invalid"));
+  const credentialId = renewalOf || correctionOf;
+  if (credentialId && !z.string().uuid().safeParse(credentialId).success) {
+    redirect(noticeUrl(path, "credential-invalid"));
+  }
+  const revisionValue = formData.get("revision");
+  const revision = z.string().regex(/^\d+$/).transform(Number).safeParse(revisionValue);
+  if (credentialId && (!revision.success || !Number.isSafeInteger(revision.data))) {
+    redirect(noticeUrl(path, "credential-invalid"));
+  }
+  const input = {
     shopId: session.user.shopId,
     personId: parsed.data.personId,
     kind: parsed.data.kind,
@@ -524,8 +537,28 @@ export async function saveStaffCredentialAction(formData: FormData) {
     identifier: parsed.data.identifier || null,
     issuedAt: parsed.data.issuedAt || null,
     renewsAt: parsed.data.renewsAt || null,
-  });
-  revalidateAndRedirect(path, noticeUrl(path, row ? "credential-saved" : "credential-invalid"));
+  };
+  const db = await getDb();
+  const row =
+    typeof credentialId === "string"
+      ? await changeStaffCredential(db, {
+          ...input,
+          credentialId,
+          expectedRevision: revision.success ? revision.data : -1,
+          change: renewalOf ? "renewed" : "corrected",
+        })
+      : await createStaffCredential(db, input);
+  const notice = !row
+    ? "credential-invalid"
+    : renewalOf
+      ? "credential-renewed"
+      : correctionOf
+        ? "credential-corrected"
+        : "credential-saved";
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, notice, credentialId ? { credentialChangeFor: input.personId } : undefined),
+  );
 }
 
 export async function reviewStaffCredentialAction(formData: FormData) {
@@ -535,10 +568,13 @@ export async function reviewStaffCredentialAction(formData: FormData) {
   await teamManagementBlock(session);
   const id = z.string().uuid().safeParse(fields.credentialId);
   const status = z.enum(["pending", "verified"]).safeParse(fields.status);
-  if (!id.success || !status.success) redirect(noticeUrl(path, "credential-invalid"));
+  const revision = z.string().regex(/^\d+$/).transform(Number).safeParse(formData.get("revision"));
+  if (!id.success || !status.success || !revision.success || !Number.isSafeInteger(revision.data))
+    redirect(noticeUrl(path, "credential-invalid"));
   const row = await reviewStaffCredential(await getDb(), {
     shopId: session.user.shopId,
     credentialId: id.data,
+    expectedRevision: revision.data,
     status: status.data,
     reviewNote: fields.reviewNote.trim().slice(0, 300) || null,
     reviewedByPersonId: session.user.personId,
@@ -552,12 +588,15 @@ export async function deleteStaffCredentialAction(formData: FormData) {
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
   const id = z.string().uuid().safeParse(fields.credentialId);
-  if (!id.success) redirect(noticeUrl(path, "credential-invalid"));
+  const revision = z.string().regex(/^\d+$/).transform(Number).safeParse(formData.get("revision"));
+  if (!id.success || !revision.success || !Number.isSafeInteger(revision.data))
+    redirect(noticeUrl(path, "credential-invalid"));
   const deleted = await deleteStaffCredential(
     await getDb(),
     session.user.shopId,
     id.data,
     session.user.personId,
+    revision.data,
   );
   revalidateAndRedirect(
     path,

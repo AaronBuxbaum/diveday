@@ -39,6 +39,9 @@ Each step's commands and reasoning: [procedure.md](procedure.md). Read it before
 10. Grep the diff for implementation jargon in user-facing strings (principles §4).
 11. Significant surface: launch `design-critic` with the screenshots and the pixel-probe report.
 
+**Print/PDF changes:** follow [print review](../e2e-and-visual/print.md) and give the critic
+rendered, paginated sheets. A continuous print screenshot cannot show pagination defects.
+
 ## Output
 
 A findings list ordered by severity: what fails which principle, where (file:line or

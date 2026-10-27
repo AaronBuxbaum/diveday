@@ -40,9 +40,14 @@ import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
+import {
+  boardingCertificationSnapshot,
+  lockBoardingCertificationEvidence,
+} from "./boarding-certification-snapshot";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { crewCredentialSnapshot } from "./crew-credential-snapshot";
 import { listTripGearAssignments } from "./gear";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
@@ -1045,6 +1050,7 @@ export async function listDepartureBoardedBookingIds(
 function trainingDiveOf(
   mark: TrainingMarkState | undefined,
   identityHeld: boolean,
+  siteAttributionUnknown: boolean,
 ): TripManifest["divers"][number]["trainingDive"] {
   // Aboard means the course's own instructor (issue #2731), the same answer
   // readiness reads to take the course's level.
@@ -1054,6 +1060,7 @@ function trainingDiveOf(
         ...(mark.enrollmentCourse ? { intro: mark.enrollmentCourse.intro } : {}),
         instructorAboard: mark.courseInstructorAboard,
         overRatio: mark.overRatio ?? false,
+        ...(siteAttributionUnknown ? { siteAttributionUnknown: true } : {}),
       }
     : null;
 }
@@ -1116,6 +1123,9 @@ export async function getTripManifests(
   );
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
+  );
+  const trainingAttributionByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.trainingSiteAttributionUnknown] as const),
   );
   const depthByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.depthAdvisory] as const),
@@ -1313,6 +1323,7 @@ export async function getTripManifests(
       trainingDive: trainingDiveOf(
         trainingMarks.get(booking.id),
         booking.identityUnconfirmedAt !== null,
+        trainingAttributionByBooking.get(booking.id) ?? true,
       ),
       trainingMarkCleared: booking.trainingClearedAt
         ? {
@@ -1923,6 +1934,9 @@ async function writeRollCall(
   const source = input.source ?? "live";
   const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
+  if (source === "live" && checkpoint === "departure" && input.status === "boarded") {
+    await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+  }
 
   if (source === "offline" && input.clientEventId) {
     const replayed = replayVerdict(
@@ -1966,6 +1980,7 @@ async function writeRollCall(
       status: bookings.status,
       personId: bookings.personId,
       participantType: bookings.participantType,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       turnedAwayAt: bookings.turnedAwayAt,
       plannedDives: trips.plannedDives,
       shopId: trips.shopId,
@@ -2088,6 +2103,12 @@ async function writeRollCall(
     }
   }
 
+  const captureCards =
+    source === "live" &&
+    checkpoint === "departure" &&
+    input.status === "boarded" &&
+    booking.identityUnconfirmedAt === null;
+  const capturedAt = captureCards ? nowDate() : null;
   const [event] = await tx
     .insert(rollCallEvents)
     .values({
@@ -2110,10 +2131,25 @@ async function writeRollCall(
       ),
       readinessStatus: readinessSnapshot?.status ?? null,
       readinessBlockers: readinessSnapshot?.blockers ?? null,
+      // Offline sync observes today, not the cards the device saw at the tap.
+      certificationSnapshot: captureCards
+        ? boardingCertificationSnapshot(input.shopId, booking.personId)
+        : null,
+      certificationSnapshotStartedAt: capturedAt,
+      certificationSnapshotCapturedAt: capturedAt,
       occurredAt,
     })
     .returning({ id: rollCallEvents.id });
   if (!event) throw new Error("recordRollCall: insert returned no row");
+  if (captureCards && capturedAt) {
+    // The statement can wait before it completes. A clock adjustment must not
+    // make completion precede the start or reject an otherwise valid count.
+    const finishedAt = nowDate();
+    await tx
+      .update(rollCallEvents)
+      .set({ certificationSnapshotCapturedAt: finishedAt < capturedAt ? capturedAt : finishedAt })
+      .where(and(eq(rollCallEvents.id, event.id), eq(rollCallEvents.shopId, input.shopId)));
+  }
   await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
   // The rail has contradicted the desk. Nothing above refused it and nothing
   // here does either (the docblock says why); what happens instead is that
@@ -2232,6 +2268,10 @@ export async function recordCrewRollCall(
 
         const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
         if (!staffId) return { ok: false, reason: "staff_not_found" };
+        const captureCredentials =
+          source === "live" && checkpoint === "departure" && input.status === "boarded";
+        if (captureCredentials)
+          await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
 
         // Idempotency first, exactly as the diver path does it: a sync the device
         // retried (the response never arrived, the tab was closed mid-flight) must
@@ -2298,7 +2338,7 @@ export async function recordCrewRollCall(
         // still be closed by naming what happened to them, rather than only by
         // deleting them.
         const [assigned] = await tx
-          .select({ personId: tripAssignments.personId })
+          .select({ personId: tripAssignments.personId, anonymizedAt: people.anonymizedAt })
           .from(tripAssignments)
           .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
           .innerJoin(people, eq(people.id, tripAssignments.personId))
@@ -2435,6 +2475,16 @@ export async function recordCrewRollCall(
             )[0] ?? null)
           : null;
 
+        const note = await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+          standingCrewRollCall(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            personId: input.personId,
+            checkpoint,
+          }),
+        );
+        const captureAssignedCredentials = captureCredentials && assigned.anonymizedAt === null;
+        const credentialSnapshotStartedAt = captureAssignedCredentials ? nowDate() : null;
         const [event] = await tx
           .insert(rollCallCrewEvents)
           .values({
@@ -2450,18 +2500,33 @@ export async function recordCrewRollCall(
             // evidence of which snapshot supplied the *readiness* it boarded on,
             // and a crew member has no readiness to evidence. It is still an input
             // above, where the staleness bound is computed from it.
-            note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
-              standingCrewRollCall(tx, {
-                shopId: input.shopId,
-                tripId: input.tripId,
-                personId: input.personId,
-                checkpoint,
-              }),
-            ),
+            note,
+            credentialSnapshot: captureAssignedCredentials
+              ? crewCredentialSnapshot(input.shopId, assigned.personId)
+              : null,
+            credentialSnapshotStartedAt,
+            credentialSnapshotCapturedAt: credentialSnapshotStartedAt,
             occurredAt,
           })
           .returning({ id: rollCallCrewEvents.id });
         if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+        if (credentialSnapshotStartedAt) {
+          const finishedAt = nowDate();
+          await tx
+            .update(rollCallCrewEvents)
+            .set(
+              finishedAt < credentialSnapshotStartedAt
+                ? {
+                    credentialSnapshot: null,
+                    credentialSnapshotStartedAt: null,
+                    credentialSnapshotCapturedAt: null,
+                  }
+                : { credentialSnapshotCapturedAt: finishedAt },
+            )
+            .where(
+              and(eq(rollCallCrewEvents.id, event.id), eq(rollCallCrewEvents.shopId, input.shopId)),
+            );
+        }
         await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
         // The seat was released and the rail has now said the person sailed, so it
         // comes back with them — the same consequence, the same trail lines and the

@@ -25,6 +25,7 @@ import { RouteEditor, type RouteEditorCopy } from "./RouteEditor";
 import { SiteDiveFields } from "./SiteDiveFields";
 import { SiteForecastFields } from "./SiteForecastFields";
 import { SitePhotoFields } from "./SitePhotoFields";
+import { SiteSavedPrintDetails } from "./SiteSavedPrintDetails";
 import {
   SITE_FORM_OPEN_SECTIONS,
   SITE_FORM_SECTION_IDS,
@@ -418,11 +419,12 @@ export function SiteFields({
           </OpenEditorSection>
         );
       })}
-      <DisclosureRowList>
+      <DisclosureRowList className={values ? "print:[&>details:not([open])]:hidden" : undefined}>
         {closed.map((section) => {
           const parts = sections[section];
           return (
             <ClosedEditorSection
+              printEditorLabel={t("shared.formDraft.editorValues")}
               key={section}
               id={SITE_FORM_SECTION_IDS[section]}
               label={labels[section]}
@@ -435,6 +437,7 @@ export function SiteFields({
         })}
         {spanish ? (
           <ClosedEditorSection
+            printEditorLabel={t("shared.formDraft.editorValues")}
             id={SITE_FORM_SPANISH_ID}
             label={t("diveSites.form.sections.spanish")}
           >
@@ -442,6 +445,16 @@ export function SiteFields({
           </ClosedEditorSection>
         ) : null}
       </DisclosureRowList>
+      {values ? (
+        <SiteSavedPrintDetails
+          values={values}
+          t={t}
+          catalog={marineLifeCatalog}
+          fieldGuideOn={fieldGuideOn}
+          depthUnit={depthUnit}
+          tideStation={tideStation}
+        />
+      ) : null}
     </>
   );
 }

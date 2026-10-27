@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { confirmCarriedFacts } from "@/db/bookings";
@@ -13,15 +14,18 @@ import {
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema, readEmergencyContact } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import {
+  PARTY_RETURN_MAX_AGE_SECONDS,
+  partyReturnCookiePath,
+  WAIVER_RETURN_COOKIE,
+} from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
 
 /**
- * Sign the waiver from the page. We can't reconstruct an existing bearer token
- * (only its hash is stored), so this issues a fresh link for the booking and
- * sends the diver straight to it. Reissuing supersedes any prior pending link,
- * which is the intended behaviour.
+ * Open the waiver for this readiness holder. Keep their existing readiness link
+ * in a cookie scoped to this waiver; completion verifies it again before return.
  */
 export async function signWaiverFromReady(token: string) {
   const ctx = await contextFor(token);
@@ -32,6 +36,13 @@ export async function signWaiverFromReady(token: string) {
     bookingId: ctx.bookingId,
   });
   if (!issued.ok) redirect(`${base(token)}?error=waiver`);
+  (await cookies()).set(WAIVER_RETURN_COOKIE, token, {
+    path: partyReturnCookiePath(issued.token),
+    maxAge: PARTY_RETURN_MAX_AGE_SECONDS,
+    sameSite: "lax",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  });
   redirect(`/waivers/${issued.token}`);
 }
 

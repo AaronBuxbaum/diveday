@@ -365,17 +365,32 @@ export const bookings = pgTable(
     rescheduleMissedPlace: boolean("reschedule_missed_place").notNull().default(false),
     /**
      * **The fly-safe wait the night-before email told this seat, in hours**
-     * (issue #2927; H-150). Written once that email is sent with the line, so
-     * a departure later marked as decompression diving knows exactly who holds
-     * a figure that no longer applies. Null on every seat told nothing.
+     * (issue #2927; H-150). A sent or ambiguously failed attempt may have
+     * exposed this figure; a later itinerary change can then correct it.
      */
     flySafeHoursTold: integer("fly_safe_hours_told"),
-    /**
-     * When this seat was sent the one correction to that figure (issue
-     * #2927), claimed before the send so a diver hears it once. Null while
-     * nothing is owed or the correction has not gone.
-     */
+    /** Encrypted possible-exposure ledger bound to its shop and seat; absent for older reminders. */
+    flySafeRecipientSealed: text("fly_safe_recipient_sealed"),
+    /** An exposure whose original recipient or sealed ledger cannot be recovered. */
+    flySafeRecipientUnknown: boolean("fly_safe_recipient_unknown").notNull().default(false),
+    /** The specific outstanding guidance state staff explicitly resolved. */
+    flySafeAcknowledgementFingerprint: text("fly_safe_acknowledgement_fingerprint"),
+    flySafeAcknowledgedAt: timestamp("fly_safe_acknowledged_at", { withTimezone: true }),
+    flySafeAcknowledgedByPersonId: uuid("fly_safe_acknowledged_by_person_id").references(
+      () => people.id,
+      { onDelete: "set null" },
+    ),
+    /** A correction was accepted by the provider or persisted for retry. */
     flySafeCorrectedAt: timestamp("fly_safe_corrected_at", { withTimezone: true }),
+    /** Generation fenced against an older queued retry failing. */
+    flySafeCorrectionId: uuid("fly_safe_correction_id"),
+    /** Bounds unattended correction claims for the current recommendation. */
+    flySafeCorrectionAttempts: integer("fly_safe_correction_attempts").notNull().default(0),
+    /** A recoverable, expiring send claim. Its token fences stale workers. */
+    flySafeCorrectionLeaseId: uuid("fly_safe_correction_lease_id"),
+    flySafeCorrectionLeaseUntil: timestamp("fly_safe_correction_lease_until", {
+      withTimezone: true,
+    }),
     /**
      * **Whoever booked this seat said its diver is under 18** (the "Under 18"
      * box on the public party form; H-21 follow-up, decision of 2026-10-13).

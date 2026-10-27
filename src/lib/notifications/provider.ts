@@ -13,6 +13,8 @@ export type NotificationDelivery =
   | {
       status: "failed";
       retryable?: boolean;
+      /** Whether a fly-safe correction retry was durably queued. */
+      retryQueued?: boolean;
       retryAfterMs?: number;
       httpStatus?: number;
       errorCode?: string;

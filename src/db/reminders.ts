@@ -7,6 +7,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { log } from "@/lib/log";
 import { type MeetingPoint, meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import { forecastText } from "@/lib/night-before-brief";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
@@ -42,7 +43,14 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
-import { rememberFlySafeTold } from "./fly-safe-correction";
+import {
+  correctFlySafeForBooking,
+  deliveryCarriesFigure,
+  discardRefusedFlySafeExposure,
+  prepareFlySafeExposure,
+  rememberFlySafeTold,
+  retryOwedFlySafeCorrections,
+} from "./fly-safe-correction";
 import { readReminderFlySafeHours } from "./fly-safe-plan";
 import {
   notificationProviderForDb,
@@ -345,7 +353,12 @@ async function nightBeforeFlySafe(
     trip: { id: string; startsAt: Date };
     shop: { id: string; timezone: string };
   },
-): Promise<{ flySafeHours?: number }> {
+): Promise<{
+  flySafeHours?: number;
+  tripId?: string;
+  personId?: string;
+  flySafeExposureId?: string;
+}> {
   if (kind !== "trip_reminder_24h") return {};
   const flySafeHours = await readReminderFlySafeHours(db, {
     shop: { id: seat.shop.id },
@@ -353,7 +366,14 @@ async function nightBeforeFlySafe(
     participantType: seat.booking.participantType,
     detail: { shop: { timezone: seat.shop.timezone }, trip: seat.trip },
   });
-  return flySafeHours === null ? {} : { flySafeHours };
+  return flySafeHours === null
+    ? {}
+    : {
+        flySafeHours,
+        tripId: seat.trip.id,
+        personId: seat.person.id,
+        flySafeExposureId: crypto.randomUUID(),
+      };
 }
 
 /**
@@ -382,6 +402,7 @@ async function settleReminderEmail(
   db: AppDb,
   work: { shopId: string; bookingId: string; kind: ReminderKind; notification: Notification },
   delivery: Parameters<typeof recordNotificationDelivery>[1]["delivery"],
+  options: { now: Date; emailProvider: NotificationProvider },
 ): Promise<void> {
   await recordNotificationDelivery(db, {
     shopId: work.shopId,
@@ -389,7 +410,44 @@ async function settleReminderEmail(
     kind: work.kind,
     delivery,
   });
-  await rememberFlySafeTold(db, { ...work, delivery });
+  if (delivery.status === "not_configured" || (delivery.status === "failed" && !delivery.retryable))
+    await discardRefusedFlySafeExposure(db, work.notification);
+  else await rememberFlySafeTold(db, { ...work, delivery });
+  if (
+    work.notification.kind !== "trip_reminder_24h" ||
+    work.notification.flySafeHours === undefined ||
+    !deliveryCarriesFigure(delivery)
+  )
+    return;
+  const correction = await correctFlySafeForBooking(db, { ...work, ...options });
+  if (correction.unreached.length > 0) {
+    log("reminder.fly_safe_correction_unreached", "error", {
+      shopId: work.shopId,
+      bookingId: work.bookingId,
+      count: correction.unreached.length,
+    });
+  }
+}
+
+async function sendPreparedReminderBatch(
+  db: AppDb,
+  work: Array<{ notification: Notification }>,
+  provider: NotificationProvider,
+) {
+  for (const entry of work)
+    entry.notification = await prepareFlySafeExposure(db, entry.notification);
+  return sendNotificationBatch(
+    db,
+    work.map((entry) => entry.notification),
+    provider,
+  );
+}
+
+async function reminderClockAndCorrections(db: AppDb, options: SendDueRemindersOptions) {
+  const now = options.now ?? nowDate();
+  const emailProvider = notificationProviderForDb(options.emailProvider);
+  await retryOwedFlySafeCorrections(db, { now, emailProvider });
+  return { now, emailProvider };
 }
 
 /**
@@ -421,8 +479,7 @@ export async function sendDueReminders(
   db: AppDb,
   options: SendDueRemindersOptions = {},
 ): Promise<ReminderRunSummary> {
-  const now = options.now ?? nowDate();
-  const emailProvider = notificationProviderForDb(options.emailProvider);
+  const { now, emailProvider } = await reminderClockAndCorrections(db, options);
   const smsProvider = stopListedSmsProvider(
     db,
     options.smsProvider ?? smsProviderFromEnvironment(),
@@ -767,11 +824,7 @@ export async function sendDueReminders(
       }
     }
 
-    const emailDeliveries = await sendNotificationBatch(
-      db,
-      emailWork.map((work) => work.notification),
-      emailProvider,
-    );
+    const emailDeliveries = await sendPreparedReminderBatch(db, emailWork, emailProvider);
     for (let index = 0; index < emailWork.length; index += 1) {
       const work = emailWork[index];
       const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
@@ -791,7 +844,7 @@ export async function sendDueReminders(
           { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
         );
       }
-      await settleReminderEmail(db, work, delivery);
+      await settleReminderEmail(db, work, delivery, { now, emailProvider });
       links.settle(summary, work.bookingId, delivery);
     }
 

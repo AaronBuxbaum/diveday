@@ -48,6 +48,7 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
+import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
@@ -310,9 +311,8 @@ const addSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
-  plannedDives: z.coerce.number().int().min(1).max(4),
-  // A departure that meets on consecutive days is one trip, not a week of
-  // look-alikes: one roster, one set of waivers, one crew (src/lib/trip-days.ts).
+  plannedDives: z.coerce.number().int().min(1).max(MAX_COURSE_DIVES),
+  // Consecutive days share one roster, set of waivers and crew (src/lib/trip-days.ts).
   dayCount: z.preprocess(
     (value) => (value === "" || value === undefined ? MIN_TRIP_DAYS : value),
     z.coerce.number().int().min(MIN_TRIP_DAYS).max(MAX_TRIP_DAYS),
@@ -390,11 +390,16 @@ function repeatWeekdaysFrom(formData: FormData): WeekdaySet {
 }
 
 export async function addDepartureAction(shopSlug: string, formData: FormData) {
-  const back = boardPath(shopSlug);
+  const back = `${boardPath(shopSlug)}/new`;
+  const submittedWeek = formData.get("boardWeek");
+  const returnWeek =
+    typeof submittedWeek === "string" && isValidCalendarDate(submittedWeek)
+      ? `&week=${submittedWeek}`
+      : "";
   const { db, shop, session } = await requireBoardAuthor(shopSlug);
   const invalid = async () => {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-    redirect(`${back}?builder=invalid`);
+    redirect(`${back}?builder=invalid${returnWeek}`);
   };
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return await invalid();
@@ -436,7 +441,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       action: "add",
       outcome: "invalid",
     });
-    redirect(`${back}?builder=rehearsal-repeats`);
+    redirect(`${back}?builder=rehearsal-repeats${returnWeek}`);
   }
   const crewPersonIds = crewPersonIdsFrom(formData);
   if (!crewPersonIds) return await invalid();
@@ -451,8 +456,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   if (lensId && !(await getTripLens(db, shop.id, lensId))) return await invalid();
 
   // The hull the panel just assigned. Its own prefill puts this number in
-  // the box, but the box is editable afterwards and the server has to be the
-  // one that says no — to the hull's seats and to its certificate (H-107).
+  // the box, but the box is editable afterwards. The certificate remains a limit (H-107).
   const assignedBoat = boatId
     ? ((await listBoats(await getDb(), shop.id)).find((boat) => boat.id === boatId) ?? null)
     : null;
@@ -477,24 +481,13 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     shop,
   );
   if (!details.ok) {
-    if (details.reason === "capacity_above_boat") {
-      await trackEvent({
-        name: "schedule_builder_action",
-        action: "add",
-        outcome: "capacity_above_boat",
-      });
-      // The board's own `?builder=` channel, not `noticeUrl` — this page reads
-      // its refusals through `BUILDER_NOTICE_KEYS`. `count` rides alongside so
-      // the banner can name the hull's number rather than say "too many".
-      redirect(`${back}?builder=capacity-above-boat&count=${details.boatCapacity}`);
-    }
     if (details.reason === "capacity_above_certificate") {
       await trackEvent({
         name: "schedule_builder_action",
         action: "add",
         outcome: "capacity_above_certificate",
       });
-      redirect(`${back}?builder=capacity-above-certificate&count=${details.limit}`);
+      redirect(`${back}?builder=capacity-above-certificate&count=${details.limit}${returnWeek}`);
     }
     if (details.reason === "end_before_start") {
       await trackEvent({
@@ -502,11 +495,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
         action: "add",
         outcome: "end_before_start",
       });
-      redirect(`${back}?builder=end-before-start`);
+      redirect(`${back}?builder=end-before-start${returnWeek}`);
     }
     if (details.reason === "days_out_of_order") {
       await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-      redirect(`${back}?builder=days-out-of-order`);
+      redirect(`${back}?builder=days-out-of-order${returnWeek}`);
     }
     return await invalid();
   }
@@ -522,7 +515,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     lastDay.startsAt.getTime() - startsAt.getTime() >= repeatIntervalWeeks * 7 * 86_400_000
   ) {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
-    redirect(`${back}?builder=days-span-repeat`);
+    redirect(`${back}?builder=days-span-repeat${returnWeek}`);
   }
 
   // The per-dive cards only exist while the panel is expanded, so an all-blank

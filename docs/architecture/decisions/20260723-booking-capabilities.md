@@ -82,8 +82,8 @@ CR-002 and CR-003 need the same primitive, so this is one decision, not two.
 - A future "revoke this link" staff action is a single `revokeBookingCapabilities` call away; none
   exists yet because no ticket asked for the UI, but the seam is there and tested.
 - Every call site that used to build a readiness link synchronously from a bare booking id
-  (`src/db/reminders.ts`, `src/db/notifications.ts`, the booking-confirmation email, the waiver
-  completion page) now issues a capability from the database instead, and the removed
+  (`src/db/reminders.ts`, `src/db/notifications.ts`, the booking-confirmation email) now issues a
+  capability from the database instead, and the removed
   `src/lib/readiness-links.ts` no longer depends on `AUTH_SECRET` for this flow at all.
 - **Escape hatch:** if concurrent-link proliferation ever becomes a real cost (many outstanding rows
   per booking), an idle-row cleanup job can prune expired/revoked rows past a retention window —
@@ -97,3 +97,16 @@ so it shuts when the course seat's own links do: if any `readiness` or `course_f
 on the course seat was revoked at or after the mark, the charter route resolves no enrollment and
 signs nothing. Reissuing the course seat's link is the shop's call, never the charter link's.
 Each record keeps the seat it was signed from (`course_form_records.signed_via_booking_id`).
+
+## Addendum 2026-10-27 (issue #3124)
+
+Aaron chose separate readiness access. Signing a waiver or revisiting its receipt does not issue a
+readiness capability. A diver who opened their own waiver from a readiness link returns through that
+same independently held link, verified again for its purpose, shop, booking and live state. The
+existing parent return similarly verifies the lead's link. Both travel in a short-lived HttpOnly
+cookie scoped to the waiver path. A standalone waiver shows the signed receipt and directs the
+diver to their booking confirmation or the shop for trip details. Existing readiness links retain
+their own lifetime and revocation rules; an older waiver link is still usable for its own purpose.
+When signing creates a medical hold, the receipt comes first so the signer sees the physician
+instructions and the doctor's page when available. The receipt may offer the separately held
+return link only after verifying it again; readiness retains its generic medical-privacy wording.

@@ -32,6 +32,7 @@ export const TEAM_FORMS = {
   roles: (personId: string) => `roles:${personId}`,
   contact: (personId: string) => `contact:${personId}`,
   languages: (personId: string) => `languages:${personId}`,
+  credential: (personId: string) => `credential:${personId}`,
 } as const;
 
 /** Every refusal one row's roles disclosure can produce. */
@@ -62,10 +63,11 @@ export type TeamNoticeTargets = {
   rolesFor?: string;
   contactFor?: string;
   languagesFor?: string;
+  credentialChangeFor?: string;
 };
 
 /** The three per-row forms, by the prefix `TEAM_FORMS` gives each of them. */
-const ROW_FORM_PREFIXES = ["roles:", "contact:", "languages:"] as const;
+const ROW_FORM_PREFIXES = ["roles:", "contact:", "languages:", "credential:"] as const;
 
 /**
  * The same answer, demoted to the page banner when the row it names is not on
@@ -87,7 +89,12 @@ export function teamNoticeOnRoster(form: string, personIds: readonly string[]): 
 }
 
 export function teamNoticeForm(code: string, targets: TeamNoticeTargets): string {
-  const { rolesFor, contactFor, languagesFor } = targets;
+  const { rolesFor, contactFor, languagesFor, credentialChangeFor } = targets;
+  if (
+    credentialChangeFor &&
+    ["credential-renewed", "credential-corrected", "credential-invalid"].includes(code)
+  )
+    return TEAM_FORMS.credential(credentialChangeFor);
   if (rolesFor && ROLE_NOTICES.has(code)) return TEAM_FORMS.roles(rolesFor);
   if (contactFor && CONTACT_NOTICES.has(code)) return TEAM_FORMS.contact(contactFor);
   if (languagesFor && LANGUAGE_NOTICES.has(code)) return TEAM_FORMS.languages(languagesFor);

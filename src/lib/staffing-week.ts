@@ -259,6 +259,7 @@ export type WeekGap = {
    * (issue #1853). Absent reads as no.
    */
   ratingLapsed?: boolean;
+  ratingUnverified?: boolean;
 };
 
 /** Another departure the same person crews at the same hours as this one. */
@@ -381,6 +382,7 @@ export type PlacedGap = PlacedTrip & {
    * the departure still sells and seats on the roster's claim (H-59).
    */
   ratingLapsed: boolean;
+  ratingUnverified?: boolean;
   requests: readonly PlacedGapRequest[];
   viewerMayRequest: boolean;
   /**
@@ -769,6 +771,7 @@ export function staffWeek(input: {
         ...first.placed,
         gap: gap.gap,
         ratingLapsed: gap.ratingLapsed ?? false,
+        ...(gap.ratingUnverified ? { ratingUnverified: true } : {}),
         // The same fact the reader's own line states, said to the person who
         // can act on it: a pending ask from somebody who is not an instructor
         // does not move an intro session's instructor-to-student cap. Only

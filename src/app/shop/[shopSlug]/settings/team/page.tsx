@@ -8,20 +8,12 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import {
-  ChoicePill,
-  controlClass,
-  Field,
-  FieldActions,
-  FieldGrid,
-  FormStatus,
-} from "@/components/ui/form";
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { listStaffCredentials } from "@/db/staff-credentials";
-import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
@@ -31,12 +23,12 @@ import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
-import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { AddCredentialDisclosure } from "./_components/AddCredentialDisclosure";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
-import { StaffCardCredentials } from "./_components/StaffCardCredentials";
+import { LanguageCheckboxes, StaffLanguagesValue } from "./_components/LanguageCheckboxes";
+import { StaffCardCredentialsWithActions as StaffCardCredentials } from "./_components/StaffCardCredentialsWithActions";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
@@ -53,6 +45,7 @@ import {
 import { type CardCredential, credentialRowsFor } from "./credential-rows";
 import { noticeMessages } from "./notice-messages";
 import { parseRoles, TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
+import { publicName } from "./public-name";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -89,63 +82,7 @@ function statusBadge(
  * flagged in the extraction report rather than changed here.
  */
 const roleLabels = staffRoleLabelRecord;
-
-/**
- * One staff member's spoken languages (issue #708) — a checkbox per language
- * DiveDay can render, each labelled in the *reader's* own language
- * (`languageNameIn`) so the staffer filling this in recognises the option,
- * unlike the diver-facing badge below which uses each language's endonym.
- */
-function LanguageCheckboxes({
-  defaultLanguages,
-  locale,
-  t,
-}: {
-  defaultLanguages: readonly string[];
-  locale: string;
-  t: StaffTranslator;
-}) {
-  return (
-    <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <legend className="sr-only">{t("settings.team.languagesLegend")}</legend>
-      {COMMON_SPOKEN_LANGUAGES.map((language) => (
-        <ChoicePill
-          key={language}
-          type="checkbox"
-          name={`language_${language}`}
-          defaultChecked={defaultLanguages.includes(language)}
-        >
-          {languageNameIn(language, locale) ?? language}
-        </ChoicePill>
-      ))}
-    </fieldset>
-  );
-}
-
-/**
- * The name divers actually read for this person, or empty when they read none.
- *
- * **Both conditions, because this row makes a claim about a page it is not**
- * (issue #1357, tightened by a security pass on the commit that added it).
- * `tripPublicCrew` (`src/db/trips-record.ts`) requires the consent stamp, a
- * live person **and an `active` account** — so a divemaster who consented and
- * was later disabled vanishes from every public page while their roster row
- * went on saying "Divers see “Mar”". Disabling deliberately leaves the consent
- * standing (`setStaffAccountStatus` — a temporary disable should not destroy a
- * standing answer), which is right, and is exactly why the reader has to check
- * the second condition rather than infer it.
- *
- * `trim()` rather than truthiness for the same reason one layer down: the
- * check constraint pairs the stamp with a name that is non-blank **after
- * Postgres `btrim`**, which strips ASCII space and nothing else. No writer can
- * produce a tab-only name today — `crewPublicNameToStore` collapses every
- * `\p{Cc}` to a space and trims — but a roster is a poor place to learn that a
- * default changed.
- */
-function publicName(member: StaffMember): string {
-  if (member.accountStatus !== "active") return "";
-  return member.crewPublicName?.trim() ?? "";
-}
+const EMPTY_PRINT_ROW_CLASS = "mt-4 print:[&:not(:has(details[open]))]:hidden";
 
 function StaffRow({
   member,
@@ -177,8 +114,12 @@ function StaffRow({
   const rolesNotice = noticeForForm(notice, TEAM_FORMS.roles(member.personId));
   const contactStatus = noticeForForm(notice, TEAM_FORMS.contact(member.personId));
   const languagesStatus = noticeForForm(notice, TEAM_FORMS.languages(member.personId));
+  const hasContact = Boolean(member.emergencyContactName && member.emergencyContactPhone);
   return (
-    <li id={`staff-${member.personId}`} className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6">
+    <li
+      id={`staff-${member.personId}`}
+      className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6 print:break-inside-avoid print:px-3 print:py-2 print:[&>div]:mt-1 print:[&_summary]:min-h-0 print:[&_summary]:py-0"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="font-medium">{member.fullName}</p>
@@ -264,19 +205,11 @@ function StaffRow({
           nowhere gated — a shop that never fills this in loses nothing
           (issue #708). Its own immediate form, like the emergency contact
           below. */}
-      <div className="mt-4">
+      <div className={member.spokenLanguages.length ? "mt-4" : EMPTY_PRINT_ROW_CLASS}>
         <CompactDisclosureRow
           id={`languages-${member.personId}`}
           label={t("settings.team.languagesLabel")}
-          value={
-            member.spokenLanguages.length > 0
-              ? cachedListFormat(locale).format(
-                  member.spokenLanguages.map(
-                    (language) => languageNameIn(language, locale) ?? language,
-                  ),
-                )
-              : t("settings.team.emergencyContact.addValue")
-          }
+          value={<StaffLanguagesValue languages={member.spokenLanguages} locale={locale} t={t} />}
           open={Boolean(languagesStatus)}
         >
           <form action={saveStaffLanguagesAction} className="flex flex-col gap-3">
@@ -303,6 +236,7 @@ function StaffRow({
         t={t}
         reviewAction={reviewStaffCredentialAction}
         deleteAction={deleteStaffCredentialAction}
+        status={noticeForForm(notice, TEAM_FORMS.credential(member.personId))}
       />
 
       {/* Who to call for this person, and the one place a shop can say so.
@@ -315,16 +249,18 @@ function StaffRow({
           the sheet a coastguard reads answered "who do we call?" for every
           paying diver and for neither of the two staff most reliably in the
           water (dive-domain review 20260810). */}
-      <div className="mt-4">
+      <div className={hasContact ? "mt-4" : EMPTY_PRINT_ROW_CLASS}>
         <CompactDisclosureRow
           id={`emergency-contact-${member.personId}`}
           label={t("settings.team.emergencyContact.label")}
           // The label names the fact, the value answers it — the row used to
           // say "Add an emergency contact" beside "Marisol Reyes (wife)".
           value={
-            member.emergencyContactName && member.emergencyContactPhone
-              ? member.emergencyContactName
-              : t("settings.team.emergencyContact.addValue")
+            hasContact ? (
+              member.emergencyContactName
+            ) : (
+              <span className="print:hidden">{t("settings.team.emergencyContact.addValue")}</span>
+            )
           }
           open={Boolean(contactStatus)}
         >
@@ -371,7 +307,7 @@ function StaffRow({
           which took this row's 8px gap and pushed the switches 8px down on a
           phone (the pixel probe, settings-team). `sm:ms-auto` holds the
           switches to the end without a placeholder holding the start. */}
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
         {member.accountStatus === "invited" ? (
           <form action={resendInviteAction}>
             <input type="hidden" name="userAccountId" value={member.userAccountId} />
@@ -482,6 +418,7 @@ export default async function TeamSettingsPage({
     undoRoles?: string;
     undoName?: string;
     credentialFor?: string;
+    credentialChangeFor?: string;
     contactFor?: string;
     languagesFor?: string;
     rolesFor?: string;
@@ -496,6 +433,7 @@ export default async function TeamSettingsPage({
     undoRoles,
     undoName,
     credentialFor,
+    credentialChangeFor,
     contactFor,
     languagesFor,
     rolesFor,
@@ -531,7 +469,7 @@ export default async function TeamSettingsPage({
     notice && resolved
       ? {
           form: teamNoticeOnRoster(
-            teamNoticeForm(notice, { rolesFor, contactFor, languagesFor }),
+            teamNoticeForm(notice, { rolesFor, contactFor, languagesFor, credentialChangeFor }),
             staff.map((member) => member.personId),
           ),
           ...resolved,

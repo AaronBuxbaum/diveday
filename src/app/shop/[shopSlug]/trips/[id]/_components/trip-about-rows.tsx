@@ -274,7 +274,11 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             ),
             locale,
             currency: toShopCurrency(shop.currency),
-            boats: shopBoats.map((boat) => ({ id: boat.id, name: boat.name })),
+            boats: shopBoats.map((boat) => ({
+              id: boat.id,
+              name: boat.name,
+              capacity: boat.capacity,
+            })),
             lenses: shopLenses.map((lens) => ({ id: lens.id, name: lens.name })),
             hasBoatDiving: shop.hasBoatDiving,
             hasShoreDiving: shop.hasShoreDiving,
@@ -401,6 +405,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             onShiftIds={cancelled ? null : onShiftIds}
             clashes={liveClashes}
             crewGapCode={cancelled ? "none" : crewGap.code}
+            bookingInstructorPresent={crew.rosterInWaterCrew.instructorCount > 0}
             updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
             copy={{
               heading: t("trips.crew.heading"),

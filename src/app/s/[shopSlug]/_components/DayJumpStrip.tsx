@@ -39,7 +39,7 @@ export function DayJumpStrip({
   return (
     <section
       aria-label={label}
-      className="table-scroll-shell -mx-4 mb-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+      className="table-scroll-shell -mx-4 mb-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 print:hidden"
     >
       <ol className="grid auto-cols-fr grid-flow-col sm:flex sm:gap-1">
         {days.map(({ dayKey, dayParts }) => (

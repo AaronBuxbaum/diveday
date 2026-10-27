@@ -19,7 +19,7 @@ export type IssuedCapability = { token: string; expiresAt: Date };
  * Minting is unavoidably per-request: tokens are stored only as hashes, so an
  * existing row's plaintext can never be re-derived and a page render that needs
  * a link has no choice but to issue one. That made every GET of the booking
- * confirmation and the signed-waiver page mint another `readiness` capability,
+ * confirmation mint another `readiness` capability,
  * each now living to trip end + 30 days — an unbounded pile of live credentials
  * for a single booking, every one of them a working link if it ever leaked.
  *

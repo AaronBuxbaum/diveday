@@ -50,7 +50,7 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // URL unattended for as long as the subscription exists, so one leaked copy
   // in telemetry replays the whole shop's schedule indefinitely.
   "calendar",
-  // Email unsubscribe tokens (`last_minute_list_unsubscribe_tokens` and
+  // Email unsubscribe tokens (`interest_unsubscribe_tokens` and
   // `person_courtesy_email_unsubscribe_tokens`, both resolved by
   // /unsubscribe/[token]). Found missing by the OPS-L1 review: the tenth
   // capability route, and the only one this list had never covered. The

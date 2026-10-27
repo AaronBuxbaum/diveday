@@ -14,6 +14,7 @@ import {
   rungLostToLapse,
   standingRatingsBesideJob,
   TRIP_CREW_ROLES,
+  unverifiedRungs,
 } from "./crew-roles";
 
 /**
@@ -228,6 +229,36 @@ describe("lapsedRungs", () => {
         DIVE_DAY,
       ),
     ).toEqual([]);
+  });
+
+  it("keeps a future instructor rating unverified while a current divemaster rating preserves the assistant rung", () => {
+    const cards = [
+      { kind: "instructor_rating", issuedAt: "2026-10-11", renewsAt: "2028-01-01" },
+      { kind: "divemaster_rating", issuedAt: "2020-01-01", renewsAt: "2028-01-01" },
+    ];
+    const member = {
+      shopRoles: ["instructor"],
+      lapsedRungs: lapsedRungs(cards, DIVE_DAY),
+      unverifiedRungs: unverifiedRungs(cards, DIVE_DAY),
+    };
+    expect(member.unverifiedRungs).toEqual(["instructor"]);
+    expect(inWaterCrewRole(member)).toBe("certified_assistant");
+    expect(countBothClaims([member]).roster.instructorCount).toBe(1);
+    expect(
+      unverifiedRungs([{ kind: "instructor_rating", issuedAt: null, renewsAt: null }], DIVE_DAY),
+    ).toEqual([]);
+  });
+
+  it("does not let a future-issued rating hide a currently expired rating", () => {
+    expect(
+      lapsedRungs(
+        [
+          { kind: "instructor_rating", issuedAt: "2020-01-01", renewsAt: "2026-10-01" },
+          { kind: "instructor_rating", issuedAt: "2026-10-11", renewsAt: "2028-01-01" },
+        ],
+        DIVE_DAY,
+      ),
+    ).toContain("instructor");
   });
 
   it("counts a rating with no renewal date recorded as current", () => {

@@ -166,6 +166,8 @@
   "trainingMarkCleared": "{hasName, select, yes {{name} quitó la marca de formación con formularios del curso sin firmar} other {Se quitó la marca de formación con formularios del curso sin firmar}}",
   "trainingMarkClearedInvalid": "{hasName, select, yes {{name} quitó la marca de formación cuando ya no correspondía a su plaza del curso} other {Se quitó la marca de formación cuando ya no correspondía a su plaza del curso}}",
   "mixedTrainingDepthWarning": "Si los participantes de una actividad introductoria bucean con otros alumnos, revisa el límite de profundidad de la actividad introductoria antes de bucear.",
+  "trainingSiteAttributionUnknown": "Esta marca no indica cuál inmersión es de formación, así que siguen aplicando los requisitos de certificación del sitio.",
+  "trainingReadinessStale": "La habilitación de formación guardada está desactualizada. Actualiza el manifiesto antes de embarcar.",
   "trainingDive": "Inmersión de formación para {course}",
   "trainingDiveNoInstructor": "Ningún instructor del curso a bordo para esta plaza",
   "trainingDiveOverRatio": "Supera la proporción del instructor para este curso; pasa a un alumno a otro grupo",

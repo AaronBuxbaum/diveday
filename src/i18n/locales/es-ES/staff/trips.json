@@ -1,4 +1,14 @@
 {
+  "flySafeFollowUp": {
+    "heading": "Seguimiento de las indicaciones para volar",
+    "resolveHelp": "Marca como resuelto solo después de contactar con el buceador o resolver de otro modo las indicaciones para volar. Esto no confirma la entrega del correo.",
+    "resolveFor": "Marcar seguimiento resuelto para {name}",
+    "resolve": "Marcar seguimiento resuelto",
+    "resolving": "Guardando…",
+    "intro": "Es posible que las indicaciones anteriores para volar ya no sean válidas.",
+    "queued": "Corrección pendiente de envío.",
+    "contact": "Contacta con el buceador y con quienes recibieron las indicaciones anteriores para confirmar las indicaciones actuales para volar."
+  },
   "surfaces": {
     "trip": "Salida",
     "manifest": "Manifiesto",
@@ -58,8 +68,8 @@
     "trainingMarkOver": "Esa salida o sesión del curso ya terminó, así que no cambió nada.",
     "trainingMarkFormsOwed": "Todavía faltan formularios del curso. Un gerente o el instructor del curso puede quitar esta marca.",
     "saved": "Cambios guardados",
-    "savedFlySafeUnreached": "Cambios guardados. Algunos buceadores que recibieron un plazo para volar no pudieron recibir la corrección. Llámalos.",
-    "savedFlySafeUnreachedCount": "{count, plural, one {Cambios guardados. # buceador que recibió un plazo para volar no pudo recibir la corrección. Llámalo.} other {Cambios guardados. # buceadores que recibieron un plazo para volar no pudieron recibir la corrección. Llámalos.}}",
+    "savedFlySafeUnreached": "Cambios guardados. No se pudo enviar una corrección sobre cuándo volar. Revisa la lista de esta salida y contacta a sus buceadores sobre cuándo volar.",
+    "savedFlySafeUnreachedCount": "{count, plural, one {Cambios guardados. No se pudo enviar # corrección sobre cuándo volar. Revisa la lista de esta salida y contacta a sus buceadores sobre cuándo volar.} other {Cambios guardados. No se pudieron enviar # correcciones sobre cuándo volar. Revisa la lista de esta salida y contacta a sus buceadores sobre cuándo volar.}}",
     "savedFlySafeFailed": "Cambios guardados, pero no se enviaron todas las correcciones del plazo para volar. Guarda de nuevo para reintentar.",
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
     "cancelUnderway": "Esta salida está en curso o ya zarpó, así que no se canceló.",
@@ -69,6 +79,8 @@
     "noteAdded": "Nota privada del personal agregada",
     "noteDeleted": "Nota privada del personal eliminada",
     "bookingRemoved": "Reserva cancelada. La plaza vuelve a estar disponible.",
+    "seatMovedFlySafeUnreached": "Se trasladó. Contacta al buceador para confirmar la nueva salida y cuándo puede volar.",
+    "seatMovedOwedFlySafeUnreached": "Se trasladó; queda pendiente la diferencia de precio. Contacta al buceador para confirmar la nueva salida y cuándo puede volar.",
     "seatMoved": "Listo. El buceador ya tiene el nuevo horario.",
     "seatMovedUntold": "Listo, pero el mensaje con el nuevo horario no salió. Avísale tú.",
     "seatMovedOwed": "Listo. La nueva salida cuesta más, así que se debe la diferencia.",
@@ -121,6 +133,7 @@
     "identitySplitDobInvalid": "Esa fecha de nacimiento no puede ser correcta. Revísala e inténtalo de nuevo.",
     "identitySplitEmailInvalid": "Ese correo no parece correcto. Revísalo o déjalo en blanco.",
     "identitySplitEmailInUse": "Otro buceador ya tiene ese correo. Usa el suyo propio o déjalo en blanco.",
+    "identityRepointedFlySafe": "Se pasó a la otra ficha. Contacta a la persona que recibió el aviso anterior para revisar cuándo puede volar.",
     "identityRepointed": "Se pasó a la otra ficha con ese nombre. Confirma que es esa persona antes de que embarque.",
     "identityRepointUnavailable": "Esa ficha no puede quedarse con esta plaza. Elige otra persona con este nombre o usa Otra persona.",
     "identityRepointMedicalHold": "Esta plaza, o una plaza retenida que se mueve con ella, tiene una retención médica: una derivación al médico sin respuesta o una que el médico no aprobó. Para pasarla a otra ficha, cancela esta plaza y vuelve a reservarla.",
@@ -331,6 +344,7 @@
     "awayWithdraw": "Ya no trabaja en ella",
     "awayWithdrawing": "Guardando…",
     "courseNeedsInstructor": "Este curso no puede aceptar reservas hasta que un miembro de la tripulación asignado tenga el rol de instructor.",
+    "underTargetUnverified": "{divers, plural, one {# buceador} other {# buceadores}} sin supervisor confirmado. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "underTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasters, plural, =0 {ningún supervisor} one {# supervisor} other {# supervisores}}. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "Reservaron en {language}: {divers}. Nadie de esta tripulación tiene registrado {language}.",
     "languageCovered": "Charla en {language} para {divers}: {crew}.",
@@ -674,6 +688,7 @@
       "paperCopy": "Tengo la copia firmada en papel"
     },
     "trainingMark": {
+      "siteAttributionUnknown": "Esta marca no indica cuál inmersión es de formación, así que siguen aplicando los requisitos de certificación del sitio.",
       "label": "Inmersión de formación",
       "countsToward": "Cuenta para",
       "option": "{course}, {date}",
@@ -848,5 +863,30 @@
     "daysAgo": "hace {days} d",
     "emailSubject": "Hay una plaza libre en {tripTitle}",
     "emailBody": "Hola {firstName},\n\nHay una plaza libre en {tripTitle} ({tripWhen}) con {shopName}. Consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
+  },
+  "partyWaiverQueue": {
+    "title": "Exenciones del grupo",
+    "intro": "Muestra un código QR disponible para que la persona firme en su celular.",
+    "back": "Volver a la salida",
+    "show": "Mostrar código QR",
+    "showFor": "Mostrar código QR de la exención de {name}",
+    "scan": "Pide a esta persona que escanee el código con su propio celular.",
+    "close": "Cerrar",
+    "loading": "Preparando el código…",
+    "failed": "Esta exención ya no está disponible aquí. Actualiza y revisa la plaza.",
+    "needed": "Falta la exención",
+    "signed": "Exención firmada",
+    "medicalReview": "Exención firmada · requiere revisión médica",
+    "held": "Identidad pendiente de confirmación",
+    "notRequired": "No se requiere exención",
+    "unknown": "Revisar los requisitos de la salida",
+    "guardian": "También debe firmar un padre, madre o tutor.",
+    "medical": "También requiere revisión médica.",
+    "unnamed": "Plaza retenida",
+    "review": "Revisar exenciones del grupo",
+    "medicalNotCleared": "Exención firmada · sin autorización médica",
+    "notCleared": "Sin autorización médica.",
+    "confirmIdentity": "Confirmar identidad",
+    "reviewMedical": "Revisar estado médico"
   }
 }

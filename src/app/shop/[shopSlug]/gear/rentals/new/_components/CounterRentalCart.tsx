@@ -428,7 +428,7 @@ export function CounterRentalCart({
       </div>
 
       <StickyFormActions>
-        <p className="me-auto text-base" aria-live="polite">
+        <p className="me-auto text-base" aria-live="polite" data-print-content>
           <span className="font-medium">{count}</span>
           {picked.length > 0 ? <span className="tabular-nums text-muted"> · {total}</span> : null}
         </p>

@@ -11,7 +11,6 @@ import {
   canManageWaiverTemplates,
 } from "@/lib/authz";
 import { requireShopSurface } from "@/lib/session";
-import { RailOffTheHub } from "./_components/RailOffTheHub";
 import { SettingsRail } from "./_components/SettingsRail";
 import { SettingsRailSkeleton } from "./_components/SettingsRailSkeleton";
 import { SETTINGS_GROUPS, settingsRailGatesFor, settingsRailRowsFor } from "./settings-groups";
@@ -19,8 +18,8 @@ import { SETTINGS_GROUPS, settingsRailGatesFor, settingsRailRowsFor } from "./se
 /**
  * Settings is a rail and a pane — ADR 20260827-clearwater-surface-language,
  * decision 6. This is the frame that holds the two: the map on the left from
- * `lg` up, the destination on the right, and below `lg` nothing at all beyond
- * the page it has always been.
+ * `lg` up, the destination on the right, and a compact navigation control
+ * on narrower screens.
  *
  * The layout itself awaits nothing above `{children}` — a request-scoped read
  * there would cost every route beneath it its static shell (ADR
@@ -45,11 +44,9 @@ export default function SettingsLayout({
        fixed-width sibling when it exists, and when it does not the pane simply
        takes the width. */
     <div className="mx-auto w-full max-w-6xl lg:flex lg:gap-8 lg:px-6">
-      <RailOffTheHub>
-        <Suspense fallback={<SettingsRailSkeleton />}>
-          <SettingsRailPanel params={params} />
-        </Suspense>
-      </RailOffTheHub>
+      <Suspense fallback={<SettingsRailSkeleton />}>
+        <SettingsRailPanel params={params} />
+      </Suspense>
       <div className="min-w-0 lg:flex-1">{children}</div>
     </div>
   );

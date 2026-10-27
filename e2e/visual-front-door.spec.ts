@@ -78,11 +78,197 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/s/blue-mantis/register");
+        await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
         await page.getByRole("heading", { level: 1 }).waitFor();
         await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "shopfront-register", scheme);
       });
+
+      for (const locale of ["en-US", SPANISH] as const) {
+        test.describe(`registration certification ${locale}`, () => {
+          test.use({ locale });
+          test(`native agency selection reveals the existing declaration fields (${scheme})`, async ({
+            page,
+          }) => {
+            const words = diverTranslator(locale);
+            await page.goto("/s/blue-mantis/register");
+            await expect(page.locator("form[data-hydrated='true']")).toBeVisible();
+            const agency = page.getByLabel(words("register.agencyLabel"));
+            const level = page.getByLabel(words("register.levelLabel"));
+            const number = page.getByLabel(words("register.identifierLabel"));
+            await expect(page.getByText(words("register.uncertified"))).toBeVisible();
+            await expect(level).toBeHidden();
+            await expect(number).toBeHidden();
+            await capture(page, "shopfront-register-uncertified", scheme, {
+              ...(locale === SPANISH ? { locale: SPANISH } : {}),
+            });
+            await agency.selectOption("padi");
+            await expect(level).toBeVisible();
+            await level.selectOption("rescue");
+            await number.fill("PADI-778899");
+            await capture(page, "shopfront-register-certified", scheme, {
+              ...(locale === SPANISH ? { locale: SPANISH } : {}),
+            });
+            await agency.selectOption("");
+            await expect(level).toBeHidden();
+            await agency.selectOption("padi");
+            await expect(level).toHaveValue("rescue");
+            await expect(number).toHaveValue("PADI-778899");
+          });
+
+          if (scheme === "light") {
+            test("200% text size keeps populated certification disclosures readable and keyboard reachable", async ({
+              page,
+            }) => {
+              const words = diverTranslator(locale);
+              await page.goto("/s/blue-mantis/register");
+              const form = page.locator("form[data-hydrated='true']");
+              await expect(form).toBeVisible();
+              // Existing course-form accessibility coverage uses root text size too.
+              // This is text enlargement, not browser zoom or image scaling.
+              await page.evaluate(() => {
+                document.documentElement.style.fontSize = "200%";
+              });
+              await page.getByLabel(words("register.nameLabel")).fill("María Fernanda Rodríguez");
+              await page.getByLabel(words("register.emailLabel")).fill("maria@example.test");
+              await page.getByLabel(words("register.phoneLabel")).fill("+1 305 555 0147");
+              await expect(form.locator("#phone ~ [id$='-description']")).toBeVisible();
+              await page.getByLabel(words("register.wetsuitLabel")).fill("XL tall");
+              await page.getByLabel(words("register.bootLabel")).fill("US 10 / EU 43");
+              await page.getByLabel(words("register.finLabel")).fill("XL open heel");
+              const agency = page.getByLabel(words("register.agencyLabel"));
+              const level = page.getByLabel(words("register.levelLabel"));
+              const number = page.getByLabel(words("register.identifierLabel"));
+              const overflowChecks: {
+                page: boolean;
+                controls: string[];
+                labels: (string | undefined)[];
+              }[] = [];
+              const headingChecks: boolean[] = [];
+              const readable = async () => {
+                await expect
+                  .poll(async () =>
+                    page.locator("[data-chrome-natural]").evaluate((header) => {
+                      const token = Number.parseFloat(
+                        getComputedStyle(document.documentElement).getPropertyValue("--chrome-h"),
+                      );
+                      return Math.abs(token - header.getBoundingClientRect().height);
+                    }),
+                  )
+                  .toBeLessThanOrEqual(1);
+                const heading = await page
+                  .getByRole("heading", { level: 1 })
+                  .evaluate((element) => {
+                    const bounds = element.getBoundingClientRect();
+                    const range = document.createRange();
+                    range.selectNodeContents(element);
+                    const lines = [...range.getClientRects()].map((rect) => ({
+                      left: rect.left,
+                      right: rect.right,
+                    }));
+                    const viewport = document.documentElement.clientWidth;
+                    return {
+                      viewport,
+                      bounds: { left: bounds.left, right: bounds.right },
+                      lines,
+                      outsideViewport: lines.some(
+                        (line) => line.left < -1 || line.right > viewport + 1,
+                      ),
+                    };
+                  });
+                headingChecks.push(heading.outsideViewport);
+                await test.info().attach(`enlarged-heading-${page.viewportSize()?.width}`, {
+                  body: JSON.stringify(heading, null, 2),
+                  contentType: "application/json",
+                });
+                const chrome = await page.locator("[data-chrome-bar]").evaluate((header) => {
+                  const bounds = header.getBoundingClientRect();
+                  return {
+                    viewport: window.innerWidth,
+                    header: { top: bounds.top, bottom: bounds.bottom, height: bounds.height },
+                    token: getComputedStyle(document.documentElement).getPropertyValue(
+                      "--chrome-h",
+                    ),
+                    controls: [...header.querySelectorAll("a, button")].map((control) => {
+                      const rect = control.getBoundingClientRect();
+                      return {
+                        name: control.textContent?.trim() || control.getAttribute("aria-label"),
+                        top: rect.top,
+                        bottom: rect.bottom,
+                        left: rect.left,
+                        right: rect.right,
+                        outsideHeader: rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1,
+                      };
+                    }),
+                  };
+                });
+                await test.info().attach(`enlarged-header-${page.viewportSize()?.width}`, {
+                  body: JSON.stringify(chrome, null, 2),
+                  contentType: "application/json",
+                });
+                const overflow = await form.evaluate((element) => {
+                  const width = document.documentElement.clientWidth;
+                  return {
+                    page: document.documentElement.scrollWidth > width + 1,
+                    controls: [...element.querySelectorAll("input, select, button")].flatMap(
+                      (control) => {
+                        const bounds = control.getBoundingClientRect();
+                        return bounds.width > 0 && (bounds.left < -1 || bounds.right > width + 1)
+                          ? [control.getAttribute("name") ?? control.tagName]
+                          : [];
+                      },
+                    ),
+                    labels: [
+                      ...element.querySelectorAll("label, legend, p, [id$='-description']"),
+                    ].flatMap((label) => {
+                      const bounds = label.getBoundingClientRect();
+                      if (bounds.width === 0) return [];
+                      const range = document.createRange();
+                      range.selectNodeContents(label);
+                      return [...range.getClientRects()].some(
+                        (rect) => rect.left < bounds.left - 1 || rect.right > bounds.right + 1,
+                      )
+                        ? [label.textContent?.trim()]
+                        : [];
+                    }),
+                  };
+                });
+                // Preserve the complete native capture matrix before reporting a
+                // geometry failure, so the failing state remains reviewable.
+                overflowChecks.push(overflow);
+              };
+              await expect(level).toBeHidden();
+              await expect(number).toBeHidden();
+              await capture(page, "shopfront-register-uncertified-text-200", scheme, {
+                ...(locale === SPANISH ? { locale: SPANISH } : {}),
+                beforeShot: readable,
+              });
+              await agency.selectOption("padi");
+              await level.selectOption("rescue");
+              await number.fill("PADI-778899");
+              await capture(page, "shopfront-register-certified-text-200", scheme, {
+                ...(locale === SPANISH ? { locale: SPANISH } : {}),
+                beforeShot: async () => {
+                  await agency.focus();
+                  await page.keyboard.press("Tab");
+                  await expect(level).toBeFocused();
+                  await page.keyboard.press("Tab");
+                  await expect(number).toBeFocused();
+                  await readable();
+                },
+              });
+              expect(headingChecks).toEqual([false, false, false, false]);
+              expect(overflowChecks).toEqual([
+                { page: false, controls: [], labels: [] },
+                { page: false, controls: [], labels: [] },
+                { page: false, controls: [], labels: [] },
+                { page: false, controls: [], labels: [] },
+              ]);
+            });
+          }
+        });
+      }
 
       /**
        * **The night-before reminder, on the diver's last boat** (ux-delight
@@ -739,7 +925,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The first (and only-ever-first) departure, dated off the frozen
         // clock so the card and queue rows render pixel-identically per run.
-        await page.goto(`/shop/${unique}/schedule/board?add=1`);
+        await page.goto(`/shop/${unique}/schedule/board/new`);
         const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10);

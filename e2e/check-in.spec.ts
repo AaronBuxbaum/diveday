@@ -255,6 +255,7 @@ test("a counter walk-in family is seated together from one form", async ({ page 
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
   await page.goto(counter);
+  await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
   const find = page.getByRole("searchbox", { name: "Find a returning diver" });
   await find.fill("Zzyzx No Such Diver");
   await find.press("Enter");
@@ -273,11 +274,21 @@ test("a counter walk-in family is seated together from one form", async ({ page 
     .fill("Odo Brightwater");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
+  await expect(page).toHaveURL(
+    new RegExp(`/shop/blue-mantis/trips/${tripId}/party/[0-9a-f-]{36}/waivers$`),
+  );
+  for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
+    await expect(page.getByText(name, { exact: true })).toBeVisible();
+  }
+  await page.getByRole("link", { name: "Back to departure" }).click();
   await expect(page).toHaveURL(counter);
-  await expect(page.getByText(/^Everyone is on this boat’s list, together/)).toBeVisible();
   for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
     await expect(deskRow(page, name)).toHaveCount(1);
   }
+  const lead = deskRow(page, "Quillon Brightwater");
+  await openRosterDetails(lead);
+  await lead.getByRole("link", { name: "Review party waivers" }).click();
+  await expect(page.getByRole("heading", { name: "Party waivers" })).toBeVisible();
 });
 
 /**

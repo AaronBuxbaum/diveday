@@ -13,9 +13,12 @@ import {
   bookings,
   certifications,
   courses,
+  diveSites,
   rollCallCrewEvents,
   tripAssignments,
+  tripDives,
   tripRequirements,
+  trips,
 } from "./schema";
 import { seatWithinRoom, trainingDiveRoom } from "./training-mark-resolve";
 import { trainingMarksForRoster } from "./training-marks";
@@ -134,12 +137,59 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
-  it("takes the course's own minimum when the mark stands and the course's instructor is aboard", async () => {
+  it("keeps an explicit charter level even when the mark stands and the instructor is aboard", async () => {
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx);
     expect(await markSeat(ctx)).toMatchObject({ ok: true });
-    expect(await levelCodes(ctx)).toEqual([]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
     expect(await rosterWarning(ctx)).toBe(true);
+  });
+
+  it("does not apply a seat-level training mark to both dives on a two-site charter", async () => {
+    const ctx = await advancedCharter();
+    await ctx.db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: null })
+      .where(eq(tripRequirements.tripId, ctx.charter.id));
+    const sites = await ctx.db
+      .insert(diveSites)
+      .values([
+        {
+          shopId: ctx.shop.id,
+          name: "Training site A",
+          slug: "training-site-a",
+          minimumCertificationLevel: "open_water",
+        },
+        {
+          shopId: ctx.shop.id,
+          name: "Training site B",
+          slug: "training-site-b",
+          minimumCertificationLevel: "open_water",
+        },
+      ])
+      .returning();
+    if (!sites[0] || !sites[1]) throw new Error("test sites missing");
+    await ctx.db.insert(tripDives).values(
+      sites.map((site, index) => ({
+        tripId: ctx.charter.id,
+        diveNumber: index + 1,
+        diveSiteId: site.id,
+      })),
+    );
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+    await ctx.db
+      .delete(tripDives)
+      .where(and(eq(tripDives.tripId, ctx.charter.id), eq(tripDives.diveNumber, 2)));
+    await ctx.db
+      .update(trips)
+      .set({ plannedDives: 1, diveSiteId: sites[1].id })
+      .where(eq(trips.id, ctx.charter.id));
+    // One dive but two distinct visited-site sources still cannot identify the site.
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+    await ctx.db.update(trips).set({ diveSiteId: sites[0].id }).where(eq(trips.id, ctx.charter.id));
+    expect(await levelCodes(ctx)).toEqual([]);
   });
 
   it("keeps the charter's level and warns when no instructor is aboard", async () => {

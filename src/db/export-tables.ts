@@ -53,6 +53,7 @@ import {
   shopPromoRedemptions,
   shopTextTranslations,
   specialtyCertifications,
+  staffCredentialHistory,
   staffCredentials,
   tips,
   tripChangeEvents,
@@ -250,6 +251,11 @@ export const EXPORT_TABLES = {
     table: incidentReportAddenda,
     order: [asc(incidentReportAddenda.createdAt), asc(incidentReportAddenda.id)],
     scope: { shopColumn: incidentReportAddenda.shopId },
+  },
+  staffCredentialHistory: {
+    table: staffCredentialHistory,
+    order: [asc(staffCredentialHistory.seq)],
+    scope: { shopColumn: staffCredentialHistory.shopId },
   },
   staffCredentials: {
     table: staffCredentials,

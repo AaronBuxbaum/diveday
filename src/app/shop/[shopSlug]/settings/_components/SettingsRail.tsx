@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import { DoorChevron } from "@/components/ui/ledger";
 import { RAIL_ROW_CLASS, RAIL_ROW_CURRENT, RAIL_ROW_IDLE } from "@/components/ui/rail";
@@ -12,6 +13,7 @@ import {
   type SettingsRailRow,
   settingsSectionFragment,
 } from "../settings-groups";
+import { SETTINGS_SELECTION_EVENT } from "./SettingsSelection";
 import {
   SETTINGS_RAIL_COLUMN_CLASS,
   SETTINGS_RAIL_CONTENT_CLASS,
@@ -26,12 +28,7 @@ import {
  * pane". The whole map of the shop's switches at desktop, so "where do I
  * change X?" is answered by looking rather than by scrolling forty rows.
  *
- * It renders from `lg` up and **nowhere else**: below that the phone keeps the
- * grouped list, which is already the right anatomy, and a directory stacked
- * above the content is the sub-nav card this repo deleted once already. Its
- * rows are the page rail's one row (`RAIL_ROW_CLASS`, shared with the long
- * editor's section rail) at the 44px floor: `lg` starts at 1024px, which is a
- * landscape tablet held in the hand.
+ * On narrow screens the same rail opens from a compact control.
  *
  * **The selection model is one thing, decided in `settings-groups.ts`.** A row
  * pointing at a sub-route selects by pathname; a row pointing at a hub section
@@ -51,39 +48,6 @@ import {
  * too (`py-6`, `space-y-5`) — four more rows before the fold, at no cost to
  * the ramp.
  */
-
-/**
- * How far down the viewport the "current section" reading line sits, at the
- * least. A section a rail click just scrolled to lands lower than this — under
- * the bar's `scroll-padding-top` plus its own `scroll-mt-24`, about 152px —
- * so the line moves down to wherever the section's own landing is
- * (`landingLine`), or the row you clicked lit the one above it (Aaron,
- * 2026-10-03: "Review link" selected "Online payments").
- */
-const READING_LINE_PX = 120;
-
-/** A pixel or two of rounding between where a section lands and where it is read. */
-const LANDING_SLACK_PX = 8;
-
-/** Where a fragment jump puts `anchor`'s top edge: the scrollport's inset plus its own margin. */
-function landingLine(anchor: HTMLElement): number {
-  const px = (value: string) => Number.parseFloat(value) || 0;
-  const inset = px(getComputedStyle(document.documentElement).scrollPaddingTop);
-  return Math.max(
-    READING_LINE_PX,
-    inset + px(getComputedStyle(anchor).scrollMarginTop) + LANDING_SLACK_PX,
-  );
-}
-
-/**
- * True when the page cannot scroll any further down. A section near the foot
- * of the pane never reaches the reading line at all, so there the fragment
- * the reader just followed decides, as long as its section is in view.
- */
-function atPageFoot(): boolean {
-  const root = document.documentElement;
-  return window.scrollY > 0 && window.innerHeight + window.scrollY >= root.scrollHeight - 2;
-}
 
 export type SettingsRailGroupView = {
   id: string;
@@ -108,7 +72,7 @@ export function SettingsRail({
   ariaLabel: string;
 }) {
   const pathname = usePathname();
-  const sectionId = useSectionScrollSpy(groups);
+  const sectionId = useSelectedSection(groups);
   const rows = groups.flatMap((group) => group.rows);
   const currentId = currentSettingsRailRowId(rows, {
     pathname,
@@ -118,6 +82,7 @@ export function SettingsRail({
   const hubPath = `${shopBasePath}/settings`;
   const onHub = pathname === hubPath;
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // The rail scrolls in a box of its own, and the layout keeps that box across
   // a click inside the rail. Every other way in (a direct link, ⌘K's "Go to",
@@ -135,10 +100,22 @@ export function SettingsRail({
     if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
     setSettledFor(currentId);
   }, [currentId]);
+  useEffect(() => {
+    if (mobileOpen && currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+  }, [mobileOpen, currentId]);
   const moreBelow = useMoreBelow(scrollerRef);
 
   return (
     <nav aria-label={ariaLabel} className={SETTINGS_RAIL_COLUMN_CLASS}>
+      <button
+        type="button"
+        className={`${buttonClass({ variant: "secondary" })} mx-4 mt-4 lg:hidden`}
+        aria-expanded={mobileOpen}
+        aria-controls="settings-rail-content"
+        onClick={() => setMobileOpen((open) => !open)}
+      >
+        {ariaLabel}
+      </button>
       {/* Sticky, and scrollable in its own right: the map is longer than a
           laptop viewport, and a rail that scrolled the page away with it would
           be a map you have to leave to read. It pins at the bar's own height
@@ -150,6 +127,7 @@ export function SettingsRail({
           (`settings-rail-geometry.ts`). */}
       <div
         ref={scrollerRef}
+        id="settings-rail-content"
         data-settings-rail-scroller
         data-rail-settled={settledFor === currentId ? "" : undefined}
         // The box is longer than a laptop viewport and its clipped foot read
@@ -157,7 +135,7 @@ export function SettingsRail({
         // with no rows under it (UX audit 2026-10-07, item 12). While there
         // is more below, globals.css fades the box's bottom edge.
         data-more-below={moreBelow ? "" : undefined}
-        className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto`}
+        className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto ${mobileOpen ? "block" : "hidden"} lg:block`}
       >
         {/* The inset is on what the box scrolls, never on the box: a sticky
             `top-0` sticks at its scroller's padding edge, so with `py-6` on
@@ -201,6 +179,7 @@ export function SettingsRail({
                           }
                           sameDocument={row.target.kind === "section" && onHub}
                           selected={selected}
+                          onClick={() => setMobileOpen(false)}
                         >
                           {/* Wrapped, never cut: the rail is 264px by its
                             design, and its rows inset their words 12px a
@@ -322,6 +301,7 @@ function RailLink({
   href,
   sameDocument,
   selected,
+  onClick,
   children,
 }: {
   href: string;
@@ -329,6 +309,7 @@ function RailLink({
    * own reveal algorithm opens the target row and scrolls to it. */
   sameDocument: boolean;
   selected: boolean;
+  onClick: () => void;
   children: React.ReactNode;
 }) {
   // The page rail's one row, ringed inside itself (`ui/rail.ts` says why);
@@ -339,29 +320,20 @@ function RailLink({
   const current = selected ? ("true" as const) : undefined;
   if (sameDocument) {
     return (
-      <a href={href} aria-current={current} className={className}>
+      <a href={href} aria-current={current} className={className} onClick={onClick}>
         {children}
       </a>
     );
   }
   return (
-    <Link href={href} aria-current={current} className={className}>
+    <Link href={href} aria-current={current} className={className} onClick={onClick}>
       {children}
     </Link>
   );
 }
 
-/**
- * Which hub section the reader is standing in front of, from scroll position.
- *
- * Anchors are looked up by the section's own `#fragment` — the id the pane
- * already renders on each row's heading — so the spy needs no second set of
- * markers to fall out of step with. Off the hub there are no anchors and this
- * answers `null`, which is what leaves the pathname to decide.
- */
-function useSectionScrollSpy(groups: readonly SettingsRailGroupView[]): string | null {
-  // Serialised to a string so the effect's dependency is the *content* of the
-  // list rather than a fresh array identity on every render.
+/** The hub shows one section, identified by its fragment or saved notice. */
+function useSelectedSection(groups: readonly SettingsRailGroupView[]): string | null {
   const key = groups
     .flatMap((group) => group.rows)
     .flatMap((row) =>
@@ -371,7 +343,6 @@ function useSectionScrollSpy(groups: readonly SettingsRailGroupView[]): string |
     )
     .join(",");
   const [sectionId, setSectionId] = useState<string | null>(null);
-
   useEffect(() => {
     const sections = key
       .split(",")
@@ -380,48 +351,27 @@ function useSectionScrollSpy(groups: readonly SettingsRailGroupView[]): string |
         const [id, fragment] = pair.split(":");
         return { id: id ?? "", fragment: fragment ?? "" };
       });
-    let frame = 0;
-    const measure = () => {
-      frame = 0;
-      let current: string | null = null;
-      let first: string | null = null;
-      for (const section of sections) {
-        const anchor = document.getElementById(section.fragment);
-        if (!anchor) continue;
-        first ??= section.id;
-        if (anchor.getBoundingClientRect().top <= landingLine(anchor)) current = section.id;
-        else break;
-      }
-      const followed = sections.find((section) => `#${section.fragment}` === window.location.hash);
-      if (followed && atPageFoot()) {
-        const rect = document.getElementById(followed.fragment)?.getBoundingClientRect();
-        if (rect && rect.top >= 0 && rect.top < window.innerHeight) current = followed.id;
-      }
-      // The first section counts as current before the page has scrolled past
-      // it, so the map is never blank at the top of the pane.
-      setSectionId(current ?? first);
+    const sync = () => {
+      const fragment = window.location.hash.slice(1);
+      const saved = new URLSearchParams(window.location.search).get("saved");
+      setSectionId(
+        sections.find((section) => section.fragment === fragment)?.id ??
+          sections.find((section) => section.id === saved)?.id ??
+          sections.find((section) => section.id === "timezone")?.id ??
+          null,
+      );
     };
-    const schedule = () => {
-      if (!frame) frame = window.requestAnimationFrame(measure);
+    const selectionChanged = (event: Event) => {
+      const selected = (event as CustomEvent<unknown>).detail;
+      setSectionId(sections.find((section) => section.fragment === selected)?.id ?? null);
     };
-    measure();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    window.addEventListener("hashchange", schedule);
-    // A rail click opens the row it lands on (`AutoOpenDetails`) after the
-    // jump, which pushes every section below it down without scrolling: read
-    // again whenever the page changes height, or the row under it, which stood
-    // within the line while everything was shut, keeps the light.
-    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
-    resize?.observe(document.body);
+    sync();
+    window.addEventListener("hashchange", sync);
+    window.addEventListener(SETTINGS_SELECTION_EVENT, selectionChanged);
     return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      window.removeEventListener("hashchange", schedule);
-      resize?.disconnect();
+      window.removeEventListener("hashchange", sync);
+      window.removeEventListener(SETTINGS_SELECTION_EVENT, selectionChanged);
     };
   }, [key]);
-
   return sectionId;
 }

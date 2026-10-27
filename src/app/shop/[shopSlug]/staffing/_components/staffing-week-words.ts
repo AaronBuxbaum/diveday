@@ -14,7 +14,6 @@ export function staffingWeekWords(t: StaffTranslator, week?: StaffWeek) {
     next: t("staffing.week.next"),
     thisWeek: t("staffing.week.thisWeek"),
     today: t("staffing.week.today"),
-    print: t("print.sheet.door"),
     person: t("staffing.week.person"),
     needsCrew: t("staffing.week.needsCrew"),
     shiftsAndAway: t("staffing.week.shiftsAndAway"),
@@ -47,6 +46,7 @@ export function staffingWeekWords(t: StaffTranslator, week?: StaffWeek) {
     askWontClose: t("staffing.week.askWontClose"),
     requestWontClose: t("staffing.week.requestWontClose"),
     ratingLapsed: t("staffing.week.ratingLapsed"),
+    ratingUnverified: t("today.actionKind.crewRatingUnverified"),
   };
 }
 

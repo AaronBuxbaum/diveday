@@ -175,6 +175,7 @@ export function loadShopExportBundleInput(
 async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) {
   return {
     staffCredentialRows: await readScoped(tx, "staffCredentials", scope),
+    staffCredentialHistoryRows: await readScoped(tx, "staffCredentialHistory", scope),
     incidentReportRows: await readScoped(tx, "incidentReports", scope),
     incidentPersonRows: await readScoped(tx, "incidentReportPeople", scope),
     incidentAddendumRows: await readScoped(tx, "incidentReportAddenda", scope),
@@ -1251,6 +1252,7 @@ export async function loadShopExportCounts(
         ),
     ),
     "staff_credentials.csv": await countShopScoped(db, "staffCredentials", shopId),
+    "staff_credential_history.csv": await countShopScoped(db, "staffCredentialHistory", shopId),
     "bookings.csv": await countOf(
       db.select({ n: count() }).from(bookings).where(eq(bookings.shopId, shopId)),
     ),

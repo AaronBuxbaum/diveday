@@ -59,9 +59,30 @@ describe("the month's crew tile", () => {
     expect(crewTile(month({ noCrewOnRecord: true }), null).link).toBeUndefined();
   });
 
+  it("does not repeat unavailable history in the value and detail", () => {
+    const tile = crewTile(
+      month({ crewSailings: 4, checkedSailings: 0, unknownCredentialSailings: 4 }),
+    );
+    expect(tile.value).toBe(t("incidents.safety.crewHistoryUnavailable", { count: 4 }));
+    expect(tile.detail).toBe("");
+  });
+
+  it("counts only live observations in the empty-file denominator", () => {
+    const tile = crewTile(
+      month({
+        crewSailings: 3,
+        checkedSailings: 1,
+        unrecordedSailings: 1,
+        unknownCredentialSailings: 1,
+      }),
+    );
+    expect(tile.detail).toContain("No credentials on file at 1 of 2 crew boardings");
+    expect(tile.detail).toContain("Credential history unavailable for 1 crew sailing");
+  });
+
   it("keeps the lapsed count over the sailings it judged when crew are rostered", () => {
     const tile = crewTile(month({ crewSailings: 4, checkedSailings: 4 }));
     expect(tile.value).toBe("0 of 4");
-    expect(tile.href).toBe("#lapsed-crew");
+    expect(tile.href).toBeUndefined();
   });
 });

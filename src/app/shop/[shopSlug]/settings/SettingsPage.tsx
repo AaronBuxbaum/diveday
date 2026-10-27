@@ -37,6 +37,7 @@ import { MoneyGroup } from "./_components/groups/MoneyGroup";
 import { ShopGroup } from "./_components/groups/ShopGroup";
 import { TeamGroup } from "./_components/groups/TeamGroup";
 import { WebsiteGroup } from "./_components/groups/WebsiteGroup";
+import { SettingsSelection } from "./_components/SettingsSelection";
 import { settingsPaneClass } from "./_components/settings-pane";
 import { SECTION_IDS, SETTINGS_GROUPS, type SectionId } from "./settings-groups";
 
@@ -259,7 +260,7 @@ export default async function SettingsPage({
       {/* Section rhythm belongs to the page, not to each section: one
           `space-y-10` here, and no `mt-*` on any group or card
           (docs/design/forms-and-controls.md). */}
-      <div className="space-y-10">
+      <SettingsSelection initialSection={activeSection}>
         <ShopGroup
           view={view}
           canPayments={canPayments}
@@ -311,7 +312,7 @@ export default async function SettingsPage({
             {t("settings.main.support.emailCta", { email: SUPPORT_EMAIL })}
           </a>
         </footer>
-      </div>
+      </SettingsSelection>
     </main>
   );
 }

@@ -11,6 +11,7 @@ import { isCrossSiteHeaders } from "@/lib/same-origin";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { AutoPrint } from "../../_components/AutoPrint";
+import { PacketSummary } from "../_components/PacketDocument";
 import { PACKET_READY_SELECTOR, PacketReady, TripPacket } from "../_components/TripPacket";
 
 export const metadata: Metadata = {
@@ -77,7 +78,7 @@ export default async function TripPrintWithMedicalAlertsPage({
   return (
     <div className="trip-print-bundle">
       <AutoPrint readySelector={PACKET_READY_SELECTOR} />
-      <header className="mb-10 border-b border-border pb-6 print:mb-6">
+      <PacketSummary openingPageName={packet.openingPageName}>
         <p className={EYEBROW_CLASS}>DiveDay</p>
         <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("manifest.medicalAlertsPrintedTitle")}</h1>
         <p className="mt-2 text-muted">
@@ -85,8 +86,8 @@ export default async function TripPrintWithMedicalAlertsPage({
             date: formatDateTimeTz(printed.printed.printedAt, locale, shop.timezone),
           })}
         </p>
-      </header>
-      {packet}
+      </PacketSummary>
+      {packet.document}
       <PacketReady />
     </div>
   );

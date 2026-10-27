@@ -31,7 +31,7 @@ import {
 import { parseRequirement, requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
 import {
   type TrainingMarkState,
-  trainingDiveAsksNoCard,
+  trainingDiveAsksNoCardForSite,
   trainingDiveLevel,
 } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
@@ -1837,6 +1837,7 @@ export async function listTripsReadiness(
             startsAt: trips.startsAt,
             endsAt: trips.endsAt,
             courseId: trips.courseId,
+            plannedDives: trips.plannedDives,
             minimumAge: courses.minimumAge,
             priceCents: trips.priceCents,
             snorkelerPriceCents: trips.snorkelerPriceCents,
@@ -1988,6 +1989,12 @@ export async function listTripsReadiness(
     const requirement = requirementsByTrip.get(tripId) ?? null;
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
+    // A seat-level mark cannot identify which of several planned dives is training.
+    const siteAttributionUnknown =
+      courseRow?.plannedDives !== 1 || (siteRowsByTrip.get(tripId)?.length ?? 0) !== 1;
+    const trainingForSite = siteAttributionUnknown
+      ? null
+      : trainingDiveLevel(trainingMarks.get(row.booking.id));
     // A kind of seat the shop states as free has no payment to clear. Read
     // off the departure's own price for that kind, never inferred from a
     // missing one (`paymentGateIsUnclearable`).
@@ -2071,12 +2078,10 @@ export async function listTripsReadiness(
       requirement,
       siteRequirement,
       statedFree,
+      trainingSiteAttributionUnknown: siteAttributionUnknown,
       trainingNoCardAsked:
         isDiver(row.booking.participantType) &&
-        trainingDiveAsksNoCard(
-          unionRequirements(requirement, siteRequirement),
-          trainingDiveLevel(trainingMark),
-        ),
+        trainingDiveAsksNoCardForSite(requirement, siteRequirement, trainingForSite),
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
@@ -2132,7 +2137,7 @@ export async function listTripsReadiness(
         trainingMarkInvalid: trainingMark !== undefined && !trainingMark.valid,
         // A standing mark with the course's instructor aboard takes the
         // course's own minimum level (issue #2731).
-        trainingDive: trainingDiveLevel(trainingMark),
+        trainingDive: trainingForSite,
         now,
       }),
     };

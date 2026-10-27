@@ -41,7 +41,7 @@ describe("the settings rail's loading skeleton", () => {
   it("stands in the rail's column, from lg only", () => {
     const column = render(<SettingsRailSkeleton />).container.firstElementChild;
     const nav = renderRail();
-    for (const name of ["hidden", "lg:block", "lg:w-[264px]", "lg:shrink-0"]) {
+    for (const name of ["lg:block", "lg:w-[264px]", "lg:shrink-0"]) {
       expect(nav).toHaveClass(name);
       expect(column).toHaveClass(name);
     }
@@ -50,11 +50,13 @@ describe("the settings rail's loading skeleton", () => {
 
   it("frames its groups as the rail's scroll box does", () => {
     const frame = render(<SettingsRailSkeleton />).container.firstElementChild?.firstElementChild;
-    const scroller = renderRail().firstElementChild;
+    const scroller = renderRail().querySelector("[data-settings-rail-scroller]");
     // Everything that pins the rail; the skeleton does not scroll, so it clips
     // instead.
-    const geometry = classes(scroller).filter((name) => name !== "overflow-y-auto");
-    expect(geometry).toEqual(expect.arrayContaining(["sticky", "pe-2"]));
+    const geometry = classes(scroller).filter(
+      (name) => !["overflow-y-auto", "hidden", "lg:block"].includes(name),
+    );
+    expect(geometry).toEqual(expect.arrayContaining(["lg:sticky", "lg:pe-2"]));
     expect(frame).toHaveClass(...geometry);
     // What places the first label and spaces the groups sits inside the box,
     // on what it scrolls, so a stuck label meets the box's top (K-221).

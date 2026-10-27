@@ -27,6 +27,7 @@ import { diversTabState } from "./_arrivals/departure-record";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { detailsReadRows } from "./_components/details-rows";
+import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
@@ -59,6 +60,10 @@ import { reinstateTripAction } from "./details-actions";
 // 20260804-instant-navigation.
 export const instant = true;
 
+// Trip details and the roster share the same authorized shop context.
+// The flying-guidance follow-up panel is visible from every departure.
+// Staff dates follow the device's requested locale.
+// Departure warnings follow the current shop.
 export const metadata: Metadata = {
   title: "Manage trip — DiveDay",
 };
@@ -105,15 +110,10 @@ export default async function ManageTripPage({
       ...paymentParams
     },
   ] = await Promise.all([params, searchParams]);
-  // An unparseable id names no row. Guarded here rather than in the query
-  // helper: comparing junk against a `uuid` column raises in Postgres, so
-  // without this the page 500s where its own notFound() belongs.
+  // An unparseable UUID must not reach Postgres.
   if (!uuidParam(tripId)) notFound();
   const { session, db, shop } = await requireShopSurface(shopSlug);
   reportRenderQueries("/shop/[shopSlug]/trips/[id]", after);
-  // Staff read dates in the language their own device asks for, same
-  // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  // Locale and the trip row both depend on `shop` but not on each other.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const sharedReads = loadTripSharedReads(db, shop.id, tripId);
@@ -161,7 +161,6 @@ export default async function ManageTripPage({
   } = overview;
   // One hull, one departure at a time (H-80, issue #1780). A called-off
   // departure holds no hull, and `boatClashes` answers nothing for one anyway.
-  const liveBoatClashes = cancelled ? [] : boatClashes;
   const crewNotes = tripCrewNotes({
     crew: overview.crew,
     diversPerDivemaster: shop.diversPerDivemaster,
@@ -182,7 +181,7 @@ export default async function ManageTripPage({
   });
 
   const pulseFacts = tripPulseFactsOf(overview, {
-    liveBoatClashes,
+    liveBoatClashes: cancelled ? [] : boatClashes,
     shopSlug,
     tripId,
     now,
@@ -338,6 +337,7 @@ export default async function ManageTripPage({
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
+        <FlySafeFollowUps {...{ db, shop, shopSlug, tripId, now, locale }} />
 
         {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
           // A card in a tone: the card's radius, bed and inset, so its words start
@@ -376,7 +376,7 @@ export default async function ManageTripPage({
                 ...tripAboutRows({
                   overview,
                   crewNotes,
-                  liveBoatClashes,
+                  liveBoatClashes: cancelled ? [] : boatClashes,
                   shop,
                   shopSlug,
                   tripId,

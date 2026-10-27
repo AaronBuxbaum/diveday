@@ -221,6 +221,7 @@
     "selfRegistered": "Se registró en el mostrador · {date}",
     "letterOther": "#",
     "pagination": {
+      "paperSubset": "{total, plural, one {{shown} de # buceador en esta lista} other {{shown} de # buceadores en esta lista}}",
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
     },
     "viewNotBack": "Sin volver en 12 meses",

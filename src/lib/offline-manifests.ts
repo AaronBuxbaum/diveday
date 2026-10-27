@@ -145,6 +145,8 @@ export type OfflineManifestFreshness = "current" | "aging" | "stale";
 export type OfflineManifestPayload = {
   /** Absent on older snapshots, which cannot claim junior checks were captured. */
   juniorAdvisoriesChecked?: true;
+  /** Absent on copies made before site-only training readiness; queued events remain intact. */
+  readinessPolicyVersion?: 1;
   /**
    * `emergencyReference` rides here, and that is the point of carrying it at
    * all: this snapshot is the document a crew has with no signal, and until
@@ -527,6 +529,7 @@ export type OfflineManifestPayload = {
             courseTitle: string;
             instructorAboard: boolean;
             overRatio?: boolean;
+            siteAttributionUnknown?: boolean;
             intro?: boolean;
           };
           /**
@@ -1098,6 +1101,7 @@ export function serializeManifests(
   resolveJuniorAdvisory?: () => string,
 ): OfflineManifestPayload {
   return {
+    readinessPolicyVersion: 1,
     shop,
     ...(resolveJuniorAdvisory ? { juniorAdvisoriesChecked: true as const } : {}),
     ...(boatSafety ? { boatSafety } : {}),
@@ -1344,6 +1348,14 @@ export function isOfflineManifestExpired(
  * diver means no boarding, rather than a readiness verdict borrowed from a
  * checkpoint the caller never named.
  */
+/** A saved training verdict predating the site-only rule cannot authorize boarding. */
+export function offlineTrainingReadinessStale(
+  snapshot: OfflineManifestSnapshot,
+  diver: OfflineManifestSnapshot["manifests"][number]["divers"][number],
+): boolean {
+  return snapshot.readinessPolicyVersion !== 1 && !!diver.trainingDive;
+}
+
 export function canRecordOfflineStatus(
   snapshot: OfflineManifestSnapshot,
   bookingId: string,
@@ -1387,7 +1399,7 @@ export function canRecordOfflineStatus(
     ?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
   if (checkpoint !== "departure") return true;
-  return diver.readiness.status === "ready";
+  return diver.readiness.status === "ready" && !offlineTrainingReadinessStale(snapshot, diver);
 }
 
 /**

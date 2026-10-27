@@ -831,7 +831,8 @@
     "invalid": "Something in the form didn’t come through. Check it over and try again.",
     "contactRequired": "Leave an email or a phone number so we can reach you.",
     "unavailable": "That shop isn’t taking registrations right now.",
-    "switchedOff": "Ask the crew at the counter to sign you in."
+    "switchedOff": "Ask the crew at the counter to sign you in.",
+    "uncertified": "No certification recorded"
   },
   "packages": {
     "title": "Dive packages",
@@ -1077,6 +1078,7 @@
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
+    "courseFormsNeedSigning": "Course forms still need signing.",
     "savedCourseForms": "Course forms signed",
     "groupDifferentDeparture": "Some group seats are on another departure.",
     "groupSummary": "{total, plural, one {# seat in your group} other {# seats in your group}} · {unclaimed, plural, one {# unclaimed} other {# unclaimed}}"
@@ -1152,6 +1154,7 @@
     "medicalContactEmailOnly": "Questions about next steps? Reach out to {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "Questions about next steps? Reach out to {shop}.",
     "signedBody": "Your waiver is signed and saved.",
+    "prepLinkHelp": "For trip details, open your booking confirmation or contact the shop.",
     "seeWhatsLeft": "See what’s left before you sail",
     "doctor": {
       "title": "Take this to your doctor",
@@ -1255,7 +1258,9 @@
     "medicalDeclinedNext": "The physician’s evaluation on file does not clear you to dive. Contact the shop about your next step.",
     "medicalFormWaiting": "Your doctor’s form has been sent. Wait for staff to review it and confirm your next step. You are not cleared to dive yet.",
     "medicalReferralNext": "Your questionnaire requires a physician’s written evaluation before you can dive.",
-    "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive."
+    "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive.",
+    "counterSigned": "Waiver signed",
+    "independentTitle": "Sign your waiver"
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",
@@ -5460,8 +5465,8 @@
       "finishPaying": "Finish paying"
     },
     "flySafeCorrection": {
-      "subject": "A change to when you can fly: {tripTitle}",
-      "body": "{tripTitle} now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly."
+      "subject": "An update to your flying guidance",
+      "body": "The flying interval in our earlier reminder may no longer apply. Ask the crew how long to wait before you fly."
     },
     "tripReminder": {
       "weekSubject": "You sail this week: {tripTitle}",
@@ -5473,7 +5478,8 @@
       "dayBody": "{tripTitle} sails {day, select, today {today} other {tomorrow}}; be at the dock by {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
       "daySubjectCourse": "{day, select, today {Your course starts today} other {Your course starts tomorrow}}: {tripTitle}",
       "dayBodyCourse": "{tripTitle} starts {day, select, today {today} other {tomorrow}} at {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
-      "flySafe": "Plan to fly no earlier than {count, plural, one {# hour} other {# hours}} after your last dive, and longer if you make decompression stops."
+      "flySafe": "Plan to fly no earlier than {count, plural, one {# hour} other {# hours}} after your last dive, and longer if you make decompression stops.",
+      "flySafeAskCrew": "Ask the crew how long to wait before flying."
     },
     "courseMaterials": {
       "heading": "Before your first day"

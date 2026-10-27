@@ -72,6 +72,7 @@ const moved = {
   owedCents: 0,
   waiver: "not_needed" as const,
   notice: "told" as const,
+  flySafe: { told: 0, failed: 0, unreached: [] },
 };
 
 describe("moveSeatAction", () => {
@@ -95,6 +96,11 @@ describe("moveSeatAction", () => {
   });
 
   it.each([
+    [{ ...moved, flySafe: "failed" as const }, "seat-moved-fly-safe-unreached"],
+    [
+      { ...moved, owedCents: 2000, flySafe: { told: 0, failed: 1, unreached: ["Nora"] } },
+      "seat-moved-owed-fly-safe-unreached",
+    ],
     [{ ...moved, notice: "failed" as const }, "seat-moved-untold"],
     [{ ...moved, owedCents: 2_000 }, "seat-moved-owed"],
     [{ ok: false as const, reason: "on_buddy_team" as const }, "seat-move-buddy"],

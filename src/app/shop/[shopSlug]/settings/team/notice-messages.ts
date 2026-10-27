@@ -33,6 +33,8 @@ export function noticeMessages(t: StaffTranslator): NoticeMessages {
     "not-found": { tone: "danger", text: t("settings.team.notice.notFound") },
     "not-authorized": { tone: "danger", text: t("settings.team.notice.notAuthorized") },
     "credential-saved": { tone: "success", text: t("staffing.notice.credentialSaved") },
+    "credential-renewed": { tone: "success", text: t("staffing.notice.credentialRenewed") },
+    "credential-corrected": { tone: "success", text: t("staffing.notice.credentialCorrected") },
     "credential-reviewed": { tone: "success", text: t("staffing.notice.credentialReviewed") },
     "credential-deleted": { tone: "success", text: t("staffing.notice.credentialDeleted") },
     "credential-renewal-required": {

@@ -33,6 +33,26 @@ const GAP: WeekGap = {
 };
 
 describe("StaffingWeek", () => {
+  it("includes the shop's generic timezone in its repeated print context", () => {
+    const { container } = renderWeek();
+    const context = container.querySelector("thead [data-crew-print-context]");
+    expect(context).toHaveTextContent("ET");
+  });
+
+  it("associates week data with weekday columns and person rows", () => {
+    const { container } = renderWeek({ gaps: [GAP] });
+    const table = container.querySelector("table");
+    if (!table) throw new Error("the desktop week must be a table");
+    const columns = within(table).getAllByRole("columnheader");
+    expect(columns).toHaveLength(8);
+    for (const column of columns) expect(column).toHaveAttribute("scope", "col");
+    const rows = within(table).getAllByRole("rowheader");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Needs crew");
+    expect(rows[1]).toHaveTextContent(KEIKO.name);
+    for (const row of rows) expect(row).toHaveAttribute("scope", "row");
+  });
+
   it("renders a crew gap with its word and its act, in the day it sails", () => {
     renderWeek({ gaps: [GAP] });
 
@@ -60,6 +80,12 @@ describe("StaffingWeek", () => {
 
     renderWeek({ gaps: [{ ...GAP, gap: "uncrewed_course" }] });
     expect(screen.queryByText("A crew rating isn’t current")).toBeNull();
+  });
+
+  it("does not describe an assigned instructor as absent when the rating is unverified", () => {
+    renderWeek({ gaps: [{ ...GAP, gap: "uncrewed_course", ratingUnverified: true }] });
+    expect(screen.getAllByText("Check crew rating").length).toBeGreaterThan(0);
+    expect(screen.queryByText("No instructor or crew")).toBeNull();
   });
 
   it("says nothing about crew when every departure has some", () => {
@@ -509,7 +535,7 @@ describe("StaffingWeek geometry", () => {
    */
   it("starts the person column's words on the page's own edge", () => {
     const { container } = renderWeek({ gaps: [GAP] });
-    const rows = [...branches(container).grid.children];
+    const rows = [...branches(container).grid.querySelectorAll("tr")];
     expect(rows).toHaveLength(3);
     // The gap row leads the people: a boat short of crew is the week's news.
     expect(within(rows[1] as HTMLElement).getByText("Needs crew")).toBeVisible();
@@ -530,7 +556,8 @@ describe("StaffingWeek geometry", () => {
     const { grid } = branches(container);
     expect(grid).not.toHaveClass("border-t");
     expect(grid).not.toHaveClass("border-b");
-    for (const row of grid.children) expect(row).toHaveClass(...ledgerRowBoxClass.split(" "));
+    for (const row of grid.querySelectorAll("tr"))
+      expect(row).toHaveClass(...ledgerRowBoxClass.split(" "));
   });
 
   /**
@@ -540,7 +567,7 @@ describe("StaffingWeek geometry", () => {
    */
   it("insets each day's label as its day cells inset their chips", () => {
     const { container } = renderWeek({ gaps: [GAP] });
-    const [header, person, gapRow] = branches(container).grid.children;
+    const [header, person, gapRow] = branches(container).grid.querySelectorAll("tr");
     const heads = [...header.children].slice(1);
     expect(heads).toHaveLength(7);
     for (const [index, head] of heads.entries()) {
@@ -556,7 +583,7 @@ describe("StaffingWeek geometry", () => {
    */
   it("centers the day-header band's labels between its rules", () => {
     const { container } = renderWeek();
-    const [header] = branches(container).grid.children;
+    const [header] = branches(container).grid.querySelectorAll("tr");
     for (const cell of header.children) {
       expect(cell).toHaveClass("py-2.5");
       expect(cell).not.toHaveClass("pt-3");
@@ -813,7 +840,7 @@ describe("StaffingWeek geometry", () => {
   it("closes itself in both renderings, and hangs a row under it on its closing rule alone", () => {
     const { container } = renderWeek({ gaps: [GAP] });
     const { grid, list } = branches(container);
-    expect(grid.lastElementChild).toHaveClass("last:border-b");
+    expect(grid.querySelector("tbody > tr:last-child")).toHaveClass("last:border-b");
     const lastRows = list.querySelectorAll("ul > li:last-child");
     expect(lastRows.length).toBeGreaterThan(0);
     expect(lastRows[lastRows.length - 1]).toHaveClass("last:border-b");

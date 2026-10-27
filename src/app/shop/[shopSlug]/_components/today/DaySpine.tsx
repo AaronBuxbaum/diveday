@@ -261,8 +261,8 @@ function StationRow({
   );
   if (action.helpRequest) {
     return helpRequestControl(action.helpRequest, action.actionLabel, t, {
-      leading: <RowGlyph tone={tone} icon={quietIcon(action.kind)} />,
-      kind: t(ACTION_KIND_KEYS[action.kind]),
+      leading: <RowGlyph tone={tone} icon={quietIcon(action.kind)} />, // i18n-exempt: object syntax; label uses the message bundle
+      kind: t(action.kindLabelKey ?? ACTION_KIND_KEYS[action.kind]),
       tone,
       sentence: <p className="min-w-0 text-base leading-snug">{sentence}</p>,
       closed,
@@ -357,7 +357,7 @@ function StationRow({
     <SpineRow
       tone={tone}
       icon={quietIcon(action.kind)}
-      kind={t(ACTION_KIND_KEYS[action.kind])}
+      kind={t(action.kindLabelKey ?? ACTION_KIND_KEYS[action.kind])}
       trailing={control}
       closed={closed}
       door={door}

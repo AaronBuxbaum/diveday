@@ -54,6 +54,10 @@
     "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["booking-confirmed-embed"]
   },
+  "/shop/[shopSlug]/schedule/board/new": {
+    "e2e": ["schedule-builder.spec.ts"],
+    "visual": ["schedule-builder-add", "schedule-builder-add-full", "schedule-builder-add-tide"]
+  },
   "/shop/[shopSlug]/bookings/new/[tripId]": {
     "visual": ["booking-new-diver"]
   },
@@ -123,6 +127,10 @@
   },
   "/shop/[shopSlug]/trips/[id]/log": {
     "visual": ["departure-log", "departure-log-every-checkpoint"]
+  },
+  "/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers": {
+    "e2e": ["party-waiver-qr.spec.ts", "check-in.spec.ts"],
+    "visual": ["party-waiver-queue", "party-waiver-held-medical"]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
     "e2e": ["gear.spec.ts", "rental-terms.spec.ts"],

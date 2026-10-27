@@ -503,6 +503,18 @@ export function ratingLapsedDetailText(
   return t("today.detail.ratingLapsed", { names, count: lapsed.length });
 }
 
+/** Why an issued-after-start rating cannot support this departure's count. */
+export function ratingUnverifiedDetailText(
+  t: StaffTranslator,
+  locale: string,
+  crew: readonly { fullName: string }[],
+): string {
+  const names = cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+    crew.map((member) => member.fullName),
+  );
+  return t("today.detail.ratingUnverified", { names, count: crew.length });
+}
+
 /**
  * The `over_ratio` half of `courseCrewGap` (src/lib/course-ratios.ts) — an
  * instructor is on the crew, but not enough for the booked count.

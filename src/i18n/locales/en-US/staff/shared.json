@@ -140,6 +140,8 @@
     "popupBlocked": "Your browser blocked the print window. Allow pop-ups, then try again."
   },
   "printPacket": {
+    "changedHeading": "Packet needs refreshing",
+    "changed": "Departure {id} changed while this packet was being prepared. No departure sheets were included. Refresh and print again.",
     "title": "Trip packet",
     "divesHeading": "Dive plan",
     "diveNumber": "Dive {number}",
@@ -621,6 +623,8 @@
     "tellThem": "Tell them"
   },
   "formDraft": {
+    "editorValues": "Editor values, including unsaved changes",
+    "savedDetails": "Saved details",
     "pickedUp": "Picked up from the desk, {time}.",
     "startOver": "Start over",
     "unsavedSection": "Unsaved"

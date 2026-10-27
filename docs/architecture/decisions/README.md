@@ -418,7 +418,9 @@ script again.
 | 20261024-diver-sent-doctors-form | A referred diver sends the… |
 | 20261024-e2e-reset-replays-a-snapshot | The e2e reset replays the… |
 | 20261026-pending-sign-in-challenge | Use a single-use pending second-factor… |
+| 20261027-boarding-certification-evidence | Boarding certification evidence |
 | 20261027-junior-card-evidence | Record junior card evidence explicitly |
 | 20261027-server-staff-idle | End inactive staff sessions on… |
+| 20261027-staff-credential-history | Recorded staff credential history |
 
 <!-- adr-index:end -->

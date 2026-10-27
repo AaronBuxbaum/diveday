@@ -58,9 +58,8 @@ const MIN_WIDTH = {
   "56rem": "min-w-[56rem] print:min-w-0",
   // The same table with more roll-call columns. The departure log's roster is
   // three text columns plus one per checkpoint, and a checkpoint is a dive:
-  // `rollCallCheckpoints` clamps `plannedDives` to 1..4 and the DB check
-  // constraint `trips_planned_dives_range` agrees, so the count is five to
-  // eight columns and nothing wider exists. The log pins each checkpoint
+  // `rollCallCheckpoints` allows up to five dives on a course session, so the
+  // widest case has nine columns. The log pins each checkpoint
   // column at `8rem` and the text columns share the rest, so at `56rem` they
   // get ~213px beside two checkpoints and ~171px beside three, but only 128px
   // beside four and 85px beside five: the crush issue #1035 measured, back on a
@@ -73,6 +72,8 @@ const MIN_WIDTH = {
   // document, and `print:min-w-0` still hands paper the whole thing (issue
   // #1052).
   "72rem": "min-w-[72rem] print:min-w-0",
+  // Six checkpoints need one more 8rem column to leave the same text width.
+  "80rem": "min-w-[80rem] print:min-w-0",
 } as const;
 
 export type TableMinWidth = keyof typeof MIN_WIDTH;

@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import {
   countBothClaims,
   groupCrewAssignments,
@@ -7,6 +8,8 @@ import {
   lapsedRungs,
   lastDayOfDeparture,
   rungLostToLapse,
+  rungLostToUnverified,
+  unverifiedRungs,
 } from "@/lib/crew-roles";
 import type { AppDb } from "./client";
 import { people, personRoles, shops, tripAssignments, trips } from "./schema";
@@ -46,6 +49,7 @@ export async function courseCrewCountsByTrip(
       fullName: people.fullName,
       tripRole: tripAssignments.tripRole,
       role: personRoles.role,
+      startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       timeZone: shops.timezone,
     })
@@ -87,26 +91,45 @@ export async function courseCrewCountsByTrip(
     // Asked of the departure's own last day in the shop's zone, so a rating
     // that lapses between the booking and the dive is lapsed for the dive.
     const divesOn = first ? lastDayOfDeparture(first.endsAt, first.timeZone) : null;
+    const firstDay = first ? calendarDateInTimezone(first.startsAt, first.timeZone) : null;
     const members = groupCrewAssignments(tripRows).map((member) => ({
       ...member,
       lapsedRungs:
-        divesOn === null ? [] : lapsedRungs(credentials.get(member.personId) ?? [], divesOn),
+        divesOn === null
+          ? []
+          : lapsedRungs(credentials.get(member.personId) ?? [], divesOn, firstDay ?? divesOn),
+      unverifiedRungs:
+        firstDay === null ? [] : unverifiedRungs(credentials.get(member.personId) ?? [], firstDay),
     }));
     const { supervision, roster } = countBothClaims(members);
     const lapsed: SupervisionCrewCount["lapsed"] = [];
+    const unverified: NonNullable<SupervisionCrewCount["unverified"]> = [];
     for (const member of members) {
       const lost = rungLostToLapse(member);
-      if (lost === null) continue;
-      lapsed.push({
-        personId: member.personId,
-        fullName: nameByPerson.get(member.personId) ?? "",
-        lost,
-      });
+      if (lost !== null)
+        lapsed.push({
+          personId: member.personId,
+          fullName: nameByPerson.get(member.personId) ?? "",
+          lost,
+        });
+      const unverifiedLost = rungLostToUnverified(member);
+      if (unverifiedLost !== null)
+        unverified.push({
+          personId: member.personId,
+          fullName: nameByPerson.get(member.personId) ?? "",
+          lost: unverifiedLost,
+        });
     }
     // Names in a stable order, so the sentence that lists them does not
     // reshuffle between loads.
     lapsed.sort(byNameThenId);
-    counts.set(tripId, { ...supervision, roster, lapsed });
+    unverified.sort(byNameThenId);
+    counts.set(tripId, {
+      ...supervision,
+      roster,
+      lapsed,
+      ...(unverified.length ? { unverified } : {}),
+    });
   }
   return counts;
 }
@@ -129,6 +152,7 @@ function byNameThenId(
 export type SupervisionCrewCount = InWaterCrewCount & {
   roster: InWaterCrewCount;
   lapsed: { personId: string; fullName: string; lost: LapsedRung }[];
+  unverified?: { personId: string; fullName: string; lost: LapsedRung }[];
 };
 
 /** A departure nobody is rostered on: nobody in the water, nobody lapsed. */

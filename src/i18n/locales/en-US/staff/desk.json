@@ -4,6 +4,7 @@
     "missingOxygen": "No oxygen provider on {title}, {when}",
     "missingFirstAid": "No first aid / CPR on {title}, {when}",
     "longDay": "{name} crews departures over {hours, plural, one {# hour} other {# hours}} on {day}.",
+    "credentialNotYetIssued": "{name}, crewing {title}: {credential} is recorded as issued on {date}. Check the credential before this departure.",
     "credentialExpired": "{name}, crewing {title}: {credential} expired {date}.",
     "credentialExpiredOther": "{name}, crewing {title}: a credential expired {date}."
   },

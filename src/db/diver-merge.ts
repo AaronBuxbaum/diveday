@@ -23,6 +23,10 @@ import {
 import { normalizePersonName, personNamesMatch } from "@/lib/person-name";
 import { hasReturned } from "@/lib/trips";
 import { isStandingRefusal, isUnresolvedMedicalHold } from "@/lib/waivers";
+import {
+  lockBoardingCertificationEvidence,
+  rewriteBoardingSnapshotReviewer,
+} from "./boarding-certification-snapshot";
 import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
 import { refileWaiverRecords } from "./waiver-refile";
@@ -275,6 +279,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "certifications.junior_status_verified_by_person_id": "the staff member who sighted the card",
   "activity_events.actor_person_id": "who did it — attribution, not diver history",
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
+  "bookings.fly_safe_acknowledged_by_person_id":
+    "which staffer resolved the flying-guidance follow-up",
   "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
   "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
   "bookings.training_marked_by_person_id": "which staffer marked the dive as training",
@@ -1202,6 +1208,7 @@ export async function mergeDiverRecords(input: {
         return { ok: false, reason: "not_found" };
       }
 
+      await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
       const lockedIds = [input.personId, input.survivorId].sort();
       const locked = await tx
         .select()
@@ -1240,6 +1247,7 @@ export async function mergeDiverRecords(input: {
         }
       }
 
+      await rewriteBoardingSnapshotReviewer(tx, input.shopId, source.id, survivor.id);
       const mergedAt = nowDate();
       const mergedSpokenLanguages = [
         ...new Set([...survivor.spokenLanguages, ...source.spokenLanguages]),

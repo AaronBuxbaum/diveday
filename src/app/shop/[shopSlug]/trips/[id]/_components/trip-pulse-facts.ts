@@ -156,7 +156,7 @@ export function tripPulseFacts({
               href: awayFromThisPage(action.href, shopPath(shopSlug, "trips", tripId)),
               chip: {
                 group: action.diver?.readiness ? `${action.kind}:readiness` : action.kind,
-                kind: t(ACTION_KIND_KEYS[action.kind]),
+                kind: t(action.kindLabelKey ?? ACTION_KIND_KEYS[action.kind]),
                 icon: quietIcon(action.kind),
                 tone: rowTone(action),
               },

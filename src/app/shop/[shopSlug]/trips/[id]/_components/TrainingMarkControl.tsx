@@ -64,6 +64,12 @@ export function TrainingMarkControl({
               <span>{t("trips.roster.trainingMark.noInstructor")}</span>
             </p>
           ) : null}
+          {mark.valid && mark.siteAttributionUnknown ? (
+            <p className="flex items-baseline gap-2 text-sm text-warning-strong">
+              <StatusMarkColumn variant="warning" />
+              <span>{t("trips.roster.trainingMark.siteAttributionUnknown")}</span>
+            </p>
+          ) : null}
           {clearAction ? (
             <form action={clearAction}>
               <input type="hidden" name="bookingId" value={bookingId} />

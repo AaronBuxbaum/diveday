@@ -30,6 +30,7 @@ import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type MonthFigure, MonthFigures } from "../reports/_components/MonthFigures";
+import { crewSafetyValue } from "./_components/crew-safety-value";
 import { SafetyLists } from "./_components/SafetyLists";
 import { safetyMonthTiles } from "./_components/safety-month-tiles";
 
@@ -159,22 +160,17 @@ export default async function SafetyReportPage({
       // lapsed count stands over the sailings it judged, the detail says how
       // much it could not judge, and a month with nothing on file at all
       // shows no ratio (third review, item 2).
-      value:
-        safety.crewSailings > 0 && safety.checkedSailings === 0
-          ? t("staffing.credentials.noneOnFile")
-          : t("incidents.safety.crewValue", {
-              lapsed: safety.lapsedSailings.length,
-              sailings: safety.checkedSailings,
-            }),
-      detail:
-        safety.unrecordedSailings > 0
-          ? t("incidents.safety.crewDetailUnrecorded", {
-              unrecorded: safety.unrecordedSailings,
-              sailings: safety.crewSailings,
-            })
-          : t("incidents.safety.crewDetail", { sailings: safety.crewSailings }),
-      detailTone:
-        safety.lapsedSailings.length > 0 || safety.unrecordedSailings > 0 ? "attention" : "quiet",
+      value: crewSafetyValue(safety, t).value,
+      detail: crewSafetyValue(safety, t).detail,
+      detailTone: crewSafetyValue(safety, t).attention ? "attention" : "quiet",
+      ...(safety.unknownCredentialSailings
+        ? {
+            link: {
+              href: shopPath(shopSlug, "settings", "team"),
+              label: t("incidents.safety.currentCrewCredentials"),
+            },
+          }
+        : {}),
     },
     // **A boat nobody is recorded driving is a figure, not a silence**
     // (fourth review, item 13): such a departure never reaches the crew check,
@@ -215,6 +211,7 @@ export default async function SafetyReportPage({
     drafts: draftReports,
     activityHref,
     staffingHref: shop.crewScheduleEnabled ? shopPath(shopSlug, "staffing") : null,
+    teamHref: shopPath(shopSlug, "settings", "team"),
   });
 
   function noCrewDetail(): Pick<MonthFigure, "detail" | "detailTone"> {

@@ -422,8 +422,12 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
     );
   }
   revalidatePath(tripPath(shopSlug, toTripId));
-  const notice =
-    moved.owedCents > 0
+  const flySafeUnreached = moved.flySafe === "failed" || moved.flySafe.unreached.length > 0;
+  const notice = flySafeUnreached
+    ? moved.owedCents > 0
+      ? "seat-moved-owed-fly-safe-unreached"
+      : "seat-moved-fly-safe-unreached"
+    : moved.owedCents > 0
       ? "seat-moved-owed"
       : moved.notice === "failed"
         ? "seat-moved-untold"

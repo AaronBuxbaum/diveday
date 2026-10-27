@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d7e8b77f-aa97-4d6c-bc4e-cc883cee32e0",
+  "prevIds": [
+    "6b48a0ee-8cbc-45af-8175-c527526b54ad"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_recipient_sealed"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_recipient_sealed",
+        "n|col|public.bookings.fly_safe_recipient_sealed",
+        "e|col|public.bookings.fly_safe_recipient_sealed"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_recipient_sealed",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

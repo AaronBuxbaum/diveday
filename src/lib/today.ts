@@ -1,5 +1,5 @@
 import type { HandledHelpRequest } from "@/db/help-requests";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   blockerActionLabelText,
   blockerItemText,
@@ -863,6 +863,8 @@ export type TodayAction = {
   /** Stable across renders so the list can be diffed and tested. */
   id: string;
   kind: TodayActionKind;
+  /** A bundle key when the usual kind label would misstate the cause. */
+  kindLabelKey?: StaffMessageKey;
   urgency: TodayUrgency;
   /** Who or what the work is about — usually a diver's name. */
   subject: string;

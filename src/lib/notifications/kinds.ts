@@ -26,6 +26,7 @@ import {
   SETUP_PHONE_MAX,
   SETUP_TEXT_MAX,
 } from "@/lib/setup-requests";
+import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { EMERGENCY_READERS_LISTED, EMERGENCY_READS_LISTED } from "@/lib/weekly-digest";
 
@@ -540,6 +541,10 @@ const tripReminder7dSchema = z.object({
 const tripReminder24hSchema = z.object({
   kind: z.literal("trip_reminder_24h"),
   ...tripReminderFields,
+  tripId: z.uuid().optional(),
+  personId: z.uuid().optional(),
+  flySafeExposureId: z.uuid().optional(),
+  flySafeAskCrew: z.boolean().optional(),
 });
 
 /**
@@ -1387,6 +1392,7 @@ export type CustomerGearPiece = z.infer<typeof customerGearPieceSchema>;
  */
 const flySafeCorrectionSchema = z.object({
   kind: z.literal("fly_safe_correction"),
+  correctionId: z.uuid().optional(),
   seatId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
@@ -1812,8 +1818,8 @@ const rollCallStaleSchema = z.object({
   recipientName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: tripTitleSchema,
-  /** The after-dive checkpoint that is open: 1–4. */
-  diveNumber: z.number().int().min(1).max(4),
+  /** The after-dive checkpoint that is open, up to the course-session limit. */
+  diveNumber: z.number().int().min(1).max(MAX_COURSE_DIVES),
   /**
    * The two counts, summed across the departure's diver and crew rows (EAP
    * review on H-118): people recorded not back aboard, and people with no
@@ -1914,7 +1920,7 @@ const rollCallStaleShoreSchema = z.object({
   /** The shop's own phone, when it has one on file: who to call first. */
   shopPhone: z.string().trim().min(1).max(60).nullable(),
   tripTitle: tripTitleSchema,
-  diveNumber: z.number().int().min(1).max(4),
+  diveNumber: z.number().int().min(1).max(MAX_COURSE_DIVES),
   notBackAboard: z.number().int().min(0).max(10_000),
   awaiting: z.number().int().min(0).max(10_000),
   endsAt: z.date(),
@@ -2413,7 +2419,7 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `departure-note/${notification.noteId}/${notification.seatId}`;
     // One correction per seat, ever (issue #2927).
     case "fly_safe_correction":
-      return `fly-safe-correction/${notification.seatId}`;
+      return `fly-safe-correction/${notification.seatId}${notification.correctionId ? `/${notification.correctionId}` : ""}`;
     // One send per tap on Tell.
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;

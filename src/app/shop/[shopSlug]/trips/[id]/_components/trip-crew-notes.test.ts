@@ -26,6 +26,18 @@ describe("tripCrewNotes", () => {
     });
   });
 
+  it("asks staff to check a future-issued rating instead of calling it lapsed", () => {
+    const notes = tripCrewNotes({
+      crew: crew({ unverifiedCrew: [{ personId: "p1", fullName: "Alex" }] }),
+      diversPerDivemaster: 8,
+      locale: "en-US",
+      t,
+    });
+    expect(notes.ratingLapsedNote).toBe(
+      "Alex has a rating issued after this departure starts. Check the cards.",
+    );
+  });
+
   it("names the divers of a missing language, and who can brief a covered one", () => {
     const notes = tripCrewNotes({
       crew: crew({
@@ -62,6 +74,21 @@ describe("tripCrewNotes", () => {
     });
     expect(notes.languageGapNote).toBe(
       "4 people booked in Spanish. No one on this crew has recorded Spanish.",
+    );
+  });
+
+  it("says a supervisor is unconfirmed when a future-issued rating prevents counting", () => {
+    const notes = tripCrewNotes({
+      crew: crew({
+        unverifiedCrew: [{ personId: "p1", fullName: "Alex" }],
+        ratioGap: { code: "under_target", divers: 1, divemasterCount: 0, needed: 1, shortBy: 1 },
+      }),
+      diversPerDivemaster: 6,
+      locale: "en-US",
+      t,
+    });
+    expect(notes.underTargetNote).toBe(
+      "1 diver without a confirmed supervisor. Your 6:1 target wants 1 divemaster.",
     );
   });
 

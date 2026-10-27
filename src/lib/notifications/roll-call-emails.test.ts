@@ -135,6 +135,12 @@ describe("the roll_call_stale kind", () => {
     alertedAt: new Date("2026-10-14T17:00:00Z"),
   });
 
+  it("can send an open fifth-dive roll call to an owner", () => {
+    const fifth = notificationSchema.safeParse({ ...notification, diveNumber: 5 });
+    expect(fifth.success).toBe(true);
+    if (fifth.success) expect(messageFor(fifth.data).text).toContain("after dive 5");
+  });
+
   it("carries counts and a link, never a name of anybody unaccounted for", () => {
     expect(Object.keys(notification).sort()).toEqual(
       [
@@ -189,6 +195,12 @@ describe("the roll_call_stale_shore kind", () => {
     ...shore,
   });
   const plain = (text: string) => text.replaceAll("\u00a0", " ");
+
+  it("can send an open fifth-dive roll call to the shore contact", () => {
+    const fifth = notificationSchema.safeParse({ ...notification, diveNumber: 5 });
+    expect(fifth.success).toBe(true);
+    if (fifth.success) expect(messageFor(fifth.data).text).toContain("after dive 5");
+  });
 
   it("names the shop, the departure, the dive, both counts and the time", () => {
     const email = rollCallStaleShoreEmail({ ...shore, notBackAboard: 1, awaiting: 2 });

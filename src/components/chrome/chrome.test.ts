@@ -224,7 +224,7 @@ describe("the chrome bar", () => {
   it("sets the token for a stacked bar on a phone, and only for a bar that says so", async () => {
     const css = await read("src/app/globals.css");
     expect(css).toMatch(
-      /@media \(max-width: 39\.99rem\)\s*\{\s*html:has\(\[data-chrome-stacked\]\)\s*\{\s*--chrome-h:\s*5\.5rem;/,
+      /@media \(max-width: 39\.99rem\)\s*\{\s*html:has\(\[data-chrome-stacked\]\)\s*\{\s*--chrome-base-h:\s*5\.5rem;/,
     );
     const bar = await read("src/components/chrome/ChromeBar.tsx");
     expect(bar).toMatch(/data-chrome-stacked=\{stackedOnPhone \|\| undefined\}/);
@@ -273,14 +273,14 @@ describe("the chrome bar", () => {
     // Inside `@theme`, which is what publishes it to `:root` for the
     // `h-(--chrome-h)` / `top-(--chrome-h)` utilities to resolve against.
     const theme = css.slice(css.indexOf("@theme {"), css.indexOf("@theme inline"));
-    expect(theme).toContain("--chrome-h: 3.5rem;");
-    // Declared once. A second height is two bars again, wearing one name. The
-    // one other declaration is the bar's absence: 0px where the live manifest
-    // hides it (below), and the shopfront's two-row phone bar (issue #2303,
-    // `data-chrome-stacked`), which is the same bar with two rows in it.
+    expect(theme).toContain("--chrome-base-h: 3.5rem;");
+    expect(theme).toContain("--chrome-h: var(--chrome-base-h);");
+    // One fixed baseline, overridden only by the public header's measured
+    // clearance or the live manifest's absence. Public minimum sizing never
+    // feeds back from its observer's output.
     expect(css.match(/--chrome-h:[^;]*/g)).toEqual([
-      "--chrome-h: 3.5rem",
-      "--chrome-h: 5.5rem",
+      "--chrome-h: var(--chrome-base-h)",
+      "--chrome-h: var(--public-chrome-h, var(--chrome-base-h))",
       "--chrome-h: 0px",
     ]);
   });
@@ -465,7 +465,7 @@ describe("the hidden bar's height", () => {
    * hidden by an inline `display: none`, so a `:has()` that finds the roll
    * call by its class alone kept hiding the tab bar on every page after it
    * until a reload. Each rule that reacts to the live manifest must step over
-   * a hidden trip shell and a hidden manifest wrapper.
+   * a hidden trip shell, paper identity wrapper and manifest wrapper.
    */
   it("reacts only to a manifest on screen, never one Activity has hidden", () => {
     const css = readGlobalsCss();
@@ -473,6 +473,7 @@ describe("the hidden bar's height", () => {
     expect(selectors.length, "the three manifest rules").toBe(3);
     for (const selector of selectors) {
       expect(selector).toContain('main:not([style*="display: none"])');
+      expect(selector).toContain('[data-departure-paper]:not([style*="display: none"])');
       expect(selector).toContain('div.boat-mode:not([style*="display: none"])');
     }
   });

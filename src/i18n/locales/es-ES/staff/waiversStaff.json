@@ -57,7 +57,9 @@
       "medical": "Bloqueos médicos"
     },
     "pagination": {
-      "total": "{count, plural, one {# registro} other {# registros}}"
+      "total": "{count, plural, one {# registro} other {# registros}}",
+      "paperSubset": "{total, plural, one {{shown} de # registro en esta lista} other {{shown} de # registros en esta lista}}",
+      "paperPinned": "También se muestra el registro seleccionado"
     },
     "paperRecorded": "Exención en papel registrada",
     "openSignedRecord": "Abrir registro firmado"

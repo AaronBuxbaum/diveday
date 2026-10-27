@@ -5,9 +5,8 @@ import type { TableMinWidth } from "@/components/ui/table";
  * thing on that page whose column count is not fixed. Each is three text
  * columns (diver, emergency contact, buddy team; crew member, roles, teams)
  * plus one per checkpoint, and a checkpoint is a dive. `rollCallCheckpoints`
- * clamps to 1..4 dives (as does the `trips_planned_dives_range` check
- * constraint), so these answer for two to five checkpoints, five to eight
- * columns, and there is no ninth case to miss.
+ * allows up to five dives on a course session, so these answer for two to six
+ * checkpoints, five to nine columns.
  *
  * Two-branch picks rather than arithmetic, because `Table`'s widths are static
  * maps of literal Tailwind classes: a computed `min-w-[${n}rem]` or
@@ -27,7 +26,7 @@ import type { TableMinWidth } from "@/components/ui/table";
  * that runs more dives per departure than the seed does.
  */
 export function rollCallTableMinWidth(checkpointCount: number): TableMinWidth {
-  return checkpointCount >= 4 ? "72rem" : "56rem";
+  return checkpointCount >= 6 ? "80rem" : checkpointCount >= 4 ? "72rem" : "56rem";
 }
 
 /**

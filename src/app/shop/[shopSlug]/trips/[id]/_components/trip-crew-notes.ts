@@ -2,7 +2,7 @@ import type { getTripOverview } from "@/db/trips";
 import { overRatioWarningText } from "@/i18n/crew-gap-labels";
 import { languageNameIn } from "@/i18n/language-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { ratingLapsedDetailText } from "@/i18n/today-labels";
+import { ratingLapsedDetailText, ratingUnverifiedDetailText } from "@/i18n/today-labels";
 import { cachedListFormat } from "@/lib/intl-cache";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -39,11 +39,16 @@ export function tripCrewNotes({
   locale: string;
   t: StaffTranslator;
 }) {
-  const { crewGap, ratioGap, lapsedCrew } = crew;
+  const { crewGap, ratioGap, lapsedCrew, unverifiedCrew } = crew;
   // Who a lapsed rating took down a rung (issue #1853), in Today's own
   // sentence: one fact, one set of words wherever a staffer meets it.
   const ratingLapsedNote =
-    lapsedCrew.length > 0 ? ratingLapsedDetailText(t, locale, lapsedCrew) : null;
+    [
+      lapsedCrew.length > 0 ? ratingLapsedDetailText(t, locale, lapsedCrew) : null,
+      unverifiedCrew?.length ? ratingUnverifiedDetailText(t, locale, unverifiedCrew) : null,
+    ]
+      .filter(Boolean)
+      .join(" ") || null;
   // Same tone as underTargetNote below: informs, refuses nothing (issue
   // #708). Each language is named in the reader's own locale
   // (`languageNameIn`), matching the team settings form's convention. The
@@ -75,15 +80,21 @@ export function tripCrewNotes({
   const underTargetNote =
     ratioGap.code === "none"
       ? null
-      : t("trips.crew.underTarget", {
-          divers: ratioGap.divers,
-          divemasters: ratioGap.divemasterCount,
-          ratio: diversPerDivemaster,
-          // The total the target wants, not the shortfall: "wants 1 more" than
-          // none reads as arithmetic about nothing when the boat has no
-          // divemaster at all, which is the case that matters most.
-          needed: ratioGap.needed,
-        });
+      : unverifiedCrew?.length && ratioGap.divemasterCount === 0
+        ? t("trips.crew.underTargetUnverified", {
+            divers: ratioGap.divers,
+            ratio: diversPerDivemaster,
+            needed: ratioGap.needed,
+          })
+        : t("trips.crew.underTarget", {
+            divers: ratioGap.divers,
+            divemasters: ratioGap.divemasterCount,
+            ratio: diversPerDivemaster,
+            // The total the target wants, not the shortfall: "wants 1 more" than
+            // none reads as arithmetic about nothing when the boat has no
+            // divemaster at all, which is the case that matters most.
+            needed: ratioGap.needed,
+          });
   const overRatioWarning = overRatioWarningText(t, crewGap);
   return { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning };
 }

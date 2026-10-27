@@ -227,11 +227,13 @@ describe("SiteMap labels through Leaflet", () => {
     const { container } = render(
       <SiteMap center={{ latitude: 0, longitude: 0 }} pins={pins} clusterLabel="dive sites" />,
     );
+    await waitFor(() => expect(getContainer.mock.contexts[0]).toBeDefined());
+    const map = getContainer.mock.contexts[0];
+    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
+    await act(async () => map.setView([0, 0], 11, { animate: false }));
     await waitFor(() =>
       expect(container.querySelector(".leaflet-site-cluster")).toHaveAccessibleName("3 dive sites"),
     );
-    const map = getContainer.mock.contexts[0];
-    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
     const startZoom = map.getZoom();
     const cluster = container.querySelector(".leaflet-site-cluster");
     if (!cluster) throw new Error("Cluster did not mount");
@@ -881,14 +883,10 @@ describe("SiteMap labels through Leaflet", () => {
       return button;
     };
 
-    // One click fits the group fully; coincident coordinates reach maximum zoom.
-    for (const _zoom of [19]) {
-      const button = await clusterButton();
-      expect(button).toHaveAccessibleName("2 dive sites");
-      fireEvent.click(button);
-      await waitFor(() => expect(button).not.toBeInTheDocument());
-    }
-    fireEvent.click(await clusterButton());
+    // Coincident coordinates are already at the maximum overview zoom.
+    const button = await clusterButton();
+    expect(button).toHaveAccessibleName("2 dive sites");
+    fireEvent.click(button);
     const content = popup(container);
     expect(content.querySelector(".leaflet-site-cluster-card__name")?.textContent).toBe(name);
     expect(content.querySelector(".leaflet-site-cluster-card__location")?.textContent).toBe(

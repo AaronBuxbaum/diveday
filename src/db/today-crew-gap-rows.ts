@@ -5,6 +5,7 @@ import {
   overRatioDetailText,
   overRatioIntroDetailText,
   ratingLapsedDetailText,
+  ratingUnverifiedDetailText,
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
 } from "@/i18n/today-labels";
@@ -74,12 +75,20 @@ export function pushCrewGapRows(
   const rosterRatioGap = roster.ratioGap;
   const rosterUncrewed = roster.uncrewed;
   const lapseNote =
-    counts.lapsed.length > 0 ? ratingLapsedDetailText(t, locale, counts.lapsed) : null;
+    [
+      counts.lapsed.length > 0 ? ratingLapsedDetailText(t, locale, counts.lapsed) : null,
+      counts.unverified?.length ? ratingUnverifiedDetailText(t, locale, counts.unverified) : null,
+    ]
+      .filter(Boolean)
+      .join(" ") || null;
   const explainedIf = (opened: boolean, detail: string) =>
     opened && lapseNote ? `${detail} ${lapseNote}` : detail;
   // Who lost the instructor rung — the only people who can be why a session
   // reads as having no instructor.
   const lostInstructor = counts.lapsed.filter((member) => member.lost === "instructor");
+  const unverifiedInstructor = (counts.unverified ?? []).filter(
+    (member) => member.lost === "instructor",
+  );
   if (crewGap.code !== "none" && !uncrewed) {
     const opened = rosterCrewGap.code !== crewGap.code || rosterUncrewed;
     actions.push({
@@ -110,7 +119,9 @@ export function pushCrewGapRows(
             // rostered at all, and that is what it says.
             opened && lostInstructor.length > 0
             ? ratingLapsedDetailText(t, locale, lostInstructor)
-            : instructorMissingDetailText(t),
+            : opened && unverifiedInstructor.length > 0
+              ? ratingUnverifiedDetailText(t, locale, unverifiedInstructor)
+              : instructorMissingDetailText(t),
       actionLabel: openCrewActionText(t),
       // The trip's crew editor, not the bare Overview it used to land on
       // (Lens 17 task 139) — the fix for either gap lives right there.
@@ -153,17 +164,23 @@ export function pushCrewGapRows(
       actions.push({
         id: `uncrewed:${trip.id}`,
         kind: course ? "uncrewed_course" : "uncrewed_departure",
+        ...(!rosterUncrewed && counts.unverified?.length
+          ? { kindLabelKey: "today.actionKind.crewRatingUnverified" as const }
+          : {}),
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
         departure,
         aboutDeparture: true,
-        detail: explainedIf(
-          !rosterUncrewed,
-          course
-            ? uncrewedCourseDetailText(t, ratioGap.divers)
-            : uncrewedDepartureDetailText(t, ratioGap.divers),
-        ),
+        detail:
+          !rosterUncrewed && counts.unverified?.length && lapseNote
+            ? lapseNote
+            : explainedIf(
+                !rosterUncrewed,
+                course
+                  ? uncrewedCourseDetailText(t, ratioGap.divers)
+                  : uncrewedDepartureDetailText(t, ratioGap.divers),
+              ),
         actionLabel: openCrewActionText(t),
         href: `${tripHref}?view=details#crew`,
         dueAt: trip.startsAt,

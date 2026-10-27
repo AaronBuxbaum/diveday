@@ -110,14 +110,14 @@ test("the old /trips/new URL still works — 308 to the board's own form", async
   expect(direct.headers().location).toContain("/shop/blue-mantis/schedule/board?add=full");
 
   await page.goto("/shop/blue-mantis/trips/new");
-  await expect(page).toHaveURL(/\/shop\/blue-mantis\/schedule\/board\?add=full$/);
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/schedule\/board\/new\?add=full$/);
   // Landed on the whole form, not merely the board.
   await expect(page.getByRole("button", { name: "Fewer options" })).toBeVisible();
   await expect(page.getByLabel("How often")).toBeVisible();
 });
 
 test("end-before-start is rejected with a friendly message", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
   await page.getByLabel("What is it").fill("Backwards Trip");
   await page.getByLabel("Date").fill(daysFromNow(4));
   await page.getByLabel("Departs").fill("12:00");
@@ -137,7 +137,7 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   // an Open Water weekend went on the board as unrelated trips sharing a
   // title: separate rosters, separate waivers, separate crew.
   const title = `Open Water Weekend ${e2eNow().getTime()}`;
-  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
   await page.getByLabel("What is it").fill(title);
   // Six days out, which from the frozen clock's Tuesday is the following
   // Monday — so the span is never on the week the board opens to, and the

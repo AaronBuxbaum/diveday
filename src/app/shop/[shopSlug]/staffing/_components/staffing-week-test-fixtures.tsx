@@ -17,7 +17,6 @@ export const WORDS: StaffingWeekWords = {
   next: "Next week",
   thisWeek: "This week",
   today: "Today",
-  print: "Print",
   person: "Person",
   needsCrew: "Needs crew",
   shiftsAndAway: "Shifts and days away",
@@ -43,6 +42,7 @@ export const WORDS: StaffingWeekWords = {
   askWontClose: "You add no seats to this session. Only another instructor does.",
   requestWontClose: "Approving this one won’t close the gap. Only an instructor adds seats.",
   ratingLapsed: "A crew rating isn’t current",
+  ratingUnverified: "Check crew rating",
   continuedUntil: "until {time} · from {day}",
   continuedFrom: "from {day}",
 };
@@ -117,6 +117,7 @@ export function renderWeek({
       locale={DEFAULT_DIVER_LOCALE}
       timeZone={TZ}
       shopSlug="blue-mantis"
+      shopName="Blue Mantis Divers"
       canManage={canManage}
       canDecide={canDecide}
       deleteShiftAction={vi.fn()}

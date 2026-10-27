@@ -274,7 +274,6 @@
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
           "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
-          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1046 -> 1057",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
@@ -413,6 +412,25 @@
         "files": {
           "src/db/erasure-coverage.test.ts": "1175 -> 1181"
         }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/closeout.test.ts": "0 -> 903",
+          "src/db/courses.test.ts": "1659 -> 1719",
+          "src/db/executed-dives.test.ts": "1082 -> 1085",
+          "src/db/no-show.test.ts": "1100 -> 1165",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/db/recap.test.ts": "2114 -> 2138",
+          "src/db/retention.test.ts": "1250 -> 1262",
+          "src/db/self-declared-cards.test.ts": "1836 -> 1864",
+          "src/lib/staffing-week.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -424,9 +442,8 @@
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1043,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1060,
-    "src/app/shop/[shopSlug]/schedule/board/actions.ts": 923,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 915,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1056,
+    "src/app/shop/[shopSlug]/schedule/board/actions.ts": 916,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1176,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 923,
@@ -442,7 +459,7 @@
     "src/db/course-forms.test.ts": 1234,
     "src/db/courses.test.ts": 1719,
     "src/db/dive-sites.test.ts": 1156,
-    "src/db/diver-merge.test.ts": 1277,
+    "src/db/diver-merge.test.ts": 1270,
     "src/db/divers.test.ts": 3056,
     "src/db/erasure-coverage.test.ts": 1181,
     "src/db/executed-dives.test.ts": 1085,
@@ -520,13 +537,11 @@
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 396,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
-    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 305,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 367,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 312,
-    "src/db/reminders.ts#sendDueReminders": 303,
     "src/db/reporting.ts#getMonthlyReport": 321,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 680,
@@ -585,9 +600,8 @@
     "src/app/shop/[shopSlug]/promos/page.tsx": 564,
     "src/app/shop/[shopSlug]/reports/page.tsx": 492,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 430,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 643,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 581,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 591,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 419,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 474,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 508
   },
