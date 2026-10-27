@@ -16,20 +16,65 @@ counts as 72 ready and 3 verification-first. Individual readiness and owner
 choices remain preserved. These authorization figures do not count implementation completion.
 
 At that original stage, all eight additional owner approvals were recorded and no owner questions
-remained pending. That historical statement does not describe the current decision: RP04 now awaits
-owner input in #3101. M02 still adds no new Product hero scene, and RGS04 adds no filename search.
+remained pending. Later RP04 delivery and shared-header decisions are recorded in the execution
+update below. M02 still adds no new Product hero scene, and RGS04 adds no filename search.
 Browser review Skip and notes retain precedence; this record does not overwrite browser-only
 choices.
 
-Current execution reconciliation — 27 October 2026 (PR #3105 review snapshot)
+## Execution update — 27 October 2026
 
-Of 75 implementation proposals, 70 have merged with CI and visual review verified. Four diver
-proposals are published in PR #3105 and remain partial pending final visual verification. RP04 is separately held
-for an owner decision. Seven proposals were already done and three remain as requested. Historical
+
+74 of the 75 implementation proposals are merged, including R01, RP02, RP03 and RP06 in
+[PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). This was verified on main
+`87f5bdece9f9be4ce03825955b6f6b39ee786d96`; it does not claim deployment.
+The 7 already-done and 3 owner-retained proposals require no implementation.
+
+RP04 is the final implementation proposal, tracked separately in
+[issue #3101](https://github.com/AaronBuxbaum/diveday/issues/3101). On 27 October the owner
+confirmed: “You can assume JS.” JavaScript-enabled registration is therefore the acceptance
+scope. Accessible disclosure, keyboard use, refusal recovery and declaration safety remain
+required. The historical no-JavaScript delivery failure remains recorded as a failure; it is
+neither a current requirement nor passing evidence. The candidate is under implementation and
+review on `codex/visual-polish-10-registration`; integration and exact hosted CI are pending.
+
+The candidate passes 36 focused tests, static checks, a production build and all eight registration
+journey tests. Security review and two differently framed domain reviews found no source findings.
+Independent visual review found a Spanish heading overflow at 200% text size; a registration-local
+word-wrap repair passed fresh geometry checks. Historical enlarged-text page checks failed for pre-existing
+shared public-navigation overflow, tracked in
+[issue #3116](https://github.com/AaronBuxbaum/diveday/issues/3116). Its robust repair requires a
+measured header-height contract to keep sticky offsets aligned. On 27 October the owner explicitly
+approved that fix. The implemented header measures its natural height for sticky offsets, keeps
+staff headers fixed, and packs the language control into the wrapping navigation. This restores
+100 pixels of usable space at 200% text on both English and Spanish phones. A discovered language
+menu edge clip is repaired with viewport-aware placement and a scrollable cap for short viewports.
+
+Final local production checks pass: six header journeys, eight registration flows and five visual
+tests producing 18 registration images, plus 25 menu, schedule and anchor images. Independent Sol
+medium review accepts all 43 images, using 26 exact image-hash/dimension carries and 17 fresh native
+inspections. All ten remaining probe candidates were dismissed with measured reasons; no confirmed
+or unclear visual finding remains. Historical failed captures are preserved as failures, not
+relabelled as passing. Focused tests, lint, typecheck and repository guards pass.
+
+This is local acceptance only. The candidate has not been published as a PR or merged; the newest
+unrelated stack still has failed CI checks. Refresh main and the live parent, integrate, and verify
+the exact publication head before claiming completion.
+
+The original mapping and per-proposal observations below are the 26 October planning snapshot.
+Their queued/readiness labels describe that snapshot, not current delivery status. This update
+and the RP04 entry supersede those labels; implementation evidence lives with the linked PRs and
+the interactive artifact's execution ledger.
+
+### Historical execution reconciliation — 27 October 2026 (PR #3105 review snapshot)
+
+At that review snapshot, 70 of 75 implementation proposals had merged with CI and visual review
+verified. Four diver proposals were published in PR #3105 and remained partial pending final visual
+verification. RP04 was separately held for an owner decision. Seven proposals were already done and three remain as requested. Historical
 authorization and readiness counts remain separate and unchanged: 72 ready, 3 requiring
-verification, 7 already done, and 3 retained. No acceptance criterion has changed.
+verification, 7 already done, and 3 retained. The later explicit JavaScript acceptance decision
+supersedes the snapshot’s no-JavaScript requirement; its historical failure remains preserved.
 
-| Execution issue | Current scope and state |
+| Execution issue | Scope and state at that snapshot |
 | --- | --- |
 | #3066 | Eight IDs merged; CI and visual review complete |
 | #3069 | Thirteen IDs merged; CI and visual review complete |
@@ -71,18 +116,18 @@ caches required local styles and fonts before publishing a saved copy and preser
 when saves finish out of order. Cancellation, terminal responses and delayed cache writes have
 focused regression coverage. Native phone and desktop font preservation is verified; final hosted
 comparison of the repaired source remains required. The prior failing captures and test results
-remain evidence, not accepted baselines. #3074 owns only R01, RP02, RP03 and RP06; #3101 owns RP04
-and all its original requirements. No merge or deployment of this PR is claimed.
+remain evidence, not accepted baselines. #3074 owns only R01, RP02, RP03 and RP06; #3101 owns RP04. The original requirements and failure are preserved below, with the later explicit JavaScript
+acceptance decision recorded separately. No deployment is claimed by this historical review.
 
 RP04's complete original requirements moved from #3074 to
 [#3101](https://github.com/AaronBuxbaum/diveday/issues/3101), “Finish registration disclosure after
-deciding no-JavaScript delivery,” classified half-done and ready for the human decision. No
-requirement was waived. Its complete source and actual JavaScript-disabled RED test remain in the
-full backup. Streaming delivery requires a decision about new non-streaming architecture versus
-narrower acceptance; neither choice is assumed approved. Map U1 remains unverified with diagnostic
+deciding no-JavaScript delivery,” then classified half-done and ready for the human decision.
+Its complete source and actual JavaScript-disabled RED test remain in the full backup. The owner
+subsequently approved JavaScript-enabled acceptance and the measured public-header repair, as
+recorded above; no separate nonstreaming delivery architecture is required. Map U1 remains unverified with diagnostic
 permission pending after automatic rejection for provider-metadata egress, without bypass.
 
-Current main is the externally merged boat commit `20324bd4cfe1131db869d94b1249e2ab4869e979`. The
+Main at that historical review was the externally merged boat commit `20324bd4cfe1131db869d94b1249e2ab4869e979`. The
 original audit scope is available at an [immutable historical
 snapshot](https://github.com/AaronBuxbaum/diveday/blob/ca57514595faf55d57ff2bfdd03c6dfc9df7d47e/docs/engineering/audits/20261026-visual-polish-plan.md).
 Both old publication branches were deleted. Proposal anchors, original scope, owner decisions, and
@@ -3500,14 +3545,19 @@ Historical scope mapping: issue #3074 explicitly includes RP03. Current implemen
 
 ## RP04
 
-**Current execution (27 October):** Current execution target #3101 owns all original RP04
-requirements; #3074 is historical context. Owner decision pending; full d700 source and actual
-no-JavaScript RED retained. No acceptance waived.
+**Current execution (27 October):** #3101 owns RP04; #3074 is historical context. The owner
+explicitly approved JavaScript-enabled acceptance and the measured public-header repair. Local
+production and independent visual review pass on the original candidate; main integration and
+exact hosted CI remain pending. Full d700 source and actual no-JavaScript RED remain preserved.
 
 **Only ask certification details when the diver has a certification**
 
 **Initial readiness (26 October):** Ready to implement. Condition certification detail controls on
 existing certified agency selection, preserve values when switched back; do not infer verification.
+
+**Execution (27 October):** Implemented in [issue #3101](https://github.com/AaronBuxbaum/diveday/issues/3101).
+Local production and independent visual review pass on the original candidate; main integration
+and exact hosted CI remain pending.
 
 **Audit assessment (25 October):** still-open. Current register capture still shows Level and Card
 number immediately under Agency: Not certified yet. The fields remain unconditional.
@@ -3538,9 +3588,11 @@ closure targets.
 related. Supported agencies in registration; not conditional uncertified fields.
 
 - Historical execution: [Issue #3074](https://github.com/AaronBuxbaum/diveday/issues/3074) — original
-five-ID batch. It originally included RP04; that scope has transferred without an acceptance waiver.
+five-ID batch. It originally included RP04; that scope transferred to #3101 before the later
+explicit JavaScript acceptance decision.
 - Current execution: [Issue #3101](https://github.com/AaronBuxbaum/diveday/issues/3101) — owns RP04 and
-its complete original requirements, pending the owner’s delivery decision.
+its JavaScript-enabled acceptance scope; the owner’s delivery and measured-header decisions are
+recorded above.
 
 **Evidence references in local artifact:** `current/shopfront-register-light-vw-390.png`,
 `current/shopfront-register-light-vw-1280.png`
