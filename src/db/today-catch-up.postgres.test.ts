@@ -4,7 +4,7 @@ import { HOUR_MS } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
 import { recordDeskEvent } from "./desk-events";
-import { people, todayReadMarkEvents, tripDeskEvents } from "./schema";
+import { people, todayReadMarkEvents, todayReadMarks, tripDeskEvents } from "./schema";
 import {
   acknowledgeTodayCatchUp,
   initializeTodayCatchUp,
@@ -38,6 +38,76 @@ describePostgres("Today catch-up on PostgreSQL", () => {
       input: { shopId: shop.id, personId: person.id, now, timeZone: "UTC" },
     };
   }
+
+  it("rejects acknowledgement links between different shops", async () => {
+    const a = await fixture();
+    const shopB = await raceShop(a.pg.db);
+    const [readerB] = await a.pg.db
+      .insert(people)
+      .values({ shopId: shopB.id, fullName: "Reader B" })
+      .returning();
+    const tripB = await createTrip(a.pg.db, {
+      shopId: shopB.id,
+      title: "Other boat",
+      startsAt: now,
+      endsAt: new Date(now.getTime() + 4 * HOUR_MS),
+      capacity: 6,
+    });
+    if (!readerB || !tripB) throw new Error("other fixture missing");
+    await initializeTodayCatchUp(a.pg.db, { ...a.input, eventIds: [] });
+    await initializeTodayCatchUp(a.pg.db, {
+      shopId: shopB.id,
+      personId: readerB.id,
+      now,
+      timeZone: "UTC",
+      eventIds: [],
+    });
+    await recordDeskEvent(a.pg.db, {
+      shopId: a.shop.id,
+      tripId: a.trip.id,
+      kind: "plan_changed",
+      occurredAt: now,
+    });
+    await recordDeskEvent(a.pg.db, {
+      shopId: shopB.id,
+      tripId: tripB.id,
+      kind: "plan_changed",
+      occurredAt: now,
+    });
+    const [markA] = await a.pg.db
+      .select()
+      .from(todayReadMarks)
+      .where(eq(todayReadMarks.shopId, a.shop.id));
+    const [markB] = await a.pg.db
+      .select()
+      .from(todayReadMarks)
+      .where(eq(todayReadMarks.shopId, shopB.id));
+    const [eventA] = await a.pg.db
+      .select()
+      .from(tripDeskEvents)
+      .where(eq(tripDeskEvents.shopId, a.shop.id));
+    const [eventB] = await a.pg.db
+      .select()
+      .from(tripDeskEvents)
+      .where(eq(tripDeskEvents.shopId, shopB.id));
+    if (!markA || !markB || !eventA || !eventB) throw new Error("fixture missing");
+    await a.pg.db
+      .insert(todayReadMarkEvents)
+      .values({ shopId: a.shop.id, markId: markA.id, eventId: eventA.id });
+    await a.pg.db
+      .insert(todayReadMarkEvents)
+      .values({ shopId: shopB.id, markId: markB.id, eventId: eventB.id });
+    await expect(
+      a.pg.db
+        .insert(todayReadMarkEvents)
+        .values({ shopId: a.shop.id, markId: markA.id, eventId: eventB.id }),
+    ).rejects.toThrow();
+    await expect(
+      a.pg.db
+        .insert(todayReadMarkEvents)
+        .values({ shopId: a.shop.id, markId: markB.id, eventId: eventA.id }),
+    ).rejects.toThrow();
+  });
 
   it("shows a lower sequence event that commits after the acknowledged event", async () => {
     const { pg, shop, trip, input } = await fixture();
