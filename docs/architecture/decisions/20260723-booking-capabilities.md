@@ -107,3 +107,6 @@ existing parent return similarly verifies the lead's link. Both travel in a shor
 cookie scoped to the waiver path. A standalone waiver shows the signed receipt and directs the
 diver to their booking confirmation or the shop for trip details. Existing readiness links retain
 their own lifetime and revocation rules; an older waiver link is still usable for its own purpose.
+When signing creates a medical hold, the receipt comes first so the signer sees the physician
+instructions and the doctor's page when available. The receipt may offer the separately held
+return link only after verifying it again; readiness retains its generic medical-privacy wording.

@@ -1,8 +1,11 @@
 import { and, eq, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { issueBookingCapability } from "@/db/booking-capabilities";
 import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
+import { listStaff } from "@/db/trips";
 import { completeWaiver } from "@/db/waivers-completion";
+import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
   clearAnswers,
@@ -11,12 +14,22 @@ import {
   waiverContextFor,
 } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
+import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
 const context = waiverContextFor(ctx);
+const cookieJar = new Map<string, string>();
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({
+    get: (name: string) => {
+      const value = cookieJar.get(name);
+      return value === undefined ? undefined : { name, value };
+    },
+  })),
+}));
 vi.mock("@/lib/observability/render-connection", () => ({
   connectionForRoute: vi.fn(async () => undefined),
 }));
@@ -31,7 +44,10 @@ vi.mock("@/i18n/request", () => ({
 const { getDb } = await import("@/db/client");
 const { default: WaiverPage } = await import("./page");
 const t = diverTranslator("en-US");
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  cookieJar.clear();
+  vi.clearAllMocks();
+});
 async function signed(answers: typeof clearAnswers = medicalReferralAnswers) {
   const fixture = await context();
   vi.mocked(getDb).mockResolvedValue(fixture.db);
@@ -69,6 +85,96 @@ describe("the actual completed waiver branch", () => {
     expect(html).toContain(t("waiver.doctor.open"));
     expect(html).toContain('data-medical-next="referral"');
     expect(html).not.toContain("moderate exercise");
+  });
+  it("shows physician instructions and the independently held return link together", async () => {
+    const { db, shop, booking, render } = await signed();
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "readiness",
+    });
+    if (!readiness) throw new Error("readiness unavailable");
+    cookieJar.set("diveday_waiver_return", readiness.token);
+    const html = await render();
+    expect(html).toContain(t("waiver.medicalReferralNext"));
+    expect(html).toContain(t("waiver.doctor.open"));
+    expect(html).toContain(t("waiver.seeWhatsLeft"));
+    expect(html.includes(`/ready/${readiness.token}`)).toBe(true);
+  });
+  it.each(["wrong purpose", "expired", "revoked", "cancelled"] as const)(
+    "does not offer a return link when the separately held capability is %s",
+    async (condition) => {
+      const { db, shop, booking, render } = await signed();
+      const readiness = await issueBookingCapability(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        purpose: condition === "wrong purpose" ? "confirm" : "readiness",
+      });
+      if (!readiness) throw new Error("link unavailable");
+      if (condition === "expired" || condition === "revoked") {
+        await db
+          .update(bookingCapabilities)
+          .set(condition === "expired" ? { expiresAt: nowDate() } : { revokedAt: nowDate() })
+          .where(eq(bookingCapabilities.tokenHash, hashCapabilityToken(readiness.token)));
+      }
+      if (condition === "cancelled") {
+        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+      }
+      cookieJar.set("diveday_waiver_return", readiness.token);
+      const html = await render();
+      expect(html).toContain(t("waiver.medicalReferralNext"));
+      expect(html).not.toContain(t("waiver.seeWhatsLeft"));
+      expect(html).not.toContain("/ready/");
+    },
+  );
+  it("keeps physician refusal distinct on the waiver receipt", async () => {
+    const { db, shop, booking, render } = await signed();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("staff missing");
+    const outcome = await recordMedicalEvaluation(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.person.id,
+      outcome: "not_cleared",
+      evaluatedOn: "2026-07-18",
+      physicianName: "Dr. Example",
+      now: new Date(now.getTime() + 60_000),
+    });
+    expect(outcome.ok).toBe(true);
+    const html = await render();
+    expect(html).toContain(t("waiver.medicalDeclinedNext"));
+    expect(html).not.toContain(t("waiver.medicalReferralNext"));
+    expect(html).not.toContain(t("waiver.doctor.open"));
+  });
+  it("offers a parent their independently held party link after the referral instructions", async () => {
+    const { db, shop, booking, render } = await signed();
+    const [lead] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          eq(bookings.tripId, booking.tripId),
+          ne(bookings.id, booking.id),
+        ),
+      )
+      .limit(1);
+    if (!lead) throw new Error("party lead missing");
+    await db
+      .update(bookings)
+      .set({ partyLeadBookingId: lead.id })
+      .where(eq(bookings.id, booking.id));
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: lead.id,
+      purpose: "readiness",
+    });
+    if (!readiness) throw new Error("readiness unavailable");
+    cookieJar.set("diveday_party_return", readiness.token);
+    const html = await render();
+    expect(html).toContain(t("waiver.medicalReferralNext"));
+    expect(html).toContain(t("waiver.doctor.open"));
+    expect(html.includes(`/ready/${readiness.token}#party-seats`)).toBe(true);
   });
   it.each([
     null,

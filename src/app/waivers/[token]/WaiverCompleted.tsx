@@ -27,6 +27,7 @@ export function WaiverCompleted({
   locale,
   medicalState,
   showPrepHelp,
+  readyPath = null,
   doctorPath,
   signedRail,
   diveSitesList,
@@ -42,6 +43,8 @@ export function WaiverCompleted({
   locale: string;
   medicalState: CompletedMedicalState;
   showPrepHelp: boolean;
+  /** A separately held readiness link, independently verified for this receipt. */
+  readyPath?: string | null;
   /** "Take this to your doctor", while the release waits on a physician (H-127). */
   doctorPath: string | null;
   signedRail: WaiverRailProgress;
@@ -83,7 +86,16 @@ export function WaiverCompleted({
             <MedicalReviewContact shop={shop} t={t} />
           </div>
         ) : null}
-        {showPrepHelp ? <p className="mt-5">{t("waiver.prepLinkHelp")}</p> : null}
+        {readyPath ? (
+          <Link
+            href={readyPath}
+            className={buttonClass({ variant: "secondary", className: "mt-5" })}
+          >
+            {t("waiver.seeWhatsLeft")}
+          </Link>
+        ) : showPrepHelp ? (
+          <p className="mt-5">{t("waiver.prepLinkHelp")}</p>
+        ) : null}
       </EarnedMoment>
 
       {/* The rail's closing frame: the same three segments the signing page

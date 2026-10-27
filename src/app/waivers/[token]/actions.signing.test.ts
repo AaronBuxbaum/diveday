@@ -240,6 +240,37 @@ describe("the signing doors", () => {
     expect(cookieJar.has("diveday_waiver_return")).toBe(false);
   });
 
+  it("shows a referred signer the waiver receipt before returning to their trip prep", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Sam Referral",
+        email: "sam.referral@example.com",
+      },
+    ]);
+    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
+    const bookingId = party.bookings[0].bookingId;
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok || !readiness) throw new Error("links unavailable");
+    cookieJar.set("diveday_waiver_return", readiness.token);
+    const form = signedForm(shop, { signerName: "Sam Referral", acknowledged: "on" });
+    form.set(medicalQuestionField("q3"), "yes");
+    const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
+    expect(target === `/waivers/${issued.token}`).toBe(true);
+    expect(cookieJar.has("diveday_waiver_return")).toBe(true);
+  });
+
   it.each([
     "other booking",
     "wrong purpose",
@@ -338,5 +369,39 @@ describe("the signing doors", () => {
       ),
     ).toBe(`/ready/${leadLink.token}#party-seats`);
     expect(cookieJar.has("diveday_party_return")).toBe(false);
+  });
+
+  it("shows a parent the referral instructions before returning to the party", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Rae Family",
+        email: "rae.family@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Sol Family" },
+    ]);
+    if (!party.ok || !party.bookings[0] || !party.bookings[1]) throw new Error("party incomplete");
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: party.bookings[0].bookingId,
+      purpose: "readiness",
+    });
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: party.bookings[1].bookingId,
+    });
+    if (!issued.ok || !readiness) throw new Error("links unavailable");
+    cookieJar.set("diveday_party_return", readiness.token);
+    const form = signedForm(shop, { signerName: "Sol Family", acknowledged: "on" });
+    form.set(medicalQuestionField("q3"), "yes");
+    const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
+    expect(target === `/waivers/${issued.token}`).toBe(true);
+    expect(cookieJar.has("diveday_party_return")).toBe(true);
   });
 });

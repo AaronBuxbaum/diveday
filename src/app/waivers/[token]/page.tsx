@@ -32,6 +32,7 @@ import { GuardianCard } from "./GuardianCard";
 import { MEDICAL_ALERT_ANCHOR, MedicalAlertSection } from "./MedicalAlertSection";
 import { MedicalQuestionnaireSection } from "./MedicalQuestionnaireSection";
 import { medicalDraftState } from "./medical-draft-state";
+import { waiverReturnForReceipt } from "./return-path";
 import { ShopQuestionsSection } from "./ShopQuestionsSection";
 import { SignatureCard } from "./SignatureCard";
 import { isShopQuestionRefusal, shopQuestionsForPage } from "./shop-questions-state";
@@ -157,6 +158,12 @@ export default async function WaiverPage({
 
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
+    // A referred signer needs the physician instructions on this receipt first.
+    // A return door exists only for a separately held, still-valid readiness link.
+    const readyPath = needsReview
+      ? await waiverReturnForReceipt(db, { shopId: state.record.shopId, bookingId, token })
+      : null;
+
     // The same gate the doctor's page opens on, so the door never leads to a redirect.
     const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
     const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
@@ -167,7 +174,8 @@ export default async function WaiverPage({
         locale={locale}
         waiverOnly={isCounterWaiverToken(token)}
         medicalState={completedMedicalState(state.record)}
-        showPrepHelp={Boolean(bookingTripId) && !isCounterWaiverToken(token)}
+        showPrepHelp={!readyPath && Boolean(bookingTripId) && !isCounterWaiverToken(token)}
+        readyPath={readyPath}
         doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}

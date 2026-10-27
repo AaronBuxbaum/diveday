@@ -4,11 +4,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
 import type { MedicalAnswers } from "@/db/schema";
-import { partyLeadReturnToken } from "@/db/seat-claims";
 import { getShopById } from "@/db/shops";
 import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
@@ -22,7 +20,6 @@ import {
 } from "@/db/waivers";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import {
   type EmergencyContactSubmission,
@@ -48,6 +45,7 @@ import {
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { buildShopAnswers, type ShopQuestion, shopAnswerField } from "@/lib/waiver-questions";
+import { waiverReturnPath } from "./return-path";
 import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
 
 /**
@@ -622,53 +620,26 @@ export async function completeWaiverAction(token: string, formData: FormData) {
   });
   // A waiver link is authority to sign that waiver, not to issue trip prep access.
   if (isCounterWaiverToken(token)) revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
+  // Show the mandatory physician instructions on the waiver receipt before
+  // returning to readiness. Keep the separate return cookie for that receipt.
+  if (outcome.status === "medical_review")
+    revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
   const db = await getDb();
   // A parent who opened this from their party panel goes back to it, so the
   // next child's release is one tap away (dive-domain review F6).
-  const partyReturn = recordBookingId
-    ? await partyReturnPath(db, { shopId: record.shopId, seatBookingId: recordBookingId, token })
+  const jar = await cookies();
+  const partyToken = jar.get(PARTY_RETURN_COOKIE)?.value;
+  const ownToken = jar.get(WAIVER_RETURN_COOKIE)?.value;
+  if (partyToken) jar.delete({ name: PARTY_RETURN_COOKIE, path: partyReturnCookiePath(token) });
+  if (ownToken) jar.delete({ name: WAIVER_RETURN_COOKIE, path: partyReturnCookiePath(token) });
+  const returnPath = recordBookingId
+    ? await waiverReturnPath(db, {
+        shopId: record.shopId,
+        bookingId: recordBookingId,
+        partyToken,
+        ownToken,
+      })
     : null;
-  const ownReturn = recordBookingId
-    ? await ownReturnPath(db, { shopId: record.shopId, bookingId: recordBookingId, token })
-    : null;
-  if (partyReturn) revalidateAndRedirect(`/waivers/${token}`, partyReturn);
-  if (ownReturn) revalidateAndRedirect(`/waivers/${token}`, ownReturn);
+  if (returnPath) revalidateAndRedirect(`/waivers/${token}`, returnPath);
   revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
-}
-
-/** Return only an independently held, live readiness link for this same booking. */
-async function ownReturnPath(
-  db: Awaited<ReturnType<typeof getDb>>,
-  input: { shopId: string; bookingId: string; token: string },
-): Promise<string | null> {
-  const jar = await cookies();
-  const readyToken = jar.get(WAIVER_RETURN_COOKIE)?.value;
-  if (!readyToken) return null;
-  jar.delete({ name: WAIVER_RETURN_COOKIE, path: partyReturnCookiePath(input.token) });
-  const capability = await verifyBookingCapability(db, { token: readyToken, purpose: "readiness" });
-  return capability?.shopId === input.shopId && capability.bookingId === input.bookingId
-    ? readinessLinkPath(readyToken)
-    : null;
-}
-
-/**
- * The lead's own `/ready#party-seats`, when the lead's tap handed this release
- * their link (`PARTY_RETURN_COOKIE`) and it is a live readiness link for this
- * seat's party lead; null otherwise, and the signer lands on the seat's own
- * page as every signer does. The cookie is spent either way.
- */
-async function partyReturnPath(
-  db: Awaited<ReturnType<typeof getDb>>,
-  input: { shopId: string; seatBookingId: string; token: string },
-): Promise<string | null> {
-  const jar = await cookies();
-  const leadToken = jar.get(PARTY_RETURN_COOKIE)?.value;
-  if (!leadToken) return null;
-  jar.delete({ name: PARTY_RETURN_COOKIE, path: partyReturnCookiePath(input.token) });
-  const returned = await partyLeadReturnToken(db, {
-    shopId: input.shopId,
-    seatBookingId: input.seatBookingId,
-    leadToken,
-  });
-  return returned ? `${readinessLinkPath(returned)}#party-seats` : null;
 }
