@@ -1010,6 +1010,7 @@ describe("every retention window deletes", () => {
 const OUTSIDE_RETENTION: readonly string[] = [
   "today_read_mark_events", // junction rows cascade with the 30-day mark or event; no independent clock
   "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
+  "platform_backup_progress", // one mutable per-shop checkpoint, replaced on attempts and deleted with its shop
   "claude_call_content_erasures", // one per-shop erasure stamp, overwritten, never a trail
   // Shop configuration stays until the shop edits or deletes it.
   "shops",

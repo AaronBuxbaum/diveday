@@ -1,6 +1,7 @@
-import { asc, eq } from "drizzle-orm";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "@/db/client";
-import { shops } from "@/db/schema";
+import { boundLockWaits, isLockWaitRefusal } from "@/db/lock-bounds";
+import { platformBackupProgress, shops } from "@/db/schema";
 import type { FeedLabels } from "@/features/calendar-sync";
 import { nowDate } from "@/lib/clock";
 import { buildBackupBundle } from "./bundle";
@@ -24,20 +25,17 @@ import { type BackupUploadErrorCode, putS3Object } from "./s3-client";
  * | credentials | the shop's, AES-sealed per shop | DiveDay's one write-only uploader |
  * | destination | whatever bucket the shop configured | `DatabaseBackupBucket` |
  * | who is owed an answer | the shop, in its settings page | an operator, during an incident |
- * | failure record | a `shop_backup_deliveries` row | a log line and a non-2xx pass |
+ * | failure record | a `shop_backup_deliveries` row | scheduler checkpoint and a non-2xx pass |
  *
- * That last row is why there is no ledger table here. A shop needs to see why
- * *its* backup did not land, months later, in a UI. An operator needs to know a
- * *pass* was incomplete, now — which the cron's own response and log line
- * already say. Adding a table to restate that would be schema for its own sake.
+ * The platform checkpoint is not a user-visible delivery history. It rotates
+ * the bounded cron fairly and keeps overlapping invocations from starting the
+ * same shop concurrently. The census remains the operator's per-invocation
+ * account of the pass.
  *
- * Idempotency comes from the object key instead: `exports/<date>/<slug>.zip` is
- * deterministic, so a re-run overwrites rather than accumulating, and the bucket
- * is versioned so an overwrite is additive. The cost of having no ledger is that
- * a re-run redoes work it need not redo; on a weekly pass that is cheap, and it
- * is the honest trade for not being able to read the bucket back (the uploader
- * has no `ListBucket`, deliberately — a leaked key must not be able to read a
- * shop's exported waivers).
+ * Object keys remain deterministic (`exports/<date>/<slug>.zip`) and the bucket
+ * is versioned, so repeated PUTs are additive. The scheduler checkpoint does
+ * not prove remote presence: the uploader has no `ListBucket`, deliberately,
+ * and the watchdog's separate principal remains the source of that evidence.
  */
 
 /** Why a shop's bundle did not reach DiveDay's bucket. Codes, never sentences. */
@@ -72,8 +70,86 @@ export type RunPlatformBackupInput = {
   fetchImpl?: typeof fetch;
 };
 
-/** Every shop worth backing up, oldest first so a truncated pass is stable across runs. */
+/** Every real shop, least recently attempted first so a truncated pass rotates across runs. */
 export type PlatformBackupShop = { id: string; slug: string; locale: string };
+
+/** A lease lasts longer than the cron's five-minute runtime, including one in-flight shop. */
+export const PLATFORM_BACKUP_LEASE_MS = 10 * 60_000;
+
+/**
+ * Claim the shop for this invocation without holding a database lock over S3 or
+ * bundle I/O. The upsert is atomic: a live lease is unavailable, while an
+ * expired lease can be reclaimed after a crashed invocation. A new token fences
+ * off a late finisher from an invocation whose lease has since been reclaimed.
+ * This fences the database checkpoint only; it cannot prevent a late S3 PUT,
+ * whose deterministic object key remains additive in the versioned bucket.
+ */
+export async function claimPlatformBackupShop(
+  db: AppDb,
+  input: { shopId: string; token: string; now: Date },
+): Promise<boolean> {
+  const leaseUntil = new Date(input.now.getTime() + PLATFORM_BACKUP_LEASE_MS);
+  try {
+    return await db.transaction(async (tx) => {
+      await boundLockWaits(tx);
+      const [claim] = await tx
+        .insert(platformBackupProgress)
+        .values({
+          shopId: input.shopId,
+          lastAttemptAt: input.now,
+          leaseToken: input.token,
+          leaseUntil,
+        })
+        .onConflictDoUpdate({
+          target: platformBackupProgress.shopId,
+          set: {
+            lastAttemptAt: input.now,
+            leaseToken: input.token,
+            leaseUntil,
+          },
+          where: or(
+            isNull(platformBackupProgress.leaseUntil),
+            lte(platformBackupProgress.leaseUntil, input.now),
+          ),
+        })
+        .returning({ shopId: platformBackupProgress.shopId });
+      return Boolean(claim);
+    });
+  } catch (error) {
+    if (isLockWaitRefusal(error)) return false;
+    throw error;
+  }
+}
+
+/** Commit a successful PUT, or release a failed attempt for the next cron. */
+export async function finishPlatformBackupShop(
+  db: AppDb,
+  input: { shopId: string; token: string; succeeded: boolean; now: Date },
+): Promise<boolean> {
+  try {
+    return await db.transaction(async (tx) => {
+      await boundLockWaits(tx);
+      const [finished] = await tx
+        .update(platformBackupProgress)
+        .set({
+          ...(input.succeeded ? { lastSuccessAt: input.now } : {}),
+          leaseToken: null,
+          leaseUntil: null,
+        })
+        .where(
+          and(
+            eq(platformBackupProgress.shopId, input.shopId),
+            eq(platformBackupProgress.leaseToken, input.token),
+          ),
+        )
+        .returning({ shopId: platformBackupProgress.shopId });
+      return Boolean(finished);
+    });
+  } catch (error) {
+    if (isLockWaitRefusal(error)) return false;
+    throw error;
+  }
+}
 
 /**
  * Demo shops are excluded. They are per-visitor test fixtures spun up by the
@@ -88,18 +164,24 @@ export type PlatformBackupShop = { id: string; slug: string; locale: string };
  * it does mean the pass cannot be smoke-tested by running it against the seed,
  * and `platform-backup.test.ts` drives the flag explicitly for that reason.
  *
- * Ordered by `createdAt` rather than by slug so the sequence is stable as shops
- * are added: a pass that runs out of time always stops at the same place in the
- * list, and the shops it did reach are the same ones as last week.
+ * Attempt time advances before network work starts. If a pass runs out of time
+ * or one shop fails, untouched shops sort ahead of attempted shops next time,
+ * including a later weekly period.
  */
 export async function listShopsForPlatformBackup(db: DbExecutor): Promise<PlatformBackupShop[]> {
   return (
     db
       .select({ id: shops.id, slug: shops.slug, locale: shops.defaultLocale })
       .from(shops)
+      .leftJoin(platformBackupProgress, eq(platformBackupProgress.shopId, shops.id))
       .where(eq(shops.isDemo, false))
+      // Null attempts first, then the least recently attempted shop.
       // diveday:allow-time-id-order: a backup pass's visiting order; no one is shown it.
-      .orderBy(asc(shops.createdAt), asc(shops.id))
+      .orderBy(
+        sql`${platformBackupProgress.lastAttemptAt} asc nulls first`,
+        sql`${shops.createdAt} asc`,
+        sql`${shops.id} asc`,
+      )
   );
 }
 

@@ -72,6 +72,7 @@ import {
   paymentDisputes,
   paymentOperationIntents,
   people,
+  platformBackupProgress,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
   preDepartureCheckEvents,
@@ -1389,6 +1390,9 @@ export async function clearDemoSchedule(
   db: DbExecutor,
   shopId: string,
 ): Promise<ClearedDemoSchedule> {
+  // The demo shop is excluded from platform backup, but clear its scheduler
+  // checkpoint with the rest of its resettable state if a local run wrote one.
+  await db.delete(platformBackupProgress).where(eq(platformBackupProgress.shopId, shopId));
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
 

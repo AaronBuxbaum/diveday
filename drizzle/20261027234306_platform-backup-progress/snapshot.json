@@ -1,0 +1,266 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "93a63fae-3ed6-4c94-af6d-8bdb3a17d0e5",
+  "prevIds": [
+    "131b2200-503d-46ae-844f-7a6bf97a4d8c",
+    "8a6713cb-4d60-44a4-9065-be85300ad3bf"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "platform_backup_progress"
+      ],
+      "writes": [
+        "s|tbl|public.platform_backup_progress",
+        "n|tbl|public.platform_backup_progress",
+        "e|tbl|public.platform_backup_progress",
+        "n|rel|public.platform_backup_progress",
+        "n|type|public.platform_backup_progress",
+        "n|rel|public.platform_backup_progress_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "platform_backup_progress",
+        "platform_backup_progress_attempted_idx"
+      ],
+      "writes": [
+        "s|idx|public.platform_backup_progress_attempted_idx",
+        "n|idx|public.platform_backup_progress_attempted_idx",
+        "e|idx|public.platform_backup_progress_attempted_idx",
+        "n|rel|public.platform_backup_progress_attempted_idx"
+      ],
+      "reads": [
+        "n|tbl|public.platform_backup_progress",
+        "n|sch|public",
+        "n|col|public.platform_backup_progress.last_attempt_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "platform_backup_progress",
+        "platform_backup_progress_lease_idx"
+      ],
+      "writes": [
+        "s|idx|public.platform_backup_progress_lease_idx",
+        "n|idx|public.platform_backup_progress_lease_idx",
+        "e|idx|public.platform_backup_progress_lease_idx",
+        "n|rel|public.platform_backup_progress_lease_idx"
+      ],
+      "reads": [
+        "n|tbl|public.platform_backup_progress",
+        "n|sch|public",
+        "n|col|public.platform_backup_progress.lease_until"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "platform_backup_progress"
+      ],
+      "writes": [
+        "s|fk|public.platform_backup_progress.platform_backup_progress_shop_id_shops_id_fkey",
+        "n|fk|public.platform_backup_progress.platform_backup_progress_shop_id_shops_id_fkey",
+        "e|fk|public.platform_backup_progress.platform_backup_progress_shop_id_shops_id_fkey",
+        "n|con|public.platform_backup_progress.platform_backup_progress_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.platform_backup_progress",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.platform_backup_progress.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "platform_backup_progress",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "last_attempt_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "last_success_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "lease_token",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "lease_until",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "platform_backup_progress_attempted_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "last_attempt_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "platform_backup_progress_lease_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "lease_until",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "platform_backup_progress_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "platform_backup_progress",
+        "name": "platform_backup_progress_pkey",
+        "columns": [
+          "shop_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

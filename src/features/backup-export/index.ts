@@ -38,6 +38,9 @@ export {
   platformBackupObjectKey,
 } from "./period";
 export {
+  PLATFORM_BACKUP_LEASE_MS,
+  claimPlatformBackupShop,
+  finishPlatformBackupShop,
   listShopsForPlatformBackup,
   type PlatformBackupConfig,
   type PlatformBackupErrorCode,
