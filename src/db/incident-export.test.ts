@@ -19,7 +19,14 @@ import {
   recordPreDepartureCheck,
 } from "./pre-departure-check";
 import { createCertification, reviewCertification } from "./readiness";
-import { activityEvents, rollCallEvents, shops, waiverRecords, waiverTemplates } from "./schema";
+import {
+  activityEvents,
+  certifications,
+  rollCallEvents,
+  shops,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -320,6 +327,54 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
  * every other surface writes.
  */
 describe("the departure log's roster changes and incident reports", () => {
+  it("does not treat a later certification review as evidence at sailing, but includes it if the diver boarded after the review", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const [first] = await getTripRoster(db, shop.id, reef.id);
+    if (!first) throw new Error("demo booking missing");
+    const minutes = (n: number) => new Date(reef.startsAt.getTime() + n * 60_000);
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: first.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "LATE-REVIEW",
+    });
+    if (!card) throw new Error("expected card");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+      reviewedByPersonId: staff.id,
+    });
+    await db
+      .update(certifications)
+      .set({ createdAt: minutes(-60), reviewedAt: minutes(10) })
+      .where(eq(certifications.id, card.id));
+    const atCutoff = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(60));
+    expect(
+      atCutoff?.roster
+        .find((entry) => entry.bookingId === first.booking.id)
+        ?.certifications.find((entry) => entry.identifier === "LATE-REVIEW"),
+    ).toBeUndefined();
+    await db
+      .insert(rollCallEvents)
+      .values({
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: first.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        checkpoint: "departure",
+        source: "live",
+        occurredAt: minutes(25),
+      });
+    const lateBoarding = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(60));
+    expect(
+      lateBoarding?.roster
+        .find((entry) => entry.bookingId === first.booking.id)
+        ?.certifications.find((entry) => entry.identifier === "LATE-REVIEW"),
+    ).toMatchObject({ status: "verified", reviewedByName: staff.fullName });
+  });
   it("states a waiver link as it stood when the boat was due out, whenever the log is printed", async () => {
     // Domain re-review 2026-10-16, item 3: a link that lapsed between two
     // printings changed the version-2 code under unchanged records.
