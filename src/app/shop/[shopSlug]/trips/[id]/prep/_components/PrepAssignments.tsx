@@ -114,7 +114,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
         </div>
         {counts.proposed > 0 ? (
           <ConfirmProposals
-            className="shrink-0"
+            className="min-w-0 max-w-full"
             tripId={tripId}
             picks={proposalPicks}
             confirm={confirmProposedGearUnits}

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
@@ -7,9 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -21,6 +18,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { BlowoutConfirmation } from "./_components/BlowoutConfirmation";
 import { HeldRefundsCard } from "./_components/HeldRefundsCard";
 import { RecoveryGroups } from "./_components/RecoveryGroups";
 import { blowoutTitleKey, readBlowout } from "./_lib/title";
@@ -134,77 +132,29 @@ export default async function BlowoutPage({
     const departed = trip.startsAt <= nowDate();
     const roster = await getTripRoster(db, shop.id, tripId);
     return (
-      <StaffPage width="reading">
-        <FlashParams params={["notice"]} />
-        {header}
-        <div className="mt-6">
-          {banner ? (
-            <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
-          ) : null}
-        </div>
-        <SectionCard as="div" padding="lg">
-          <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
-          <p className="mt-3 text-sm text-muted">
-            {t(mayRefund ? "blowout.confirm.moneyNote" : "blowout.confirm.moneyNoteHeld")}
-          </p>
-          {departed || !canCallDay ? null : (
-            // The whole morning is usually what the weather closes (ADR
-            // 20261009-day-weather-call); calling the boats one at a time
-            // offered each boat's divers the next one about to be called.
-            <Link
-              href={shopPath(
+      <BlowoutConfirmation
+        header={header}
+        notice={
+          banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null
+        }
+        trip={trip}
+        departed={departed}
+        mayRefund={mayRefund}
+        dayHref={
+          !departed && canCallDay
+            ? shopPath(
                 shopSlug,
                 "schedule",
                 "blowout",
                 "day",
                 calendarDateInTimezone(trip.startsAt, shop.timezone),
-              )}
-              className={`mt-3 ${buttonClass({ variant: "link", size: "sm", flush: true })}`}
-            >
-              {t("blowout.day.instead")}
-            </Link>
-          )}
-          {roster.length === 0 ? (
-            // Nested inside the confirm card, so no icon, fill or shadow.
-            <EmptyState
-              title={t("blowout.confirm.noDivers")}
-              icon={false}
-              nested
-              className="mt-5"
-            />
-          ) : (
-            <div className="mt-5">
-              <h2 className="text-sm font-semibold">
-                {t("blowout.confirm.diversHeading", { count: roster.length })}
-              </h2>
-              <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {roster.map((row) => (
-                  <li key={row.booking.id} className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-0">{row.person.fullName}</span>
-                    {row.person.email ? null : (
-                      <Badge tone="neutral" size="sm">
-                        {t("blowout.confirm.noEmail")}
-                      </Badge>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {departed ? (
-            <p className="mt-6 text-sm font-medium text-danger">{t("blowout.confirm.departed")}</p>
-          ) : (
-            <form action={callBlowoutAction.bind(null, shopSlug, tripId)} className="mt-6">
-              <SubmitButton
-                pendingLabel={t("blowout.confirm.calling")}
-                className={buttonClass({ variant: "danger" })}
-              >
-                {t("blowout.confirm.button")}
-              </SubmitButton>
-            </form>
-          )}
-        </SectionCard>
-      </StaffPage>
+              )
+            : null
+        }
+        roster={roster}
+        call={callBlowoutAction.bind(null, shopSlug, tripId)}
+        t={t}
+      />
     );
   }
 
@@ -222,7 +172,7 @@ export default async function BlowoutPage({
   );
 
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <FlashParams params={["notice"]} />
       {header}
       <div className="mt-6">

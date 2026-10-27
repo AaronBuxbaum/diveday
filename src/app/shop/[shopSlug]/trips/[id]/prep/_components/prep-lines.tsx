@@ -249,7 +249,7 @@ export const sizeCell = (t: StaffTranslator, piece: PrepPiece) => {
  * "really ugly"), and three tiles a row put a diver's kit on two lines.
  */
 export const kitLineClass =
-  "grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 sm:flex sm:min-w-0 sm:flex-col sm:items-stretch sm:justify-between sm:gap-1.5 sm:rounded-inset sm:border sm:p-3";
+  "grid grid-cols-[minmax(0,min(5rem,30%))_minmax(0,1fr)] items-center break-words gap-x-2 gap-y-1 sm:flex sm:min-w-0 sm:flex-col sm:items-stretch sm:justify-between sm:gap-1.5 sm:rounded-inset sm:border sm:p-3";
 
 /** A piece with its unit on it: settled, so it sits back in a sunken tile. */
 export const kitLineSettledClass = `${kitLineClass} sm:border-transparent sm:bg-surface-sunken`;

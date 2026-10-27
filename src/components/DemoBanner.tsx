@@ -117,7 +117,13 @@ export function DemoBanner({
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
             {/* `Badge`, not a hand-rolled chip: the chip's 6px corner sat off the
                 radius ladder. A label rather than a caution, so no tone mark. */}
-            <Badge tone="warning" size="sm" toneMark={false} className="tracking-wide uppercase">
+            <Badge
+              tone="warning"
+              size="sm"
+              toneMark={false}
+              wraps
+              className="max-w-full break-words tracking-wide uppercase"
+            >
               {copy.shopLabel}
             </Badge>
             {/* Below `sm` the row is the badge, the role and the switch on one

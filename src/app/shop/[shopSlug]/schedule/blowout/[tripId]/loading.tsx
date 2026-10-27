@@ -33,7 +33,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function BlowoutLoading() {
   return (
-    <StaffPage width="reading" className="animate-pulse">
+    <StaffPage width="full" className="animate-pulse">
       <ShopPageHeaderSkeleton
         titleWidth="w-64 max-w-full"
         // The header carries `meta`, never a description: the trip's name and

@@ -268,7 +268,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
         await Promise.all([
-          page.waitForURL(/notice=waiver-paper-recorded/),
+          page.waitForURL(/notice=diver-clear/),
           page.getByRole("button", { name: "Record paper signature" }).click(),
         ]);
         // The earned moment is what says the ledger emptied — and it is the
@@ -673,7 +673,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByLabel("I have this diver’s signed release on file", { exact: false })
           .check();
-        await page.getByRole("button", { name: "Record paper signature" }).click();
+        await Promise.all([
+          page.waitForURL(/notice=waiver-paper-recorded/),
+          page.getByRole("button", { name: "Record paper signature" }).click(),
+        ]);
         const signed = page.locator(`a[href*="/divers/${personId}/waivers/"]`).first();
         await expect(signed).toBeVisible();
         const href = await signed.getAttribute("href");

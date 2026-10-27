@@ -252,7 +252,7 @@ export function PrepKitList({
                         and margin, so a name that wraps keeps both. */}
                     <Link
                       href={`/shop/${shopSlug}/divers/${line.personId}`}
-                      className={`${tapTargetLinkClass} py-2.5 -my-2.5 hover:text-primary hover:underline`}
+                      className={`${tapTargetLinkClass} py-2.5 -my-2.5 focus-visible:focus-ring-inset hover:text-primary hover:underline`}
                     >
                       {line.fullName}
                     </Link>
