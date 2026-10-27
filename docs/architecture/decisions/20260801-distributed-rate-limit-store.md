@@ -51,6 +51,11 @@ security audit re-confirming the gap.
   to "no rate limiting," never to "every request 500s." This is the same contract ADR
   20260724-rate-limiting already established; nothing about adopting a real network dependency is
   allowed to weaken it.
+- **The Upstash HTTP request has a two-second deadline across headers and body parsing.** The request
+  is raced against a timer, and the timer aborts the fetch through its `AbortSignal`; the timer is
+  cleared on success or failure. A transport that ignores abort still cannot hold a request open,
+  and a late rejection remains observed. The timeout enters the same existing store-error path, so
+  the ordinary caller fails open and the doctor's date-of-birth gate continues to fail closed.
 - **A bucket key gets a 24-hour `PEXPIRE` in the Lua script**, replacing the in-memory store's
   `MAX_BUCKETS`-eviction bound (which only applies to that store; Redis needs its own bound so idle
   keys don't accumulate forever). 24 hours is generous relative to every configured window (15
@@ -98,6 +103,6 @@ security audit re-confirming the gap.
 - `src/lib/rate-limit.test.ts` covers the Lua script's behavior via a fake `fetch` that mirrors the
   server-side token-bucket math (burst, refill, and — the one property that matters — two
   independently-constructed store instances sharing state through the same backend), plus the
-  fail-open path for a non-2xx response and a malformed body.
+  fail-open path for a non-2xx response and malformed body, and bounded header/body stalls.
 - The in-memory store and its `MAX_BUCKETS` eviction bound are unchanged and remain the default
   everywhere the two env vars aren't set.
