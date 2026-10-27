@@ -53,6 +53,7 @@ async function advancedCharter(): Promise<CharterContext> {
       certifiesLevel: "open_water",
       isIntroCourse: false,
       agency: "padi",
+      sourceTemplateSlug: null,
     })
     .where(eq(courses.id, ctx.course.courseId));
   await ctx.db.delete(certifications).where(eq(certifications.personId, ctx.course.personId));
@@ -243,7 +244,7 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
 
   it.each([
     ["an intro session", { isIntroCourse: true }, true],
-    ["a course that certifies no level", { certifiesLevel: null }, true],
+    ["a course that certifies no level", { certifiesLevel: null }, false],
     // No ratio is known for these, so the level is never lowered (fail closed).
     ["another agency's course", { agency: "SSI" }, false],
   ] as const)("never lowers the level for %s", async (_name, course, aboard) => {
@@ -260,6 +261,72 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     await teachesAndAboard(ctx);
     expect(await markSeat(ctx)).toMatchObject({ ok: true });
     expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("keeps the departure level for an Advanced course even when its prerequisite is blank", async () => {
+    const ctx = await continuingEdCharter();
+    await ctx.db
+      .update(courses)
+      .set({ minimumCertificationLevel: null })
+      .where(eq(courses.id, ctx.course.courseId));
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("does not relax a site's Advanced requirement for an unmodeled Advanced course", async () => {
+    const ctx = await continuingEdCharter();
+    await ctx.db
+      .update(courses)
+      .set({ minimumCertificationLevel: null })
+      .where(eq(courses.id, ctx.course.courseId));
+    await ctx.db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: null })
+      .where(eq(tripRequirements.tripId, ctx.charter.id));
+    const [site] = await ctx.db
+      .insert(diveSites)
+      .values({
+        shopId: ctx.shop.id,
+        name: "Advanced training site",
+        slug: "advanced-training-site",
+        minimumCertificationLevel: "advanced_open_water",
+      })
+      .returning();
+    if (!site) throw new Error("test site missing");
+    await ctx.db
+      .update(trips)
+      .set({ plannedDives: 1, diveSiteId: site.id })
+      .where(eq(trips.id, ctx.charter.id));
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("does not credit an edited continuing-education template as an entry-level course", async () => {
+    const ctx = await advancedCharter();
+    await ctx.db
+      .update(courses)
+      .set({ sourceTemplateSlug: "deep-diver", certifiesLevel: "open_water" })
+      .where(eq(courses.id, ctx.course.courseId));
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+    expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("does not assume an unclassified shop course is entry-level training", async () => {
+    const ctx = await advancedCharter();
+    await ctx.db
+      .update(courses)
+      .set({ sourceTemplateSlug: null, certifiesLevel: null })
+      .where(eq(courses.id, ctx.course.courseId));
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
     expect(await rosterWarning(ctx)).toBe(false);
   });
 
@@ -292,13 +359,18 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
   it("has room for a marked dive only where the course has a known ratio and an instructor is aboard", async () => {
     const ctx = await advancedCharter();
     const pair = (
-      course: Partial<{ minimumLevel: "open_water" | null; intro: boolean; agency: string }>,
+      course: Partial<{
+        minimumLevel: "open_water" | null;
+        certifiesLevel: "open_water" | "advanced_open_water" | null;
+        intro: boolean;
+        agency: string;
+      }>,
     ) => ({
       departureTripId: ctx.charter.id,
       sessionTripId: ctx.course.tripId,
       course: {
         minimumLevel: null,
-        certifiesLevel: null,
+        certifiesLevel: "open_water" as const,
         intro: false,
         agency: "padi",
         ...course,
@@ -312,6 +384,8 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     expect(await spare(pair({}))).toBe(true);
     expect(await spare(pair({ intro: true }))).toBe(true);
     expect(await spare(pair({ minimumLevel: "open_water" }))).toBe(false);
+    expect(await spare(pair({ certifiesLevel: "advanced_open_water" }))).toBe(false);
+    expect(await spare(pair({ certifiesLevel: null }))).toBe(false);
     expect(await spare(pair({ agency: "NAUI" }))).toBe(false);
     expect(seatWithinRoom(undefined, "a")).toBe(false);
     expect(

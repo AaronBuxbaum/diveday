@@ -110,8 +110,9 @@ becomes safety-load-bearing rather than cosmetic — worth a dedicated look if D
 crew roles that are per-trip rather than global.
 
 Continuing-education courses (course row's `minimum_certification_level` set — AOW, Rescue,
-specialties) are **not** ratio-capped: they already gate on a verified card at booking, and PADI
-does not publish a ratio for them as strict and universally consistent as the entry-level figure.
+specialties) are **not** ratio-capped at booking. This does not mean there is no agency ratio:
+the applicable standard may be tighter for a particular dive, age or equipment and cannot be
+reconstructed from the departure alone. See the 2026-10-27 amendment below.
 **One exception worth flagging, not resolving here:** Rescue Diver's in-water scenario/stress-test
 day is widely treated as needing tight, hands-on supervision — a `dive-domain-expert` review raised
 this specifically as worth checking against a real published number before assuming "no ratio
@@ -274,3 +275,21 @@ Fixing either needs the course (or at least "this seat is an intro participant")
 the **booking**, so the cap can count students rather than seats and a mixed boat can be counted
 correctly in both directions. That is a data-model change with its own migration and UI, out of
 scope for this amendment; recorded here so the limitation is not mistaken for coverage.
+
+## Amendment 2026-10-27 — continuing-education training marks fail closed
+
+The owner chose to keep affected training marks from relaxing a site's certification requirement
+until stricter in-water conditions are modeled (issue #2829). The [2021 PADI Instructor Manual](https://pro-cms.padi.com/sites/default/files/documents/training-hub/79173_Instructor_Manual_2021_EN.pdf)
+gives an Advanced Open Water general ratio but does not permit assistant increases on Deep dives;
+other adventure dives may differ. SSI's current [Advanced Adventurer standards](https://training.divessi.com/us/course/scuba-training-standards-and-procedures/continuing-education-programs-1/advanced-adventurer)
+also vary by student age and dry-suit qualification. These sources were checked 2026-10-27; the
+older PADI manual is evidence of the conditional rule, not verification of its current edition.
+
+`trainingCourseRatioRule` is distinct from the booking cap. A higher certification rung or a
+continuing-education template cannot become entry-level training merely by clearing the shop's
+prerequisite; an unclassified non-intro shop course is not assumed to be Open Water. A mark can
+still record the training relationship and its forms, but it does not claim ratio-backed coverage
+or lower the site's certification requirement. An explicit Open Water or intro course retains the
+existing rule. These rules do not record actual underwater groups, a session's Deep dive, student
+equipment or all agency conditions. The earlier provisional aggregate figures do not establish
+compliance, and no continuing-education ratio has been enabled here.

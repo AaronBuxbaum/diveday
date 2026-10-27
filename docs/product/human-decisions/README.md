@@ -285,8 +285,8 @@ and the [2026 UHMS/DMSC participant questionnaire](https://uhms.org/images/Recre
 ### Course admission
 
 - **Starting rules:** Discover Scuba Diving and Open Water have no pre-existing C-card gate;
-  Advanced Open Water and a refresher require a verified Open Water card. Instructor-led sessions
-  cannot accept a booking until an instructor is assigned.
+  Advanced Open Water and a refresher default to a verified Open Water card. Shops can edit those
+  prerequisites. Instructor-led sessions cannot accept a booking until an instructor is assigned.
 - **In-water ratio (resolved + shipped, corrected 2026-08-02):** a session with no certification
   requirement caps bookings independently of the trip's own stated capacity, at one of **two**
   ratios. An **intro/taster session** (`courses.is_intro_course` — Discover Scuba, Try Scuba) takes
@@ -298,6 +298,11 @@ and the [2026 UHMS/DMSC participant questionnaire](https://uhms.org/images/Recre
   one stays **PADI-scoped**, since it is a cited PADI number. See
   [20260724-course-admission-standards](../../architecture/decisions/20260724-course-admission-standards.md)
   and [20260802-dsd-instructor-manual-ratio](../../architecture/decisions/20260802-dsd-instructor-manual-ratio.md).
+- **Continuing-education training coverage (owner decision 2026-10-27, issue #2829):** do not
+  relax a site's certification requirement using a provisional aggregate ratio when Deep or other
+  stricter dive conditions have not been modeled. The training relationship may still be recorded;
+  the unresolved conditions do not turn it into verified ratio coverage. This supersedes the earlier
+  proposal to enable estimated continuing-education ratios. Booking capacity is unchanged.
 - **Minimum age (resolved + shipped):** an optional diver date of birth gates a course's stated
   `minimum_age`, measured on the day the course runs. Fails open — no date on file, no block
   (H-08 option B). See

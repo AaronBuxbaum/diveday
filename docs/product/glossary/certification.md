@@ -713,9 +713,13 @@
   `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter,
   agency-independent DSD rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
   PADI's published number, and applying it to an SSI or NAUI course would be a
-  wrong-but-confident safety control. Continuing-education courses (AOW, Rescue, specialty) already gate on a verified
-  card and PADI does not publish a comparably strict numeric ratio for them, so they are not
-  ratio-capped. `courses.agency` is shop-set free text, so the PADI check is case- and
+  wrong-but-confident safety control. Continuing-education courses (AOW, Rescue, specialty) are not
+  ratio-capped at booking. Agency ratios exist, but can change with the dive, student age, equipment
+  and conditions that DiveDay does not record. A training mark cannot claim entry-level ratio
+  coverage for a known continuing-education template or a higher certification rung, even when a
+  shop clears the course prerequisite. A non-intro shop course without a declared certification
+  level is unclassified and also cannot claim that coverage. This does not establish the actual
+  underwater groups or make a recorded mark invalid. `courses.agency` is shop-set free text, so the PADI check is case- and
   whitespace-insensitive: a course typed `"PADI"` is gated exactly like `"padi"`.
 - **Target diver:divemaster ratio** — the shop's own stated ratio, `shops.divers_per_divemaster`,
   stored as the divers half (`5` is "5:1"). Asked of every shop on its settings page and applying
