@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { MoveSeatControl } from "./MoveSeatControl";
 import type { SeatMove } from "./roster-model";
 import type { RosterEntry } from "./types";
 
@@ -42,7 +41,14 @@ export function SeatFootActions({
   carriedChartersNote?: string;
 }) {
   return (
-    <div className="mt-3 border-t border-border pt-4">
+    <AutoOpenDetails
+      openOnHash={[`booking-actions-${booking.id}`, `move-booking-${booking.id}`]}
+      open={moveSeat?.refusal?.bookingId === booking.id}
+      className="mt-3 border-t border-border pt-2"
+    >
+      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
+        {t("trips.roster.bookingActions")}
+      </summary>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* One orders door per row, and only when the shop can take money
             at all (principle 9 — Settings and the Orders index own the
@@ -61,9 +67,27 @@ export function SeatFootActions({
             (docs/design/principles.md §7). */}
         {moveSeat && moveSeat.targets.length > 0 ? (
           <MoveSeatControl
-            booking={booking}
-            t={t}
-            moveSeat={moveSeat}
+            bookingId={booking.id}
+            copy={{
+              trigger: t("trips.roster.moveSeat"),
+              label: t("trips.roster.moveSeatTo"),
+              note: t("trips.roster.moveSeatNote"),
+              choose: t("trips.roster.moveSeatChoose"),
+              pending: t("trips.roster.moveSeatPending"),
+              submit: t("trips.roster.moveSeatSubmit"),
+              cancel: t("trips.roster.neverMind"),
+            }}
+            targets={moveSeat.targets.map((target) => ({
+              ...target,
+              availability: t(
+                target.seatsLeft > 0
+                  ? "trips.roster.moveSeatAvailability"
+                  : "trips.roster.moveSeatFull",
+                { count: Math.max(0, target.seatsLeft) },
+              ),
+            }))}
+            action={moveSeat.action}
+            refusal={moveSeat.refusal?.bookingId === booking.id ? moveSeat.refusal.text : undefined}
             carriedChartersNote={carriedChartersNote}
           />
         ) : null}
@@ -100,7 +124,7 @@ export function SeatFootActions({
           </form>
         )}
       </div>
-    </div>
+    </AutoOpenDetails>
   );
 }
 
@@ -138,68 +162,5 @@ function RemoveRefusedAboard({
         })}
       </p>
     </details>
-  );
-}
-
-/**
- * **"Move to another departure"** (ADR 20261013-staff-move-a-seat): a quiet
- * disclosure, because it is rarer than Remove and should not compete with it.
- * Opened, it is one select of the departures this seat may move to, each
- * worded with its zone, and one button. No confirm: nothing is charged or
- * refunded, and moving back is the same two taps.
- */
-function MoveSeatControl({
-  booking,
-  t,
-  moveSeat,
-  carriedChartersNote,
-}: {
-  booking: RosterEntry["booking"];
-  t: StaffTranslator;
-  moveSeat: SeatMove;
-  carriedChartersNote?: string;
-}) {
-  const selectId = `move-seat-${booking.id}`;
-  return (
-    // Opened by the Inbox's "Move to another departure" (`#move-booking-…`,
-    // fourth review, item 32); scroll-mt keeps it clear of the sticky header.
-    <AutoOpenDetails
-      id={`move-booking-${booking.id}`}
-      openOnHash={`move-booking-${booking.id}`}
-      className="group/move-seat basis-full scroll-mt-24"
-    >
-      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-medium text-muted hover:text-foreground [&::-webkit-details-marker]:hidden">
-        {t("trips.roster.moveSeat")}
-      </summary>
-      <form action={moveSeat.action} className="mt-2 flex flex-col gap-3">
-        <input type="hidden" name="bookingId" value={booking.id} />
-        <FieldGrid columns={1}>
-          <Field
-            label={t("trips.roster.moveSeatTo")}
-            description={t("trips.roster.moveSeatNote")}
-            htmlFor={selectId}
-          >
-            <select id={selectId} name="toTripId" required className={controlClass}>
-              {moveSeat.targets.map((target) => (
-                <option key={target.id} value={target.id}>
-                  {target.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </FieldGrid>
-        {carriedChartersNote ? (
-          <p className="text-sm text-warning-strong">{carriedChartersNote}</p>
-        ) : null}
-        <div>
-          <SubmitButton
-            pendingLabel={t("trips.roster.moveSeatPending")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("trips.roster.moveSeatSubmit")}
-          </SubmitButton>
-        </div>
-      </form>
-    </AutoOpenDetails>
   );
 }

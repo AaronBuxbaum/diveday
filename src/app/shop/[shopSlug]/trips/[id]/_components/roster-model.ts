@@ -301,8 +301,18 @@ export type RosterActions = {
 /** The departures a seat may move to, already worded with their zone. */
 export type SeatMove = {
   action: (formData: FormData) => void;
+  /** Validated against the current roster before its global fallback is suppressed. */
+  refusal?: { bookingId: string; text: string };
   /** Each with the seats it still sells (`listSeatMoveTargets`). */
-  targets: readonly { id: string; label: string; seatsLeft: number }[];
+  targets: readonly {
+    id: string;
+    label: string;
+    seatsLeft: number;
+    startsAt: string;
+    localDay: string;
+    dayLabel: string;
+    timeLabel: string;
+  }[];
   /** The departure has left (`hasSailed`): a booked seat no longer moves. */
   departed: boolean;
   /** The departure's scheduled start has passed: a turned-away seat no longer moves. */

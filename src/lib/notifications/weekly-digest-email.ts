@@ -2,6 +2,7 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import {
   formatCalendarDateRange,
+  formatDateTimeTz,
   formatMoneyCents,
   formatTimeZoneName,
   formatWeekdayTime,
@@ -22,6 +23,8 @@ export type WeeklyDigestEmailInput = {
   recipientName: string;
   shopName: string;
   timezone: string;
+  /** The producer’s report clock; absent only on an already queued payload. */
+  preparedAt?: string;
   lastWeekFrom: string;
   lastWeekTo: string;
   thisWeekFrom: string;
@@ -290,7 +293,15 @@ const SECTION_LINE_STYLE = "margin: 0;";
 export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
-  const blocks = input.sections.map((section) => blockFor(section, input, t));
+  const entries = input.sections.map((section) => ({
+    section,
+    block: blockFor(section, input, t),
+  }));
+  const attention = entries.filter(
+    ({ section }) => section.kind === "safety" && section.openRollCalls > 0,
+  );
+  const reporting = entries.filter((entry) => !attention.includes(entry));
+  const blocks = entries.map(({ block }) => block);
   // Each sentence links to the section whose numbers it quotes; one whose
   // section is not in this email (another grade's) is not printed.
   const read = (input.read ?? []).flatMap((sentence) => {
@@ -306,41 +317,57 @@ export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEm
     )
     .join("");
   const note = zoneNote(input, t);
+  const prepared = input.preparedAt
+    ? t("notifications.weeklyDigest.preparedAt", {
+        at: formatDateTimeTz(new Date(input.preparedAt), input.locale, input.timezone),
+      })
+    : "";
   const why = t("notifications.weeklyDigest.why", { shopName: input.shopName });
   const settings = t("notifications.weeklyDigest.settings");
   const turnOff = t("notifications.weeklyDigest.turnOff");
 
-  const textBlocks = blocks
-    .map((block) =>
-      [
-        block.heading,
-        ...block.lines,
-        ...(block.action
-          ? [`${block.action.text} ${block.action.label}: ${block.action.url}`]
-          : []),
-        `${block.linkLabel}: ${block.url}`,
-      ].join("\n"),
-    )
-    .join("\n\n");
+  const renderTextBlocks = (items: Block[]) =>
+    items
+      .map((block) =>
+        [
+          block.heading,
+          ...block.lines,
+          ...(block.action
+            ? [`${block.action.text} ${block.action.label}: ${block.action.url}`]
+            : []),
+          `${block.linkLabel}: ${block.url}`,
+        ].join("\n"),
+      )
+      .join("\n\n");
   const actionHtml = (action: Action | undefined) =>
     action
       ? `<p style="${SECTION_LINE_STYLE}">${escapeHtml(action.text)} <a href="${escapeHtml(action.url)}">${escapeHtml(action.label)}</a></p>`
       : "";
-  const htmlBlocks = blocks
-    .map(
-      (block) =>
-        `<h2 style="${SECTION_HEADING_STYLE}">${escapeHtml(block.heading)}</h2>${block.lines
-          .map((line) => `<p style="${SECTION_LINE_STYLE}">${escapeHtml(line)}</p>`)
-          .join(
-            "",
-          )}${actionHtml(block.action)}<p style="margin: 4px 0 0;"><a href="${escapeHtml(block.url)}">${escapeHtml(block.linkLabel)}</a></p>`,
-    )
-    .join("");
+  const renderHtmlBlocks = (items: Block[]) =>
+    items
+      .map(
+        (block) =>
+          `<h2 style="${SECTION_HEADING_STYLE}">${escapeHtml(block.heading)}</h2>${block.lines
+            .map((line) => `<p style="${SECTION_LINE_STYLE}">${escapeHtml(line)}</p>`)
+            .join(
+              "",
+            )}${actionHtml(block.action)}<p style="margin: 4px 0 0;"><a href="${escapeHtml(block.url)}">${escapeHtml(block.linkLabel)}</a></p>`,
+      )
+      .join("");
 
+  const attentionBlocks = attention.map(({ block }) => ({
+    ...block,
+    heading: t("notifications.weeklyDigest.needsAttention"),
+  }));
+  const reportingBlocks = reporting.map(({ block }) => block);
+  const attentionText = renderTextBlocks(attentionBlocks);
+  const attentionHtml = renderHtmlBlocks(attentionBlocks);
+  const textBlocks = renderTextBlocks(reportingBlocks);
+  const htmlBlocks = renderHtmlBlocks(reportingBlocks);
   return {
     subject: t("notifications.weeklyDigest.subject", { shopName: input.shopName }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${readText ? `${readText}\n\n` : ""}${textBlocks}\n\n${note}\n${why}\n${settings}: ${input.settingsUrl}\n${turnOff}: ${input.turnOffUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p>${readHtml}${htmlBlocks}<p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(note)}<br>${escapeHtml(why)}<br><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(settings)}</a> · <a href="${escapeHtml(input.turnOffUrl)}">${escapeHtml(turnOff)}</a></p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${prepared ? `${prepared}\n\n` : ""}${attentionText ? `${attentionText}\n\n` : ""}${readText ? `${readText}\n\n` : ""}${textBlocks}\n\n${note}\n${why}\n${settings}: ${input.settingsUrl}\n${turnOff}: ${input.turnOffUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p>${prepared ? `<p>${escapeHtml(prepared)}</p>` : ""}${attentionHtml}${readHtml}${htmlBlocks}<p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(note)}<br>${escapeHtml(why)}<br><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(settings)}</a> · <a href="${escapeHtml(input.turnOffUrl)}">${escapeHtml(turnOff)}</a></p>`,
   };
 }
 

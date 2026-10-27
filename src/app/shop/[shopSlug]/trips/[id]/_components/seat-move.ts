@@ -1,6 +1,7 @@
 import { listSeatMoveTargets } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
-import { formatDateTimeTz } from "@/lib/format";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { formatDateWithYear, formatTimeTz } from "@/lib/format";
 import { hasSailed } from "@/lib/trips";
 import { moveSeatAction } from "../roster-seating-actions";
 import type { SeatMove } from "./roster-model";
@@ -28,10 +29,25 @@ export async function seatMoveFor(input: {
     action: moveSeatAction.bind(null, input.shopSlug, input.tripId),
     departed: hasSailed(input.startsAt, input.now),
     started: input.now.getTime() >= input.startsAt.getTime(),
-    targets: targets.map((target) => ({
-      id: target.id,
-      label: `${target.title} · ${formatDateTimeTz(target.startsAt, input.locale, input.timeZone)}`,
-      seatsLeft: target.seatsLeft,
-    })),
+    targets: wordSeatMoveTargets(targets, input.locale, input.timeZone),
   };
+}
+
+/** Date grouping uses actual instants in the shop zone, never a localized option label. */
+export function wordSeatMoveTargets(
+  targets: readonly { id: string; title: string; startsAt: Date; seatsLeft: number }[],
+  locale: string,
+  timeZone: string,
+): SeatMove["targets"] {
+  return [...targets]
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .map((target) => ({
+      id: target.id,
+      label: target.title,
+      startsAt: target.startsAt.toISOString(),
+      localDay: calendarDateInTimezone(target.startsAt, timeZone),
+      dayLabel: formatDateWithYear(target.startsAt, locale, timeZone),
+      timeLabel: formatTimeTz(target.startsAt, locale, timeZone),
+      seatsLeft: target.seatsLeft,
+    }));
 }

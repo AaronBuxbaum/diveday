@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openRosterDetails, seededTripId } from "./helpers";
+import { openBookingActions, openRosterDetails, seededTripId } from "./helpers";
 import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 import {
   capture,
@@ -473,10 +473,23 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ has: page.locator("summary", { hasText: "Move to another departure" }) })
           .first();
         await openRosterDetails(row);
+        await openBookingActions(row);
         await row.locator("summary", { hasText: "Move to another departure" }).click();
         await row.getByLabel("Departure").waitFor();
         await row.getByRole("button", { name: "Move", exact: true }).scrollIntoViewIfNeeded();
+        await expect(row.getByLabel("Departure")).toHaveValue("");
+        await expect(row.getByRole("button", { name: "Move", exact: true })).toBeDisabled();
         await capture(page, "trip-roster-move-seat", scheme);
+        const choice = row
+          .getByLabel("Departure")
+          .locator("option:not([disabled])")
+          .filter({ hasNotText: "Choose a departure" })
+          .first();
+        const destination = await choice.getAttribute("value");
+        if (!destination) throw new Error("move capture needs a usable destination");
+        await row.getByLabel("Departure").selectOption(destination);
+        await expect(row.getByRole("button", { name: "Move", exact: true })).toBeEnabled();
+        await capture(page, "trip-roster-move-seat-chosen", scheme);
       });
 
       // What divers wrote back, as a worklist (ADR 20260907-two-way-inbox):

@@ -812,7 +812,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
         await page.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
-        await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        await page
+          .getByRole("region", { name: /^Unresolved/ })
+          .getByRole("columnheader", { name: "Diver" })
+          .waitFor();
         // The call's toast leaves on a real 4-second timer, so whether the
         // first width caught it depended on how long the capture took: two
         // one-worker runs of one tree disagreed at vw-390. The record is the

@@ -23,10 +23,17 @@ export function tripPageNotices(
 ) {
   const { notice, t } = input;
   const tripNotice: FormNotice | undefined = resolveTripNotice(input) ?? deskFormNotice(notice, t);
+  const pageNotices = pageNoticesFor(tripNotice);
   return {
     tripNotice,
     lifecycleStatus: noticeForForm(tripNotice, "lifecycle"),
-    ...pageNoticesFor(tripNotice),
+    ...pageNotices,
+    rosterPageNotice: pageNotices.rosterPageNotice
+      ? {
+          ...pageNotices.rosterPageNotice,
+          moveRefusalOrigin: notice?.startsWith("seat-move-") ? input.bid : undefined,
+        }
+      : undefined,
   };
 }
 

@@ -50,14 +50,21 @@ export function ProposedUnit({
 
   return (
     <div data-hydrated={hydrated ? "true" : undefined}>
-      <div className="flex items-center gap-x-2">
-        <span className={`min-w-0 flex-1 ${proposed ? "font-medium" : "text-muted"}`}>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span
+          className={`min-w-0 flex-1 basis-20 break-words ${proposed ? "font-medium" : "text-muted"}`}
+        >
           {copy.line}
         </span>
         <button
           type="button"
           onClick={() => setChanging(true)}
-          className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+          className={buttonClass({
+            variant: "ghost",
+            size: "sm",
+            flush: true,
+            className: "min-w-12 max-w-full whitespace-normal break-words",
+          })}
         >
           {copy.reveal}
         </button>
@@ -101,7 +108,7 @@ export function ConfirmProposals({
   useEffect(() => setHydrated(true), []);
   return (
     <div
-      className={`flex flex-wrap items-center gap-x-3 gap-y-1 print:hidden ${className}`}
+      className={`flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 print:hidden ${className}`}
       data-hydrated={hydrated ? "true" : undefined}
     >
       <button
@@ -115,7 +122,7 @@ export function ConfirmProposals({
             else if (result.refused > 0) setMessage(copy.refused);
           });
         }}
-        className={buttonClass()}
+        className={buttonClass({ className: "max-w-full whitespace-normal break-words" })}
       >
         {isPending ? copy.pending : copy.action}
       </button>

@@ -482,10 +482,7 @@ export default async function ManageTripPage({
                   notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
                     ? bid
                     : undefined,
-                // Every row folds its fixes now, so whatever a save inside a row
-                // reports, the row it names stays open on the way back: the
-                // staffer lands where they were working, not on a closed list.
-                // A removed seat has no row to hold.
+                // Keep refused booking operations open at their source row.
                 keepOpenBookingId: notice?.startsWith("booking-removed") ? undefined : bid,
                 paymentMarkRetry,
                 partyPreview,

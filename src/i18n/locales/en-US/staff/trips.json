@@ -671,7 +671,15 @@
       "clear": "Clear training mark",
       "clearing": "Clearing…",
       "clearedWithFormsOwed": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned} other {Training mark cleared with course forms unsigned}}"
-    }
+    },
+    "cannotBoard": "Cannot board",
+    "informationAndPreparation": "Information and preparation",
+    "bookingActions": "Booking actions",
+    "moveSeatChoose": "Choose a departure",
+    "moveSeatAvailability": "{count, plural, one {# seat left} other {# seats left}}",
+    "moveSeatFull": "Full",
+    "contactHeading": "Contact",
+    "preparationHeading": "Preparation and reference"
   },
   "offlineManifestManager": {
     "checkingDevice": "Checking this device…",

@@ -5,6 +5,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
+import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import type { PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { RosterRecordBlocked } from "./RosterRecordBlocked";
@@ -89,7 +90,35 @@ export function RosterRow({
   const s5 = { ...s4, ...rowReasonList(s4) };
   // The training marks are the departure's (issue #2275), read here beside the seat.
   const s6 = { ...s5, ...rowOutstanding({ ...s5, trainingMarks: context.rows.trainingMarks }) };
-  const s7 = { ...s6, ...rowReference(s6) };
+  // One remedy per actual reason family, in the open beside that reason.
+  // Sending a link records delivery only; readiness still comes from the server.
+  let waiverPlaced = false;
+  let certificationPlaced = false;
+  let courseFormsPlaced = false;
+  const reasonLines = s6.reasonLines.map((line) => {
+    const blocker = s6.blockerTexts.find((item) => item.text === line.key)?.blocker;
+    if (
+      !waiverPlaced &&
+      s6.waiverControl.action &&
+      (line.key === "waiver" ||
+        blocker?.code.startsWith("waiver_") ||
+        blocker?.code === "guardian_signature_missing")
+    ) {
+      waiverPlaced = true;
+      // Delivery changes the reason text, but must retain the send result's state.
+      return { ...line, key: "waiver-remedy", actions: s6.waiverRemedy };
+    }
+    if (!certificationPlaced && blocker && BLOCKER_CATEGORY[blocker.code] === "certification") {
+      certificationPlaced = true;
+      return { ...line, actions: s6.certificationRemedy };
+    }
+    if (!courseFormsPlaced && blocker?.code.startsWith("course_form_") && s6.hasCourseForms) {
+      courseFormsPlaced = true;
+      return { ...line, actions: s6.courseFormsRemedy };
+    }
+    return line;
+  });
+  const s7 = { ...s6, ...rowReasonList({ ...s6, reasonLines }), ...rowReference(s6) };
   const {
     booking,
     person,
@@ -150,7 +179,7 @@ export function RosterRow({
             and a wrapped one starts on the name's column like the name's
             own wrap (K-278: it right-aligned to the mark's edge, on no
             shared edge). */}
-        {arrivalControl ? (
+        {arrivalControl && s7.blockerTexts.length === 0 ? (
           <>
             {/* **The desk's tap keeps the name's line at every width**: the
                 name, its chips and its capsules wrap inside their own
@@ -169,23 +198,16 @@ export function RosterRow({
           </>
         )}
       </div>
-      {/* **Every seat is one line** (owner, 2026-10-05). The group band says
-          the state, the name line says who, the reason lines say what is in
-          the way, and everything the row can do — the waiver, payment, the
-          contact, notes, the reference facts — waits behind the row's mark.
-          Only a flagged medical answer and a returning diver's own ask stand
-          in the open beside them, with a held seat's identity answers.
-          Deep links
-          (Today, the manifest's "Resolve blockers") land mid-page at one
-          diver; AutoOpenDetails opens on the hash, so the fold can never
-          swallow what a link promised, and `holdOpen` keeps open the row a
-          form on it just answered. */}
-      {record ? (
-        countedBlocked ? (
-          <RosterRecordBlocked t={t} blocked={countedBlocked} />
-        ) : null
-      ) : (
-        reasonList
+      {/* Blockers and their existing remedies stay visible. Optional facts and
+          routine preparation remain in the guest's details. */}
+      {record && countedBlocked ? <RosterRecordBlocked t={t} blocked={countedBlocked} /> : null}
+      {record ? null : (
+        <>
+          {reasonList}
+          {arrivalControl && s7.blockerTexts.length > 0 ? (
+            <div className="mb-2 flex justify-end">{arrivalControl}</div>
+          ) : null}
+        </>
       )}
       {/* "Check with SSI", under the reason that says the card is pending
           (H-105): drawn only with the browser extension, and never on a held
@@ -215,8 +237,16 @@ export function RosterRow({
             the seat still needs, then what is true about it, then notes,
             then the seat's own actions, each a band of its own. */}
         <div className="mb-3 rounded-lg border border-border bg-surface-sunken/50 p-4 sm:p-5">
-          {hasWork && !record ? (
+          {(hasWork ||
+            (!waiverPlaced && s6.waiverControl.action !== null) ||
+            (!courseFormsPlaced && s6.hasCourseForms)) &&
+          !record ? (
             <div className="mb-4 border-b border-border pb-4 [&>*:first-child]:mt-0">
+              <p className="mb-2 text-sm font-semibold">
+                {t("trips.roster.informationAndPreparation")}
+              </p>
+              {!waiverPlaced ? s6.waiverRemedy : null}
+              {!courseFormsPlaced && s6.hasCourseForms ? s6.courseFormsRemedy : null}
               {outstanding}
             </div>
           ) : null}

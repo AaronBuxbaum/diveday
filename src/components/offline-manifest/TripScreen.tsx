@@ -5,6 +5,7 @@ import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanne
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
+import { buttonClass } from "@/components/ui/button";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { OfflineCheckpointNav } from "./CheckpointNav";
@@ -49,32 +50,44 @@ export function OfflineTripScreen({
             level="page"
           />
           <OfflineTripHeader view={view} controls={controls} />
+          <a
+            href="#offline-roll-call-context"
+            className={buttonClass({
+              variant: "link",
+              flush: true,
+              className: "mt-2 print:hidden",
+            })}
+          >
+            {t("shared.offlineManifest.single.rollCallJump")}
+          </a>
 
           {/* **Above the roster, deliberately.** This is the one document a crew has
           with no signal, and the numbers on it are the ones you reach for while
           somebody is bent — not after the boat is back. Everything below is who
           is aboard; this is what to do about it. Rides in the snapshot, so it is
           here in airplane mode (issue #688). */}
-          <EmergencyReferenceCard
-            className="mt-6"
-            // A snapshot saved before this field existed still decrypts, so it
-            // arrives without one. Falls back to the empty reference, which renders
-            // the "nothing recorded yet" prompt — the same thing a shop that has
-            // filled nothing in sees, and the only outcome that does not throw on
-            // the one surface a crew has offshore.
-            reference={envelope.snapshot.shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE}
-            copy={{
-              heading: t("manifest.emergency.heading"),
-              empty: t("manifest.emergency.empty"),
-              vesselLabel: t("manifest.emergency.vesselLabel"),
-              callSignLabel: t("manifest.emergency.callSignLabel"),
-              mmsiLabel: t("manifest.emergency.mmsiLabel"),
-              workingChannelLabel: t("manifest.emergency.workingChannelLabel"),
-              distressChannel: t("manifest.emergency.distressChannel"),
-              shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
-              planLabel: t("manifest.emergency.planLabel"),
-            }}
-          />
+          <section id="offline-emergency-reference" tabIndex={-1} className="scroll-mt-24">
+            <EmergencyReferenceCard
+              className="mt-6"
+              // A snapshot saved before this field existed still decrypts, so it
+              // arrives without one. Falls back to the empty reference, which renders
+              // the "nothing recorded yet" prompt — the same thing a shop that has
+              // filled nothing in sees, and the only outcome that does not throw on
+              // the one surface a crew has offshore.
+              reference={envelope.snapshot.shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE}
+              copy={{
+                heading: t("manifest.emergency.heading"),
+                empty: t("manifest.emergency.empty"),
+                vesselLabel: t("manifest.emergency.vesselLabel"),
+                callSignLabel: t("manifest.emergency.callSignLabel"),
+                mmsiLabel: t("manifest.emergency.mmsiLabel"),
+                workingChannelLabel: t("manifest.emergency.workingChannelLabel"),
+                distressChannel: t("manifest.emergency.distressChannel"),
+                shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
+                planLabel: t("manifest.emergency.planLabel"),
+              }}
+            />
+          </section>
 
           {/* Opt-in by presence, the same rule the gear register follows: a shop
           with no checklist items renders nothing here, not an empty card.
@@ -101,9 +114,11 @@ export function OfflineTripScreen({
           step toward a queue answering the second. */}
           <OfflineCounter view={view} controls={controls} />
 
-          <OfflineCheckpointNav view={view} controls={controls} />
+          <section id="offline-roll-call-context" tabIndex={-1} className="scroll-mt-24">
+            <OfflineCheckpointNav view={view} controls={controls} />
 
-          <OfflineRollCallSection view={view} controls={controls} />
+            <OfflineRollCallSection view={view} controls={controls} />
+          </section>
 
           <OfflineTripFoot view={view} controls={controls} tripId={tripId} />
         </PullToRefresh>

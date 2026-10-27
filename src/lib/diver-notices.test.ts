@@ -1,3 +1,5 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -143,4 +145,26 @@ describe("the merge booking-conflict notice", () => {
       })?.text,
     ).toBe(t("divers.notices.mergeInvalid"));
   });
+});
+
+describe("the named earned moment", () => {
+  for (const locale of ["en-US", "es-ES"] as const) {
+    it(`formats the record name as escaped text in ${locale}`, () => {
+      const name = "María <Boat> & O’Neil";
+      const notice = resolve({ notice: "diver-clear", locale, personName: name });
+      expect(notice?.code).toBe("diver-clear");
+      expect(notice?.text).toBe(staffTranslator(locale)("divers.notices.cleared", { name }));
+      const html = renderToStaticMarkup(createElement("p", null, notice?.text));
+      expect(html).toContain("&lt;Boat&gt; &amp;");
+      expect(html).not.toContain("<Boat>");
+    });
+    it(`keeps older or blank-name callers readable in ${locale}`, () => {
+      const t = staffTranslator(locale);
+      for (const personName of [undefined, "  "]) {
+        expect(resolve({ notice: "diver-clear", locale, personName })?.text).toBe(
+          t("divers.notices.cleared", { name: t("shared.waiverSend.unnamedDiver") }),
+        );
+      }
+    });
+  }
 });

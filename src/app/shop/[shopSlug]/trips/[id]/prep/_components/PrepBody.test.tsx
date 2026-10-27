@@ -148,8 +148,8 @@ describe("the packing list's geometry", () => {
     const { container } = renderPrep(everyPanelPrep(), { notice: "gear-released" });
     const stack = container.firstElementChild;
     expect(stack).toHaveClass(STACK);
-    // Tanks, nitrox, sizes, staff fit, pickups, kit, banner, assignments.
-    expect(stack?.children.length).toBe(8);
+    // Task navigation, tanks, nitrox, sizes, staff fit, pickups, kit, banner, assignments.
+    expect(stack?.children.length).toBe(9);
     for (const section of stack?.children ?? []) {
       expect(tokens(section).filter((token) => /^mt-/.test(token))).toEqual([]);
     }
@@ -243,5 +243,31 @@ describe("a boat that has left the dock", () => {
     const atSea = renderPrep(everyPanelPrep(), { sailed: true });
     expect(within(atSea.container).queryByText(sizes)).toBeNull();
     expect(within(atSea.container).getByRole("heading", { name: "Tanks" })).toBeTruthy();
+  });
+});
+
+describe("preparation task navigation", () => {
+  it("links to the packing and assignment headings using the actual missing-piece count", () => {
+    const prep = everyPanelPrep();
+    const [row] = prep.assignmentRows;
+    if (!row) throw new Error("assignment fixture missing");
+    prep.assignmentRows = [
+      { ...row, wanted: [{ kind: "regulator" }, { kind: "fins" }] as typeof row.wanted },
+    ];
+    renderPrep(prep);
+    expect(screen.getByRole("link", { name: "Pull list" })).toHaveAttribute("href", "#kit-heading");
+    expect(screen.getByRole("link", { name: "2 pieces to assign" })).toHaveAttribute(
+      "href",
+      "#assignments-heading",
+    );
+    expect(screen.getByRole("heading", { name: t("gear.prep.heading") })).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+  });
+  it("offers no packing task navigation once the departure has sailed", () => {
+    renderPrep(everyPanelPrep(), { sailed: true });
+    expect(screen.queryByRole("navigation", { name: t("tripPrep.tasksLabel") })).toBeNull();
+    expect(screen.getByRole("heading", { name: t("gear.prep.heading") })).toBeInTheDocument();
   });
 });

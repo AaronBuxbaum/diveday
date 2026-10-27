@@ -411,7 +411,17 @@ describe("waiverControls on a rehearsal", () => {
 describe("seatMoveForRow", () => {
   const move = (departed: boolean, started = departed) => ({
     action: () => {},
-    targets: [{ id: "t", label: "T", seatsLeft: 1 }],
+    targets: [
+      {
+        id: "t",
+        label: "T",
+        seatsLeft: 1,
+        startsAt: "2026-10-24T12:00:00Z",
+        localDay: "2026-10-24",
+        dayLabel: "Sat, Oct 24, 2026",
+        timeLabel: "8:00 AM EDT",
+      },
+    ],
     departed,
     started,
   });

@@ -461,7 +461,8 @@
         "refusedNotBookable": "Sin registrar: esta plaza ya no está en la lista del barco. Se canceló o en el mostrador marcaron que no vino. Abre el mostrador en vivo.",
         "refusedBoarded": "Sigue registrado: la tripulación ya lo anotó a bordo.",
         "refusedGeneric": "DiveDay no aplicó este toque. Abre el mostrador en vivo."
-      }
+      },
+      "rollCallJump": "Pase de lista"
     },
     "shellVersion": {
       "staleBanner": "Esta copia guardada es de una versión anterior de DiveDay. Actualízala con conexión antes de embarcar buceadores.",

@@ -327,6 +327,7 @@ describe("previewWeeklyDigest", () => {
     });
     expect(preview?.kind).toBe("weekly_digest");
     if (preview?.kind === "weekly_digest") {
+      expect(preview.preparedAt).toBe(monday.toISOString());
       expect(preview.turnOffUrl).toBe(`${ORIGIN}/shop/${shop.slug}/settings/email`);
     }
     const claims = await db

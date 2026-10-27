@@ -147,7 +147,7 @@ describe("the weekly_digest notification", () => {
       ],
     });
     expect(text).toContain(
-      "Safety\n1 roll call is still open.\n2 departures have no crew on them yet.",
+      "Needs attention\n1 roll call is still open.\n2 departures have no crew on them yet.",
     );
     expect(text).not.toContain("incident");
     expect(text).toContain("3 units are due for service.");
@@ -347,5 +347,59 @@ describe("weeklyDigestQuietWeekEmail", () => {
     expect(weeklyDigestQuietWeekEmail({ locale: "en-US", shopName: "Blue Mantis" }).text).toContain(
       "no email goes out this Monday",
     );
+  });
+});
+
+describe("report preparation and attention order", () => {
+  it("promotes an open roll call before assist prose while keeping each assist link with its section", () => {
+    const { html, text } = messageFor({
+      ...BASE,
+      preparedAt: "2026-10-05T04:05:00.000Z",
+      sections: [
+        ...BASE.sections,
+        {
+          kind: "safety",
+          openRollCalls: 2,
+          uncrewed: 1,
+          incidents: 0,
+          url: "https://diveday.example/shop/blue-mantis/today",
+        },
+      ],
+      read: [
+        { section: "last_week", text: "Weekly booking context." },
+        { section: "safety", text: "Open roll call context." },
+      ],
+    });
+    expect(text.indexOf("Needs attention")).toBeLessThan(text.indexOf("Weekly booking context."));
+    expect(html.indexOf("Needs attention")).toBeLessThan(html.indexOf("Weekly booking context."));
+    expect(html).toContain(
+      'Weekly booking context. <a href="https://diveday.example/shop/blue-mantis/reports">',
+    );
+    expect(html).toContain(
+      'Open roll call context. <a href="https://diveday.example/shop/blue-mantis/today">',
+    );
+    expect(text).toContain("Prepared");
+    expect(text).toContain("12:05");
+    expect(html).toContain("Prepared");
+  });
+  it("does not invent an attention alert or preparation instant for an older queued payload", () => {
+    const { html, text } = messageFor({
+      ...BASE,
+      sections: [
+        ...BASE.sections,
+        {
+          kind: "safety",
+          openRollCalls: 0,
+          uncrewed: 1,
+          incidents: 0,
+          url: "https://diveday.example/shop/blue-mantis/today",
+        },
+      ],
+    });
+    expect(text).not.toContain("Needs attention");
+    expect(html).not.toContain("Needs attention");
+    expect(text).not.toContain("Prepared");
+    expect(notificationSchema.safeParse(BASE).success).toBe(true);
+    expect(notificationSchema.safeParse({ ...BASE, preparedAt: "yesterday" }).success).toBe(false);
   });
 });

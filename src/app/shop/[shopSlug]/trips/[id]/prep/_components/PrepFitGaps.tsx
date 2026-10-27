@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
@@ -49,7 +50,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                     <span>
                       <Link
                         href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                        className="font-medium hover:text-primary hover:underline"
+                        className={`${tapTargetLinkClass} py-3 -my-3 print:min-h-0 print:py-0 print:my-0 font-medium hover:text-primary hover:underline`}
                       >
                         {diver.fullName}
                       </Link>{" "}
@@ -87,7 +88,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                         <Link
                           key={diver.personId}
                           href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                          className="font-medium hover:text-primary hover:underline"
+                          className={`${tapTargetLinkClass} py-3 -my-3 print:min-h-0 print:py-0 print:my-0 font-medium hover:text-primary hover:underline`}
                         >
                           {diver.fullName}
                         </Link>
@@ -143,7 +144,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                 <span>
                   <Link
                     href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                    className="font-medium hover:text-primary hover:underline"
+                    className={`${tapTargetLinkClass} py-3 -my-3 print:min-h-0 print:py-0 print:my-0 font-medium hover:text-primary hover:underline`}
                   >
                     {diver.fullName}
                   </Link>

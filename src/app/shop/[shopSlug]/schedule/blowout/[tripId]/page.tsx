@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
@@ -7,25 +6,21 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
-import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
-import type { BlowoutDiverState } from "@/db/blowouts";
-import type { PaymentStatus } from "@/db/schema";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { BlowoutConfirmation } from "./_components/BlowoutConfirmation";
 import { HeldRefundsCard } from "./_components/HeldRefundsCard";
+import { RecoveryGroups } from "./_components/RecoveryGroups";
 import { blowoutTitleKey, readBlowout } from "./_lib/title";
 import { callBlowoutAction, releaseBlowoutRefundsAction, resumeBlowoutAction } from "./actions";
 
@@ -60,12 +55,6 @@ export async function generateMetadata({
   return { title: `${staffTranslator(locale)(blowoutTitleKey(blowout))} — DiveDay` };
 }
 
-/**
- * Between an offered departure's title and its date, glued to the title by a
- * no-break space: a wrap falls after the dash, so a line never starts with one.
- */
-const TITLE_DATE_JOIN = " — ";
-
 const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
   called: { tone: "success", key: "blowout.notices.called" },
   resumed: { tone: "success", key: "blowout.notices.resumed" },
@@ -73,27 +62,6 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
   error: { tone: "danger", key: "blowout.notices.error" },
   "refunds-released": { tone: "success", key: "blowout.notices.refundsReleased" },
   "refund-not-authorized": { tone: "danger", key: "blowout.notices.refundNotAuthorized" },
-};
-
-const PAYMENT_KEY: Record<PaymentStatus, StaffMessageKey> = {
-  unpaid: "divers.shared.paymentStatus.unpaid",
-  deposit_paid: "divers.shared.paymentStatus.depositPaid",
-  paid: "divers.shared.paymentStatus.paid",
-  waived: "divers.shared.paymentStatus.waived",
-  partly_refunded: "divers.shared.paymentStatus.partlyRefunded",
-  refunded: "divers.shared.paymentStatus.refunded",
-};
-
-const MESSAGE_BADGE: Record<
-  BlowoutDiverState["messageStatus"],
-  { tone: BadgeTone; key: StaffMessageKey }
-> = {
-  sent: { tone: "success", key: "blowout.record.messageSent" },
-  queued: { tone: "warning", key: "blowout.record.messageQueued" },
-  pending: { tone: "warning", key: "blowout.record.messagePending" },
-  sending: { tone: "warning", key: "blowout.record.messageSending" },
-  failed: { tone: "danger", key: "blowout.record.messageFailed" },
-  no_email: { tone: "neutral", key: "blowout.record.messageNoEmail" },
 };
 
 /**
@@ -164,77 +132,29 @@ export default async function BlowoutPage({
     const departed = trip.startsAt <= nowDate();
     const roster = await getTripRoster(db, shop.id, tripId);
     return (
-      <StaffPage width="reading">
-        <FlashParams params={["notice"]} />
-        {header}
-        <div className="mt-6">
-          {banner ? (
-            <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
-          ) : null}
-        </div>
-        <SectionCard as="div" padding="lg">
-          <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
-          <p className="mt-3 text-sm text-muted">
-            {t(mayRefund ? "blowout.confirm.moneyNote" : "blowout.confirm.moneyNoteHeld")}
-          </p>
-          {departed || !canCallDay ? null : (
-            // The whole morning is usually what the weather closes (ADR
-            // 20261009-day-weather-call); calling the boats one at a time
-            // offered each boat's divers the next one about to be called.
-            <Link
-              href={shopPath(
+      <BlowoutConfirmation
+        header={header}
+        notice={
+          banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null
+        }
+        trip={trip}
+        departed={departed}
+        mayRefund={mayRefund}
+        dayHref={
+          !departed && canCallDay
+            ? shopPath(
                 shopSlug,
                 "schedule",
                 "blowout",
                 "day",
                 calendarDateInTimezone(trip.startsAt, shop.timezone),
-              )}
-              className={`mt-3 ${buttonClass({ variant: "link", size: "sm", flush: true })}`}
-            >
-              {t("blowout.day.instead")}
-            </Link>
-          )}
-          {roster.length === 0 ? (
-            // Nested inside the confirm card, so no icon, fill or shadow.
-            <EmptyState
-              title={t("blowout.confirm.noDivers")}
-              icon={false}
-              nested
-              className="mt-5"
-            />
-          ) : (
-            <div className="mt-5">
-              <h2 className="text-sm font-semibold">
-                {t("blowout.confirm.diversHeading", { count: roster.length })}
-              </h2>
-              <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {roster.map((row) => (
-                  <li key={row.booking.id} className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-0">{row.person.fullName}</span>
-                    {row.person.email ? null : (
-                      <Badge tone="neutral" size="sm">
-                        {t("blowout.confirm.noEmail")}
-                      </Badge>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {departed ? (
-            <p className="mt-6 text-sm font-medium text-danger">{t("blowout.confirm.departed")}</p>
-          ) : (
-            <form action={callBlowoutAction.bind(null, shopSlug, tripId)} className="mt-6">
-              <SubmitButton
-                pendingLabel={t("blowout.confirm.calling")}
-                className={buttonClass({ variant: "danger" })}
-              >
-                {t("blowout.confirm.button")}
-              </SubmitButton>
-            </form>
-          )}
-        </SectionCard>
-      </StaffPage>
+              )
+            : null
+        }
+        roster={roster}
+        call={callBlowoutAction.bind(null, shopSlug, tripId)}
+        t={t}
+      />
     );
   }
 
@@ -252,7 +172,7 @@ export default async function BlowoutPage({
   );
 
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <FlashParams params={["notice"]} />
       {header}
       <div className="mt-6">
@@ -276,108 +196,33 @@ export default async function BlowoutPage({
           detail={t("blowout.record.rebookedDetail")}
           tone={rebooked > 0 ? "success" : "default"}
         />
-        <ShopStat
-          label={t("blowout.record.unresolved")}
-          value={unresolved}
-          detail={
-            unresolved === 0
-              ? t("blowout.record.allResolvedDetail")
-              : t("blowout.record.unresolvedDetail")
-          }
-          tone={unresolved === 0 ? "success" : "warning"}
-        />
+        <a
+          href={unresolved > 0 ? "#unresolved-recovery" : "#rebooked-recovery"}
+          className="rounded-lg"
+        >
+          <ShopStat
+            label={t("blowout.record.unresolved")}
+            value={unresolved}
+            detail={
+              unresolved === 0
+                ? t("blowout.record.allResolvedDetail")
+                : t("blowout.record.unresolvedDetail")
+            }
+            tone={unresolved === 0 ? "success" : "warning"}
+          />{" "}
+        </a>
       </div>
 
       {divers.length === 0 ? (
         <EmptyState title={t("blowout.record.empty")} className="mt-6" />
       ) : (
-        <Table shellClassName="mt-6">
-          <THead>
-            <Th>{t("blowout.record.table.diver")}</Th>
-            <Th>{t("blowout.record.table.message")}</Th>
-            <Th hideBelow="sm">{t("blowout.record.table.money")}</Th>
-            <Th hideBelow="md">{t("blowout.record.table.offers")}</Th>
-            <Th>{t("blowout.record.table.status")}</Th>
-          </THead>
-          <TBody>
-            {divers.map((diver) => {
-              const message = MESSAGE_BADGE[diver.messageStatus];
-              return (
-                // `align="baseline"` on every cell: the two Badge columns put
-                // their word on the row's line, not under it. A `Tr`, because
-                // the name's `RowLink` overlay positions against its
-                // `relative`: the name is the row's one door, and it was a
-                // 17–37px target (K-322). `clip={false}` keeps that overlay
-                // row-wide (a clipping cell bounds it to itself, #1989), and
-                // `break-words` wraps the name the dropped clip no longer cuts.
-                <Tr key={diver.id}>
-                  <Td clip={false} align="baseline" className="break-words">
-                    <RowLink
-                      href={shopPath(shopSlug, "divers", diver.personId)}
-                      className="font-medium text-foreground hover:text-primary hover:underline"
-                    >
-                      {diver.fullName}
-                    </RowLink>
-                    {/* Over the name's overlay (`relative z-10`, as
-                        `LedgerRow` lifts its trailing slot): under it, a tap on
-                        the number opened the record, and the number could be
-                        neither selected nor tapped to call — on the page for
-                        reaching the divers the cascade could not email. */}
-                    {diver.messageStatus === "no_email" && diver.phone ? (
-                      <div className="relative z-10 text-xs text-muted">
-                        {t("blowout.record.callThem", {
-                          phone: displayStoredPhoneWhole(diver.phone),
-                        })}
-                      </div>
-                    ) : null}
-                  </Td>
-                  <Td align="baseline">
-                    <Badge tone={message.tone} size="sm">
-                      {t(message.key)}
-                    </Badge>
-                  </Td>
-                  <Td muted hideBelow="sm" align="baseline">
-                    {diver.paymentStatus
-                      ? t(PAYMENT_KEY[diver.paymentStatus])
-                      : t("blowout.record.noPayment")}
-                  </Td>
-                  <Td muted hideBelow="md" align="baseline">
-                    {/* One offer per line, its date one unbroken run: joined
-                        with " · " in this ~163px column, two or three dates
-                        broke across lines on every row (K-323). Only a title
-                        may wrap, and the dash stays with it. */}
-                    {diver.offeredTrips.length === 0 ? (
-                      t("blowout.record.noOffers")
-                    ) : (
-                      <ul className="space-y-1">
-                        {diver.offeredTrips.map((offer) => (
-                          <li key={offer.id}>
-                            {offer.title}
-                            {TITLE_DATE_JOIN}
-                            <span className="whitespace-nowrap">
-                              {formatShortDate(offer.startsAt, locale, shop.timezone)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </Td>
-                  <Td align="baseline">
-                    {diver.rebooked ? (
-                      <Badge tone="success" size="sm">
-                        {t("blowout.record.rebookedBadge")}
-                      </Badge>
-                    ) : (
-                      <Badge tone="warning" size="sm">
-                        {t("blowout.record.unresolvedBadge")}
-                      </Badge>
-                    )}
-                  </Td>
-                </Tr>
-              );
-            })}
-          </TBody>
-        </Table>
+        <RecoveryGroups
+          divers={divers}
+          shopSlug={shopSlug}
+          locale={locale}
+          timezone={shop.timezone}
+          t={t}
+        />
       )}
 
       {retryable ? (

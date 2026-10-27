@@ -671,7 +671,15 @@
       "clear": "Quitar marca de formación",
       "clearing": "Quitando…",
       "clearedWithFormsOwed": "{hasName, select, yes {{name} quitó la marca de formación con formularios del curso sin firmar.} other {Se quitó la marca de formación con formularios del curso sin firmar.}}"
-    }
+    },
+    "cannotBoard": "No puede embarcar",
+    "informationAndPreparation": "Información y preparación",
+    "bookingActions": "Acciones de la reserva",
+    "moveSeatChoose": "Elige una salida",
+    "moveSeatAvailability": "{count, plural, one {# lugar disponible} other {# lugares disponibles}}",
+    "moveSeatFull": "Llena",
+    "contactHeading": "Contacto",
+    "preparationHeading": "Preparación y referencia"
   },
   "offlineManifestManager": {
     "checkingDevice": "Verificando este dispositivo…",
