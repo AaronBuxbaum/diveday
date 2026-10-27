@@ -134,10 +134,16 @@ export function expiredKinds(
   for (const kind of kinds) {
     if (holdsCurrent(credentials, kind, day, firstDay)) continue;
     const dates = credentials
-      .filter(
-        (credential) => credential.kind === kind && credentialIssuedBy(credential.issuedAt, day),
-      )
-      .map((credential) => credential.renewsAt as CalendarDate)
+      .flatMap((credential) => {
+        const renewal = credential.renewsAt;
+        return credential.kind === kind &&
+          credentialIssuedBy(credential.issuedAt, firstDay) &&
+          renewal !== null &&
+          isValidCalendarDate(renewal) &&
+          isCalendarDateExpired(renewal, day)
+          ? [renewal]
+          : [];
+      })
       .sort();
     const latest = dates[dates.length - 1];
     if (latest) out.push({ kind, renewsAt: latest });
