@@ -1,0 +1,8 @@
+/* Keep native controls mounted so card-photo fill and agency backtracking
+   retain the diver's draft. Hidden fields are absent from the accessibility tree. */
+.certificationFields:has(select[name="agency"] option[value=""]:checked) .certificationDetails {
+  display: none;
+}
+.certificationFields:has(select[name="agency"] option:not([value=""]):checked) .uncertified {
+  display: none;
+}

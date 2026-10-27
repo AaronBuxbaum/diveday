@@ -421,8 +421,9 @@ test.describe("schedule builder", () => {
     // still knows which day the rows under their thumb belong to. They pin
     // directly under the one chrome bar both shells wear (ADR
     // 20260827-clearwater-surface-language, decision 10), which they now read
-    // rather than measure: `top-(--chrome-h)` is the same declaration the bar
-    // sets its own height from. Before that token the board carried a
+    // through `top-(--chrome-h)`: the staff bar has a fixed height, while the
+    // public bar publishes its measured natural border-box height. Before
+    // that token the board carried a
     // hand-measured `top-[68px]` and only this test stood between it and the
     // bar's next change, while the public schedule pinned at `top-0` and spent
     // every scroll hidden underneath its own header — which is the failure
@@ -503,6 +504,9 @@ test.describe("schedule builder", () => {
         return {
           dayCount: tops.length,
           barHeight: bar ? bar.getBoundingClientRect().height : 0,
+          chromeHeight: getComputedStyle(document.documentElement)
+            .getPropertyValue("--chrome-h")
+            .trim(),
           pinnedCount: pinned.length,
           // How far the worst-placed pinned header clears the bar. Negative
           // means it is hiding underneath it.
@@ -543,14 +547,35 @@ test.describe("schedule builder", () => {
         // It cannot hide a regression. A bar that genuinely never renders
         // still fails here, and says so in as many words instead of arriving
         // as an arithmetic complaint about zero.
-        await expect(page.locator("header.sticky")).toBeVisible();
+        const bar = page.locator("header.sticky");
+        await expect(bar).toBeVisible();
+        if (surface === "the public schedule") {
+          await expect(bar).toHaveAttribute("data-chrome-measured", "true");
+          // A resize can leave the prior width's measurement until the
+          // observer runs. Wait for the published token and the independently
+          // observed border box to agree at the same precision as below.
+          await expect
+            .poll(() =>
+              bar.evaluate((element) => {
+                const token = getComputedStyle(document.documentElement)
+                  .getPropertyValue("--chrome-h")
+                  .trim();
+                return token.endsWith("px")
+                  ? Math.abs(element.getBoundingClientRect().height - Number.parseFloat(token))
+                  : Infinity;
+              }),
+            )
+            .toBeLessThan(0.5);
+        }
         const measured = await measure();
 
-        // The height `--chrome-h` names. Preflight makes the bar `border-box`,
-        // so the token is its whole outside edge with the hairline inside it:
-        // 56px for one row, and 88px (5.5rem) for the shopfront's two rows
-        // below `sm` (#2303, the shop's name above its tabs).
-        const barHeight = surface === "the public schedule" && width < 640 ? 88 : 56;
+        // Staff keeps its fixed 56px contract. Public chrome includes natural
+        // wrapping and the hairline, so check its observed height against the
+        // published pixel token instead of the old two-row 88px assumption.
+        if (surface === "the public schedule")
+          expect(measured.chromeHeight).toMatch(/^\d+(?:\.\d+)?px$/);
+        const barHeight =
+          surface === "the public schedule" ? Number.parseFloat(measured.chromeHeight) : 56;
         expect(
           measured.barHeight,
           `the chrome bar on ${surface} is ${measured.barHeight}px tall at ${width}px, not the ${barHeight}px --chrome-h names`,

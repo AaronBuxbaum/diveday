@@ -44,6 +44,23 @@ describe("activeNavIndex", () => {
 });
 
 describe("PublicShopNav", () => {
+  it("keeps a related control after the destination links without changing the active page", () => {
+    pathname = "/s/blue-mantis/courses";
+    render(
+      <PublicShopNav
+        ariaLabel="Shop pages"
+        items={ITEMS}
+        action={<button type="button">Change language</button>}
+      />,
+    );
+    const nav = screen.getByRole("navigation", { name: "Shop pages" });
+    const language = screen.getByRole("button", { name: "Change language" });
+    expect(nav.contains(language)).toBe(true);
+    expect(language.closest("li")).toBe(nav.querySelector("li:last-child"));
+    expect(screen.getByRole("link", { name: "Courses" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Schedule" })).not.toHaveAttribute("aria-current");
+    expect(nav.querySelectorAll("a")).toHaveLength(2);
+  });
   it("gives exactly one link aria-current, on the page being read", () => {
     pathname = "/s/blue-mantis/courses/open-water-diver";
     render(<PublicShopNav ariaLabel="Shop pages" items={ITEMS} />);
