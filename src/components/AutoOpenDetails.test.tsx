@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AutoOpenDetails } from "./AutoOpenDetails";
 
 afterEach(() => {
@@ -94,6 +94,56 @@ describe("AutoOpenDetails' open prop", () => {
     });
     expect(details(container).open).toBe(false);
     container.remove();
+  });
+});
+
+describe("AutoOpenDetails native state before hydration", () => {
+  for (const startsOpen of [false, true]) {
+    it(`adopts a native ${startsOpen ? "close" : "reveal"} before hydration without a mismatch`, async () => {
+      const tree = (
+        <AutoOpenDetails id="native-course-forms" openOnHash="unrelated" open={startsOpen}>
+          <summary>Course forms</summary>
+          <p id="native-form">Form</p>
+        </AutoOpenDetails>
+      );
+      const container = document.createElement("div");
+      container.innerHTML = renderToString(tree);
+      document.body.append(container);
+      details(container).open = !startsOpen;
+      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+      let root: ReturnType<typeof hydrateRoot> | undefined;
+      try {
+        await act(async () => {
+          root = hydrateRoot(container, tree);
+        });
+        expect(details(container).open).toBe(!startsOpen);
+        expect(errors.mock.calls.flat().some((value) => String(value).includes("hydrated"))).toBe(
+          false,
+        );
+      } finally {
+        await act(async () => root?.unmount());
+        errors.mockRestore();
+        container.remove();
+      }
+    });
+  }
+
+  it("does not adopt another instance with the same disclosure id", () => {
+    const previous = document.createElement("details");
+    previous.id = "course-forms";
+    previous.open = true;
+    document.body.append(previous);
+    try {
+      const { container } = render(
+        <AutoOpenDetails id="course-forms" openOnHash="unrelated" open={false}>
+          <summary>Fresh course forms</summary>
+        </AutoOpenDetails>,
+      );
+      expect(details(container).open).toBe(false);
+      expect(previous.open).toBe(true);
+    } finally {
+      previous.remove();
+    }
   });
 });
 

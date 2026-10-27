@@ -75,6 +75,7 @@ const props: ComponentProps<typeof CounterRentalCart> = {
     items: { one: t("counterRentals.new.itemsOne"), other: t("counterRentals.new.itemsOther") },
     submit: t("counterRentals.new.submit"),
     submitting: t("counterRentals.new.submitting"),
+    review: t("counterRentals.new.review"),
     fillLabel: t("counterRentals.new.fillLabel"),
     fillOptions: tankFillOptions(t, t("counterRentals.new.fillChoose")),
     fillHint: t("counterRentals.new.fillHint"),
@@ -115,6 +116,23 @@ const filter = () => screen.getByRole("searchbox", { name: props.words.filterLab
 const fill = (tank: PickerUnit) => screen.getByRole("combobox", { name: tank.fillAria ?? "" });
 
 describe("the counter cart's local lookup", () => {
+  it("puts Gear before review and guides a sticky action to the first unresolved control", () => {
+    render(<Cart />);
+    fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
+    expect(gear().compareDocumentPosition(bill()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: props.words.review }));
+    expect(screen.getByRole("combobox", { name: tank1.fillAria ?? "" })).toHaveFocus();
+    fireEvent.change(screen.getByRole("combobox", { name: tank1.fillAria ?? "" }), {
+      target: { value: "21" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: props.words.review }));
+    expect(screen.getByRole("radio", { name: props.payments[0].label })).toHaveFocus();
+    fireEvent.click(screen.getByRole("radio", { name: props.payments[0].label }));
+    expect(screen.getByRole("button", { name: props.words.submit })).toHaveAttribute(
+      "type",
+      "submit",
+    );
+  });
   it("filters labels/sizes inside one kind, clears and resets on a kind change", () => {
     render(<Cart />);
     fireEvent.change(filter(), { target: { value: "002" } });
@@ -324,6 +342,7 @@ describe("issue 2723 refused cart", () => {
     render(<Cart />);
     fireEvent.click(within(gear()).getByRole("button", { name: "Tank 001· AL80" }));
     fireEvent.change(fill(tank1), { target: { value: "21" } });
+    fireEvent.click(screen.getByRole("radio", { name: props.payments[0].label }));
     fireEvent.submit(screen.getByRole("form", { name: "Rental" }));
     cleanup();
     const unavailable = { ...tank1, blocked: t("counterRentals.new.unitUnavailable") };
@@ -427,6 +446,7 @@ describe("an EANx fill in a tank with no current O2-clean record (issue #2719)",
     render(<Cart groups={groups} />);
     fireEvent.click(within(gear()).getByRole("button", { name: "Tank 004· AL80" }));
     fireEvent.change(fill(uncleaned), { target: { value: "36" } });
+    fireEvent.click(screen.getByRole("radio", { name: props.payments[0].label }));
     expect(screen.getByText(warning)).toBeTruthy();
     expect(screen.getByRole("button", { name: props.words.submit })).toBeEnabled();
   });
@@ -450,6 +470,7 @@ describe("the O2-clean warning by the shop's nitrox fill method (issue 3004)", (
     render(<Cart groups={groups} nitroxFillMethod={method} />);
     fireEvent.click(within(gear()).getByRole("button", { name: "Tank 004· AL80" }));
     fireEvent.change(fill(uncleaned), { target: { value: mix } });
+    fireEvent.click(screen.getByRole("radio", { name: props.payments[0].label }));
     const shown = screen.queryByText(warning) !== null;
     expect(screen.getByRole("button", { name: props.words.submit })).toBeEnabled();
     cleanup();

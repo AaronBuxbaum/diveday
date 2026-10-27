@@ -418,6 +418,20 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/orders/new");
         await page.getByRole("heading", { level: 1, name: "New order" }).waitFor();
         await capture(page, "orders-new", scheme);
+        await page.getByRole("button", { name: "Add another item", exact: true }).click();
+        await page
+          .locator('input[name="description-0"]')
+          .filter({ visible: true })
+          .fill("Two-tank reef trip");
+        await page.locator('input[name="unitAmount-0"]').filter({ visible: true }).fill("129.00");
+        await page
+          .locator('input[name="description-1"]')
+          .filter({ visible: true })
+          .fill("Rental set");
+        await page.locator('input[name="unitAmount-1"]').filter({ visible: true }).fill("35.00");
+        await expect(page.getByText("$164.00", { exact: true })).toBeVisible();
+        await capture(page, "orders-new-multiple-lines", scheme);
+        await captureStickyFoot(page, "orders-new-subtotal", scheme);
       });
     });
   });

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -12,7 +11,6 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import {
   ChoicePill,
   controlClass,
-  DateField,
   Field,
   FieldActions,
   FieldGrid,
@@ -36,6 +34,7 @@ import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
+import { AddCredentialDisclosure } from "./_components/AddCredentialDisclosure";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { StaffCardCredentials } from "./_components/StaffCardCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
@@ -46,13 +45,11 @@ import {
   resendInviteAction,
   restoreStaffAction,
   reviewStaffCredentialAction,
-  saveStaffCredentialAction,
   saveStaffEmergencyContactAction,
   saveStaffLanguagesAction,
   saveStaffRolesAction,
   setStaffStatusAction,
 } from "./actions";
-import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
 import { type CardCredential, credentialRowsFor } from "./credential-rows";
 import { noticeMessages } from "./notice-messages";
 import { parseRoles, TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
@@ -484,6 +481,7 @@ export default async function TeamSettingsPage({
     undoUserAccountId?: string;
     undoRoles?: string;
     undoName?: string;
+    credentialFor?: string;
     contactFor?: string;
     languagesFor?: string;
     rolesFor?: string;
@@ -497,6 +495,7 @@ export default async function TeamSettingsPage({
     undoUserAccountId,
     undoRoles,
     undoName,
+    credentialFor,
     contactFor,
     languagesFor,
     rolesFor,
@@ -556,6 +555,7 @@ export default async function TeamSettingsPage({
           "undoUserAccountId",
           "undoRoles",
           "undoName",
+          "credentialFor",
           "contactFor",
           "languagesFor",
           "rolesFor",
@@ -635,69 +635,7 @@ export default async function TeamSettingsPage({
           )}
           {/* Every credential is read, reviewed and removed on its person's
               card above (A09); adding one is the door under the team. */}
-          <div className="mt-4">
-            <AutoOpenDetails
-              id="add-credential"
-              openOnHash="add-credential"
-              className="scroll-mt-8"
-            >
-              <summary
-                className={buttonClass({
-                  variant: "link",
-                  flush: true,
-                  className: "list-none select-none [&::-webkit-details-marker]:hidden",
-                })}
-              >
-                {t("staffing.credentials.add")}
-              </summary>
-              <div className="pt-1 pb-6">
-                <FieldGrid as="form" action={saveStaffCredentialAction} columns={2}>
-                  <Field label={t("staffing.credentials.person")}>
-                    <select name="personId" required className={controlClass}>
-                      <option value="">{t("staffing.credentials.choosePerson")}</option>
-                      {staff.map((member) => (
-                        <option key={member.personId} value={member.personId}>
-                          {member.fullName}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label={t("staffing.credentials.kind")}>
-                    <select name="kind" required className={controlClass}>
-                      {Object.entries(CREDENTIAL_KIND_KEYS).map(([kind, key]) => (
-                        <option key={kind} value={kind}>
-                          {t(key)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label={t("staffing.credentials.name")}>
-                    <input name="name" required maxLength={160} className={controlClass} />
-                  </Field>
-                  <Field label={t("staffing.credentials.issuer")}>
-                    <input name="issuingBody" maxLength={160} className={controlClass} />
-                  </Field>
-                  <Field label={t("staffing.credentials.identifier")}>
-                    <input name="identifier" maxLength={120} className={controlClass} />
-                  </Field>
-                  <Field label={t("staffing.credentials.issuedAt")}>
-                    <DateField name="issuedAt" />
-                  </Field>
-                  <Field label={t("staffing.credentials.renewsAt")}>
-                    <DateField name="renewsAt" />
-                  </Field>
-                  <FieldActions>
-                    <SubmitButton
-                      pendingLabel={t("staffing.credentials.saving")}
-                      className={buttonClass()}
-                    >
-                      {t("staffing.credentials.add")}
-                    </SubmitButton>
-                  </FieldActions>
-                </FieldGrid>
-              </div>
-            </AutoOpenDetails>
-          </div>
+          <AddCredentialDisclosure staff={staff} credentialFor={credentialFor} t={t} />
         </section>
       </div>
     </main>

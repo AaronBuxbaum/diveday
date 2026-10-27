@@ -344,7 +344,8 @@
     "acknowledge": "Verifiqué con el buceador (o con su documento) que estos registros son de una sola persona.",
     "submit": "Fusionar con {name}",
     "pending": "Fusionando…",
-    "confirm": "¿Fusionar a {source} con {kept}? El registro de {source} se elimina y todo lo que tiene pasa a {kept}."
+    "confirm": "¿Fusionar a {source} con {kept}? El registro de {source} se elimina y todo lo que tiene pasa a {kept}.",
+    "noContact": "Sin datos de contacto"
   },
   "erase": {
     "heading": "Borrar datos personales",

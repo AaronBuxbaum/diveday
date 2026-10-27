@@ -94,3 +94,90 @@ test.describe("course forms", () => {
     ).toHaveCount(0);
   });
 });
+
+test.describe("course-form disclosure anchors", () => {
+  signedInAsOwner();
+
+  test("native and repeated client entries reveal the definitions, including a refused form", async ({
+    page,
+  }) => {
+    const path = "/shop/blue-mantis/waivers#course-form-new";
+    const parent = page.locator("details#course-forms").filter({ visible: true });
+    const form = page.locator("details#course-form-new").filter({ visible: true });
+    await page.goto(path);
+    await expect(parent).toHaveAttribute("open", "");
+    await expect(form).toHaveAttribute("open", "");
+    for (let index = 0; index < 2; index++) {
+      await parent.locator(":scope > summary").click();
+      await expect(parent).not.toHaveAttribute("open", "");
+      await page.getByRole("link", { name: "Courses", exact: true }).click();
+      await expect(page).toHaveURL("/shop/blue-mantis/courses");
+      await page
+        .locator('a[href="/shop/blue-mantis/courses/open-water-diver/edit"]')
+        .filter({ visible: true })
+        .first()
+        .click();
+      await expect(page).toHaveURL("/shop/blue-mantis/courses/open-water-diver/edit");
+      const requiredForms = page.locator("details#forms").filter({ visible: true });
+      if (
+        !(await requiredForms.evaluate((node) => node instanceof HTMLDetailsElement && node.open))
+      )
+        await requiredForms.locator(":scope > summary").click();
+      const writeForm = requiredForms.getByRole("link", {
+        name: staffCopy("courses.edit.forms.writeLink"),
+        exact: true,
+      });
+      await expect(writeForm).toHaveAttribute("href", path);
+      await writeForm.click();
+      await expect(page).toHaveURL(path);
+      await expect(parent).toHaveAttribute("open", "");
+      await expect(form).toHaveAttribute("open", "");
+    }
+    await page.locator("#course-form-title-new").fill("A form awaiting full wording");
+    await page.locator("#course-form-body-new").fill("Short");
+    // Exercise the server's refusal as a crafted client can; ordinary native
+    // minlength still prevents this submission without that deliberate override.
+    await form.locator("form").evaluate((node) => {
+      if (!(node instanceof HTMLFormElement)) throw new Error("course form is not a form");
+      node.noValidate = true;
+    });
+    const refused = page.waitForURL(/notice=course-form-invalid/);
+    await form.getByRole("button", { name: "Add form", exact: true }).click();
+    await refused;
+    await expect(parent).toHaveAttribute("open", "");
+    await expect(form).toHaveAttribute("open", "");
+    await expect(
+      form.getByText(staffCopy("waiversStaff.courseForms.notice.invalid"), { exact: true }),
+    ).toBeVisible();
+  });
+});
+
+test.describe("course-form title readability", () => {
+  signedInAsOwner();
+
+  test("complete legal titles fit their choice rows at phone text size 200%", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+    const forms = page.locator("details#forms");
+    await forms.locator(":scope > summary").click();
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    const clippedTitles = await forms
+      .locator("label")
+      .filter({ has: page.locator('input[type="checkbox"]') })
+      .evaluateAll((labels) =>
+        labels.flatMap((label) => {
+          const bounds = label.getBoundingClientRect();
+          const text = document.createRange();
+          text.selectNodeContents(label);
+          return [...text.getClientRects()].some(
+            (rect) => rect.right > bounds.right + 1 || rect.left < bounds.left - 1,
+          )
+            ? [label.textContent?.trim()]
+            : [];
+        }),
+      );
+    expect(clippedTitles).toEqual([]);
+  });
+});

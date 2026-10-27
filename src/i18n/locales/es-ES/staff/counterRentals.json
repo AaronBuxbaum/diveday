@@ -94,7 +94,8 @@
       "seen": "Tarjeta vista",
       "record": "Registrar tarjeta",
       "recording": "Registrando…"
-    }
+    },
+    "review": "Revisar alquiler"
   },
   "invoiceLine": "Alquiler de {label}, {days, plural, one {# día} other {# días}}",
   "ticket": {

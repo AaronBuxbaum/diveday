@@ -88,7 +88,9 @@ describe("the merge preview", () => {
     expect(keepAway).toHaveAttribute("name", "keep_phone");
     expect(keepAway).toHaveAttribute("value", "source");
     // A field only one record holds is shown, not asked about.
-    expect(screen.getByText("maya@example.com")).toBeInTheDocument();
+    expect(
+      within(screen.getAllByRole("table")[0]).getByText("maya@example.com"),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /maya@example\.com/ })).toBeNull();
   });
 
@@ -96,7 +98,7 @@ describe("the merge preview", () => {
   // break after its "@" and before a dot, and never inside a word.
   it("breaks an email only after its @ and before its dots", () => {
     renderPreview(preview());
-    const email = screen.getByText("maya@example.com");
+    const email = within(screen.getAllByRole("table")[0]).getByText("maya@example.com");
     expect(email).toHaveClass("break-words");
     expect(email).not.toHaveClass("break-all");
     expect(email.querySelectorAll("wbr")).toHaveLength(2);
@@ -107,7 +109,9 @@ describe("the merge preview", () => {
   // Its row spans the card, the label on its own line under the name.
   it("gives the email row the card's whole width, under its own label line", () => {
     renderPreview(preview());
-    const cell = screen.getByText("maya@example.com").closest("td");
+    const cell = within(screen.getAllByRole("table")[0])
+      .getByText("maya@example.com")
+      .closest("td");
     expect(cell).toHaveAttribute("colspan", "3");
     const label = screen.getByText("Email").closest("th");
     expect(label).toHaveAttribute("colspan", "3");
@@ -133,6 +137,27 @@ describe("the merge preview", () => {
       "/shop/blue-mantis/divers/22222222-2222-4222-8222-222222222222/merge/11111111-1111-4111-8111-111111111111",
     );
     expect(screen.getByRole("button", { name: "Merge into Maya R. Rivera" })).toBeInTheDocument();
+  });
+
+  it("identifies the kept record beside the merge action, including its contact and bookings", () => {
+    const { container } = renderPreview(
+      preview({
+        survivor: side({
+          fullName: "Maya Rivera",
+          email: "keeper@example.com",
+          counts: { ...zeroCounts, bookings: 4 },
+        }),
+      }),
+    );
+    const commit = container.querySelector("#merge");
+    expect(commit).not.toBeNull();
+    expect(within(commit as HTMLElement).getByText("keeper@example.com")).toBeVisible();
+    expect(commit).toHaveTextContent("4 bookings");
+  });
+
+  it("uses an honest no-contact fallback at the commit point", () => {
+    const { container } = renderPreview(preview({ survivor: side({ email: null, phone: null }) }));
+    expect(container.querySelector("#merge")).toHaveTextContent("No contact details on file");
   });
 
   it("names the shared departure and offers no button when both sit on it", () => {
@@ -259,7 +284,9 @@ describe("the merge preview", () => {
       }),
     );
     expect(screen.getByText(/^Added .*Mar.* 4 bookings$/)).toBeVisible();
-    expect(screen.getByText(/^Added .*Oct.* 0 bookings$/)).toBeVisible();
+    expect(
+      within(screen.getAllByRole("table")[0]).getByText(/^Added .*Oct.* 0 bookings$/),
+    ).toBeVisible();
     expect(
       screen.getByRole("link", { name: /^Keep Maya Rivera \(Added .*4 bookings\) instead$/ }),
     ).toBeVisible();

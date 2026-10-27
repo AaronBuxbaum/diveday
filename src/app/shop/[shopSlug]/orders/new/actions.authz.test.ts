@@ -82,6 +82,7 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
 function invoiceFor(personId: string) {
   const formData = new FormData();
   formData.set("personId", personId);
+  formData.set("lineItemCount", "1");
   formData.set("description", "Two-tank reef trip");
   formData.set("kind-0", "trip_fee");
   formData.set("description-0", "Two-Tank Reef — Molasses & French");
@@ -99,6 +100,35 @@ async function seededCustomer(db: AppDb, shopId: string) {
 }
 
 describe("raising an invoice", () => {
+  it("preserves the same validated route target on refusal without echoing a success receipt", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const personId = await seededCustomer(db, shop.id);
+    const form = invoiceFor(personId);
+    form.set("invoiceTarget", `:${personId}`);
+    form.set("invoiceAttempt", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    form.set("description-0", "");
+    const destination = await redirectedTo(() => createOrderAction(form));
+    const url = new URL(destination, "https://example.test");
+    expect(url.searchParams.get("notice")).toBe("invalid");
+    expect(url.searchParams.get("personId")).toBe(personId);
+    expect(url.searchParams.has("invoiceCreated")).toBe(false);
+  });
+  it("refuses a partly entered line instead of sending an incomplete invoice", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const form = invoiceFor(await seededCustomer(db, shop.id));
+    form.set("lineItemCount", "2");
+    form.set("kind-1", "other");
+    form.set("description-1", "");
+    form.set("quantity-1", "1");
+    form.set("unitAmount-1", "25");
+    const before = await orderCount(db, shop.id);
+    expect(await redirectedTo(() => createOrderAction(form))).toBe(
+      `/shop/${shop.slug}/orders/new?notice=invalid`,
+    );
+    expect(await orderCount(db, shop.id)).toBe(before);
+  });
   it("refuses a captain — billing a diver is owner/manager work, not deck work", async () => {
     const { db, shop, captain } = await context();
     const customer = await seededCustomer(db, shop.id);

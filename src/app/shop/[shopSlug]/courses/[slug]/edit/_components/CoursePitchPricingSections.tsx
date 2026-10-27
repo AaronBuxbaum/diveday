@@ -15,6 +15,7 @@ export function CoursePitchPricingSections({
   locale,
   t,
   summaryAssist,
+  summaryTranslation,
 }: {
   course: EditableCourse;
   pitch: CourseSectionRef;
@@ -24,6 +25,7 @@ export function CoursePitchPricingSections({
   t: StaffTranslator;
   /** Claude's Draft button for the summary, inside the save form; absent while dark. */
   summaryAssist?: ReactNode;
+  summaryTranslation?: ReactNode;
 }) {
   return (
     <>
@@ -42,6 +44,7 @@ export function CoursePitchPricingSections({
             />
             {summaryAssist ? <div className="mt-2">{summaryAssist}</div> : null}
           </Field>
+          {summaryTranslation}
           <Field
             label={t("courses.edit.overviewLabel")}
             description={t("courses.edit.overviewDescription")}

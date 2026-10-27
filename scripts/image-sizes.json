@@ -149,5 +149,14 @@
       "1280": 358,
       "1920": 358
     }
+  },
+  "src/app/shop/[shopSlug]/dive-sites/[id]/TemplateValueComparison.tsx :: (max-width: 640px) 90vw, 336px": {
+    "measured": "2026-10-26, ordinary pnpm dev with image optimizer enabled, /shop/blue-mantis/dive-sites/<Molasses Reef>#briefing-template. Existing landmark photo preserved while its note was changed in the normal local editor to expose the current/template comparison. Four current-photo slots agree at each width. /tmp/polish-editors-fresh/image-measurement-manifest.json. Declared desktop slot336px serves the measured333px slot without undersizing DPR2.",
+    "rendered": {
+      "390": 324,
+      "768": 333,
+      "1280": 305,
+      "1920": 333
+    }
   }
 }

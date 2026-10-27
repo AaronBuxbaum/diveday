@@ -55,7 +55,7 @@ describe("StaffCardCredentials", () => {
   it("lists what is on file when the role is answered, and a higher rating answers a lower role", () => {
     renderCard(["divemaster"], [card("PADI Instructor", "instructor_rating")]);
     expect(screen.getAllByText("PADI Instructor").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/on file/)).toBeNull();
+    expect(screen.getByText("1 on file")).toBeVisible();
   });
 
   it("names each unanswered role of a person who holds two", () => {
@@ -63,7 +63,7 @@ describe("StaffCardCredentials", () => {
     expect(screen.getByText("No captain’s license on file")).toBeVisible();
   });
 
-  it("keeps the full credential summary and every detail accessible for long names", () => {
+  it("counts settled credentials at rest and keeps complete long names inside", () => {
     const names = [
       "PADI Open Water Scuba Instructor — Professional Teaching Status",
       "Emergency First Response Primary and Secondary Care Instructor",
@@ -74,10 +74,28 @@ describe("StaffCardCredentials", () => {
     );
     const summary = container.querySelector("summary");
     expect(summary).toHaveTextContent("Credentials");
+    expect(summary).toHaveTextContent("2 on file");
     for (const name of names) {
-      expect(summary).toHaveTextContent(name);
+      expect(summary).not.toHaveTextContent(name);
       expect(screen.getAllByText(name, { exact: true })).toHaveLength(1);
     }
+  });
+
+  it("keeps a due-soon warning and a role-critical missing qualification in the summary", () => {
+    const { container } = renderCard(
+      ["captain"],
+      [card("EFR", "first_aid_cpr", { renewal: "due-soon", renewalWord: "Due soon" })],
+    );
+    expect(container.querySelector("summary")).toHaveTextContent("1 on file");
+    expect(container.querySelector("summary")).toHaveTextContent("Due soon");
+    expect(screen.getByText("No captain’s license on file")).toBeVisible();
+  });
+
+  it("adds a credential in this person's context", () => {
+    renderCard(["captain"], []);
+    expect(
+      screen.getByRole("link", { name: t("staffing.credentials.add"), hidden: true }),
+    ).toHaveAttribute("href", "?credentialFor=p1#add-credential");
   });
 
   it("is the ledger: an unreviewed credential says so and offers Mark reviewed and Delete", () => {

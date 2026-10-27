@@ -1,4 +1,5 @@
-import type { Page } from "@playwright/test";
+import type { Page, Request as PlaywrightRequest } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { counterPath, openRosterDetails, seededTripId } from "./helpers";
 
@@ -33,11 +34,30 @@ import { counterPath, openRosterDetails, seededTripId } from "./helpers";
  * `order-detail` visual captures.
  */
 
+const staffCopy = staffTranslator("en-US");
 const NEW_ORDER = "/shop/blue-mantis/orders/new";
 // `${fullName} — ${email}`, both deterministic in the seed (src/db/seed.ts).
 const CUSTOMER = "Priya Sharma — priya.sharma@mail.example";
 // A seeded departure with divers on it, so the roster has a seat to open.
 const ROSTER_TRIP = "Two-Tank Reef — Molasses & French";
+
+/** Compare only a boolean; request bodies and nonce values never enter test output. */
+async function postedInvoiceFieldsMatch(
+  request: PlaywrightRequest,
+  expected: Partial<Record<"invoiceAttempt" | "bookingId" | "personId", string>>,
+) {
+  const bytes = request.postDataBuffer();
+  if (!bytes) return false;
+  const form = await new Response(new Uint8Array(bytes), {
+    headers: { "content-type": request.headers()["content-type"] ?? "" },
+  }).formData();
+  return Object.entries(expected).every(([field, expectedValue]) => {
+    const values = [...form.entries()].filter(
+      ([name]) => name === field || name.endsWith(`_${field}`),
+    );
+    return values.length === 1 && values[0]?.[1] === expectedValue;
+  });
+}
 
 /** The first seat on a seeded departure's roster, opened to its foot row. */
 async function openFirstSeat(page: Page) {
@@ -84,9 +104,7 @@ test.describe("as owner", () => {
 
     await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
     await page.getByLabel("Order note").fill("Two-tank reef trip + rental set");
-    // Row 0 of the four fixed line-item rows. The kind select and the
-    // description input are unlabelled by design (a compact grid), so they are
-    // reached by name; quantity and unit price carry aria-labels.
+    // The initial line keeps stable posted names as more lines are added.
     const firstRow = page.locator('select[name="kind-0"]').filter({ visible: true });
     await firstRow.selectOption("trip_fee");
     await page
@@ -195,11 +213,230 @@ test.describe("as owner", () => {
       .locator('input[name="description-0"]')
       .filter({ visible: true })
       .fill("Private charter");
-    await page.locator('input[name="unitAmount-0"]').filter({ visible: true }).fill("250000");
+    const amount = page.locator('input[name="unitAmount-0"]').filter({ visible: true });
+    await amount.fill("250000");
     await page.getByRole("button", { name: "Create and send invoice" }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "Pick a customer" })).toContainText(
-      "Pick a customer and at least one line item with an amount.",
+    await expect(
+      page.locator('input[name="unitAmount-0"]:invalid').filter({ visible: true }),
+    ).toHaveCount(1);
+    await expect(amount).toBeFocused();
+    await expect(amount).toHaveValue("250000");
+  });
+
+  test("twenty complete invoice lines survive validation and repeated provider refusal", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-stripe-account");
+    await page.goto(NEW_ORDER);
+    await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+    await page.getByLabel("Order note").fill("Twenty-line test invoice");
+    await page
+      .getByLabel(staffCopy("orders.new.addressLine1"), { exact: true })
+      .fill("12 Test Street");
+    for (let index = 1; index < 20; index++)
+      await page.getByRole("button", { name: staffCopy("orders.new.addItem") }).click();
+    for (let index = 0; index < 20; index++) {
+      await page
+        .locator(`input[name="description-${index}"]`)
+        .filter({ visible: true })
+        .fill(`Test item ${index + 1}`);
+      await page
+        .locator(`input[name="unitAmount-${index}"]`)
+        .filter({ visible: true })
+        .fill(String(index + 1));
+    }
+    await page.locator('input[name="description-19"]').filter({ visible: true }).clear();
+    const invalidLanding = page.waitForURL(/notice=invalid/);
+    await page.getByRole("button", { name: staffCopy("orders.new.submit") }).click();
+    await invalidLanding;
+    await expect(page.locator('input[name="unitAmount-19"]').filter({ visible: true })).toHaveValue(
+      "20",
     );
+    await expect(page.getByLabel("Order note")).toHaveValue("Twenty-line test invoice");
+    await page
+      .locator('input[name="description-19"]')
+      .filter({ visible: true })
+      .fill("Corrected last item");
+    const providerRefusal = async () => {
+      const refusedLanding = page.waitForURL(/notice=stripe-failed/);
+      await page.getByRole("button", { name: staffCopy("orders.new.submit") }).click();
+      await refusedLanding;
+      await expect(
+        page.locator('input[name="description-19"]').filter({ visible: true }),
+      ).toHaveValue("Corrected last item");
+      await expect(
+        page.locator('input[name="description-0"]').filter({ visible: true }),
+      ).toHaveValue("Test item 1");
+      await expect(page.getByLabel("Order note")).toHaveValue("Twenty-line test invoice");
+      await expect(
+        page.getByLabel(staffCopy("orders.new.addressLine1"), { exact: true }),
+      ).toHaveValue("12 Test Street");
+      await expect(
+        page.getByRole("button", { name: staffCopy("orders.new.addItem") }),
+      ).toBeDisabled();
+    };
+    await providerRefusal();
+    await providerRefusal();
+  });
+
+  test("query-only client navigation changes the full invoice target and a same-target refusal retains it", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-stripe-account");
+    await openFirstSeat(page);
+    const seats = page.locator('#roster li[id^="booking-"]').filter({ visible: true });
+    const urls: string[] = [];
+    for (let index = 0; index < 2; index++) {
+      const seat = seats.nth(index);
+      await openRosterDetails(seat);
+      const href = await seat
+        .getByRole("link", { name: "Create order", exact: true })
+        .getAttribute("href");
+      if (!href) throw new Error("seeded seat has no invoice target");
+      urls.push(href);
+    }
+    const targetA = new URL(urls[0], "https://example.test");
+    const targetB = new URL(urls[1], "https://example.test");
+    await page.goto(urls[0]);
+    await page
+      .locator('input[name="description-0"]')
+      .filter({ visible: true })
+      .fill("Target A edited fee");
+    await page.getByLabel("Order note").fill("Target A note");
+    const customerBName = (
+      await page
+        .getByLabel("Customer")
+        .locator(`option[value="${targetB.searchParams.get("personId")}"]`)
+        .textContent()
+    )?.split(" — ")[0];
+    if (!customerBName) throw new Error("target B customer missing from the shop selector");
+    const formA = await page
+      .locator('form:has([name="lineItemCount"])')
+      .filter({ visible: true })
+      .elementHandle();
+    const navigated = page.waitForURL(
+      (url) => url.searchParams.get("bookingId") === targetB.searchParams.get("bookingId"),
+    );
+    await page.evaluate((url) => {
+      const router = (window as unknown as { next?: { router?: { push: (url: string) => void } } })
+        .next?.router;
+      if (!router) throw new Error("installed Next App Router debugger facade unavailable");
+      router.push(url);
+    }, urls[1]);
+    await navigated;
+    const formB = page.locator('form:has([name="lineItemCount"])').filter({ visible: true });
+    await expect(formB.locator('input[name="bookingId"]')).toHaveValue(
+      targetB.searchParams.get("bookingId") ?? "",
+    );
+    await expect(page.getByLabel("Customer")).toHaveValue(
+      targetB.searchParams.get("personId") ?? "",
+    );
+    await expect(page.getByLabel("Order note")).toHaveValue("");
+    await expect(
+      page.locator("p").filter({ hasText: customerBName }).filter({ hasText: ROSTER_TRIP }),
+    ).toBeVisible();
+    expect(await formB.evaluate((node, previous) => node !== previous, formA)).toBe(true);
+    expect(targetA.searchParams.get("bookingId") !== targetB.searchParams.get("bookingId")).toBe(
+      true,
+    );
+    await page.getByLabel("Order note").fill("Target B retained note");
+    const posted = page.waitForRequest(
+      (request) => request.method() === "POST" && Boolean(request.headers()["next-action"]),
+    );
+    const refused = page.waitForURL(/notice=stripe-failed/);
+    await page.getByRole("button", { name: staffCopy("orders.new.submit") }).click();
+    expect(
+      await postedInvoiceFieldsMatch(await posted, {
+        bookingId: targetB.searchParams.get("bookingId") ?? "",
+        personId: targetB.searchParams.get("personId") ?? "",
+      }),
+    ).toBe(true);
+    await refused;
+    await expect(formB.locator('input[name="bookingId"]')).toHaveValue(
+      targetB.searchParams.get("bookingId") ?? "",
+    );
+    await expect(page.getByLabel("Customer")).toHaveValue(
+      targetB.searchParams.get("personId") ?? "",
+    );
+    await expect(page.getByLabel("Order note")).toHaveValue("Target B retained note");
+  });
+
+  test("completion cleanup preserves unrelated attempts and consumes only the matching current draft", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-stripe-account");
+    const submitDraft = async (description: string) => {
+      await page.goto(NEW_ORDER);
+      await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+      await page.locator('input[name="description-0"]').filter({ visible: true }).fill(description);
+      await page.locator('input[name="unitAmount-0"]').filter({ visible: true }).fill("12");
+      const submittedRequest = page.waitForRequest(
+        (request) => request.method() === "POST" && Boolean(request.headers()["next-action"]),
+      );
+      const refusedLanding = page.waitForURL(/notice=stripe-failed/);
+      await page.getByRole("button", { name: staffCopy("orders.new.submit") }).click();
+      await refusedLanding;
+      await expect(
+        page.locator('input[name="description-0"]').filter({ visible: true }),
+      ).toHaveValue(description);
+      const draft = await page.evaluate(() => {
+        const key = Object.keys(sessionStorage).find(
+          (candidate) =>
+            candidate.startsWith("diveday.refused-form.blue-mantis.") &&
+            candidate.endsWith(".new-order"),
+        );
+        if (!key) throw new Error("submitted draft was not retained");
+        const raw = sessionStorage.getItem(key);
+        if (!raw) throw new Error("submitted draft is empty");
+        return { key, raw, attempt: String(JSON.parse(raw).attempt) };
+      });
+      expect(
+        await postedInvoiceFieldsMatch(await submittedRequest, { invoiceAttempt: draft.attempt }),
+      ).toBe(true);
+      return draft;
+    };
+    const current = await submitDraft("Pending first invoice");
+    await page.evaluate(() =>
+      sessionStorage.setItem("diveday.refused-form.other-shop.other-staffer.new-order", "keep"),
+    );
+    // An existing synthetic order isolates landing cleanup. The disabled fleet provider cannot complete a real create.
+    await page.goto("/shop/blue-mantis/orders");
+    await page
+      .locator('ul[aria-labelledby^="orders-day-"] > li')
+      .filter({ visible: true })
+      .first()
+      .getByRole("link")
+      .first()
+      .click();
+    await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
+    const orderUrl = page.url().split("?")[0];
+    await page.goto(`${orderUrl}?invoiceCreated=1`);
+    await expect(page).not.toHaveURL(/invoiceCreated=/);
+    expect(await page.evaluate((key) => sessionStorage.getItem(key), current.key)).toBe(
+      current.raw,
+    );
+    await page.goto(`${orderUrl}?invoiceCreated=ffffffff-ffff-4fff-8fff-ffffffffffff`);
+    await expect(page).not.toHaveURL(/invoiceCreated=/);
+    expect(await page.evaluate((key) => sessionStorage.getItem(key), current.key)).toBe(
+      current.raw,
+    );
+    await page.goto(`${orderUrl}?invoiceCreated=${current.attempt}`);
+    await expect
+      .poll(() => page.evaluate((key) => sessionStorage.getItem(key), current.key))
+      .toBeNull();
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("diveday.refused-form.other-shop.other-staffer.new-order"),
+      ),
+    ).toBe("keep");
+    const newer = await submitDraft("Pending newer invoice");
+    expect(newer.attempt !== current.attempt).toBe(true);
+    await page.goto(`${orderUrl}?invoiceCreated=${current.attempt}`);
+    await expect(page).not.toHaveURL(/invoiceCreated=/);
+    expect(await page.evaluate((key) => sessionStorage.getItem(key), newer.key)).toBe(newer.raw);
   });
 });
 

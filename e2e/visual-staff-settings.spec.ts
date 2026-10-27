@@ -568,7 +568,10 @@ for (const scheme of ["light", "dark"] as const) {
             });
             const value = summary.locator(":scope > span").last();
             await expect(label).toContainText("Credentials");
-            await expect(value).toContainText("Emergency First Response");
+            await expect(value).toHaveText(
+              staffCopy("staffing.credentials.onFileCount", { count: 3 }),
+            );
+            await expect(credentials.locator("ul")).toContainText("Emergency First Response");
             const labelBox = await label.boundingBox();
             const valueBox = await value.boundingBox();
             if (!labelBox || !valueBox) throw new Error("Credential summary did not render");

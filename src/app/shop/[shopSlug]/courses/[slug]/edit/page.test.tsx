@@ -15,6 +15,9 @@ vi.mock("@/components/ShopPageHeader", () => ({
   ShopPageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
 }));
 vi.mock("@/components/ui/FieldErrorFocus", () => ({ FieldErrorFocus: () => null }));
+vi.mock("../../../_components/ShopTextTranslation", () => ({
+  loadTranslationBox: vi.fn(async () => null),
+}));
 vi.mock("./_components/DayByDayEditor", () => ({ DayByDayEditor: () => null }));
 vi.mock("./_components/FaqEditor", () => ({ FaqEditor: () => null }));
 vi.mock("./_components/LearningMaterialsEditor", () => ({ LearningMaterialsEditor: () => null }));
@@ -66,6 +69,7 @@ vi.mock("@/i18n/staff-messages", () => ({
 const { getCourseBySlug, getCourseTemplateUpdate } = await import("@/db/courses");
 const { requireShopSurface } = await import("@/lib/session");
 const { default: EditCoursePage } = await import("./page");
+const { loadTranslationBox } = await import("../../../_components/ShopTextTranslation");
 
 const COURSE = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -160,6 +164,28 @@ describe("EditCoursePage sections", () => {
       }),
     );
   }
+
+  it("keeps Spanish summary beside its source and overview inside the one save form", async () => {
+    vi.mocked(loadTranslationBox).mockResolvedValueOnce({
+      kind: "course",
+      id: COURSE.id,
+      field: "summary",
+      text: "Aprende a bucear",
+      translatedFrom: "source",
+      stale: true,
+    });
+    await renderEditor({ error: "spanish-stale" });
+    const source = screen.getByRole("textbox", { name: /^courses\.edit\.subheadLabel/ });
+    const spanish = screen.getByRole("textbox", { name: /^courses\.edit\.summarySpanishLabel/ });
+    const overview = screen.getByRole("textbox", { name: "courses.edit.overviewLabel" });
+    expect(source.closest("form")).toBe(spanish.closest("form"));
+    expect(source.compareDocumentPosition(spanish) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      spanish.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(spanish.closest("details")).toBeNull();
+    expect(spanish).toHaveValue("Aprende a bucear");
+  });
 
   it("opens the everyday sections and closes the rest, with no rail", async () => {
     const { container } = await renderEditor();

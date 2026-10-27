@@ -243,7 +243,7 @@ for (const scheme of ["light", "dark"] as const) {
             await startSignInChallenge(page, privateShop.ownerEmail, locale);
             const words = diverTranslator(locale);
             const captureOptions = locale === SPANISH ? { locale: SPANISH } : {};
-            await capture(page, "sign-in-second-factor", scheme, captureOptions);
+            await capture(page, "sign-in-second-factor-direct", scheme, captureOptions);
             await page
               .getByRole("textbox", { name: words("account.signIn.twoFactorCode") })
               .fill("AAAAAA");

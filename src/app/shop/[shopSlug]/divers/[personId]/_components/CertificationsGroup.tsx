@@ -609,7 +609,7 @@ export function CertificationsGroup({
         }
         detail={
           <>
-            {selfDeclared ? t("divers.certifications.selfDeclaredLabel") : card.identifier}
+            {selfDeclared ? null : card.identifier}
             {/* A self-declared nitrox card is the diver's word with no card
                 sighted: its agency is often the "other" placeholder and its
                 title drops the agency, so a lookup link would send the staffer

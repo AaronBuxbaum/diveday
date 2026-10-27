@@ -5,8 +5,8 @@ import type { DiveSiteTemplateField } from "@/lib/dive-site-template-sync";
 export const TEMPLATE_FIELD_KEYS: Record<DiveSiteTemplateField, StaffMessageKey> = {
   description: "diveSites.edit.templateUpdates.fields.description",
   locationName: "diveSites.edit.templateUpdates.fields.locationName",
-  forecastLatitude: "diveSites.edit.templateUpdates.fields.coordinates",
-  forecastLongitude: "diveSites.edit.templateUpdates.fields.coordinates",
+  forecastLatitude: "diveSites.form.latitudeLabel",
+  forecastLongitude: "diveSites.form.longitudeLabel",
   marineLife: "diveSites.edit.templateUpdates.fields.marineLife",
   marineLifeDescription: "diveSites.edit.templateUpdates.fields.marineLifeDescription",
   difficultyLevel: "diveSites.edit.templateUpdates.fields.difficultyLevel",

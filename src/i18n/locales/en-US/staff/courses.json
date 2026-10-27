@@ -95,7 +95,6 @@
     "materialsDescription": "Sent to each student with their booking, and again a week before day 1.",
     "dayByDayLegend": "Day by day",
     "faqLegend": "Questions divers ask",
-    "spanishLegend": "Spanish",
     "save": "Save",
     "scheduleSession": "Schedule a session",
     "saving": "Saving…",
@@ -154,8 +153,10 @@
       "pasteWording": "Paste the agency’s wording",
       "awaitingText": "No student signs this until it has its text.",
       "addImpact": "{students, plural, one {A form added now asks # student} other {A form added now asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign it.",
-      "removeNotSaved": "That didn’t save."
-    }
+      "removeNotSaved": "That didn’t save.",
+      "displayOrder": "Display order"
+    },
+    "summarySpanishLabel": "Course summary in Spanish"
   },
   "dayByDay": {
     "dayLabel": "Day {number}",
