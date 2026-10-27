@@ -1490,6 +1490,10 @@
   A course with no known ratio never lowers a level, so the departure's level stands and the row
   warns. The sale, which cannot see a mark not yet made, sells on the same course seat under the
   same rule.
+  A counter advisory can name overlapping intro and entry-level sessions with a possible shared
+  instructor. It does not establish a group or clearance: different session windows can still
+  have training marks on the same separate departure, so an absent advisory does not establish
+  available instructor capacity.
 - **Counter hand-off** — signing several students' **Course forms** one at a time on one shop
   device, each on a single-use staff-issued link, with the page dead-ending after each signature
   (ADR 20261012-course-forms-on-charters-and-counter, decision 2). Designed, not built yet.

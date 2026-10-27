@@ -402,6 +402,8 @@
   },
   "addDiver": {
     "heading": "Add a booking",
+    "mixedTrainingTitle": "Possible training overlap",
+    "mixedTrainingBody": "If students from these sessions train together on one departure, check instructor groups and the intro ratio before the dive.",
     "fullDescription": "The boat is full.",
     "findLabel": "Find a returning diver",
     "findPlaceholder": "Name, email, or phone",
