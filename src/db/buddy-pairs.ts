@@ -660,6 +660,39 @@ export async function formPartyTeams(
         .from(shops)
         .where(eq(shops.id, input.shopId))
         .for("no key update");
+      // Match the card-sighting writer's person-then-card order. Lock seated
+      // people and existing cards before reading the plan. Sort each set so
+      // different departures cannot invert it. Card writers take the same
+      // person lock before introducing a new row.
+      const seatedPeople = tx
+        .select({ id: bookings.personId })
+        .from(bookings)
+        .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
+      const lockedPeople = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(
+          // diveday:allow-deleted-people: lock every seated person, including removed records.
+          and(eq(people.shopId, input.shopId), inArray(people.id, seatedPeople)),
+        )
+        .orderBy(asc(people.id))
+        .for("no key update");
+      if (lockedPeople.length) {
+        await tx
+          .select({ id: certifications.id })
+          .from(certifications)
+          .where(
+            and(
+              eq(certifications.shopId, input.shopId),
+              inArray(
+                certifications.personId,
+                lockedPeople.map((person) => person.id),
+              ),
+            ),
+          )
+          .orderBy(asc(certifications.id))
+          .for("update");
+      }
       const plan = await planPartyTeams(tx, input.shopId, input.tripId);
       const confirmed = new Set(input.confirmedAdultParties ?? []);
       const teamable = [

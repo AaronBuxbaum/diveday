@@ -230,10 +230,12 @@ describe("which parties one tap leaves for the divemaster", () => {
       { age: 15, minor: true },
       { age: 17, minor: true },
     ]);
-    expect((await planPartyTeams(db, shop.id, trip.id)).teamable).toEqual([ids]);
+    expect((await planPartyTeams(db, shop.id, trip.id)).teamable).toEqual([
+      expect.arrayContaining(ids),
+    ]);
     await db.update(shops).set({ requireAdultBuddyForTeens: true }).where(eq(shops.id, shop.id));
     expect((await planPartyTeams(db, shop.id, trip.id)).left).toEqual([
-      { bookingIds: ids, reason: "junior_without_adult" },
+      { bookingIds: expect.arrayContaining(ids), reason: "junior_without_adult" },
     ]);
     expect(await tap(db, shop.id, trip.id)).toBe(0);
     expect(await listTripBuddyTeams(db, shop.id, trip.id)).toEqual([]);

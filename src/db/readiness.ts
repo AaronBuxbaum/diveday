@@ -339,19 +339,22 @@ export async function activeCertificationReviewerId(
  * case-insensitive partial unique index would reject it anyway (CR-009).
  */
 export async function createCertification(db: AppDb, input: NewCertification) {
-  const [person] = await db
-    .select({ id: people.id })
-    .from(people)
-    // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
-    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
-    .limit(1);
-  if (!person) return null;
   try {
-    const [certification] = await db
-      .insert(certifications)
-      .values({ ...input, identifier: input.identifier.trim() })
-      .returning();
-    return certification ?? null;
+    return await db.transaction(async (tx) => {
+      const [person] = await tx
+        .select({ id: people.id })
+        .from(people)
+        // diveday:allow-deleted-people: removed records retain cards for restoration.
+        .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+        .limit(1)
+        .for("no key update");
+      if (!person) return null;
+      const [certification] = await tx
+        .insert(certifications)
+        .values({ ...input, identifier: input.identifier.trim() })
+        .returning();
+      return certification ?? null;
+    });
   } catch (error) {
     if (isUniqueConstraintViolation(error)) return null;
     throw error;
@@ -954,27 +957,51 @@ export async function restoreCertification(
     )
     .limit(1);
   if (!deleted || deleted.deletedAt === null) return false;
-  const [conflict] = await db
-    .select({ id: certifications.id })
-    .from(certifications)
-    .where(
-      and(
-        eq(certifications.shopId, input.shopId),
-        eq(certifications.agency, deleted.agency),
-        sql`lower(${certifications.identifier}) = lower(${deleted.identifier})`,
-        isNull(certifications.deletedAt),
-      ),
-    )
-    .limit(1);
-  if (conflict) return false;
-  const [row] = await db
-    .update(certifications)
-    .set({ deletedAt: null, deletedByPersonId: null })
-    .where(
-      and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
-    )
-    .returning({ id: certifications.id });
-  return Boolean(row);
+  try {
+    return await db.transaction(async (tx) => {
+      const [person] = await tx
+        .select({ id: people.id })
+        .from(people)
+        // diveday:allow-deleted-people: deleted divers retain their cards for restoration.
+        .where(and(eq(people.id, deleted.personId), eq(people.shopId, input.shopId)))
+        .for("no key update");
+      if (!person) return false;
+      const [current] = await tx
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.id, input.certificationId),
+            eq(certifications.shopId, input.shopId),
+            eq(certifications.personId, person.id),
+          ),
+        )
+        .limit(1);
+      if (!current || current.deletedAt === null) return false;
+      const [conflict] = await tx
+        .select({ id: certifications.id })
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, input.shopId),
+            eq(certifications.agency, current.agency),
+            sql`lower(${certifications.identifier}) = lower(${current.identifier})`,
+            isNull(certifications.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (conflict) return false;
+      const [row] = await tx
+        .update(certifications)
+        .set({ deletedAt: null, deletedByPersonId: null })
+        .where(and(eq(certifications.id, current.id), eq(certifications.shopId, input.shopId)))
+        .returning({ id: certifications.id });
+      return Boolean(row);
+    });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return false;
+    throw error;
+  }
 }
 
 export type NewSpecialtyCertification = {

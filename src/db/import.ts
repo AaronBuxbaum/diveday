@@ -31,7 +31,7 @@
  * roster.
  */
 
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { rentalItemLabel } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
@@ -320,6 +320,26 @@ export async function commitContactImport(
             and(eq(people.shopId, shopId), isNull(people.deletedAt), inArray(people.email, emails)),
           )
       : [];
+    // A merge row may add a card without updating the person. Hold the same
+    // person locks as one-tap planning, in stable order, for the whole import.
+    // People created below are already owned by this transaction.
+    if (existingPeople.length) {
+      await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(
+          and(
+            eq(people.shopId, shopId),
+            isNull(people.deletedAt),
+            inArray(
+              people.id,
+              existingPeople.map((person) => person.id),
+            ),
+          ),
+        )
+        .orderBy(asc(people.id))
+        .for("no key update");
+    }
     const personIdByEmail = new Map(
       existingPeople.flatMap((p) => (p.email ? [[p.email.toLowerCase(), p.id] as const] : [])),
     );
