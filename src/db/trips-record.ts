@@ -6,6 +6,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  max,
   notInArray,
   type SQL,
   type SQLWrapper,
@@ -49,6 +50,7 @@ import {
   bookings,
   courses,
   diveSites,
+  executedDives,
   people,
   personRoles,
   rollCallCrewEvents,
@@ -577,7 +579,7 @@ export async function updateTrip(
   let timeMoved = false;
   let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
-    const plannedDives = normalizedDiveCount(patch.plannedDives);
+    const plannedDives = normalizedDiveCount(patch.plannedDives, true);
     if (!plannedDives) return { ok: false, reason: "invalid" };
 
     const [existing] = await tx
@@ -612,6 +614,9 @@ export async function updateTrip(
       .limit(1)
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
+    if (!normalizedDiveCount(plannedDives, existing.courseId !== null)) {
+      return { ok: false, reason: "invalid" };
+    }
 
     // `seatHeld`, the same predicate `getTripWithBooked` above shows the
     // staffer and `createBookingRecord` enforces capacity with. Counting every
@@ -631,7 +636,20 @@ export async function updateTrip(
     // Divers and crew alike (`recordedRollCallRows`): a crew member counted
     // after a dive is history this edit may not orphan either.
     const checkpointRows = await recordedRollCallRows(tx, shopId, [tripId]);
-    const recordedDiveCount = maxRecordedDiveNumber(checkpointRows);
+    const [executed] = await tx
+      .select({ lastDive: max(executedDives.diveNumber) })
+      .from(executedDives)
+      .where(
+        and(
+          eq(executedDives.shopId, shopId),
+          eq(executedDives.tripId, tripId),
+          isNull(executedDives.deletedAt),
+        ),
+      );
+    const recordedDiveCount = Math.max(
+      maxRecordedDiveNumber(checkpointRows),
+      executed?.lastDive ?? 0,
+    );
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
     }

@@ -1,0 +1,2 @@
+-- diveday:allow-destructive drop-constraint trips.trips_planned_dives_range: the same atomic ALTER replaces the check with a superset of all previously valid rows; existing writers remain valid.
+ALTER TABLE "trips" DROP CONSTRAINT "trips_planned_dives_range", ADD CONSTRAINT "trips_planned_dives_range" CHECK ("planned_dives" between 1 and 4 or ("course_id" is not null and "planned_dives" = 5));

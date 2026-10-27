@@ -7,6 +7,7 @@ import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { ChoiceRow, controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
+import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import {
   CapacityField,
   CourseSelect,
@@ -34,6 +35,10 @@ import type {
 } from "./builder-types";
 import { focusOnMount } from "./focus-on-mount";
 import { useAddPanel } from "./use-add-panel";
+
+function diveFieldCountProps(courseId: string, plannedDives: number) {
+  return { count: plannedDives, maxDives: maxPlannedDives(courseId !== "") };
+}
 
 /** What every add panel on the board shares, built once by `ScheduleBuilder`: the draft, the loaders, the options and the words. */
 export type AddPanelBuilder = {
@@ -124,6 +129,7 @@ export function AddPanel({
     patternAnchor,
     pattern,
     patternApplied,
+    markPatternEdited,
     lensId,
     setLensId,
     crew,
@@ -151,6 +157,8 @@ export function AddPanel({
     <FieldGrid
       as="form"
       action={onAdd}
+      onInputCapture={markPatternEdited}
+      onChangeCapture={markPatternEdited}
       columns={1}
       className={
         standalone
@@ -272,8 +280,8 @@ export function AddPanel({
             required={!expanded}
             disabled={expanded}
             min={1}
-            max={4}
-            value={plannedDives}
+            max={maxPlannedDives(courseId !== "")}
+            value={Math.min(plannedDives, maxPlannedDives(courseId !== ""))}
             onChange={(event) => setPlannedDives(Number(event.target.value))}
             className={`${controlClass} tabular-nums`}
           />
@@ -376,7 +384,7 @@ export function AddPanel({
             id: site.id,
             name: site.title,
           }))}
-          initialCount={diveSeed.count}
+          {...diveFieldCountProps(courseId, plannedDives)}
           initialDives={[
             {
               title: null,

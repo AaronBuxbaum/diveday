@@ -40,6 +40,57 @@ describe("staff activity", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
+  it("exposes when the first live session check has finished", async () => {
+    let release!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    render(<StaffActivity sessionId="one" copy={copy} />);
+    expect(document.querySelector('[data-staff-session-check="pending"]')).not.toBeNull();
+    await act(async () => {});
+    expect(document.body.lastElementChild).toHaveAttribute("data-staff-session-lock");
+    await act(async () => {
+      release(new Response(JSON.stringify({ remainingMs: 5000 })));
+    });
+    expect(document.body.lastElementChild).not.toHaveAttribute("data-staff-session-lock");
+    expect(document.querySelector('[data-staff-session-check="settled"]')).not.toBeNull();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("settles the marker when a pending input is refused during a visibility check", async () => {
+    let finishPost!: (response: Response) => void;
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ remainingMs: 5000 })))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishPost = resolve;
+          }),
+      );
+    const listeners = vi.spyOn(document, "addEventListener");
+    await act(async () => {
+      render(<StaffActivity sessionId="one" copy={copy} />);
+    });
+    const pointer = listeners.mock.calls.find(([name]) => name === "pointerdown")?.[1];
+    if (typeof pointer !== "function") throw new Error("pointer handler missing");
+    await act(async () => {
+      pointer({ isTrusted: true } as Event);
+    });
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(document.querySelector('[data-staff-session-check="pending"]')).not.toBeNull();
+    await act(async () => {
+      finishPost(new Response(null, { status: 401 }));
+    });
+    expect(document.querySelector('[data-staff-session-check="settled"]')).not.toBeNull();
+    expect(screen.getByRole("alertdialog")).toBeVisible();
+    listeners.mockRestore();
+  });
+
   it("covers and makes staff content inert when the session cannot be confirmed", async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 401 }));
     const otherPortal = document.createElement("div");

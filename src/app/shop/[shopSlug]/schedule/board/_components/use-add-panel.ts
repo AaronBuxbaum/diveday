@@ -185,6 +185,11 @@ export function useAddPanel({
   const plain = addDraft === null && !initialCourse && !initialSite && !requestPlan;
   const [pattern, setPattern] = useState<BuilderPattern | null>(null);
   const [patternApplied, setPatternApplied] = useState(false);
+  // A slow pattern must never replace something the desk has started to edit.
+  const patternEdited = useRef(false);
+  const markPatternEdited = () => {
+    patternEdited.current = true;
+  };
   /** The trip tag, controlled so "Start blank" can reset it. */
   const [lensId, setLensId] = useState("");
   const [crew, setCrew] = useState<BuilderPattern["crew"]>([]);
@@ -201,7 +206,7 @@ export function useAddPanel({
   }, [plain, canAskPattern, dateIso]);
   useEffect(() => {
     const element = patternAnchor.current?.closest("form");
-    if (!pattern || patternApplied || !options || !element) return;
+    if (!pattern || patternApplied || !options || !element || patternEdited.current) return;
     applyFormFields(element, pattern.fields);
     setCrew(pattern.crew);
     setPatternApplied(true);
@@ -249,6 +254,7 @@ export function useAddPanel({
     patternAnchor,
     pattern,
     patternApplied,
+    markPatternEdited,
     lensId,
     setLensId,
     crew,

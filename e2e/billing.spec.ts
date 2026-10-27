@@ -42,7 +42,9 @@ test.describe("Billing settings, for anyone but the owner", () => {
   test("sends a captain home with the reason", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto(BILLING);
 
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\?notice=billing-not-authorized$/);
-    await expect(page.getByText("Billing is limited to the owner.")).toBeVisible();
+    // FlashParams removes the one-shot notice from the address bar after the
+    // streamed redirect; the destination and its specific refusal stay visible.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(?:\?.*)?$/);
+    await expect(page.getByRole("status")).toContainText("Billing is limited to the owner.");
   });
 });

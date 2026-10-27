@@ -48,6 +48,7 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
+import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
@@ -310,9 +311,8 @@ const addSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
-  plannedDives: z.coerce.number().int().min(1).max(4),
-  // A departure that meets on consecutive days is one trip, not a week of
-  // look-alikes: one roster, one set of waivers, one crew (src/lib/trip-days.ts).
+  plannedDives: z.coerce.number().int().min(1).max(MAX_COURSE_DIVES),
+  // Consecutive days share one roster, set of waivers and crew (src/lib/trip-days.ts).
   dayCount: z.preprocess(
     (value) => (value === "" || value === undefined ? MIN_TRIP_DAYS : value),
     z.coerce.number().int().min(MIN_TRIP_DAYS).max(MAX_TRIP_DAYS),

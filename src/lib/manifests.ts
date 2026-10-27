@@ -270,6 +270,7 @@ export type ManifestDiverInput = {
     courseTitle: string;
     instructorAboard: boolean;
     overRatio?: boolean;
+    siteAttributionUnknown?: boolean;
     intro?: boolean;
   } | null;
   /**

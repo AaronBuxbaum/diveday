@@ -670,6 +670,7 @@
       "paperCopy": "Tengo la copia firmada en papel"
     },
     "trainingMark": {
+      "siteAttributionUnknown": "Esta marca no indica cuál inmersión es de formación, así que siguen aplicando los requisitos de certificación del sitio.",
       "label": "Inmersión de formación",
       "countsToward": "Cuenta para",
       "option": "{course}, {date}",
