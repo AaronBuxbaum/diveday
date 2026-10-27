@@ -26,6 +26,32 @@ describe("the waiver signing page's reads (in-memory PGlite)", () => {
     });
   });
 
+  it("does not claim a cancelled booking still has scheduled dive sites", async () => {
+    const { db, shop } = ctx;
+    const [seat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .limit(1);
+    if (!seat) throw new Error("seat missing");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat.id));
+    expect(await getBookingTripId(db, shop.id, seat.id)).toBeNull();
+    expect(await getWaiverTripHeader(db, shop.id, seat.id)).toBeNull();
+  });
+
+  it("does not claim scheduled sites for a cancelled departure", async () => {
+    const { db, shop } = ctx;
+    const [seat] = await db
+      .select({ id: bookings.id, tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .limit(1);
+    if (!seat) throw new Error("seat missing");
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, seat.tripId));
+    expect(await getBookingTripId(db, shop.id, seat.id)).toBeNull();
+    expect(await getWaiverTripHeader(db, shop.id, seat.id)).toBeNull();
+  });
+
   it("reads the name a release is signed under", async () => {
     const { db, shop } = ctx;
     const [person] = await db

@@ -114,6 +114,17 @@ test.describe("the paper day", () => {
     }
     expect(new Set(sectionPages.map((section) => section.page)).size).toBe(sectionPages.length);
     await popup.evaluate(() => document.fonts.ready);
+    // Returning to the packet rechecks its staff session. Exercise that check
+    // and wait for it: printing while it is pending correctly prints the lock.
+    await popup.bringToFront();
+    await Promise.all([
+      popup.waitForResponse(
+        (response) =>
+          response.url().includes("/api/staff-activity") && response.request().method() === "GET",
+      ),
+      popup.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))),
+    ]);
+    await expect(popup.locator("[data-staff-session-lock]")).toHaveCount(0);
     const pdf = await popup.pdf({ format: "Letter", preferCSSPageSize: true });
     // Every section starts its own sheet; a long section may continue on more.
     const sheets = pdf.toString("latin1").match(/\/Type \/Page\b/g) ?? [];

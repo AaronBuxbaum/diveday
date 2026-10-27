@@ -24,7 +24,7 @@ test("a full date in a weekly run points at the next one, and a party waits whol
   // aggregate sequential-navigation cost, as in trip-series.spec.ts.
   test.setTimeout(45_000);
   const title = `Run Party ${e2eNow().getTime()}`;
-  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
   await page.getByLabel("What is it").fill(title);
   await page.getByLabel("Date").fill(daysFromNow(4));
   await page.getByLabel("Departs").fill("08:00");
