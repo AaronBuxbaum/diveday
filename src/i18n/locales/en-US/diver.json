@@ -831,7 +831,8 @@
     "invalid": "Something in the form didn’t come through. Check it over and try again.",
     "contactRequired": "Leave an email or a phone number so we can reach you.",
     "unavailable": "That shop isn’t taking registrations right now.",
-    "switchedOff": "Ask the crew at the counter to sign you in."
+    "switchedOff": "Ask the crew at the counter to sign you in.",
+    "uncertified": "No certification recorded"
   },
   "packages": {
     "title": "Dive packages",

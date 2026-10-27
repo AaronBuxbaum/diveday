@@ -591,6 +591,17 @@ H-01/H-03's.
 - **Composition:** official form, protected answers and signed-form return form a reading order
   that stays truthful before and after DOB unlock.
 
+### Counter self-registration — `/s/[shopSlug]/register`
+
+- **One idea:** give the shop my diver details once.
+- **The question it arrives with:** "what does the shop need from me?" is answered by identity,
+  contact, certification and rental-size groups in that order.
+- **Controls that dissolved:** certification level and optional number appear only when the
+  selected agency makes them relevant.
+- **Remove first:** decorative panels, rather than the form's labels, consent or refusal feedback.
+- **Composition:** one unboxed form uses the same group order on phone and desktop, retaining
+  entered details after a refused submission without presenting self-declared cards as verified.
+
 ### The gear register — `/shop/[shopSlug]/gear`
 
 **Built 2026-08-29** — ADR

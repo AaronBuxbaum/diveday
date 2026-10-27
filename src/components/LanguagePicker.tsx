@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/group-label";
@@ -13,6 +13,15 @@ export type LanguagePickerCopy = {
   ariaLabel: string;
   /** Heads the open panel. */
   heading: string;
+};
+
+type PanelPlacement = {
+  top: number;
+  left: number;
+  maxHeight: number;
+  maxWidth: number;
+  minWidth: number;
+  upward: boolean;
 };
 
 /**
@@ -62,8 +71,80 @@ export function LanguagePicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [placement, setPlacement] = useState<PanelPlacement>();
   // 180ms matches .animate-scale-out in globals.css — the two must move together.
   const { mounted, closing } = useExitAnimation(open, motionMs("base"));
+
+  // Like RowMenu, place before paint and flip when the lower side cannot fit.
+  // Scroll height plus borders is the full list even after a short viewport
+  // caps it; transformed animation bounds would underestimate its final size.
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!mounted || !panel) {
+      setPlacement(undefined);
+      return;
+    }
+    const position = () => {
+      const trigger = triggerRef.current?.getBoundingClientRect();
+      const root = rootRef.current?.getBoundingClientRect();
+      const naturalHeight = panel.scrollHeight + panel.offsetHeight - panel.clientHeight;
+      if (!trigger || !root || naturalHeight <= 0) return;
+      const fontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const edge = fontSize / 2;
+      const gap = fontSize / 4;
+      const viewportHeight = Math.max(0, window.innerHeight - edge * 2);
+      const below = Math.max(
+        0,
+        Math.min(viewportHeight, window.innerHeight - edge - trigger.bottom - gap),
+      );
+      const above = Math.max(0, Math.min(viewportHeight, trigger.top - edge - gap));
+      const upward = naturalHeight > below && above > below;
+      const maxHeight = upward ? above : below;
+      const height = Math.min(naturalHeight, maxHeight);
+      const maxWidth = Math.max(0, window.innerWidth - edge * 2);
+      const width = Math.min(panel.offsetWidth, maxWidth);
+      const left = Math.max(
+        edge,
+        Math.min(trigger.right - width, window.innerWidth - edge - width),
+      );
+      const desiredTop = upward ? trigger.top - gap - height : trigger.bottom + gap;
+      const top = Math.max(edge, Math.min(desiredTop, window.innerHeight - edge - height));
+      const next = {
+        top: top - root.top,
+        left: left - root.left,
+        maxHeight,
+        maxWidth,
+        minWidth: Math.min(fontSize * 10, maxWidth),
+        upward,
+      };
+      setPlacement((previous) =>
+        previous?.top === next.top &&
+        previous.left === next.left &&
+        previous.maxHeight === next.maxHeight &&
+        previous.maxWidth === next.maxWidth &&
+        previous.minWidth === next.minWidth &&
+        previous.upward === next.upward
+          ? previous
+          : next,
+      );
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(position);
+    observer?.observe(panel);
+    if (triggerRef.current) observer?.observe(triggerRef.current);
+    // The wrapping public header can move this trigger without resizing it.
+    // This absolute panel does not contribute to that header's height.
+    const header = rootRef.current?.closest("header");
+    if (header) observer?.observe(header);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+      observer?.disconnect();
+    };
+  }, [mounted]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,9 +189,9 @@ export function LanguagePicker({
           {currentLabel}
         </span>
         {/* Below `sm` the globe carries the control alone: the endonym goes
-            `sr-only` and the caret is hidden outright. The phone's chrome bar
-            is one fixed-height row (ADR 20260827-clearwater-surface-language,
-            decision 10) whose first claim belongs to the shop's own name,
+            `sr-only` and the caret is hidden outright. The public bar can
+            wrap (ADR 20260827-clearwater-surface-language, decision 10),
+            while the leading identity row belongs to the shop's own name,
             which appears nowhere else above the fold on a shopfront page,
             while this control's meaning survives the squeeze whole: the globe
             is the half that needs no language, `aria-label` and
@@ -127,7 +208,24 @@ export function LanguagePicker({
         // its corner, and the heading on the rows' tick gutter, so it starts
         // where the names do.
         <div
-          className={`absolute top-full right-0 z-10 mt-1 min-w-40 ${MENU_PANEL} ${closing ? "animate-scale-out" : "animate-scale-in"}`}
+          ref={panelRef}
+          data-language-menu=""
+          data-side={placement?.upward ? "above" : "below"}
+          style={
+            placement
+              ? {
+                  top: placement.top,
+                  left: placement.left,
+                  right: "auto",
+                  marginTop: 0,
+                  maxHeight: placement.maxHeight,
+                  maxWidth: placement.maxWidth,
+                  minWidth: placement.minWidth,
+                  transformOrigin: placement.upward ? "bottom right" : "top right",
+                }
+              : undefined
+          }
+          className={`absolute top-full right-0 z-10 mt-1 min-w-40 overflow-y-auto ${MENU_PANEL} ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
           <GroupLabel className={MENU_TICK_GUTTER}>{copy.heading}</GroupLabel>
           <div className="mt-1">
