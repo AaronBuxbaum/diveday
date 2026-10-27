@@ -42,6 +42,7 @@ import {
   shopShoreAlertTokens,
   staffReplies,
   stripeWebhookEvents,
+  todayReadMarks,
   tripDeskEvents,
   tripReadMarks,
   trips,
@@ -505,6 +506,11 @@ export const PRUNE_ARMS = {
     from: tripReadMarks,
     id: tripReadMarks.id,
     clock: tripReadMarks.lastSeenAt,
+  },
+  today_read_marks: {
+    from: todayReadMarks,
+    id: todayReadMarks.id,
+    clock: todayReadMarks.lastSeenAt,
   },
   // The inbox (ADR 20260907-two-way-inbox), replies first: a reply names the
   // message it answered with ON DELETE SET NULL, so either order is safe, but

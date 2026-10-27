@@ -29,6 +29,7 @@ export type DeskEventKind = (typeof tripDeskEventKind.enumValues)[number];
  */
 export const DESK_EVENT_KINDS = [
   "arrival",
+  "running_late",
   "seat_taken",
   "seat_released",
   "seat_turned_away",

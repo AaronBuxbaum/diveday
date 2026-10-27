@@ -12,7 +12,7 @@ import {
   markPhoneRunningLate,
   messageSeats,
 } from "./running-late";
-import { activityEvents, bookings, people, shops, trips } from "./schema";
+import { activityEvents, bookings, people, shops, tripDeskEvents, trips } from "./schema";
 import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -98,6 +98,19 @@ describe("markBookingRunningLate", () => {
       at: now,
     });
     expect(await lateAt(bookingId)).toEqual(now);
+  });
+
+  it("records exactly one desk event when the diver first says they are late", async () => {
+    const { db, shop, trip, bookingId, personId, now } = await context();
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId, now });
+    const events = await db
+      .select()
+      .from(tripDeskEvents)
+      .where(eq(tripDeskEvents.bookingId, bookingId));
+    expect(events.filter((event) => event.kind === "running_late")).toMatchObject([
+      { shopId: shop.id, tripId: trip.id, subjectPersonId: personId, actorPersonId: null },
+    ]);
   });
 
   it("refuses before the day-before window and once the boat has sailed", async () => {
