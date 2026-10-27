@@ -21,6 +21,7 @@ import {
 } from "../../e2e/helpers";
 import { E2E_CRON_SECRET, E2E_TEST_ROUTE_SECRET } from "../../e2e/servers";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "../../src/db/seed-clock";
+import { diverTranslator } from "../../src/i18n/messages";
 import { DAY_STATES, dayTimeline, renderTranscript, screenshotName } from "./lib.mjs";
 import {
   SIMULATION_BASE_URL,
@@ -59,6 +60,7 @@ const SEEDED_DEPARTURE_MS = 3.5 * 60 * 60 * 1000;
 const SEEDED_DEPARTURE_TITLE = "Two-Tank Reef — Molasses & French";
 const DIVER_NAME = "Sam Simulation";
 const CARD_NUMBER = "SIM-2026-0721";
+const diverCopy = diverTranslator("en-US");
 
 type StateResult = {
   id: string;
@@ -193,7 +195,9 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
     case "seat-booked": {
       await advanceClock(at(id));
       await diver.goto(`/s/${SIMULATION_SHOP_SLUG}/trips/${day.tripId}`);
-      await expect(diver.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+      await expect(
+        diver.getByLabel(diverCopy("party.numberOfDivers"), { exact: true }),
+      ).toHaveAttribute("data-hydrated", "true");
       const shots = [await snap(diver, index, id, "trip-page")];
       await diver.getByLabel("Name", { exact: true }).fill(DIVER_NAME);
       await diver.getByLabel("Email", { exact: true }).fill("sam.simulation@example.com");
