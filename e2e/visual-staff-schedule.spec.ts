@@ -705,7 +705,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the expanded add-a-departure panel renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
         await page.getByRole("heading", { name: "Add a departure", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await addPanelSettled(page);
@@ -720,7 +720,7 @@ for (const scheme of ["light", "dark"] as const) {
       // generates stable.
       test(`the repeating-trip panel renders true to the design (${scheme})`, async ({ page }) => {
         const title = "Standing Saturday charter";
-        await page.goto("/shop/blue-mantis/schedule/board?add=full");
+        await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
         await page.getByLabel("What is it").fill(title);
         await page.getByLabel("Date").fill(daysFromNow(4));
         await page.getByLabel("Departs").fill("08:00");

@@ -15,7 +15,8 @@ import {
   WAIVER_LINK_TTL_MS,
   waiverClockInstant,
 } from "@/lib/waivers";
-import type { AppDb, DbExecutor } from "./client";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
+import type { DbExecutor } from "./client";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
@@ -77,18 +78,17 @@ export type IssueWaiverOutcome =
  * stops being the *usual* outcome of asking twice.
  */
 export async function issueWaiverRequest(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; bookingId?: string; personId?: string; now?: Date },
 ): Promise<IssueWaiverOutcome> {
   if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
-  const now = input.now ?? nowDate();
   const token = createWaiverToken();
   const tokenHash = hashWaiverToken(token);
-  const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
   const keyResult = secretKeyFromEnvironment();
   const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
 
   return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
+    await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
     const booking = input.bookingId
       ? await tx
           .select({
@@ -112,6 +112,7 @@ export async function issueWaiverRequest(
               ne(bookings.status, "cancelled"),
             ),
           )
+          .for("update", { of: bookings })
           .limit(1)
           .then((rows) => rows[0] ?? null)
       : null;
@@ -122,7 +123,22 @@ export async function issueWaiverRequest(
     if (booking?.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
     const personId = booking?.personId ?? input.personId;
     if (!personId) return { ok: false, reason: "person_not_found" };
-    let dateOfBirth = booking?.dateOfBirth ?? null;
+    const [lockedPerson] = await tx
+      .select({
+        id: people.id,
+        dateOfBirth: people.dateOfBirth,
+        anonymizedAt: people.anonymizedAt,
+        mergedIntoPersonId: people.mergedIntoPersonId,
+      })
+      .from(people)
+      // diveday:allow-deleted-people: an existing booking may belong to a removed person; erasure is refused below.
+      .where(and(eq(people.id, personId), eq(people.shopId, input.shopId)))
+      // diveday:allow-update-lock: issuance and signing use the same person-before-waiver order.
+      .for("update")
+      .limit(1);
+    if (!lockedPerson || lockedPerson.anonymizedAt || lockedPerson.mergedIntoPersonId)
+      return { ok: false, reason: "person_not_found" };
+    let dateOfBirth = lockedPerson.dateOfBirth;
     if (!booking) {
       const [person] = await tx
         .select({ id: people.id, dateOfBirth: people.dateOfBirth })
@@ -144,9 +160,6 @@ export async function issueWaiverRequest(
       timezone: await shopTimezone(tx, input.shopId),
     };
 
-    const template = await getCurrentWaiverTemplate(tx, input.shopId);
-    if (!template) return { ok: false, reason: "template_not_found" };
-
     const current = await tx
       .select()
       .from(waiverRecords)
@@ -158,7 +171,14 @@ export async function issueWaiverRequest(
             : and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)),
           isNull(waiverRecords.supersededAt),
         ),
-      );
+      )
+      .for("update");
+    // A row lock can wait past expiry or a concurrent signature. Re-read the
+    // clock and terms only after every current record is locked.
+    const now = input.now ?? nowDate();
+    const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
+    const template = await getCurrentWaiverTemplate(tx, input.shopId);
+    if (!template) return { ok: false, reason: "template_not_found" };
     // A signature that has lapsed (its year, its physician's year, or terms the
     // shop has since changed) stands for nothing: the seat reads
     // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on

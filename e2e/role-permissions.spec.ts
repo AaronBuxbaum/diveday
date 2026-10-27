@@ -104,6 +104,7 @@ test.describe("H-14 role permissions", () => {
       // Trip creation is hidden — and the board says whose job it is rather
       // than just omitting the control (ADR 20260806-one-trip-create-form).
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
+      await page.waitForURL((url) => url.pathname === `/shop/${SHOP}/schedule/board/new`);
       await expect(page.getByText("limited to owners, managers, and instructors")).toBeVisible();
       await expect(page.getByRole("link", { name: "Add a departure" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: /Add a departure/ })).toHaveCount(0);
@@ -269,6 +270,7 @@ test.describe("H-14 role permissions", () => {
     }) => {
       // Trip configuration is instructor work — the form is present.
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
+      await page.waitForURL((url) => url.pathname === `/shop/${SHOP}/schedule/board/new`);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
       // Money and the legal waiver are still owner/manager only — including
@@ -333,6 +335,7 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("button", { name: "Save rentals" })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
+      await page.waitForURL((url) => url.pathname === `/shop/${SHOP}/schedule/board/new`);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
       await page.goto(await firstDiverDetailHref(page));

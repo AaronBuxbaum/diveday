@@ -130,7 +130,7 @@ test("the second trip does not repeat the bookable moment", async ({ page }) => 
     .toISOString()
     .slice(0, 10);
   const schedule = async (title: string, start: string, end: string) => {
-    await page.goto(`/shop/${unique}/schedule/board?add=1`);
+    await page.goto(`/shop/${unique}/schedule/board/new`);
     await page.locator('input[name="title"]').fill(title);
     await page.locator('input[name="date"]').fill(tomorrow);
     await page.getByLabel("Departs").fill(start);
@@ -189,7 +189,7 @@ test("a shop with a departure today is not treated as a shop with no departures"
   // Today, late enough in the day that it has not sailed yet under the frozen
   // clock — the ordinary case of a shop opening its own home page mid-morning.
   const today = E2E_FROZEN_CLOCK.slice(0, 10);
-  await page.goto(`/shop/${unique}/schedule/board?add=1`);
+  await page.goto(`/shop/${unique}/schedule/board/new`);
   await page.locator('input[name="title"]').fill("Afternoon Two-Tank");
   await page.locator('input[name="date"]').fill(today);
   await page.getByLabel("Departs").fill("16:00");

@@ -533,14 +533,9 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
   // party is seated, so the draft is finished with (security review N2).
   await discardFormDraft(db, session.user.shopId, session.user.personId, "new_diver");
 
-  const path = door.seatedPath({ shopSlug, tripId, personId: "" });
-  const seats = outcome.seats;
-  // The same precedence one walk-in's notice keeps (`seat` above): a held
-  // seat first, then a release nobody was sent, then the plain "added".
-  const notice = seats.some((seat) => seat.identityUnconfirmed)
-    ? door.seatedIdentityUnconfirmedNotice
-    : seats.some((seat) => seat.waiver === "not_delivered" || seat.waiver === "failed")
-      ? "walkin-party-added-waiver-undelivered"
-      : "walkin-party-added";
-  revalidateAndRedirect(path, noticeUrl(path, notice));
+  const lead = outcome.seats[0];
+  if (!lead) throw new Error("seatParty returned no lead seat");
+  const departurePath = door.seatedPath({ shopSlug, tripId, personId: "" });
+  const queuePath = shopPath(shopSlug, "trips", tripId, "party", lead.bookingId, "waivers");
+  revalidateAndRedirect(departurePath, queuePath);
 }

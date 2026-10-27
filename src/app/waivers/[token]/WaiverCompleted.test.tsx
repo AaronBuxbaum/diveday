@@ -16,7 +16,7 @@ afterEach(cleanup);
 function receipt(
   medicalState: CompletedMedicalState,
   doctorPath: string | null = "/waivers/private/doctor",
-  readyPath: string | null = "/ready/private",
+  showPrepHelp = true,
 ) {
   return (
     <WaiverCompleted
@@ -24,7 +24,7 @@ function receipt(
       t={t}
       locale="en-US"
       medicalState={medicalState}
-      readyPath={readyPath}
+      showPrepHelp={showPrepHelp}
       doctorPath={doctorPath}
       signedRail={completedWaiverRail(medicalState !== "complete", false)}
       diveSitesList={[]}
@@ -49,7 +49,7 @@ describe("signed waiver receipt", () => {
     const signed = screen.getByText(t("waiver.signedBody"));
     const next = screen.getByText(t("waiver.medicalReferralNext"));
     const doctor = screen.getByRole("link", { name: t("waiver.doctor.open") });
-    const prep = screen.getByRole("link", { name: t("waiver.seeWhatsLeft") });
+    const prep = screen.getByText(t("waiver.prepLinkHelp"));
     expect(signed.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(next.compareDocumentPosition(doctor) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(doctor.compareDocumentPosition(prep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -73,14 +73,33 @@ describe("signed waiver receipt", () => {
   it("keeps completed receipt/prep truthful without asserting boarding clearance", () => {
     const { container } = render(receipt("complete"));
     expect(screen.getByText(t("waiver.signedBody"))).toBeVisible();
-    expect(screen.getByRole("link", { name: t("waiver.seeWhatsLeft") })).toBeVisible();
+    expect(screen.getByText(t("waiver.prepLinkHelp"))).toBeVisible();
+    expect(screen.queryByRole("link", { name: t("waiver.seeWhatsLeft") })).toBeNull();
     expect(container.querySelector("[data-medical-next]")).toBeNull();
     expect(container.textContent).not.toMatch(
       /cleared to dive|all done|off your mind|see you at the dock/i,
     );
   });
+  it("calls only the waiver signed for a counter handoff", () => {
+    render(
+      <WaiverCompleted
+        shop={shop}
+        t={t}
+        locale="en-US"
+        medicalState="complete"
+        showPrepHelp={false}
+        doctorPath={null}
+        signedRail={completedWaiverRail(false, false)}
+        diveSitesList={[]}
+        waiverOnly
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
+    expect(screen.queryByText(t("capability.waiverDone"))).toBeNull();
+    expect(screen.queryByRole("link", { name: t("waiver.seeWhatsLeft") })).toBeNull();
+  });
   it("retains contact with no booking or doctor door", () => {
-    render(receipt("referral", null, null));
+    render(receipt("referral", null, false));
     expect(screen.getByText(t("waiver.medicalReferralNext"))).toBeVisible();
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });

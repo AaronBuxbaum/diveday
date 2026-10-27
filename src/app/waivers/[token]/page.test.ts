@@ -1,8 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { waiverRecords } from "@/db/schema";
+import { issueBookingCapability } from "@/db/booking-capabilities";
+import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
+import { listStaff } from "@/db/trips";
 import { completeWaiver } from "@/db/waivers-completion";
+import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
   clearAnswers,
@@ -11,10 +14,22 @@ import {
   waiverContextFor,
 } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
+import { hashCapabilityToken } from "@/lib/booking-capabilities";
+import { nowDate } from "@/lib/clock";
+import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
 const context = waiverContextFor(ctx);
+const cookieJar = new Map<string, string>();
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({
+    get: (name: string) => {
+      const value = cookieJar.get(name);
+      return value === undefined ? undefined : { name, value };
+    },
+  })),
+}));
 vi.mock("@/lib/observability/render-connection", () => ({
   connectionForRoute: vi.fn(async () => undefined),
 }));
@@ -29,7 +44,10 @@ vi.mock("@/i18n/request", () => ({
 const { getDb } = await import("@/db/client");
 const { default: WaiverPage } = await import("./page");
 const t = diverTranslator("en-US");
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  cookieJar.clear();
+  vi.clearAllMocks();
+});
 async function signed(answers: typeof clearAnswers = medicalReferralAnswers) {
   const fixture = await context();
   vi.mocked(getDb).mockResolvedValue(fixture.db);
@@ -68,6 +86,96 @@ describe("the actual completed waiver branch", () => {
     expect(html).toContain('data-medical-next="referral"');
     expect(html).not.toContain("moderate exercise");
   });
+  it("shows physician instructions and the independently held return link together", async () => {
+    const { db, shop, booking, render } = await signed();
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "readiness",
+    });
+    if (!readiness) throw new Error("readiness unavailable");
+    cookieJar.set("diveday_waiver_return", readiness.token);
+    const html = await render();
+    expect(html).toContain(t("waiver.medicalReferralNext"));
+    expect(html).toContain(t("waiver.doctor.open"));
+    expect(html).toContain(t("waiver.seeWhatsLeft"));
+    expect(html.includes(`/ready/${readiness.token}`)).toBe(true);
+  });
+  it.each(["wrong purpose", "expired", "revoked", "cancelled"] as const)(
+    "does not offer a return link when the separately held capability is %s",
+    async (condition) => {
+      const { db, shop, booking, render } = await signed();
+      const readiness = await issueBookingCapability(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        purpose: condition === "wrong purpose" ? "confirm" : "readiness",
+      });
+      if (!readiness) throw new Error("link unavailable");
+      if (condition === "expired" || condition === "revoked") {
+        await db
+          .update(bookingCapabilities)
+          .set(condition === "expired" ? { expiresAt: nowDate() } : { revokedAt: nowDate() })
+          .where(eq(bookingCapabilities.tokenHash, hashCapabilityToken(readiness.token)));
+      }
+      if (condition === "cancelled") {
+        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+      }
+      cookieJar.set("diveday_waiver_return", readiness.token);
+      const html = await render();
+      expect(html).toContain(t("waiver.medicalReferralNext"));
+      expect(html).not.toContain(t("waiver.seeWhatsLeft"));
+      expect(html).not.toContain("/ready/");
+    },
+  );
+  it("keeps physician refusal distinct on the waiver receipt", async () => {
+    const { db, shop, booking, render } = await signed();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("staff missing");
+    const outcome = await recordMedicalEvaluation(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.person.id,
+      outcome: "not_cleared",
+      evaluatedOn: "2026-07-18",
+      physicianName: "Dr. Example",
+      now: new Date(now.getTime() + 60_000),
+    });
+    expect(outcome.ok).toBe(true);
+    const html = await render();
+    expect(html).toContain(t("waiver.medicalDeclinedNext"));
+    expect(html).not.toContain(t("waiver.medicalReferralNext"));
+    expect(html).not.toContain(t("waiver.doctor.open"));
+  });
+  it("offers a parent their independently held party link after the referral instructions", async () => {
+    const { db, shop, booking, render } = await signed();
+    const [lead] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          eq(bookings.tripId, booking.tripId),
+          ne(bookings.id, booking.id),
+        ),
+      )
+      .limit(1);
+    if (!lead) throw new Error("party lead missing");
+    await db
+      .update(bookings)
+      .set({ partyLeadBookingId: lead.id })
+      .where(eq(bookings.id, booking.id));
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: lead.id,
+      purpose: "readiness",
+    });
+    if (!readiness) throw new Error("readiness unavailable");
+    cookieJar.set("diveday_party_return", readiness.token);
+    const html = await render();
+    expect(html).toContain(t("waiver.medicalReferralNext"));
+    expect(html).toContain(t("waiver.doctor.open"));
+    expect(html.includes(`/ready/${readiness.token}#party-seats`)).toBe(true);
+  });
   it.each([
     null,
     { ...medicalReferralAnswers, questionnaireVersion: 999 },
@@ -95,11 +203,158 @@ describe("the actual completed waiver branch", () => {
     expect(html).not.toContain("media.example.test");
     expect(html).not.toContain(t("waiver.doctor.open"));
   });
-  it("a signed clear release keeps its receipt and preparation door", async () => {
-    const { render } = await signed(clearAnswers);
+  it("a signed standalone release keeps its receipt without granting trip prep", async () => {
+    const { db, booking, render } = await signed(clearAnswers);
+    const before = await db
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, booking.id));
     const html = await render();
     expect(html).toContain(t("waiver.signedBody"));
-    expect(html).toContain(t("waiver.seeWhatsLeft"));
+    expect(html).not.toContain("/ready/");
+    expect(html).not.toContain(t("waiver.seeWhatsLeft"));
     expect(html).not.toContain("data-medical-next=");
+    const after = await db
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, booking.id));
+    expect(after).toHaveLength(before.length);
   });
+  it.each(["seat", "departure"] as const)(
+    "keeps the signed receipt without trip-preparation guidance after %s cancellation",
+    async (cancelled) => {
+      const { db, booking, render } = await signed(clearAnswers);
+      if (cancelled === "seat") {
+        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+      } else {
+        await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, booking.tripId));
+      }
+      const html = await render();
+      expect(html).toContain(t("waiver.signedBody"));
+      expect(html).not.toContain(t("waiver.prepLinkHelp"));
+      expect(html).not.toContain("/ready/");
+    },
+  );
+  it("keeps an expired signed waiver's receipt without issuing trip prep", async () => {
+    const { db, where, render } = await signed(clearAnswers);
+    await db.update(waiverRecords).set({ expiresAt: nowDate() }).where(where);
+    const html = await render();
+    expect(html).toContain(t("waiver.signedBody"));
+    expect(html).not.toContain("/ready/");
+  });
+  it("a lead's counter receipt cannot mint readiness after completion, expiry or supersession", async () => {
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
+    try {
+      const { db, shop, booking, issued, where } = await signed(clearAnswers);
+      const [sibling] = await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, shop.id),
+            eq(bookings.tripId, booking.tripId),
+            ne(bookings.id, booking.id),
+          ),
+        )
+        .limit(1);
+      if (!sibling) throw new Error("party sibling missing");
+      await db
+        .update(bookings)
+        .set({ partyLeadBookingId: booking.id })
+        .where(eq(bookings.id, sibling.id));
+      const expiresAt = new Date(nowDate().getTime() + 60_000);
+      const envelope = sealCounterWaiverToken(issued.token, expiresAt);
+      if (!envelope) throw new Error("envelope missing");
+      const renderCounter = async () =>
+        renderToStaticMarkup(
+          await WaiverPage({
+            params: Promise.resolve({ token: envelope }),
+            searchParams: Promise.resolve({}),
+          }),
+        );
+      const before = await db
+        .select({ id: bookingCapabilities.id })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.purpose, "readiness"),
+          ),
+        );
+      const live = await renderCounter();
+      expect(live).toContain(t("waiver.counterSigned"));
+      expect(live).not.toContain(issued.token);
+      expect(live).not.toContain("/ready/");
+      expect(live).not.toContain(t("waiver.seeWhatsLeft"));
+      vi.stubEnv("DIVEDAY_CLOCK", expiresAt.toISOString());
+      const expired = await renderCounter();
+      expect(expired).not.toContain("/ready/");
+      expect(expired).not.toContain(issued.token);
+      expect(expired).not.toContain(t("waiver.counterSigned"));
+      vi.stubEnv("DIVEDAY_CLOCK", new Date(expiresAt.getTime() - 30_000).toISOString());
+      await db.update(waiverRecords).set({ supersededAt: nowDate() }).where(where);
+      const superseded = await renderCounter();
+      expect(superseded).not.toContain("/ready/");
+      expect(superseded).not.toContain(issued.token);
+      expect(superseded).not.toContain(t("waiver.counterSigned"));
+      const after = await db
+        .select({ id: bookingCapabilities.id })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.purpose, "readiness"),
+          ),
+        );
+      expect(after).toHaveLength(before.length);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it.each(["seat", "departure"] as const)(
+    "keeps a pending counter waiver signable without %s cancellation claims",
+    async (cancelled) => {
+      vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
+      try {
+        const fixture = await context();
+        vi.mocked(getDb).mockResolvedValue(fixture.db);
+        const issued = await issueWaiverRequest(fixture.db, {
+          shopId: fixture.shop.id,
+          bookingId: fixture.booking.id,
+          now,
+        });
+        if (!issued.ok) throw new Error("waiver missing");
+        const envelope = sealCounterWaiverToken(issued.token, issued.expiresAt);
+        if (!envelope) throw new Error("envelope missing");
+        const [trip] = await fixture.db
+          .select({ title: trips.title })
+          .from(trips)
+          .where(eq(trips.id, fixture.booking.tripId));
+        if (!trip) throw new Error("trip missing");
+        if (cancelled === "seat")
+          await fixture.db
+            .update(bookings)
+            .set({ status: "cancelled" })
+            .where(eq(bookings.id, fixture.booking.id));
+        else
+          await fixture.db
+            .update(trips)
+            .set({ status: "cancelled" })
+            .where(eq(trips.id, fixture.booking.tripId));
+        const html = renderToStaticMarkup(
+          await WaiverPage({
+            params: Promise.resolve({ token: envelope }),
+            searchParams: Promise.resolve({}),
+          }),
+        );
+        expect(html).toContain(t("waiver.independentTitle"));
+        expect(html).not.toContain(t("waiver.beforeDockTitle"));
+        expect(html).not.toContain(trip.title);
+        expect(html).not.toContain(issued.token);
+        expect(html).toContain(t("waiver.signButton"));
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 });

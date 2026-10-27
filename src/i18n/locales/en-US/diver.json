@@ -1153,6 +1153,7 @@
     "medicalContactEmailOnly": "Questions about next steps? Reach out to {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "Questions about next steps? Reach out to {shop}.",
     "signedBody": "Your waiver is signed and saved.",
+    "prepLinkHelp": "For trip details, open your booking confirmation or contact the shop.",
     "seeWhatsLeft": "See what’s left before you sail",
     "doctor": {
       "title": "Take this to your doctor",
@@ -1256,7 +1257,9 @@
     "medicalDeclinedNext": "The physician’s evaluation on file does not clear you to dive. Contact the shop about your next step.",
     "medicalFormWaiting": "Your doctor’s form has been sent. Wait for staff to review it and confirm your next step. You are not cleared to dive yet.",
     "medicalReferralNext": "Your questionnaire requires a physician’s written evaluation before you can dive.",
-    "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive."
+    "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive.",
+    "counterSigned": "Waiver signed",
+    "independentTitle": "Sign your waiver"
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",

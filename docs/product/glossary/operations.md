@@ -113,7 +113,11 @@
 - **Walk-in party** — several people seated in one counter submission: the first person's own
   fields plus further rows (`member-<n>-…`, `src/lib/walk-in-party.ts`), each seated by the
   walk-in door with every gate its own. A name that reads like someone on file is settled row by
-  row (the record, or a new person) before anyone is seated.
+  row (the record, or a new person) before anyone is seated. Staff can open the party's waiver
+  queue after seating or from the roster. Each person scans only their own code and signs on their
+  own phone; a minor's release also asks for a parent or guardian, and a held identity must be
+  confirmed before a code is issued. The queue reports waiver and medical status without answers;
+  a signed waiver alone does not establish boarding readiness.
 - **Coming as** — a walk-in's participant type (diver, snorkeler or rider) on its row. The first
   person's posts as `participantType`; a blank reads as a diver, the stricter default.
 - **Under 18** — the booker's tick on a walk-in row that this person is a minor. It asks for a

@@ -36,7 +36,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
     timeZone: "UTC",
   }).format(new Date(`${startDate}T00:00:00Z`));
 
-  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
   await page.getByLabel("What is it").fill(title);
   await page.getByLabel("Date").fill(startDate);
   await page.getByLabel("Departs").fill("08:00");
@@ -133,7 +133,7 @@ test("an open-ended run says it keeps going on the board's last month", async ({
   // end: its own test, so the walk above keeps its budget.
   test.setTimeout(30_000);
   const title = `Horizon Test ${e2eNow().getTime()}`;
-  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
   await page.getByLabel("What is it").fill(title);
   await page.getByLabel("Date").fill(daysFromNow(5));
   await page.getByLabel("Departs").fill("08:00");
@@ -189,7 +189,7 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
   const third = daysFromNow(19);
 
   // A weekly run, open-ended: its dates a week apart are already on the board.
-  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.goto("/shop/blue-mantis/schedule/board/new?add=full");
   await page.getByLabel("What is it").fill(title);
   await page.getByLabel("Date").fill(first);
   await page.getByLabel("Departs").fill("05:00");
