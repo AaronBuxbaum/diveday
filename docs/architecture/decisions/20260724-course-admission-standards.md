@@ -296,5 +296,7 @@ prerequisite; an unclassified non-intro shop course is not assumed to be Open Wa
 still record the training relationship and its forms, but it does not claim ratio-backed coverage
 or lower the site's certification requirement. An explicit Open Water or intro course retains the
 existing rule. These rules do not record actual underwater groups, a session's Deep dive, student
-equipment or all agency conditions. The earlier provisional aggregate figures do not establish
+equipment or all agency conditions. An unmodeled marked seat also prevents ratio-backed training
+coverage for other marked seats on the departure: separate session rosters do not establish the
+underwater groups or instructor loads. The earlier provisional aggregate figures do not establish
 compliance, and no continuing-education ratio has been enabled here.

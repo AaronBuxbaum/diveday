@@ -695,7 +695,7 @@
       "mark": "Marcar como inmersión de formación",
       "marking": "Marcando…",
       "marked": "Inmersión de formación para {course}. En esta plaza se piden los formularios del curso.",
-      "noInstructor": "Ningún instructor del curso está a bordo para esta plaza (asignado por otra persona, contado a bordo y dentro de la proporción del curso), así que se aplica el nivel de la salida.",
+      "noInstructor": "No se puede confirmar la cobertura de un instructor para esta plaza de formación, así que se aplica el nivel de la salida.",
       "clear": "Quitar marca de formación",
       "clearing": "Quitando…",
       "clearedWithFormsOwed": "{hasName, select, yes {{name} quitó la marca de formación con formularios del curso sin firmar.} other {Se quitó la marca de formación con formularios del curso sin firmar.}}"

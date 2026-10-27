@@ -401,6 +401,45 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
     ).toBe(0);
   });
 
+  it("withholds modeled coverage when an instructor may also teach an unmodeled seat", () => {
+    const unknown = { id: "deep", sessionTripId: "s1", rule: null };
+    for (const marked of [
+      [unknown, ...seats("s2", 8)],
+      [...seats("s2", 8), unknown],
+    ]) {
+      const room = trainingRoom({ marked, sessionCrew: crews, departureCrew: [teacher] });
+      expect(room.seated.size).toBe(0);
+      expect(room.spare).toBe(false);
+    }
+    expect(
+      trainingRoom({
+        marked: [unknown],
+        candidate: { id: "new", sessionTripId: "s2", rule: entry },
+        sessionCrew: crews,
+        departureCrew: [teacher],
+      }).spare,
+    ).toBe(false);
+    // An unmodeled candidate cannot be offered by unseating an existing mark.
+    expect(
+      trainingRoom({
+        marked: seats("s2", 1),
+        candidate: unknown,
+        sessionCrew: crews,
+        departureCrew: [teacher],
+      }).spare,
+    ).toBe(false);
+    // Separate session rosters do not prove the underwater groups are separate.
+    const split = trainingRoom({
+      marked: [unknown, ...seats("s2", 8)],
+      sessionCrew: new Map([
+        ["s1", [teacher]],
+        ["s2", [teacher2]],
+      ]),
+      departureCrew: [teacher, teacher2],
+    });
+    expect(split.seated.size).toBe(0);
+  });
+
   it("lets a certified assistant raise the cap, to the ceiling and no further", () => {
     const withDm = trainingRoom({
       marked: seats("s1", 12),

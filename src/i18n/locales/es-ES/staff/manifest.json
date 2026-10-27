@@ -169,7 +169,7 @@
   "trainingSiteAttributionUnknown": "Esta marca no indica cuál inmersión es de formación, así que siguen aplicando los requisitos de certificación del sitio.",
   "trainingReadinessStale": "La habilitación de formación guardada está desactualizada. Actualiza el manifiesto antes de embarcar.",
   "trainingDive": "Inmersión de formación para {course}",
-  "trainingDiveNoInstructor": "Ningún instructor del curso a bordo para esta plaza",
+  "trainingDiveNoInstructor": "No se puede confirmar la cobertura de un instructor para esta plaza de formación",
   "trainingDiveOverRatio": "Supera la proporción del instructor para este curso; pasa a un alumno a otro grupo",
   "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada",

@@ -396,6 +396,102 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     ).toBe(false);
   });
 
+  it("withholds roster, readiness, and candidate coverage when another marked course is unmodeled", async () => {
+    const ctx = await advancedCharter();
+    await ctx.db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: null })
+      .where(eq(tripRequirements.tripId, ctx.charter.id));
+    const [site] = await ctx.db
+      .insert(diveSites)
+      .values({
+        shopId: ctx.shop.id,
+        name: "Mixed training site",
+        slug: "mixed-training-site-2829",
+        minimumCertificationLevel: "open_water",
+      })
+      .returning();
+    if (!site) throw new Error("site missing");
+    await ctx.db
+      .update(trips)
+      .set({ plannedDives: 1, diveSiteId: site.id })
+      .where(eq(trips.id, ctx.charter.id));
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await rosterWarning(ctx)).toBe(true);
+    expect(await levelCodes(ctx)).toEqual([]);
+
+    const [deep] = await ctx.db
+      .insert(courses)
+      .values({
+        shopId: ctx.shop.id,
+        title: "Deep training",
+        slug: "deep-unmodeled-2829",
+        agency: "padi",
+        minimumCertificationLevel: "open_water",
+        certifiesLevel: "advanced_open_water",
+      })
+      .returning();
+    if (!deep) throw new Error("course missing");
+    const [session] = await ctx.db
+      .insert(trips)
+      .values({
+        shopId: ctx.shop.id,
+        title: "Deep session",
+        courseId: deep.id,
+        startsAt: ctx.course.startsAt,
+        endsAt: ctx.course.endsAt,
+        capacity: 8,
+      })
+      .returning();
+    if (!session) throw new Error("session missing");
+    const diver = await createDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      fullName: "Deep student",
+      email: "deep-mixed-2829@example.com",
+    });
+    if (!diver) throw new Error("diver missing");
+    const [enrollment] = await ctx.db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: ctx.shop.id,
+        tripId: session.id,
+        personId: diver.id,
+      })
+      .returning();
+    if (!enrollment) throw new Error("enrollment missing");
+    await roster(ctx, session.id, ctx.instructor, "instructor");
+    await ctx.db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: ctx.shop.id,
+      tripId: ctx.charter.id,
+      personId: diver.id,
+      trainingEnrollmentBookingId: enrollment.id,
+      trainingMarkedAt: ctx.now,
+      trainingMarkedByPersonId: ctx.owner,
+    });
+
+    expect(await rosterWarning(ctx)).toBe(false);
+    expect(await levelCodes(ctx)).toContain("certification_missing");
+    const pair = {
+      departureTripId: ctx.charter.id,
+      sessionTripId: ctx.course.tripId,
+      course: {
+        agency: "padi",
+        minimumLevel: null,
+        certifiesLevel: "open_water" as const,
+        intro: false,
+      },
+    };
+    const room = (await trainingDiveRoom(ctx.db, ctx.shop.id, [pair])).get(
+      `${ctx.charter.id}:${ctx.course.tripId}`,
+    );
+    expect(room?.seated.has(ctx.seat.id)).toBe(false);
+    expect(room?.spare).toBe(false);
+    expect(room?.overRatio.has(ctx.seat.id)).toBe(false);
+  });
+
   it("stops seating marks once the instructor's ratio is used up, even with a second mark on another seat", async () => {
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx);
