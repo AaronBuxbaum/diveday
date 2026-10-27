@@ -38,6 +38,9 @@ test.describe("shop integrations settings", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings#data");
+    // The hub renders all groups until the fragment selection hydrates. Wait
+    // for that selection before clicking a door that would otherwise move.
+    await expect(page.locator('[data-settings-selection="group:data"]')).toBeVisible();
     await page
       .getByRole("main")
       .getByRole("link", { name: "Export, import, backups and integrations" })
