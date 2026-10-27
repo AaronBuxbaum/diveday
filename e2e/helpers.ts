@@ -1137,8 +1137,14 @@ export async function openPaperWaiverForm(scope: Page | Locator) {
  */
 export async function writeCourseForm(page: Page, title: string, body: string): Promise<void> {
   await page.goto("/shop/blue-mantis/waivers#course-form-new");
-  await openIfClosed(page.locator("#course-forms"));
-  await openIfClosed(page.locator("#course-form-new"));
+  // The fragment reveals both disclosures. Toggling while the client reveal
+  // is still arriving can close the destination that this journey needs open.
+  const definitions = page.locator("#course-forms").filter({ visible: true });
+  const newForm = page.locator("#course-form-new").filter({ visible: true });
+  await expect(definitions).toHaveAttribute("open", "");
+  await expect(newForm).toHaveAttribute("open", "");
+  await disclosureSettled(definitions);
+  await disclosureSettled(newForm);
   await page.locator("#course-form-title-new").fill(title);
   await page.locator("#course-form-body-new").fill(body);
   await page.getByRole("button", { name: "Add form" }).click();

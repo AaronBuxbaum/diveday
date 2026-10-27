@@ -107,24 +107,29 @@ test.describe("course-form disclosure anchors", () => {
     await page.goto(path);
     await expect(parent).toHaveAttribute("open", "");
     await expect(form).toHaveAttribute("open", "");
-    const clientGo = async (url: string) => {
-      const arrived = page.waitForURL(
-        (candidate) => `${candidate.pathname}${candidate.hash}` === url,
-      );
-      await page.evaluate((destination) => {
-        const router = (
-          window as unknown as { next?: { router?: { push: (url: string) => void } } }
-        ).next?.router;
-        if (!router) throw new Error("installed Next App Router debugger facade unavailable");
-        router.push(destination);
-      }, url);
-      await arrived;
-    };
     for (let index = 0; index < 2; index++) {
       await parent.locator(":scope > summary").click();
       await expect(parent).not.toHaveAttribute("open", "");
-      await clientGo("/shop/blue-mantis/courses/open-water-diver/edit");
-      await clientGo(path);
+      await page.getByRole("link", { name: "Courses", exact: true }).click();
+      await expect(page).toHaveURL("/shop/blue-mantis/courses");
+      await page
+        .locator('a[href="/shop/blue-mantis/courses/open-water-diver/edit"]')
+        .filter({ visible: true })
+        .first()
+        .click();
+      await expect(page).toHaveURL("/shop/blue-mantis/courses/open-water-diver/edit");
+      const requiredForms = page.locator("details#forms").filter({ visible: true });
+      if (
+        !(await requiredForms.evaluate((node) => node instanceof HTMLDetailsElement && node.open))
+      )
+        await requiredForms.locator(":scope > summary").click();
+      const writeForm = requiredForms.getByRole("link", {
+        name: staffCopy("courses.edit.forms.writeLink"),
+        exact: true,
+      });
+      await expect(writeForm).toHaveAttribute("href", path);
+      await writeForm.click();
+      await expect(page).toHaveURL(path);
       await expect(parent).toHaveAttribute("open", "");
       await expect(form).toHaveAttribute("open", "");
     }
@@ -144,5 +149,35 @@ test.describe("course-form disclosure anchors", () => {
     await expect(
       form.getByText(staffCopy("waiversStaff.courseForms.notice.invalid"), { exact: true }),
     ).toBeVisible();
+  });
+});
+
+test.describe("course-form title readability", () => {
+  signedInAsOwner();
+
+  test("complete legal titles fit their choice rows at phone text size 200%", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+    const forms = page.locator("details#forms");
+    await forms.locator(":scope > summary").click();
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    const clippedTitles = await forms
+      .locator("label")
+      .filter({ has: page.locator('input[type="checkbox"]') })
+      .evaluateAll((labels) =>
+        labels.flatMap((label) => {
+          const bounds = label.getBoundingClientRect();
+          const text = document.createRange();
+          text.selectNodeContents(label);
+          return [...text.getClientRects()].some(
+            (rect) => rect.right > bounds.right + 1 || rect.left < bounds.left - 1,
+          )
+            ? [label.textContent?.trim()]
+            : [];
+        }),
+      );
+    expect(clippedTitles).toEqual([]);
   });
 });

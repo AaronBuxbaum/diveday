@@ -160,12 +160,19 @@ export function CourseFormsRequirement({
                   {at !== undefined && !canWriteForms ? (
                     <>
                       <input type="hidden" name="formId" value={form.id} />
-                      <ChoiceRow type="checkbox" checked disabled readOnly>
+                      <ChoiceRow
+                        type="checkbox"
+                        checked
+                        disabled
+                        readOnly
+                        className="min-w-0 [overflow-wrap:anywhere]"
+                      >
                         {form.title}
                       </ChoiceRow>
                     </>
                   ) : (
                     <ChoiceRow
+                      className="min-w-0 [overflow-wrap:anywhere]"
                       type="checkbox"
                       name="formId"
                       value={form.id}
