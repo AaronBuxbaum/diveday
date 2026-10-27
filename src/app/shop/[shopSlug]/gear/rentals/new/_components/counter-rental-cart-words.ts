@@ -25,6 +25,8 @@ export function counterRentalCartWords(t: StaffTranslator, days: number): CartWo
     fillLabel: t("counterRentals.new.fillLabel"),
     fillOptions: tankFillOptions(t, t("counterRentals.new.fillChoose")),
     fillHint: t("counterRentals.new.fillHint"),
+    fillUnavailable: t("counterRentals.new.fillUnavailable"),
+    fillRetained: t("counterRentals.new.fillRetained"),
   };
 }
 
