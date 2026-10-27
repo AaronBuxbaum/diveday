@@ -2325,7 +2325,8 @@ exports.handler = async (event) => {
         when: "once, before the first `preview` label or `/preview` comment on a pull request. Skippable: nothing else needs it, and production deploys are unaffected",
         why: "`vercel.json`'s git.deploymentEnabled turns automatic preview deployments off for every branch but main -- roughly three of every four Vercel builds, none of which anything in this repository consumed. .github/workflows/preview.yml is the door back in, and it shells out to the Vercel CLI, which needs the same token and project ids the deploy job uses. It cannot read infra-deploy's copies: that environment carries a required-reviewer approval, which is correct for a production deploy and would make an on-demand preview useless -- somebody would have to approve a run to look at a branch.",
         run: [
-          "Reuse the token minted for ci-vercel-deploy-token, or mint a second one: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.",
+          "Create or update the GitHub `preview-deploy` environment with a custom deployment branch policy allowing only `main`. Both preview workflow triggers run on the default branch, even though the resolved pull request SHA is what gets uploaded.",
+          "Do not reuse the production deploy token. Create a separate project-scoped token for an account whose Vercel role can deploy previews but lacks Full Production Deployment. See https://vercel.com/docs/rbac/access-roles and https://vercel.com/docs/rest-api#creating-an-access-token; availability depends on the team's plan and roles.",
           "gh secret set VERCEL_TOKEN --env preview-deploy",
           "gh secret set VERCEL_ORG_ID --env preview-deploy --body <orgId>; gh secret set VERCEL_PROJECT_ID --env preview-deploy --body <projectId> -- the same two ids as ci-vercel-deploy-token, read from .vercel/project.json.",
           "Create the `preview` label on the repository if it does not exist: gh label create preview --description 'Deploy a Vercel preview on every push to this pull request'.",
@@ -2333,11 +2334,12 @@ exports.handler = async (event) => {
         produces:
           "Labelling a pull request `preview`, or commenting `/preview` on one, deploys it to a Vercel preview URL and comments the link back. The label is sticky: while it is on, every push to that pull request previews again.",
         store:
-          "GitHub repo Settings -> Environments -> preview-deploy -> Environment secrets -> VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID. A separate environment from infra-deploy, and deliberately with **no required reviewer** -- the approval gate is what makes infra-deploy's copies unusable here. Give it no deployment-branch restriction either: the workflow runs against pull request refs, not main.",
+          "GitHub repo Settings -> Environments -> preview-deploy -> Environment secrets -> VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID. Use a custom deployment branch policy allowing only `main` and no required reviewer. The branch policy prevents a pull request's own workflow from accessing this environment; it does not restrict the resolved source SHA the trusted preview workflow uploads.",
         verify: [
-          "Label any open pull request `preview` -- the Preview workflow should run and comment a URL. Without the secrets it fails at its first step naming the one that is empty, rather than at an opaque Vercel CLI error.",
+          "Confirm `gh api repos/AaronBuxbaum/diveday/environments/preview-deploy --jq .deployment_branch_policy` reports custom branch policies, and its deployment-branch-policies endpoint lists only `main`.",
+          "Confirm the token owner's project and team roles do not include production deployment, promotion or rollback, then label an open pull request `preview` -- the Preview workflow should run and comment a URL. Without the secrets it fails naming the one that is empty, rather than at an opaque Vercel CLI error.",
         ],
-        note: "This credential can deploy to the project, which is why the workflow checks `author_association` before acting on a `/preview` comment: `issue_comment` fires for anyone who can comment. Labelling and pushing already require write access.",
+        note: "The branch policy and restricted token are both required before enabling this workflow. Project scope alone does not prevent production deployment: the token inherits its owner's role. Preview source builds on Vercel and can read the project's Preview environment variables; scope those separately. The workflow checks `author_association` before acting on a `/preview` comment because anyone can comment; labelling and pushing already require write access.",
       },
       {
         id: "production-deploy-gate",
