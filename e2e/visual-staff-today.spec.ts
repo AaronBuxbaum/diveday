@@ -72,6 +72,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today", scheme);
       });
 
+      if (scheme === "light") {
+        test("grouped departure links have a usable touch target and keyboard focus", async ({
+          page,
+        }) => {
+          for (const width of [390, 1280]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto("/shop/blue-mantis");
+            const link = page.locator('#needs-you h3 a[href*="/trips/"]').first();
+            await expect(link).toBeVisible();
+            const box = await link.boundingBox();
+            expect(box?.height).toBeGreaterThanOrEqual(44);
+            await link.focus();
+            await page.keyboard.press("Shift+Tab");
+            await page.keyboard.press("Tab");
+            await expect(link).toBeFocused();
+          }
+        });
+      }
+
       test(`a course station shows the course total (${scheme})`, async ({ page }) => {
         await createTrip(page, {
           course: "Open Water Diver",
