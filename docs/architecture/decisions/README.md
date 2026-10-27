@@ -380,7 +380,7 @@ script again.
 | 20261009-single-use-setup-links | `/onboard` opens with a single-use… |
 | 20261009-stripe-reversals-reach-diveday | Record refunds and disputes made… |
 | 20261012-architecture-guard-stays-hand-written | Keep the architecture guard hand-written;… |
-| 20261012-course-forms-on-charters-and-counter | Ask a course's forms on… |
+| 20261012-course-forms-on-charters-and-counter | Training marks and a phone… |
 | 20261012-incident-reports | Keep an incident report on… |
 | 20261012-payouts-reach-diveday | Record Stripe payouts so Reports… |
 | 20261012-rehearsal-departures | A rehearsal departure for training… |

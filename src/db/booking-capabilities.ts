@@ -6,7 +6,7 @@ import {
 } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import type { AppDb, DbExecutor } from "./client";
+import type { DbExecutor } from "./client";
 import { bookingCapabilities, bookings, trips } from "./schema";
 
 export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
@@ -244,7 +244,7 @@ export async function mintBookingCapabilities(
  * so two sends at once cannot both mint.
  */
 export async function issueCourseFormsCapability(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; bookingId: string; now?: Date },
 ): Promise<(IssuedCapability & { reused: boolean }) | null> {
   const now = input.now ?? nowDate();

@@ -210,6 +210,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     <CourseFormsRowControl
       tripId={tripId}
       bookingId={booking.id}
+      personName={person.fullName}
       owed={readinessByBooking.get(booking.id)?.owedCourseForms ?? []}
       warnOnly={!COURSE_FORMS_BLOCK_BOARDING}
       offerSend={!waiverControl.action}

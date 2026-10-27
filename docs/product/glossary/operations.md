@@ -1494,9 +1494,10 @@
   instructor. It does not establish a group or clearance: different session windows can still
   have training marks on the same separate departure, so an absent advisory does not establish
   available instructor capacity.
-- **Counter hand-off** — signing several students' **Course forms** one at a time on one shop
-  device, each on a single-use staff-issued link, with the page dead-ending after each signature
-  (ADR 20261012-course-forms-on-charters-and-counter, decision 2). Designed, not built yet.
+- **Counter hand-off** — staff show one student's forms-only QR at a time, and the student signs
+  their **Course forms** on their own phone (ADR 20261012-course-forms-on-charters-and-counter,
+  decision 2, amended 2026-10-22). The existing live capability is reusable until expiry or
+  revocation. Scanning does not sign a form or clear the other boarding requirements.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

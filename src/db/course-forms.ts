@@ -1,5 +1,8 @@
+import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { authSecret } from "@/lib/auth-secret";
 import { canManageWaiverTemplates, isStaff } from "@/lib/authz";
+import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -40,6 +43,7 @@ import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
+import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import {
   activityEvents,
@@ -857,11 +861,12 @@ export async function courseFormSignaturesForBookings(
 export async function verifyCourseFormsLink(
   db: DbExecutor,
   token: string,
+  now?: Date,
 ): Promise<{ shopId: string; bookingId: string; formsOnly: boolean } | null> {
-  const formsOnly = await verifyBookingCapability(db, { token, purpose: "course_forms" });
+  const formsOnly = await verifyBookingCapability(db, { token, purpose: "course_forms", now });
   if (formsOnly)
     return { shopId: formsOnly.shopId, bookingId: formsOnly.bookingId, formsOnly: true };
-  const readiness = await verifyBookingCapability(db, { token, purpose: "readiness" });
+  const readiness = await verifyBookingCapability(db, { token, purpose: "readiness", now });
   if (readiness)
     return { shopId: readiness.shopId, bookingId: readiness.bookingId, formsOnly: false };
   return null;
@@ -1224,31 +1229,97 @@ async function guardianOwedFor(
  * no longer asks for. Idempotent per enrollment and version — except that a
  * signature a minor gave alone takes the guardian's half once, when it comes.
  */
+type SignCourseFormInput = {
+  shopId: string;
+  bookingId: string;
+  formVersionId: string;
+  signerName: string;
+  agreed: boolean;
+  guardian?: CourseFormGuardianInput;
+  now?: Date;
+};
+
+/** Trusted callers that already control the booking, for example tests. */
 export async function signCourseForm(
   db: AppDb,
-  input: {
-    shopId: string;
-    bookingId: string;
-    formVersionId: string;
-    signerName: string;
-    agreed: boolean;
-    guardian?: CourseFormGuardianInput;
-    now?: Date;
-  },
+  input: SignCourseFormInput,
 ): Promise<SignCourseFormOutcome> {
-  const now = input.now ?? nowDate();
-  const evidence = localTypedConsentProvider.capture({
-    signerName: input.signerName,
-    agreed: input.agreed,
-    signedAt: now,
-  });
-  if (!evidence) return { ok: false, reason: "invalid_signature" };
+  return signCourseFormInTransaction(db, input);
+}
+
+/** Recheck the exact bearer and its seat under locks before recording consent. */
+export async function signCourseFormForLink(
+  db: AppDb,
+  input: SignCourseFormInput & { token: string; displayedDigest: string },
+): Promise<SignCourseFormOutcome> {
+  return signCourseFormInTransaction(db, input, input.token, input.displayedDigest);
+}
+
+/** Authenticate the exact words and placeholder values displayed to this seat. */
+export function courseFormDisplayDigest(input: {
+  shopId: string;
+  bookingId: string;
+  formVersionId: string;
+  body: string;
+  context: CourseFormContext;
+}): string {
+  if (!authSecret) throw new Error("AUTH_SECRET is required to authenticate course forms.");
+  const key = hkdfSync("sha256", authSecret, "", "diveday course form display v1", 32);
+  return createHmac("sha256", Buffer.from(key))
+    .update(
+      JSON.stringify([
+        input.shopId,
+        input.bookingId,
+        input.formVersionId,
+        input.body,
+        input.context.shopName,
+        input.context.courseTitle,
+        input.context.instructorNames,
+      ]),
+    )
+    .digest("hex");
+}
+
+async function signCourseFormInTransaction(
+  db: AppDb,
+  input: SignCourseFormInput,
+  token?: string,
+  displayedDigest?: string,
+): Promise<SignCourseFormOutcome> {
   let signer: string | null = null;
   const outcome = await db.transaction(async (tx): Promise<SignCourseFormOutcome> => {
-    const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
-    if (!enrollment || enrollment.identityHeld || hasReturned(enrollment.endsAt, now)) {
+    if (
+      token !== undefined &&
+      !(await lockFormsLinkRows(tx, input.shopId, input.bookingId, token))
+    ) {
       return { ok: false, reason: "unavailable" };
     }
+    const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
+    if (!enrollment || enrollment.identityHeld) {
+      return { ok: false, reason: "unavailable" };
+    }
+    if (
+      token !== undefined &&
+      !(await lockCourseFormInputs(tx, input.shopId, enrollment.tripId, input.formVersionId))
+    ) {
+      return { ok: false, reason: "version_changed" };
+    }
+    // A form lock can block past the bearer expiry or the end of the trip.
+    // Re-read time and capability only after every potentially blocking lock.
+    const now = input.now ?? nowDate();
+    if (token !== undefined) {
+      const link = await verifyCourseFormsLink(tx, token, now);
+      if (link?.shopId !== input.shopId || link.bookingId !== input.bookingId) {
+        return { ok: false, reason: "unavailable" };
+      }
+    }
+    if (hasReturned(enrollment.endsAt, now)) return { ok: false, reason: "unavailable" };
+    const evidence = localTypedConsentProvider.capture({
+      signerName: input.signerName,
+      agreed: input.agreed,
+      signedAt: now,
+    });
+    if (!evidence) return { ok: false, reason: "invalid_signature" };
     signer = enrollment.personId;
     const required =
       (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId], now)).get(
@@ -1256,6 +1327,31 @@ export async function signCourseForm(
       ) ?? [];
     const form = requiredVersion(required, input.formVersionId);
     if (!form) return { ok: false, reason: "version_changed" };
+    if (token !== undefined) {
+      const [version] = await tx
+        .select({ body: courseFormVersions.body })
+        .from(courseFormVersions)
+        .where(
+          and(
+            eq(courseFormVersions.id, form.versionId),
+            eq(courseFormVersions.shopId, input.shopId),
+          ),
+        )
+        .limit(1);
+      if (!version || !displayedDigest || !/^[0-9a-f]{64}$/.test(displayedDigest)) {
+        return { ok: false, reason: "version_changed" };
+      }
+      const expected = courseFormDisplayDigest({
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        formVersionId: form.versionId,
+        body: fillCourseFormText(version.body, enrollment.context),
+        context: enrollment.context,
+      });
+      if (!timingSafeEqual(Buffer.from(displayedDigest, "hex"), Buffer.from(expected, "hex"))) {
+        return { ok: false, reason: "version_changed" };
+      }
+    }
     if (!personNamesMatch(evidence.signerName, enrollment.fullName)) {
       return { ok: false, reason: "name_mismatch" };
     }
@@ -1308,6 +1404,167 @@ export async function signCourseForm(
   });
   await publishSigned(db, input.shopId, signer, outcome);
   return outcome;
+}
+
+/**
+ * Snapshot the relevant departures, lock them in moveBooking's sorted order,
+ * then lock and revalidate both seats. A concurrent move or mark change makes
+ * this attempt fail closed. Hold capabilities through the signature commit.
+ */
+export async function lockCourseFormSeatRows(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<{ enrollmentId: string | null; personId: string } | null> {
+  await boundLockWaits(tx);
+  const [snapshot] = await tx
+    .select({ tripId: bookings.tripId, enrollmentId: bookings.trainingEnrollmentBookingId })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  if (!snapshot) return null;
+  let enrollmentTripId: string | null = null;
+  if (snapshot.enrollmentId && snapshot.enrollmentId !== bookingId) {
+    const [enrollment] = await tx
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(and(eq(bookings.id, snapshot.enrollmentId), eq(bookings.shopId, shopId)))
+      .limit(1);
+    if (!enrollment) return null;
+    enrollmentTripId = enrollment.tripId;
+  }
+  const tripIds = [
+    ...new Set([snapshot.tripId, ...(enrollmentTripId ? [enrollmentTripId] : [])]),
+  ].sort();
+  for (const tripId of tripIds) {
+    const [trip] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      // diveday:allow-deleted-trips: a lock; live state is checked below.
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1)
+      .for("no key update");
+    if (!trip) return null;
+  }
+  const [seat] = await tx
+    .select({
+      tripId: bookings.tripId,
+      enrollmentId: bookings.trainingEnrollmentBookingId,
+      courseId: trips.courseId,
+      personId: bookings.personId,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+      ),
+    )
+    .limit(1)
+    .for("update", { of: bookings });
+  if (
+    !seat ||
+    seat.tripId !== snapshot.tripId ||
+    seat.enrollmentId !== snapshot.enrollmentId ||
+    (!seat.courseId && !seat.enrollmentId)
+  )
+    return null;
+  if (seat.enrollmentId && seat.enrollmentId !== bookingId) {
+    const [enrollment] = await tx
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(and(eq(bookings.id, seat.enrollmentId), eq(bookings.shopId, shopId)))
+      .limit(1)
+      .for("update");
+    if (!enrollment || enrollment.tripId !== enrollmentTripId) return null;
+  }
+  return { enrollmentId: seat.enrollmentId, personId: seat.personId };
+}
+
+async function lockFormsLinkRows(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+  token: string,
+): Promise<boolean> {
+  const seat = await lockCourseFormSeatRows(tx, shopId, bookingId);
+  if (!seat) return false;
+  if (seat.enrollmentId && seat.enrollmentId !== bookingId) {
+    // Revoking an enrollment's earlier links invalidates a charter link made
+    // before that take-back. Serialize against changes to those existing rows.
+    await tx
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.shopId, shopId),
+          eq(bookingCapabilities.bookingId, seat.enrollmentId),
+          inArray(bookingCapabilities.purpose, ["readiness", "course_forms"]),
+        ),
+      )
+      .orderBy(bookingCapabilities.id)
+      .for("share");
+  }
+  // Name and birth date decide whose consent this is and whether a guardian
+  // must sign, so their live row cannot change before this signature commits.
+  const [person] = await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, seat.personId), eq(people.shopId, shopId), livePerson()))
+    .limit(1)
+    .for("share");
+  if (!person) return false;
+  const [bearer] = await tx
+    .select({ id: bookingCapabilities.id })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, shopId),
+        eq(bookingCapabilities.bookingId, bookingId),
+        eq(bookingCapabilities.tokenHash, hashCapabilityToken(token)),
+      ),
+    )
+    .limit(1)
+    .for("share");
+  if (!bearer) return false;
+  return true;
+}
+
+/** The course's requirement set and the submitted form's current version stay stable during signing. */
+async function lockCourseFormInputs(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  formVersionId: string,
+): Promise<boolean> {
+  const [course] = await tx
+    .select({ id: courses.id })
+    .from(courses)
+    .innerJoin(trips, eq(trips.courseId, courses.id))
+    .where(
+      and(eq(courses.shopId, shopId), eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()),
+    )
+    .limit(1)
+    .for("share", { of: courses });
+  if (!course) return false;
+  const [form] = await tx
+    .select({ id: courseForms.id })
+    .from(courseForms)
+    .innerJoin(courseFormVersions, eq(courseFormVersions.formId, courseForms.id))
+    .where(
+      and(
+        eq(courseForms.shopId, shopId),
+        isNull(courseForms.deletedAt),
+        eq(courseFormVersions.shopId, shopId),
+        eq(courseFormVersions.id, formVersionId),
+      ),
+    )
+    .limit(1)
+    .for("share", { of: courseForms });
+  return Boolean(form);
 }
 
 /**

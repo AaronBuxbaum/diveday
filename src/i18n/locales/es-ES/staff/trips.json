@@ -648,6 +648,13 @@
     "reasonWaiverNotSigned": "Exención sin firmar todavía",
     "reasonUnpaid": "Sin pagar todavía",
     "courseForms": {
+      "showQrFor": "Mostrar código QR para {name}",
+      "showQr": "Mostrar código QR",
+      "qrTitle": "Formularios del curso",
+      "qrScan": "Escanea con tu teléfono para firmar.",
+      "qrClose": "Cerrar",
+      "qrLoading": "Preparando código",
+      "qrFailed": "No se pudo preparar el código. Cierra y revisa los formularios del estudiante.",
       "owed": "{count, plural, one {Formulario del curso pendiente: {forms}} other {Formularios del curso pendientes: {forms}}}",
       "send": "Enviar formularios del curso",
       "recordPaper": "Firmado en papel",

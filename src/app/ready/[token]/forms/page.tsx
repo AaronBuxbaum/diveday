@@ -11,7 +11,11 @@ import { StatusInView } from "@/components/ui/StatusInView";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staleBookingCapabilityForToken } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
-import { getCourseFormsForBooking, verifyCourseFormsLink } from "@/db/course-forms";
+import {
+  courseFormDisplayDigest,
+  getCourseFormsForBooking,
+  verifyCourseFormsLink,
+} from "@/db/course-forms";
 import { getShopById } from "@/db/shops";
 import { diverGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
@@ -170,6 +174,17 @@ export default async function CourseFormsPage({
       </div>
       <form action={signCourseFormFromReady.bind(null, token)} className="mt-8 flex flex-col gap-6">
         <input type="hidden" name="formVersionId" value={form.versionId} />
+        <input
+          type="hidden"
+          name="displayedDigest"
+          value={courseFormDisplayDigest({
+            shopId: capability.shopId,
+            bookingId: capability.bookingId,
+            formVersionId: form.versionId,
+            body: form.body,
+            context: enrollment.context,
+          })}
+        />
         <SectionCard padding="lg">
           <h2 className={SECTION_TITLE_CLASS}>{t("waiver.signature")}</h2>
           <FieldGrid columns={1} className="mt-4">

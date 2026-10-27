@@ -1,51 +1,47 @@
-# 20261012-course-forms-on-charters-and-counter — Ask a course's forms on a charter seat staff mark as training, and sign students one at a time on a counter device
+# 20261012-course-forms-on-charters-and-counter — Training marks and a phone hand-off
 
-- **Status:** Accepted for decision 1 (the training mark, issue #2275, 2026-10-17); decision 2 (the counter hand-off) is still Proposed
+- **Status:** Accepted for decision 1 (2026-10-17); decision 2 amended and accepted (Aaron, 2026-10-22)
 - **Date:** 2026-10-12
 
 ## Context
 
-Course forms (ADR 20261008-course-forms) are asked only on a course session. Two cases miss them
-(issue #2275): an adventure dive done on an ordinary charter boards with none of the course's
-forms checked, and a group at the counter with one tablet cannot sign one student after another.
+Course forms were asked only on course sessions. A training dive on a regular charter could miss
+those forms, and a group at the counter needed a way to sign one student at a time (#2275).
 
 ## Decision
 
 **1. A training dive on a charter is an explicit staff mark, never an inference.**
 
-- `bookings.training_enrollment_booking_id` names the course seat (the enrollment) the dive counts
-  toward, with who marked it and when. Owner, manager or instructor (`canConfigureTrips`) set it
-  from the Divers tab. Valid only for the same diver's live, confirmed, diving course seat at the
-  same shop, whose session ends no earlier than the charter leaves and has not ended. One
-  enrollment per seat: a second mark is refused until the first is cleared.
-- One resolver (`src/db/training-mark-resolve.ts`) maps a charter seat to its enrollment for every
-  reader and writer. The seat is asked the enrollment's forms under its held-at-start rule, and
-  reads and writes the enrollment's records, so signing once covers both.
-- The blockers are the existing course-form ones. A mark that no longer holds at read (enrollment
-  canceled, held or moved) is `training_mark_invalid` until staff clear it, never "no mark". Every
-  mark and clear pushes the manifest, which refreshes the offline copy.
-- Clearing a mark with forms owed, or one that no longer holds, takes `canManageWaiverTemplates`
-  or the enrollment's instructor, rostered by another; the manifest names who did.
-- **Amended 2026-10-17 (#2731, Aaron):** a standing mark lowers the level to the course's minimum
-  when the course certifies it (no minimum: no card); never for an intro session. It needs the
-  course's instructor aboard and the seat within the
-  course's ratio, counted per instructor across the departure. No known ratio, no lowering.
+- `bookings.training_enrollment_booking_id` names the diver's live course seat, with who marked it
+  and when. Owner, manager or instructor (`canConfigureTrips`) set it from the Divers tab. It must
+  be a confirmed diving enrollment at this shop, for the same diver, on a session that has not
+  ended and ends no earlier than the charter leaves. One enrollment per charter seat.
+- `resolveTrainingMarks` is shared by readers and writers. A valid marked seat asks the enrollment's
+  held-at-start forms and uses its records. An invalid mark stays `training_mark_invalid` until
+  cleared, rather than making the forms disappear. Mark and clear refresh the manifest.
+- Clearing a mark with forms owed, or an invalid mark, requires `canManageWaiverTemplates` or the
+  enrollment's instructor, rostered by another. The manifest names who cleared it.
+- **Amended 2026-10-17 (#2731, Aaron):** A standing mark may lower the required level to the
+  course minimum only when the course certifies it; never for an intro session. Its instructor
+  must be aboard, and the seat must fit that instructor's ratio across the departure. No known
+  ratio means no lowering.
 
-**2. Counter hand-off (Proposed, not built).** A single-use, ten-minute `course_forms_counter`
-capability per booking, never the emailed link. The device shows that student's forms, then "Hand
-the device back" with no way back. The next student is opened from the staff side (a PIN step-up
-or the staffer's own device). Records name the staffer who handed over.
+**2. Counter hand-off (amended 2026-10-22, Aaron).** Students sign on their own phones; staff
+show one student's forms-only QR at a time. The staff-signed-in device is not handed over. The
+QR carries that seat's existing live, reusable `course_forms` capability, with its usual expiry
+and revocation rules. Scanning is not signing or boarding clearance. A student and any required
+guardian use the existing signing flow.
 
 ## Alternatives considered
 
-- **Infer training from an open enrollment.** Rejected: a student fun-diving between sessions is
-  not training, and a wrong inference blocks boarding.
-- **Copy the forms onto the charter booking.** Rejected: it breaks "satisfied per enrollment".
-- **Several enrollments per seat.** Rejected for now: one dive counts toward one course.
-- **A kiosk mode on the staff session.** Rejected: a student holding a logged-in staff device can
-  reach every record.
+- Infer training from an enrollment: rejected because a fun dive is not necessarily training.
+- Copy forms to the charter: rejected because signatures belong to the enrollment.
+- Several enrollments per seat: deferred until shops need one dive to count toward multiple courses.
+- A kiosk on a staff session: rejected because its holder could reach staff records. The original
+  proposed single-use counter-device capability was superseded by Aaron's phone-only decision.
 
 ## Consequences
 
-- Five booking columns and one resolver; no new dependency.
-- Revisit if shops need several courses on one dive.
+The training mark adds five booking columns and one resolver; the QR hand-off reuses an existing
+capability and adds no dependency. Revisit if shops need multiple courses on a dive or a separate,
+securely managed signing device.

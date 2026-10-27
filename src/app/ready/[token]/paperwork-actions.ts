@@ -7,7 +7,7 @@ import { getDb } from "@/db/client";
 import {
   getCourseFormsForBooking,
   type SignCourseFormOutcome,
-  signCourseForm,
+  signCourseFormForLink,
   verifyCourseFormsLink,
 } from "@/db/course-forms";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
@@ -80,6 +80,7 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
 
 const courseFormSignSchema = z.object({
   formVersionId: z.uuid(),
+  displayedDigest: z.string().regex(/^[0-9a-f]{64}$/),
   signerName: z.string().trim().max(120),
   acknowledged: z.literal("on").optional(),
   guardianName: z.string().trim().max(120).optional(),
@@ -102,7 +103,7 @@ const COURSE_FORM_ERROR: Record<Exclude<SignCourseFormOutcome, { ok: true }>["re
  * Either link that opens the forms page may sign on it — the readiness link
  * or the forms-only one (`verifyCourseFormsLink`), rate-limited before it
  * verifies, like every action here — and nothing else in this file accepts the
- * forms-only one. `signCourseForm` checks everything else against the booking
+ * forms-only one. `signCourseFormForLink` rechecks the capability and everything else against the booking
  * itself: a held seat, the typed name is the student's, the version is one the
  * course asks for, a minor's form carries a guardian. Back to the forms page
  * while any are owed, then to the prep page when the link can open it.
@@ -123,10 +124,12 @@ export async function signCourseFormFromReady(token: string, formData: FormData)
   if (!parsed.success) redirect(`${forms}?error=agreement`);
   const guardianPosted =
     parsed.data.guardianName !== undefined || parsed.data.guardianRelationship !== undefined;
-  const signed = await signCourseForm(db, {
+  const signed = await signCourseFormForLink(db, {
+    token,
     shopId: link.shopId,
     bookingId: link.bookingId,
     formVersionId: parsed.data.formVersionId,
+    displayedDigest: parsed.data.displayedDigest,
     signerName: parsed.data.signerName,
     agreed: parsed.data.acknowledged === "on",
     guardian: guardianPosted
