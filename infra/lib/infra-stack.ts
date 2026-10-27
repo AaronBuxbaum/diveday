@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
@@ -278,11 +279,19 @@ const AUDIT_TRAIL_RETENTION_DAYS = 365;
 const DUMP_CONNECTION_SECRET_NAME = "diveday/database-url-unpooled";
 
 /**
- * The Postgres major version the dump is taken with. `pg_dump` may be newer than
- * the server but never older, so this is a floor to raise when Neon's project is
- * upgraded -- and raising it is the whole maintenance burden of the image choice.
+ * `pg_dump` may be newer than the server but never older. The manifest keeps the
+ * dump and restore drill on Postgres 17 and lets Dependabot update their digest.
  */
-const DUMP_POSTGRES_MAJOR = 17;
+const dumpImageManifest = readFileSync(
+  path.join(__dirname, "../../config/postgres-image/Dockerfile"),
+  "utf8",
+).trim();
+const dumpImageMatch =
+  /^FROM public\.ecr\.aws\/docker\/library\/postgres:17-alpine@(sha256:[0-9a-f]{64})$/.exec(
+    dumpImageManifest,
+  );
+if (!dumpImageMatch) throw new Error("Invalid pinned Postgres image manifest");
+const DUMP_POSTGRES_IMAGE = `public.ecr.aws/docker/library/postgres@${dumpImageMatch[1]}`;
 
 export class InfraStack extends cdk.Stack {
   /**
@@ -3646,7 +3655,7 @@ exports.handler = async () => {
     // CodeBuild runs an arbitrary public image on a schedule with no VPC, no NAT
     // and no cluster to keep warm, which makes it the cheapest host in AWS for
     // "run one Postgres client tool once a week". The image is pinned to the
-    // Postgres major version (DUMP_POSTGRES_MAJOR) so the client is never older
+    // Postgres major version (17) so the client is never older
     // than the server -- the one direction `pg_dump` refuses.
     //
     // Cost: build.general1.small is billed by the minute; a dump of this database
@@ -3729,7 +3738,7 @@ exports.handler = async () => {
         computeType: "BUILD_GENERAL1_SMALL",
         // The official Postgres image via AWS's own ECR Public mirror, so the
         // pull needs no Docker Hub credential and is not rate-limited.
-        image: `public.ecr.aws/docker/library/postgres:${DUMP_POSTGRES_MAJOR}-alpine`,
+        image: DUMP_POSTGRES_IMAGE,
         imagePullCredentialsType: "CODEBUILD",
         environmentVariables: [
           { name: "BUCKET", value: databaseDumpBucket.bucketName },
