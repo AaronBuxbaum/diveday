@@ -269,7 +269,7 @@ function CapabilityLines({
     </span>
   );
   return (
-    <details className="group">
+    <details className="marketing-capability-lines group">
       <summary
         aria-labelledby={titled ? undefined : `${pageNameId(id)} ${labelId}`}
         className={`flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden ${

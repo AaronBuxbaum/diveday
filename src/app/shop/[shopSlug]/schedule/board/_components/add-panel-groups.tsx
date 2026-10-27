@@ -690,3 +690,57 @@ export function PanelFooter({
     </>
   );
 }
+
+/** A configured boat limit is advisory; it never disables the seat field. */
+export function CapacityField({
+  copy,
+  capacity,
+  boatCapacity,
+  setCapacity,
+}: {
+  copy: BuilderCopy;
+  capacity: number;
+  boatCapacity?: number;
+  setCapacity: (capacity: number) => void;
+}) {
+  return (
+    <Field
+      label={copy.seats}
+      description={
+        boatCapacity !== undefined && capacity > boatCapacity
+          ? fill(copy.boatCapacityWarning, { count: boatCapacity })
+          : undefined
+      }
+    >
+      <input
+        name="capacity"
+        type="number"
+        required
+        min={1}
+        max={60}
+        value={capacity}
+        onChange={(event) => setCapacity(Number(event.target.value))}
+        className={`${controlClass} tabular-nums`}
+      />
+    </Field>
+  );
+}
+
+/** The public price is optional, with a currency-shaped input. */
+export function PriceInputGroup({ copy, price }: { copy: BuilderCopy; price: BuilderPriceInput }) {
+  return (
+    <FieldGrid columns={1}>
+      <Field label={copy.price} hint={copy.optional} description={copy.priceDescription}>
+        <input
+          name="priceDollars"
+          type="number"
+          step={price.step}
+          min={0}
+          max={price.max}
+          placeholder={price.placeholder}
+          className={`${controlClass} max-w-28 tabular-nums`}
+        />
+      </Field>
+    </FieldGrid>
+  );
+}

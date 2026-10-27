@@ -118,7 +118,7 @@ describe("Copyable inline", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Copy" }).className).toBe(
-      buttonClass({ variant: "ghost", size: "sm" }),
+      buttonClass({ variant: "ghost", size: "sm", className: "print:hidden" }),
     );
   });
 });

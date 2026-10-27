@@ -59,6 +59,7 @@ export function ClosedEditorSection({
   grouped = false,
   open,
   children,
+  printEditorLabel,
 }: {
   id: string;
   label: string;
@@ -67,9 +68,13 @@ export function ClosedEditorSection({
   /** Opened by the page when a refusal or a notice is about this section. */
   open?: boolean;
   children: ReactNode;
+  printEditorLabel?: string;
 }) {
   const body = (
     <div className="flex flex-col gap-5">
+      {printEditorLabel ? (
+        <p className="hidden text-sm font-medium print:block">{printEditorLabel}</p>
+      ) : null}
       {description ? <div className="text-sm text-muted">{description}</div> : null}
       {children}
     </div>

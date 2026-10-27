@@ -148,7 +148,10 @@ export default async function TripPrepPage({
           body={t("tripPrep.noDivers")}
           action={
             paper ? null : (
-              <Link href={shopPath(shopSlug, "trips", tripId)} className={buttonClass()}>
+              <Link
+                href={shopPath(shopSlug, "trips", tripId)}
+                className={buttonClass({ className: "print:hidden" })}
+              >
                 {t("tripPrep.emptyAction")}
               </Link>
             )

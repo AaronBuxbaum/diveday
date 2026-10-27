@@ -1,31 +1,27 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
-import { PrintButton } from "@/components/PrintButton";
-import { EYEBROW_CLASS, EyebrowBackLink, ShopStat } from "@/components/ShopPageHeader";
+import { ShopStat } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
-import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import {
-  formatEvidenceDateTimeTz,
-  formatShortDate,
-  formatTimeRangeTz,
-  formatTimeZoneName,
-} from "@/lib/format";
+import { formatEvidenceDateTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { DeparturePaperIdentity, formatPaperDateTime } from "../_components/DeparturePaperIdentity";
 import { BoatAtDeparture } from "./_components/BoatAtDeparture";
 import { CertificationEvidence } from "./_components/CertificationEvidence";
 import { CrewAtDeparture, RollCallCell } from "./_components/CrewAtDeparture";
 import { CrewAwayWorkingLog } from "./_components/CrewAwayWorkingLog";
+import { DepartureLogHeader } from "./_components/DepartureLogHeader";
 import {
   DepartureLogClosing,
   DepartureLogFooter,
@@ -127,90 +123,61 @@ export default async function IncidentExportPage({
   // margin of its own (docs/design/forms-and-controls.md): they used to step
   // `mt-7`, `mt-8`, `mt-10`, three gaps where the page has one.
   return (
-    <DepartureLogFrame>
-      <header className="border-b border-border pb-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            {/* On screen the eyebrow is the way back to the departure this
-                documents, in the word its own tab uses; the only link up used
-                to be a ghost button beside Print, and it went to Today rather
-                than to the departure (principle 10, issue #823). On paper the
-                same line names the document instead: a record handed to an
-                insurer has to say what it is, and it has no navigation. */}
-            <EyebrowBackLink href={shopPath(shopSlug, "trips", tripId)} className="print:hidden">
-              {t("trips.surfaces.trip")}
-            </EyebrowBackLink>
-            <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("incidentExport.title")}</p>
-            <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{doc.meta.tripTitle}</h1>
-            {/* Each dot is glued to what it follows by a no-break space, so a
-                wrap falls after one and never starts a line with it. */}
-            <p className="mt-1 text-muted">
-              {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)}
-              {"\u00a0"}·{" "}
-              {formatTimeRangeTz(
-                new Date(doc.meta.tripStartsAt),
-                new Date(doc.meta.tripEndsAt),
-                locale,
-                doc.meta.timezone,
-              )}
-              {"\u00a0"}· {doc.meta.shopName}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
-            <PrintButton label={t("shared.printButton.label")} />
-          </div>
-        </div>
-        {/* **One paragraph about the document itself** (visual review
-            2026-10-24, B52): what it is, that it states facts and judges none,
-            who generated it and when, and the zone every time on it is in. It
-            was four, with the disclaimer in bold, before the first fact. */}
-        <p className="mt-3 max-w-prose text-sm text-muted">
-          {t("incidentExport.preamble", {
-            date: dateTime(doc.meta.generatedAt),
-            name: doc.meta.generatedByName,
-            timezone: formatTimeZoneName(locale, doc.meta.timezone),
-          })}
-        </p>
-      </header>
+    <DeparturePaperIdentity
+      standaloneLog
+      pageName={`departure-${tripId}-log`}
+      identity={[
+        doc.meta.shopName,
+        doc.meta.tripTitle,
+        `${formatPaperDateTime(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)} · ${doc.meta.timezone}`,
+        [doc.boatSafety?.boatName, t("incidentExport.title")].filter(Boolean).join(" · "),
+      ]}
+      printed={`${t("print.sheet.printed", { date: formatPaperDateTime(new Date(doc.meta.generatedAt), locale, doc.meta.timezone) })} · ${doc.meta.timezone}`}
+    >
+      <DepartureLogFrame>
+        <DepartureLogHeader doc={doc} locale={locale} t={t} />
 
-      <section aria-labelledby="incident-summary-heading">
-        <h2 id="incident-summary-heading" className={SECTION_TITLE_CLASS}>
-          {t("incidentExport.summaryHeading")}
-        </h2>
-        {/* A <dl>, deliberately: this is the definition-list half of the
+        <section aria-labelledby="incident-summary-heading">
+          <h2 id="incident-summary-heading" className={SECTION_TITLE_CLASS}>
+            {t("incidentExport.summaryHeading")}
+          </h2>
+          {/* A <dl>, deliberately: this is the definition-list half of the
             "table-and-definition-list document" the a11y scan expects, so a
             screen reader keeps the label-to-figure pairing on the record a
             shop hands an insurer. */}
-        <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {summary.map(([label, value, detail]) => (
-            <ShopStat key={label} definition label={label} value={value} detail={detail} />
-          ))}
-        </dl>
-      </section>
-
-      <section aria-labelledby="incident-roster-heading">
-        <h2 id="incident-roster-heading" className={SECTION_TITLE_CLASS}>
-          {t("incidentExport.rosterHeading")}
-        </h2>
-        <RosterIntro turnedAway={doc.turnedAway} t={t} />
-        <Table minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)} shellClassName="mt-3">
-          <THead>
-            <Th>{t("incidentExport.colDiver")}</Th>
-            <Th>{t("incidentExport.colEmergencyContact")}</Th>
-            <Th>{t("incidentExport.colBuddy")}</Th>
-            {doc.meta.checkpoints.map((checkpoint) => (
-              <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
-                {checkpointText(checkpoint)}
-              </Th>
+          <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {summary.map(([label, value, detail]) => (
+              <ShopStat key={label} definition label={label} value={value} detail={detail} />
             ))}
-          </THead>
-          <TBody>
-            {doc.roster.map((diver, index) => (
-              <tr key={diver.bookingId}>
-                <Td>
-                  <NumberedName number={index + 1} name={diver.fullName} />
-                </Td>
-                {/* The name may wrap; the number may not. This is the one
+          </dl>
+        </section>
+
+        <section aria-labelledby="incident-roster-heading">
+          <h2 id="incident-roster-heading" className={SECTION_TITLE_CLASS}>
+            {t("incidentExport.rosterHeading")}
+          </h2>
+          <RosterIntro turnedAway={doc.turnedAway} t={t} />
+          <Table
+            minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)}
+            shellClassName="mt-3"
+          >
+            <THead>
+              <Th>{t("incidentExport.colDiver")}</Th>
+              <Th>{t("incidentExport.colEmergencyContact")}</Th>
+              <Th>{t("incidentExport.colBuddy")}</Th>
+              {doc.meta.checkpoints.map((checkpoint) => (
+                <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
+                  {checkpointText(checkpoint)}
+                </Th>
+              ))}
+            </THead>
+            <TBody>
+              {doc.roster.map((diver, index) => (
+                <tr key={diver.bookingId}>
+                  <Td>
+                    <NumberedName number={index + 1} name={diver.fullName} />
+                  </Td>
+                  {/* The name may wrap; the number may not. This is the one
                     document a shop hands an insurer or an authority, and a
                     phone number broken across lines at its hyphens is a number
                     somebody has to reassemble while reading it aloud in a
@@ -219,186 +186,192 @@ export default async function IncidentExportPage({
                     figure — so the rule goes on the number itself. The dot
                     before it is glued to the name by a no-break space, so a
                     narrow cell never starts a line with "·". */}
-                <Td muted>
-                  {/* A held seat's contact would be the matched person's next
+                  <Td muted>
+                    {/* A held seat's contact would be the matched person's next
                       of kin (issue #2128): said, never "Not on file". */}
-                  {diver.identityWithheld ? (
-                    t("incidentExport.identityWithheld")
-                  ) : diver.emergencyContactName && diver.emergencyContactPhone ? (
-                    <>
-                      {diver.emergencyContactName}
-                      {"\u00a0"}·{" "}
-                      <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
-                    </>
-                  ) : (
-                    t("incidentExport.notOnFile")
-                  )}
-                </Td>
-                <Td muted>
-                  {diver.buddy ? (
-                    <>
-                      <span className="font-medium text-foreground">
-                        {t("incidentExport.buddyTeam", { number: diver.buddy.teamNumber })}
-                      </span>{" "}
-                      {/* Every other member, and crew marked as crew — the
+                    {diver.identityWithheld ? (
+                      t("incidentExport.identityWithheld")
+                    ) : diver.emergencyContactName && diver.emergencyContactPhone ? (
+                      <>
+                        {diver.emergencyContactName}
+                        {"\u00a0"}·{" "}
+                        <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
+                      </>
+                    ) : (
+                      t("incidentExport.notOnFile")
+                    )}
+                  </Td>
+                  <Td muted>
+                    {diver.buddy ? (
+                      <>
+                        <span className="font-medium text-foreground">
+                          {t("incidentExport.buddyTeam", { number: diver.buddy.teamNumber })}
+                        </span>{" "}
+                        {/* Every other member, and crew marked as crew — the
                             distinction this document exists to keep, since
                             "accompanied by a divemaster" and "nobody paired
                             them" used to print the same. */}
-                      {memberList.format(
-                        diver.buddy.members.map((member) =>
-                          member.isCrew
-                            ? `${member.fullName} (${t("incidentExport.buddyCrewTag")})`
-                            : member.fullName,
-                        ),
-                      )}
-                      <span className="block text-xs">
-                        {diver.buddy.pairedByName && diver.buddy.pairedAt
-                          ? t("incidentExport.buddyPairedBy", {
-                              name: diver.buddy.pairedByName,
-                              at: dateTime(diver.buddy.pairedAt),
-                            })
-                          : t("incidentExport.buddyPairedByUnknown")}
-                      </span>
-                    </>
-                  ) : (
-                    t("incidentExport.noBuddyRecorded")
-                  )}
-                </Td>
-                {diver.rollCall.map((result) => (
-                  <RollCallCell key={result.checkpoint} t={t} result={result} dateTime={dateTime} />
-                ))}
-              </tr>
-            ))}
-          </TBody>
-        </Table>
-      </section>
+                        {memberList.format(
+                          diver.buddy.members.map((member) =>
+                            member.isCrew
+                              ? `${member.fullName} (${t("incidentExport.buddyCrewTag")})`
+                              : member.fullName,
+                          ),
+                        )}
+                        <span className="block text-xs">
+                          {diver.buddy.pairedByName && diver.buddy.pairedAt
+                            ? t("incidentExport.buddyPairedBy", {
+                                name: diver.buddy.pairedByName,
+                                at: dateTime(diver.buddy.pairedAt),
+                              })
+                            : t("incidentExport.buddyPairedByUnknown")}
+                        </span>
+                      </>
+                    ) : (
+                      t("incidentExport.noBuddyRecorded")
+                    )}
+                  </Td>
+                  {diver.rollCall.map((result) => (
+                    <RollCallCell
+                      key={result.checkpoint}
+                      t={t}
+                      result={result}
+                      dateTime={dateTime}
+                    />
+                  ))}
+                </tr>
+              ))}
+            </TBody>
+          </Table>
+        </section>
 
-      <CrewAtDeparture
-        doc={doc}
-        t={t}
-        dateTime={dateTime}
-        checkpointText={checkpointText}
-        checkpointPrintClass={checkpointPrintClass}
-      >
-        <CrewAwayWorkingLog db={db} shopId={shop.id} tripId={tripId} t={t} dateTime={dateTime} />
-      </CrewAtDeparture>
-
-      {/* Absence is stated, never blank: a shop with no checklist defined says so, rather than the
-          section simply not appearing; the two mean different things to an investigator. */}
-      <section aria-labelledby="incident-checklist-heading">
-        <h2 id="incident-checklist-heading" className={SECTION_TITLE_CLASS}>
-          {t("incidentExport.checklistHeading")}
-        </h2>
-        <PreDepartureRecord
-          checks={doc.preDepartureCheck}
-          snags={doc.sailedWithSnags}
+        <CrewAtDeparture
+          doc={doc}
           t={t}
           dateTime={dateTime}
-        />
-      </section>
-
-      <BoatAtDeparture doc={doc} locale={locale} dateTime={dateTime} t={t} />
-      <section aria-labelledby="incident-evidence-heading">
-        <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
-          {t("incidentExport.evidenceHeading")}
-        </h2>
-        <p className="mt-1 max-w-prose text-sm text-muted">
-          {t("incidentExport.evidenceDescription")}
-        </p>
-        {/* The release most of the boat signed, said once; a diver whose
-            waiver differs keeps their whole sentence below (`waiver-evidence`). */}
-        {waiverHeader ? (
-          <p className="mt-2 max-w-prose text-sm font-medium">
-            {waiverHeaderText(t, waiverHeader)}
-          </p>
-        ) : null}
-        <ul
-          className={sectionCardClass({
-            padding: "none",
-            className: "mt-3 divide-y divide-border",
-          })}
+          checkpointText={checkpointText}
+          checkpointPrintClass={checkpointPrintClass}
         >
-          {doc.roster.map((diver) => (
-            <li key={diver.bookingId} className="break-inside-avoid px-4 py-3 sm:px-5">
-              <p className="font-semibold">{diver.fullName}</p>
-              {/* A held seat's release and cards would be the matched
-                  person's (issue #2128): one sentence, never "not sent" or
-                  "no cards", which would be wrong facts on this document. */}
-              {diver.identityWithheld || !diver.waiver ? (
-                <p className="mt-1 text-sm text-muted">{t("incidentExport.identityWithheld")}</p>
-              ) : (
-                <p className="mt-1 text-sm">
-                  <WaiverLine
-                    t={t}
-                    waiver={diver.waiver}
-                    dateTime={dateTime}
-                    underHeader={matchesWaiverHeader(diver.waiver, waiverHeader)}
-                  />
-                </p>
-              )}
-              <CertificationEvidence
-                diver={diver}
-                t={t}
-                agencyText={agencyText}
-                dateTime={dateTime}
-              />
-            </li>
-          ))}
-        </ul>
-      </section>
+          <CrewAwayWorkingLog db={db} shopId={shop.id} tripId={tripId} t={t} dateTime={dateTime} />
+        </CrewAtDeparture>
 
-      <section aria-labelledby="incident-executed-dive-heading">
-        <h2 id="incident-executed-dive-heading" className={SECTION_TITLE_CLASS}>
-          {t("incidentExport.executedDiveHeading")}
-        </h2>
-        <p className="mt-1 max-w-prose text-sm text-muted">
-          {t("incidentExport.executedDiveDescription")}
-        </p>
-        {doc.executedDives.length === 0 ? (
-          <p className="mt-3 text-sm font-semibold">{t("incidentExport.executedDiveEmpty")}</p>
-        ) : (
-          <ExecutedDivesTable
-            dives={doc.executedDives}
-            locale={locale}
-            timeZone={doc.meta.timezone}
+        {/* Absence is stated, never blank: a shop with no checklist defined says so, rather than the
+          section simply not appearing; the two mean different things to an investigator. */}
+        <section aria-labelledby="incident-checklist-heading">
+          <h2 id="incident-checklist-heading" className={SECTION_TITLE_CLASS}>
+            {t("incidentExport.checklistHeading")}
+          </h2>
+          <PreDepartureRecord
+            checks={doc.preDepartureCheck}
+            snags={doc.sailedWithSnags}
             t={t}
-          />
-        )}
-      </section>
-
-      <section aria-labelledby="incident-timeline-heading">
-        <h2 id="incident-timeline-heading" className={SECTION_TITLE_CLASS}>
-          {t("incidentExport.timelineHeading")}
-        </h2>
-        <p className="mt-1 max-w-prose text-sm text-muted">
-          {t("incidentExport.timelineDescription")}
-        </p>
-        <NoRollCallNote timeline={doc.timeline} t={t} />
-        {doc.timeline.length === 0 ? null : (
-          <TimelineGroups
-            timeline={doc.timeline}
-            t={t}
-            memberList={memberList}
             dateTime={dateTime}
+          />
+        </section>
+
+        <BoatAtDeparture doc={doc} locale={locale} dateTime={dateTime} t={t} />
+        <section aria-labelledby="incident-evidence-heading">
+          <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
+            {t("incidentExport.evidenceHeading")}
+          </h2>
+          <p className="mt-1 max-w-prose text-sm text-muted">
+            {t("incidentExport.evidenceDescription")}
+          </p>
+          {/* The release most of the boat signed, said once; a diver whose
+            waiver differs keeps their whole sentence below (`waiver-evidence`). */}
+          {waiverHeader ? (
+            <p className="mt-2 max-w-prose text-sm font-medium">
+              {waiverHeaderText(t, waiverHeader)}
+            </p>
+          ) : null}
+          <ul
             className={sectionCardClass({
               padding: "none",
               className: "mt-3 divide-y divide-border",
             })}
+          >
+            {doc.roster.map((diver) => (
+              <li key={diver.bookingId} className="break-inside-avoid px-4 py-3 sm:px-5">
+                <p className="font-semibold">{diver.fullName}</p>
+                {/* A held seat's release and cards would be the matched
+                  person's (issue #2128): one sentence, never "not sent" or
+                  "no cards", which would be wrong facts on this document. */}
+                {diver.identityWithheld || !diver.waiver ? (
+                  <p className="mt-1 text-sm text-muted">{t("incidentExport.identityWithheld")}</p>
+                ) : (
+                  <p className="mt-1 text-sm">
+                    <WaiverLine
+                      t={t}
+                      waiver={diver.waiver}
+                      dateTime={dateTime}
+                      underHeader={matchesWaiverHeader(diver.waiver, waiverHeader)}
+                    />
+                  </p>
+                )}
+                <CertificationEvidence
+                  diver={diver}
+                  t={t}
+                  agencyText={agencyText}
+                  dateTime={dateTime}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="incident-executed-dive-heading">
+          <h2 id="incident-executed-dive-heading" className={SECTION_TITLE_CLASS}>
+            {t("incidentExport.executedDiveHeading")}
+          </h2>
+          <p className="mt-1 max-w-prose text-sm text-muted">
+            {t("incidentExport.executedDiveDescription")}
+          </p>
+          {doc.executedDives.length === 0 ? (
+            <p className="mt-3 text-sm font-semibold">{t("incidentExport.executedDiveEmpty")}</p>
+          ) : (
+            <ExecutedDivesTable
+              dives={doc.executedDives}
+              locale={locale}
+              timeZone={doc.meta.timezone}
+              t={t}
+            />
+          )}
+        </section>
+
+        <section aria-labelledby="incident-timeline-heading">
+          <h2 id="incident-timeline-heading" className={SECTION_TITLE_CLASS}>
+            {t("incidentExport.timelineHeading")}
+          </h2>
+          <p className="mt-1 max-w-prose text-sm text-muted">
+            {t("incidentExport.timelineDescription")}
+          </p>
+          <NoRollCallNote timeline={doc.timeline} t={t} />
+          {doc.timeline.length === 0 ? null : (
+            <TimelineGroups
+              timeline={doc.timeline}
+              t={t}
+              memberList={memberList}
+              dateTime={dateTime}
+              className={sectionCardClass({
+                padding: "none",
+                className: "mt-3 divide-y divide-border",
+              })}
+            />
+          )}
+        </section>
+
+        <DepartureLogClosing emptyReports={doc.incidentReports.length === 0}>
+          <IncidentReportsSection
+            reports={doc.incidentReports}
+            reportHref={(reportId) => shopPath(shopSlug, "trips", tripId, "incidents", reportId)}
+            t={t}
+            locale={locale}
+            timeZone={doc.meta.timezone}
           />
-        )}
-      </section>
 
-      <DepartureLogClosing emptyReports={doc.incidentReports.length === 0}>
-        <IncidentReportsSection
-          reports={doc.incidentReports}
-          reportHref={(reportId) => shopPath(shopSlug, "trips", tripId, "incidents", reportId)}
-          t={t}
-          locale={locale}
-          timeZone={doc.meta.timezone}
-        />
-
-        <DepartureLogFooter hash={doc.contentHash} version={doc.hashVersion} t={t} />
-      </DepartureLogClosing>
-    </DepartureLogFrame>
+          <DepartureLogFooter hash={doc.contentHash} version={doc.hashVersion} t={t} />
+        </DepartureLogClosing>
+      </DepartureLogFrame>
+    </DeparturePaperIdentity>
   );
 }

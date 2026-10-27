@@ -13,6 +13,7 @@ import {
 } from "../settings-groups";
 import { SettingsRail } from "./SettingsRail";
 import { SettingsDoorRow, SettingsRow } from "./SettingsRows";
+import { SettingsSelection } from "./SettingsSelection";
 
 /**
  * The rail and pane of ADR 20260827-clearwater-surface-language, decision 6.
@@ -154,12 +155,51 @@ describe("the selection model", () => {
 });
 
 describe("the rail as it renders", () => {
+  it("opens and closes the same navigation on a narrow screen", () => {
+    const { container } = renderRail();
+    const toggle = screen.getByRole("button", { name: "Settings sections" });
+    const scroller = container.querySelector("[data-settings-rail-scroller]");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(scroller).toHaveClass("hidden");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(scroller).not.toHaveClass("hidden");
+    fireEvent.click(screen.getByRole("link", { name: "stripe" }));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
   /**
    * The rail moves to the current row from an effect, after the page paints,
    * so a screenshot fired early caught it at the top (`settings-embed` moved
    * between two runs that never touched Settings). The mark is what the visual
    * suite waits on, so it has to arrive once the move has run.
    */
+  it("updates the persistent rail when a form returns to another saved section", () => {
+    const tree = (saved: "units" | null) => (
+      <>
+        {rail()}
+        <SettingsSelection initialSection={saved}>
+          <div data-settings-group="shop">
+            <div data-settings-section="timezone">
+              <details>
+                <summary>Timezone form</summary>
+              </details>
+            </div>
+            <div data-settings-section="units">
+              <details>
+                <summary>Units form</summary>
+              </details>
+            </div>
+          </div>
+        </SettingsSelection>
+      </>
+    );
+    const { rerender } = render(tree(null));
+    expect(screen.getByRole("link", { name: "timezone" })).toHaveAttribute("aria-current", "true");
+    rerender(tree("units"));
+    expect(screen.getByRole("link", { name: "units" })).toHaveAttribute("aria-current", "true");
+  });
+
   it("marks its scroll box settled once it has moved to the current row", () => {
     pathname = `${BASE}/settings/embed`;
     const { container } = renderRail();

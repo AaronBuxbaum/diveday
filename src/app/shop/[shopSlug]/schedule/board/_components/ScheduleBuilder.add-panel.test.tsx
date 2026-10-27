@@ -15,8 +15,8 @@ import {
   MORE,
   PRICE,
   resetScheduleBuilderFixtures,
+  routerPush,
   routerReplace,
-  setMockPathname,
   useSearchParams,
   weekFrom,
 } from "./schedule-builder-test-fixtures";
@@ -58,7 +58,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
           copy: COPY,
           more: MORE,
           initialCourse: null,
-          openAdd: "closed",
+          openAdd: "quick",
         }}
       />,
     );
@@ -66,7 +66,6 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
 
   it("offers an optional price box, currency-shaped by the server", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
 
     const price = screen.getByLabelText(/Price per diver/);
     expect(price).toHaveAttribute("name", "priceDollars");
@@ -78,21 +77,10 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
     expect(price).toHaveAttribute("placeholder", "$0.00");
   });
 
-  it("asks for the course and dive-site lists only once a panel is open", async () => {
+  it("loads course and site choices for the creation page", async () => {
     renderBuilder();
-    // Closed panel, no catalogue: the whole point of the change.
-    expect(loadOptions).not.toHaveBeenCalled();
-
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
-    expect(loadOptions).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("option", { name: "Open Water Diver" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Fun dive" })).toBeInTheDocument();
-
-    // Reopening reuses what it already has — the catalogue does not change
-    // while somebody schedules a week.
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(loadOptions).toHaveBeenCalledTimes(1);
   });
 
@@ -106,14 +94,13 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
       diveSites: [],
     });
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
 
     const courseSelect = await vi.waitFor(() => {
       const select = container.querySelector('select[name="courseId"]');
       if (!select) throw new Error("course selector is not mounted yet");
       return select;
     });
-    expect(courseSelect.querySelectorAll("optgroup")).toHaveLength(3);
+    await waitFor(() => expect(courseSelect.querySelectorAll("optgroup")).toHaveLength(3));
     expect(courseSelect.querySelector('optgroup[label="PADI"]')).toHaveTextContent(
       "Open Water Diver",
     );
@@ -142,7 +129,6 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
       diveSites: [],
     });
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
 
     const courseSelect = (await vi.waitFor(() => {
       const select = container.querySelector('select[name="courseId"]');
@@ -211,7 +197,7 @@ describe("ScheduleBuilder add panel: the tide at the chosen site", () => {
           copy: COPY,
           more: MORE,
           initialCourse: null,
-          openAdd: "closed",
+          openAdd: "quick",
         }}
       />,
     );
@@ -230,7 +216,6 @@ describe("ScheduleBuilder add panel: the tide at the chosen site", () => {
 
   it("describes the site select with the tide, and dive one's once the form is expanded", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await screen.findByRole("option", { name: "Molasses Reef" });
     const site = container.querySelector('select[name="diveSiteId"]') as HTMLSelectElement;
     // Nothing picked, nothing to say: no description, and nothing asked.
@@ -310,7 +295,7 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
           copy: COPY,
           more: MORE,
           initialCourse: null,
-          openAdd: "closed",
+          openAdd: "quick",
           ...extra,
         }}
       />,
@@ -323,7 +308,6 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
 
   it("fills the panel from the weekday, names the crew as chips, and offers the second boat", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(loadPattern).toHaveBeenCalledWith("2026-08-01");
 
     expect(
@@ -361,7 +345,6 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
 
   it("starts blank on request: the fields empty, the crew gone, the line gone", async () => {
     const { container } = renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await screen.findByText(/Filled from your last 6 Sat departures/);
     await userEvent.click(screen.getByRole("button", { name: "start blank" }));
 
@@ -382,7 +365,6 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
    */
   it("sets start blank inside the sentence that offers it", async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await screen.findByText(/Filled from your last 6 Sat departures/);
     expect(rendersFlush(screen.getByRole("button", { name: "start blank" }), "link", "sm")).toBe(
       true,
@@ -393,7 +375,6 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     renderBuilder({
       addDraft: { fields: { title: "Night dive" }, savedAtLabel: "4:12 PM" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(await screen.findByLabelText("What is it")).toHaveValue("Night dive");
     expect(loadPattern).not.toHaveBeenCalled();
 
@@ -404,69 +385,6 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
     });
     expect(await screen.findByLabelText("What is it")).toBeInTheDocument();
     expect(loadPattern).not.toHaveBeenCalled();
-  });
-});
-
-describe("ScheduleBuilder open-panel reset on revisit", () => {
-  it("closes an expanded add/move/copy panel on a pathname change, instead of resurfacing it with stale defaults", async () => {
-    const days: FixtureDay[] = [
-      {
-        dateIso: "2026-08-01",
-        label: "Sat, Aug 1",
-        parts: { weekday: "Sat", day: "1", month: "Aug" },
-        trips: [baseTrip()],
-      },
-    ];
-    const { rerender } = render(
-      <ScheduleBuilder
-        context={{
-          shopSlug: "blue-mantis",
-          week: weekFrom(days),
-          loadOptions,
-          loadMovePreflight,
-          price: PRICE,
-          actions,
-          defaultDateIso: "2026-08-01",
-          canConfigure: true,
-          locale: "en-US",
-          copy: COPY,
-          more: MORE,
-          initialCourse: null,
-          openAdd: "closed",
-        }}
-      />,
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
-    expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
-
-    // Simulate a navigate-away-and-back: the pathname changes and this
-    // instance's effects re-run (an Activity re-show, should cacheComponents
-    // be re-enabled, behaves like a fresh mount for effects, even though
-    // state survived) — the schedule route has no dynamic id to key a fresh
-    // instance by otherwise.
-    setMockPathname("/shop/blue-mantis/schedule/board?foo=bar");
-    rerender(
-      <ScheduleBuilder
-        context={{
-          shopSlug: "blue-mantis",
-          week: weekFrom(days),
-          loadOptions,
-          loadMovePreflight,
-          price: PRICE,
-          actions,
-          defaultDateIso: "2026-08-01",
-          canConfigure: true,
-          locale: "en-US",
-          copy: COPY,
-          more: MORE,
-          initialCourse: null,
-          openAdd: "closed",
-        }}
-      />,
-    );
-
-    expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
   });
 });
 
@@ -565,7 +483,7 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
 });
 
 describe("ScheduleBuilder panel focus management (accessibility audit §3)", () => {
-  it("moves focus into the add panel's first field on open, and back to the toggle on cancel", async () => {
+  it("opens the dated creation page when a day is chosen", async () => {
     const days: FixtureDay[] = [
       {
         dateIso: "2026-08-01",
@@ -593,14 +511,35 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
         }}
       />,
     );
+    expect(screen.getByRole("link", { name: "Add a departure on Sat, Aug 1" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board/new?date=2026-08-01&week=2026-08-01",
+    );
+  });
 
-    const toggle = screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" });
-    await userEvent.click(toggle);
-    expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toHaveFocus();
-
+  it("returns to the selected week when creation is cancelled", async () => {
+    render(
+      <ScheduleBuilder
+        context={{
+          shopSlug: "blue-mantis",
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "quick",
+          createPage: true,
+          returnWeek: "2026-07-27",
+        }}
+      />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
-    expect(toggle).toHaveFocus();
+    expect(routerPush).toHaveBeenCalledWith("/shop/blue-mantis/schedule/board?week=2026-07-27");
   });
 
   it("moves focus into the move panel's date field on open, and back to the row's actions control on cancel", async () => {

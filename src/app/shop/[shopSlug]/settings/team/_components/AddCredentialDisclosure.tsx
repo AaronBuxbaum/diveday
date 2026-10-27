@@ -19,7 +19,7 @@ export function AddCredentialDisclosure({
   const credentialPerson =
     staff.find((member) => member.personId === credentialFor)?.personId ?? "";
   return (
-    <div className="mt-4">
+    <div className="mt-4 print:hidden">
       <AutoOpenDetails
         id="add-credential"
         openOnHash="add-credential"

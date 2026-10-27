@@ -85,11 +85,11 @@ export function RemovablePhoto({
       )}
       <span
         aria-hidden="true"
-        className="absolute top-1.5 end-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger-tint peer-checked:text-danger"
+        className="absolute top-1.5 end-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger-tint peer-checked:text-danger print:hidden"
       >
         <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
       </span>
-      <span className="mt-1 block text-xs font-medium text-balance text-muted transition peer-checked:text-danger">
+      <span className="mt-1 block text-xs font-medium text-balance text-muted transition peer-checked:text-danger print:hidden">
         {label}
       </span>
     </label>

@@ -36,7 +36,7 @@ export function InboxRowToggle({ label }: { label: string }) {
       aria-expanded={row.open}
       aria-controls={row.viewId}
       onClick={row.toggle}
-      className={buttonClass({ variant: "ghost", size: "icon-sm" })}
+      className={buttonClass({ variant: "ghost", size: "icon-sm", className: "print:hidden" })}
     >
       <DisclosureCaret direction="down" className={row.open ? "rotate-180" : ""} />
     </button>

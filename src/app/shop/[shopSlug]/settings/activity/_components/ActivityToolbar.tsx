@@ -66,89 +66,96 @@ export function ActivityToolbar({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const submit = () => formRef.current?.requestSubmit();
+  const person = people.find((option) => option.value === personId)?.label ?? copy.personAll;
+  const activityKind = kinds.find((option) => option.value === kind)?.label ?? copy.kindAll;
 
   return (
-    <QueryForm ref={formRef} className="flex flex-wrap items-center gap-3">
-      <div className={FIELD_CLASS}>
-        <label className="sr-only" htmlFor="activity-person">
-          {copy.personLabel}
-        </label>
-        <select
-          id="activity-person"
-          name="personId"
-          defaultValue={personId}
-          onChange={submit}
-          className={controlClass}
-        >
-          <option value="">{copy.personAll}</option>
-          {people.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className={FIELD_CLASS}>
-        <label className="sr-only" htmlFor="activity-kind">
-          {copy.kindLabel}
-        </label>
-        <select
-          id="activity-kind"
-          name="kind"
-          defaultValue={kind}
-          onChange={submit}
-          className={controlClass}
-        >
-          <option value="">{copy.kindAll}</option>
-          {kinds.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <details open={Boolean(from || to)} className="group/filter w-full sm:w-auto">
-        <summary className={buttonClass({ variant: "secondary", size: "sm" })}>
-          {copy.filter}
-          <SummaryCaret className="ms-2 size-3 group-open/filter:rotate-90" />
-        </summary>
-        <div className={`${DATE_RANGE_CLASS} mt-3`}>
-          <label className="text-sm text-muted" htmlFor="activity-from">
-            {copy.fromLabel}
+    <>
+      <p className="hidden text-sm text-muted print:block">
+        {[person, activityKind, copy.activeRange, copy.count].filter(Boolean).join(" · ")}
+      </p>
+      <QueryForm ref={formRef} className="flex flex-wrap items-center gap-3 print:hidden">
+        <div className={FIELD_CLASS}>
+          <label className="sr-only" htmlFor="activity-person">
+            {copy.personLabel}
           </label>
-          <DateField
-            id="activity-from"
-            name="from"
-            defaultValue={from}
+          <select
+            id="activity-person"
+            name="personId"
+            defaultValue={personId}
             onChange={submit}
-            wrapperClassName={DATE_BOX_CLASS}
-          />
-          <label className="text-sm text-muted sm:ms-1" htmlFor="activity-to">
-            {copy.toLabel}
-          </label>
-          <DateField
-            id="activity-to"
-            name="to"
-            defaultValue={to}
-            onChange={submit}
-            wrapperClassName={DATE_BOX_CLASS}
-          />
+            className={controlClass}
+          >
+            <option value="">{copy.personAll}</option>
+            {people.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
-      </details>
-      {copy.activeRange ? <p className="text-sm text-muted">{copy.activeRange}</p> : null}
-      {clearHref ? (
-        <Link
-          href={clearHref}
-          scroll={false}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {copy.clear}
-        </Link>
-      ) : null}
 
-      <p className="ms-auto text-sm text-muted tabular-nums">{copy.count}</p>
-    </QueryForm>
+        <div className={FIELD_CLASS}>
+          <label className="sr-only" htmlFor="activity-kind">
+            {copy.kindLabel}
+          </label>
+          <select
+            id="activity-kind"
+            name="kind"
+            defaultValue={kind}
+            onChange={submit}
+            className={controlClass}
+          >
+            <option value="">{copy.kindAll}</option>
+            {kinds.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <details open={Boolean(from || to)} className="group/filter w-full sm:w-auto">
+          <summary className={buttonClass({ variant: "secondary", size: "sm" })}>
+            {copy.filter}
+            <SummaryCaret className="ms-2 size-3 group-open/filter:rotate-90" />
+          </summary>
+          <div className={`${DATE_RANGE_CLASS} mt-3`}>
+            <label className="text-sm text-muted" htmlFor="activity-from">
+              {copy.fromLabel}
+            </label>
+            <DateField
+              id="activity-from"
+              name="from"
+              defaultValue={from}
+              onChange={submit}
+              wrapperClassName={DATE_BOX_CLASS}
+            />
+            <label className="text-sm text-muted sm:ms-1" htmlFor="activity-to">
+              {copy.toLabel}
+            </label>
+            <DateField
+              id="activity-to"
+              name="to"
+              defaultValue={to}
+              onChange={submit}
+              wrapperClassName={DATE_BOX_CLASS}
+            />
+          </div>
+        </details>
+        {copy.activeRange ? <p className="text-sm text-muted">{copy.activeRange}</p> : null}
+        {clearHref ? (
+          <Link
+            href={clearHref}
+            scroll={false}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {copy.clear}
+          </Link>
+        ) : null}
+
+        <p className="ms-auto text-sm text-muted tabular-nums">{copy.count}</p>
+      </QueryForm>
+    </>
   );
 }

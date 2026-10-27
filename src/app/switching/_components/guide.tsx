@@ -55,7 +55,7 @@ const GUIDE_FACTS = ["moves", "time", "preview", "back"] as const;
  * once and shared with {@link GuideBodySkeleton}, so the skeleton cannot draw a
  * different box from the one that replaces it.
  */
-const HERO_BOX_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-24";
+const HERO_BOX_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-24 print:py-6";
 const FACTS_GRID_CLASS =
   "mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-6 lg:grid-cols-4";
 const CONTEXT_PARAGRAPHS_CLASS = "mt-5 max-w-2xl space-y-5";
@@ -71,7 +71,7 @@ const DIVIDED_ITEM_CLASS = "border-t border-border py-5";
  * its words against the 64 of every band around it (K-518). The hero (`py-24`
  * from `lg`) and the mid-page card (`MidCta`) are deliberately other sizes.
  */
-export const GUIDE_BAND_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20";
+export const GUIDE_BAND_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20 print:py-6";
 
 /**
  * **The lede under a band's heading** — the move rail's, the coexist band's,
@@ -358,7 +358,10 @@ export function GuideContents({
     ...(!spreadsheet ? [{ id: "cutover", label: t("switching.common.cutoverLink") }] : []),
   ];
   return (
-    <nav aria-label={t("switching.common.contents")} className="mx-auto max-w-4xl px-6 pb-8">
+    <nav
+      aria-label={t("switching.common.contents")}
+      className="mx-auto max-w-4xl px-6 pb-8 print:hidden"
+    >
       <ul className="flex flex-wrap gap-x-6">
         {links.map((link) => (
           <li key={link.id}>
@@ -428,7 +431,7 @@ export function MovePhase({
   return (
     <li
       id={id}
-      className={`group relative pb-14 pl-14 last:pb-0 sm:pl-16 ${id ? "scroll-mt-48" : ""}`}
+      className={`switching-move-phase group relative pb-14 pl-14 last:pb-0 sm:pl-16 print:pb-6 ${id ? "scroll-mt-48" : ""}`}
     >
       {/* The marker is the heading's first line: 32px, `LEAD_TITLE_CLASS`'s
           line box, at the line's top, so the two share a centre 16px down with

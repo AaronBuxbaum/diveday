@@ -268,7 +268,7 @@ export default async function CourseFormsPage({
         ) : null}
       </form>
       {offerPrep ? (
-        <p className="mt-8 text-center text-sm">
+        <p className="mt-8 text-center text-sm print:hidden">
           <Link href={prep} className="font-medium text-primary hover:underline">
             {t("courseForms.backToPrep")}
           </Link>

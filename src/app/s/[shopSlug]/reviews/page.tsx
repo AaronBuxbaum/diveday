@@ -77,7 +77,7 @@ export default async function PublicReviewsPage({
   const average = aggregate.average;
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10 print:py-3">
       {/* No standing description under the title. `reviews.allDescription`
           said "read what divers who were on the boat said about their day" —
           which is the page's own name plus a redundant explanation. It remains

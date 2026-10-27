@@ -349,7 +349,7 @@ for (const scheme of ["light", "dark"] as const) {
         // *pre-click* board, so this is the only one that can tell the two
         // pages apart. A no-op for the expanded capture, which `goto`s the
         // panel state directly.
-        await page.waitForURL(/[?&]add=/);
+        await page.waitForURL(/\/schedule\/board\/new/);
         const courseSelect = page.locator('select[name="courseId"]');
         // The panel is mounted. Without this the wait below is vacuous.
         await courseSelect.waitFor({ state: "attached" });
@@ -671,7 +671,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await page.getByRole("link", { name: "Add a departure", exact: true }).click();
         await addPanelSettled(page);
-        await boardListSettled(page);
         await capture(page, "schedule-builder-add", scheme);
       });
 
@@ -695,7 +694,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByText(/(Next|Last) (high|low) water at .*; this departure reaches the site/)
           .waitFor();
-        await boardListSettled(page);
         await capture(page, "schedule-builder-add-tide", scheme);
       });
 
@@ -708,10 +706,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/schedule/board?add=full");
-        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Add a departure", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
         await addPanelSettled(page);
-        await boardListSettled(page);
         await capture(page, "schedule-builder-add-full", scheme);
       });
 

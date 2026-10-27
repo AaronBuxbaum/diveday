@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
+import { openSettingsRail } from "./helpers";
 
 const staff = staffTranslator("en-US");
 
@@ -41,6 +42,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   await page.goto(`/shop/${SHOP}/settings`);
 
   const main = page.getByRole("main");
+  const rail = await openSettingsRail(page);
   for (const [name, href] of [
     ["Boats", `/shop/${SHOP}/boats`],
     ["Trip tags", `/shop/${SHOP}/trip-tags`],
@@ -51,7 +53,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
     ["Dock-day rhythm", `/shop/${SHOP}/settings/dock-day`],
     ["Shop profile & branding", `/shop/${SHOP}/settings/profile`],
   ] as const) {
-    await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
+    await expect(rail.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
   }
 
   // And the hub is a directory: none of the editors' controls is on it.

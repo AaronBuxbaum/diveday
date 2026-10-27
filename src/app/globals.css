@@ -547,14 +547,16 @@ body {
  * **Only a roll call on screen counts.** Cache Components keeps a page left
  * behind mounted under React's `<Activity>`, hidden by an inline
  * `display: none` on its outermost element (the trip shell's `<main>` when
- * the reader left the trip, the `.boat-mode` wrapper when they only left the
- * tab). A bare `:has(… div.boat-mode)` still found that hidden manifest, so
- * every page reached without a reload after the Boat tab had no tab bar, no
- * header and a navy ground. Each selector below steps over both. */
+ * the reader left the trip, the departure-paper identity wrapper when they
+ * only left the tab). A bare `:has(… div.boat-mode)` still found that hidden
+ * manifest, so every page reached without a reload after the Boat tab had no
+ * tab bar, no header and a navy ground. Each selector follows the identity
+ * wrapper and excludes every boundary Activity can hide. */
 @media (max-width: 1023px) {
   body:has(
       #shop-main-content
         > main:not([style*="display: none"])
+        > [data-departure-paper]:not([style*="display: none"])
         > div.boat-mode:not([style*="display: none"])
     )
     [data-staff-chrome="true"] {
@@ -564,6 +566,7 @@ body {
   html:has(
     #shop-main-content
       > main:not([style*="display: none"])
+      > [data-departure-paper]:not([style*="display: none"])
       > div.boat-mode:not([style*="display: none"])
   ) {
     --chrome-h: 0px;
@@ -582,7 +585,9 @@ body {
  */
 @media screen {
   #shop-main-content:has(
-    > main:not([style*="display: none"]) > div.boat-mode:not([style*="display: none"])
+    > main:not([style*="display: none"])
+      > [data-departure-paper]:not([style*="display: none"])
+      > div.boat-mode:not([style*="display: none"])
   ) {
     background-color: #ffffff;
 
@@ -1139,7 +1144,62 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
+/* A rota is read across seven days on a noticeboard. Landscape gives those
+   columns room without reducing names and shift times to fine print. */
+@page crew-rota {
+  size: landscape;
+}
+
 @media print {
+  .staffing-print-rota {
+    page: crew-rota;
+  }
+
+  /* A weekly crew rota belongs on the noticeboard. Keep all seven days in
+     columns even when printing from a phone, and let names wrap on paper. */
+  .staffing-print-grid tr {
+    display: table-row;
+    break-inside: avoid;
+  }
+
+  /* Table layout repeats the weekday key when a busy rota needs more than
+     one sheet. The same cells keep their screen grid outside print. */
+  .staffing-print-grid {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .staffing-print-grid thead {
+    display: table-header-group;
+    break-inside: avoid;
+  }
+
+  .staffing-print-grid :is(td, th) {
+    display: table-cell;
+    vertical-align: top;
+    padding: 0.35rem;
+  }
+
+  .staffing-print-grid :is(td, th):first-child {
+    width: 7rem;
+  }
+
+  .staffing-print-grid :is(td, th) > * + * {
+    margin-top: 0.25rem;
+  }
+
+  .staffing-print-grid .text-base {
+    font-size: 11.5px;
+    line-height: 1.35;
+    padding: 0.25rem;
+  }
+
+  .staffing-print-grid .truncate {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
   /**
    * **Nothing interactive reaches the trip packet's paper, by construction.**
    *
@@ -1178,6 +1238,34 @@ select:not([multiple]):not([size]):dir(rtl) {
    */
   button[type="submit"] {
     display: none;
+  }
+
+  /* The paper margin already supplies the bottom gutter. Screen padding can
+     otherwise fragment into a trailing sheet containing only its page number. */
+  #shop-main-content main {
+    /* Beat the trip shell's print:py-8 utility without changing its top gutter. */
+    padding-bottom: 0 !important;
+  }
+
+  /* Save/unsaved-status bars have no paper action; their empty border and
+     padding remain after submit controls disappear unless the row goes too. */
+  #shop-main-content [data-sticky-actions]:not(:has([data-print-content])) {
+    display: none;
+  }
+
+  #shop-main-content [data-sticky-actions]:has([data-print-content]) {
+    position: static;
+  }
+
+  #shop-main-content [data-sticky-actions]:has([data-print-content]) > :not([data-print-content]) {
+    display: none;
+  }
+
+  /* Editors already start inside the page margin. Their extra screen gutter
+     can leave the last field's empty layout extent on a sheet of its own. */
+  #shop-main-content main:has([data-sticky-actions]) {
+    /* Beat the shared staff-page screen inset at every print viewport. */
+    padding-top: 0 !important;
   }
 
   :root,
@@ -1234,6 +1322,12 @@ select:not([multiple]):not([size]):dir(rtl) {
     break-inside: avoid;
   }
 
+  /* A switching-guide phase may be longer than a page; its own list of
+     numbered steps keeps each step intact without wasting a sheet per phase. */
+  .switching-move-phase {
+    break-inside: auto;
+  }
+
   /*
    * **A heading never ends a page.** A section title stranded at the foot of
    * one sheet with its table starting on the next reads, on the boat, as a
@@ -1245,6 +1339,7 @@ select:not([multiple]):not([size]):dir(rtl) {
   h3,
   h4 {
     break-after: avoid;
+    break-inside: avoid;
   }
 
   /*
@@ -2115,6 +2210,29 @@ details[open]::details-content {
 }
 
 @media print {
+  /* A paper reader cannot scroll to trigger an entrance or open a feature list. */
+  .marketing-reveal,
+  .marketing-reveal-pending,
+  .marketing-reveal-visible,
+  .marketing-hero-motion,
+  .marketing-hero-motion * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .marketing-capability-lines::details-content {
+    /* Closed details use a UA rule that otherwise suppresses their paper content. */
+    content-visibility: visible !important;
+    display: block;
+    height: auto;
+    opacity: 1;
+  }
+
+  .marketing-capability-lines summary svg {
+    display: none;
+  }
+
   .table-scroll-shell {
     mask-image: none;
     animation: none;
@@ -2854,9 +2972,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
 }
 
-/* Start the evidence section on a fresh sheet so its heading stays with its records. */
+/* Keep the introduction with the first record; later records can paginate normally. */
 @media print {
-  section:has(> #incident-evidence-heading) {
-    break-before: page;
+  #incident-evidence-heading,
+  #incident-evidence-heading ~ p {
+    break-after: avoid;
+  }
+
+  #incident-evidence-heading ~ ul,
+  #incident-evidence-heading ~ ul > li:first-child {
+    break-before: avoid;
   }
 }

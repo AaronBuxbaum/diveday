@@ -58,7 +58,7 @@ export default async function ResetPasswordPage({
   if (!check) {
     return (
       <DeadLink t={t} next={t("account.resetPassword.unavailableText")} diveDayDoor={false}>
-        <Link href="/sign-in" className="font-medium text-primary hover:underline">
+        <Link href="/sign-in" className="font-medium text-primary hover:underline print:hidden">
           {t("account.common.backToSignIn")}
         </Link>
       </DeadLink>
@@ -77,7 +77,7 @@ export default async function ResetPasswordPage({
       description={t("account.resetPassword.description")}
       footer={
         <p>
-          <Link href="/sign-in" className="font-medium text-primary hover:underline">
+          <Link href="/sign-in" className="font-medium text-primary hover:underline print:hidden">
             {t("account.common.backToSignIn")}
           </Link>
         </p>
