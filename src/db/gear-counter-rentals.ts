@@ -161,6 +161,22 @@ export async function counterRentalCards(db: AppDb, shopId: string, personId: st
   return { certifications: levels, specialtyCertifications: specialties };
 }
 
+/** Picker hint only; the rental transaction rechecks the same predicate. */
+export async function counterRentalHasNitroxFillCard(db: AppDb, shopId: string, personId: string) {
+  const [card] = await db
+    .select({ id: nitroxCertifications.id })
+    .from(nitroxCertifications)
+    .where(
+      and(
+        eq(nitroxCertifications.shopId, shopId),
+        eq(nitroxCertifications.personId, personId),
+        authorizesNitroxFill,
+      ),
+    )
+    .limit(1);
+  return Boolean(card);
+}
+
 /** A card a staffer holds in their hand at the counter, and what it is. */
 export type CounterRentalCardSighting =
   | { card: "level"; level: CertificationLevel }

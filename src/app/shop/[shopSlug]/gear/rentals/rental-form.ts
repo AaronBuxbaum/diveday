@@ -1,3 +1,4 @@
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
@@ -57,6 +58,16 @@ export function counterRentalFormPath(
 
 /** The rent-out form's name for `KeepTypedOnRefusal`: a refusal brings the cart back filled. */
 export const COUNTER_RENTAL_FORM = "counter-rental";
+
+/** A refused bill belongs to this staffer and this diver, not the next customer. */
+export function counterRentalDraftScope(
+  shopSlug: string,
+  staffId: string,
+  personId: string | undefined,
+): string {
+  const staffScope = keptTypedScope(shopSlug, staffId);
+  return personId ? `${staffScope}.${personId}` : staffScope;
+}
 
 /** The payment choice posts under this name, one of `RENTAL_PAYMENTS`. */
 export const PAYMENT_FIELD = "payment";
