@@ -8,6 +8,7 @@ import {
   openIfClosed,
   openTripAbout,
   openTripAboutRow,
+  openTripMore,
 } from "./helpers";
 
 const staffCopy = staffTranslator("en-US");
@@ -210,6 +211,14 @@ test.describe("staff", () => {
     // render — no click needed (and one would close it again).
     await expect(page.getByLabel("Water temp °F")).toHaveValue("");
     await expect(page.getByLabel("Visibility ft")).toHaveValue("");
+  });
+
+  test("staff can cancel and reinstate a departure", async ({ page }) => {
+    await (await findTripOnBoard(page, "blue-mantis", /Two-Tank Reef/)).click();
+    const more = await openTripMore(page);
+    await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    await more.getByRole("button", { name: "Yes, cancel this departure" }).click();
+    await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });
 
   test("staff find a site by name or location instead of scrolling the whole library", async ({
