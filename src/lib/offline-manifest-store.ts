@@ -124,6 +124,7 @@ export type OfflineSyncResult = {
   clientEventId: string;
   status: "applied" | "duplicate" | "rejected";
   reason?: string;
+  noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
 };
 
 /**
@@ -632,7 +633,7 @@ export async function saveOfflineManifest(
         ...payload,
         manifests,
         version: OFFLINE_MANIFEST_RECORD_VERSION,
-        snapshotId: crypto.randomUUID(),
+        snapshotId: payload.snapshotId ?? crypto.randomUUID(),
         savedAt: savedAt.toISOString(),
         expiresAt: offlineManifestExpiresAt(savedAt, new Date(trip.endsAt)).toISOString(),
       },
@@ -801,6 +802,7 @@ export async function appendOfflineRollCall(
       clientEventId: crypto.randomUUID(),
       snapshotId: envelope.snapshot.snapshotId,
       snapshotSavedAt: envelope.snapshot.savedAt,
+      erasureEpochToken: envelope.snapshot.erasureEpochToken,
       tripId,
       occurredAt: nowDate().toISOString(),
       syncStatus: "pending",
@@ -994,8 +996,10 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
       if (!result) return event;
       return {
         ...event,
+        ...(result.noteDisposition ? { note: null } : {}),
         syncStatus: result.status === "rejected" ? "rejected" : "applied",
         rejectionReason: result.reason,
+        ...(result.noteDisposition ? { noteDisposition: result.noteDisposition } : {}),
       };
     };
     current.events = current.events.map(applyResult);

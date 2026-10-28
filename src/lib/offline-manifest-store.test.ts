@@ -844,6 +844,41 @@ describe("syncOfflineManifest", () => {
     expect(reloaded?.events[0].syncStatus).toBe("applied");
   });
 
+  it("clears offline note text only after the server acknowledges an erasure cutoff", async () => {
+    await saveOfflineManifest(payload);
+    const envelope = await appendOfflineRollCall(payload.manifests[0].trip.id, {
+      crewPersonId: payload.manifests[0].crew[0].id,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "Nora Quinn was seen at the ladder.",
+    });
+    const pending = envelope.events[0];
+    expect(pending.note).toContain("Nora Quinn");
+
+    server.use(
+      http.post("/api/offline-manifests/sync", () =>
+        HttpResponse.json({
+          results: [
+            {
+              clientEventId: pending.clientEventId,
+              status: "applied",
+              noteDisposition: "discarded_erasure_cutoff",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const synced = await syncOfflineManifest(payload.manifests[0].trip.id);
+    expect(synced?.events[0]).toMatchObject({
+      status: "not_boarded",
+      syncStatus: "applied",
+      note: null,
+      noteDisposition: "discarded_erasure_cutoff",
+    });
+    expect((await loadOfflineManifest(payload.manifests[0].trip.id))?.events[0].note).toBeNull();
+  });
+
   it("marks a rejected event with the server's reason instead of silently dropping it", async () => {
     await saveOfflineManifest(payload);
     const envelope = await appendOfflineRollCall(payload.manifests[0].trip.id, {

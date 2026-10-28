@@ -143,6 +143,10 @@ export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
+  /** Server-issued identifier bound into `erasureEpochToken` for note cutoffs. */
+  snapshotId?: string;
+  /** HMAC-authenticated shop erasure epoch; clients must carry it unchanged. */
+  erasureEpochToken?: string;
   /** Absent on older snapshots, which cannot claim junior checks were captured. */
   juniorAdvisoriesChecked?: true;
   /** Absent on copies made before site-only training readiness; queued events remain intact. */
@@ -620,6 +624,8 @@ export type OfflineRollCallEvent = {
   clientEventId: string;
   snapshotId: string;
   snapshotSavedAt: string;
+  /** Bound to this snapshot id and shop; absent tokens cannot authorize note text. */
+  erasureEpochToken?: string;
   tripId: string;
   /** A diver's paid seat. Absent on a crew event; see the note above. */
   bookingId?: string;
@@ -696,6 +702,7 @@ export type OfflineRollCallEvent = {
   occurredAt: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
+  noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
 };
 
 /**

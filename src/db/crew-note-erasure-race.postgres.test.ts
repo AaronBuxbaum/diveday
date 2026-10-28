@@ -1,6 +1,8 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
+import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "./anonymize";
 import { recordCrewRollCall } from "./manifests";
@@ -68,6 +70,30 @@ async function fixture() {
       checkpoint: "after_dive_1",
       note,
     });
+  const writeOfflineNote = (note: string, epoch: number) => {
+    const snapshotId = randomUUID();
+    const occurredAt = nowDate();
+    return recordCrewRollCall(pg.connect(), {
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: owner.id,
+      recordedByPersonId: owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      source: "offline",
+      clientEventId: randomUUID(),
+      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
+      offlineSnapshotId: snapshotId,
+      offlineErasureEpochToken: signOfflineErasureEpoch({
+        shopId: shop.id,
+        tripId: trip.id,
+        snapshotId,
+        epoch,
+      }),
+      occurredAt,
+      note,
+    });
+  };
   const erase = () =>
     anonymizeDiver(pg.connect(), {
       shopId: shop.id,
@@ -81,7 +107,7 @@ async function fixture() {
       .where(
         and(eq(rollCallCrewEvents.shopId, shop.id), eq(rollCallCrewEvents.personId, owner.id)),
       );
-  return { pg, shop, diver, writeNote, erase, notes };
+  return { pg, shop, diver, writeNote, writeOfflineNote, erase, notes };
 }
 
 describePostgres("crew note writes ordered with erasure", () => {
@@ -94,7 +120,10 @@ describePostgres("crew note writes ordered with erasure", () => {
       sql`create trigger test_hold_crew_note_insert before insert on roll_call_crew_events for each row execute function test_hold_crew_note_insert()`,
     );
     const gate = await holdRowLock(f.pg, sql`select pg_advisory_xact_lock(281033)`);
-    const noteWrite = f.writeNote("Maya Rivera returned safely after dive one.");
+    const noteWrite = f.writeOfflineNote(
+      "Maya Rivera returned safely after dive one.",
+      f.shop.offlineErasureEpoch,
+    );
     let erasure: ReturnType<typeof f.erase> | undefined;
     try {
       // The trigger can only run after the note writer has passed its shared
@@ -138,5 +167,54 @@ describePostgres("crew note writes ordered with erasure", () => {
       .from(people)
       .where(eq(people.id, f.diver.id));
     expect(erased).toEqual({ name: "[anonymized]", email: null });
+  });
+
+  it("keeps an offline roll-call mark but drops its pre-erasure note after waiting behind erasure", async () => {
+    const f = await fixture();
+    const staleEpoch = f.shop.offlineErasureEpoch;
+    await f.pg.db.execute(
+      sql`create function test_hold_erasure_person_update() returns trigger language plpgsql as $$ begin if new.anonymized_at is not null and old.anonymized_at is null then perform pg_advisory_xact_lock(281035); end if; return new; end $$`,
+    );
+    await f.pg.db.execute(
+      sql`create trigger test_hold_erasure_person_update before update on people for each row execute function test_hold_erasure_person_update()`,
+    );
+    const gate = await holdRowLock(f.pg, sql`select pg_advisory_xact_lock(281035)`);
+    const erasure = f.erase();
+    let offlineWrite: ReturnType<typeof f.writeOfflineNote> | undefined;
+    try {
+      await waitForLockWaiters(f.pg.db, 1);
+      offlineWrite = f.writeOfflineNote("Maya Rivera was seen at the ladder.", staleEpoch);
+      await waitForLockWaiters(f.pg.db, 2);
+    } finally {
+      await gate.release();
+    }
+
+    expect(await erasure).toMatchObject({ ok: true });
+    expect(await offlineWrite).toMatchObject({
+      ok: true,
+      noteDisposition: "discarded_erasure_cutoff",
+    });
+    expect(await f.notes()).toEqual([{ note: null }]);
+    const [shopAfterErasure] = await f.pg.db
+      .select({ epoch: shops.offlineErasureEpoch })
+      .from(shops)
+      .where(eq(shops.id, f.shop.id));
+    expect(shopAfterErasure?.epoch).toBe(staleEpoch + 1);
+    const [mark] = await f.pg.db
+      .select({ status: rollCallCrewEvents.status })
+      .from(rollCallCrewEvents)
+      .where(eq(rollCallCrewEvents.shopId, f.shop.id));
+    expect(mark?.status).toBe("not_boarded");
+
+    // A fresh server snapshot carries the incremented shop epoch, so later
+    // notes remain available as the product decision requires.
+    const freshWrite = await f.writeOfflineNote(
+      "A fresh post-erasure note is allowed.",
+      staleEpoch + 1,
+    );
+    expect(freshWrite).toMatchObject({ ok: true });
+    expect((await f.notes()).map((row) => row.note).sort()).toEqual(
+      [null, "A fresh post-erasure note is allowed."].sort(),
+    );
   });
 });

@@ -30,6 +30,8 @@ export function offlineManifestManagerCopy(t: StaffTranslator): OfflineManifestM
     reconcilePendingOne: t("trips.offlineManifestManager.reconcilePendingOne"),
     reconcilePendingOther: t.raw("trips.offlineManifestManager.reconcilePendingOther"),
     reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
+    reconcileNoteDiscarded: t("shared.offlineManifest.reconcile.noteDiscarded"),
+    reconcileNoteUnverified: t("shared.offlineManifest.reconcile.noteUnverified"),
     reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
     savingMessage: t("trips.offlineManifestManager.savingMessage"),
     saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),

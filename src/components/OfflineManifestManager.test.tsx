@@ -18,6 +18,10 @@ const copy: OfflineManifestManagerCopy = {
   reconcilePendingOne: "1 change is still sending.",
   reconcilePendingOther: "{count} changes are still sending.",
   reconcileCaughtUp: "Everything’s sent.",
+  reconcileNoteDiscarded:
+    "An old offline note was removed after an erasure; the roll-call mark was kept.",
+  reconcileNoteUnverified:
+    "An offline note was removed because this saved copy could not be verified; the roll-call mark was kept.",
   reconcileErrorFallback:
     "Couldn’t reach DiveDay just now. Your offline changes are still saved here and will try to send again on reconnect.",
   savingMessage: "Saving the latest manifest to this device…",
@@ -216,6 +220,33 @@ describe("OfflineManifestManager", () => {
     expect(alert).toHaveTextContent(copy.reconcileRejectedOne);
     // Pinned over the page rather than sitting inside the card it came from.
     expect(alert.closest("section")).toBeNull();
+  });
+
+  it("reports a discarded offline note while keeping its acknowledged roll-call mark", async () => {
+    setOnline(true);
+    const withDiscardedNote = envelope([
+      {
+        clientEventId: "event-1",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: new Date().toISOString(),
+        tripId: TRIP_ID,
+        crewPersonId: "33333333-3333-3333-3333-333333333333",
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: null,
+        occurredAt: new Date().toISOString(),
+        syncStatus: "applied",
+        noteDisposition: "discarded_erasure_cutoff",
+      },
+    ]);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(withDiscardedNote);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue(withDiscardedNote);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(withDiscardedNote);
+
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+
+    expect(await screen.findByText(copy.reconcileNoteDiscarded)).toHaveAttribute("role", "status");
   });
 
   // Task 76: the "Saved …" timestamp used to call the bare `toLocaleString()`

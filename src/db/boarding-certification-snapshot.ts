@@ -11,10 +11,12 @@ import {
 
 /**
  * A per-shop transaction lock serializes person merge/erasure with shared
- * writers of name-bearing evidence, including boarding captures and retained
- * crew notes, before their person or booking locks. Shared writers do not block
- * one another. A note ordered after an erasure's exclusive lock may introduce
- * a name again; the erasure sweep covers notes persisted before it completes.
+ * writers of name-bearing evidence, including boarding captures and crew notes,
+ * before their person or booking locks. Shared writers do not block one another.
+ * Offline crew-note sync also compares its authenticated snapshot epoch under
+ * this fence: a pre-erasure queued note keeps its roll-call mark but drops its
+ * text, while a fresh post-erasure snapshot may submit a new note. Live notes
+ * remain allowed after erasure by product decision.
  * The namespace is distinct from other advisory locks; hash collisions only
  * serialize unrelated shops, never weaken isolation.
  */

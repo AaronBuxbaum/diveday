@@ -373,6 +373,8 @@
       "pendingRejectedSingle": "{count, plural, one {# change needs a look. Open the live manifest to sort it out.} other {# changes need a look. Open the live manifest to sort it out.}}",
       "pendingWaiting": "{count, plural, one {# change is still sending.} other {# changes are still sending.}}",
       "allCaughtUp": "Everything’s sent.",
+      "noteDiscarded": "A note from an older offline copy was removed after an erasure. The roll-call mark was kept.",
+      "noteUnverified": "An offline note was removed because this saved copy could not be verified. The roll-call mark was kept.",
       "listLoadError": "This device couldn’t open its saved manifests. Save a fresh copy while you have signal.",
       "singleLoadError": "This device couldn’t open its saved manifest. Save a fresh copy while you have signal.",
       "savedCount": "{count, plural, one {# saved manifest} other {# saved manifests}} on this device",

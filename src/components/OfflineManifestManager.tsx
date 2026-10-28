@@ -78,6 +78,12 @@ export function OfflineManifestManager({
 
   const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
+  const cutoffNoteDiscarded = saved?.events.some(
+    (event) => event.noteDisposition === "discarded_erasure_cutoff",
+  );
+  const unverifiedNoteDiscarded = saved?.events.some(
+    (event) => event.noteDisposition === "discarded_unverified_snapshot",
+  );
   const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
   const freshnessLabel =
     freshness === "current"
@@ -194,6 +200,16 @@ export function OfflineManifestManager({
                 <p className={message ? "mt-2 text-sm font-medium" : ""} aria-live="polite">
                   {message}
                 </p>
+                {cutoffNoteDiscarded ? (
+                  <p className="mt-2 text-sm text-muted" role="status">
+                    {copy.reconcileNoteDiscarded}
+                  </p>
+                ) : null}
+                {unverifiedNoteDiscarded ? (
+                  <p className="mt-2 text-sm text-muted" role="status">
+                    {copy.reconcileNoteUnverified}
+                  </p>
+                ) : null}
                 {saved ? (
                   <p className="mt-1 text-xs text-muted">
                     {fill(copy.savedSummary, {

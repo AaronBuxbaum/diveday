@@ -547,6 +547,16 @@ export async function anonymizeDiver(
       now,
     });
 
+    // Invalidate every offline snapshot issued before this committed erasure.
+    // Note sync compares its authenticated snapshot epoch while holding the
+    // same shop fence, so an old queued note cannot arrive after the sweep.
+    const [epoch] = await tx
+      .update(shops)
+      .set({ offlineErasureEpoch: sql`${shops.offlineErasureEpoch} + 1` })
+      .where(eq(shops.id, input.shopId))
+      .returning({ value: shops.offlineErasureEpoch });
+    if (!epoch) throw new Error("anonymizeDiver: shop erasure epoch update returned no row");
+
     return { ok: true, alreadyAnonymized: false, ...result } as const;
   });
 

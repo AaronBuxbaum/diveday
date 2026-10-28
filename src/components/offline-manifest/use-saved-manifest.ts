@@ -154,13 +154,27 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // cannot see it tells a captain they are caught up when they are not.
       const rejected = rejectedOfflineEventCount(next);
       const pending = pendingOfflineEventCount(next);
-      setMessage(
-        rejected > 0
-          ? t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })
-          : pending > 0
-            ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
-            : t("shared.offlineManifest.reconcile.allCaughtUp"),
+      const noteCutoffDiscarded = next.events.some(
+        (event) => event.noteDisposition === "discarded_erasure_cutoff",
       );
+      const noteUnverifiedDiscarded = next.events.some(
+        (event) => event.noteDisposition === "discarded_unverified_snapshot",
+      );
+      const messages = [
+        ...(rejected > 0
+          ? [t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: rejected })]
+          : []),
+        ...(noteCutoffDiscarded ? [t("shared.offlineManifest.reconcile.noteDiscarded")] : []),
+        ...(noteUnverifiedDiscarded ? [t("shared.offlineManifest.reconcile.noteUnverified")] : []),
+        ...(rejected === 0 && !noteCutoffDiscarded && !noteUnverifiedDiscarded
+          ? [
+              pending > 0
+                ? t("shared.offlineManifest.reconcile.pendingWaiting", { count: pending })
+                : t("shared.offlineManifest.reconcile.allCaughtUp"),
+            ]
+          : []),
+      ];
+      setMessage(messages.join(" "));
     } catch {
       setMessage(t("shared.offlineManifest.reconcile.reachError"));
     }

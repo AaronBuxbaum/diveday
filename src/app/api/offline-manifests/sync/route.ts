@@ -29,6 +29,7 @@ const eventSchema = z
     clientEventId: z.string().uuid(),
     snapshotId: z.string().uuid(),
     snapshotSavedAt: z.iso.datetime(),
+    erasureEpochToken: z.string().max(128).optional(),
     bookingId: z.string().uuid().optional(),
     crewPersonId: z.string().uuid().optional(),
     tripId: z.string().uuid(),
@@ -244,6 +245,8 @@ export async function POST(request: Request) {
       checkpoint: event.checkpoint as RollCallCheckpoint,
       source: "offline" as const,
       clientEventId: event.clientEventId,
+      offlineSnapshotId: event.snapshotId,
+      offlineErasureEpochToken: event.erasureEpochToken,
       retractsClientEventId: event.retractsClientEventId,
       note: event.note,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
@@ -264,6 +267,9 @@ export async function POST(request: Request) {
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
       ...(!outcome.ok ? { reason: outcome.reason } : {}),
+      ...(outcome.ok && "noteDisposition" in outcome && outcome.noteDisposition
+        ? { noteDisposition: outcome.noteDisposition }
+        : {}),
     });
   }
 

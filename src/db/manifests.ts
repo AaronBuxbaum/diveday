@@ -26,6 +26,7 @@ import {
   standingResultMeansSailed,
   type TripManifest,
 } from "@/lib/manifests";
+import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
@@ -68,6 +69,7 @@ import {
   personRoles,
   rollCallCrewEvents,
   rollCallEvents,
+  shops,
   tripAssignments,
   trips,
 } from "./schema";
@@ -2187,7 +2189,12 @@ async function writeRollCall(
 }
 
 export type RecordCrewRollCallOutcome =
-  | { ok: true; eventId: string; duplicate?: boolean }
+  | {
+      ok: true;
+      eventId: string;
+      duplicate?: boolean;
+      noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+    }
   | {
       ok: false;
       reason:
@@ -2254,6 +2261,8 @@ export async function recordCrewRollCall(
     /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
     retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
+    offlineSnapshotId?: string;
+    offlineErasureEpochToken?: string;
     /** The same, for the other half of the head count. */
     note?: string | null;
     occurredAt?: Date;
@@ -2289,6 +2298,35 @@ export async function recordCrewRollCall(
           await lockBoardingCertificationEvidence(tx, input.shopId, evidenceLockMode);
         }
 
+        let noteInput = input.note;
+        let noteDisposition:
+          | "discarded_erasure_cutoff"
+          | "discarded_unverified_snapshot"
+          | undefined;
+        if (source === "offline" && mayWriteNote) {
+          const issuedEpoch = verifyOfflineErasureEpoch({
+            token: input.offlineErasureEpochToken,
+            shopId: input.shopId,
+            tripId: input.tripId,
+            snapshotId: input.offlineSnapshotId,
+          });
+          const [shop] = await tx
+            .select({ epoch: shops.offlineErasureEpoch })
+            .from(shops)
+            .where(eq(shops.id, input.shopId))
+            .limit(1);
+          // The shared erasure fence remains held through this comparison and
+          // the event insert. A stale snapshot still gets its roll-call mark,
+          // but its arbitrary text cannot cross a completed shop erasure.
+          if (issuedEpoch === null) {
+            noteInput = null;
+            noteDisposition = "discarded_unverified_snapshot";
+          } else if (shop?.epoch !== issuedEpoch) {
+            noteInput = null;
+            noteDisposition = "discarded_erasure_cutoff";
+          }
+        }
+
         // Idempotency first, exactly as the diver path does it: a sync the device
         // retried (the response never arrived, the tab was closed mid-flight) must
         // not append a second row, and answering `duplicate` before any subject
@@ -2300,7 +2338,9 @@ export async function recordCrewRollCall(
             `${input.tripId}/${input.personId}`,
             "roll_call_crew_events",
           );
-          if (replayed) return replayed;
+          if (replayed) {
+            return replayed.ok && noteDisposition ? { ...replayed, noteDisposition } : replayed;
+          }
         }
 
         // Same tenancy and trip-status gate the other two writers apply — and the
@@ -2336,7 +2376,9 @@ export async function recordCrewRollCall(
             `${input.tripId}/${input.personId}`,
             "roll_call_crew_events",
           );
-          if (replayed) return replayed;
+          if (replayed) {
+            return replayed.ok && noteDisposition ? { ...replayed, noteDisposition } : replayed;
+          }
         }
         if (!trip) return { ok: false, reason: "trip_unavailable" };
         if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
@@ -2491,7 +2533,7 @@ export async function recordCrewRollCall(
             )[0] ?? null)
           : null;
 
-        const note = await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+        const note = await acceptedRollCallNote(noteInput, checkpoint, input.status, () =>
           standingCrewRollCall(tx, {
             shopId: input.shopId,
             tripId: input.tripId,
@@ -2499,10 +2541,11 @@ export async function recordCrewRollCall(
             checkpoint,
           }),
         );
-        // Any retained note already holds the shared merge/erasure fence from
-        // before trip/seat locks. Erasure either waits and sweeps this committed
-        // note, or wins first and orders this note after its point-in-time sweep.
-        // Later notes remain allowed by policy and can name the diver again.
+        // Any retained note holds the shared erasure fence from before trip/seat
+        // locks. A live note or a valid fresh offline snapshot may be retained;
+        // an offline snapshot from before a completed erasure keeps its mark but
+        // has its text omitted above. Erasure waits for a writer that got here
+        // first and sweeps its note before committing.
         const captureAssignedCredentials = captureCredentials && assigned.anonymizedAt === null;
         const credentialSnapshotStartedAt = captureAssignedCredentials ? nowDate() : null;
         const [event] = await tx
@@ -2566,7 +2609,7 @@ export async function recordCrewRollCall(
             missingAfterDive: input.status === "not_boarded",
           });
         }
-        return { ok: true, eventId: event.id };
+        return { ok: true, eventId: event.id, ...(noteDisposition ? { noteDisposition } : {}) };
       }),
     {
       indexName: "roll_call_crew_events_shop_client_event_unique",
