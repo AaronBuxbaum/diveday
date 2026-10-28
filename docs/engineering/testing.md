@@ -230,11 +230,12 @@ about 50 s of job steps and the run's own setup.
 To measure again, run `pnpm e2e:build`, deal a shard with `node scripts/e2e-shard.mjs`, then
 run `E2E_WORKERS=1 VISUAL_TIMING_OUT=.agent-out/timing.json pnpm exec playwright test e2e/visual --test-list <list> --reporter=line,./e2e/visual-timing-reporter.ts`.
 
-**Two workers per visual shard is a trial, not a setting.** `.github/workflows/visual-workers-trial.yml`
-runs on manual dispatch only. Each of its eight shards captures its list three times from one
-build: twice at `E2E_WORKERS=2` and once at 1. `scripts/compare-capture-sets.mjs` then fails the
-shard if any PNG differs by one byte or is missing from a set, and lists each one in the step
-summary. CI's `visual` job stays at one worker until a trial is green.
+**CI uses two workers per visual shard under option B; the trial remains incomplete.**
+`.github/workflows/visual-workers-trial.yml` runs on manual dispatch only. Each of its eight shards
+captures its list three times from one build: twice at `E2E_WORKERS=2` and once at 1.
+`scripts/compare-capture-sets.mjs` fails the shard if any PNG differs by one byte or is missing
+from a set, and lists each one in the step summary. This trial has not established a green result;
+unexplained visual differences remain unapproved.
 
 Byte equality is stricter than reg-suit, which ignores anti-aliasing (`enableAntialias` in
 `regconfig.json`). Two one-worker runs of shard 1 on 2026-10-24 differed in three of 201 PNGs. Two
