@@ -611,17 +611,40 @@ describe("a navigation on a network that never answers", () => {
   });
 
   it("uses only the readiness copy for the exact path when the network is slow", async () => {
-    await cacheReadyCopy(READY_PATH, "saved readiness page");
+    // This test is about the four-second routing deadline, not native
+    // WebCrypto scheduling. Hash deterministically so completion of the
+    // saved-path check cannot race the fake clock's final microtask under
+    // parallel test load. ready-page-cache.test.ts exercises the real digest.
+    const digest = vi
+      .spyOn(crypto.subtle, "digest")
+      .mockImplementation(async (_algorithm, data) => {
+        const input = new TextDecoder().decode(data);
+        const bytes = new Uint8Array(32);
+        let value = 2_166_136_261;
+        for (let index = 0; index < input.length; index += 1) {
+          value = Math.imul(value ^ (input.charCodeAt(index) ?? 0), 16_777_619);
+        }
+        for (let index = 0; index < bytes.length; index += 1) {
+          value = Math.imul(value ^ index, 16_777_619);
+          bytes[index] = value >>> 24;
+        }
+        return bytes.buffer;
+      });
+    try {
+      await cacheReadyCopy(READY_PATH, "saved readiness page");
 
-    const matching = navigateReady(`https://dive.day${READY_PATH}`);
-    const saved = await settledAfter(matching.response, 4_000);
-    if (saved === "still waiting") throw new Error("the saved readiness page never arrived");
-    expect(await saved.text()).toContain("saved readiness page");
+      const matching = navigateReady(`https://dive.day${READY_PATH}`);
+      const saved = await settledAfter(matching.response, 4_000);
+      if (saved === "still waiting") throw new Error("the saved readiness page never arrived");
+      expect(await saved.text()).toContain("saved readiness page");
 
-    const other = navigateReady(`https://dive.day${OTHER_READY_PATH}`);
-    const missing = await settledAfter(other.response, 4_000);
-    if (missing === "still waiting") throw new Error("a path without a saved page kept waiting");
-    expect(missing.type).toBe("error");
+      const other = navigateReady(`https://dive.day${OTHER_READY_PATH}`);
+      const missing = await settledAfter(other.response, 4_000);
+      if (missing === "still waiting") throw new Error("a path without a saved page kept waiting");
+      expect(missing.type).toBe("error");
+    } finally {
+      digest.mockRestore();
+    }
   });
 
   it("returns the browser error and aborts an uncached readiness request at four seconds", async () => {
