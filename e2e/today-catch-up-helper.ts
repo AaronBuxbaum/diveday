@@ -15,7 +15,16 @@ export async function todayCatchUpScenario(
   });
   const reader = makeActivitySafe(await readerContext.newPage());
   try {
+    // Today establishes the reader's baseline through a server action on its
+    // first visit. Wait for that transaction before the other staffer acts.
+    const initialized = reader.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.request().headers()["next-action"] !== undefined &&
+        new URL(response.url()).pathname === "/shop/blue-mantis",
+    );
     await reader.goto("/shop/blue-mantis");
+    expect((await initialized).status()).toBe(200);
     const href = await reader
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .getAttribute("href");
