@@ -79,7 +79,14 @@ export type IssueWaiverOutcome =
  */
 export async function issueWaiverRequest(
   db: DbExecutor,
-  input: { shopId: string; bookingId?: string; personId?: string; now?: Date },
+  input: {
+    shopId: string;
+    bookingId?: string;
+    personId?: string;
+    expectedPersonId?: string;
+    expectedTripId?: string;
+    now?: Date;
+  },
 ): Promise<IssueWaiverOutcome> {
   if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
   const token = createWaiverToken();
@@ -89,12 +96,12 @@ export async function issueWaiverRequest(
 
   return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
-    const booking = input.bookingId
+    const candidate = input.bookingId
       ? await tx
           .select({
             id: bookings.id,
             personId: bookings.personId,
-            dateOfBirth: people.dateOfBirth,
+            tripId: bookings.tripId,
             minorDeclaredAt: bookings.minorDeclaredAt,
             tripStatus: trips.status,
             tripStartsAt: trips.startsAt,
@@ -103,8 +110,7 @@ export async function issueWaiverRequest(
             participantType: bookings.participantType,
           })
           .from(bookings)
-          .innerJoin(trips, eq(trips.id, bookings.tripId))
-          .innerJoin(people, eq(people.id, bookings.personId))
+          .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
           .where(
             and(
               eq(bookings.id, input.bookingId),
@@ -112,16 +118,11 @@ export async function issueWaiverRequest(
               ne(bookings.status, "cancelled"),
             ),
           )
-          .for("update", { of: bookings })
           .limit(1)
           .then((rows) => rows[0] ?? null)
       : null;
-    if (input.bookingId && !booking) return { ok: false, reason: "booking_not_found" };
-    if (booking && booking.tripStatus !== "scheduled") {
-      return { ok: false, reason: "booking_unavailable" };
-    }
-    if (booking?.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
-    const personId = booking?.personId ?? input.personId;
+    if (input.bookingId && !candidate) return { ok: false, reason: "booking_not_found" };
+    const personId = candidate?.personId ?? input.personId;
     if (!personId) return { ok: false, reason: "person_not_found" };
     const [lockedPerson] = await tx
       .select({
@@ -138,6 +139,47 @@ export async function issueWaiverRequest(
       .limit(1);
     if (!lockedPerson || lockedPerson.anonymizedAt || lockedPerson.mergedIntoPersonId)
       return { ok: false, reason: "person_not_found" };
+    let booking = candidate;
+    if (candidate && input.bookingId) {
+      const [lockedBooking] = await tx
+        .select({
+          id: bookings.id,
+          personId: bookings.personId,
+          tripId: bookings.tripId,
+          minorDeclaredAt: bookings.minorDeclaredAt,
+          tripStatus: trips.status,
+          tripStartsAt: trips.startsAt,
+          tripEndsAt: trips.endsAt,
+          identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+          participantType: bookings.participantType,
+        })
+        .from(bookings)
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+        .where(
+          and(
+            eq(bookings.id, input.bookingId),
+            eq(bookings.shopId, input.shopId),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+        .for("update", { of: bookings })
+        .limit(1);
+      if (
+        !lockedBooking ||
+        lockedBooking.personId !== candidate.personId ||
+        lockedBooking.tripId !== candidate.tripId ||
+        lockedBooking.personId !== lockedPerson.id ||
+        (input.expectedPersonId && lockedBooking.personId !== input.expectedPersonId) ||
+        (input.expectedTripId && lockedBooking.tripId !== input.expectedTripId)
+      ) {
+        return { ok: false, reason: "booking_not_found" };
+      }
+      booking = lockedBooking;
+      if (booking.tripStatus !== "scheduled") {
+        return { ok: false, reason: "booking_unavailable" };
+      }
+      if (booking.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
+    }
     let dateOfBirth = lockedPerson.dateOfBirth;
     if (!booking) {
       const [person] = await tx

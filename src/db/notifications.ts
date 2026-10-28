@@ -387,7 +387,10 @@ async function queueRetry(
         seat.status === "cancelled" ||
         ("personId" in input && input.personId && input.personId !== subject.id) ||
         ("tripId" in input && input.tripId && input.tripId !== seat.tripId) ||
-        ("to" in input && input.to && input.to !== subject.email)
+        ("to" in input &&
+          input.to &&
+          input.kind !== "fly_safe_correction" &&
+          input.to !== subject.email)
       )
         return "stale_recipient";
       recipientPersonId = subject.id;
@@ -1041,30 +1044,39 @@ async function dispatchQueuedRetry(
   let delivery: NotificationDelivery;
   let suppressed = false;
   try {
-    const correctionState =
-      notification.kind === "fly_safe_correction"
-        ? await queuedFlySafeCorrectionState(db, notification)
-        : "valid";
-    if (correctionState === "stale") {
-      delivery = { status: "failed", retryable: false, errorCode: "stale_correction" };
-    } else if (correctionState === "unavailable") {
-      delivery = { status: "failed", retryable: true, errorCode: "recipient_snapshot_unavailable" };
-    } else if (await notificationHeldForRehearsal(db, notification)) {
+    if (await notificationHeldForRehearsal(db, notification)) {
       delivery = REHEARSAL_HELD_DELIVERY;
     } else if (claimed.bookingId) {
-      const fenced = await withErasureCoordinatedBookingSend(
+      const fenced = await withErasureCoordinatedBookingSend<NotificationDelivery>(
         db,
         {
           shopId: claimed.shopId,
           bookingId: claimed.bookingId,
           expectedPersonId: claimed.recipientPersonId as string,
           expectedTripId: claimed.recipientTripId as string,
-          expectedEmail: "to" in notification ? notification.to : undefined,
+          expectedEmail:
+            "to" in notification && notification.kind !== "fly_safe_correction"
+              ? notification.to
+              : undefined,
         },
-        async (tx) =>
-          notify(await withShopSender(tx, notification, senders), provider, {
+        async (tx) => {
+          if (notification.kind === "fly_safe_correction") {
+            const correctionState = await queuedFlySafeCorrectionState(tx, notification);
+            if (correctionState === "stale") {
+              return { status: "failed", retryable: false, errorCode: "stale_correction" };
+            }
+            if (correctionState === "unavailable") {
+              return {
+                status: "failed",
+                retryable: true,
+                errorCode: "recipient_snapshot_unavailable",
+              };
+            }
+          }
+          return notify(await withShopSender(tx, notification, senders), provider, {
             signal: notificationProviderSignal(),
-          }),
+          });
+        },
       );
       suppressed = fenced === null;
       delivery = fenced ?? { status: "failed", retryable: false, errorCode: "stale_recipient" };
@@ -1091,7 +1103,10 @@ async function dispatchQueuedRetry(
         bookingId: claimed.bookingId as string,
         expectedPersonId: claimed.recipientPersonId as string,
         expectedTripId: claimed.recipientTripId as string,
-        expectedEmail: "to" in notification ? notification.to : undefined,
+        expectedEmail:
+          "to" in notification && notification.kind !== "fly_safe_correction"
+            ? notification.to
+            : undefined,
       },
       (tx) =>
         recordNotificationDelivery(tx, {
@@ -1745,91 +1760,118 @@ async function sendStoredBookingConfirmation(
     waiver?: { url: string; expiresAt: Date } | null;
   },
 ) {
-  const [row] = await db
-    .select({
-      booking: bookings,
-      person: people,
-      trip: trips,
-      shop: shops,
-      course: courses,
-      /** Who took the money, when anyone has: "stripe" is a card checkout. */
-      paymentProvider: bookingPayments.provider,
-    })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, bookings.shopId)))
-    .leftJoin(
-      bookingPayments,
-      and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, bookings.shopId)),
-    )
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .limit(1);
-  if (!row?.person.email) return null;
-  const learningMaterials = readLearningMaterials(row.course?.learningMaterials);
-  if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
-  const origin = publicAppUrl();
-  const readinessCapability = origin
-    ? await issueBookingCapability(db, {
-        shopId,
-        bookingId: row.booking.id,
-        purpose: "readiness",
-        delivered: true,
+  const loadRows = (executor: DbExecutor) =>
+    executor
+      .select({
+        booking: bookings,
+        person: people,
+        trip: trips,
+        shop: shops,
+        course: courses,
+        /** Who took the money, when anyone has: "stripe" is a card checkout. */
+        paymentProvider: bookingPayments.provider,
       })
-    : null;
-  return sendAndRecordNotification(
+      .from(bookings)
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+      .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+      .innerJoin(shops, eq(shops.id, bookings.shopId))
+      .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, bookings.shopId)))
+      .leftJoin(
+        bookingPayments,
+        and(
+          eq(bookingPayments.bookingId, bookings.id),
+          eq(bookingPayments.shopId, bookings.shopId),
+        ),
+      )
+      .where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.shopId, shopId),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .limit(1);
+
+  // Establish the identity observed by the caller. The fenced read below
+  // refreshes all message fields, while these ids make a move between reads a
+  // refusal instead of silently retargeting a confirmation.
+  const [observed] = await loadRows(db);
+  if (!observed?.person.email) return null;
+  return withErasureCoordinatedBookingSend(
     db,
     {
-      kind: "booking_confirmation",
-      bookingId: row.booking.id,
       shopId,
-      to: row.person.email,
-      // Staff press the button, but the diver reads the mail — so this is the
-      // diver's own recorded locale, never the staff member's request
-      // (docs ADR 20260731-per-person-notification-locale).
-      locale: recipientLocale(row.person.locale, row.shop.defaultLocale),
-      diverName: row.person.fullName,
-      shopName: row.shop.name,
-      tripTitle: row.trip.title,
-      startsAt: row.trip.startsAt,
-      endsAt: row.trip.endsAt,
-      timezone: row.shop.timezone,
-      dockCallMinutes: row.shop.dockCallMinutes,
-      readinessUrl: readinessCapability
-        ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
-        : undefined,
-      ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
-      ...(options.waiver
-        ? { waiverUrl: options.waiver.url, waiverExpiresAt: options.waiver.expiresAt }
-        : {}),
-      // The same where, calendar, money and window the booking-time send
-      // carried (ux review 2026-10-11, items 4 and 5). Online when a card
-      // checkout took this seat's money; otherwise it is owed at the shop.
-      ...confirmationExtras({
-        shop: row.shop,
-        trip: row.trip,
-        course: row.course,
-        participantType: row.booking.participantType,
-        chargesOnline: row.paymentProvider === "stripe",
-        origin,
-        // What the party's card checkout settled, for the lead (#2447).
-        partyPaid:
-          row.paymentProvider === "stripe"
-            ? await settledPartyPayment(db, shopId, row.booking.id)
-            : null,
-      }),
-      // A staff-triggered resend is a new logical send, not a replay of the
-      // original booking confirmation's provider idempotency key.
-      confirmedAt: nowDate(),
+      bookingId,
+      expectedPersonId: observed.person.id,
+      expectedTripId: observed.trip.id,
+      expectedEmail: observed.person.email,
     },
-    { isRetry: options.isRetry, provider: options.provider },
+    async (tx) => {
+      const [row] = await loadRows(tx);
+      if (!row?.person.email) return null;
+      const learningMaterials = readLearningMaterials(row.course?.learningMaterials);
+      if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
+      const origin = publicAppUrl();
+      const readinessCapability = origin
+        ? await issueBookingCapability(tx, {
+            shopId,
+            bookingId: row.booking.id,
+            purpose: "readiness",
+            expectedPersonId: observed.person.id,
+            expectedTripId: observed.trip.id,
+            delivered: true,
+          })
+        : null;
+      if (origin && !readinessCapability) return null;
+      const notification: Notification = {
+        kind: "booking_confirmation",
+        bookingId: row.booking.id,
+        shopId,
+        to: row.person.email,
+        // Staff press the button, but the diver reads the mail — so this is the
+        // diver's own recorded locale, never the staff member's request
+        // (docs ADR 20260731-per-person-notification-locale).
+        locale: recipientLocale(row.person.locale, row.shop.defaultLocale),
+        diverName: row.person.fullName,
+        shopName: row.shop.name,
+        tripTitle: row.trip.title,
+        startsAt: row.trip.startsAt,
+        endsAt: row.trip.endsAt,
+        timezone: row.shop.timezone,
+        dockCallMinutes: row.shop.dockCallMinutes,
+        readinessUrl: readinessCapability
+          ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
+          : undefined,
+        ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
+        ...(options.waiver
+          ? { waiverUrl: options.waiver.url, waiverExpiresAt: options.waiver.expiresAt }
+          : {}),
+        // The same where, calendar, money and window the booking-time send
+        // carried (ux review 2026-10-11, items 4 and 5). Online when a card
+        // checkout took this seat's money; otherwise it is owed at the shop.
+        ...confirmationExtras({
+          shop: row.shop,
+          trip: row.trip,
+          course: row.course,
+          participantType: row.booking.participantType,
+          chargesOnline: row.paymentProvider === "stripe",
+          origin,
+          // What the party's card checkout settled, for the lead (#2447).
+          partyPaid:
+            row.paymentProvider === "stripe"
+              ? await settledPartyPayment(tx, shopId, row.booking.id)
+              : null,
+        }),
+        // A staff-triggered resend is a new logical send, not a replay of the
+        // original booking confirmation's provider idempotency key.
+        confirmedAt: nowDate(),
+      };
+      return sendAndRecordNotification(tx, notification, {
+        isRetry: options.isRetry,
+        provider: options.provider,
+        signal: notificationProviderSignal(),
+      });
+    },
   );
 }
 

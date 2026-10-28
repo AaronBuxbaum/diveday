@@ -1,6 +1,6 @@
 import { and, eq, inArray, lt } from "drizzle-orm";
 import type { PlainTextProvider } from "@/lib/notifications/courtesy";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { smsOptOuts } from "./schema";
 
 /**
@@ -28,7 +28,7 @@ export async function recordSmsKeyword(
     });
 }
 
-export async function isSmsOptedOut(db: AppDb, phone: string): Promise<boolean> {
+export async function isSmsOptedOut(db: DbExecutor, phone: string): Promise<boolean> {
   const rows = await db
     .select({ phone: smsOptOuts.phone })
     .from(smsOptOuts)
@@ -58,7 +58,7 @@ export async function optedOutPhones(db: AppDb, phones: readonly string[]): Prom
  * of looking like the channel was never set up. AWS refuses the same number on
  * its side too; this check is what makes the refusal ours and immediate.
  */
-export function stopListedSmsProvider(db: AppDb, inner: PlainTextProvider): PlainTextProvider {
+export function stopListedSmsProvider(db: DbExecutor, inner: PlainTextProvider): PlainTextProvider {
   return {
     async send(message) {
       if (await isSmsOptedOut(db, message.to)) {

@@ -3,12 +3,18 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import {
+  type NotificationProvider,
+  notificationProviderSignal,
+  publicAppUrl,
+  recipientLocale,
+} from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
 import { issueCourseFormsCapability } from "./booking-capabilities";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import {
   retryBookingConfirmation,
   sendAndRecordNotification,
@@ -71,7 +77,7 @@ export type WaiverDelivery =
  * and so the one rule that prefers a shop's own WhatsApp over platform SMS
  * (`sendCourtesyMessage`) stays in the one place that owns it.
  */
-async function waiverTextProviders(db: AppDb, shopId: string): Promise<CourtesyProviders> {
+async function waiverTextProviders(db: DbExecutor, shopId: string): Promise<CourtesyProviders> {
   const senders = await whatsAppProvidersForShops(db, [shopId]);
   return {
     sms: stopListedSmsProvider(db, smsProviderFromEnvironment()),
@@ -105,7 +111,7 @@ function waiverTextBody(
  * both (`src/lib/notifications/courtesy.ts`).
  */
 async function textWaiverLink(
-  db: AppDb,
+  db: DbExecutor,
   input: {
     shopId: string;
     phone: string | null;
@@ -114,6 +120,7 @@ async function textWaiverLink(
     locale: string;
     completionUrl: string;
     providers?: CourtesyProviders;
+    signal?: AbortSignal;
     /** The course-forms text rather than the release's (ADR 20261008-course-forms). */
     courseForms?: boolean;
   },
@@ -141,6 +148,7 @@ async function textWaiverLink(
       smsStopLine: t("notifications.sms.stopLine"),
     },
     providers,
+    { signal: input.signal ?? notificationProviderSignal() },
   );
   if (delivery.status === "sent") {
     return { delivery: "sent", providerMessageId: delivery.providerMessageId };
@@ -197,6 +205,8 @@ export type WaiverDeliveryOptions = {
   channel?: WaiverSendChannel;
   /** Injected text senders, so a test never needs AWS or Meta credentials. */
   textProviders?: CourtesyProviders;
+  /** Provider seam for booking-bound confirmation and waiver emails. */
+  provider?: NotificationProvider;
   /**
    * The instant to issue against, threaded down to `issueWaiverRequest`.
    *
@@ -219,7 +229,7 @@ export type WaiverDeliveryOptions = {
  * reports the release as already signed, which is the whole truth.
  */
 async function deliverCourseFormsLink(
-  db: AppDb,
+  db: DbExecutor,
   ctx: {
     person: typeof people.$inferSelect;
     trip: typeof trips.$inferSelect;
@@ -227,6 +237,7 @@ async function deliverCourseFormsLink(
   },
   bookingId: string,
   options: WaiverDeliveryOptions,
+  expectedTripId: string,
 ): Promise<IssueAndDeliverWaiverResult | null> {
   const shopId = ctx.shop.id;
   const forms = await getCourseFormsForBooking(db, shopId, bookingId);
@@ -238,6 +249,7 @@ async function deliverCourseFormsLink(
     shopId,
     bookingId,
     expectedPersonId: ctx.person.id,
+    expectedTripId,
     now: options.now,
   });
   if (!issued) return null;
@@ -264,25 +276,30 @@ async function deliverCourseFormsLink(
         completionUrl: url,
         providers: options.textProviders,
         courseForms: true,
+        signal: notificationProviderSignal(),
       })
     ).delivery;
   } else if (!ctx.person.email) {
     delivery = "no_email";
   } else {
-    const result = await sendAndRecordNotification(db, {
-      kind: "readiness_link",
-      purpose: "course_forms",
-      bookingId,
-      shopId,
-      to: ctx.person.email,
-      locale,
-      diverName: ctx.person.fullName,
-      shopName: ctx.shop.name,
-      tripTitle: ctx.trip.title,
-      readinessUrl: url,
-      expiresAt: issued.expiresAt,
-      timezone: ctx.shop.timezone,
-    });
+    const result = await sendAndRecordNotification(
+      db,
+      {
+        kind: "readiness_link",
+        purpose: "course_forms",
+        bookingId,
+        shopId,
+        to: ctx.person.email,
+        locale,
+        diverName: ctx.person.fullName,
+        shopName: ctx.shop.name,
+        tripTitle: ctx.trip.title,
+        readinessUrl: url,
+        expiresAt: issued.expiresAt,
+        timezone: ctx.shop.timezone,
+      },
+      { provider: options.provider, signal: notificationProviderSignal() },
+    );
     delivery =
       result.status === "sent"
         ? "sent"
@@ -316,11 +333,11 @@ export async function issueAndDeliverWaiver(
   bookingId: string,
   options: WaiverDeliveryOptions = {},
 ): Promise<IssueAndDeliverWaiverResult> {
-  const [ctx] = await db
+  const [observed] = await db
     .select({ person: people, trip: trips, shop: shops })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(
       and(
@@ -330,106 +347,146 @@ export async function issueAndDeliverWaiver(
       ),
     )
     .limit(1);
-
-  const outcome = await issueWaiverRequest(db, { shopId, bookingId, now: options.now });
-  if (!outcome.ok && outcome.reason === "already_completed" && ctx) {
-    // The release is signed. A course may still ask for its own forms, and the
-    // shop's one "send the waiver" act covers them too — so it hands over the
-    // student's forms page instead of reporting nothing to send.
-    const forms = await deliverCourseFormsLink(db, ctx, bookingId, options);
-    if (forms) return forms;
-  }
-  if (!outcome.ok) {
-    return {
-      ok: false,
-      bookingId,
-      diverName: ctx?.person.fullName ?? null,
-      reason: outcome.reason === "already_completed" ? "already_completed" : "error",
-    };
+  if (!observed) {
+    return { ok: false, bookingId, diverName: null, reason: "error" };
   }
 
-  // `issueWaiverRequest` already validated the booking, so `ctx` is present in
-  // every real path; guard only so a race that cancels mid-issue degrades to the
-  // link rather than throwing.
-  const diverName = ctx?.person.fullName ?? "";
-  const email = ctx?.person.email ?? null;
-  const origin = publicAppUrl();
-  // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the link is
-  // still issued, for the staffer to hand over in person.
-  const channel = ctx?.trip.isRehearsal ? "link" : (options.channel ?? "email");
-  const completionUrl = origin
-    ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
-    : null;
-
-  // Two different "we could not send this" states that used to collapse into
-  // one. `unconfigured` means no provider; `no_app_origin` means the
-  // provider may be fine but `APP_HOST` is unset, so there is no origin to
-  // build the diver's link on and nothing is attempted. Telling a shop "no
-  // email provider configured" when the actual gap is a missing APP_HOST sends
-  // them to look at the wrong setting.
-  let delivery: WaiverDelivery = "no_app_origin";
-  let providerMessageId: string | undefined;
-  if (channel === "link") {
-    delivery = completionUrl ? "link_only" : "no_app_origin";
-  } else if (channel === "text") {
-    if (!completionUrl) {
-      delivery = "no_app_origin";
-    } else if (!ctx) {
-      // `issueWaiverRequest` already validated the booking, so this is only
-      // reachable if the row went away mid-issue. Reported as `failed` rather
-      // than `no_app_origin`, which is the same distinction the person-scoped
-      // path makes: a vanished booking is a data problem, and naming it after
-      // a missing APP_HOST sends the shop to the wrong setting.
-      delivery = "failed";
-    } else {
-      const result = await textWaiverLink(db, {
-        shopId,
-        phone: ctx.person.phone,
-        shopName: ctx.shop.name,
-        tripTitle: ctx.trip.title,
-        locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
-        completionUrl,
-        providers: options.textProviders,
-      });
-      delivery = result.delivery;
-      providerMessageId = result.providerMessageId;
-    }
-  } else if (!email) {
-    delivery = "no_email";
-  } else if (completionUrl && ctx) {
-    const result = await sendAndRecordNotification(db, {
-      kind: "waiver_request",
-      waiverRecordId: outcome.recordId,
-      bookingId,
+  const fenced = await withErasureCoordinatedBookingSend<IssueAndDeliverWaiverResult | null>(
+    db,
+    {
       shopId,
-      to: email,
-      locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
-      diverName: ctx.person.fullName,
-      shopName: ctx.shop.name,
-      tripTitle: ctx.trip.title,
-      completionUrl,
-      expiresAt: outcome.expiresAt,
-      timezone: ctx.shop.timezone,
-    });
-    providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
-    delivery =
-      result.status === "sent"
-        ? "sent"
-        : result.status === "not_configured"
-          ? "unconfigured"
-          : result.errorCode === "invalid_test_recipient"
-            ? "test_recipient"
-            : "failed";
-  }
-  await recordWaiverDelivery(db, {
-    shopId,
-    waiverRecordId: outcome.recordId,
-    channel,
-    delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
-    now: options.now,
-  });
+      bookingId,
+      expectedPersonId: observed.person.id,
+      expectedTripId: observed.trip.id,
+      expectedEmail: observed.person.email,
+      expectedPhone: observed.person.phone,
+    },
+    async (tx) => {
+      const [ctx] = await tx
+        .select({ person: people, trip: trips, shop: shops })
+        .from(bookings)
+        .innerJoin(
+          people,
+          and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)),
+        )
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+        .innerJoin(shops, eq(shops.id, bookings.shopId))
+        .where(
+          and(
+            eq(bookings.id, bookingId),
+            eq(bookings.shopId, shopId),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+        .limit(1);
+      if (!ctx) return null;
 
-  return { ok: true, bookingId, diverName, token: outcome.token, delivery };
+      const outcome = await issueWaiverRequest(tx, {
+        shopId,
+        bookingId,
+        expectedPersonId: observed.person.id,
+        expectedTripId: observed.trip.id,
+        now: options.now,
+      });
+      if (!outcome.ok && outcome.reason === "already_completed") {
+        // The release is signed. A course may still ask for its own forms, and the
+        // shop's one "send the waiver" act covers them too — so it hands over the
+        // student's forms page instead of reporting nothing to send.
+        const forms = await deliverCourseFormsLink(tx, ctx, bookingId, options, observed.trip.id);
+        if (forms) return forms;
+      }
+      if (!outcome.ok) {
+        return {
+          ok: false,
+          bookingId,
+          diverName: ctx.person.fullName,
+          reason: outcome.reason === "already_completed" ? "already_completed" : "error",
+        };
+      }
+
+      // `issueWaiverRequest` already validated the booking, so `ctx` is present in
+      // every real path; guard only so a race that cancels mid-issue degrades to the
+      // link rather than throwing.
+      const diverName = ctx.person.fullName;
+      const email = ctx.person.email;
+      const origin = publicAppUrl();
+      // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the link is
+      // still issued, for the staffer to hand over in person.
+      const channel = ctx.trip.isRehearsal ? "link" : (options.channel ?? "email");
+      const completionUrl = origin
+        ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
+        : null;
+
+      // Two different "we could not send this" states that used to collapse into
+      // one. `unconfigured` means no provider; `no_app_origin` means the
+      // provider may be fine but `APP_HOST` is unset, so there is no origin to
+      // build the diver's link on and nothing is attempted. Telling a shop "no
+      // email provider configured" when the actual gap is a missing APP_HOST sends
+      // them to look at the wrong setting.
+      let delivery: WaiverDelivery = "no_app_origin";
+      let providerMessageId: string | undefined;
+      if (channel === "link") {
+        delivery = completionUrl ? "link_only" : "no_app_origin";
+      } else if (channel === "text") {
+        if (!completionUrl) {
+          delivery = "no_app_origin";
+        } else {
+          const result = await textWaiverLink(tx, {
+            shopId,
+            phone: ctx.person.phone,
+            shopName: ctx.shop.name,
+            tripTitle: ctx.trip.title,
+            locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+            completionUrl,
+            providers: options.textProviders,
+            signal: notificationProviderSignal(),
+          });
+          delivery = result.delivery;
+          providerMessageId = result.providerMessageId;
+        }
+      } else if (!email) {
+        delivery = "no_email";
+      } else if (completionUrl && ctx) {
+        const result = await sendAndRecordNotification(
+          tx,
+          {
+            kind: "waiver_request",
+            waiverRecordId: outcome.recordId,
+            bookingId,
+            shopId,
+            to: email,
+            locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+            diverName: ctx.person.fullName,
+            shopName: ctx.shop.name,
+            tripTitle: ctx.trip.title,
+            completionUrl,
+            expiresAt: outcome.expiresAt,
+            timezone: ctx.shop.timezone,
+          },
+          { provider: options.provider, signal: notificationProviderSignal() },
+        );
+        providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
+        delivery =
+          result.status === "sent"
+            ? "sent"
+            : result.status === "not_configured"
+              ? "unconfigured"
+              : result.errorCode === "invalid_test_recipient"
+                ? "test_recipient"
+                : "failed";
+      }
+      await recordWaiverDelivery(tx, {
+        shopId,
+        waiverRecordId: outcome.recordId,
+        channel,
+        delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
+        now: options.now,
+      });
+
+      return { ok: true, bookingId, diverName, token: outcome.token, delivery };
+    },
+  );
+  return fenced ?? { ok: false, bookingId, diverName: null, reason: "error" };
 }
 
 /**
