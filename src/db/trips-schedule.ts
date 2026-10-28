@@ -31,6 +31,7 @@ import {
   trips,
 } from "./schema";
 import { forgetTranslationsOf } from "./shop-text-translations";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
 import { boatCertifiedPassengers } from "./trips-queries";
@@ -177,6 +178,7 @@ export async function moveTrip(
   const now = options.now ?? nowDate();
   let moved = false;
   const outcome = await db.transaction(async (tx): Promise<MoveTripOutcome> => {
+    await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     const [existing] = await tx
       .select()
       .from(trips)

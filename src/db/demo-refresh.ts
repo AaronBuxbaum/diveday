@@ -10,6 +10,7 @@ import { demoTodayDepartureStart } from "./seed-clock";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { syncDemoShopBrand } from "./seed-shop-brand";
 import { syncDemoStripeAccount } from "./stripe-accounts";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { upcomingScheduleRange } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -244,6 +245,7 @@ export async function ensureDemoSailsToday(
   if (!candidate) return "no_candidate";
 
   return db.transaction(async (tx) => {
+    await lockTripRevisionNotificationFence(tx, shopId, candidate.id, "revision-write");
     // A count or staff edit may have changed the candidate since selection.
     // Share its lock with capture and recheck every eligibility condition.
     const [current] = await tx
