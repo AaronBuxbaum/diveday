@@ -168,8 +168,11 @@ describe("BookingPartyFields — the group captions", () => {
     );
     try {
       renderDiver(<BookingPartyFields maxPartySize={4} rememberForShop="blue-mantis" />);
-      const line = screen.getByRole("button", { name: "Not you?" }).closest("p");
+      const clearButton = screen.getByRole("button", { name: "Not you?" });
+      const line = clearButton.closest("p");
       expect(line).toHaveTextContent("Booking as Marco Rossi");
+      expect(clearButton).toHaveClass("relative", "before:absolute", "before:min-h-11");
+      expect(clearButton).not.toHaveClass("min-h-11");
       expect(screen.getByText("Your details").nextElementSibling).toHaveClass("mt-2");
       expect(line?.parentElement).toBe(screen.getByText("Your details").nextElementSibling);
       expect(line?.className.split(" ").filter((name) => /^-?m[ty]-/.test(name))).toEqual([]);

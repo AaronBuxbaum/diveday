@@ -37,6 +37,34 @@ function clearLegacyStorage(): void {
   }
 }
 
+/** Remove expired shop-scoped copies opportunistically whenever memory is used. */
+function clearExpiredShopMemories(now: Date): void {
+  try {
+    const keys = Array.from({ length: localStorage.length }, (_, index) =>
+      localStorage.key(index),
+    ).filter((key): key is string => key?.startsWith(STORAGE_PREFIX) ?? false);
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          typeof (parsed as { expiresAt?: unknown }).expiresAt === "number" &&
+          (parsed as { expiresAt: number }).expiresAt <= now.getTime()
+        ) {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        // The active shop's malformed value is removed by its normal read.
+      }
+    }
+  } catch {
+    // Storage can be blocked; remembering anyone is optional.
+  }
+}
+
 /** Best-effort: storage failures never block booking or the confirmation. */
 export function saveReturningDiver(
   shopSlug: string,
@@ -45,6 +73,7 @@ export function saveReturningDiver(
   now: Date = nowDate(),
 ): void {
   clearLegacyStorage();
+  clearExpiredShopMemories(now);
   const key = storageKey(shopSlug);
   if (!key || !diver.fullName.trim() || !diver.email.trim() || expiresAt <= now.getTime()) return;
   try {
@@ -59,6 +88,7 @@ export function saveReturningDiver(
 
 export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): ReturningDiver | null {
   clearLegacyStorage();
+  clearExpiredShopMemories(now);
   const key = storageKey(shopSlug);
   if (!key) return null;
   try {
@@ -88,8 +118,9 @@ export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): Ret
   }
 }
 
-export function forgetReturningDiver(shopSlug: string): void {
+export function forgetReturningDiver(shopSlug: string, now: Date = nowDate()): void {
   clearLegacyStorage();
+  clearExpiredShopMemories(now);
   const key = storageKey(shopSlug);
   if (!key) return;
   try {

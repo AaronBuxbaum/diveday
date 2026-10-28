@@ -399,7 +399,7 @@
     "bookVerb": "Book",
     "headingToPayment": "Heading to payment…",
     "booking": "Booking…",
-    "rememberOnDevice": "Remember my name and email on this device for this shop for 30 days.",
+    "rememberOnDevice": "Remember my name and email on this device for this shop for up to 30 days.",
     "fullHeading": "This boat’s full",
     "alternativeSameCourse": "Same course, {date}",
     "alternativeSameSite": "Same site, {date}",

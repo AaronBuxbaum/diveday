@@ -276,7 +276,7 @@ export function BookingPartyFields({
                         <button
                           type="button"
                           onClick={forgetRememberedDiver}
-                          className="font-medium text-primary hover:underline"
+                          className="relative font-medium text-primary before:absolute before:-inset-x-1 before:-inset-y-3 before:min-h-11 before:content-[''] hover:underline"
                         >
                           {chunks}
                         </button>

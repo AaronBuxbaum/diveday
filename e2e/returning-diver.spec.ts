@@ -69,6 +69,32 @@ test("the embed widget never prefills or remembers a booker", async ({ page }) =
   );
 });
 
+test("opening a booking form purges expired memory entries for other shops", async ({ page }) => {
+  const expiredShopKey = "diveday:returning-diver:v2:red-reef";
+  await page.goto("/s/blue-mantis");
+  await page.evaluate(
+    ({ key, expiredAt }) =>
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          fullName: "Priya Shah",
+          email: "priya@example.com",
+          expiresAt: expiredAt,
+        }),
+      ),
+    { key: expiredShopKey, expiredAt: e2eNow().getTime() - 1 },
+  );
+  await page
+    .locator("li")
+    .filter({ hasText: "Discover Scuba — Pool & Reef" })
+    .getByRole("link", { name: "Discover Scuba — Pool & Reef" })
+    .click();
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
+  await expect
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), expiredShopKey))
+    .toBeNull();
+});
+
 test("a successful booking without opt-in and a forged confirmation flag do not save identity", async ({
   page,
 }) => {

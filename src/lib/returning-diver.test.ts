@@ -36,6 +36,38 @@ describe("opted-in returning-diver memory", () => {
     expect(localStorage.getItem("diveday:returning-diver:v2:blue-mantis")).toBeNull();
   });
 
+  it("purges expired entries for other shops whenever a shop memory is read", () => {
+    const expiresAt = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
+    saveReturningDiver("blue-mantis", diver, expiresAt, NOW);
+    localStorage.setItem(
+      "diveday:returning-diver:v2:red-reef",
+      JSON.stringify({
+        fullName: "Priya Shah",
+        email: "priya@example.com",
+        expiresAt: NOW.getTime(),
+      }),
+    );
+
+    expect(loadReturningDiver("blue-mantis", NOW)).toEqual(diver);
+    expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
+  });
+
+  it("purges expired entries for other shops whenever a shop memory is written", () => {
+    localStorage.setItem(
+      "diveday:returning-diver:v2:red-reef",
+      JSON.stringify({
+        fullName: "Priya Shah",
+        email: "priya@example.com",
+        expiresAt: NOW.getTime(),
+      }),
+    );
+
+    saveReturningDiver("blue-mantis", diver, NOW.getTime() + RETURNING_DIVER_MEMORY_MS, NOW);
+
+    expect(localStorage.getItem("diveday:returning-diver:v2:red-reef")).toBeNull();
+    expect(loadReturningDiver("blue-mantis", NOW)).toEqual(diver);
+  });
+
   it("does not write blank or already-expired data", () => {
     const expiresAt = NOW.getTime() + RETURNING_DIVER_MEMORY_MS;
     saveReturningDiver("blue-mantis", { ...diver, fullName: " " }, expiresAt, NOW);

@@ -41,5 +41,9 @@ not change the successful booking confirmation.
 
 Receipt rows contain no PII and expire within 24 hours; the existing capability-row retention
 policy prunes them 90 days after expiry. Device memory is local to a browser profile and shop,
-expires after 30 days, and remains clearable. If product later requires guaranteed memory across
-pre-hydration navigation, it needs a separately reviewed browser proof design.
+expires for use after 30 days, and remains clearable. Each memory read or write also removes expired
+entries for other shops when browser storage is available. Because the browser cannot run cleanup
+while it is closed, expired bytes may remain on the device until a later memory read or write; the
+30-day deadline does not guarantee physical deletion at that exact moment. If product later
+requires guaranteed memory across pre-hydration navigation, it needs a separately reviewed browser
+proof design.
