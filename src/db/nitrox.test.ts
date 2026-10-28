@@ -15,6 +15,7 @@ import {
 import { bookings, nitroxCertifications, people } from "./schema";
 import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
+import { getTripPrep } from "./trips-prep";
 
 async function context() {
   const { db, shop } = fileCtx;
@@ -85,6 +86,49 @@ describe("nitrox certification workflow", () => {
 
     await reviewNitroxCertification(db, { shopId, certificationId: cert.id, status: "verified" });
     expect([...(await verifiedNitroxPersonIds(db, shopId))]).toContain(personId);
+  });
+
+  it("counts a request in the prep tanks only after its card is reviewed", async () => {
+    const { db, shopId, tripId, bookingId, personId } = await context();
+    const shop = fileCtx.shop;
+    const before = await getTripPrep(db, shop, tripId);
+    if (!before) throw new Error("prep missing");
+
+    expect(await setBookingNitrox(db, { shopId, bookingId, wantsNitrox: true })).toMatchObject({
+      ok: true,
+      wantsNitrox: true,
+      certified: false,
+    });
+    const card = await createNitroxCertification(db, {
+      shopId,
+      personId,
+      agency: "padi",
+      identifier: "NX-PREP-TRANSITION",
+    });
+    if (!card) throw new Error("card missing");
+    const pending = await getTripPrep(db, shop, tripId);
+    if (!pending) throw new Error("pending prep missing");
+    expect(pending.checklist.nitroxBlockers).toEqual(
+      expect.arrayContaining([expect.objectContaining({ bookingId })]),
+    );
+    expect(pending.checklist.diveCount).toBeGreaterThan(0);
+    expect(pending.checklist.tanks.nitrox).toBe(before.checklist.tanks.nitrox);
+    expect(pending.checklist.tanks.air).toBe(before.checklist.tanks.air);
+
+    expect(
+      await reviewNitroxCertification(db, { shopId, certificationId: card.id, status: "verified" }),
+    ).toMatchObject({ ok: true });
+    const reviewed = await getTripPrep(db, shop, tripId);
+    if (!reviewed) throw new Error("reviewed prep missing");
+    expect(reviewed.checklist.nitroxBlockers).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ bookingId })]),
+    );
+    expect(reviewed.checklist.tanks.nitrox).toBe(
+      before.checklist.tanks.nitrox + reviewed.checklist.diveCount,
+    );
+    expect(reviewed.checklist.tanks.air).toBe(
+      before.checklist.tanks.air - reviewed.checklist.diveCount,
+    );
   });
 
   it("does not authorize a fill from an imported nitrox card until it's confirmed here", async () => {

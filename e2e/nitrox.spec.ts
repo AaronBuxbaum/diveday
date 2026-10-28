@@ -12,12 +12,10 @@ import { mintOnboardFormPath } from "./setup-link";
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("a verified nitrox card turns a diver's tanks to Nitrox on the prep list", async ({
-    page,
-  }) => {
+  test("staff can verify a nitrox card and view the prep tank list", async ({ page }) => {
     // Find the departure before editing the card. Opening its prep page directly
     // avoids a redundant visit to the trip overview; that navigation is covered
-    // by the trip-tab tests, while this test exercises the card-to-prep result.
+    // by the trip-tab tests. This journey checks staff review and prep display.
     const tripPath = await tripPathByTitle(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
 
     // A unique card number keeps the flow self-contained and re-run safe.
@@ -53,8 +51,9 @@ test.describe("staff", () => {
     await page.goto(`${tripPath}/prep`);
     await expect(page.getByRole("heading", { name: /Wreck Trip/ })).toBeVisible();
 
-    // The prep list is derived from rental fit, so it always lists tanks and
-    // rental kit even when nobody on the boat rents a single piece of kit.
+    // The seeded trip already has a Nitrox request; this is a display check.
+    // The request-to-certified-tank transition is tested against the database.
+    // Tanks and rental kit appear even when nobody rents gear.
     await expect(page.getByRole("heading", { name: "Rental kit" })).toBeVisible();
     // One tank per diver per dive, and the seeded nitrox request is on the split.
     await expect(page.getByText("one tank per diver per dive")).toBeVisible();
