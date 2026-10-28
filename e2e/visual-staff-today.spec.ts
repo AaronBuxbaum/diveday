@@ -28,7 +28,6 @@ import {
   scheduleCrewedOpenWaterSession,
   seatFromRoster,
   seededTripId,
-  waitForTodayCatchUpSettled,
   writeCourseForm,
 } from "./helpers";
 import { todayCatchUpScenario } from "./today-catch-up-helper";
@@ -68,7 +67,6 @@ for (const scheme of ["light", "dark"] as const) {
 
         test(`a captain's week names the crew's own dock time (${scheme})`, async ({ page }) => {
           await page.goto("/shop/blue-mantis");
-          await waitForTodayCatchUpSettled(page);
           await page.getByRole("heading", { name: "Your week" }).waitFor();
           await page
             .getByText(/At the dock \d{1,2}:\d\d\s[AP]M · leaves/)

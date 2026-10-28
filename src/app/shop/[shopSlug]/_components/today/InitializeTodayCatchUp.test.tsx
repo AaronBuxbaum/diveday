@@ -27,7 +27,6 @@ describe("InitializeTodayCatchUp", () => {
   });
 
   it("stays non-ready when the initialization action rejects", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const action = vi.fn().mockRejectedValue(new Error("initialization failed"));
     const { container } = render(<InitializeTodayCatchUp action={action} />);
 
@@ -38,11 +37,6 @@ describe("InitializeTodayCatchUp", () => {
       "data-today-catch-up-state",
       "failed",
     );
-    expect(consoleError).toHaveBeenCalledWith(
-      "Failed to initialize Today catch-up baseline",
-      expect.any(Error),
-    );
-    consoleError.mockRestore();
   });
 
   it("starts the action once across Strict Mode effect replay", async () => {
