@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup } from "./helpers";
@@ -27,6 +27,63 @@ async function finishLineAction(page: Page, submit: Locator, notice: string) {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       ),
   );
+}
+
+async function assertValidationRefusalSurvivesDelete(
+  page: Page,
+  context: BrowserContext,
+  kind: "add" | "edit",
+) {
+  await page.goto("/shop/blue-mantis/gear/work-orders");
+  const path = await page
+    .getByRole("link", { name: /Breathes wet at depth/ })
+    .first()
+    .getAttribute("href");
+  if (!path) throw new Error("Seeded work order is missing");
+
+  await page.goto(path);
+  if (kind === "add") {
+    await page.getByText(staffCopy("workOrders.detail.addPartOrLabor"), { exact: true }).click();
+    await page.locator("#new-line-description").fill("Deleted-ticket service kit");
+    await page.locator("#new-line-amount").fill("bad");
+  } else {
+    await page
+      .getByRole("button", { name: /^Change / })
+      .first()
+      .click();
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await page.locator("[data-row-menu]").getByLabel("Price each").fill("bad");
+  }
+
+  const other = makeActivitySafe(await context.newPage());
+  try {
+    await other.goto(path);
+    await other.getByRole("button", { name: "Delete work order" }).click();
+    await expect(
+      other.getByText(staffCopy("workOrders.notice.deleted"), { exact: true }),
+    ).toBeVisible();
+  } finally {
+    await other.close();
+  }
+
+  const action =
+    kind === "add"
+      ? page.locator("form:has(#new-line-description)").getByRole("button", {
+          name: "Add",
+          exact: true,
+        })
+      : page.locator("[data-row-menu]").getByRole("button", { name: "Save", exact: true });
+  await action.click();
+  await expect(
+    page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
+  await expect(page.locator("#new-line-description")).toHaveCount(0);
+  await expect(page.locator("[data-row-menu]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await expect(
+    page.getByText(staffCopy("workOrders.notice.restored"), { exact: true }),
+  ).toBeVisible();
 }
 
 /**
@@ -210,61 +267,13 @@ test.describe("staff", () => {
     await expect(trigger).toBeFocused();
   });
 
-  // Each editor is an independent race. Keeping both flows in one test left
-  // the second Restore less than a second of the shared budget on CI.
+  // Each editor is an independent race and gets its own test budget.
   for (const kind of ["add", "edit"] as const) {
     test(`a ${kind} validation refusal stays visible when another desk deletes the ticket`, async ({
       page,
       context,
     }) => {
-      await page.goto("/shop/blue-mantis/gear/work-orders");
-      const path = await page
-        .getByRole("link", { name: /Breathes wet at depth/ })
-        .first()
-        .getAttribute("href");
-      if (!path) throw new Error("Seeded work order is missing");
-      await page.goto(path);
-      if (kind === "add") {
-        await page
-          .getByText(staffCopy("workOrders.detail.addPartOrLabor"), { exact: true })
-          .click();
-        await page.locator("#new-line-description").fill("Deleted-ticket service kit");
-        await page.locator("#new-line-amount").fill("bad");
-      } else {
-        await page
-          .getByRole("button", { name: /^Change / })
-          .first()
-          .click();
-        await page.getByRole("button", { name: "Edit", exact: true }).click();
-        await page.locator("[data-row-menu]").getByLabel("Price each").fill("bad");
-      }
-      const other = makeActivitySafe(await context.newPage());
-      try {
-        await other.goto(path);
-        await other.getByRole("button", { name: "Delete work order" }).click();
-        await expect(
-          other.getByText(staffCopy("workOrders.notice.deleted"), { exact: true }),
-        ).toBeVisible();
-      } finally {
-        await other.close();
-      }
-      const action =
-        kind === "add"
-          ? page
-              .locator("form:has(#new-line-description)")
-              .getByRole("button", { name: "Add", exact: true })
-          : page.locator("[data-row-menu]").getByRole("button", { name: "Save", exact: true });
-      await action.click();
-      await expect(
-        page.getByText(staffCopy("workOrders.notice.invalidAmount"), { exact: true }),
-      ).toBeVisible();
-      await expect(page.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
-      await expect(page.locator("#new-line-description")).toHaveCount(0);
-      await expect(page.locator("[data-row-menu]")).toHaveCount(0);
-      await page.getByRole("button", { name: "Restore", exact: true }).click();
-      await expect(
-        page.getByText(staffCopy("workOrders.notice.restored"), { exact: true }),
-      ).toBeVisible();
+      await assertValidationRefusalSurvivesDelete(page, context, kind);
     });
   }
 

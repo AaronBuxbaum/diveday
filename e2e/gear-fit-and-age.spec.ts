@@ -354,39 +354,18 @@ test.describe("minimum age (H-08, fail open)", () => {
   test("names the real reason on the diver's own checklist once a date on file makes them under age (H-22)", async ({
     page,
   }) => {
-    // This is one continuous journey across two actors on purpose — the
-    // public booking has to happen before staff records the date of birth,
-    // proving the blocker catches a diver who was "unknown age" at booking
-    // time, not just one whose date was on file up front — so it can't be
-    // split the way the two tests above were. It reliably exceeds the
-    // default 15s (playwright.config.ts, sized for one flow) even with no
-    // CI contention: trip creation, a sign-out/sign-in round trip, a full
-    // public booking form, and a second diver detour to edit a date of birth
-    // all have to land before the final assertion.
+    // Keep this one journey across two actors: the public booking must happen
+    // before staff records the date of birth, so readiness proves it catches a
+    // diver who was "unknown age" at booking time. The per-test reset restores
+    // the seeded Open Water class, which has the same minimum-age rule and a
+    // free seat; using it keeps this critical flow within its 30s budget without
+    // spending several server actions creating a class and assigning crew.
     test.setTimeout(30_000);
     const stamp = e2eNow().getTime();
-    const sessionTitle = `Age disclosure session ${stamp}`;
-    await createTrip(page, {
-      shopSlug: SHOP,
-      course: "Open Water Diver",
-      title: sessionTitle,
-      date: daysFromNow(24),
-      departsAt: "08:00",
-      returnsAt: "17:00",
-    });
-
-    const tripPath = await tripPathByTitle(page, SHOP, sessionTitle);
-    await page.goto(tripPath);
-    // The crew picker is controlled: a pick before hydration silently no-ops
-    // (the DOM changes, no action fires), so wait for the marker first.
-    await openTripAbout(page);
-    await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
-    await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
-    await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
-
     // Staff must step aside for the public flow: this exercises the booking
     // form a diver fills in, and `bookSpot`'s actor is decided by the session
     // on the request, not by the URL.
+    await page.goto(`/shop/${SHOP}/divers`);
     await signOut(page);
 
     // The PUBLIC form — actor: "public" in bookSpot — never refuses on age.

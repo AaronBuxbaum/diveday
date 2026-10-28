@@ -1,0 +1,642 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3cf6d43e-af49-4a48-9353-86f2516bb753",
+  "prevIds": [
+    "5e6a3c4a-1863-40c1-a894-cb2ea0c31f09"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "last_minute_list_unsubscribe_tokens"
+      ],
+      "writes": [
+        "s|fk|public.last_minute_list_unsubscribe_tokens.last_minute_list_unsubscribe_tokens_AOSpe7xhTtoO_fkey",
+        "n|fk|public.last_minute_list_unsubscribe_tokens.last_minute_list_unsubscribe_tokens_AOSpe7xhTtoO_fkey",
+        "e|fk|public.last_minute_list_unsubscribe_tokens.last_minute_list_unsubscribe_tokens_AOSpe7xhTtoO_fkey",
+        "n|con|public.last_minute_list_unsubscribe_tokens.last_minute_list_unsubscribe_tokens_AOSpe7xhTtoO_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.last_minute_list_unsubscribe_tokens",
+        "n|sch|public",
+        "e|col|public.last_minute_list_unsubscribe_tokens.entry_id"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_invitations"
+      ],
+      "writes": [
+        "s|fk|public.trip_invitations.trip_invitations_course_inquiry_id_course_inquiries_id_fkey",
+        "n|fk|public.trip_invitations.trip_invitations_course_inquiry_id_course_inquiries_id_fkey",
+        "e|fk|public.trip_invitations.trip_invitations_course_inquiry_id_course_inquiries_id_fkey",
+        "n|con|public.trip_invitations.trip_invitations_course_inquiry_id_course_inquiries_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trip_invitations",
+        "n|sch|public",
+        "e|col|public.trip_invitations.course_inquiry_id"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "course_inquiries"
+      ],
+      "writes": [
+        "s|tbl|public.course_inquiries",
+        "n|tbl|public.course_inquiries",
+        "e|tbl|public.course_inquiries",
+        "n|rel|public.course_inquiries",
+        "n|type|public.course_inquiries"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "last_minute_list_entries"
+      ],
+      "writes": [
+        "s|tbl|public.last_minute_list_entries",
+        "n|tbl|public.last_minute_list_entries",
+        "e|tbl|public.last_minute_list_entries",
+        "n|rel|public.last_minute_list_entries",
+        "n|type|public.last_minute_list_entries"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "last_minute_list_unsubscribe_tokens"
+      ],
+      "writes": [
+        "s|tbl|public.last_minute_list_unsubscribe_tokens",
+        "n|tbl|public.last_minute_list_unsubscribe_tokens",
+        "e|tbl|public.last_minute_list_unsubscribe_tokens",
+        "n|rel|public.last_minute_list_unsubscribe_tokens",
+        "n|type|public.last_minute_list_unsubscribe_tokens"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_invitations"
+      ],
+      "writes": [
+        "s|tbl|public.trip_invitations",
+        "n|tbl|public.trip_invitations",
+        "e|tbl|public.trip_invitations",
+        "n|rel|public.trip_invitations",
+        "n|type|public.trip_invitations"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_last_minute_promo_recipients"
+      ],
+      "writes": [
+        "s|tbl|public.trip_last_minute_promo_recipients",
+        "n|tbl|public.trip_last_minute_promo_recipients",
+        "e|tbl|public.trip_last_minute_promo_recipients",
+        "n|rel|public.trip_last_minute_promo_recipients",
+        "n|type|public.trip_last_minute_promo_recipients"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_waitlist_entries"
+      ],
+      "writes": [
+        "s|tbl|public.trip_waitlist_entries",
+        "n|tbl|public.trip_waitlist_entries",
+        "e|tbl|public.trip_waitlist_entries",
+        "n|rel|public.trip_waitlist_entries",
+        "n|type|public.trip_waitlist_entries"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "course_inquiry_experience"
+      ],
+      "writes": [
+        "s|enum|public.course_inquiry_experience",
+        "n|enum|public.course_inquiry_experience",
+        "e|enum|public.course_inquiry_experience",
+        "n|type|public.course_inquiry_experience"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "trip_invitation_source"
+      ],
+      "writes": [
+        "s|enum|public.trip_invitation_source",
+        "n|enum|public.trip_invitation_source",
+        "e|enum|public.trip_invitation_source",
+        "n|type|public.trip_invitation_source"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "course_inquiry_outcome"
+      ],
+      "writes": [
+        "s|enum|public.course_inquiry_outcome",
+        "n|enum|public.course_inquiry_outcome",
+        "e|enum|public.course_inquiry_outcome",
+        "n|type|public.course_inquiry_outcome"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"course_inquiries\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"last_minute_list_entries\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"trip_invitations\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"trip_last_minute_promo_recipients\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"trip_waitlist_entries\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"course_inquiry_experience\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"trip_invitation_source\"]"
+    },
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"course_inquiry_outcome\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"course_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"interest\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"preferred_date\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"alternate_date\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"date_flexible\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"name\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"email\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"phone\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"experience_level\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"timing\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"divers\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"message\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_entries\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_entries\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_entries\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_entries\",\"available_from\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_entries\",\"available_until\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_entries\",\"unsubscribed_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_entries\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"entry_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"token_hash\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"issued_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"source\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"course_inquiry_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"created_by_person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"invited_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"trip_promo_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"email\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_waitlist_entries\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_waitlist_entries\",\"shop_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_waitlist_entries\",\"trip_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_waitlist_entries\",\"person_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_waitlist_entries\",\"created_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_waitlist_entries\",\"invited_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"handled_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"course_inquiries\",\"handled_as\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_invitations\",\"emailed_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"trip_waitlist_entries\",\"party_size\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"course_inquiries_shop_created_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"course_inquiries_course_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"course_inquiries_shop_preferred_date_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"last_minute_list_entries_shop_person_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"last_minute_list_entries_shop_active_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"last_minute_list_unsubscribe_tokens_token_hash_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"last_minute_list_unsubscribe_tokens_entry_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_invitations_shop_trip_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_invitations_trip_request_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_invitations_trip_person_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_last_minute_promo_recipients_promo_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_last_minute_promo_recipients_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_last_minute_promo_recipients_shop_person_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_waitlist_entries_trip_person_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_waitlist_entries_trip_created_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"trip_waitlist_entries_shop_trip_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"course_inquiries\",\"course_inquiries_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"course_inquiries\",\"course_inquiries_course_id_courses_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"course_inquiries\",\"course_inquiries_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"last_minute_list_entries\",\"last_minute_list_entries_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"last_minute_list_entries\",\"last_minute_list_entries_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"last_minute_list_unsubscribe_tokens_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"last_minute_list_unsubscribe_tokens_AOSpe7xhTtoO_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_invitations\",\"trip_invitations_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_invitations\",\"trip_invitations_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_invitations\",\"trip_invitations_course_inquiry_id_course_inquiries_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_invitations\",\"trip_invitations_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_invitations\",\"trip_invitations_created_by_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"trip_last_minute_promo_recipients_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"trip_last_minute_promo_recipients_SoZT25MYUx9D_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"trip_last_minute_promo_recipients_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_waitlist_entries\",\"trip_waitlist_entries_shop_id_shops_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_waitlist_entries\",\"trip_waitlist_entries_trip_id_trips_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"trip_waitlist_entries\",\"trip_waitlist_entries_person_id_people_id_fkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"course_inquiries\",\"course_inquiries_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"last_minute_list_entries\",\"last_minute_list_entries_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"last_minute_list_unsubscribe_tokens_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"trip_invitations\",\"trip_invitations_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"trip_last_minute_promo_recipients\",\"trip_last_minute_promo_recipients_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"trip_waitlist_entries\",\"trip_waitlist_entries_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "uniques\u0000[\"public\",\"last_minute_list_unsubscribe_tokens\",\"last_minute_list_unsubscribe_tokens_token_hash_key\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"course_inquiries\",\"course_inquiries_subject_present\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"last_minute_list_entries\",\"last_minute_list_entries_range\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"trip_invitations\",\"trip_invitations_source_reference_check\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"course_inquiries\",\"course_inquiries_handled_together\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"trip_waitlist_entries\",\"trip_waitlist_entries_party_size_range\"]"
+    }
+  ]
+}

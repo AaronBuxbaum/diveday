@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { TripDiveFields, type TripDiveFieldsCopy } from "./TripDiveFields";
 
@@ -96,5 +96,39 @@ describe("dive one's site description", () => {
     expect(
       container.querySelector('select[name="dive-1-siteId"]')?.getAttribute("aria-describedby"),
     ).toBeNull();
+  });
+});
+
+describe("five-dive course plans", () => {
+  it("offers five dives only for a course and preserves the fifth draft if the course is temporarily removed", () => {
+    const view = (maxDives: 4 | 5) => (
+      <form data-testid="trip-form">
+        <TripDiveFields diveSites={[]} copy={COPY} frameClassName="" maxDives={maxDives} />
+      </form>
+    );
+    const { container, rerender } = render(view(4));
+    const select = screen.getByLabelText("Number of dives");
+    expect(screen.queryByRole("option", { name: "5 dives" })).toBeNull();
+    rerender(view(5));
+    fireEvent.change(select, { target: { value: "5" } });
+    const fifth = container.querySelector<HTMLInputElement>('input[name="dive-5-title"]');
+    if (!fifth) throw new Error("fifth dive control missing");
+    fireEvent.change(fifth, { target: { value: "Deep practice" } });
+    expect(select).toHaveValue("5");
+    rerender(view(4));
+    expect(select).toHaveValue("4");
+    const form = screen.getByTestId("trip-form") as HTMLFormElement;
+    expect(new FormData(form).get("dive-5-title")).toBeNull();
+    rerender(view(5));
+    expect(select).toHaveValue("5");
+    expect(fifth).toHaveValue("Deep practice");
+  });
+
+  it("opens an existing five-dive course without truncating its plan", () => {
+    render(
+      <TripDiveFields diveSites={[]} copy={COPY} frameClassName="" maxDives={5} initialCount={5} />,
+    );
+    expect(screen.getByLabelText("Number of dives")).toHaveValue("5");
+    expect(screen.getByRole("group", { name: "Dive 5" })).toBeVisible();
   });
 });

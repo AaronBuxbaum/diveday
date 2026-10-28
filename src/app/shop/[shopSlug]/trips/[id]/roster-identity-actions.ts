@@ -187,9 +187,17 @@ export async function repointDiverIdentityAction(
   });
   revalidateAndRedirect(
     back,
-    noticeUrl(back, moved.ok ? "identity-repointed" : REPOINT_REFUSAL_NOTICE[moved.reason], {
-      bid: bookingId,
-    }),
+    noticeUrl(
+      back,
+      moved.ok
+        ? moved.flySafeFollowUp
+          ? "identity-repointed-fly-safe"
+          : "identity-repointed"
+        : REPOINT_REFUSAL_NOTICE[moved.reason],
+      {
+        bid: bookingId,
+      },
+    ),
   );
 }
 

@@ -59,6 +59,7 @@ import {
   tripBlowouts,
   trips,
 } from "./schema";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { rollCallStartedOn, setTripStatus } from "./trips-record";
 
@@ -166,6 +167,8 @@ type BlowoutSetup = Extract<Awaited<ReturnType<typeof setUpTripBlowout>>, { ok: 
  */
 async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
   return db.transaction(async (tx) => {
+    // Match reschedule dispatch ordering: fence before taking the trip row.
+    await lockTripRevisionNotificationFence(tx, input.shopId, input.tripId, "revision-write");
     const [trip] = await tx
       .select()
       .from(trips)

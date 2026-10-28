@@ -5,13 +5,16 @@ import type { AppDb, DbExecutor } from "@/db/client";
 import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import {
   activityEvents,
+  bookingCapabilities,
   bookings,
+  notificationSendQueue,
   people,
   personRoles,
   rentalFitProfiles,
   trips,
   waiverRecords,
 } from "@/db/schema";
+import { forgetTrainingPlanPeople } from "@/db/training-plan-privacy";
 import { nowDate } from "@/lib/clock";
 import {
   type DiverDuplicateReason,
@@ -23,6 +26,10 @@ import {
 import { normalizePersonName, personNamesMatch } from "@/lib/person-name";
 import { hasReturned } from "@/lib/trips";
 import { isStandingRefusal, isUnresolvedMedicalHold } from "@/lib/waivers";
+import {
+  lockBoardingCertificationEvidence,
+  rewriteBoardingSnapshotReviewer,
+} from "./boarding-certification-snapshot";
 import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
 import { refileWaiverRecords } from "./waiver-refile";
@@ -161,6 +168,7 @@ export const DIVER_HISTORY_TABLES = [
   // sides cannot collide.
   "course_form_records",
   "certifications",
+  "certification_junior_reviews",
   "specialty_certifications",
   "prior_visits",
   "imported_payment_history",
@@ -270,10 +278,21 @@ export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as
  * page by leaving it.
  */
 export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
+  "certification_junior_reviews.recorded_by_person_id": "the staff member who sighted the card",
+  "certifications.junior_status_verified_by_person_id": "the staff member who sighted the card",
   "activity_events.actor_person_id": "who did it — attribution, not diver history",
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
+  "bookings.fly_safe_acknowledged_by_person_id":
+    "which staffer resolved the flying-guidance follow-up",
   "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
   "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
+  "bookings.training_plan_by_person_id": "planning records involving a merged person are cleared",
+  "bookings.training_plan_instructor_person_id":
+    "planning records involving a merged person are cleared",
+  "trip_assignments.training_plan_by_person_id":
+    "planning records involving a merged person are cleared",
+  "trip_assignments.training_plan_instructor_person_id":
+    "planning records involving a merged person are cleared",
   "bookings.training_marked_by_person_id": "which staffer marked the dive as training",
   "bookings.training_cleared_by_person_id": "which staffer cleared a training mark with forms owed",
   "trip_assignments.assigned_by_person_id": "which staffer rostered the crew member",
@@ -384,6 +403,12 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "departure_notes.sent_by_person_id": "who sent the note to the departure",
   "course_form_records.anonymized_by_person_id": "who erased the signer's names from the form",
   "course_form_versions.created_by_person_id": "who wrote that version of the form",
+};
+
+/** Subject-bound sealed retries are discarded rather than readdressed. */
+export const PERSON_COLUMNS_DELETED_ON_MERGE: Readonly<Record<string, string>> = {
+  "notification_send_queue.recipient_person_id":
+    "sealed retries retain the source subject and cannot transfer authority",
 };
 
 /**
@@ -972,7 +997,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "work_orders",
     "lost_items",
   ],
-  history: ["prior_visits"],
+  history: ["prior_visits", "certification_junior_reviews"],
   lists: ["interests", "person_courtesy_email_unsubscribe_tokens", "trip_blowout_divers"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;
@@ -1199,6 +1224,7 @@ export async function mergeDiverRecords(input: {
         return { ok: false, reason: "not_found" };
       }
 
+      await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
       const lockedIds = [input.personId, input.survivorId].sort();
       const locked = await tx
         .select()
@@ -1237,6 +1263,9 @@ export async function mergeDiverRecords(input: {
         }
       }
 
+      await rewriteBoardingSnapshotReviewer(tx, input.shopId, source.id, survivor.id);
+      // A new identity must not inherit an unconfirmed instructor plan.
+      await forgetTrainingPlanPeople(tx, input.shopId, [source.id]);
       const mergedAt = nowDate();
       const mergedSpokenLanguages = [
         ...new Set([...survivor.spokenLanguages, ...source.spokenLanguages]),
@@ -1388,6 +1417,34 @@ export async function mergeDiverRecords(input: {
         fromPersonId: source.id,
         toPersonId: survivor.id,
       });
+      const transferredBookings = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(and(eq(bookings.shopId, input.shopId), eq(bookings.personId, source.id)));
+      if (transferredBookings.length > 0) {
+        const transferredAt = nowDate();
+        await tx
+          .update(bookingCapabilities)
+          .set({ revokedAt: transferredAt, expiresAt: transferredAt, tokenSealed: null })
+          .where(
+            and(
+              eq(bookingCapabilities.shopId, input.shopId),
+              inArray(
+                bookingCapabilities.bookingId,
+                transferredBookings.map(({ id }) => id),
+              ),
+              isNull(bookingCapabilities.revokedAt),
+            ),
+          );
+      }
+      await tx
+        .delete(notificationSendQueue)
+        .where(
+          and(
+            eq(notificationSendQueue.shopId, input.shopId),
+            eq(notificationSendQueue.recipientPersonId, source.id),
+          ),
+        );
       for (const tableName of DIVER_HISTORY_TABLES) {
         if (tableName === "waiver_records" || tableName === "course_form_records") continue;
         // A seat that is already over, on a departure the kept record also

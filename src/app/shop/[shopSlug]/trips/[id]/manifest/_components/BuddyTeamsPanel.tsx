@@ -122,7 +122,39 @@ export function BuddyTeamsPanel({
   const panelError = builderError ? null : buddyErrorText;
   return (
     <section aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")} className="print:hidden">
-      {/* The whole panel sits behind one disclosure line. Grouping people is
+      {buddyTeamsList.some((team) => (teamWarnings[team.teamId] ?? []).length > 0) ? (
+        <ul className="mb-3 max-w-4xl space-y-2 text-sm" aria-label={t("manifest.buddyHeading")}>
+          {buddyTeamsList.flatMap((team, index) => {
+            const warnings = teamWarnings[team.teamId] ?? [];
+            if (warnings.length === 0) return [];
+            const members = team.members
+              .map((member) =>
+                member.kind === "crew"
+                  ? t("manifest.buddyCrewName", { name: member.fullName })
+                  : member.cancelled
+                    ? t("manifest.buddyCancelledName", { name: member.fullName })
+                    : member.fullName,
+              )
+              .join(", ");
+            return [
+              <li
+                key={team.teamId}
+                className="rounded-lg border border-warning/40 bg-warning-tint px-3 py-2"
+              >
+                <p className="font-semibold text-foreground">
+                  {t("manifest.buddyTeamLabel", { number: index + 1 })}: {members}
+                </p>
+                {warnings.map((warning) => (
+                  <p key={warning} className="mt-1 text-warning-strong">
+                    {warning}
+                  </p>
+                ))}
+              </li>,
+            ];
+          })}
+        </ul>
+      ) : null}
+      {/* The editor sits behind one disclosure line. Grouping people is
           dock/desk prep, done once per departure — but the open panel (team
           rows, per-team pickers, dissolve buttons) stood at permanent height
           on every manifest visit, between the roll call and the offline
@@ -130,15 +162,10 @@ export function BuddyTeamsPanel({
           where roll call reads them, so at rest this section owes the page
           one line: how many teams, and who is not on one. It arrives open
           when a refusal needs reading — a submit's answer must never hide
-          behind the fold it came from. */}
-      <details
-        className="group/buddypanel"
-        open={
-          buddyErrorText || defaultOpen || Object.values(teamWarnings).some((lines) => lines.length)
-            ? true
-            : undefined
-        }
-      >
+          behind the fold it came from. Specific safety cautions stay visible
+          beside the line with the team and its members, without opening every
+          editor row on the manifest. */}
+      <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
         {/* Two alignments, not one: the caret centres on the heading's *first
             line* (`SummaryCaret`, a box one title line tall, in a row that
             starts at the top), while the heading and its count share a
@@ -258,11 +285,6 @@ export function BuddyTeamsPanel({
                   <p className={groupLabelClass()}>
                     {t("manifest.buddyTeamLabel", { number: index + 1 })}
                   </p>
-                  {(teamWarnings[team.teamId] ?? []).map((warning) => (
-                    <p key={warning} className="mt-1.5 text-base text-warning-strong">
-                      {warning}
-                    </p>
-                  ))}
                   {/* **"Dissolve team" is the chip row's last item, at the
                       row's size** (pixel-craft class 1). Beside the whole
                       label-and-chips block, a 48px `md` button topped against

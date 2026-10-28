@@ -48,7 +48,7 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
@@ -69,6 +69,10 @@ import {
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
+import {
+  lockBoardingCertificationEvidence,
+  rewriteBoardingSnapshotReviewer,
+} from "./boarding-certification-snapshot";
 import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
 import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb, AppTransaction } from "./client";
@@ -79,6 +83,7 @@ import {
   type ProcessorErasureTargetInput,
   recordProcessorErasureObligations,
 } from "./processor-erasure";
+import { withRetiredSavedAnswers } from "./retired-saved-answers";
 import type { ProcessorErasureObligation } from "./schema";
 import {
   accountSecurity,
@@ -96,6 +101,7 @@ import {
   bookings,
   buddyTeamEvents,
   calendarFeeds,
+  certificationJuniorReviews,
   certifications,
   courseFormRecords,
   customerGearItems,
@@ -133,6 +139,7 @@ import {
   shopShoreAlertTokens,
   shops,
   specialtyCertifications,
+  staffCredentialHistory,
   staffCredentials,
   staffReplies,
   tips,
@@ -148,6 +155,7 @@ import {
 } from "./schema";
 import { recordShopActivityWithin } from "./shop-activity";
 import { customerProviderFromEnvironment } from "./stripe-providers";
+import { forgetTrainingPlanPeople } from "./training-plan-privacy";
 import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
 
 export type AnonymizeDiverRefusal =
@@ -164,7 +172,9 @@ export type AnonymizeDiverRefusal =
    * that is not the diver's data to begin with. Staff offboarding is a
    * different problem with a different answer.
    */
-  | "staff_member";
+  | "staff_member"
+  | "requires_delete"
+  | "name_mismatch";
 
 export type AnonymizeDiverResult =
   | {
@@ -183,7 +193,8 @@ export type AnonymizeDiverResult =
        */
       owedProcessorErasures: number;
     }
-  | { ok: false; reason: AnonymizeDiverRefusal };
+  | { ok: false; reason: AnonymizeDiverRefusal }
+  | { ok: false; reason: "merged"; survivorId: string };
 
 /** Every column `listDiverSummaries` already refuses to ship to the browser, plus the rest. */
 const ERASED_PERSON_COLUMNS = {
@@ -439,25 +450,57 @@ function logFuzzyMatch(
  */
 export async function anonymizeDiver(
   db: AppDb,
-  input: { shopId: string; personId: string; actorPersonId: string },
+  input: {
+    shopId: string;
+    personId: string;
+    actorPersonId: string;
+    /** A public erase confirmation must still match the locked target. */
+    confirmation?: { name: string; requireDeleted: true };
+  },
   options: { customerProvider?: CustomerProvider } = {},
 ): Promise<AnonymizeDiverResult> {
   const now = nowDate();
   const outcome = await db.transaction(async (tx) => {
+    // Serialize with merge before looking up the target; a stale source must
+    // never be erased successfully after its data moved to another person.
+    await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
+    // Authorization comes before the target read and does not lock rows.
+    if (!(await canPersonErasePersonalData(tx, input.shopId, input.actorPersonId))) {
+      return { ok: false, reason: "not_authorized" } as const;
+    }
+    if (input.actorPersonId === input.personId) return { ok: false, reason: "self" } as const;
+
+    // Match sign-in completion's account -> person lock order. The target is
+    // then re-read under its row lock, so restore or rename cannot invalidate
+    // the public action's earlier confirmation.
+    await boundLockWaits(tx);
+    await tx
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .innerJoin(people, eq(people.id, userAccounts.personId))
+      // diveday:allow-deleted-people: erasure owns live and removed records, authorized above.
+      .where(and(eq(userAccounts.personId, input.personId), eq(people.shopId, input.shopId)))
+      .for("update", { of: userAccounts });
     const [person] = await tx
       .select()
       .from(people)
       // diveday:allow-deleted-people: erasure acts on a removed record; it is the usual subject.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
-      .limit(1);
+      .limit(1)
+      // diveday:allow-update-lock: restore and rename must not invalidate an erasure confirmation after it is checked.
+      .for("update");
     if (!person) return { ok: false, reason: "not_found" } as const;
-    // Authorization is answered before anything else about the record is, so a
-    // caller with no standing here learns nothing from the reply — not even
-    // whether this person has already been erased.
-    if (!(await canPersonErasePersonalData(tx, input.shopId, input.actorPersonId))) {
-      return { ok: false, reason: "not_authorized" } as const;
+    if (person.mergedIntoPersonId) {
+      return { ok: false, reason: "merged", survivorId: person.mergedIntoPersonId } as const;
     }
-    if (input.actorPersonId === input.personId) return { ok: false, reason: "self" } as const;
+    if (input.confirmation && !person.deletedAt)
+      return { ok: false, reason: "requires_delete" } as const;
+    if (
+      input.confirmation &&
+      input.confirmation.name.trim().toLowerCase() !== person.fullName.trim().toLowerCase()
+    ) {
+      return { ok: false, reason: "name_mismatch" } as const;
+    }
     if (person.anonymizedAt) {
       return {
         ok: true,
@@ -467,7 +510,6 @@ export async function anonymizeDiver(
         bookkeeperCleared: false,
       } as const;
     }
-
     const roleRows = await tx
       .select({ role: personRoles.role })
       .from(personRoles)
@@ -475,18 +517,6 @@ export async function anonymizeDiver(
     if (roleRows.some((row) => STAFF_ROLES.includes(row.role))) {
       return { ok: false, reason: "staff_member" } as const;
     }
-
-    // Match sign-in completion's account -> person order. A request that
-    // resolved its challenge before Remove can still be entering its locks.
-    // Authorization and the staff/self refusals above remain unchanged.
-    await boundLockWaits(tx);
-    await tx
-      .select({ id: userAccounts.id })
-      .from(userAccounts)
-      .innerJoin(people, eq(people.id, userAccounts.personId))
-      // diveday:allow-deleted-people: erasure owns live and removed records, authorized above.
-      .where(and(eq(userAccounts.personId, person.id), eq(people.shopId, input.shopId)))
-      .for("update", { of: userAccounts });
 
     const result = await scrub(tx, {
       shopId: input.shopId,
@@ -707,7 +737,8 @@ async function scrubPersonRecord(
   // (ADR 20260820-every-delete-is-soft). What goes is the identity, not the row,
   // so the merge audit trail (`merged_into_person_id`, `merged_at`,
   // `merged_by_person_id`) is deliberately left in place.
-  for (const shellId of await mergedIntoChain(tx, shopId, personId)) {
+  const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
+  for (const shellId of mergedShellIds) {
     await tx
       .update(people)
       .set({
@@ -718,9 +749,51 @@ async function scrubPersonRecord(
       .where(eq(people.id, shellId));
   }
 
+  // Retry rows now carry a durable subject handle even for person-only
+  // notifications with no booking or contact address. Sweep that binding
+  // before commit so a claimed payload cannot be requeued after this erase.
+  await tx
+    .delete(notificationSendQueue)
+    .where(
+      and(
+        eq(notificationSendQueue.shopId, shopId),
+        inArray(notificationSendQueue.recipientPersonId, [personId, ...mergedShellIds]),
+      ),
+    );
+
   // The person is no longer a diver of this shop; nothing downstream may treat
   // an erased record as an active one of any kind.
   await tx.delete(personRoles).where(eq(personRoles.personId, personId));
+
+  // Versions retain personal credential dates even after the current row was deleted.
+  await tx.delete(staffCredentialHistory).where(
+    and(
+      eq(staffCredentialHistory.shopId, shopId),
+      inArray(
+        staffCredentialHistory.credentialId,
+        tx
+          .select({ id: staffCredentials.id })
+          .from(staffCredentials)
+          .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId))),
+      ),
+    ),
+  );
+
+  // Crew observations can exist without this person holding a booking.
+  await tx
+    .update(rollCallCrewEvents)
+    .set({
+      credentialSnapshot: null,
+      credentialSnapshotStartedAt: null,
+      credentialSnapshotCapturedAt: null,
+    })
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, shopId),
+        eq(rollCallCrewEvents.personId, personId),
+        isNotNull(rollCallCrewEvents.credentialSnapshot),
+      ),
+    );
 
   // Credentials belong to the staff member's operational record, but their
   // names and identifiers are still personal data when the target was later
@@ -732,18 +805,14 @@ async function scrubPersonRecord(
       name: REDACTED_TEXT,
       issuingBody: null,
       identifier: null,
+      issuedAt: null,
+      renewsAt: null,
       reviewNote: null,
       deletedAt: now,
       deletedByPersonId: ctx.actorPersonId,
       updatedAt: now,
     })
-    .where(
-      and(
-        eq(staffCredentials.shopId, shopId),
-        eq(staffCredentials.personId, personId),
-        isNull(staffCredentials.deletedAt),
-      ),
-    );
+    .where(and(eq(staffCredentials.shopId, shopId), eq(staffCredentials.personId, personId)));
   return [];
 }
 
@@ -922,6 +991,14 @@ async function scrubCertificationEvidence(
     .select()
     .from(certifications)
     .where(and(eq(certifications.shopId, shopId), eq(certifications.personId, personId)));
+  await tx
+    .delete(certificationJuniorReviews)
+    .where(
+      and(
+        eq(certificationJuniorReviews.shopId, shopId),
+        eq(certificationJuniorReviews.personId, personId),
+      ),
+    );
   for (const card of levelCards) {
     await tx
       .update(certifications)
@@ -932,6 +1009,9 @@ async function scrubCertificationEvidence(
         declaredIdentifier: null,
         reviewNote: null,
         importedFromLabel: null,
+        juniorStatus: null,
+        juniorStatusVerifiedAt: null,
+        juniorStatusVerifiedByPersonId: null,
         deletedAt: card.deletedAt ?? now,
       })
       .where(eq(certifications.id, card.id));
@@ -1154,6 +1234,70 @@ async function scrubBookingRows(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now, bookingIds, owned, retire } = ctx;
+  // A reviewer can be erased even when they held no seat on these departures.
+  // Cards can still name a merged-away reviewer, including captures created
+  // after the merge, so scrub the entire chain just as the person sweep does.
+  const personChain = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  for (const reviewerId of personChain) {
+    await rewriteBoardingSnapshotReviewer(tx, shopId, reviewerId, null);
+  }
+  // A duplicate cancelled seat can remain on a merged-away person. Lock every
+  // seat first, so an in-flight boarding cannot insert a snapshot after this
+  // erasure scans the event table.
+  // Preserve the acknowledgement while removing the erased staff member's identity.
+  await tx
+    .update(bookings)
+    .set({ flySafeAcknowledgedByPersonId: null })
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.flySafeAcknowledgedByPersonId, personChain),
+      ),
+    );
+  const snapshotSeats = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    // diveday:allow-update-lock: erasure serializes with the roll-call writer before clearing personal snapshots.
+    .where(and(eq(bookings.shopId, shopId), inArray(bookings.personId, personChain)))
+    .orderBy(asc(bookings.id))
+    .for("update");
+  if (snapshotSeats.length > 0) {
+    await tx
+      .update(bookings)
+      .set({
+        flySafeRecipientSealed: null,
+        flySafeRecipientUnknown: false,
+        flySafeAcknowledgementFingerprint: null,
+        flySafeAcknowledgedAt: null,
+        flySafeAcknowledgedByPersonId: null,
+      })
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(
+            bookings.id,
+            snapshotSeats.map((seat) => seat.id),
+          ),
+        ),
+      );
+    await tx
+      .update(rollCallEvents)
+      .set({
+        certificationSnapshot: null,
+        certificationSnapshotStartedAt: null,
+        certificationSnapshotCapturedAt: null,
+      })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(
+            rollCallEvents.bookingId,
+            snapshotSeats.map((seat) => seat.id),
+          ),
+          isNotNull(rollCallEvents.certificationSnapshot),
+        ),
+      );
+  }
   if (owned) {
     // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
     // diver said this departure's crew may know it is a first trip or a long
@@ -1245,12 +1389,20 @@ async function scrubBookingRows(
     // made while blocked. The shape check allows a `blocked` status with no list.
     await tx
       .update(rollCallEvents)
-      .set({ readinessBlockers: null })
+      .set({
+        readinessBlockers: null,
+        certificationSnapshot: null,
+        certificationSnapshotStartedAt: null,
+        certificationSnapshotCapturedAt: null,
+      })
       .where(
         and(
           eq(rollCallEvents.shopId, shopId),
           inArray(rollCallEvents.bookingId, bookingIds),
-          isNotNull(rollCallEvents.readinessBlockers),
+          or(
+            isNotNull(rollCallEvents.readinessBlockers),
+            isNotNull(rollCallEvents.certificationSnapshot),
+          ),
         ),
       );
 
@@ -2501,14 +2653,18 @@ async function scrubPiiBlob(
     logFuzzyMatch(ctx, "send_queue_subject_phone", droppedByPhone.length);
   }
   if (owned) {
-    await tx
-      .delete(notificationSendQueue)
-      .where(
-        and(
-          eq(notificationSendQueue.shopId, shopId),
+    await tx.delete(notificationSendQueue).where(
+      and(
+        eq(notificationSendQueue.shopId, shopId),
+        or(
           inArray(notificationSendQueue.bookingId, bookingIds),
+          inArray(
+            notificationSendQueue.idempotencyKey,
+            bookingIds.map((id) => `fly-safe-correction/${id}`),
+          ),
         ),
-      );
+      ),
+    );
   }
   return [];
 }
@@ -2896,11 +3052,16 @@ async function scrubInbox(
   // the words were still written to this diver, so the copy goes too. A merge
   // leaves `source_person_id` on the merged-away record, so its shells count.
   const sources = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
-  await tx
-    .delete(inboxSavedAnswers)
-    .where(
-      and(eq(inboxSavedAnswers.shopId, shopId), inArray(inboxSavedAnswers.sourcePersonId, sources)),
-    );
+  await withRetiredSavedAnswers(tx, (answerTx) =>
+    answerTx
+      .delete(inboxSavedAnswers)
+      .where(
+        and(
+          eq(inboxSavedAnswers.shopId, shopId),
+          inArray(inboxSavedAnswers.sourcePersonId, sources),
+        ),
+      ),
+  );
   return [];
 }
 
@@ -2998,6 +3159,16 @@ async function scrubClaudeCallContent(
   return [];
 }
 
+/** Planning assignments are personal records, not a permanent group history. */
+async function scrubTrainingPlans(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const chain = [ctx.personId, ...(await mergedIntoChain(tx, ctx.shopId, ctx.personId))];
+  await forgetTrainingPlanPeople(tx, ctx.shopId, chain);
+  return [];
+}
+
 /**
  * Every sweep of the erasure, in the order it runs. Each takes the transaction
  * and the diver's context and hands back the Stripe objects it found standing
@@ -3030,6 +3201,7 @@ const SCRUB_SECTIONS = [
   scrubInbox,
   scrubIncidentReports,
   scrubClaudeCallContent,
+  scrubTrainingPlans,
 ] as const;
 
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {

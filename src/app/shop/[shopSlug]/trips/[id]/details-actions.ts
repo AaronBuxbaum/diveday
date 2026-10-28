@@ -41,6 +41,7 @@ import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { firstOfferedDiveMode, shopOffersDiveMode, tripDetailsPatch } from "@/lib/trip-details";
+import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
@@ -72,7 +73,7 @@ const detailsSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
-  plannedDives: z.coerce.number().int().min(1).max(4),
+  plannedDives: z.coerce.number().int().min(1).max(MAX_COURSE_DIVES),
   // **The departure's own three**, editable since 2026-08-22 (issue #681).
   // They were writable only at creation, which made the commonest real edit —
   // "the boat that was going to run this is in for service" — impossible, with
@@ -393,8 +394,10 @@ async function saveDepartureDetails(
   };
   if (section && !formData.has("lensId")) delete patch.lensId;
   const outcome = section
-    ? await updateTripSection(dbi, s.user.shopId, tripId, departureSectionPatch(section, patch))
-    : await updateTrip(dbi, s.user.shopId, tripId, patch);
+    ? await updateTripSection(dbi, s.user.shopId, tripId, departureSectionPatch(section, patch), {
+        captureRescheduleStart: true,
+      })
+    : await updateTrip(dbi, s.user.shopId, tripId, patch, { captureRescheduleStart: true });
   if (!outcome.ok) {
     await photo.discardUpload();
     redirectUpdateRefusal(back, outcome, section);
@@ -427,10 +430,7 @@ async function saveDepartureDetails(
         arrivalParkingNote: null,
       }),
     );
-  const timeMoved =
-    (!section || section === "timing") && tripNow
-      ? tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
-      : false;
+  const timeMoved = outcome.startMoved;
   const notice =
     tripNow && (timeMoved || placeMoved)
       ? await holdRescheduleNotice(dbi, {

@@ -78,6 +78,25 @@ describe("the dock copy of a training dive", () => {
     ).toEqual({ courseTitle: "Advanced Open Water", instructorAboard: false });
   });
 
+  it("keeps the recorded intro classification for the offline depth prompt", () => {
+    for (const intro of [true, false]) {
+      expect(
+        save({ trainingDive: { courseTitle: "Course", instructorAboard: false, intro } })
+          .trainingDive,
+      ).toMatchObject({ intro });
+    }
+  });
+
+  it("does not save a held seat’s course or introductory classification", () => {
+    const row = save({
+      identityClaim: { bookedAs: "Maya", matchedBy: "picked_name" },
+      readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+      trainingDive: { courseTitle: "Intro", instructorAboard: false, intro: true },
+    });
+    expect(row.identityWithheld).toBe(true);
+    expect(row).not.toHaveProperty("trainingDive");
+  });
+
   it("carries who cleared a mark with its forms unsigned", () => {
     for (const cleared of [
       { byName: "Ana Ruiz", reason: "forms_owed" as const },
@@ -93,5 +112,44 @@ describe("the dock copy of a training dive", () => {
       expect(row).not.toHaveProperty("trainingDive");
       expect(row).not.toHaveProperty("trainingMarkCleared");
     }
+  });
+});
+
+describe("junior safety advisories on a saved manifest", () => {
+  it("stores the worded advisory without storing card details or a birthday", () => {
+    const manifest = manifestWith({
+      depthAdvisory: { status: "verification_required", verificationReasons: ["card_status"] },
+    });
+    const payload = serializeManifests(
+      [manifest],
+      shop,
+      (b) => b.code,
+      [],
+      null,
+      undefined,
+      () => "Check the dive plan and supervision",
+    );
+    expect(payload.juniorAdvisoriesChecked).toBe(true);
+    expect(payload.manifests[0]?.divers[0]).toMatchObject({
+      safetyAdvisoryText: "Check the dive plan and supervision",
+    });
+    expect(JSON.stringify(payload)).not.toContain("card_status");
+  });
+
+  it("withholds the advisory for a held identity", () => {
+    const manifest = manifestWith({
+      identityWithheld: true,
+      depthAdvisory: { status: "verification_required", verificationReasons: ["card_status"] },
+    });
+    const payload = serializeManifests(
+      [manifest],
+      shop,
+      (b) => b.code,
+      [],
+      null,
+      undefined,
+      () => "Check the dive plan and supervision",
+    );
+    expect(payload.manifests[0]?.divers[0]?.safetyAdvisoryText).toBeUndefined();
   });
 });

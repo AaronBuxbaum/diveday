@@ -1,0 +1,379 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f90cbd48-0ba2-4c03-a6de-04ff0f64718b",
+  "prevIds": [
+    "5e6a3c4a-1863-40c1-a894-cb2ea0c31f09"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "staff_credential_history"
+      ],
+      "writes": [
+        "s|tbl|public.staff_credential_history",
+        "n|tbl|public.staff_credential_history",
+        "e|tbl|public.staff_credential_history",
+        "n|rel|public.staff_credential_history",
+        "n|type|public.staff_credential_history",
+        "n|rel|public.staff_credential_history_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.staff_credential_kind"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "staff_credentials",
+        "revision"
+      ],
+      "writes": [
+        "s|col|public.staff_credentials.revision",
+        "n|col|public.staff_credentials.revision",
+        "e|col|public.staff_credentials.revision"
+      ],
+      "reads": [
+        "n|tbl|public.staff_credentials",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "staff_credential_history",
+        "staff_credential_history_shop_credential_idx"
+      ],
+      "writes": [
+        "s|idx|public.staff_credential_history_shop_credential_idx",
+        "n|idx|public.staff_credential_history_shop_credential_idx",
+        "e|idx|public.staff_credential_history_shop_credential_idx",
+        "n|rel|public.staff_credential_history_shop_credential_idx"
+      ],
+      "reads": [
+        "n|tbl|public.staff_credential_history",
+        "n|sch|public",
+        "n|col|public.staff_credential_history.shop_id",
+        "n|col|public.staff_credential_history.credential_id",
+        "n|col|public.staff_credential_history.seq"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "staff_credential_history"
+      ],
+      "writes": [
+        "s|fk|public.staff_credential_history.staff_credential_history_shop_id_shops_id_fkey",
+        "n|fk|public.staff_credential_history.staff_credential_history_shop_id_shops_id_fkey",
+        "e|fk|public.staff_credential_history.staff_credential_history_shop_id_shops_id_fkey",
+        "n|con|public.staff_credential_history.staff_credential_history_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.staff_credential_history",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.staff_credential_history.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "staff_credential_history"
+      ],
+      "writes": [
+        "s|fk|public.staff_credential_history.staff_credential_history_32OPkfKC4FnJ_fkey",
+        "n|fk|public.staff_credential_history.staff_credential_history_32OPkfKC4FnJ_fkey",
+        "e|fk|public.staff_credential_history.staff_credential_history_32OPkfKC4FnJ_fkey",
+        "n|con|public.staff_credential_history.staff_credential_history_32OPkfKC4FnJ_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.staff_credential_history",
+        "n|sch|public",
+        "n|tbl|public.staff_credentials",
+        "n|sch|public",
+        "n|col|public.staff_credential_history.credential_id",
+        "n|col|public.staff_credentials.id",
+        "e|uniqueness|public.staff_credentials.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "staff_credential_history",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "seq",
+        "type": "bigserial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "credential_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "event",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "kind",
+        "type": "staff_credential_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "issued_at",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "renews_at",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "active",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credentials",
+        "name": "revision",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "staff_credential_history_shop_credential_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "credential_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "seq",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "staff_credential_history_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "staff_credential_history_32OPkfKC4FnJ_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "credential_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "staff_credentials",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "staff_credential_history",
+        "name": "staff_credential_history_pkey",
+        "columns": [
+          "seq"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

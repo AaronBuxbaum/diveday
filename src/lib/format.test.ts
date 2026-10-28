@@ -6,6 +6,7 @@ import {
   formatDateTimeTz,
   formatDateWithYear,
   formatDayParts,
+  formatEvidenceDateTimeTz,
   formatMonthDay,
   formatNearDay,
   formatOrdinal,
@@ -465,5 +466,21 @@ describe("formatTimeZoneGeneric", () => {
     expect(formatTimeZoneGeneric("en-US", "America/New_York")).toBe("ET");
     expect(formatTimeZoneGeneric("en-US", "America/Cancun")).toBe("EST");
     expect(formatTimeZoneGeneric("es-ES", "America/New_York")).toBe("hora de Nueva York");
+  });
+});
+
+describe("formatEvidenceDateTimeTz", () => {
+  it("preserves same-minute and subsecond ordering with an explicit zone in both locales", () => {
+    const mark = new Date("2026-08-04T14:30:00.001Z");
+    const capture = new Date("2026-08-04T14:30:45.125Z");
+    for (const locale of ["en-US", "es-ES"]) {
+      const first = formatEvidenceDateTimeTz(mark, locale, "America/New_York");
+      const second = formatEvidenceDateTimeTz(capture, locale, "America/New_York");
+      expect(first).not.toBe(second);
+      expect(first).toMatch(/00[.,]001/);
+      expect(second).toMatch(/45[.,]125/);
+      expect(first).toMatch(/EDT|GMT-4/);
+      expect(second).toMatch(/EDT|GMT-4/);
+    }
   });
 });

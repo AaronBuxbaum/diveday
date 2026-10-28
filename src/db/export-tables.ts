@@ -12,6 +12,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   buddyPairMembers,
+  certificationJuniorReviews,
   certifications,
   courseFormRecords,
   courseFormRequirements,
@@ -52,6 +53,7 @@ import {
   shopPromoRedemptions,
   shopTextTranslations,
   specialtyCertifications,
+  staffCredentialHistory,
   staffCredentials,
   tips,
   tripChangeEvents,
@@ -250,6 +252,11 @@ export const EXPORT_TABLES = {
     order: [asc(incidentReportAddenda.createdAt), asc(incidentReportAddenda.id)],
     scope: { shopColumn: incidentReportAddenda.shopId },
   },
+  staffCredentialHistory: {
+    table: staffCredentialHistory,
+    order: [asc(staffCredentialHistory.seq)],
+    scope: { shopColumn: staffCredentialHistory.shopId },
+  },
   staffCredentials: {
     table: staffCredentials,
     order: [asc(staffCredentials.createdAt), asc(staffCredentials.id)],
@@ -390,6 +397,14 @@ export const EXPORT_TABLES = {
     table: certifications,
     order: [asc(certifications.createdAt), asc(certifications.id)],
     scope: { shopColumn: certifications.shopId, personColumn: certifications.personId },
+  },
+  certificationJuniorReviews: {
+    table: certificationJuniorReviews,
+    order: [asc(certificationJuniorReviews.recordedAt), asc(certificationJuniorReviews.id)],
+    scope: {
+      shopColumn: certificationJuniorReviews.shopId,
+      personColumn: certificationJuniorReviews.personId,
+    },
   },
   specialtyCertifications: {
     table: specialtyCertifications,

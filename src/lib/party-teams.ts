@@ -3,10 +3,9 @@
  * item 50; dive-domain review of layer r5-4, BLOCK 1).
  *
  * A party is the diver seats that booked together (`partyLeadBookingId`). One
- * tap makes each party of two or three a buddy team, and a divemaster reads
- * the teams out at the briefing, so a team this module lets through is a team
- * that gets in the water. Everything it is unsure of is left for the
- * divemaster, with the reason, never guessed:
+ * tap suggests each party of two or three as a buddy team. The actual groups
+ * in the water are not recorded. Everything this module is unsure of is left
+ * for the divemaster, with the reason, never guessed:
  *
  * - **A course departure.** An intro (DSD, Try Scuba) participant always dives
  *   with an instructor (glossary **DSD**); a student on a training dive is the
@@ -19,6 +18,8 @@
  *   wrong, and which one decides who the party's adult is.
  * - **A minor with no date of birth.** The "Under 18" box says a seat is a
  *   minor and nothing about which band: it could be ten.
+ * - **A known minor beside someone whose age is unknown.** The adult-only
+ *   confirmation would misstate this party, so staff place it by hand.
  * - **A diver under {@link JUNIOR_AGE_END} with no certified adult on file.** A
  *   12-14-year-old dives with a certified adult: a diver of {@link ADULT_AGE}
  *   or more, by a date of birth on file, holding a verified card, in the same
@@ -52,6 +53,8 @@ export type PartyMember = {
   declaredMinor: boolean;
   /** The person holds a verified card with this shop. */
   verifiedCard: boolean;
+  /** The shop's verified level cards; null status means the card's wording is unknown. */
+  certifications?: readonly { agency: string; juniorStatus: "junior" | "full" | null }[];
 };
 
 /** Why a party was left for the divemaster. Codes; the words are the manifest bundle's. */
@@ -61,11 +64,16 @@ export type PartyLeftReason =
   | "young_child"
   | "minor_age_conflict"
   | "minor_age_unknown"
+  | "mixed_ages_unconfirmed"
   | "junior_without_adult"
+  | "junior_requirements_unconfirmed"
   | "too_large";
 
 /** The departure the party is on: its course, if it is one. */
-export type PartyDeparture = { course: { intro: boolean } | null };
+export type PartyDeparture = {
+  course: { intro: boolean } | null;
+  requireAdultForTeens?: boolean;
+};
 
 /**
  * Why this party needs a divemaster's decision, or null. One-tap planning
@@ -89,11 +97,40 @@ export function partyLeftReason(
   if (members.some((member) => member.age === null && member.declaredMinor)) {
     return "minor_age_unknown";
   }
+  // The adult confirmation attests to the whole party, so it cannot describe
+  // a party containing both a known minor and someone whose age is unknown.
+  if (
+    members.some((member) => member.age !== null && member.age < ADULT_AGE) &&
+    members.some((member) => member.age === null)
+  ) {
+    return "mixed_ages_unconfirmed";
+  }
+  // An age alone never proves that an agency issued a full replacement card.
+  // For a junior, the actual guardian/professional/qualified-supervisor facts
+  // are not recorded by this party suggestion. Leave it for staff to place.
+  if (
+    members.some((member) => {
+      const cards = member.certifications;
+      if (!cards) return member.age !== null && member.age < JUNIOR_AGE_END;
+      if (member.age !== null && member.age < JUNIOR_AGE_END && cards.length === 0) return true;
+      return cards.some((card) => {
+        if (card.agency === "padi") return card.juniorStatus === null;
+        if (member.age !== null && member.age < JUNIOR_AGE_END) return true;
+        return card.juniorStatus !== "full";
+      });
+    })
+  )
+    return "junior_requirements_unconfirmed";
   const junior = members.some((member) => member.age !== null && member.age < JUNIOR_AGE_END);
+  const teen =
+    departure.requireAdultForTeens &&
+    members.some(
+      (member) => member.age !== null && member.age >= JUNIOR_AGE_END && member.age < ADULT_AGE,
+    );
   const certifiedAdult = members.some(
     (member) => member.age !== null && member.age >= ADULT_AGE && member.verifiedCard,
   );
-  if (junior && !certifiedAdult) return "junior_without_adult";
+  if ((junior || teen) && !certifiedAdult) return "junior_without_adult";
   if (members.length > PARTY_TEAM_MAX) return "too_large";
   return null;
 }

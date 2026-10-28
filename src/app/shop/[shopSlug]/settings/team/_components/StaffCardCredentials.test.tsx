@@ -173,3 +173,34 @@ describe("StaffCardCredentials", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe("renewing and correcting a staff credential", () => {
+  it("opens the selected card with its current dates and separate save choices", () => {
+    render(
+      <StaffCardCredentials
+        personId="p1"
+        roles={["captain"]}
+        locale="en-US"
+        t={t}
+        reviewAction={noop}
+        deleteAction={noop}
+        editAction={noop}
+        credentials={[
+          card("Licence", "captains_licence", {
+            renewal: "overdue",
+            revision: 4,
+            issuedAt: "2024-01-01",
+            renewsAt: "2026-01-01",
+            identifier: "C-123",
+          }),
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByText("Edit or renew"));
+    expect(screen.getByLabelText("Reference number")).toHaveValue("C-123");
+    expect(screen.getByLabelText("Issue date")).toHaveValue("2024-01-01");
+    expect(screen.getByLabelText("Renewal date")).toHaveValue("2026-01-01");
+    expect(screen.getByRole("button", { name: "Save renewal" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save correction" })).toBeVisible();
+  });
+});

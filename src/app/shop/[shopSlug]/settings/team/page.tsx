@@ -28,7 +28,7 @@ import { settingsPaneClass } from "../_components/settings-pane";
 import { AddCredentialDisclosure } from "./_components/AddCredentialDisclosure";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { LanguageCheckboxes, StaffLanguagesValue } from "./_components/LanguageCheckboxes";
-import { StaffCardCredentials } from "./_components/StaffCardCredentials";
+import { StaffCardCredentialsWithActions as StaffCardCredentials } from "./_components/StaffCardCredentialsWithActions";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
@@ -45,6 +45,7 @@ import {
 import { type CardCredential, credentialRowsFor } from "./credential-rows";
 import { noticeMessages } from "./notice-messages";
 import { parseRoles, TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
+import { publicName } from "./public-name";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -82,31 +83,6 @@ function statusBadge(
  */
 const roleLabels = staffRoleLabelRecord;
 const EMPTY_PRINT_ROW_CLASS = "mt-4 print:[&:not(:has(details[open]))]:hidden";
-
-/**
- * The name divers actually read for this person, or empty when they read none.
- *
- * **Both conditions, because this row makes a claim about a page it is not**
- * (issue #1357, tightened by a security pass on the commit that added it).
- * `tripPublicCrew` (`src/db/trips-record.ts`) requires the consent stamp, a
- * live person **and an `active` account** — so a divemaster who consented and
- * was later disabled vanishes from every public page while their roster row
- * went on saying "Divers see “Mar”". Disabling deliberately leaves the consent
- * standing (`setStaffAccountStatus` — a temporary disable should not destroy a
- * standing answer), which is right, and is exactly why the reader has to check
- * the second condition rather than infer it.
- *
- * `trim()` rather than truthiness for the same reason one layer down: the
- * check constraint pairs the stamp with a name that is non-blank **after
- * Postgres `btrim`**, which strips ASCII space and nothing else. No writer can
- * produce a tab-only name today — `crewPublicNameToStore` collapses every
- * `\p{Cc}` to a space and trims — but a roster is a poor place to learn that a
- * default changed.
- */
-function publicName(member: StaffMember): string {
-  if (member.accountStatus !== "active") return "";
-  return member.crewPublicName?.trim() ?? "";
-}
 
 function StaffRow({
   member,
@@ -260,6 +236,7 @@ function StaffRow({
         t={t}
         reviewAction={reviewStaffCredentialAction}
         deleteAction={deleteStaffCredentialAction}
+        status={noticeForForm(notice, TEAM_FORMS.credential(member.personId))}
       />
 
       {/* Who to call for this person, and the one place a shop can say so.
@@ -441,6 +418,7 @@ export default async function TeamSettingsPage({
     undoRoles?: string;
     undoName?: string;
     credentialFor?: string;
+    credentialChangeFor?: string;
     contactFor?: string;
     languagesFor?: string;
     rolesFor?: string;
@@ -455,6 +433,7 @@ export default async function TeamSettingsPage({
     undoRoles,
     undoName,
     credentialFor,
+    credentialChangeFor,
     contactFor,
     languagesFor,
     rolesFor,
@@ -490,7 +469,7 @@ export default async function TeamSettingsPage({
     notice && resolved
       ? {
           form: teamNoticeOnRoster(
-            teamNoticeForm(notice, { rolesFor, contactFor, languagesFor }),
+            teamNoticeForm(notice, { rolesFor, contactFor, languagesFor, credentialChangeFor }),
             staff.map((member) => member.personId),
           ),
           ...resolved,

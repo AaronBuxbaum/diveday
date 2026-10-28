@@ -2,6 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
+import { notificationProviderSignal } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import {
@@ -10,6 +11,7 @@ import {
   staleReadinessBookingForResend,
 } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
 import { bookings, people, shops, trips } from "./schema";
 
@@ -76,6 +78,8 @@ export type ReadinessRescuePlan =
       ok: true;
       shopId: string;
       bookingId: string;
+      personId: string;
+      tripId: string;
       email: string;
       diverName: string;
       locale: DiverLocale;
@@ -103,6 +107,8 @@ export async function planReadinessLinkRescue(
   // by the shop the capability itself named, never by anything the caller sent.
   const [context] = await db
     .select({
+      personId: people.id,
+      tripId: trips.id,
       email: people.email,
       diverName: people.fullName,
       personLocale: people.locale,
@@ -143,6 +149,8 @@ export async function planReadinessLinkRescue(
     ok: true,
     shopId: stale.shopId,
     bookingId: stale.bookingId,
+    personId: context.personId,
+    tripId: context.tripId,
     email: context.email,
     diverName: context.diverName,
     locale: recipientLocale(context.personLocale, context.shopLocale),
@@ -171,39 +179,49 @@ export async function sendPlannedReadinessLink(
   plan: Extract<ReadinessRescuePlan, { ok: true }>,
   now: Date = nowDate(),
 ): Promise<ReadinessLinkRescue> {
-  const issued = await db.transaction(async (tx) => {
-    await tx
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(and(eq(bookings.id, plan.bookingId), eq(bookings.shopId, plan.shopId)))
-      .for("update");
-    if (await hasLiveReadinessCapability(tx, { ...plan, now })) return "raced" as const;
-    return issueBookingCapability(tx, {
+  const result = await withErasureCoordinatedBookingSend(
+    db,
+    {
       shopId: plan.shopId,
       bookingId: plan.bookingId,
-      purpose: "readiness",
-      now,
-      delivered: true,
-    });
-  });
-  if (issued === "raced") return "current_link_live";
-  // Null means the booking went away between the plan and the write —
-  // `issueBookingCapability` owns that rule and this defers to it.
-  if (!issued) return "unavailable";
-
-  const result = await sendAndRecordNotification(db, {
-    kind: "readiness_link",
-    bookingId: plan.bookingId,
-    shopId: plan.shopId,
-    to: plan.email,
-    locale: plan.locale,
-    diverName: plan.diverName,
-    shopName: plan.shopName,
-    tripTitle: plan.tripTitle,
-    readinessUrl: new URL(readinessLinkPath(issued.token), `${plan.origin}/`).toString(),
-    expiresAt: issued.expiresAt,
-    timezone: plan.timezone,
-  });
+      expectedPersonId: plan.personId,
+      expectedTripId: plan.tripId,
+      expectedEmail: plan.email,
+    },
+    async (tx) => {
+      if (await hasLiveReadinessCapability(tx, { ...plan, now })) return "raced" as const;
+      const issued = await issueBookingCapability(tx, {
+        shopId: plan.shopId,
+        bookingId: plan.bookingId,
+        purpose: "readiness",
+        expectedPersonId: plan.personId,
+        expectedTripId: plan.tripId,
+        now,
+        delivered: true,
+      });
+      if (!issued) return null;
+      return sendAndRecordNotification(
+        tx,
+        {
+          kind: "readiness_link",
+          bookingId: plan.bookingId,
+          shopId: plan.shopId,
+          to: plan.email,
+          locale: plan.locale,
+          diverName: plan.diverName,
+          shopName: plan.shopName,
+          tripTitle: plan.tripTitle,
+          readinessUrl: new URL(readinessLinkPath(issued.token), `${plan.origin}/`).toString(),
+          expiresAt: issued.expiresAt,
+          timezone: plan.timezone,
+        },
+        { signal: notificationProviderSignal() },
+      );
+    },
+  );
+  if (result === "raced") return "current_link_live";
+  if (!result) return "unavailable";
+  if (result === null) return "unavailable";
   // Issued, but nothing left the building — an unconfigured provider, a
   // rejected recipient, a provider error. Never claim mail is on its way.
   return result.status === "sent" ? "sent" : "failed";

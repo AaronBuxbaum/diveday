@@ -472,10 +472,10 @@ jobs:
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
             pnpm exec playwright install chromium
           fi
-          # These print specs inspect actual PDF text. Only a shard assigned
-          # one of them needs Poppler; visual and fast-lane jobs install it
-          # separately when their selections require it.
-          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(staff-saved-print|trip-document-print|public-document-identity)[.]spec[.]ts$'; then
+          # These print assertions inspect actual PDF text. Only shards
+          # assigned those specs need Poppler; the visual and fast-lane
+          # jobs install it separately when their selections require it.
+          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper|five-dive-departure-log|trip-document-print|public-document-identity)[.]spec[.]ts$'; then
             if ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
               sudo apt-get install -y --no-install-recommends poppler-utils
@@ -682,7 +682,7 @@ jobs:
         timeout-minutes: 5
         run: |
           if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
-             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/(staff-saved-print|trip-document-print|public-document-identity)[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
+             { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper|five-dive-departure-log|trip-document-print|public-document-identity)[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
             if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
               sudo apt-get update -qq
               sudo apt-get install -y --no-install-recommends poppler-utils
@@ -1599,7 +1599,7 @@ jobs:
       # sees it; if it ever matches nothing, vitest exits non-zero rather than
       # reporting a cheerful zero tests.
       - name: Migrations and concurrency against a real server
-        run: pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts
+        run: pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts 'src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts'
         env:
           # Deliberately *not* `DATABASE_URL`. That variable is what `getDb()`
           # reads, and both `vitest.config.ts` and `src/test/global-setup.ts` pin

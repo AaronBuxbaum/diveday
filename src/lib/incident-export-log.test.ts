@@ -129,13 +129,14 @@ describe("roster changes and incident reports on the departure log", () => {
     expect(lapsed.roster[0]?.waiver?.state).toBe("expired");
   });
 
-  it("seals version 2 by default, names it, and never matches a version-1 code", () => {
+  it("seals version 3 by default, names it, and never matches an earlier code", () => {
     const doc = buildIncidentExport(baseInput());
-    expect(doc.hashVersion).toBe(2);
+    expect(doc.hashVersion).toBe(3);
     expect(doc.contentHash).not.toBe(BASE_V1_HASH);
     const { contentHash, ...body } = doc;
     expect(incidentExportContentHash(body)).toBe(contentHash);
-    expect(incidentExportContentHash(body, 2)).toBe(contentHash);
+    expect(incidentExportContentHash(body, 3)).toBe(contentHash);
+    expect(incidentExportContentHash(body, 2)).not.toBe(contentHash);
   });
 
   it("lists a seat change from the scheduled start on, in time order, and none before", () => {

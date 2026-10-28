@@ -116,6 +116,21 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
     // back in (issue #630).
     { header: "declared_identifier", in: "both", value: (row) => row.declaredIdentifier },
     { header: "status", in: "both", value: (row) => row.status },
+    { header: "junior_status", in: "both", value: (row) => row.juniorStatus },
+    { header: "junior_status_verified_at", in: "both", value: (row) => row.juniorStatusVerifiedAt },
+    {
+      header: "junior_status_verified_by_person_id",
+      in: "shop",
+      value: (row) => row.juniorStatusVerifiedByPersonId,
+    },
+    {
+      header: "junior_status_verified_by_name",
+      in: "diver",
+      value: (row, { personName }) =>
+        row.juniorStatusVerifiedByPersonId
+          ? personName.get(row.juniorStatusVerifiedByPersonId)
+          : null,
+    },
     { header: "review_note", in: "both", value: (row) => row.reviewNote },
     { header: "reviewed_at", in: "both", value: (row) => row.reviewedAt },
     {
@@ -168,6 +183,31 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
   diver: {
     rows: ({ certificationRows }) => certificationRows,
     note: "Certification records this shop holds on file, with their verification status.",
+  },
+});
+
+export const CERTIFICATION_JUNIOR_REVIEWS_CSV = sharedFile<ShopRow<"juniorReviewRows">>({
+  file: "certification_junior_reviews.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "certification_id", in: "both", value: (row) => row.certificationId },
+    { header: "person_id", in: "shop", value: (row) => row.personId },
+    { header: "recorded_by_person_id", in: "shop", value: (row) => row.recordedByPersonId },
+    {
+      header: "recorded_by_name",
+      in: "diver",
+      value: (row, { personName }) => personName.get(row.recordedByPersonId),
+    },
+    { header: "junior_status", in: "both", value: (row) => row.juniorStatus },
+    { header: "recorded_at", in: "both", value: (row) => row.recordedAt },
+  ],
+  shop: {
+    rows: ({ juniorReviewRows }) => juniorReviewRows,
+    note: EXPORT_FILE_NOTES["certification_junior_reviews.csv"],
+  },
+  diver: {
+    rows: ({ juniorReviewRows }) => juniorReviewRows,
+    note: EXPORT_FILE_NOTES["certification_junior_reviews.csv"],
   },
 });
 
@@ -420,6 +460,36 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       header: "training_enrollment_booking_id",
       in: "shop",
       value: (row) => row.trainingEnrollmentBookingId,
+    },
+    // Staff plan, not a record of the underwater group.
+    {
+      header: "training_plan_instructor_person_id",
+      in: "shop",
+      value: (row) => row.trainingPlanInstructorPersonId,
+    },
+    {
+      header: "training_plan_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingPlanByPersonId,
+    },
+    {
+      header: "training_plan_instructor_name",
+      in: "diver",
+      value: (row, { trainingPlanStaffName }) =>
+        nameOf(trainingPlanStaffName, row.trainingPlanInstructorPersonId),
+    },
+    {
+      header: "training_plan_by_name",
+      in: "diver",
+      value: (row, { trainingPlanStaffName }) =>
+        nameOf(trainingPlanStaffName, row.trainingPlanByPersonId),
+    },
+    { header: "training_plan_at", in: "both", value: (row) => row.trainingPlanAt },
+    { header: "fly_safe_acknowledged_at", in: "shop", value: (row) => row.flySafeAcknowledgedAt },
+    {
+      header: "fly_safe_acknowledged_by_person_id",
+      in: "shop",
+      value: (row) => row.flySafeAcknowledgedByPersonId,
     },
     { header: "training_marked_at", in: "shop", value: (row) => row.trainingMarkedAt },
     {
@@ -718,6 +788,26 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
       header: "readiness_blockers",
       in: "both",
       value: (row) => row.readinessBlockers?.map((blocker) => blocker.code).join(";") ?? null,
+    },
+    {
+      header: "certification_snapshot",
+      in: "both",
+      value: (row) =>
+        row.certificationSnapshot === null
+          ? null
+          : JSON.stringify(
+              row.certificationSnapshot.map(({ reviewedByPersonId: _reviewerId, ...card }) => card),
+            ),
+    },
+    {
+      header: "certification_snapshot_started_at",
+      in: "both",
+      value: (row) => row.certificationSnapshotStartedAt,
+    },
+    {
+      header: "certification_snapshot_captured_at",
+      in: "both",
+      value: (row) => row.certificationSnapshotCapturedAt,
     },
     { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
     { header: "created_at", in: "shop", value: (row) => row.createdAt },

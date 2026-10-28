@@ -1,9 +1,11 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  boolean,
   check,
   date,
   index,
+  integer,
   pgEnum,
   pgTable,
   primaryKey,
@@ -58,6 +60,7 @@ export const staffCredentials = pgTable(
     identifier: text("identifier"),
     issuedAt: date("issued_at", { mode: "string" }),
     renewsAt: date("renews_at", { mode: "string" }),
+    revision: integer("revision").notNull().default(0),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -76,6 +79,35 @@ export const staffCredentials = pgTable(
     check(
       "staff_credentials_renewal_after_issue",
       sql`${table.issuedAt} is null or ${table.renewsAt} is null or ${table.renewsAt} >= ${table.issuedAt}`,
+    ),
+  ],
+);
+
+/** Recorded credential states; a baseline begins history without inventing an earlier state. */
+export const staffCredentialHistory = pgTable(
+  "staff_credential_history",
+  {
+    seq: bigserial("seq", { mode: "number" }).primaryKey(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    credentialId: uuid("credential_id")
+      .notNull()
+      .references(() => staffCredentials.id, { onDelete: "cascade" }),
+    event: text("event", {
+      enum: ["created", "baseline", "renewed", "corrected", "deleted"],
+    }).notNull(),
+    kind: staffCredentialKind("kind").notNull(),
+    issuedAt: date("issued_at", { mode: "string" }),
+    renewsAt: date("renews_at", { mode: "string" }),
+    active: boolean("active").notNull(),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+  },
+  (table) => [
+    index("staff_credential_history_shop_credential_idx").on(
+      table.shopId,
+      table.credentialId,
+      table.seq,
     ),
   ],
 );
@@ -137,6 +169,12 @@ export const tripAssignments = pgTable(
     assignedByPersonId: uuid("assigned_by_person_id").references(() => people.id, {
       onDelete: "set null",
     }),
+    /** Staff's plan for this assistant; it is not evidence of an underwater group. */
+    trainingPlanInstructorPersonId: uuid("training_plan_instructor_person_id").references(
+      () => people.id,
+    ),
+    trainingPlanByPersonId: uuid("training_plan_by_person_id").references(() => people.id),
+    trainingPlanAt: timestamp("training_plan_at", { withTimezone: true }),
   },
   (table) => [
     primaryKey({ columns: [table.tripId, table.personId] }),
@@ -145,6 +183,8 @@ export const tripAssignments = pgTable(
     // 2026-10-11, item 27).
     index("trip_assignments_person_idx").on(table.personId),
     index("trip_assignments_assigned_by_idx").on(table.assignedByPersonId),
+    index("trip_assignments_training_plan_instructor_idx").on(table.trainingPlanInstructorPersonId),
+    index("trip_assignments_training_plan_by_idx").on(table.trainingPlanByPersonId),
   ],
 );
 

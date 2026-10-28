@@ -614,7 +614,7 @@ export function groupRoster({
   const advisorySentenceCounts = new Map<string, number>();
   for (const { booking } of roster) {
     const depthAdvisory = seatDepthAdvisory(booking);
-    if (depthAdvisory?.status === "exceeds") {
+    if (depthAdvisory?.status === "exceeds" || depthAdvisory?.status === "verification_required") {
       const text = depthWarningText(t, depthAdvisory);
       advisorySentenceCounts.set(text, (advisorySentenceCounts.get(text) ?? 0) + 1);
     }
@@ -676,7 +676,10 @@ export function groupRoster({
   const isSettled = (entry: RosterEntry): boolean => {
     const { booking } = entry;
     const depth = seatDepthAdvisory(booking);
-    const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
+    const depthText =
+      depth?.status === "exceeds" || depth?.status === "verification_required"
+        ? depthWarningText(t, depth)
+        : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
     return (
       deskTasksClear(entry) &&

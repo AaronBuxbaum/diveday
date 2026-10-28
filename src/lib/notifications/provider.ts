@@ -13,6 +13,8 @@ export type NotificationDelivery =
   | {
       status: "failed";
       retryable?: boolean;
+      /** Whether this failed notification was durably queued for retry. */
+      retryQueued?: boolean;
       retryAfterMs?: number;
       httpStatus?: number;
       errorCode?: string;
@@ -20,8 +22,21 @@ export type NotificationDelivery =
     };
 
 export interface NotificationProvider {
-  send(notification: Notification): Promise<NotificationDelivery>;
-  sendBatch?(notifications: Notification[]): Promise<NotificationDelivery[]>;
+  send(
+    notification: Notification,
+    options?: { signal?: AbortSignal },
+  ): Promise<NotificationDelivery>;
+  sendBatch?(
+    notifications: Notification[],
+    options?: { signal?: AbortSignal },
+  ): Promise<NotificationDelivery[]>;
+}
+
+/** Upper bound for one provider dispatch, including its own retry ladder. */
+export const NOTIFICATION_PROVIDER_TIMEOUT_MS = 4_000;
+
+export function notificationProviderSignal(): AbortSignal {
+  return AbortSignal.timeout(NOTIFICATION_PROVIDER_TIMEOUT_MS);
 }
 
 export type NotificationEnvironment = Readonly<Record<string, string | undefined>>;

@@ -16,7 +16,7 @@ import {
   verifyStrandedBookingCapability,
 } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
-import { bookingCapabilities, trips as tripRows } from "./schema";
+import { bookingCapabilities, bookings, people, trips as tripRows } from "./schema";
 import { setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
@@ -159,6 +159,34 @@ describe("booking capabilities (in-memory PGlite)", () => {
       purpose: "readiness",
     });
     expect(ctx).toBeNull();
+  });
+
+  it("refuses to mint or verify a capability for an erased booking subject", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    if (!issued) throw new Error("expected initial capability");
+    const [booking] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!booking) throw new Error("expected booking");
+    const erasedAt = nowDate();
+    await db
+      .update(people)
+      .set({ anonymizedAt: erasedAt, deletedAt: erasedAt })
+      .where(eq(people.id, booking.personId));
+
+    expect(
+      await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose: "readiness" }),
+    ).toBeNull();
+    expect(
+      await verifyBookingCapability(db, { token: issued.token, purpose: "readiness" }),
+    ).toBeNull();
   });
 
   it("revocation is purpose-scoped: revoking readiness leaves confirm untouched", async () => {

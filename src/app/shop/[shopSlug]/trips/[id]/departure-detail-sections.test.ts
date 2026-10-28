@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import { departureSectionForm, departureSectionPatch } from "./departure-detail-sections";
 
 describe("section boundaries", () => {
+  it("keeps all fifth-dive plan fields and rejects a sixth dive", () => {
+    const form = new FormData();
+    for (const field of ["title", "siteId", "travelMinutes", "description"]) {
+      form.set(`dive-5-${field}`, `fifth ${field}`);
+      form.set(`dive-6-${field}`, `sixth ${field}`);
+    }
+    const filtered = departureSectionForm("plan", form);
+    for (const field of ["title", "siteId", "travelMinutes", "description"]) {
+      expect(filtered.get(`dive-5-${field}`)).toBe(`fifth ${field}`);
+      expect(filtered.has(`dive-6-${field}`)).toBe(false);
+    }
+  });
+
   it("ignores forged timing, money, boat and meeting fields in a plan submission", () => {
     const form = new FormData();
     for (const key of [

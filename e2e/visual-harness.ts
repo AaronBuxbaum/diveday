@@ -402,6 +402,7 @@ for (const name of TABLET_SURFACES) {
 const FRAME_WAIT_MS = 500;
 const SCROLL_BUDGET_MS = 20_000;
 const FONTS_WAIT_MS = 5_000;
+type FontSettleResult = "ready" | "timed-out" | "renderer-stalled";
 /**
  * The one class that can make a surface photograph as nothing.
  *
@@ -466,7 +467,6 @@ const PAGE_SIDE_BUDGET_MS = SCROLL_BUDGET_MS + IMAGE_SETTLE_MS + 4 * FRAME_WAIT_
 /** Protocol round-trips and a contended runner's scheduling, not page work. */
 const PROTOCOL_SLACK_MS = 5_000;
 const PAINT_STALL_MS = PAGE_SIDE_BUDGET_MS + PROTOCOL_SLACK_MS;
-const FONTS_STALL_MS = FONTS_WAIT_MS + PROTOCOL_SLACK_MS;
 const ANIMATION_STALL_MS = ANIMATION_WAIT_MS + PROTOCOL_SLACK_MS;
 /**
  * The pending-reveal tripwire at the end of `paintWholeDocument`: one
@@ -531,19 +531,22 @@ const SCREENSHOT_GIVE_UP_MS = SCREENSHOT_TIMEOUT_MS + PROTOCOL_SLACK_MS;
  * That derivation was still short in two places, which is why the number moved
  * again: it costed the *page-side* budgets and then left the two waits that
  * actually own the clock outside the sum — the `page.evaluate` calls, whose
- * stall bounds are now `PAINT_STALL_MS`/`FONTS_STALL_MS`, and the screenshots,
+ * stall bounds are now `PAINT_STALL_MS`/`FONTS_WAIT_MS` plus protocol slack,
+ * and the screenshots,
  * which had 10s between them for a shot Playwright will itself wait 30s for. So
  * the ceiling was, in the worst honest case, *below* the work it was meant to
  * bound. It is bigger now for the same reason it exists: it is the sum.
  *
  * It is also much harder to reach, and that is the point. Every wait under it
- * degrades on its own bound now, page-side and driver-side alike, so a slow
- * page shoots a stripe and a wedged renderer shoots whatever it has. Reaching
- * this ceiling means both viewports stalled *and* neither screenshot came back
+ * has a page-side and driver-side bound. A slow image can still produce a
+ * degraded shot; unsettled fonts refuse the shot because fallback glyphs would
+ * make a misleading baseline. Reaching this ceiling means both viewports
+ * stalled *and* neither screenshot came back
  * — a browser that is gone, not a surface that is slow. Nothing here is a knob
  * to widen when one test starts timing out.
  */
-const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS + ANIMATION_STALL_MS + TRIPWIRE_STALL_MS;
+const PAINT_BUDGET_MS =
+  PAINT_STALL_MS + FONTS_WAIT_MS + PROTOCOL_SLACK_MS + ANIMATION_STALL_MS + TRIPWIRE_STALL_MS;
 /**
  * The bounded waits that each pay one `RENDERER_PROBE_MS` diagnostic on the
  * path that has already given up: `paintWholeDocument`'s scroll-through/image
@@ -1097,24 +1100,16 @@ async function paintWholeDocument(page: Page) {
         "sticky chrome may sit anywhere, which reads as a phantom diff. Find what is scrolling.",
     );
   }
-  // Same reasoning as the frame waits: a webfont that never resolves must cost
-  // one capture's sharpness, not the run. Bounded on both sides for the same
-  // reason as the pass above — the page-side race is a `setTimeout`, and a
-  // renderer that has stopped running the page will not fire that either.
-  await withRendererBound(
-    page,
-    "the font settle",
-    FONTS_STALL_MS,
-    page.evaluate(
-      (ms) =>
-        Promise.race([
-          document.fonts.ready.then(() => true),
-          new Promise((resolve) => setTimeout(() => resolve(true), ms)),
-        ]),
-      FONTS_WAIT_MS,
-    ),
-    true,
-  );
+  // A webfont that misses its bound refuses this shot; otherwise fallback
+  // glyphs could be recorded as a valid baseline. Both bounds remain necessary:
+  // the page-side timer cannot fire if the renderer itself has stopped running.
+  const fonts = await settleCaptureFonts(page);
+  if (fonts !== "ready") {
+    throw new Error(
+      `visual: capture refused at ${page.url()} because fonts were ${fonts}; ` +
+        "the screenshot was not taken. Check the font requests and renderer state.",
+    );
+  }
   // Last, because the scroll above is what starts the entrance animations and
   // a font swap can start more: whatever is still running has been started by
   // this pass. See `waitForEntranceAnimations` for the measured case (#1380).
@@ -1164,6 +1159,27 @@ async function paintWholeDocument(page: Page) {
         "fires, find what is keeping it from running rather than raising the pass count.",
     );
   }
+}
+
+/** Resolve font readiness without collapsing a timeout into success. */
+export async function settleCaptureFonts(
+  page: Page,
+  waitMs = FONTS_WAIT_MS,
+): Promise<FontSettleResult> {
+  return withRendererBound(
+    page,
+    "the font settle",
+    waitMs + PROTOCOL_SLACK_MS,
+    page.evaluate(
+      (ms) =>
+        Promise.race([
+          document.fonts.ready.then(() => "ready" as const),
+          new Promise<"timed-out">((resolve) => setTimeout(() => resolve("timed-out"), ms)),
+        ]),
+      waitMs,
+    ),
+    "renderer-stalled",
+  );
 }
 
 /**

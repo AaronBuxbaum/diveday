@@ -4,11 +4,13 @@ import { COURSE_FORMS_BLOCK_BOARDING, type RequiredCourseForm } from "./course-f
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import {
   courseInstructorsAboard,
+  mixedTrainingDepthAdvisory,
   type TrainingDiveCourse,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
   type TrainingMarkState,
   trainingDiveAsksNoCard,
+  trainingDiveAsksNoCardForSite,
   trainingDiveLevel,
   trainingDiveRequiredLevel,
   trainingMarkProblem,
@@ -264,6 +266,28 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
     expect(trainingDiveAsksNoCard(level("open_water"), null)).toBe(false);
   });
 
+  it("never says no card is asked when the trip itself requires one", () => {
+    const course: TrainingDiveCourse = {
+      minimumLevel: null,
+      certifiesLevel: "open_water",
+      intro: false,
+    };
+    const level = {
+      minimumCertificationLevel: "open_water" as const,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    };
+    const empty = { ...level, minimumCertificationLevel: null };
+    expect(trainingDiveAsksNoCardForSite(empty, level, course)).toBe(true);
+    expect(trainingDiveAsksNoCardForSite(level, level, course)).toBe(false);
+    expect(trainingDiveAsksNoCardForSite({ ...empty, requiresNitrox: true }, level, course)).toBe(
+      false,
+    );
+    expect(
+      trainingDiveAsksNoCardForSite({ ...empty, requiredSpecialties: ["wreck"] }, level, course),
+    ).toBe(false);
+  });
+
   it("still asks a card when the departure also asks nitrox or a specialty", () => {
     const ow: TrainingDiveCourse = {
       minimumLevel: null,
@@ -375,6 +399,45 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
     expect(
       trainingRoom({ marked: seats("s1", 1), sessionCrew: crews, departureCrew: [] }).seated.size,
     ).toBe(0);
+  });
+
+  it("withholds modeled coverage when an instructor may also teach an unmodeled seat", () => {
+    const unknown = { id: "deep", sessionTripId: "s1", rule: null };
+    for (const marked of [
+      [unknown, ...seats("s2", 8)],
+      [...seats("s2", 8), unknown],
+    ]) {
+      const room = trainingRoom({ marked, sessionCrew: crews, departureCrew: [teacher] });
+      expect(room.seated.size).toBe(0);
+      expect(room.spare).toBe(false);
+    }
+    expect(
+      trainingRoom({
+        marked: [unknown],
+        candidate: { id: "new", sessionTripId: "s2", rule: entry },
+        sessionCrew: crews,
+        departureCrew: [teacher],
+      }).spare,
+    ).toBe(false);
+    // An unmodeled candidate cannot be offered by unseating an existing mark.
+    expect(
+      trainingRoom({
+        marked: seats("s2", 1),
+        candidate: unknown,
+        sessionCrew: crews,
+        departureCrew: [teacher],
+      }).spare,
+    ).toBe(false);
+    // Separate session rosters do not prove the underwater groups are separate.
+    const split = trainingRoom({
+      marked: [unknown, ...seats("s2", 8)],
+      sessionCrew: new Map([
+        ["s1", [teacher]],
+        ["s2", [teacher2]],
+      ]),
+      departureCrew: [teacher, teacher2],
+    });
+    expect(split.seated.size).toBe(0);
   });
 
   it("lets a certified assistant raise the cap, to the ceiling and no further", () => {
@@ -507,5 +570,25 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
       departureCrew: [teacher],
     });
     expect(none.overRatio.size).toBe(0);
+  });
+});
+
+describe("mixed training depth advisory", () => {
+  it("asks staff to check depth when introductory and other course students share a departure", () => {
+    expect(mixedTrainingDepthAdvisory([{ intro: true }, { intro: false }])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{ intro: false }, { intro: true }])).toBe(true);
+  });
+
+  it("prompts on older saved course marks whose type is unknown", () => {
+    expect(mixedTrainingDepthAdvisory([{}, {}])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{ intro: true }, {}])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{ intro: false }, {}])).toBe(true);
+    expect(mixedTrainingDepthAdvisory([{}])).toBe(false);
+  });
+
+  it("does not infer a mixed departure from an intro or other course alone", () => {
+    expect(mixedTrainingDepthAdvisory([])).toBe(false);
+    expect(mixedTrainingDepthAdvisory([{ intro: true }, { intro: true }])).toBe(false);
+    expect(mixedTrainingDepthAdvisory([{ intro: false }, { intro: false }])).toBe(false);
   });
 });

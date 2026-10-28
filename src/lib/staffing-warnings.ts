@@ -5,7 +5,7 @@ import {
   isValidCalendarDate,
   shiftCalendarDate,
 } from "./calendar-date";
-import { lastDayOfDeparture, RUNG_EVIDENCE_KINDS } from "./crew-roles";
+import { credentialIssuedBy, lastDayOfDeparture, RUNG_EVIDENCE_KINDS } from "./crew-roles";
 import { hasReturned } from "./trips";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
@@ -51,7 +51,7 @@ export const ABOARD_CREDENTIAL_KINDS = ["oxygen_provider", "first_aid_cpr"] as c
 export type AboardCredentialKind = (typeof ABOARD_CREDENTIAL_KINDS)[number];
 
 /** One recorded credential, as much of it as currency needs. */
-export type WarningCredential = { kind: string; renewsAt: string | null };
+export type WarningCredential = { kind: string; issuedAt?: string | null; renewsAt: string | null };
 
 /** One meeting of a departure: a window somebody crewing it is on duty. */
 export type WorkWindow = { startsAt: Date; endsAt: Date };
@@ -81,6 +81,15 @@ export type StaffingWarning =
     }
   | { code: "long_day"; personId: string; name: string; day: CalendarDate; minutes: number }
   | {
+      code: "credential_not_yet_issued";
+      personId: string;
+      name: string;
+      kind: string;
+      issuedAt: CalendarDate;
+      tripId: string;
+      title: string;
+    }
+  | {
       code: "credential_expired";
       personId: string;
       name: string;
@@ -98,10 +107,12 @@ export function holdsCurrent(
   credentials: readonly WarningCredential[],
   kind: string,
   day: CalendarDate,
+  firstDay: CalendarDate = day,
 ): boolean {
   return credentials.some(
     (credential) =>
       credential.kind === kind &&
+      credentialIssuedBy(credential.issuedAt, firstDay) &&
       (credential.renewsAt === null ||
         !isValidCalendarDate(credential.renewsAt) ||
         !isCalendarDateExpired(credential.renewsAt, day)),
@@ -116,14 +127,23 @@ export function holdsCurrent(
 export function expiredKinds(
   credentials: readonly WarningCredential[],
   day: CalendarDate,
+  firstDay: CalendarDate = day,
 ): { kind: string; renewsAt: CalendarDate }[] {
   const kinds = [...new Set(credentials.map((credential) => credential.kind))].sort();
   const out: { kind: string; renewsAt: CalendarDate }[] = [];
   for (const kind of kinds) {
-    if (holdsCurrent(credentials, kind, day)) continue;
+    if (holdsCurrent(credentials, kind, day, firstDay)) continue;
     const dates = credentials
-      .filter((credential) => credential.kind === kind)
-      .map((credential) => credential.renewsAt as CalendarDate)
+      .flatMap((credential) => {
+        const renewal = credential.renewsAt;
+        return credential.kind === kind &&
+          credentialIssuedBy(credential.issuedAt, firstDay) &&
+          renewal !== null &&
+          isValidCalendarDate(renewal) &&
+          isCalendarDateExpired(renewal, day)
+          ? [renewal]
+          : [];
+      })
       .sort();
     const latest = dates[dates.length - 1];
     if (latest) out.push({ kind, renewsAt: latest });
@@ -229,7 +249,12 @@ export function staffingWarnings(input: {
     for (const kind of ABOARD_CREDENTIAL_KINDS) {
       if (!recordedKinds.has(kind)) continue;
       const covered = departure.crew.some((personId) =>
-        holdsCurrent(byId.get(personId)?.credentials ?? [], kind, day),
+        holdsCurrent(
+          byId.get(personId)?.credentials ?? [],
+          kind,
+          day,
+          calendarDateInTimezone(first.startsAt, timeZone),
+        ),
       );
       if (!covered) {
         warnings.push({
@@ -273,11 +298,34 @@ export function staffingWarnings(input: {
     // Expired credentials: once per kind, against the first departure it
     // lapses before.
     const said = new Set<string>();
+    const futureSaid = new Set<string>();
     for (const departure of crewing) {
+      const first = departure.meetings[0];
       const last = departure.meetings[departure.meetings.length - 1];
-      if (!last) continue;
+      if (!first || !last) continue;
+      const firstDay = calendarDateInTimezone(first.startsAt, timeZone);
       const day = lastDayOfDeparture(last.endsAt, timeZone);
-      for (const expired of expiredKinds(person.credentials, day)) {
+      for (const credential of person.credentials) {
+        if (
+          !credential.issuedAt ||
+          !isValidCalendarDate(credential.issuedAt) ||
+          credential.issuedAt <= firstDay ||
+          futureSaid.has(credential.kind) ||
+          holdsCurrent(person.credentials, credential.kind, day, firstDay)
+        )
+          continue;
+        futureSaid.add(credential.kind);
+        warnings.push({
+          code: "credential_not_yet_issued",
+          personId: person.personId,
+          name: person.name,
+          kind: credential.kind,
+          issuedAt: credential.issuedAt,
+          tripId: departure.tripId,
+          title: departure.title,
+        });
+      }
+      for (const expired of expiredKinds(person.credentials, day, firstDay)) {
         if (RUNG_EVIDENCE_KINDS.includes(expired.kind)) continue;
         if (said.has(expired.kind)) continue;
         said.add(expired.kind);

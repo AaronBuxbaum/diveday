@@ -13,7 +13,7 @@ import {
   saveCourseFormVersion,
   setCourseFormRequirements,
 } from "@/db/course-forms";
-import { bookings, courseFormRecords, people, shops, trips } from "@/db/schema";
+import { bookings, courseFormRecords, people, shops, tripAssignments, trips } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -145,6 +145,10 @@ async function rendered(token: string, searchParams: Record<string, string> = {}
 
 async function signed(token: string, fields: Record<string, string>) {
   const formData = new FormData();
+  const html = await rendered(token);
+  const displayedDigest =
+    /name="displayedDigest" value="([0-9a-f]{64})"/.exec(html)?.[1] ?? "0".repeat(64);
+  formData.set("displayedDigest", displayedDigest);
   for (const [key, value] of Object.entries(fields)) formData.set(key, value);
   try {
     await signCourseFormFromReady(token, formData);
@@ -255,6 +259,64 @@ describe("the course-form page", () => {
 });
 
 describe("signing a course form from the link", () => {
+  it("refuses a forged proof of the displayed words", async () => {
+    const ctx = await enrolled();
+    const [form] = await owed(ctx);
+    expect(
+      await signed(ctx.token, {
+        formVersionId: form?.versionId ?? "",
+        displayedDigest: "0".repeat(64),
+        signerName: ctx.seat.fullName,
+        acknowledged: "on",
+      }),
+    ).toBe(`/ready/${ctx.token}/forms?error=version`);
+    expect(await owed(ctx)).toHaveLength(1);
+  });
+
+  it("refuses the displayed form after its instructor roster changes", async () => {
+    const ctx = await enrolled();
+    await saveCourseFormVersion(ctx.db, {
+      shopId: ctx.shop.id,
+      formId: ctx.formIds[0] ?? "",
+      title: "Course form 1",
+      body: "I will follow {instructorNames}.",
+      actorPersonId: ctx.staff.id,
+    });
+    const [form] = await owed(ctx);
+    const html = await rendered(ctx.token);
+    const digest = /name="displayedDigest" value="([0-9a-f]{64})"/.exec(html)?.[1];
+    if (!digest) throw new Error("display proof missing");
+    const [seat] = await ctx.db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, ctx.seat.bookingId));
+    if (!seat) throw new Error("seat missing");
+    const [instructor] = await ctx.db
+      .insert(people)
+      .values({ shopId: ctx.shop.id, fullName: "New Instructor" })
+      .returning();
+    if (!instructor) throw new Error("instructor missing");
+    await ctx.db
+      .insert(tripAssignments)
+      .values({ tripId: seat.tripId, personId: instructor.id, tripRole: "instructor" });
+    expect(
+      await signed(ctx.token, {
+        formVersionId: form?.versionId ?? "",
+        displayedDigest: digest,
+        signerName: ctx.seat.fullName,
+        acknowledged: "on",
+      }),
+    ).toBe(`/ready/${ctx.token}/forms?error=version`);
+    expect(await owed(ctx)).toHaveLength(1);
+    expect(
+      await signed(ctx.token, {
+        formVersionId: form?.versionId ?? "",
+        signerName: ctx.seat.fullName,
+        acknowledged: "on",
+      }),
+    ).toBe(`/ready/${ctx.token}?saved=course-forms`);
+  });
+
   it("signs the form as the student, snapshotting the words, and returns to prep", async () => {
     const ctx = await enrolled();
     const [form] = await owed(ctx);

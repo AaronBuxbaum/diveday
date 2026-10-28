@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { OfflineCounter } from "./Counter";
 import { OfflineDiverRollCall } from "./DiverRollCall";
 import { controls, savedCopy, view } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
@@ -8,6 +9,117 @@ import { offlineTripView } from "./trip-view";
 afterEach(cleanup);
 
 describe("OfflineDiverRollCall", () => {
+  it("does not present an older training clearance as boardable", () => {
+    const copy = savedCopy();
+    const [diver] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.trainingDive = {
+      courseTitle: "Open Water",
+      instructorAboard: true,
+      siteAttributionUnknown: true,
+    };
+    diver.readiness = { status: "ready", blockers: [] };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("manifest missing");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+    expect(row?.textContent).toContain("This saved training clearance is out of date");
+    expect(row?.textContent).toContain("This mark does not identify which dive is training");
+    expect(trip.blockedAtRail[0]).toBe(true);
+  });
+
+  it("holds an old marked verdict at the offline counter too", () => {
+    const copy = savedCopy();
+    const [diver] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.trainingDive = { courseTitle: "Open Water", instructorAboard: true };
+    diver.readiness = { status: "ready", blockers: [] };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("manifest missing");
+    const { container } = render(<OfflineCounter view={trip} controls={controls()} />);
+    expect(container.textContent).toContain("This saved training clearance is out of date");
+    const row = [...container.querySelectorAll("li")].find((item) =>
+      item.textContent?.includes(diver.fullName),
+    );
+    expect(row?.querySelector("button")).toBeNull();
+  });
+
+  it("keeps every saved blocker beside the stale training warning at the counter and after boarding", () => {
+    const copy = savedCopy();
+    const [diver] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.trainingDive = { courseTitle: "Open Water", instructorAboard: true };
+    diver.readiness = {
+      status: "blocked",
+      blockers: [
+        { code: "medical_review", text: "Physician referral needs review" },
+        { code: "certification_missing", text: "Certification missing when saved" },
+      ],
+    };
+    const departure = offlineTripView(copy, "departure");
+    if (!departure) throw new Error("manifest missing");
+    const counter = render(<OfflineCounter view={departure} controls={controls()} />);
+    const counterRow = [...counter.container.querySelectorAll("li")].find((row) =>
+      row.textContent?.includes(diver.fullName),
+    );
+    expect(counterRow?.textContent).toContain("This saved training clearance is out of date");
+    expect(counterRow?.textContent).toContain("Physician referral needs review");
+    expect(counterRow?.textContent).toContain("Certification missing when saved");
+    expect(counterRow?.querySelector("button")).toBeNull();
+    counter.unmount();
+
+    expect(departure.blockedAtRail[0]).toBe(true);
+    const dock = render(<OfflineDiverRollCall view={departure} controls={controls()} />);
+    const dockRow = dock.container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+    expect(dockRow?.textContent).toContain("This saved training clearance is out of date");
+    expect(dockRow?.textContent).toContain("Physician referral needs review");
+    expect(dockRow?.textContent).toContain("Certification missing when saved");
+    expect(dockRow?.querySelector('button[aria-label="Mark boarded"]')).toBeNull();
+    dock.unmount();
+
+    const departureManifest = copy.snapshot.manifests[0];
+    if (!departureManifest) throw new Error("departure manifest missing");
+    const afterDiveManifest = structuredClone(departureManifest);
+    afterDiveManifest.checkpoint = "after_dive_1";
+    const afterDiveDiver = afterDiveManifest.divers[0];
+    if (!afterDiveDiver) throw new Error("after-dive diver missing");
+    afterDiveDiver.readiness.blockers[0] = {
+      code: "medical_review",
+      text: "After-dive physician referral needs review",
+    };
+    copy.snapshot.manifests.push(afterDiveManifest);
+    copy.events = [
+      {
+        clientEventId: "event-1",
+        snapshotId: "snap-trip-1",
+        snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+        tripId: "trip-1",
+        bookingId: diver.bookingId,
+        checkpoint: "departure",
+        status: "boarded",
+        occurredAt: "2026-08-01T12:58:00.000Z",
+        syncStatus: "pending",
+      },
+    ];
+    // A saved envelope has separately serialized manifests for each checkpoint.
+    const saved: typeof copy = JSON.parse(JSON.stringify(copy));
+    for (const checkpoint of ["departure", "after_dive_1"] as const) {
+      const trip = offlineTripView(saved, checkpoint);
+      if (!trip) throw new Error("manifest missing");
+      expect(trip.manifest.checkpoint).toBe(checkpoint);
+      const rendered = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+      const row = rendered.container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+      expect(row?.textContent).toContain("This saved training clearance is out of date");
+      expect(row?.textContent).toContain(
+        checkpoint === "departure"
+          ? "Physician referral needs review"
+          : "After-dive physician referral needs review",
+      );
+      expect(row?.textContent).toContain("Certification missing when saved");
+      rendered.unmount();
+    }
+  });
+
   it("keeps a medical capsule after a dive on a diver boarded over a physician's no, issue 2380", () => {
     const copy = savedCopy();
     const [first] = copy.snapshot.manifests[0]?.divers ?? [];

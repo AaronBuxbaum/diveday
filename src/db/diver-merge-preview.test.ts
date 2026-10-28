@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing } from "@/lib/guardian";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import {
   getDiverMergePreview,
@@ -14,6 +15,7 @@ import { recordInboundMessage } from "./inbound-messages";
 import { listTripReadiness } from "./readiness";
 import {
   activityEvents,
+  bookingCapabilities,
   bookings,
   people,
   personRoles,
@@ -414,6 +416,43 @@ describe("the merge preview", () => {
 });
 
 describe("choosing which value wins", () => {
+  it("revokes source capabilities when a merge repoints a seat", async () => {
+    const f = await fixtures();
+    const now = nowDate();
+    const [sourceSeat] = await f.db
+      .insert(bookings)
+      .values({ shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: f.source.id })
+      .returning();
+    if (!sourceSeat) throw new Error("source seat insert failed");
+    const capability = await issueBookingCapability(f.db, {
+      shopId: f.shop.id,
+      bookingId: sourceSeat.id,
+      purpose: "readiness",
+      now,
+    });
+    if (!capability) throw new Error("capability insert failed");
+
+    const result = await merge(f);
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    const [repointed] = await f.db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, sourceSeat.id));
+    expect(repointed?.personId).toBe(f.survivor.id);
+    expect(
+      await verifyBookingCapability(f.db, {
+        token: capability.token,
+        purpose: "readiness",
+        now,
+      }),
+    ).toBeNull();
+    const [revoked] = await f.db
+      .select({ revokedAt: bookingCapabilities.revokedAt })
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, sourceSeat.id));
+    expect(revoked?.revokedAt).not.toBeNull();
+  });
+
   it("keeps the kept record's values when the staffer chose nothing", async () => {
     const f = await fixtures();
     expect((await merge(f)).ok).toBe(true);

@@ -147,6 +147,14 @@ describe("the merge booking-conflict notice", () => {
   });
 });
 
+describe("successful diver merge recovery guidance", () => {
+  it("tells staff where to resend booking and course-form links", () => {
+    const notice = resolve({ notice: "merged" });
+    expect(notice?.text).toContain("resend it from the booking");
+    expect(notice?.text).not.toContain("https://");
+  });
+});
+
 describe("the named earned moment", () => {
   for (const locale of ["en-US", "es-ES"] as const) {
     it(`formats the record name as escaped text in ${locale}`, () => {

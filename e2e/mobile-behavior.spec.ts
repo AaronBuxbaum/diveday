@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
-import type { OfflineManifestUpcomingResponse } from "../src/lib/offline-manifests";
+import {
+  OFFLINE_MANIFEST_SHELL_VERSION,
+  type OfflineManifestUpcomingResponse,
+} from "../src/lib/offline-manifests";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openOnThisPhone, openThreadStep } from "./helpers";
 
@@ -67,10 +70,44 @@ test("touch booking and guardian signing stay complete after reload", async ({ p
   await page.getByLabel("I am this diver’s parent or legal guardian", { exact: false }).tap();
   await page.getByRole("button", { name: "Sign waiver", exact: true }).tap();
   await expect(page).toHaveURL(/\/ready\//);
+  expect(new URL(page.url()).pathname === readyPath).toBe(true);
   await page.goto(readyPath, { waitUntil: "domcontentloaded" });
   await expect(
     page.locator("li[data-thread-step='sign']").filter({ visible: true }),
   ).toHaveAttribute("data-step-state", "done");
+});
+
+test("a referred signer sees the physician step before returning to their booking", async ({
+  page,
+}) => {
+  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+  const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
+  await first.getByRole("link").first().tap();
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill("Mobile Referral");
+  await page.getByLabel("Email", { exact: true }).fill("mobile-referral@example.com");
+  await page.getByRole("button", { name: /^Book/ }).tap();
+  await expect(page).toHaveURL(/\/ready\//);
+  const readyPath = new URL(page.url()).pathname;
+  const sign = await openThreadStep(page, "sign");
+  await sign.getByRole("button", { name: "Sign your waiver" }).tap();
+  await page.getByLabel("Type your full name").fill("Mobile Referral");
+  await page.getByLabel(diver("waiver.agreementCheckbox")).tap();
+  const answers = page.getByRole("radio", { name: "No", exact: true });
+  await expect(answers).not.toHaveCount(0);
+  for (const answer of await answers.all()) await answer.tap();
+  await page
+    .locator("#medical-questionnaire fieldset")
+    .filter({ visible: true })
+    .nth(2)
+    .getByRole("radio", { name: "Yes", exact: true })
+    .tap();
+  await page.getByRole("button", { name: "Sign waiver", exact: true }).tap();
+  await expect(page.getByText(diver("waiver.medicalReferralNext"))).toBeVisible();
+  await expect(page.getByRole("link", { name: diver("waiver.doctor.open") })).toBeVisible();
+  await page.getByRole("link", { name: diver("waiver.seeWhatsLeft") }).tap();
+  await expect(page).toHaveURL(/\/ready\//);
+  expect(new URL(page.url()).pathname === readyPath).toBe(true);
 });
 
 test.describe("touch manifest", () => {
@@ -107,14 +144,14 @@ test.describe("touch manifest", () => {
     await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
     await expect
       .poll(() =>
-        page.evaluate(async () => {
+        page.evaluate(async (version) => {
           const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
-          const cache = await caches.open("diveday-offline-manifest-shell-v2");
+          const cache = await caches.open(`diveday-offline-manifest-shell-${version}`);
           return (
             registration?.active?.state === "activated" &&
             Boolean(await cache.match("/offline-manifest"))
           );
-        }),
+        }, OFFLINE_MANIFEST_SHELL_VERSION),
       )
       .toBe(true);
     await context.setOffline(true);

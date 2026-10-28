@@ -9,13 +9,20 @@ import {
   type KnownDiverFact,
 } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
+import type { NotificationProvider } from "@/lib/notifications";
+import { notificationProviderSignal } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { publicTripPath } from "@/lib/public-routes";
 import { type LastGear, type RentableItemKind, toRentableKinds } from "@/lib/rentals";
-import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
+import {
+  issueBookingCapability,
+  revokeIssuedCapabilities,
+  verifyBookingCapability,
+} from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import type { AppDb, DbExecutor } from "./client";
 import { diveDay } from "./dive-days";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { authorizesNitroxFill } from "./nitrox";
 import { sendAndRecordNotification } from "./notifications";
 import { getRentalFit } from "./rental-fit";
@@ -65,13 +72,21 @@ export type KnownDiver = {
 /** Mint a handoff for a booking's diver. Null for a booking that is not this shop's or is cancelled. */
 export async function issueBookingHandoff(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    expectedPersonId?: string;
+    expectedTripId?: string;
+    now?: Date;
+  },
 ) {
   const now = input.now ?? nowDate();
   return issueBookingCapability(db, {
     shopId: input.shopId,
     bookingId: input.bookingId,
     purpose: "handoff",
+    expectedPersonId: input.expectedPersonId,
+    expectedTripId: input.expectedTripId,
     now,
     expiresAt: new Date(now.getTime() + HANDOFF_TTL_MS),
   });
@@ -219,15 +234,15 @@ export async function consumeBookingHandoff(
     );
 }
 
-export type HandoffOfferOutcome = "sent" | "skipped";
+export type HandoffOfferOutcome = "sent" | "queued" | "failed" | "skipped";
 
 /**
  * **One link, to an address typed cold** (H-68 b). When the lead email on a
  * booking form matches a live diver with a booking at this shop, that diver
  * gets one email carrying a handoff onto the same departure. The page never
- * learns the answer — this returns the same shape whether it sent or not, and
- * the action above it returns nothing at all — and the delivery row keeps it
- * to one an hour, so a form that blurs the field ten times sends once.
+ * learns the answer — the public action discards this internal result — and the
+ * delivery row keeps it to one an hour, so a form that blurs the field ten
+ * times sends once.
  *
  * Only while a booking form is mid-fill with that address: the caller is the
  * form's own blur, never a page load.
@@ -243,6 +258,7 @@ export async function offerBookingHandoffByEmail(
     requestLocale: DiverLocale;
     now?: Date;
   },
+  options: { provider?: NotificationProvider } = {},
 ): Promise<HandoffOfferOutcome> {
   const now = input.now ?? nowDate();
   const email = input.email.trim().toLowerCase();
@@ -254,6 +270,7 @@ export async function offerBookingHandoffByEmail(
       personEmail: people.email,
       personLocale: people.locale,
       bookingId: bookings.id,
+      bookingTripId: bookings.tripId,
       shopName: shops.name,
       shopSlug: shops.slug,
       shopLocale: shops.defaultLocale,
@@ -298,27 +315,62 @@ export async function offerBookingHandoffByEmail(
     )
     .limit(1);
   if (recent) return "skipped";
-  const issued = await issueBookingHandoff(db, {
-    shopId: input.shopId,
-    bookingId: match.bookingId,
-    now,
-  });
-  if (!issued) return "skipped";
-  await sendAndRecordNotification(db, {
-    kind: "booking_handoff",
-    bookingId: match.bookingId,
-    shopId: input.shopId,
-    to: match.personEmail,
-    locale: recipientLocale(match.personLocale ?? input.requestLocale, match.shopLocale),
-    diverName: match.fullName,
-    shopName: match.shopName,
-    tripTitle: trip.title,
-    bookingUrl: new URL(
-      handoffHref(publicTripPath(match.shopSlug, input.tripId), issued.token),
-      `${input.origin}/`,
-    ).toString(),
-    expiresAt: issued.expiresAt,
-    timezone: match.timezone,
-  });
-  return "sent";
+  const result = await withErasureCoordinatedBookingSend(
+    db,
+    {
+      shopId: input.shopId,
+      bookingId: match.bookingId,
+      expectedPersonId: match.personId,
+      expectedTripId: match.bookingTripId,
+      expectedEmail: match.personEmail,
+    },
+    async (tx) => {
+      const issued = await issueBookingHandoff(tx, {
+        shopId: input.shopId,
+        bookingId: match.bookingId,
+        expectedPersonId: match.personId,
+        expectedTripId: match.bookingTripId,
+        now,
+      });
+      if (!issued) return "skipped" as const;
+      const delivery = await sendAndRecordNotification(
+        tx,
+        {
+          kind: "booking_handoff",
+          bookingId: match.bookingId,
+          shopId: input.shopId,
+          to: match.personEmail as string,
+          locale: recipientLocale(match.personLocale ?? input.requestLocale, match.shopLocale),
+          diverName: match.fullName,
+          shopName: match.shopName,
+          tripTitle: trip.title,
+          bookingUrl: new URL(
+            handoffHref(publicTripPath(match.shopSlug, input.tripId), issued.token),
+            `${input.origin}/`,
+          ).toString(),
+          expiresAt: issued.expiresAt,
+          timezone: match.timezone,
+        },
+        {
+          provider: options.provider,
+          signal: notificationProviderSignal(),
+          // Handoff links expire in ten minutes, while notification retries
+          // can sit until tomorrow. A queued payload would carry a dead link.
+          retryPolicy: "disabled",
+        },
+      );
+      const queued =
+        delivery.status === "failed" && "retryQueued" in delivery && delivery.retryQueued === true;
+      if (delivery.status !== "sent" && !queued) {
+        await revokeIssuedCapabilities(tx, {
+          shopId: input.shopId,
+          tokens: [issued.token],
+          now,
+        });
+      }
+      if (delivery.status === "sent") return "sent" as const;
+      return queued ? ("queued" as const) : ("failed" as const);
+    },
+  );
+  return result ?? "skipped";
 }

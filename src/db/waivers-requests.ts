@@ -15,7 +15,9 @@ import {
   WAIVER_LINK_TTL_MS,
   waiverClockInstant,
 } from "@/lib/waivers";
-import type { AppDb, DbExecutor } from "./client";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
+import type { DbExecutor } from "./client";
+import { isTransactionExecutor } from "./query-helpers";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
@@ -77,24 +79,30 @@ export type IssueWaiverOutcome =
  * stops being the *usual* outcome of asking twice.
  */
 export async function issueWaiverRequest(
-  db: AppDb,
-  input: { shopId: string; bookingId?: string; personId?: string; now?: Date },
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    bookingId?: string;
+    personId?: string;
+    expectedPersonId?: string;
+    expectedTripId?: string;
+    now?: Date;
+  },
 ): Promise<IssueWaiverOutcome> {
   if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
-  const now = input.now ?? nowDate();
   const token = createWaiverToken();
   const tokenHash = hashWaiverToken(token);
-  const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
   const keyResult = secretKeyFromEnvironment();
   const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
 
-  return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
-    const booking = input.bookingId
+  const issue = async (tx: DbExecutor): Promise<IssueWaiverOutcome> => {
+    await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+    const candidate = input.bookingId
       ? await tx
           .select({
             id: bookings.id,
             personId: bookings.personId,
-            dateOfBirth: people.dateOfBirth,
+            tripId: bookings.tripId,
             minorDeclaredAt: bookings.minorDeclaredAt,
             tripStatus: trips.status,
             tripStartsAt: trips.startsAt,
@@ -103,8 +111,7 @@ export async function issueWaiverRequest(
             participantType: bookings.participantType,
           })
           .from(bookings)
-          .innerJoin(trips, eq(trips.id, bookings.tripId))
-          .innerJoin(people, eq(people.id, bookings.personId))
+          .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
           .where(
             and(
               eq(bookings.id, input.bookingId),
@@ -115,14 +122,66 @@ export async function issueWaiverRequest(
           .limit(1)
           .then((rows) => rows[0] ?? null)
       : null;
-    if (input.bookingId && !booking) return { ok: false, reason: "booking_not_found" };
-    if (booking && booking.tripStatus !== "scheduled") {
-      return { ok: false, reason: "booking_unavailable" };
-    }
-    if (booking?.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
-    const personId = booking?.personId ?? input.personId;
+    if (input.bookingId && !candidate) return { ok: false, reason: "booking_not_found" };
+    const personId = candidate?.personId ?? input.personId;
     if (!personId) return { ok: false, reason: "person_not_found" };
-    let dateOfBirth = booking?.dateOfBirth ?? null;
+    const [lockedPerson] = await tx
+      .select({
+        id: people.id,
+        dateOfBirth: people.dateOfBirth,
+        anonymizedAt: people.anonymizedAt,
+        mergedIntoPersonId: people.mergedIntoPersonId,
+      })
+      .from(people)
+      // diveday:allow-deleted-people: an existing booking may belong to a removed person; erasure is refused below.
+      .where(and(eq(people.id, personId), eq(people.shopId, input.shopId)))
+      // diveday:allow-update-lock: issuance and signing use the same person-before-waiver order.
+      .for("update")
+      .limit(1);
+    if (!lockedPerson || lockedPerson.anonymizedAt || lockedPerson.mergedIntoPersonId)
+      return { ok: false, reason: "person_not_found" };
+    let booking = candidate;
+    if (candidate && input.bookingId) {
+      const [lockedBooking] = await tx
+        .select({
+          id: bookings.id,
+          personId: bookings.personId,
+          tripId: bookings.tripId,
+          minorDeclaredAt: bookings.minorDeclaredAt,
+          tripStatus: trips.status,
+          tripStartsAt: trips.startsAt,
+          tripEndsAt: trips.endsAt,
+          identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+          participantType: bookings.participantType,
+        })
+        .from(bookings)
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+        .where(
+          and(
+            eq(bookings.id, input.bookingId),
+            eq(bookings.shopId, input.shopId),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+        .for("update", { of: bookings })
+        .limit(1);
+      if (
+        !lockedBooking ||
+        lockedBooking.personId !== candidate.personId ||
+        lockedBooking.tripId !== candidate.tripId ||
+        lockedBooking.personId !== lockedPerson.id ||
+        (input.expectedPersonId && lockedBooking.personId !== input.expectedPersonId) ||
+        (input.expectedTripId && lockedBooking.tripId !== input.expectedTripId)
+      ) {
+        return { ok: false, reason: "booking_not_found" };
+      }
+      booking = lockedBooking;
+      if (booking.tripStatus !== "scheduled") {
+        return { ok: false, reason: "booking_unavailable" };
+      }
+      if (booking.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
+    }
+    let dateOfBirth = lockedPerson.dateOfBirth;
     if (!booking) {
       const [person] = await tx
         .select({ id: people.id, dateOfBirth: people.dateOfBirth })
@@ -144,9 +203,6 @@ export async function issueWaiverRequest(
       timezone: await shopTimezone(tx, input.shopId),
     };
 
-    const template = await getCurrentWaiverTemplate(tx, input.shopId);
-    if (!template) return { ok: false, reason: "template_not_found" };
-
     const current = await tx
       .select()
       .from(waiverRecords)
@@ -158,7 +214,14 @@ export async function issueWaiverRequest(
             : and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)),
           isNull(waiverRecords.supersededAt),
         ),
-      );
+      )
+      .for("update");
+    // A row lock can wait past expiry or a concurrent signature. Re-read the
+    // clock and terms only after every current record is locked.
+    const now = input.now ?? nowDate();
+    const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
+    const template = await getCurrentWaiverTemplate(tx, input.shopId);
+    if (!template) return { ok: false, reason: "template_not_found" };
     // A signature that has lapsed (its year, its physician's year, or terms the
     // shop has since changed) stands for nothing: the seat reads
     // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on
@@ -259,7 +322,8 @@ export async function issueWaiverRequest(
       .returning();
     if (!record) throw new Error("issueWaiverRequest: insert returned no row");
     return { ok: true, token, expiresAt, recordId: record.id, reused: false };
-  });
+  };
+  return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
 }
 
 /**

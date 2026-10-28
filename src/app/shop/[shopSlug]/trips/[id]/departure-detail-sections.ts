@@ -82,7 +82,7 @@ export function departureSectionForm(
   for (const [key, value] of submitted) {
     if (
       allowed.has(key) ||
-      (section === "plan" && /^dive-[1-4]-(title|siteId|travelMinutes|description)$/.test(key))
+      (section === "plan" && /^dive-[1-5]-(title|siteId|travelMinutes|description)$/.test(key))
     )
       form.append(key, value);
   }

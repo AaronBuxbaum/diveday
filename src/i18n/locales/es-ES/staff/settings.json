@@ -1,5 +1,14 @@
 {
   "main": {
+    "juniorBuddy": {
+      "heading": "Pareja adulta para adolescentes",
+      "detail": "Al formar parejas por grupo, exige un adulto certificado con los buceadores de 15 a 17 años.",
+      "label": "Parejas por grupo",
+      "required": "Exigir un adulto certificado",
+      "optional": "No exigir un adulto",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
     "eyebrow": "Ajustes",
     "notice": {
       "packingSaved": "Lista de equipo guardada para todas las salidas",
@@ -8,6 +17,8 @@
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
       "unitsSaved": "Unidades guardadas",
+      "juniorBuddySaved": "Política de parejas guardada",
+      "juniorBuddyInvalid": "Elige una política de parejas.",
       "unitsSavedSitesLeft": "Unidades guardadas. {count, plural, one {# sitio de buceo se dejó} other {# sitios de buceo se dejaron}} tal cual, y {count, plural, one {sigue} other {siguen}} en {from, select, feet {pies} other {metros}}: {sites}{more, plural, =0 {} other { y # más}}. Revisa{count, plural, one {lo} other {los}} a mano en Sitios de buceo.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "passThroughSaved": "Cuota repercutida guardada",
@@ -819,6 +830,7 @@
       "contacts": "Contactos para importar",
       "people": "Buceadores y personal",
       "certifications": "Registros de certificaciones",
+      "certification_junior_reviews": "Revisiones del tipo de titulación junior",
       "specialty_certifications": "Registros de especialidades",
       "nitrox_certifications": "Registros de nitrox",
       "trips": "Salidas",
@@ -835,6 +847,7 @@
       "crew_availability_blocks": "Disponibilidad del personal",
       "crew_away_acknowledgements": "Confirmaciones de ausencias",
       "crew_assignment_requests": "Solicitudes de asignación",
+      "staff_credential_history": "Historial de credenciales del personal",
       "staff_credentials": "Credenciales del personal",
       "bookings": "Reservas",
       "trip_help_requests": "Solicitudes de ayuda al personal",

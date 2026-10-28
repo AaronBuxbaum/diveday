@@ -13,8 +13,8 @@ import { railDoneLabel, railLabels } from "./waiver-rail-copy";
 
 /**
  * **Paperwork done**: the release this link carried is signed. What the page
- * decided about it (`medicalState`, the rail's closing frame, the readiness
- * link) arrives decided; this only says it. The medical hold is the page's
+ * decided about it (`medicalState`, the rail's closing frame) arrives decided;
+ * this only says it. The medical hold is the page's
  * gate, kept beside the read it rests on.
  *
  * The `<main>` wears the same gutter as the signing form this diver just came
@@ -26,10 +26,12 @@ export function WaiverCompleted({
   t,
   locale,
   medicalState,
-  readyPath,
+  showPrepHelp,
+  readyPath = null,
   doctorPath,
   signedRail,
   diveSitesList,
+  waiverOnly = false,
 }: {
   shop: {
     name: string;
@@ -40,11 +42,14 @@ export function WaiverCompleted({
   t: DiverTranslator;
   locale: string;
   medicalState: CompletedMedicalState;
-  readyPath: string | null;
+  showPrepHelp: boolean;
+  /** A separately held readiness link, independently verified for this receipt. */
+  readyPath?: string | null;
   /** "Take this to your doctor", while the release waits on a physician (H-127). */
   doctorPath: string | null;
   signedRail: WaiverRailProgress;
   diveSitesList: TripSitePeek[];
+  waiverOnly?: boolean;
 }) {
   const shopName = shop.name;
   const needsReview = medicalState !== "complete";
@@ -61,7 +66,13 @@ export function WaiverCompleted({
       <EarnedMoment
         as="h1"
         eyebrow={shopName}
-        title={needsReview ? t("capability.waiverReceived") : t("capability.waiverDone")}
+        title={
+          needsReview
+            ? t("capability.waiverReceived")
+            : waiverOnly
+              ? t("waiver.counterSigned")
+              : t("capability.waiverDone")
+        }
       >
         <p>{t("waiver.signedBody")}</p>
         {needsReview ? (
@@ -78,13 +89,12 @@ export function WaiverCompleted({
         {readyPath ? (
           <Link
             href={readyPath}
-            className={buttonClass({
-              variant: needsReview ? "secondary" : "primary",
-              className: "mt-5",
-            })}
+            className={buttonClass({ variant: "secondary", className: "mt-5" })}
           >
             {t("waiver.seeWhatsLeft")}
           </Link>
+        ) : showPrepHelp ? (
+          <p className="mt-5">{t("waiver.prepLinkHelp")}</p>
         ) : null}
       </EarnedMoment>
 

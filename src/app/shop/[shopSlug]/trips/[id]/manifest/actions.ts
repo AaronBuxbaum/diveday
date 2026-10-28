@@ -444,6 +444,7 @@ const BUDDY_ERROR_CODE: Record<BuddyTeamRefusal, string> = {
   crew_unavailable: "generic",
   team_not_found: "generic",
   not_a_member: "generic",
+  busy: "busy",
   not_a_diver: "not-diver",
 };
 
@@ -815,6 +816,7 @@ export async function teamUpPartiesAction(ctx: ManifestActionContext, formData: 
     recordedByPersonId: staff.user.personId,
     confirmedAdultParties,
   });
+  if (formed === "busy") redirect(`${manifestBack(ctx)}&buddyError=busy`);
   // A tap that teamed nobody while a party waited on its tick says so.
   const awaiting =
     formed === 0

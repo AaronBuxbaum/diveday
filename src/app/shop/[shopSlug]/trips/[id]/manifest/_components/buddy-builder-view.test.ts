@@ -63,6 +63,9 @@ function team(bookingIds: string[], crewId?: string): TripBuddyTeam {
 }
 
 describe("buddyBuilderView", () => {
+  it("explains a busy one-tap attempt without claiming a team was formed", () => {
+    expect(view("busy").panel.buddyErrorText).toBe(t("manifest.buddyErrorBusy"));
+  });
   it.each([
     { departure: { course: null }, age: 11 },
     { departure: { course: { intro: true } }, age: 35 },
@@ -91,6 +94,34 @@ describe("buddyBuilderView", () => {
     expect(panel.buddyErrorText).toBeNull();
   });
 
+  it("shows the unresolved PADI card caution on a manually formed team", () => {
+    const member = {
+      age: 17,
+      declaredMinor: true,
+      verifiedCard: true,
+      certifications: [
+        { agency: "padi", juniorStatus: "full" as const },
+        { agency: "padi", juniorStatus: null },
+      ],
+    };
+    const { panel } = view(
+      undefined,
+      ["b-1", "b-2"],
+      plan({
+        members: new Map([
+          ["b-1", member],
+          ["b-2", member],
+        ]),
+      }),
+    );
+    expect(panel.teamWarnings["team-1"]).toContain(
+      t("manifest.buddyTeamCaution", {
+        reason: partyLeftReasonText(t, "junior_requirements_unconfirmed"),
+      }),
+    );
+    expect(panel.buddyErrorText).toBeNull();
+  });
+
   it.each(["medical_review", "medical_not_cleared", "certification_missing"] as const)(
     "warns from existing readiness without exposing the %s detail",
     (code) => {
@@ -116,7 +147,12 @@ describe("buddyBuilderView", () => {
   );
 
   it("keeps a junior's certified adult context, and never treats a crew label as a card", () => {
-    const junior = { age: 13, declaredMinor: true, verifiedCard: true };
+    const junior = {
+      age: 13,
+      declaredMinor: true,
+      verifiedCard: true,
+      certifications: [{ agency: "padi", juniorStatus: "junior" as const }],
+    };
     const adult = { age: 40, declaredMinor: false, verifiedCard: true };
     expect(
       view(

@@ -7,6 +7,7 @@ import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { MOVE_SEAT_NOTICES } from "./move-seat-notices";
 import { DETAILS_FORMS, ROSTER_FORMS } from "./trip-notice-tabs";
 
 /**
@@ -128,9 +129,7 @@ const NOTICE_KEYS: Record<
     named: true,
   },
   // A seat moved to another departure, or why it stayed (ADR 20261013-staff-move-a-seat).
-  "seat-moved": { form: "roster", tone: "success", key: "trips.notices.seatMoved" },
-  "seat-moved-untold": { form: "roster", tone: "warning", key: "trips.notices.seatMovedUntold" },
-  "seat-moved-owed": { form: "roster", tone: "warning", key: "trips.notices.seatMovedOwed" },
+  ...MOVE_SEAT_NOTICES,
   "seat-move-not-movable": {
     form: "roster",
     tone: "danger",

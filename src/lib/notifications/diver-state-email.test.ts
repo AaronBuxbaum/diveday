@@ -157,6 +157,27 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     );
   });
 
+  it("renders crew guidance in both languages when the previous figure cannot be verified", () => {
+    const english = diverStateEmail({
+      ...base,
+      state: "tonight",
+      now: night,
+      flySafeAskCrew: true,
+    });
+    expect(english.text).toContain("Ask the crew how long to wait before flying.");
+    expect(english.html).toContain("Ask the crew how long to wait before flying.");
+    const spanish = diverStateEmail({
+      ...base,
+      state: "tonight",
+      locale: "es-ES",
+      now: night,
+      flySafeAskCrew: true,
+    });
+    expect(spanish.text).toContain(
+      "Consulta con la tripulación cuánto tiempo debes esperar antes de volar.",
+    );
+  });
+
   it("says nothing about flying without the hours, or on the week-out nudge", () => {
     const tonight = diverStateEmail({ ...base, state: "tonight", now: night, dockCallMinutes: 30 });
     expect(tonight.text).not.toMatch(/fly/i);
@@ -371,10 +392,10 @@ describe("diverStateEmail: fly_safe_correction (#2927)", () => {
 
   it("says the figure no longer applies and to ask the crew, in one sentence and no figure", () => {
     const email = diverStateEmail(base);
-    expect(email.subject).toBe("A change to when you can fly: Two-Tank Reef");
+    expect(email.subject).toBe("An update to your flying guidance");
     expect(email.text).toBe(
       [
-        "Two-Tank Reef now includes decompression dives, so the flying time in our reminder no longer applies. Ask the crew how long to wait before you fly.",
+        "The flying interval in our earlier reminder may no longer apply. Ask the crew how long to wait before you fly.",
         "",
       ].join("\n"),
     );
@@ -385,9 +406,9 @@ describe("diverStateEmail: fly_safe_correction (#2927)", () => {
 
   it("speaks the diver's language and escapes the shop's words", () => {
     const es = diverStateEmail({ ...base, locale: "es-ES", tripTitle: "Arrecife <dos>" });
-    expect(es.subject).toBe("Cambio en cuándo puedes volar: Arrecife <dos>");
+    expect(es.subject).toBe("Una actualización sobre cuándo puedes volar");
     expect(es.text).toContain("Pregúntale a la tripulación cuánto esperar antes de volar.");
-    expect(es.html).toContain("Arrecife &lt;dos&gt;");
+    expect(es.html).not.toContain("Arrecife");
     expect(es.html).not.toContain("<dos>");
   });
 });

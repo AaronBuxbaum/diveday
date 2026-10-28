@@ -93,7 +93,7 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * so unlike the snapshot version above, this bump is *worth* the purge: there
  * is no queued roll call inside an app shell to lose, only stale bundles.
  */
-export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v4";
 
 /**
  * The query parameter the service worker puts on its own redirect to the
@@ -143,6 +143,10 @@ export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
+  /** Absent on older snapshots, which cannot claim junior checks were captured. */
+  juniorAdvisoriesChecked?: true;
+  /** Absent on copies made before site-only training readiness; queued events remain intact. */
+  readinessPolicyVersion?: 1;
   /**
    * `emergencyReference` rides here, and that is the point of carrying it at
    * all: this snapshot is the document a crew has with no signal, and until
@@ -356,6 +360,8 @@ export type OfflineManifestPayload = {
            */
           | "dietaryNote"
         > & {
+          /** Worded at save time; no raw card, age, or verifier data rides here. */
+          safetyAdvisoryText?: string;
           /**
            * **The counter's own answer, and the reason the dock copy can take
            * one at all** (ADR 20260907-the-counter-survives-offline). One
@@ -519,7 +525,13 @@ export type OfflineManifestPayload = {
            * warning, never a blocker. Optional and additive, no version bump;
            * absent on every other seat.
            */
-          trainingDive?: { courseTitle: string; instructorAboard: boolean; overRatio?: boolean };
+          trainingDive?: {
+            courseTitle: string;
+            instructorAboard: boolean;
+            overRatio?: boolean;
+            siteAttributionUnknown?: boolean;
+            intro?: boolean;
+          };
           /**
            * A staffer cleared this seat's training mark with its course forms
            * unsigned, by name when the shop still has one: the crew boarding
@@ -1086,9 +1098,12 @@ export function serializeManifests(
   boatSafety: BoatSafetySection | null = null,
   /** The boat's open snags, worded; absent or empty carries none. */
   snags?: OfflineManifestPayload["snags"],
+  resolveJuniorAdvisory?: () => string,
 ): OfflineManifestPayload {
   return {
+    readinessPolicyVersion: 1,
     shop,
+    ...(resolveJuniorAdvisory ? { juniorAdvisoriesChecked: true as const } : {}),
     ...(boatSafety ? { boatSafety } : {}),
     ...(snags && snags.items.length > 0 ? { snags } : {}),
     checklist: {
@@ -1164,6 +1179,13 @@ export function serializeManifests(
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
+        ...(resolveJuniorAdvisory &&
+        !diver.identityWithheld &&
+        (diver.depthAdvisory?.status === "verification_required" ||
+          (diver.depthAdvisory?.status === "exceeds" &&
+            diver.depthAdvisory.verificationReasons?.length))
+          ? { safetyAdvisoryText: resolveJuniorAdvisory() }
+          : {}),
         participantType: diver.participantType,
         bookedAs: diver.bookedAs,
         ...(diver.dietaryNote ? { dietaryNote: diver.dietaryNote } : {}),
@@ -1175,7 +1197,9 @@ export function serializeManifests(
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
         ...offlineMedicalAlert(diver),
-        ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
+        ...(!diver.identityWithheld && diver.trainingDive
+          ? { trainingDive: diver.trainingDive }
+          : {}),
         ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
@@ -1324,6 +1348,14 @@ export function isOfflineManifestExpired(
  * diver means no boarding, rather than a readiness verdict borrowed from a
  * checkpoint the caller never named.
  */
+/** A saved training verdict predating the site-only rule cannot authorize boarding. */
+export function offlineTrainingReadinessStale(
+  snapshot: OfflineManifestSnapshot,
+  diver: OfflineManifestSnapshot["manifests"][number]["divers"][number],
+): boolean {
+  return snapshot.readinessPolicyVersion !== 1 && !!diver.trainingDive;
+}
+
 export function canRecordOfflineStatus(
   snapshot: OfflineManifestSnapshot,
   bookingId: string,
@@ -1367,7 +1399,7 @@ export function canRecordOfflineStatus(
     ?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
   if (checkpoint !== "departure") return true;
-  return diver.readiness.status === "ready";
+  return diver.readiness.status === "ready" && !offlineTrainingReadinessStale(snapshot, diver);
 }
 
 /**

@@ -1,0 +1,83 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "89017db3-4800-4ec9-b813-fdc29f7112e7",
+  "prevIds": [
+    "131b2200-503d-46ae-844f-7a6bf97a4d8c",
+    "9cda2960-b307-4407-8e4b-578d9a7bdc71",
+    "810fa7fc-7e94-407d-b1c7-a3a530a63422"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "notification_send_queue",
+        "recipient_person_id"
+      ],
+      "writes": [
+        "s|col|public.notification_send_queue.recipient_person_id",
+        "n|col|public.notification_send_queue.recipient_person_id",
+        "e|col|public.notification_send_queue.recipient_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.notification_send_queue",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "notification_send_queue",
+        "recipient_trip_id"
+      ],
+      "writes": [
+        "s|col|public.notification_send_queue.recipient_trip_id",
+        "n|col|public.notification_send_queue.recipient_trip_id",
+        "e|col|public.notification_send_queue.recipient_trip_id"
+      ],
+      "reads": [
+        "n|tbl|public.notification_send_queue",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_send_queue",
+        "name": "recipient_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "notification_send_queue",
+        "name": "recipient_trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

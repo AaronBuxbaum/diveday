@@ -1043,13 +1043,13 @@ describe("tripRescheduledEmail (ux review 2026-10-11, item 1)", () => {
     readinessUrl: "https://diveday.example/ready/tok",
   };
 
-  it("leads with the new time, says the old one, and links the diver's trip prep", () => {
+  it("leads with the new time and links the diver's trip prep without asserting prior delivery", () => {
     const email = tripRescheduledEmail(moved);
     expect(email.subject).toBe("New time for Two-Tank Reef");
     expect(email.text).toContain("We moved Two-Tank Reef. Here is the new time.");
-    expect(flat(email.text)).toContain(
-      "Sat, Aug 1\n9:00 AM – 1:00 PM EDT\nIt was Jul 31, 9:00 AM EDT.",
-    );
+    expect(flat(email.text)).toContain("Sat, Aug 1\n9:00 AM – 1:00 PM EDT");
+    expect(email.text).not.toContain("It was");
+    expect(email.text).not.toContain("Jul 31");
     expect(email.text).toContain("Please be at the dock 30 minutes early.");
     expect(email.text).toContain("https://diveday.example/ready/tok");
     expect(email.text).not.toContain("Where to go");
@@ -1066,7 +1066,7 @@ describe("tripRescheduledEmail (ux review 2026-10-11, item 1)", () => {
     const email = tripRescheduledEmail({ ...moved, locale: "es-ES", tripTitle: "<i>Reef</i>" });
     expect(email.subject).toBe("Nuevo horario para <i>Reef</i>");
     expect(email.html).toContain("<strong>&lt;i&gt;Reef&lt;/i&gt;</strong>");
-    expect(email.text).toContain("Antes era el");
+    expect(email.text).not.toContain("Antes era el");
     expect(email.text).toContain("¿No puedes a la nueva hora?");
   });
 
@@ -1075,15 +1075,15 @@ describe("tripRescheduledEmail (ux review 2026-10-11, item 1)", () => {
     expect(tripRescheduledEmail(course).text).not.toContain("dock");
   });
 
-  // #2443: only the meeting point moved, so there is no old time to give.
   it("leads with the place when only the meeting point moved", () => {
     const email = tripRescheduledEmail({ ...moved, previousStartsAt: base.startsAt, meetingPoint });
     expect(email.subject).toBe("New meeting point for Two-Tank Reef");
-    expect(email.text).toContain("We moved where we meet for Two-Tank Reef. The time is the same.");
+    expect(email.text).toContain(
+      "We moved where we meet for Two-Tank Reef. Here is the current schedule.",
+    );
+    expect(flat(email.text)).toContain("Sat, Aug 1\n9:00 AM – 1:00 PM EDT");
+    expect(email.text).not.toContain("The time is the same");
     expect(email.text).toContain("Where to go\nNorth Pier");
-    expect(email.text).not.toContain("It was");
-    expect(email.text).not.toContain("somewhere new, too");
-    expect(email.text).not.toContain("new time");
     const spanish = tripRescheduledEmail({
       ...moved,
       previousStartsAt: base.startsAt,
@@ -1091,6 +1091,6 @@ describe("tripRescheduledEmail (ux review 2026-10-11, item 1)", () => {
       locale: "es-ES",
     });
     expect(spanish.subject).toBe("Nuevo punto de encuentro para Two-Tank Reef");
-    expect(spanish.text).not.toContain("Antes era");
+    expect(spanish.text).toContain("Aquí está el horario actual.");
   });
 });

@@ -12,6 +12,7 @@ import {
   tripStageEvents,
   trips,
 } from "./schema";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { setTripStatus } from "./trips-record";
 
@@ -221,6 +222,8 @@ export async function cancelDeparture(
   options: { actorPersonId?: string | null } = {},
 ): Promise<{ ok: true } | { ok: false; reason: "not_found" | "trip_departed" }> {
   return db.transaction(async (tx) => {
+    // Match reschedule dispatch ordering: fence before taking the trip row.
+    await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     const [trip] = await tx
       .select({ startsAt: trips.startsAt })
       .from(trips)

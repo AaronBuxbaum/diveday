@@ -50,13 +50,16 @@ export type SesConfig = {
  * with a plain object instead of standing up (or mocking) the real SDK client.
  */
 export interface SesEmailClient {
-  send(command: SendEmailCommand): Promise<{ MessageId?: string }>;
+  send(
+    command: SendEmailCommand,
+    options?: { abortSignal?: AbortSignal },
+  ): Promise<{ MessageId?: string }>;
 }
 
 export type SesProviderOptions = {
   client?: SesEmailClient;
   /** Unverified setup receipts get one wire attempt and no automatic retry. */
-  maxAttempts?: 1;
+  maxAttempts?: 1 | 2;
 };
 
 export const sesConfigSchema = z.object({
@@ -221,7 +224,7 @@ export function sesNotificationProvider(
       ...(options.maxAttempts === undefined ? {} : { maxAttempts: options.maxAttempts }),
     });
   return {
-    async send(notification) {
+    async send(notification, providerOptions) {
       const receipt = notification.kind === "setup_request_receipt";
       // On a demo shop, a seeded person's address reads like a person's and is
       // delivered to the SES mailbox simulator (`deliveryAddressFor`); every
@@ -282,6 +285,7 @@ export function sesNotificationProvider(
               },
             },
           }),
+          ...(providerOptions?.signal ? [{ abortSignal: providerOptions.signal }] : []),
         );
         if (!result.MessageId) {
           return { status: "failed", retryable: true, errorCode: "invalid_response" };

@@ -24,10 +24,13 @@ describe("sendCourtesyMessage", () => {
     const result = await sendCourtesyMessage(message, { sms });
 
     expect(result).toEqual({ channel: "sms", delivery: sent("SM_1") });
-    expect(sms.send).toHaveBeenCalledWith({
-      to: message.to,
-      body: "Reef Runner departs Sat at 8:00 AM. Reply STOP to opt out.",
-    });
+    expect(sms.send).toHaveBeenCalledWith(
+      {
+        to: message.to,
+        body: "Reef Runner departs Sat at 8:00 AM. Reply STOP to opt out.",
+      },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("prefers the shop's WhatsApp when connected", async () => {
@@ -50,7 +53,10 @@ describe("sendCourtesyMessage", () => {
     const whatsapp = provider(sent("wamid.1"));
     await sendCourtesyMessage(message, { sms: provider(), whatsapp });
 
-    expect(whatsapp.send).toHaveBeenCalledWith(courtesy);
+    expect(whatsapp.send).toHaveBeenCalledWith(
+      courtesy,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("never tells a WhatsApp reader to reply STOP", async () => {
@@ -60,11 +66,14 @@ describe("sendCourtesyMessage", () => {
       { sms: provider(), whatsapp },
     );
 
-    expect(whatsapp.send).toHaveBeenCalledWith({
-      ...courtesy,
-      body: "Reef Runner departs Sat. Reply C to confirm.",
-      whatsAppBody: "Reef Runner departs Sat. Reply C to confirm.",
-    });
+    expect(whatsapp.send).toHaveBeenCalledWith(
+      {
+        ...courtesy,
+        body: "Reef Runner departs Sat. Reply C to confirm.",
+        whatsAppBody: "Reef Runner departs Sat. Reply C to confirm.",
+      },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("puts the STOP line on the SMS a failed WhatsApp send falls back to", async () => {
@@ -72,10 +81,13 @@ describe("sendCourtesyMessage", () => {
     const whatsapp = provider({ status: "failed", retryable: false, errorCode: "131026" });
     await sendCourtesyMessage(message, { sms, whatsapp });
 
-    expect(sms.send).toHaveBeenCalledWith({
-      to: message.to,
-      body: "Reef Runner departs Sat at 8:00 AM. Reply STOP to opt out.",
-    });
+    expect(sms.send).toHaveBeenCalledWith(
+      {
+        to: message.to,
+        body: "Reef Runner departs Sat at 8:00 AM. Reply STOP to opt out.",
+      },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("falls back to SMS when the diver is not on WhatsApp", async () => {
@@ -93,6 +105,42 @@ describe("sendCourtesyMessage", () => {
     const result = await sendCourtesyMessage(message, { sms, whatsapp });
 
     expect(result).toEqual({ channel: "sms", delivery: sent("SM_1") });
+  });
+
+  it("gives SMS a fresh bounded signal when WhatsApp times out", async () => {
+    vi.useFakeTimers();
+    try {
+      const whatsapp = {
+        send: vi.fn(
+          (_message: unknown, options?: { signal?: AbortSignal }) =>
+            new Promise<CourtesyDelivery>((resolve) => {
+              options?.signal?.addEventListener(
+                "abort",
+                () => resolve({ status: "failed", retryable: true, errorCode: "timeout" }),
+                { once: true },
+              );
+            }),
+        ),
+      };
+      const sms = {
+        send: vi.fn(async (_message: unknown, options?: { signal?: AbortSignal }) => {
+          expect(options?.signal?.aborted).toBe(false);
+          return sent("SM_after_wa_timeout");
+        }),
+      };
+
+      const delivery = sendCourtesyMessage(message, { whatsapp, sms });
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      await expect(delivery).resolves.toEqual({
+        channel: "sms",
+        delivery: sent("SM_after_wa_timeout"),
+      });
+      expect(whatsapp.send.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+      expect(sms.send).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports the SMS failure when both channels fail", async () => {

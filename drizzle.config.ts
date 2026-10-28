@@ -1,8 +1,8 @@
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  // One module per domain under src/db/schema/; index.ts re-exports them all.
-  schema: ["./src/db/schema/index.ts", "./src/db/schema/retired.ts"],
+  // The migration barrel keeps staged physical storage until its drop release.
+  schema: ["./src/db/migration-schema.ts"],
   out: "./drizzle",
   dialect: "postgresql",
   driver: "pglite",

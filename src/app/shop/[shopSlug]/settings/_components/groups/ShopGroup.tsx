@@ -15,7 +15,11 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { AddressSearch } from "../../AddressSearch";
-import { saveTimezoneAction, saveUnitsAction } from "../../shop-actions";
+import {
+  saveJuniorBuddyPolicyAction,
+  saveTimezoneAction,
+  saveUnitsAction,
+} from "../../shop-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { SectionNotice, SettingsGroup, type SettingsView, SHOP_GROUP } from "./kit";
 import { searchListingRow, seasonRow } from "./shop-rows";
@@ -278,6 +282,40 @@ export function ShopGroup({
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.units.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </SettingsRow>
+
+        <SettingsRow
+          heading={t("settings.main.juniorBuddy.heading")}
+          value={t(
+            shop.requireAdultBuddyForTeens
+              ? "settings.main.juniorBuddy.required"
+              : "settings.main.juniorBuddy.optional",
+          )}
+          detail={t("settings.main.juniorBuddy.detail")}
+          sectionId="juniorBuddy"
+          activeSection={activeSection}
+        >
+          <SectionNotice banner={banner} section="juniorBuddy" active={activeSection} />
+          <FieldGrid as="form" action={saveJuniorBuddyPolicyAction} columns={1} className="mt-4">
+            <Field label={t("settings.main.juniorBuddy.label")}>
+              <select
+                name="juniorBuddy"
+                defaultValue={shop.requireAdultBuddyForTeens ? "required" : "optional"}
+                className={controlClass}
+              >
+                <option value="optional">{t("settings.main.juniorBuddy.optional")}</option>
+                <option value="required">{t("settings.main.juniorBuddy.required")}</option>
+              </select>
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.juniorBuddy.saving")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("settings.main.juniorBuddy.save")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>

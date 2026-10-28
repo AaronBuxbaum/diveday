@@ -4,6 +4,7 @@
     "missingOxygen": "Nadie con proveedor de oxígeno en {title}, {when}",
     "missingFirstAid": "Nadie con primeros auxilios / RCP en {title}, {when}",
     "longDay": "{name} tiene salidas durante más de {hours, plural, one {# hora} other {# horas}} el {day}.",
+    "credentialNotYetIssued": "{name}, en la tripulación de {title}: {credential} figura como emitida el {date}. Revisa la acreditación antes de esta salida.",
     "credentialExpired": "{name}, en la tripulación de {title}: {credential} venció el {date}.",
     "credentialExpiredOther": "{name}, en la tripulación de {title}: una credencial venció el {date}."
   },

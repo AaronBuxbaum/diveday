@@ -36,7 +36,12 @@ export function paperFactLines(value: string): string[] {
 }
 
 /** Each named page carries only its own departure's identity, even in day packets. */
-export function departurePaperRule(pageName: string, identity: string[], printed: string): string {
+export function departurePaperRule(
+  pageName: string,
+  identity: string[],
+  printed: string,
+  standaloneLog = false,
+): string {
   pageName = pageName.toLowerCase();
   if (!/^departure-[a-z0-9-]+$/.test(pageName)) throw new Error("Invalid departure page name");
   // Reserve space for wrapping rather than painting a fixed overlay over roster rows.
@@ -44,7 +49,10 @@ export function departurePaperRule(pageName: string, identity: string[], printed
   const facts = identity.flatMap(paperFactLines);
   const lines = facts.length;
   const margin = 12 + lines * 4;
-  return `@media print{[data-departure-paper="${pageName}"]{page:${pageName}}}
+  // A standalone log owns the body too: returning to an unnamed page after its
+  // last content otherwise makes Chromium append a page containing only a counter.
+  const bodyRule = standaloneLog ? `body:has([data-departure-log]){page:${pageName}}` : "";
+  return `@media print{[data-departure-paper="${pageName}"]{page:${pageName}}${bodyRule}}
 @page ${pageName}{margin-top:${margin}mm;margin-bottom:20mm;
 @top-left{content:${paperCssString(facts.join("\n"))};white-space:pre-wrap;overflow-wrap:anywhere;font:8pt/1.35 sans-serif;vertical-align:middle;width:100%}
 @bottom-left{content:${paperCssString(normalizePaperFact(printed))};font:8pt/1.35 sans-serif;white-space:pre-wrap;width:80%}
@@ -57,15 +65,17 @@ export function DeparturePaperIdentity({
   identity,
   printed,
   children,
+  standaloneLog = false,
 }: {
   pageName: string;
   identity: string[];
   printed: string;
   children: ReactNode;
+  standaloneLog?: boolean;
 }) {
   return (
     <div data-departure-paper={pageName.toLowerCase()} className="contents print:block">
-      <style>{departurePaperRule(pageName, identity, printed)}</style>
+      <style>{departurePaperRule(pageName, identity, printed, standaloneLog)}</style>
       {children}
     </div>
   );

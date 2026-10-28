@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   findMisplacedRealServerSuites,
@@ -245,6 +246,20 @@ describe("a real-Postgres suite", () => {
         suite,
       ),
     ).toEqual([]);
+  });
+
+  it("allows the explicitly selected real-Postgres action race", () => {
+    const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+    expect(workflow).toContain(
+      "'src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts'",
+    );
+    expect(
+      findMisplacedRealServerSuites(
+        "src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts",
+        suite,
+      ),
+    ).toEqual([]);
+    expect(findMisplacedRealServerSuites("src/app/other.postgres.test.ts", suite)).toHaveLength(3);
   });
 
   it("leaves alone a *.postgres.test.ts in src/db, and the harness that defines it", () => {

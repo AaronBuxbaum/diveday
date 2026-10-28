@@ -1,0 +1,158 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "dea3b228-f01a-468b-b3d3-f5f16bd4486d",
+  "prevIds": [
+    "c30de85e-9d8d-4945-8e5d-9d5369ac2ce1"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_acknowledgement_fingerprint"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_acknowledgement_fingerprint",
+        "n|col|public.bookings.fly_safe_acknowledgement_fingerprint",
+        "e|col|public.bookings.fly_safe_acknowledgement_fingerprint"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_acknowledged_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_acknowledged_at",
+        "n|col|public.bookings.fly_safe_acknowledged_at",
+        "e|col|public.bookings.fly_safe_acknowledged_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_acknowledged_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_acknowledged_by_person_id",
+        "n|col|public.bookings.fly_safe_acknowledged_by_person_id",
+        "e|col|public.bookings.fly_safe_acknowledged_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|fk|public.bookings.bookings_fly_safe_acknowledged_by_person_id_people_id_fkey",
+        "n|fk|public.bookings.bookings_fly_safe_acknowledged_by_person_id_people_id_fkey",
+        "e|fk|public.bookings.bookings_fly_safe_acknowledged_by_person_id_people_id_fkey",
+        "n|con|public.bookings.bookings_fly_safe_acknowledged_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.bookings.fly_safe_acknowledged_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_acknowledgement_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_acknowledged_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_acknowledged_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_fly_safe_acknowledged_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "fly_safe_acknowledged_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

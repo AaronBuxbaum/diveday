@@ -3,6 +3,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { notificationProviderSignal } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { diveDayOrdinal } from "@/lib/prior-visits";
@@ -11,6 +12,7 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { diveDay, numberedDiveDay } from "./dive-days";
+import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { sendAndRecordNotification } from "./notifications";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -135,6 +137,8 @@ export type YourDayLinkPlan =
       kind: "upcoming" | "past";
       shopId: string;
       bookingId: string;
+      personId: string;
+      tripId: string;
       email: string;
       diverName: string;
       locale: DiverLocale;
@@ -189,6 +193,8 @@ async function planForDay(
 ): Promise<YourDayLinkPlan> {
   const [context] = await db
     .select({
+      personId: people.id,
+      tripId: bookings.tripId,
       email: people.email,
       diverName: people.fullName,
       personLocale: people.locale,
@@ -210,6 +216,8 @@ async function planForDay(
     kind,
     shopId,
     bookingId: day.bookingId,
+    personId: context.personId,
+    tripId: context.tripId,
     email: context.email,
     diverName: context.diverName,
     locale: recipientLocale(context.personLocale, context.shopLocale),
@@ -231,37 +239,56 @@ export async function sendYourDayLink(
   plan: Extract<YourDayLinkPlan, { ok: true }>,
   now: Date = nowDate(),
 ): Promise<YourDayLinkOutcome> {
-  let url: string;
-  let expiresAt: Date;
-  if (plan.kind === "upcoming") {
-    const issued = await issueBookingCapability(db, {
+  const result = await withErasureCoordinatedBookingSend(
+    db,
+    {
       shopId: plan.shopId,
       bookingId: plan.bookingId,
-      purpose: "readiness",
-      now,
-      delivered: true,
-    });
-    if (!issued) return "unavailable";
-    url = readinessLinkPath(issued.token);
-    expiresAt = issued.expiresAt;
-  } else {
-    url = recapLinkPath(plan.bookingId);
-    expiresAt = new Date(now.getTime() + RECAP_TOKEN_MAX_AGE_MS);
-  }
-  const result = await sendAndRecordNotification(db, {
-    kind: "readiness_link",
-    purpose: plan.kind === "upcoming" ? "other_day" : "log_entry",
-    bookingId: plan.bookingId,
-    shopId: plan.shopId,
-    to: plan.email,
-    locale: plan.locale,
-    diverName: plan.diverName,
-    shopName: plan.shopName,
-    tripTitle: plan.tripTitle,
-    readinessUrl: new URL(url, `${plan.origin}/`).toString(),
-    expiresAt,
-    timezone: plan.timezone,
-  });
+      expectedPersonId: plan.personId,
+      expectedTripId: plan.tripId,
+      expectedEmail: plan.email,
+    },
+    async (tx) => {
+      let url: string;
+      let expiresAt: Date;
+      if (plan.kind === "upcoming") {
+        const issued = await issueBookingCapability(tx, {
+          shopId: plan.shopId,
+          bookingId: plan.bookingId,
+          purpose: "readiness",
+          expectedPersonId: plan.personId,
+          expectedTripId: plan.tripId,
+          now,
+          delivered: true,
+        });
+        if (!issued) return null;
+        url = readinessLinkPath(issued.token);
+        expiresAt = issued.expiresAt;
+      } else {
+        url = recapLinkPath(plan.bookingId);
+        expiresAt = new Date(now.getTime() + RECAP_TOKEN_MAX_AGE_MS);
+      }
+      return sendAndRecordNotification(
+        tx,
+        {
+          kind: "readiness_link",
+          purpose: plan.kind === "upcoming" ? "other_day" : "log_entry",
+          bookingId: plan.bookingId,
+          shopId: plan.shopId,
+          to: plan.email,
+          locale: plan.locale,
+          diverName: plan.diverName,
+          shopName: plan.shopName,
+          tripTitle: plan.tripTitle,
+          readinessUrl: new URL(url, `${plan.origin}/`).toString(),
+          expiresAt,
+          timezone: plan.timezone,
+        },
+        { signal: notificationProviderSignal() },
+      );
+    },
+  );
+  if (!result) return "unavailable";
   return result.status === "sent" ? "sent" : "failed";
 }
 

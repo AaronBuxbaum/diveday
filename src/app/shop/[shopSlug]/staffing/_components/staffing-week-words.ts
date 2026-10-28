@@ -46,6 +46,7 @@ export function staffingWeekWords(t: StaffTranslator, week?: StaffWeek) {
     askWontClose: t("staffing.week.askWontClose"),
     requestWontClose: t("staffing.week.requestWontClose"),
     ratingLapsed: t("staffing.week.ratingLapsed"),
+    ratingUnverified: t("today.actionKind.crewRatingUnverified"),
   };
 }
 

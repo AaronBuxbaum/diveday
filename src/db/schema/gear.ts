@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumnBuilder,
   boolean,
   check,
   date,
@@ -61,205 +62,211 @@ export const rentalFitItem = pgEnum("rental_fit_item", [
  * one against a booking, but a fit alone still reserves nothing
  * (ADR 20260815-minimal-gear-register).
  */
-export const rentalFitProfiles = pgTable(
-  "rental_fit_profiles",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id),
-    /**
-     * Which pieces the shop supplies. A diver with their own kit rents none.
-     *
-     * **Every `rents_*` column defaults to `false`**, these five included, and
-     * that is the whole of the column's opinion: a row is a claim about what a
-     * diver answered, and a row nobody has answered for claims nothing. These
-     * five defaulted to `true` until issue #1793 — the core kit a shop stocks
-     * for everyone — which put the assumption in the one place it does no work
-     * and real harm. A form seeds its checkboxes from `defaultRented`
-     * (`src/lib/rentals.ts`), which is where that product fact belongs and
-     * where it stays; a row that exists *without* a form having run is
-     * precisely the row that must claim nothing, and it was the one the
-     * defaults spoke for.
-     */
-    rentsBcd: boolean("rents_bcd").notNull().default(false),
-    rentsRegulator: boolean("rents_regulator").notNull().default(false),
-    rentsWetsuit: boolean("rents_wetsuit").notNull().default(false),
-    // Storage-only for the previous serving release; no feature reads or writes it.
-    retiringRentsMaskFins: boolean("rents_mask_fins").notNull().default(false),
-    rentsMask: boolean("rents_mask").notNull().default(false),
-    rentsFins: boolean("rents_fins").notNull().default(false),
-    rentsWeights: boolean("rents_weights").notNull().default(false),
-    /**
-     * Optional add-ons — a diver usually owns a computer, and the rest are kit
-     * a particular dive calls for rather than kit everybody takes. All default
-     * **false**, so a shop that never ticks one in its catalog is exactly where
-     * it was before these columns existed and no diver is ever packed
-     * something they did not ask for.
-     */
-    rentsDiveComputer: boolean("rents_dive_computer").notNull().default(false),
-    rentsGopro: boolean("rents_gopro").notNull().default(false),
-    rentsDrysuit: boolean("rents_drysuit").notNull().default(false),
-    /**
-     * Two kinds, not one "hood & gloves" (H-102, issue #1816): a warm-water
-     * diver takes gloves and no hood, a quarry diver takes both in different
-     * thicknesses, and one checkbox with one size could say neither.
-     */
-    rentsHood: boolean("rents_hood").notNull().default(false),
-    rentsGloves: boolean("rents_gloves").notNull().default(false),
-    rentsTorch: boolean("rents_torch").notNull().default(false),
-    rentsSmb: boolean("rents_smb").notNull().default(false),
-    bcdSize: text("bcd_size"),
-    wetsuitSize: text("wetsuit_size"),
-    /**
-     * The one add-on that carries a size (issue 1414), and it is **not** the
-     * wetsuit's. A drysuit is sized on the manufacturer grid a rental wall is
-     * racked from — a girth letter, a trailing `T` for the tall cut — so a
-     * plain wetsuit value written here drops the axis the wall is racked by.
-     * `text`, not an enum: the grid varies by manufacturer, staff record an
-     * off-grid size as free text, and which codes the diver's own select
-     * offers is the owner's open call (H-76).
-     *
-     * Most rental drysuits have their boots vulcanised on, so this size
-     * answers for them too — there is no boot piece to pull off the rack
-     * separately, which is why `rents_drysuit` pushes one packing piece where
-     * `rents_wetsuit` pushes two (`src/lib/dive-prep.ts`). A fleet stocking
-     * neoprene-sock suits worn with separate rock boots says so in this same
-     * free text ("ML, rock boot 9"): no column records a rock-boot size, so
-     * this is the one size field with no companion column or packing piece for
-     * what it implies — the only one whose free text is load-bearing beyond the
-     * size itself. Every size reaches the packing list verbatim; only this one
-     * carries a second fact with nothing on the list to notice its loss.
-     */
-    drysuitSize: text("drysuit_size"),
-    /**
-     * **Free text, like the drysuit's, on both fit forms** (H-102, issue
-     * #1816). A rental hood and rental gloves both rack by size *and*
-     * thickness ("M, 5 mm", "L, 3 mm"); a closed select would need two axes and somebody
-     * to own them, so the shop's own words reach the packing list verbatim.
-     */
-    hoodSize: text("hood_size"),
-    gloveSize: text("glove_size"),
-    bootSize: text("boot_size"),
-    finSize: text("fin_size"),
-    weightPreference: text("weight_preference"),
-    /**
-     * **The diver is in a drysuit** — their own or one of ours (H-78, issue
-     * #1752). The one fact on this row about what the diver *wears* rather
-     * than what the shop hands over, and the one the drysuit's safety signals
-     * key on: the in-water weight check (`weightPreference` is a wetsuit
-     * answer, short by the two to four kilos a drysuit adds, and short is the
-     * direction that cannot hold a safety stop), fins sized up over the
-     * drysuit boot, and the drysuit-card advisory (`src/lib/drysuit-card.ts`).
-     * `rents_drysuit` used to stand in for it, which left every diver in their
-     * own suit — most drysuit divers — with a wetsuit number on the rail, fins
-     * packed to the bare foot and no advisory at all.
-     *
-     * A standing answer, not a per-trip one: the diver who dives dry in winter
-     * and wet in summer will sometimes be wrong for one trip, which is the cost
-     * H-78 accepted. Every fit form asks it as one choice with the wetsuit
-     * columns (`SuitChoice`, `src/lib/rentals.ts`), so a stated fit always
-     * carries an answer; `false` on a row nobody has stated is the same
-     * "claims nothing" every `rents_*` column defaults to.
-     *
-     * The two checks below hold the suit columns to one suit (issue #1800): a
-     * rented drysuit is a dry diver, and a dry diver is not renting a wetsuit.
-     * `saveRentalFit` resolves a post that asks for both before it reaches them.
-     */
-    divesDry: boolean("dives_dry").notNull().default(false),
-    note: text("note"),
-    /**
-     * When a **fit** was last stated — by the diver's own gear form or by staff
-     * editing it. Null means this row exists for something other than a fit.
-     *
-     * There is exactly one such something today, and it is why this column
-     * exists: since issue 627 the diver's free-text note ("titanium hip, I run
-     * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
-     * which will create this row for a diver who has never touched the gear
-     * form. `rentalFitLine` and the prep checklist read a null here as "no fit
-     * recorded", exactly as they already read a missing row.
-     *
-     * **This used to be the only thing standing between a note and a six-piece
-     * packing line.** Five of the eleven `rents_*` columns above defaulted to
-     * `true` (the core kit), so a diver who had only left the crew a note would
-     * otherwise have appeared on the boat's packing list renting a BCD, a
-     * regulator, a wetsuit, a mask, fins and weights — no sizes, nobody having
-     * asked for any of them. Issue #1755 put a second defence under that, every
-     * creating writer laying `NOTHING_RENTED` (src/lib/rentals.ts) beneath its
-     * insert; issue #1793 removed the hazard instead, and the five columns
-     * default to `false` like the other six.
-     *
-     * The discriminator still earns its keep, and always did for a reason
-     * beyond the defaults: it is what separates a note from a fit for every
-     * reader, and no amount of explicit `false` makes a row with no answers
-     * into an answer.
-     */
-    fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
-    /**
-     * The safe fallback when a requested size isn't available (H-06): staff
-     * flag the diver for hands-on fitting at check-in instead of silently
-     * packing a different size. Set/cleared only by its own action — a size
-     * edit never clears it, because a stale flag costs one extra look while a
-     * wrongly-cleared one puts a diver in gear nobody checked.
-     */
-    needsStaffFitAt: timestamp("needs_staff_fit_at", { withTimezone: true }),
-    /** What's short ("no L BCD in stock"), in the flagging staff member's words. */
-    needsStaffFitNote: text("needs_staff_fit_note"),
-    /**
-     * Who raised it. A safety flag that blanks a diver's sizes on the packing
-     * list, and carries free text about a person, should not be anonymous —
-     * the same reason roll-call events record who called them. Attribution
-     * only: authorization is checked in the action, not read from this column.
-     */
-    needsStaffFitBy: uuid("needs_staff_fit_by").references(() => people.id),
-    /**
-     * **A staffer kept this fit after a trip** — recall, never inference (issue
-     * #1174, ADR 20260904-reef-all-the-way-down, D14).
-     *
-     * Distinct from `fit_stated_at` above, and the distinction is the whole
-     * point: that column means *a fit was stated*, by the diver on their own
-     * form or by staff typing what the diver said. These three mean *somebody
-     * watched a unit come back in a different size and said keep it*. D14's
-     * boundary is that the app learns only from a staff-confirmed outcome, so a
-     * fact that ages naturally is the honest shape rather than a confidence
-     * score nobody calibrated.
-     *
-     * Written only by `confirmRentalFitSize` (src/db/rental-fit.ts), which the
-     * evening's one-tap "Keep it" calls; a diver's own save never touches any
-     * of the three. Their absence is the ordinary state — most rows — and it
-     * gates nothing: an unconfirmed fit is still the fit. The diver-facing
-     * sentence renders nothing without all three, so this can never become
-     * "somebody kept your fit".
-     *
-     * Modelled on the `needs_staff_fit_*` trio above and, like it, carries no
-     * check constraint tying the three together: `fit_confirmed_by` is nulled
-     * when a staffer is anonymized, and that must age the sentence out rather
-     * than break the row.
-     */
-    fitConfirmedAt: timestamp("fit_confirmed_at", { withTimezone: true }),
-    /** Who kept it. Attribution, never authorization — the same call `needs_staff_fit_by` makes. */
-    fitConfirmedBy: uuid("fit_confirmed_by").references(() => people.id),
-    /** Which piece they kept, so the sentence can name it beside the size on file. */
-    fitConfirmedItem: rentalFitItem("fit_confirmed_item"),
-    createdAt: appNowTimestamp("created_at").notNull(),
-    updatedAt: appNowTimestamp("updated_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
-    index("rental_fit_profiles_shop_person_idx").on(table.shopId, table.personId),
-    check(
-      "rental_fit_profiles_rented_drysuit_is_dry",
-      sql`not ${table.rentsDrysuit} or ${table.divesDry}`,
-    ),
-    check(
-      "rental_fit_profiles_dry_rents_no_wetsuit",
-      sql`not (${table.divesDry} and ${table.rentsWetsuit})`,
-    ),
-  ],
-);
+/** A shared shape for the runtime and temporary migration-only tables. */
+export function makeRentalFitProfiles<Extra extends Record<string, AnyPgColumnBuilder>>(
+  extra: Extra,
+) {
+  return pgTable(
+    "rental_fit_profiles",
+    {
+      id: uuid("id").primaryKey().defaultRandom(),
+      shopId: uuid("shop_id")
+        .notNull()
+        .references(() => shops.id),
+      personId: uuid("person_id")
+        .notNull()
+        .references(() => people.id),
+      /**
+       * Which pieces the shop supplies. A diver with their own kit rents none.
+       *
+       * **Every `rents_*` column defaults to `false`**, these five included, and
+       * that is the whole of the column's opinion: a row is a claim about what a
+       * diver answered, and a row nobody has answered for claims nothing. These
+       * five defaulted to `true` until issue #1793 — the core kit a shop stocks
+       * for everyone — which put the assumption in the one place it does no work
+       * and real harm. A form seeds its checkboxes from `defaultRented`
+       * (`src/lib/rentals.ts`), which is where that product fact belongs and
+       * where it stays; a row that exists *without* a form having run is
+       * precisely the row that must claim nothing, and it was the one the
+       * defaults spoke for.
+       */
+      rentsBcd: boolean("rents_bcd").notNull().default(false),
+      rentsRegulator: boolean("rents_regulator").notNull().default(false),
+      rentsWetsuit: boolean("rents_wetsuit").notNull().default(false),
+      rentsMask: boolean("rents_mask").notNull().default(false),
+      rentsFins: boolean("rents_fins").notNull().default(false),
+      rentsWeights: boolean("rents_weights").notNull().default(false),
+      /**
+       * Optional add-ons — a diver usually owns a computer, and the rest are kit
+       * a particular dive calls for rather than kit everybody takes. All default
+       * **false**, so a shop that never ticks one in its catalog is exactly where
+       * it was before these columns existed and no diver is ever packed
+       * something they did not ask for.
+       */
+      rentsDiveComputer: boolean("rents_dive_computer").notNull().default(false),
+      rentsGopro: boolean("rents_gopro").notNull().default(false),
+      rentsDrysuit: boolean("rents_drysuit").notNull().default(false),
+      /**
+       * Two kinds, not one "hood & gloves" (H-102, issue #1816): a warm-water
+       * diver takes gloves and no hood, a quarry diver takes both in different
+       * thicknesses, and one checkbox with one size could say neither.
+       */
+      rentsHood: boolean("rents_hood").notNull().default(false),
+      rentsGloves: boolean("rents_gloves").notNull().default(false),
+      rentsTorch: boolean("rents_torch").notNull().default(false),
+      rentsSmb: boolean("rents_smb").notNull().default(false),
+      bcdSize: text("bcd_size"),
+      wetsuitSize: text("wetsuit_size"),
+      /**
+       * The one add-on that carries a size (issue 1414), and it is **not** the
+       * wetsuit's. A drysuit is sized on the manufacturer grid a rental wall is
+       * racked from — a girth letter, a trailing `T` for the tall cut — so a
+       * plain wetsuit value written here drops the axis the wall is racked by.
+       * `text`, not an enum: the grid varies by manufacturer, staff record an
+       * off-grid size as free text, and which codes the diver's own select
+       * offers is the owner's open call (H-76).
+       *
+       * Most rental drysuits have their boots vulcanised on, so this size
+       * answers for them too — there is no boot piece to pull off the rack
+       * separately, which is why `rents_drysuit` pushes one packing piece where
+       * `rents_wetsuit` pushes two (`src/lib/dive-prep.ts`). A fleet stocking
+       * neoprene-sock suits worn with separate rock boots says so in this same
+       * free text ("ML, rock boot 9"): no column records a rock-boot size, so
+       * this is the one size field with no companion column or packing piece for
+       * what it implies — the only one whose free text is load-bearing beyond the
+       * size itself. Every size reaches the packing list verbatim; only this one
+       * carries a second fact with nothing on the list to notice its loss.
+       */
+      drysuitSize: text("drysuit_size"),
+      /**
+       * **Free text, like the drysuit's, on both fit forms** (H-102, issue
+       * #1816). A rental hood and rental gloves both rack by size *and*
+       * thickness ("M, 5 mm", "L, 3 mm"); a closed select would need two axes and somebody
+       * to own them, so the shop's own words reach the packing list verbatim.
+       */
+      hoodSize: text("hood_size"),
+      gloveSize: text("glove_size"),
+      bootSize: text("boot_size"),
+      finSize: text("fin_size"),
+      weightPreference: text("weight_preference"),
+      /**
+       * **The diver is in a drysuit** — their own or one of ours (H-78, issue
+       * #1752). The one fact on this row about what the diver *wears* rather
+       * than what the shop hands over, and the one the drysuit's safety signals
+       * key on: the in-water weight check (`weightPreference` is a wetsuit
+       * answer, short by the two to four kilos a drysuit adds, and short is the
+       * direction that cannot hold a safety stop), fins sized up over the
+       * drysuit boot, and the drysuit-card advisory (`src/lib/drysuit-card.ts`).
+       * `rents_drysuit` used to stand in for it, which left every diver in their
+       * own suit — most drysuit divers — with a wetsuit number on the rail, fins
+       * packed to the bare foot and no advisory at all.
+       *
+       * A standing answer, not a per-trip one: the diver who dives dry in winter
+       * and wet in summer will sometimes be wrong for one trip, which is the cost
+       * H-78 accepted. Every fit form asks it as one choice with the wetsuit
+       * columns (`SuitChoice`, `src/lib/rentals.ts`), so a stated fit always
+       * carries an answer; `false` on a row nobody has stated is the same
+       * "claims nothing" every `rents_*` column defaults to.
+       *
+       * The two checks below hold the suit columns to one suit (issue #1800): a
+       * rented drysuit is a dry diver, and a dry diver is not renting a wetsuit.
+       * `saveRentalFit` resolves a post that asks for both before it reaches them.
+       */
+      divesDry: boolean("dives_dry").notNull().default(false),
+      note: text("note"),
+      /**
+       * When a **fit** was last stated — by the diver's own gear form or by staff
+       * editing it. Null means this row exists for something other than a fit.
+       *
+       * There is exactly one such something today, and it is why this column
+       * exists: since issue 627 the diver's free-text note ("titanium hip, I run
+       * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
+       * which will create this row for a diver who has never touched the gear
+       * form. `rentalFitLine` and the prep checklist read a null here as "no fit
+       * recorded", exactly as they already read a missing row.
+       *
+       * **This used to be the only thing standing between a note and a six-piece
+       * packing line.** Five of the eleven `rents_*` columns above defaulted to
+       * `true` (the core kit), so a diver who had only left the crew a note would
+       * otherwise have appeared on the boat's packing list renting a BCD, a
+       * regulator, a wetsuit, a mask, fins and weights — no sizes, nobody having
+       * asked for any of them. Issue #1755 put a second defence under that, every
+       * creating writer laying `NOTHING_RENTED` (src/lib/rentals.ts) beneath its
+       * insert; issue #1793 removed the hazard instead, and the five columns
+       * default to `false` like the other six.
+       *
+       * The discriminator still earns its keep, and always did for a reason
+       * beyond the defaults: it is what separates a note from a fit for every
+       * reader, and no amount of explicit `false` makes a row with no answers
+       * into an answer.
+       */
+      fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
+      /**
+       * The safe fallback when a requested size isn't available (H-06): staff
+       * flag the diver for hands-on fitting at check-in instead of silently
+       * packing a different size. Set/cleared only by its own action — a size
+       * edit never clears it, because a stale flag costs one extra look while a
+       * wrongly-cleared one puts a diver in gear nobody checked.
+       */
+      needsStaffFitAt: timestamp("needs_staff_fit_at", { withTimezone: true }),
+      /** What's short ("no L BCD in stock"), in the flagging staff member's words. */
+      needsStaffFitNote: text("needs_staff_fit_note"),
+      /**
+       * Who raised it. A safety flag that blanks a diver's sizes on the packing
+       * list, and carries free text about a person, should not be anonymous —
+       * the same reason roll-call events record who called them. Attribution
+       * only: authorization is checked in the action, not read from this column.
+       */
+      needsStaffFitBy: uuid("needs_staff_fit_by").references(() => people.id),
+      /**
+       * **A staffer kept this fit after a trip** — recall, never inference (issue
+       * #1174, ADR 20260904-reef-all-the-way-down, D14).
+       *
+       * Distinct from `fit_stated_at` above, and the distinction is the whole
+       * point: that column means *a fit was stated*, by the diver on their own
+       * form or by staff typing what the diver said. These three mean *somebody
+       * watched a unit come back in a different size and said keep it*. D14's
+       * boundary is that the app learns only from a staff-confirmed outcome, so a
+       * fact that ages naturally is the honest shape rather than a confidence
+       * score nobody calibrated.
+       *
+       * Written only by `confirmRentalFitSize` (src/db/rental-fit.ts), which the
+       * evening's one-tap "Keep it" calls; a diver's own save never touches any
+       * of the three. Their absence is the ordinary state — most rows — and it
+       * gates nothing: an unconfirmed fit is still the fit. The diver-facing
+       * sentence renders nothing without all three, so this can never become
+       * "somebody kept your fit".
+       *
+       * Modelled on the `needs_staff_fit_*` trio above and, like it, carries no
+       * check constraint tying the three together: `fit_confirmed_by` is nulled
+       * when a staffer is anonymized, and that must age the sentence out rather
+       * than break the row.
+       */
+      fitConfirmedAt: timestamp("fit_confirmed_at", { withTimezone: true }),
+      /** Who kept it. Attribution, never authorization — the same call `needs_staff_fit_by` makes. */
+      fitConfirmedBy: uuid("fit_confirmed_by").references(() => people.id),
+      /** Which piece they kept, so the sentence can name it beside the size on file. */
+      fitConfirmedItem: rentalFitItem("fit_confirmed_item"),
+      createdAt: appNowTimestamp("created_at").notNull(),
+      updatedAt: appNowTimestamp("updated_at").notNull(),
+      ...extra,
+    },
+    (table) => [
+      uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
+      index("rental_fit_profiles_shop_person_idx").on(table.shopId, table.personId),
+      check(
+        "rental_fit_profiles_rented_drysuit_is_dry",
+        sql`not ${table.rentsDrysuit} or ${table.divesDry}`,
+      ),
+      check(
+        "rental_fit_profiles_dry_rents_no_wetsuit",
+        sql`not (${table.divesDry} and ${table.rentsWetsuit})`,
+      ),
+    ],
+  );
+}
+
+export const rentalFitProfiles = makeRentalFitProfiles({});
 
 /**
  * What a tracked unit of rental gear is. Mirrors the prep list's

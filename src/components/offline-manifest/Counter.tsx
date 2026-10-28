@@ -1,5 +1,6 @@
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { offlineTrainingReadinessStale } from "@/lib/offline-manifests";
 import type { OfflineTripControls } from "./controls";
 import type { OfflineTripView } from "./trip-view";
 
@@ -86,17 +87,21 @@ export function OfflineCounter({
           // still boards a body the crew can see, and the rail takes the
           // released seat back on sync rather than turning that body
           // away.
-          if (diver.readiness.status !== "ready" || diver.notHere) {
-            const blocked = diver.readiness.status !== "ready";
+          const staleTrainingReadiness = offlineTrainingReadinessStale(
+            view.envelope.snapshot,
+            diver,
+          );
+          if (diver.readiness.status !== "ready" || diver.notHere || staleTrainingReadiness) {
+            const blocked = diver.readiness.status !== "ready" || staleTrainingReadiness;
             // The status line: why the desk cannot tap. Readiness's own
             // reasons, resolved into this copy when it was saved, so already
             // in the reader's language; then the desk's release, when there
             // is one. A blocked seat with no reason saved says "Blocked".
             const why = [
-              ...(blocked
-                ? diver.readiness.blockers.length > 0
-                  ? diver.readiness.blockers.map((blocker) => blocker.text)
-                  : [t("shared.offlineManifest.single.blockedBadge")]
+              ...(staleTrainingReadiness ? [t("manifest.trainingReadinessStale")] : []),
+              ...(blocked ? diver.readiness.blockers.map((blocker) => blocker.text) : []),
+              ...(blocked && !staleTrainingReadiness && diver.readiness.blockers.length === 0
+                ? [t("shared.offlineManifest.single.blockedBadge")]
                 : []),
               ...(diver.notHere
                 ? [

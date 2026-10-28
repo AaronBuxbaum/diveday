@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
@@ -51,6 +51,13 @@ import { getCurrentWaiverTemplate, saveWaiverTemplate } from "./waivers";
 const ctx = fileScopedShopContext();
 
 describe("resetDemoSchedule", () => {
+  it("still resets after the retired saved answers table has been dropped", async () => {
+    const { db, shop } = ctx;
+    await db.execute(sql`drop table inbox_saved_answers`);
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+    expect((await upcomingTripsWithCounts(db, shop.id)).length).toBeGreaterThan(0);
+  });
+
   it("clears Today read marks so the next visit gets a fresh baseline", async () => {
     const { db, shop } = ctx;
     const [staff] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);

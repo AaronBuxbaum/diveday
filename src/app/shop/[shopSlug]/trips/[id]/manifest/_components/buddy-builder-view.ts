@@ -102,11 +102,13 @@ export function buddyBuilderView({
           ? t("manifest.buddyErrorTooFew")
           : buddyError === "not-diver"
             ? t("manifest.buddyErrorNotDiver")
-            : buddyError === "confirm-adults"
-              ? t("manifest.buddyErrorConfirmAdults")
-              : buddyError
-                ? t("manifest.buddyErrorGeneric")
-                : null;
+            : buddyError === "busy"
+              ? t("manifest.buddyErrorBusy")
+              : buddyError === "confirm-adults"
+                ? t("manifest.buddyErrorConfirmAdults")
+                : buddyError
+                  ? t("manifest.buddyErrorGeneric")
+                  : null;
   // A refusal renders beside the form that produced it
   // (docs/design/forms-and-controls.md). `few` is the one code only the
   // new-team builder can earn, so it lands in that fieldset's action row;

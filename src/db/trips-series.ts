@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
 import { seatsWithinCertificate } from "@/lib/boat-safety";
 import {
   type CalendarDate,
@@ -33,6 +33,7 @@ import {
   bookingPayments,
   bookings,
   courses,
+  executedDives,
   people,
   shops,
   tripDives,
@@ -43,6 +44,7 @@ import {
   trips,
 } from "./schema";
 import { recordSiteRunChange, tripSiteRunSnapshot } from "./trip-change-events";
+import { lockTripRevisionNotificationFences } from "./trip-revision-notification-fence";
 import {
   insertTripInstance,
   insertTripInstances,
@@ -393,15 +395,15 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
     }
     if (!isValidCalendarDate(input.anchorDate)) return null;
     if (input.endsOn !== null && !isValidCalendarDate(input.endsOn)) return null;
-    const plannedDives = normalizedDiveCount(input.plannedDives);
+    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
+    if (!ok) return null;
+    const plannedDives = normalizedDiveCount(input.plannedDives, course !== null);
     if (!plannedDives) return null;
     const drafts = normalizedDiveDrafts(
       plannedDives,
       input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
     );
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
-    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
-    if (!ok) return null;
 
     const [series] = await tx
       .insert(tripSeries)
@@ -1400,16 +1402,27 @@ export async function applyDetailsToFutureSeries(
       gte(trips.startsAt, now),
       ne(trips.id, sourceTripId),
     );
-    // **Hold every sibling before counting its seats** (dive-domain review of
-    // #2322): the seat check below and the write after it must see the same
-    // bookings, so the dates are locked the way every seat writer locks a trip
-    // (`for no key update`, the #2324 order), in id order so two applies to
-    // one series cannot take them crosswise. A separate read because Postgres
-    // will not lock the rows of a grouped query.
-    await tx
+    // Take non-locking candidate ids first, then the revision fences in sorted
+    // order. The order matters: a reschedule retry takes its shared fence
+    // before the trip row, so this writer must never hold a sibling row while
+    // waiting for that fence.
+    const candidateIds = await tx
       .select({ id: trips.id })
       .from(trips)
       .where(and(liveTrip(), siblingScope))
+      .orderBy(asc(trips.id));
+    const candidateTripIds = candidateIds.map((candidate) => candidate.id);
+    await lockTripRevisionNotificationFences(tx, shopId, candidateTripIds);
+
+    // **Hold every sibling before counting its seats** (dive-domain review of
+    // #2322): the seat check below and the write after it must see the same
+    // bookings, so the dates are locked the way every seat writer locks a trip
+    // (`for no key update`, the #2324 order). This fresh predicate rechecks
+    // eligibility after any wait on a fence and row lock.
+    await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(liveTrip(), siblingScope, inArray(trips.id, candidateTripIds)))
       .orderBy(asc(trips.id))
       .for("no key update");
     const siblings = await tx
@@ -1425,7 +1438,7 @@ export async function applyDetailsToFutureSeries(
       // The seats somebody is holding, as everywhere else: a no-show has
       // released theirs (`seatHeld`).
       .leftJoin(bookings, liveBookingJoin)
-      .where(and(liveTrip(), siblingScope))
+      .where(and(liveTrip(), siblingScope, inArray(trips.id, candidateTripIds)))
       .groupBy(trips.id, boats.id)
       .orderBy(asc(trips.id));
 
@@ -1441,6 +1454,24 @@ export async function applyDetailsToFutureSeries(
       list.push(row);
       checkpointsByTrip.set(row.tripId, list);
     }
+
+    const executedByTrip = new Map(
+      siblingIds.length === 0
+        ? []
+        : (
+            await tx
+              .select({ tripId: executedDives.tripId, lastDive: max(executedDives.diveNumber) })
+              .from(executedDives)
+              .where(
+                and(
+                  eq(executedDives.shopId, shopId),
+                  inArray(executedDives.tripId, siblingIds),
+                  isNull(executedDives.deletedAt),
+                ),
+              )
+              .groupBy(executedDives.tripId)
+          ).map((row) => [row.tripId, row.lastDive ?? 0] as const),
+    );
 
     // What each sibling's dive plan looks like *before* this apply, so the
     // calendar revision moves only for the ones whose sites actually change
@@ -1481,7 +1512,10 @@ export async function applyDetailsToFutureSeries(
         skipped += 1;
         continue;
       }
-      const recordedDiveCount = maxRecordedDiveNumber(checkpointsByTrip.get(sibling.id) ?? []);
+      const recordedDiveCount = Math.max(
+        maxRecordedDiveNumber(checkpointsByTrip.get(sibling.id) ?? []),
+        executedByTrip.get(sibling.id) ?? 0,
+      );
       if (source.plannedDives < recordedDiveCount) {
         skipped += 1;
         continue;

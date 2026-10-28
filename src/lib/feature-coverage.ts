@@ -92,6 +92,7 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   fieldGuideEnabled: "fieldGuide",
   isDemo: { core: "platform marker for a demo shop, not a shop's choice" },
   packingLogbook: { core: "a line of the packing list, set beside it in Settings" },
+  requireAdultBuddyForTeens: { core: "junior diver safety policy for the shop" },
 };
 
 /**

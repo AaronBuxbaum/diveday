@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { confirmCarriedFacts } from "@/db/bookings";
@@ -7,21 +8,24 @@ import { getDb } from "@/db/client";
 import {
   getCourseFormsForBooking,
   type SignCourseFormOutcome,
-  signCourseForm,
+  signCourseFormForLink,
   verifyCourseFormsLink,
 } from "@/db/course-forms";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema, readEmergencyContact } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import {
+  PARTY_RETURN_MAX_AGE_SECONDS,
+  partyReturnCookiePath,
+  WAIVER_RETURN_COOKIE,
+} from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
 
 /**
- * Sign the waiver from the page. We can't reconstruct an existing bearer token
- * (only its hash is stored), so this issues a fresh link for the booking and
- * sends the diver straight to it. Reissuing supersedes any prior pending link,
- * which is the intended behaviour.
+ * Open the waiver for this readiness holder. Keep their existing readiness link
+ * in a cookie scoped to this waiver; completion verifies it again before return.
  */
 export async function signWaiverFromReady(token: string) {
   const ctx = await contextFor(token);
@@ -32,6 +36,13 @@ export async function signWaiverFromReady(token: string) {
     bookingId: ctx.bookingId,
   });
   if (!issued.ok) redirect(`${base(token)}?error=waiver`);
+  (await cookies()).set(WAIVER_RETURN_COOKIE, token, {
+    path: partyReturnCookiePath(issued.token),
+    maxAge: PARTY_RETURN_MAX_AGE_SECONDS,
+    sameSite: "lax",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  });
   redirect(`/waivers/${issued.token}`);
 }
 
@@ -80,6 +91,7 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
 
 const courseFormSignSchema = z.object({
   formVersionId: z.uuid(),
+  displayedDigest: z.string().regex(/^[0-9a-f]{64}$/),
   signerName: z.string().trim().max(120),
   acknowledged: z.literal("on").optional(),
   guardianName: z.string().trim().max(120).optional(),
@@ -102,7 +114,7 @@ const COURSE_FORM_ERROR: Record<Exclude<SignCourseFormOutcome, { ok: true }>["re
  * Either link that opens the forms page may sign on it — the readiness link
  * or the forms-only one (`verifyCourseFormsLink`), rate-limited before it
  * verifies, like every action here — and nothing else in this file accepts the
- * forms-only one. `signCourseForm` checks everything else against the booking
+ * forms-only one. `signCourseFormForLink` rechecks the capability and everything else against the booking
  * itself: a held seat, the typed name is the student's, the version is one the
  * course asks for, a minor's form carries a guardian. Back to the forms page
  * while any are owed, then to the prep page when the link can open it.
@@ -123,10 +135,12 @@ export async function signCourseFormFromReady(token: string, formData: FormData)
   if (!parsed.success) redirect(`${forms}?error=agreement`);
   const guardianPosted =
     parsed.data.guardianName !== undefined || parsed.data.guardianRelationship !== undefined;
-  const signed = await signCourseForm(db, {
+  const signed = await signCourseFormForLink(db, {
+    token,
     shopId: link.shopId,
     bookingId: link.bookingId,
     formVersionId: parsed.data.formVersionId,
+    displayedDigest: parsed.data.displayedDigest,
     signerName: parsed.data.signerName,
     agreed: parsed.data.acknowledged === "on",
     guardian: guardianPosted

@@ -1,8 +1,8 @@
-import { and, eq, gt, isNull, notExists } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { createBoat } from "@/db/boats";
 import type { AppDb } from "@/db/client";
-import { activityEvents, boats, bookings, trips } from "@/db/schema";
+import { activityEvents, boats, bookings, diveSites, tripDives, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
@@ -119,6 +119,66 @@ describe("the details form in the activity log", () => {
     expect(url.searchParams.get("notice")).toBe("saved");
     url.searchParams.delete("notice");
     expect(url.searchParams.get("view")).toBe("details");
+  });
+
+  it("refuses a fifth planned dive on an ordinary departure without changing it", async () => {
+    const { db, shop, trip } = await context();
+    const form = detailsForm(trip, shop.timezone, 0);
+    form.set("plannedDives", "5");
+    expect(await redirectedTo(() => saveDetails(shop.slug, trip.id, form))).toContain(
+      "notice=invalid",
+    );
+    const [unchanged] = await db
+      .select({ plannedDives: trips.plannedDives })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(unchanged?.plannedDives).toBe(trip.plannedDives);
+  });
+
+  it("also refuses five dives from an ordinary departure's Plan editor", async () => {
+    const { db, shop, trip } = await context();
+    const form = new FormData();
+    form.set("plannedDives", "5");
+    form.set("dive-5-title", "Not a course dive");
+    expect(
+      await redirectedTo(() => saveDetailsSection(shop.slug, trip.id, "plan", form)),
+    ).toContain("notice=invalid");
+    const [unchanged] = await db
+      .select({ plannedDives: trips.plannedDives })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(unchanged?.plannedDives).toBe(trip.plannedDives);
+  });
+
+  it("saves all fifth-dive fields from a course's Plan editor", async () => {
+    const { db, shop } = await context();
+    const [courseTrip] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), isNotNull(trips.courseId), isNull(trips.deletedAt)))
+      .limit(1);
+    const [site] = await db.select().from(diveSites).where(eq(diveSites.shopId, shop.id)).limit(1);
+    if (!courseTrip || !site) throw new Error("seeded course trip and dive site are required");
+
+    const form = new FormData();
+    form.set("plannedDives", "5");
+    form.set("dive-5-title", "Deep training");
+    form.set("dive-5-siteId", site.id);
+    form.set("dive-5-travelMinutes", "12");
+    form.set("dive-5-description", "Practice the planned skills");
+    expect(
+      await redirectedTo(() => saveDetailsSection(shop.slug, courseTrip.id, "plan", form)),
+    ).toContain("notice=saved");
+    const [fifth] = await db
+      .select()
+      .from(tripDives)
+      .where(and(eq(tripDives.tripId, courseTrip.id), eq(tripDives.diveNumber, 5)));
+    expect(fifth).toMatchObject({
+      title: "Deep training",
+      diveSiteId: site.id,
+      travelMinutes: 12,
+      description: "Practice the planned skills",
+    });
   });
 
   it("names the staffer who changed the departure time", async () => {

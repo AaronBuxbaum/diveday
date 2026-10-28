@@ -7,6 +7,7 @@ import { guardianRelationshipText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isYouthForm, type RequiredCourseForm } from "@/lib/course-forms";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
+import { CourseFormsQrButton } from "./CourseFormsQr";
 
 /**
  * **The course forms a seat still owes, on its row** (ADR
@@ -22,6 +23,7 @@ import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
 export function CourseFormsRowControl({
   tripId,
   bookingId,
+  personName,
   owed,
   warnOnly,
   offerSend,
@@ -31,6 +33,7 @@ export function CourseFormsRowControl({
 }: {
   tripId: string;
   bookingId: string;
+  personName: string;
   owed: readonly RequiredCourseForm[];
   /**
    * Forms do not block: say what is owed, since no blocker line will. A form
@@ -59,6 +62,9 @@ export function CourseFormsRowControl({
           })}
         </p>
       ) : null}
+      <div className="print:hidden">
+        <CourseFormsQrButton bookingId={bookingId} name={personName} />
+      </div>
       {offerSend ? (
         <WaiverSendControl
           surface="roster"

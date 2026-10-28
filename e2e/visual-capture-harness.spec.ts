@@ -9,11 +9,13 @@ import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   CATALOG_MAP_SITE_COUNT,
+  capture,
   expectOverviewMapSites,
   installVisualBuildGuard,
   openDiverProfile,
   PHONE_VIEWPORT,
   SURFACE_TIMEOUT_MS,
+  settleCaptureFonts,
   VIEWPORTS,
   VISUAL_STEP_BOUNDS,
   waitForSiteLibrary,
@@ -210,6 +212,72 @@ test.describe("capture harness", () => {
     // so the probe has to be able to say so. A wedged renderer is the *other*
     // sentence, and telling them apart is the whole point of asking.
     expect(reported).toContain("the page is alive");
+  });
+
+  test("fonts that miss their bound cannot reach the screenshot", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      const neverReady = new Promise<FontFaceSet>(() => {});
+      Object.defineProperty(document.fonts, "ready", {
+        configurable: true,
+        get: () => neverReady,
+      });
+    });
+
+    let reachedScreenshot = false;
+    await expect(
+      capture(page, "font-settle-timeout", "dark", {
+        beforeScreenshot: async () => {
+          reachedScreenshot = true;
+        },
+      }),
+    ).rejects.toThrow("fonts were timed-out");
+    expect(reachedScreenshot).toBe(false);
+  });
+
+  test("font settle accepts document.fonts.ready", async ({ page }) => {
+    await page.goto("/");
+    await expect(settleCaptureFonts(page, 100)).resolves.toBe("ready");
+  });
+
+  test("font readiness evaluation errors still fail the settle", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      Object.defineProperty(document.fonts, "ready", {
+        configurable: true,
+        get: () => {
+          throw new Error("font readiness access failed");
+        },
+      });
+    });
+
+    await expect(settleCaptureFonts(page, 100)).rejects.toThrow("font readiness access failed");
+  });
+
+  test("an unanswered renderer probe is reported as wedged", async ({ page }) => {
+    const warnings: string[] = [];
+    const realWarn = console.warn;
+    console.warn = (message: string) => {
+      warnings.push(message);
+    };
+    try {
+      const unresponsivePage = {
+        url: () => page.url(),
+        evaluate: () => Promise.reject(new Error("renderer probe failed")),
+      } as unknown as Page;
+      const degraded = await withRendererBound(
+        unresponsivePage,
+        "a stalled font readiness pass",
+        1,
+        new Promise<never>(() => {}),
+        "renderer-stalled",
+      );
+
+      expect(degraded).toBe("renderer-stalled");
+      expect(warnings.join("\n")).toContain("wedged, not slow");
+    } finally {
+      console.warn = realWarn;
+    }
   });
 
   /**

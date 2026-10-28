@@ -3054,3 +3054,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
     width: min(264px, calc(100vw - 64px)) !important;
   }
 }
+
+/* Keep the introduction with the first record; later records can paginate normally. */
+@media print {
+  #incident-evidence-heading,
+  #incident-evidence-heading ~ p {
+    break-after: avoid;
+  }
+
+  #incident-evidence-heading ~ ul,
+  #incident-evidence-heading ~ ul > li:first-child {
+    break-before: avoid;
+  }
+}

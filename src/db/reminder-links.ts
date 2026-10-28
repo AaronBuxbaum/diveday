@@ -13,11 +13,19 @@ export type ReminderLink = { shopId: string; token: string; url: string };
 export class ReminderLinks {
   private readonly sent = new Set<string>();
 
-  constructor(private readonly byBooking: ReadonlyMap<string, ReminderLink>) {}
+  constructor(
+    private readonly byBooking: ReadonlyMap<string, ReminderLink>,
+    private readonly suppressedBookingIds: ReadonlySet<string> = new Set(),
+  ) {}
 
   /** The link to put in this booking's reminder, if one was minted. */
   urlFor(bookingId: string): string | undefined {
     return this.byBooking.get(bookingId)?.url;
+  }
+
+  /** True when the subject stopped being eligible before capability issuance. */
+  shouldSend(bookingId: string): boolean {
+    return !this.suppressedBookingIds.has(bookingId);
   }
 
   /** Count one delivery and remember its link if the reminder did not go. */

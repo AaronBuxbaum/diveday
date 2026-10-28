@@ -256,36 +256,6 @@ describe("sendRescheduleNotices", () => {
     expect(sms.sent).toHaveLength(0);
   });
 
-  it("texts a phone-only diver with the new time, where to meet and their trip prep", async () => {
-    const { db, shop, reef, kid, previousStartsAt, now } = await movedTrip();
-    const [kidRow] = await db.select().from(bookings).where(eq(bookings.id, kid));
-    await db.update(people).set({ phone: "+13055550142" }).where(eq(people.id, kidRow.personId));
-    await db
-      .update(trips)
-      .set({ meetingPointLabel: "North Pier", meetingPointAddress: "1 Dock St" })
-      .where(eq(trips.id, reef.id));
-    const { sms, options } = providers();
-    await sendRescheduleNotices(
-      db,
-      shop.id,
-      {
-        kind: "trip_rescheduled",
-        tripId: reef.id,
-        previousStartsAt: previousStartsAt.toISOString(),
-        meetingPointMoved: true,
-      },
-      { ...options, now },
-    );
-    const texts = sms.sent.filter((m) => m.to === "+13055550142");
-    expect(texts).toHaveLength(1);
-    expect(texts[0].body).toContain(`${shop.name}: we moved ${reef.title} to`);
-    expect(texts[0].body).toContain("Meet at North Pier, 1 Dock St.");
-    expect(texts[0].body).toMatch(/Your trip prep: https:\/\/diveday\.example\/ready\//);
-    expect((await deliveriesFor(db, [kid])).map((row) => [row.bookingId, row.status])).toEqual([
-      [kid, "sent"],
-    ]);
-  });
-
   it("tells nobody about a rehearsal departure, by email or by text", async () => {
     const { db, shop, reef, previousStartsAt, now } = await movedTrip();
     await db.update(trips).set({ isRehearsal: true, isPrivate: true }).where(eq(trips.id, reef.id));

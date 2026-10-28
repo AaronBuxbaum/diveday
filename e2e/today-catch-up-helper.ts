@@ -34,8 +34,21 @@ export async function todayCatchUpScenario(browser: Browser, owner: Page, worker
     await expect(owner.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
     await owner.getByLabel("Full name").fill("Today Catchup Diver");
     await expect(owner.getByLabel("Full name")).toHaveValue("Today Catchup Diver");
+    const seated = owner.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.request().headers()["next-action"] !== undefined &&
+        new URL(response.url()).pathname === "/shop/blue-mantis/divers/new" &&
+        response.headers()["x-action-redirect"]?.includes(`/trips/${tripId}`) === true,
+    );
     await owner.getByRole("button", { name: "Add to boat" }).click();
-    await owner.waitForURL(new RegExp(`/trips/${tripId}`));
+    const seatResponse = await seated;
+    expect(seatResponse.status()).toBe(200);
+    const redirect = seatResponse.headers()["x-action-redirect"]?.split(";")[0];
+    if (!redirect) throw new Error("Walk-in action did not redirect to its trip");
+    expect(new URL(redirect, seatResponse.url()).pathname).toBe(
+      `/shop/blue-mantis/trips/${tripId}`,
+    );
     await reader.goto("/shop/blue-mantis");
     return { reader, readerContext };
   } catch (error) {

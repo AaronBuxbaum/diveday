@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
+import { MAX_COURSE_DIVES, MAX_TRIP_DIVES } from "@/lib/trip-dive-limits";
 
 type DiveOption = { id: string; name: string };
 type InitialDive = {
@@ -47,6 +48,8 @@ export type TripDiveFieldsCopy = {
 export function TripDiveFields({
   diveSites,
   initialCount = 2,
+  count: controlledCount,
+  maxDives = MAX_TRIP_DIVES,
   initialDives = [],
   copy,
   disabled = false,
@@ -59,6 +62,10 @@ export function TripDiveFields({
 }: {
   diveSites: DiveOption[];
   initialCount?: number;
+  /** Optional parent-owned count, shared with the schedule board quick row. */
+  count?: number;
+  /** A course session may plan one more dive than an ordinary departure. */
+  maxDives?: 4 | 5;
   initialDives?: InitialDive[];
   copy: TripDiveFieldsCopy;
   /**
@@ -94,7 +101,12 @@ export function TripDiveFields({
   /** An anchor for a link straight to the dive count (the manifest's "Change the plan"). */
   id?: string;
 }) {
-  const [count, setCount] = useState(Math.min(4, Math.max(1, initialCount)));
+  const [ownCount, setOwnCount] = useState(Math.min(MAX_COURSE_DIVES, Math.max(1, initialCount)));
+  const count = Math.min(maxDives, Math.max(1, controlledCount ?? ownCount));
+  // Keep previously shown uncontrolled fields mounted so switching away from a
+  // five-dive course does not discard its draft; hidden fields cannot submit.
+  const [mostShown, setMostShown] = useState(count);
+  useEffect(() => setMostShown((shown) => Math.max(shown, count)), [count]);
 
   return (
     <section
@@ -131,12 +143,12 @@ export function TripDiveFields({
               disabled={disabled}
               onChange={(event) => {
                 const next = Number(event.target.value);
-                setCount(next);
+                setOwnCount(next);
                 onCountChange?.(next);
               }}
               className={controlClass}
             >
-              {[1, 2, 3, 4].map((value) => (
+              {Array.from({ length: maxDives }, (_, index) => index + 1).map((value) => (
                 <option key={value} value={value}>
                   {fill(value === 1 ? copy.diveOptionOne : copy.diveOptionOther, { count: value })}
                 </option>
@@ -147,7 +159,7 @@ export function TripDiveFields({
       </div>
 
       <div className="mt-5 grid gap-3">
-        {Array.from({ length: count }, (_, index) => {
+        {Array.from({ length: Math.max(count, mostShown) }, (_, index) => {
           const initial = initialDives[index];
           const number = index + 1;
           const nameField = (
@@ -232,7 +244,8 @@ export function TripDiveFields({
           return (
             <fieldset
               key={number}
-              disabled={disabled}
+              disabled={disabled || number > count}
+              hidden={number > count}
               className="rounded-inset border border-border bg-surface p-4"
             >
               <legend className={`${legendClass} text-sm font-semibold text-primary`}>

@@ -3,7 +3,7 @@ import { type CourseRatioRule, courseRatioCapacity } from "./course-ratios";
 import { countInWaterCrew, inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
 import type { ParticipantType } from "./participant-types";
 import { isDiver } from "./participant-types";
-import type { Requirement } from "./requirement";
+import { type Requirement, requirementDemandsNothing } from "./requirement";
 
 /**
  * **A training mark** (issue #2275, ADR
@@ -173,13 +173,19 @@ export type TrainingRoomSeat = {
  * ratio, and an instructor's new load must also fit the tightest ratio of every seat already on them (a DSD seat caps later Open Water seats at the DSD ratio). A certified assistant aboard the departure raises the cap, as it does
  * on the session itself (`countInWaterCrew`), shared out evenly and rounded
  * down: it may seat fewer than the session would, never more. A seat whose
- * course has no known ratio is never seated.
+ * course has no known ratio is never seated. Nor can another seat be covered
+ * on that departure: the actual in-water groups and instructor loads are unknown.
  */
 function seatTrainingRoom(
   seats: readonly TrainingRoomSeat[],
   sessionCrew: ReadonlyMap<string, readonly CrewMember[]>,
   departureCrew: readonly CrewMember[],
 ): { seated: Set<string>; overRatio: Set<string> } {
+  // Session rosters do not establish who dives together or which instructor
+  // takes an unmodeled seat. No modeled coverage can be proved on this departure.
+  if (seats.some((seat) => seat.rule === null)) {
+    return { seated: new Set(), overRatio: new Set() };
+  }
   const aboardFor = (sessionTripId: string) =>
     courseInstructorIdsAboard(sessionCrew.get(sessionTripId) ?? [], departureCrew);
   const instructors = new Set(seats.flatMap((seat) => aboardFor(seat.sessionTripId)));
@@ -190,9 +196,9 @@ function seatTrainingRoom(
   // **Deliberate, not an accident of the arithmetic** (issue #2830, Aaron
   // 2026-10-22). A DSD seat caps the same instructor's Open Water seats at the
   // DSD ratio, although the DSD seat lowers no level and the published DSD
-  // figure is written for DSD participants. Every seat on one instructor is one
-  // group in the water at once, under one pair of eyes, and a DSD participant
-  // has never breathed from a regulator in open water: the instructor has to
+  // figure is written for DSD participants. Seats assigned to one instructor
+  // may form one group in the water at once, and a DSD participant
+  // may never have breathed from a regulator in open water: the instructor has to
   // stay within reach of them for the whole dive, so the Open Water students
   // beside them get the attention a DSD group leaves over, not the attention a
   // dedicated Open Water ratio assumes. No standard we hold (HD-6) says a mixed
@@ -243,6 +249,17 @@ export function trainingRoom(input: {
     withCandidate.has(candidate.id) &&
     marked.every((seat) => withCandidate.has(seat.id) === seated.has(seat.id));
   return { seated, overRatio, spare };
+}
+
+/** A conditional depth prompt, not a claim about underwater groups or clearance. */
+export function mixedTrainingDepthAdvisory(courses: readonly { intro?: boolean }[]): boolean {
+  // Saved manifests from before course type was carried have unknown kinds.
+  // Two distinct marked seats may still be mixed, so ask rather than imply clearance.
+  return courses.some(
+    (course, index) =>
+      course.intro !== false &&
+      courses.some((other, otherIndex) => otherIndex !== index && other.intro !== true),
+  );
 }
 
 /** The ladder's order, as `certificationRank` (./readiness.ts) reads it; kept here so this module imports no gate. */
@@ -302,6 +319,15 @@ export function trainingDiveAsksNoCard(
   if (required.requiresNitrox || required.requiredSpecialties.length > 0) return false;
   const level = required.minimumCertificationLevel;
   return level !== null && course !== null && trainingDiveRequiredLevel(level, course) === null;
+}
+
+/** The no-card wording is valid only when the trip itself asks for no card. */
+export function trainingDiveAsksNoCardForSite(
+  trip: Requirement | null | undefined,
+  site: Requirement | null | undefined,
+  course: TrainingDiveCourse | null,
+): boolean {
+  return requirementDemandsNothing(trip) && !!site && trainingDiveAsksNoCard(site, course);
 }
 
 /**

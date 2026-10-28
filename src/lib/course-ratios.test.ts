@@ -9,6 +9,7 @@ import {
   DSD_RATIO,
   ENTRY_LEVEL_COURSE_RATIO,
   INTRO_COURSE_RATIO,
+  trainingCourseRatioRule,
 } from "./course-ratios";
 
 const padiEntryLevel: CourseCrewGapCourse = {
@@ -69,6 +70,47 @@ describe("courseRatioCapacity", () => {
     expect(courseRatioCapacity(INTRO_COURSE_RATIO, 1, 0)).toBe(2);
     expect(courseRatioCapacity(INTRO_COURSE_RATIO, 1, 5)).toBe(2); // no published DSD assistant bonus
     expect(courseRatioCapacity(INTRO_COURSE_RATIO, 2, 0)).toBe(4);
+  });
+});
+
+describe("trainingCourseRatioRule", () => {
+  const entry = {
+    agency: " PADI ",
+    minimumLevel: null,
+    certifiesLevel: "open_water",
+    intro: false,
+    sourceTemplateSlug: "open-water-diver",
+  };
+
+  it("preserves the existing explicit Open Water and intro rules", () => {
+    expect(trainingCourseRatioRule(entry)).toEqual(ENTRY_LEVEL_COURSE_RATIO);
+    expect(trainingCourseRatioRule({ ...entry, sourceTemplateSlug: null })).toEqual(
+      ENTRY_LEVEL_COURSE_RATIO,
+    );
+    expect(
+      trainingCourseRatioRule({
+        ...entry,
+        intro: true,
+        certifiesLevel: null,
+        sourceTemplateSlug: "discover-scuba-diving",
+      }),
+    ).toEqual(INTRO_COURSE_RATIO);
+  });
+
+  it("does not convert higher rungs or unknown courses into entry-level coverage", () => {
+    for (const certifiesLevel of ["advanced_open_water", "rescue", "divemaster"]) {
+      expect(trainingCourseRatioRule({ ...entry, certifiesLevel })).toBeNull();
+    }
+    expect(
+      trainingCourseRatioRule({ ...entry, certifiesLevel: null, sourceTemplateSlug: null }),
+    ).toBeNull();
+    expect(trainingCourseRatioRule({ ...entry, sourceTemplateSlug: "deep-diver" })).toBeNull();
+    expect(
+      trainingCourseRatioRule({ ...entry, sourceTemplateSlug: "advanced-open-water-diver" }),
+    ).toBeNull();
+    expect(trainingCourseRatioRule({ ...entry, sourceTemplateSlug: "unrecognized" })).toBeNull();
+    expect(trainingCourseRatioRule({ ...entry, agency: "SSI" })).toBeNull();
+    expect(trainingCourseRatioRule(null)).toBeNull();
   });
 });
 

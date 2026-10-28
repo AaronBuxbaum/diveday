@@ -80,6 +80,7 @@ export const SECTION_IDS = [
   "counterCard",
   "certCheck",
   "units",
+  "juniorBuddy",
   "crewSchedule",
   "passThrough",
   "stripe",
@@ -185,6 +186,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.units.heading",
     group: "shop",
     target: { kind: "section", id: "units" },
+  },
+  {
+    id: "juniorBuddy",
+    labelKey: "settings.main.juniorBuddy.heading",
+    group: "shop",
+    target: { kind: "section", id: "juniorBuddy" },
   },
   {
     id: "address",

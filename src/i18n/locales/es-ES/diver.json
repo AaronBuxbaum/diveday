@@ -1156,6 +1156,7 @@
     "medicalContactEmailOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <email>{emailAddress}</email>.",
     "medicalContactNone": "¿Dudas sobre los siguientes pasos? Escribe a {shop}.",
     "signedBody": "Tu exención está firmada y guardada.",
+    "prepLinkHelp": "Para ver los detalles de tu salida, abre la confirmación de tu reserva o contacta al centro.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
     "doctor": {
       "title": "Llévale esto a tu médico",
@@ -1259,7 +1260,9 @@
     "medicalDeclinedNext": "La evaluación médica archivada no te autoriza a bucear. Contacta al centro para saber cómo seguir.",
     "medicalFormWaiting": "Tu formulario médico se ha enviado. Espera a que el personal lo revise y confirme el siguiente paso. Aún no tienes autorización para bucear.",
     "medicalReferralNext": "Tu cuestionario requiere una evaluación médica por escrito antes de que puedas bucear.",
-    "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear."
+    "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear.",
+    "counterSigned": "Exención firmada",
+    "independentTitle": "Firma tu exención"
   },
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",
@@ -5464,8 +5467,8 @@
       "finishPaying": "Terminar de pagar"
     },
     "flySafeCorrection": {
-      "subject": "Cambio en cuándo puedes volar: {tripTitle}",
-      "body": "La salida {tripTitle} ahora incluye inmersiones con descompresión, así que el tiempo para volar de nuestro recordatorio ya no aplica. Pregúntale a la tripulación cuánto esperar antes de volar."
+      "subject": "Una actualización sobre cuándo puedes volar",
+      "body": "El intervalo para volar de nuestro recordatorio anterior podría ya no aplicar. Pregúntale a la tripulación cuánto esperar antes de volar."
     },
     "tripReminder": {
       "weekSubject": "Sales esta semana: {tripTitle}",
@@ -5477,7 +5480,8 @@
       "dayBody": "{tripTitle} sale {day, select, today {hoy} other {mañana}}; preséntate en el muelle a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
       "daySubjectCourse": "{day, select, today {Tu curso empieza hoy} other {Tu curso empieza mañana}}: {tripTitle}",
       "dayBodyCourse": "{tripTitle} empieza {day, select, today {hoy} other {mañana}} a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
-      "flySafe": "Planea volar como mínimo {count, plural, one {# hora} other {# horas}} después de tu última inmersión, y más si haces paradas de descompresión."
+      "flySafe": "Planea volar como mínimo {count, plural, one {# hora} other {# horas}} después de tu última inmersión, y más si haces paradas de descompresión.",
+      "flySafeAskCrew": "Consulta con la tripulación cuánto tiempo debes esperar antes de volar."
     },
     "courseMaterials": {
       "heading": "Antes de tu primer día"
@@ -5663,8 +5667,8 @@
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
       "meetingPointMoved": "{shopName}: cambiamos el punto de encuentro de {tripTitle}, {date}, {time}.",
-      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}.",
-      "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}. Antes era el {previous}."
+      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}.",
+      "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}."
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
@@ -5824,9 +5828,8 @@
       "subject": "Nuevo horario para {tripTitle}",
       "placeSubject": "Nuevo punto de encuentro para {tripTitle}",
       "body": "Cambiamos el horario de {tripTitle}. Este es el nuevo.",
-      "placeBody": "Cambiamos el punto de encuentro de {tripTitle}. La hora no cambia.",
+      "placeBody": "Cambiamos el punto de encuentro de {tripTitle}. Aquí está el horario actual.",
       "seatBody": "Pasamos tu plaza a {tripTitle}. Este es el horario.",
-      "was": "Antes era el {when}.",
       "meetingPointMoved": "También cambia el punto de encuentro.",
       "cantMakeIt": "¿No puedes a la nueva hora? Escríbenos y lo resolvemos."
     },

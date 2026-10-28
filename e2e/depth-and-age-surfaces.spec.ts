@@ -1,9 +1,17 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { openSettingsRow, openTripAbout, openTripAboutRow, tripPathByTitle } from "./helpers";
+import { staffTranslator } from "../src/i18n/staff-messages";
+import { expect, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
+import {
+  openSettingsRow,
+  openTripAbout,
+  openTripAboutRow,
+  openTripFromBoard,
+  tripPathByTitle,
+} from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
+const staff = staffTranslator("en-US");
 
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
@@ -39,6 +47,8 @@ async function setSiteDepth(page: Page, siteName: string, depth: string, unitLab
   await page.getByLabel(unitLabel).fill(depth);
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Dive site saved")).toBeVisible();
+  await page.goto(href);
+  await expect(page.getByLabel(unitLabel)).toHaveValue(depth);
   return href;
 }
 
@@ -106,25 +116,31 @@ test.describe("staff", () => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}`);
 
-    // The warning names both numbers and says plainly that it is not a block.
-    // Eight Open Water divers resolve to the identical sentence, so it is
-    // stated once in the shared strip above the roster with its diver count
-    // (principle 9); each of their cards wears the two-word chip instead, and
-    // the sentence appears nowhere on the card itself.
+    // With junior/full status unconfirmed on the seeded cards, the shared
+    // warning names the recorded site depth and asks the crew to verify the
+    // applicable card limit before planning; it remains an advisory, not a
+    // boarding blocker. The repeated sentence is grouped above the roster.
     const warning = page
-      .getByText(/divers: Reaches .* deeper than the .* their certification qualifies them for/)
+      .getByText(staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }), {
+        exact: false,
+      })
       .first();
     await expect(warning).toBeVisible();
-    await expect(warning).toContainText("This is not a block");
+    await expect(warning).toContainText(staff("trips.roster.depthVerificationCard"));
     const juneCard = page.locator("#roster li").filter({ hasText: "June Park" }).first();
     await expect(juneCard.getByText("Depth advisory")).toBeVisible();
     await expect(juneCard.getByText(/deeper than the/)).toHaveCount(0);
-    // Lena is 13, so her ceiling comes from her age, not her card — a
-    // different sentence that is hers alone, and it keeps its full text on
-    // her card: grouping must never flatten a diver whose limit differs into
-    // the boat-wide line.
+    // Lena is 13, so her age-based band differs from the adults'. Her row
+    // carries the same explicit card-status check, plus the age/limit check,
+    // rather than flattening her evidence into the boat-wide line.
     const lenaCard = page.locator("#roster li").filter({ hasText: "Lena Fischer" }).first();
-    await expect(lenaCard.getByText(/deeper than the .* allowed at their age/)).toBeVisible();
+    const lenaWarning = lenaCard.getByText(
+      staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
+      { exact: false },
+    );
+    await expect(lenaWarning).toBeVisible();
+    await expect(lenaWarning).toContainText(staff("trips.roster.depthVerificationCard"));
+    await expect(lenaWarning).toContainText(staff("trips.roster.depthVerificationLimits"));
 
     // And no diver on this boat is *refused*: an advisory warns, a blocker
     // blocks, and the ledger keeps the two vocabularies apart. June's shared
@@ -183,12 +199,15 @@ test.describe("staff", () => {
   });
 
   test("water temperature is entered and read back in the shop's own unit", async ({ page }) => {
-    const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
+    await page.goto(`/shop/${SHOP}/schedule/board`);
+    await openTripFromBoard(page, REEF_TRIP);
+    await settleStaffHydration(page);
+    const tripPath = new URL(page.url()).pathname;
 
     // Fahrenheit by default (a Key Largo shop), and the unit is part of the
     // field's label rather than a hint beside it — a bare "Water temp" is how
     // a 27 meant as °C reaches every diver as a 27°F day.
-    await page.goto(tripPath);
+    // The board link has already opened this trip.
     // The conditions form waits behind its disclosure (summary-first
     // Overview) — Publish or Edit, depending on whether the seed already
     // published a prediction for this trip.
@@ -217,11 +236,25 @@ test.describe("staff", () => {
 
     // And a whole Celsius degree typed in round-trips exactly.
     await page.getByLabel("Water temp °C").fill("24");
+    const conditionsRedirect = page.waitForEvent("framenavigated", (frame) => {
+      if (frame !== page.mainFrame()) return false;
+      const url = new URL(frame.url());
+      return (
+        url.pathname === tripPath &&
+        url.searchParams.get("notice") === "conditions" &&
+        url.searchParams.get("form") === "conditions"
+      );
+    });
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
+    await conditionsRedirect;
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
-    await page.goto(tripPath);
-    await openTripAbout(page);
-    await openTripAboutRow(page, "Conditions");
+
+    // The action revalidates this trip and redirects with the conditions
+    // notice, which returns to a fresh Details render with this row open.
+    // Capture the URL as the redirect happens: the page consumes and removes
+    // its notice after rendering, so a later URL assertion would miss it.
+    // Then read the stored Celsius back from that server-rendered form.
     await expect(page.getByLabel("Water temp °C")).toHaveValue("24");
+    await expect(page.getByLabel("Visibility ft")).toBeVisible();
   });
 });

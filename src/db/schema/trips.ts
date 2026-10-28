@@ -696,7 +696,10 @@ export const trips = pgTable(
     // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
     index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     check("trips_capacity_range", sql`${table.capacity} between 1 and 60`),
-    check("trips_planned_dives_range", sql`${table.plannedDives} between 1 and 4`),
+    check(
+      "trips_planned_dives_range",
+      sql`${table.plannedDives} between 1 and 4 or (${table.courseId} is not null and ${table.plannedDives} = 5)`,
+    ),
     // Deliberately **not** `minimum_bookings <= capacity`. A shop that later
     // drops the boat from a nine-seater to a four-seat RIB would then be
     // refused the capacity edit by a constraint about something else, and the

@@ -128,6 +128,10 @@
   "/shop/[shopSlug]/trips/[id]/log": {
     "visual": ["departure-log", "departure-log-every-checkpoint"]
   },
+  "/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers": {
+    "e2e": ["party-waiver-qr.spec.ts", "check-in.spec.ts"],
+    "visual": ["party-waiver-queue", "party-waiver-held-medical"]
+  },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
     "e2e": ["gear.spec.ts", "rental-terms.spec.ts"],
     "visual": ["rental-ticket"]

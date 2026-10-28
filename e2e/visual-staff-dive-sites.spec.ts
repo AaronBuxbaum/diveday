@@ -83,9 +83,44 @@ for (const scheme of ["light", "dark"] as const) {
           .last();
         await expect(selectedPopup).toBeVisible();
         expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforePinSelection);
+        const waitForSelectedMapToSettle = () =>
+          page.waitForFunction(
+            async () => {
+              const map = document.querySelector<HTMLElement>(".leaflet-container");
+              const pane = map?.querySelector<HTMLElement>(".leaflet-map-pane");
+              const marker = map?.querySelector<HTMLElement>(".leaflet-site-marker button.ring-4");
+              const popup = map?.querySelector<HTMLElement>(".leaflet-popup");
+              if (!map || !pane || !marker || !popup) return false;
+
+              const geometry = () => {
+                const rect = (element: HTMLElement) => {
+                  const { x, y, width, height } = element.getBoundingClientRect();
+                  return [x, y, width, height];
+                };
+                return [pane.style.transform, rect(marker), rect(popup)];
+              };
+              const nextFrame = () =>
+                new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+              await nextFrame();
+              const before = geometry();
+              await nextFrame();
+              const after = geometry();
+              const tilesIdle =
+                map.querySelector(".leaflet-tile:not(.leaflet-tile-loaded)") === null;
+
+              return (
+                !pane.classList.contains("leaflet-pan-anim") &&
+                tilesIdle &&
+                JSON.stringify(before) === JSON.stringify(after)
+              );
+            },
+            undefined,
+            { timeout: 15_000 },
+          );
         let footerFocusedAtPreviousWidth = false;
         await capture(page, "dive-sites-library-pin-selected", scheme, {
           beforeShot: async () => {
+            await waitForSelectedMapToSettle();
             await expectPopupInMap(page, selectedPopup);
             for (const selector of [
               ".leaflet-site-card__title",

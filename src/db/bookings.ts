@@ -1658,7 +1658,7 @@ export async function getShopBookingTripId(
  * whatever handed it the ids.
  */
 export async function getBookingForTrip(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   tripId: string,
   bookingId: string,
@@ -1666,7 +1666,7 @@ export async function getBookingForTrip(
   const [row] = await db
     .select({ booking: bookings, person: people })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .where(
       and(
         eq(bookings.id, bookingId),
@@ -2130,6 +2130,10 @@ export async function moveBooking(
       .update(bookings)
       .set({
         tripId: target.id,
+        // A plan belongs to the departure where staff made it.
+        trainingPlanInstructorPersonId: null,
+        trainingPlanByPersonId: null,
+        trainingPlanAt: null,
         // Moving alone leaves the party it was booked in.
         partyLeadBookingId: null,
         // Each of these was said about the old departure, so none is true of

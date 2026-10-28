@@ -15,6 +15,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { BoatPaperRecord, BoatRadioRecord, BoatSafetyNotice } from "@/lib/boat-safety";
+import type { CrewCredentialSnapshot } from "@/lib/crew-credential-snapshot";
+import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
@@ -91,6 +93,19 @@ export const rollCallEvents = pgTable(
      * gate: nothing reads it to refuse or allow anything.
      */
     readinessStatus: text("readiness_status"),
+    /** The card evidence captured in the live boarding INSERT; null means unavailable. */
+    certificationSnapshot:
+      jsonb("certification_snapshot").$type<
+        (IncidentCertificationEvidence & { reviewedByPersonId: string | null })[]
+      >(),
+    /** The app clock before issuing the statement that reads the cards. */
+    certificationSnapshotStartedAt: timestamp("certification_snapshot_started_at", {
+      withTimezone: true,
+    }),
+    /** When the statement finished; it can be later than the snapshot it read. */
+    certificationSnapshotCapturedAt: timestamp("certification_snapshot_captured_at", {
+      withTimezone: true,
+    }),
     /** The blockers behind a `blocked` snapshot, as the engine raised them; null otherwise. */
     readinessBlockers: jsonb("readiness_blockers").$type<ReadinessBlocker[]>(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
@@ -139,6 +154,10 @@ export const rollCallEvents = pgTable(
       table.occurredAt,
     ),
     uniqueIndex("roll_call_events_shop_client_event_unique").on(table.shopId, table.clientEventId),
+    check(
+      "roll_call_events_certification_snapshot_shape",
+      sql`(${table.certificationSnapshot} is null and ${table.certificationSnapshotStartedAt} is null and ${table.certificationSnapshotCapturedAt} is null) or (${table.certificationSnapshot} is not null and ${table.certificationSnapshotStartedAt} is not null and ${table.certificationSnapshotCapturedAt} is not null and ${table.certificationSnapshotStartedAt} <= ${table.certificationSnapshotCapturedAt} and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
+    ),
     check(
       "roll_call_events_readiness_snapshot_shape",
       sql`(${table.readinessStatus} is null and ${table.readinessBlockers} is null) or (${table.status} = 'boarded' and ${table.readinessStatus} in ('ready', 'blocked'))`,
@@ -231,6 +250,14 @@ export const rollCallCrewEvents = pgTable(
      * is deliberately gone.
      */
     note: text("note"),
+    /** A live boarding mark's observed credential state, never an assertion of sailing time. */
+    credentialSnapshot: jsonb("credential_snapshot").$type<CrewCredentialSnapshot[]>(),
+    credentialSnapshotStartedAt: timestamp("credential_snapshot_started_at", {
+      withTimezone: true,
+    }),
+    credentialSnapshotCapturedAt: timestamp("credential_snapshot_captured_at", {
+      withTimezone: true,
+    }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: appNowTimestamp("created_at").notNull(),
     /**
@@ -254,6 +281,10 @@ export const rollCallCrewEvents = pgTable(
       table.checkpoint,
       table.personId,
       table.occurredAt,
+    ),
+    check(
+      "roll_call_crew_credential_snapshot_shape",
+      sql`(${table.credentialSnapshot} is null and ${table.credentialSnapshotStartedAt} is null and ${table.credentialSnapshotCapturedAt} is null) or (${table.credentialSnapshot} is not null and ${table.credentialSnapshotStartedAt} is not null and ${table.credentialSnapshotCapturedAt} is not null and ${table.credentialSnapshotStartedAt} <= ${table.credentialSnapshotCapturedAt} and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.credentialSnapshot}) = 'array')`,
     ),
     uniqueIndex("roll_call_crew_events_shop_client_event_unique").on(
       table.shopId,

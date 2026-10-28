@@ -398,7 +398,8 @@ export async function upsertExecutedDive(
       .select({ plannedDives: trips.plannedDives })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-      .limit(1);
+      .limit(1)
+      .for("update");
     if (!trip) return { ok: false, reason: "unknown_trip" };
     if (input.diveNumber < 1 || input.diveNumber > trip.plannedDives) {
       return { ok: false, reason: "dive_number_out_of_range" };

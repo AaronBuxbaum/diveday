@@ -3,11 +3,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
+import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { StatusInView } from "@/components/ui/StatusInView";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { rolesMissingCredential } from "@/lib/crew-roles";
 import { cachedListFormat } from "@/lib/intl-cache";
+import type { FormNotice } from "@/lib/staff-notices";
 import { type CardCredential, CREDENTIALED_ROLES } from "../credential-rows";
 
 const MISSING_KIND_KEYS = {
@@ -44,6 +47,8 @@ export function StaffCardCredentials({
   t,
   reviewAction,
   deleteAction,
+  editAction,
+  status,
 }: {
   personId: string;
   roles: readonly Role[];
@@ -52,9 +57,11 @@ export function StaffCardCredentials({
   t: StaffTranslator;
   reviewAction: (formData: FormData) => void | Promise<void>;
   deleteAction: (formData: FormData) => void | Promise<void>;
+  editAction?: (formData: FormData) => void | Promise<void>;
+  status?: FormNotice;
 }) {
   const sailsOnACard = roles.some((role) => CREDENTIALED_ROLES.includes(role));
-  if (credentials.length === 0 && !sailsOnACard) return null;
+  if (credentials.length === 0 && !sailsOnACard && !status) return null;
   const missing = rolesMissingCredential(
     roles,
     credentials.map((credential) => credential.kind),
@@ -76,10 +83,18 @@ export function StaffCardCredentials({
       t={t}
       reviewAction={reviewAction}
       deleteAction={deleteAction}
+      editAction={editAction}
+      personId={personId}
     />
   );
   return (
     <div className="mt-4">
+      {status ? (
+        <>
+          <FormStatus tone={status.tone}>{status.text}</FormStatus>
+          {status.tone !== "danger" ? <StatusInView /> : null}
+        </>
+      ) : null}
       {atRest.length > 0 ? (
         <ul
           aria-label={t("staffing.credentials.heading")}
@@ -144,11 +159,15 @@ function CredentialRow({
   t,
   reviewAction,
   deleteAction,
+  editAction,
+  personId,
 }: {
   credential: CardCredential;
   t: StaffTranslator;
   reviewAction: (formData: FormData) => void | Promise<void>;
   deleteAction: (formData: FormData) => void | Promise<void>;
+  editAction?: (formData: FormData) => void | Promise<void>;
+  personId: string;
 }) {
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -170,10 +189,72 @@ function CredentialRow({
           {t("staffing.credentials.pending")}
         </Badge>
       )}
+      {editAction ? (
+        <details className="basis-full print:hidden">
+          <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
+            {t("staffing.credentials.editOrRenew")}
+          </summary>
+          <FieldGrid as="form" action={editAction} columns={2} className="mt-3">
+            <input type="hidden" name="personId" value={personId} />
+            <input type="hidden" name="revision" value={credential.revision ?? 0} />
+            <input type="hidden" name="kind" value={credential.kind} />
+            <Field label={t("staffing.credentials.name")}>
+              <input
+                name="name"
+                required
+                maxLength={160}
+                defaultValue={credential.name}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("staffing.credentials.issuer")}>
+              <input
+                name="issuingBody"
+                maxLength={160}
+                defaultValue={credential.issuingBody ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("staffing.credentials.identifier")}>
+              <input
+                name="identifier"
+                maxLength={120}
+                defaultValue={credential.identifier ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("staffing.credentials.issuedAt")}>
+              <DateField name="issuedAt" defaultValue={credential.issuedAt ?? ""} />
+            </Field>
+            <Field label={t("staffing.credentials.renewsAt")}>
+              <DateField name="renewsAt" defaultValue={credential.renewsAt ?? ""} />
+            </Field>
+            <div className="col-span-full flex flex-wrap gap-3">
+              <SubmitButton
+                name="renewalOf"
+                value={credential.id}
+                pendingLabel={t("staffing.credentials.saving")}
+                className={buttonClass()}
+              >
+                {t("staffing.credentials.saveRenewal")}
+              </SubmitButton>
+              <SubmitButton
+                name="correctionOf"
+                value={credential.id}
+                pendingLabel={t("staffing.credentials.saving")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("staffing.credentials.saveCorrection")}
+              </SubmitButton>
+            </div>
+          </FieldGrid>
+        </details>
+      ) : null}
       <span className="ms-auto flex flex-wrap items-center gap-x-6 gap-y-2 print:hidden">
         {credential.reviewed ? null : (
           <form action={reviewAction}>
             <input type="hidden" name="credentialId" value={credential.id} />
+            <input type="hidden" name="revision" value={credential.revision ?? 0} />
             <input type="hidden" name="status" value="verified" />
             <SubmitButton
               pendingLabel={t("staffing.credentials.saving")}
@@ -185,6 +266,7 @@ function CredentialRow({
         )}
         <form action={deleteAction}>
           <input type="hidden" name="credentialId" value={credential.id} />
+          <input type="hidden" name="revision" value={credential.revision ?? 0} />
           <InlineConfirm
             triggerLabel={t("staffing.credentials.delete")}
             confirmLabel={t("staffing.credentials.deleteConfirm", { name: credential.name })}

@@ -23,6 +23,7 @@ vi.mock("../card-actions", () => ({
   deleteCertificationAction: vi.fn(),
   deleteSpecialtyAction: vi.fn(),
   markCertifiedAction: vi.fn(),
+  recordJuniorStatusAction: vi.fn(),
   recordDrysuitExperienceAction: vi.fn(),
   reviewAction: vi.fn(),
   reviewSpecialtyAction: vi.fn(),

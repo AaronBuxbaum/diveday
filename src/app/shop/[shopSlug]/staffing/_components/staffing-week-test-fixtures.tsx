@@ -42,6 +42,7 @@ export const WORDS: StaffingWeekWords = {
   askWontClose: "You add no seats to this session. Only another instructor does.",
   requestWontClose: "Approving this one won’t close the gap. Only an instructor adds seats.",
   ratingLapsed: "A crew rating isn’t current",
+  ratingUnverified: "Check crew rating",
   continuedUntil: "until {time} · from {day}",
   continuedFrom: "from {day}",
 };

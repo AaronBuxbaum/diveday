@@ -278,6 +278,7 @@ for (const scheme of ["light", "dark"] as const) {
       page,
       privateShop,
     }) => {
+      const promosPath = `/shop/${privateShop.slug}/promos`;
       const addPackage = async (
         name: string,
         dives: number,
@@ -285,10 +286,14 @@ for (const scheme of ["light", "dark"] as const) {
         scope: "all" | "fun_dives",
         validUntil?: string,
       ) => {
-        // Settle the form's own document, not the redirect-only packages shell:
-        // its session check can finish before the destination starts hydrating.
-        await page.goto(`/shop/${privateShop.slug}/promos#dive-packages`);
-        await expect(page).toHaveURL(`/shop/${privateShop.slug}/promos#dive-packages`);
+        // A successful save already returns to Promos; reuse it for the next save.
+        if (new URL(page.url()).pathname !== promosPath) {
+          await page.goto(`${promosPath}#dive-packages`);
+          await expect(page).toHaveURL(`${promosPath}#dive-packages`);
+        }
+        // Fill does not wait for an inert ancestor, so wait for the live session.
+        await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
+        await expect(page.locator("[data-staff-session-lock]")).toHaveCount(0);
         const create = page.locator("#package-new");
         await expect(create.locator("summary")).toBeVisible();
         if ((await create.getAttribute("open")) === null) await create.locator("summary").click();
@@ -534,6 +539,11 @@ for (const scheme of ["light", "dark"] as const) {
       ).toBeVisible();
       await expect(page.getByText(staffCopy("manifest.buddyTeamNotCleared"))).toBeVisible();
       await expect(
+        page
+          .getByRole("region", { name: staffCopy("manifest.buddyHeading") })
+          .locator(":scope > details"),
+      ).not.toHaveAttribute("open");
+      await expect(
         manifestRow(page, "Bea Quill").getByText(
           staffCopy("shared.buddyTeam.ashoreNamed", { name: "Ari" }),
           { exact: true },
@@ -562,6 +572,11 @@ for (const scheme of ["light", "dark"] as const) {
           }),
         ),
       ).toBeVisible();
+      await expect(
+        page
+          .getByRole("region", { name: staffCopy("manifest.buddyHeading") })
+          .locator(":scope > details"),
+      ).not.toHaveAttribute("open");
       await offlineCopySaved(page);
       await capture(page, "manifest-buddy-intro-warning", scheme);
     });

@@ -6,6 +6,7 @@ import { shopDayOf } from "@/lib/closeout";
 import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { DEPARTURE_BUFFER_MS, hasReturned } from "@/lib/trips";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
@@ -20,6 +21,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { invalidateTrainingPlansForCrewChange } from "./training-plan-crew";
 import {
   type DepartureWindow,
   legWindow,
@@ -626,6 +628,7 @@ export async function setTripCrew(
   );
   const valid = requested.map(crewInputPersonId);
   const changed = await db.transaction(async (tx) => {
+    await lockBoardingCertificationEvidence(tx, shopId, "rewrite");
     const [trip] = await tx
       .select({
         id: trips.id,
@@ -647,6 +650,9 @@ export async function setTripCrew(
         personId: tripAssignments.personId,
         tripRole: tripAssignments.tripRole,
         assignedByPersonId: tripAssignments.assignedByPersonId,
+        trainingPlanInstructorPersonId: tripAssignments.trainingPlanInstructorPersonId,
+        trainingPlanByPersonId: tripAssignments.trainingPlanByPersonId,
+        trainingPlanAt: tripAssignments.trainingPlanAt,
       })
       .from(tripAssignments)
       .where(eq(tripAssignments.tripId, tripId));
@@ -722,6 +728,17 @@ export async function setTripCrew(
     // A helper who leaves the crew can no longer be promised to a diver. Lock
     // and clear request rows before deleting assignments, matching the helper
     // assignment transaction's request-then-assignment lock order.
+    const changedPeople = [
+      ...dropped,
+      ...requested
+        .filter(
+          (entry) =>
+            !existingRoles.has(crewInputPersonId(entry)) ||
+            (existingRoles.get(crewInputPersonId(entry)) ?? null) !== roleAfterChange(entry),
+        )
+        .map(crewInputPersonId),
+    ];
+    await invalidateTrainingPlansForCrewChange(tx, shopId, tripId, changedPeople);
     await clearHelpRequestHelpers(tx, shopId, tripId, dropped, options.now);
     // The roles were read before the delete (`existingRoles` above), so a crew
     // edit that says nothing about roles preserves them instead of blanking
@@ -767,10 +784,18 @@ export async function setTripCrew(
           // Who rostered someone whose place did not change stays who did; a
           // newcomer or a new role is this staffer's doing.
           const kept = existingRoles.has(personId) && existingRoles.get(personId) === tripRole;
+          const prior = existing.find((row) => row.personId === personId);
+          const preservePlan =
+            kept && prior && !changedPeople.includes(prior.trainingPlanInstructorPersonId ?? "");
           return {
             tripId,
             personId,
             tripRole,
+            trainingPlanInstructorPersonId: preservePlan
+              ? prior.trainingPlanInstructorPersonId
+              : null,
+            trainingPlanByPersonId: preservePlan ? prior.trainingPlanByPersonId : null,
+            trainingPlanAt: preservePlan ? prior.trainingPlanAt : null,
             assignedByPersonId: kept
               ? (existingAssigners.get(personId) ?? null)
               : (options.actorPersonId ?? null),
@@ -1034,6 +1059,7 @@ export async function changeTripCrewOutcome(
   options: CrewChangeOptions = {},
 ): Promise<TripCrewOutcome> {
   const outcome = await db.transaction(async (tx): Promise<TripCrewOutcome> => {
+    await lockBoardingCertificationEvidence(tx, shopId, "rewrite");
     const [eligible] = await tx
       .select({ personId: people.id })
       .from(people)
@@ -1183,6 +1209,7 @@ export async function changeTripCrewOutcome(
           ? ("role_changed" as const)
           : null;
       if (news) {
+        await invalidateTrainingPlansForCrewChange(tx, shopId, tripId, [change.personId]);
         await recordCrewNotices(
           tx,
           [
@@ -1223,6 +1250,7 @@ export async function changeTripCrewOutcome(
       // Clear the promise before deleting the crew row. Help-request assignment
       // locks the request before sharing the crew row, so this keeps one lock
       // order and avoids a crew-change/assignment deadlock.
+      await invalidateTrainingPlansForCrewChange(tx, shopId, tripId, [change.personId]);
       await clearHelpRequestHelpers(tx, shopId, tripId, [change.personId], options.now);
       const removed = await tx
         .delete(tripAssignments)

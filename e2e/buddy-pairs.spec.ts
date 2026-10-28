@@ -1,7 +1,22 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { manifestRow, openManifestPerson, openTripFromBoard, openTripTab } from "./helpers";
+import {
+  manifestRow,
+  openIfClosed,
+  openManifestPerson,
+  openTripFromBoard,
+  openTripTab,
+} from "./helpers";
 
 signedInAsOwner();
+
+async function openBuddyTeamBuilder(page: Page) {
+  const heading = page.getByRole("heading", { name: "Buddy teams" });
+  const panel = page.locator("details").filter({ has: heading }).first();
+  await openIfClosed(panel);
+  const builder = panel.locator("details").filter({ hasText: "New buddy team" }).first();
+  await openIfClosed(builder);
+}
 
 /**
  * Buddy teams on the roll call (ADR 20260804-buddy-teams): build a team on the
@@ -21,11 +36,10 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
-  // The panel rests collapsed behind its summary line; working in it starts
-  // by opening it. Every buddy action redirects back with `?buddies=open`,
-  // so it stays open across the steps below.
-  await expect(page.getByRole("heading", { name: "Buddy teams" })).toBeVisible();
-  await page.getByRole("heading", { name: "Buddy teams" }).click();
+  // The panel can arrive open when a team warning needs attention. Inspect its
+  // native state before opening so the test never toggles an already-open fold
+  // shut. Buddy actions redirect back with `?buddies=open`.
+  await openBuddyTeamBuilder(page);
 
   // The seeded teams are already at a glance — including the trio the old
   // two-body model could not express at all, with the divemaster marked as
@@ -48,7 +62,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
 
   // Build a team from two of the free divers. The builder sits behind its
   // own disclosure now — forming a team is the rare act on this page.
-  await page.getByText("New buddy team").click();
+  await openBuddyTeamBuilder(page);
   await page.getByRole("checkbox", { name: "Omar Haddad" }).check();
   await page.getByRole("checkbox", { name: "Sam Whitfield" }).check();
   await page.getByRole("button", { name: "Form buddy team" }).click();
@@ -155,12 +169,15 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   // Same collapsed-at-rest panel as the first test: open it once, and the
   // `?buddies=open` redirects keep it open across the acts below.
   await expect(page.getByRole("heading", { name: "Buddy teams" })).toBeVisible();
-  await page.getByRole("heading", { name: "Buddy teams" }).click();
+  await openBuddyTeamBuilder(page);
 
   const teamPanel = page.locator("section", {
     has: page.getByRole("heading", { name: "Buddy teams" }),
   });
-  const tomLena = teamPanel.locator("li", { hasText: "Lena Fischer" }).first();
+  const tomLena = teamPanel
+    .locator("li")
+    .filter({ has: page.locator("li[data-buddy-member]", { hasText: "Lena Fischer" }) })
+    .first();
 
   // A team of two offers no per-member remove: at two the act is a dissolve,
   // which has its own button and its own entry on the trail.
@@ -172,17 +189,23 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   // `not.toContainText("Omar Haddad")` would be asserting against an <option>.
   await tomLena.getByLabel("Add to this team").selectOption({ label: "Omar Haddad" });
   await tomLena.getByRole("button", { name: "Add", exact: true }).click();
-  const grown = teamPanel.locator("li", { hasText: "Lena Fischer" }).first();
+  const grown = teamPanel
+    .locator("li")
+    .filter({ has: page.locator("li[data-buddy-member]", { hasText: "Lena Fischer" }) })
+    .first();
   await expect(grown.getByRole("button", { name: "Remove Omar Haddad" })).toBeVisible();
   await grown.getByRole("button", { name: "Remove Omar Haddad" }).click();
-  const shrunk = teamPanel.locator("li", { hasText: "Lena Fischer" }).first();
+  const shrunk = teamPanel
+    .locator("li")
+    .filter({ has: page.locator("li[data-buddy-member]", { hasText: "Lena Fischer" }) })
+    .first();
   await expect(shrunk.getByRole("button", { name: "Remove Omar Haddad" })).toHaveCount(0);
   // Back to two, so the per-member control is gone again.
   await expect(shrunk.getByRole("button", { name: /^Remove / })).toHaveCount(0);
 
   // One person is not a team — a single tick is a worded refusal, not a
   // silent no-op.
-  await page.getByText("New buddy team").click();
+  await openBuddyTeamBuilder(page);
   await page.getByRole("checkbox", { name: "Omar Haddad" }).check();
   await page.getByRole("button", { name: "Form buddy team" }).click();
   await expect(page.getByText("A buddy team needs at least two people.")).toBeVisible();
@@ -193,16 +216,12 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   // surviving team's "Add to this team" picker lists her as an <option> the
   // moment she is free, and a substring filter would match that instead.
   await expect(teamPanel.getByRole("button", { name: "Dissolve team" })).toHaveCount(2);
-  await teamPanel
-    .locator("li", { hasText: "Lena Fischer" })
-    .first()
-    .getByRole("button", { name: "Dissolve team" })
-    .click();
+  await shrunk.getByRole("button", { name: "Dissolve team" }).click();
   await expect(teamPanel.getByRole("button", { name: "Dissolve team" })).toHaveCount(1);
   await expect(teamPanel.getByRole("listitem").filter({ hasText: /^Lena Fischer$/ })).toHaveCount(
     0,
   );
-  await page.getByText("New buddy team").click();
+  await openBuddyTeamBuilder(page);
   await expect(page.getByRole("checkbox", { name: "Lena Fischer" })).toBeVisible();
   // Same h3-anchored row shape as the first test: Tom's row must not be
   // found via some other row's chip text.

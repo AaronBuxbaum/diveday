@@ -31,6 +31,15 @@ for (const scheme of ["light", "dark"] as const) {
     test.describe("staff", () => {
       signedInAsOwner();
 
+      test(`the teen buddy policy renders (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await openSettingsRow(page, staffCopy("settings.main.juniorBuddy.heading"));
+        await expect(page.getByLabel(staffCopy("settings.main.juniorBuddy.label"))).toHaveValue(
+          "optional",
+        );
+        await capture(page, "settings-teen-buddy-policy", scheme);
+      });
+
       // The settings hub, the directory every shop setting hangs off.
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
@@ -567,11 +576,11 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-team", scheme, { darkPhone: true });
         const credentials = page.locator('details[id^="credentials-"]').first();
         await expect(credentials).toBeVisible();
-        await credentials.locator("summary").click();
+        await credentials.locator(":scope > summary").click();
         await capture(page, "team-member-credential-summary", scheme, {
           darkPhone: true,
           beforeShot: async () => {
-            const summary = credentials.locator("summary");
+            const summary = credentials.locator(":scope > summary");
             const label = summary.getByText(staffCopy("staffing.credentials.heading"), {
               exact: true,
             });

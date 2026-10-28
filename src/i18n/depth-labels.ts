@@ -13,16 +13,47 @@ import type { StaffTranslator } from "./staff-messages";
  */
 export function depthWarningText(
   t: StaffTranslator,
-  advisory: Extract<DepthCeilingCheck, { status: "exceeds" }>,
+  advisory: Extract<DepthCeilingCheck, { status: "exceeds" | "verification_required" }>,
 ): string {
-  const values = {
-    site: advisory.siteDepth,
-    limit: advisory.limitDepth,
-    unit: t(advisory.unit === "feet" ? "shared.depth.feet" : "shared.depth.meters"),
-  };
-  if (advisory.basis === "junior_age") return t("trips.roster.depthWarningJunior", values);
-  if (advisory.basis === "no_card") return t("trips.roster.depthWarningNoCard", values);
-  return t("trips.roster.depthWarning", values);
+  const messages: string[] = [];
+  if (advisory.status === "exceeds") {
+    const values = {
+      site: advisory.siteDepth,
+      limit: advisory.limitDepth,
+      unit: t(advisory.unit === "feet" ? "shared.depth.feet" : "shared.depth.meters"),
+    };
+    messages.push(
+      advisory.verificationReasons && advisory.basis !== "junior_card"
+        ? t("trips.roster.depthWarningUnconfirmed", values)
+        : advisory.basis === "junior_age"
+          ? t("trips.roster.depthWarningJunior", values)
+          : advisory.basis === "junior_card"
+            ? t("trips.roster.depthWarningJuniorCard", values)
+            : advisory.basis === "no_card"
+              ? t("trips.roster.depthWarningNoCard", values)
+              : t("trips.roster.depthWarning", values),
+    );
+  }
+  for (const reason of advisory.verificationReasons ?? []) {
+    messages.push(
+      t(
+        reason === "card_status"
+          ? "trips.roster.depthVerificationCard"
+          : "trips.roster.depthVerificationLimits",
+      ),
+    );
+  }
+  return messages.join(" ");
+}
+
+/** The advisory's visible text, or null when no check is needed. */
+export function depthWarningOrNull(
+  t: StaffTranslator,
+  advisory: DepthCeilingCheck | null | undefined,
+): string | null {
+  return advisory?.status === "exceeds" || advisory?.status === "verification_required"
+    ? depthWarningText(t, advisory)
+    : null;
 }
 
 /**

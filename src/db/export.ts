@@ -175,6 +175,7 @@ export function loadShopExportBundleInput(
 async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) {
   return {
     staffCredentialRows: await readScoped(tx, "staffCredentials", scope),
+    staffCredentialHistoryRows: await readScoped(tx, "staffCredentialHistory", scope),
     incidentReportRows: await readScoped(tx, "incidentReports", scope),
     incidentPersonRows: await readScoped(tx, "incidentReportPeople", scope),
     incidentAddendumRows: await readScoped(tx, "incidentReportAddenda", scope),
@@ -271,6 +272,12 @@ async function readCrewAwayRows(tx: AppTransaction, scope: ShopExportScope) {
  * shop that does not exist. Each entry of `SHOP_EXPORT_FILES` takes only what
  * it names from this.
  */
+async function loadCardExportRows(tx: AppTransaction, scope: ShopExportScope | DiverExportScope) {
+  const certificationRows = await readScoped(tx, "certifications", scope);
+  const juniorReviewRows = await readScoped(tx, "certificationJuniorReviews", scope);
+  return { certificationRows, juniorReviewRows };
+}
+
 async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
@@ -518,8 +525,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     },
   );
 
-  const certificationRows = await readScoped(tx, "certifications", scope);
-
+  const cardRows = await loadCardExportRows(tx, scope);
   const specialtyRows = await readScoped(tx, "specialtyCertifications", scope);
 
   const nitroxRows = await readScoped(tx, "nitroxCertifications", scope);
@@ -568,8 +574,8 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   // Per-person rollups for contacts.csv. Archived cards never represent a
   // diver in a migration file; archived people still export, marked.
-  const cardsByPerson = new Map<string, typeof certificationRows>();
-  for (const card of certificationRows) {
+  const cardsByPerson = new Map<string, typeof cardRows.certificationRows>();
+  for (const card of cardRows.certificationRows) {
     if (card.deletedAt) continue;
     cardsByPerson.set(card.personId, [...(cardsByPerson.get(card.personId) ?? []), card]);
   }
@@ -594,7 +600,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
    * so every live row in it is a card a staffer captured or a CSV brought in.
    */
   const cardedPeople = new Set<string>();
-  for (const card of certificationRows) {
+  for (const card of cardRows.certificationRows) {
     if (!card.deletedAt && !isUnsightedSelfDeclaration(card)) cardedPeople.add(card.personId);
   }
   for (const card of nitroxRows) {
@@ -691,7 +697,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     rollCallRows,
     crewRollCallRows,
     buddyPairRows,
-    certificationRows,
+    ...cardRows,
     specialtyRows,
     nitroxRows,
     templateRows,
@@ -887,8 +893,33 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     // diveday:allow-deleted-people: names for every row in the bundle, removed staff included.
     .where(eq(people.shopId, shopId));
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
+  // Plan attribution may name only current staff, never another diver even if
+  // a malformed historical reference points at one.
+  const planPersonIds = [
+    ...new Set(
+      bookingRows
+        .flatMap((row) => [row.trainingPlanInstructorPersonId, row.trainingPlanByPersonId])
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const planStaff = planPersonIds.length
+    ? await tx
+        .select({ id: people.id, fullName: people.fullName })
+        .from(people)
+        // diveday:allow-deleted-people: a removed staff member still attributed this plan.
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(
+          and(
+            eq(people.shopId, shopId),
+            inArray(people.id, planPersonIds),
+            inArray(personRoles.role, ["owner", "manager", "instructor"]),
+          ),
+        )
+    : [];
+  const trainingPlanStaffName = new Map(planStaff.map((row) => [row.id, row.fullName]));
 
   const certificationRows = await readScoped(tx, "certifications", scope);
+  const juniorReviewRows = await readScoped(tx, "certificationJuniorReviews", scope);
 
   const specialtyRows = await readScoped(tx, "specialtyCertifications", scope);
 
@@ -1103,7 +1134,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     tripStartsAt,
     paymentByBooking,
     personName,
+    trainingPlanStaffName,
     certificationRows,
+    juniorReviewRows,
     specialtyRows,
     nitroxRows,
     interestRows,
@@ -1179,6 +1212,11 @@ export async function loadShopExportCounts(
     "contacts.csv": peopleCount,
     "people.csv": peopleCount,
     "certifications.csv": await countShopScoped(db, "certifications", shopId),
+    "certification_junior_reviews.csv": await countShopScoped(
+      db,
+      "certificationJuniorReviews",
+      shopId,
+    ),
     "specialty_certifications.csv": await countShopScoped(db, "specialtyCertifications", shopId),
     "nitrox_certifications.csv": await countShopScoped(db, "nitroxCertifications", shopId),
     // diveday:allow-deleted-trips: this counts what the bundle above writes, and
@@ -1235,6 +1273,7 @@ export async function loadShopExportCounts(
         ),
     ),
     "staff_credentials.csv": await countShopScoped(db, "staffCredentials", shopId),
+    "staff_credential_history.csv": await countShopScoped(db, "staffCredentialHistory", shopId),
     "bookings.csv": await countOf(
       db.select({ n: count() }).from(bookings).where(eq(bookings.shopId, shopId)),
     ),

@@ -89,7 +89,15 @@ export function RosterRow({
   const s4 = { ...s3, ...rowIdentity(s3) };
   const s5 = { ...s4, ...rowReasonList(s4) };
   // The training marks are the departure's (issue #2275), read here beside the seat.
-  const s6 = { ...s5, ...rowOutstanding({ ...s5, trainingMarks: context.rows.trainingMarks }) };
+  const partyLeadId =
+    entry.booking.partyLeadBookingId ??
+    (context.rows.roster.some((other) => other.booking.partyLeadBookingId === entry.booking.id)
+      ? entry.booking.id
+      : null);
+  const s6 = {
+    ...s5,
+    ...rowOutstanding({ ...s5, partyLeadId, trainingMarks: context.rows.trainingMarks }),
+  };
   // One remedy per actual reason family, in the open beside that reason.
   // Sending a link records delivery only; readiness still comes from the server.
   let waiverPlaced = false;

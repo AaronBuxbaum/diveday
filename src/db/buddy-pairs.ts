@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { ageOnDate } from "@/lib/age";
 import { isStaff } from "@/lib/authz";
@@ -16,6 +16,7 @@ import {
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { isLockWaitRefusal } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import { survivingPersonNames } from "./people";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
@@ -75,6 +76,7 @@ export type BuddyTeamRefusal =
   | "already_teamed"
   | "team_not_found"
   | "not_a_member"
+  | "busy"
   /**
    * The seat is a snorkeler's or a rider's (ADR 20261007-participant-types). A
    * buddy team is divers who look after each other underwater; somebody who is
@@ -167,6 +169,103 @@ async function requireScheduledTrip(tx: Tx, shopId: string, tripId: string): Pro
   return Boolean(trip);
 }
 
+/** Lock even a cancelled or deleted departure before changing an existing team. */
+async function lockTeamTrip(tx: Tx, shopId: string, tripId: string): Promise<boolean> {
+  const [trip] = await tx
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: existing teams must remain correctable on deleted departures.
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .for("update");
+  return Boolean(trip);
+}
+
+/** Hold every named person before reading names for a team event. */
+async function lockTeamPeople(
+  tx: Tx,
+  shopId: string,
+  tripId: string,
+  members: readonly BuddyTeamMemberInput[],
+) {
+  const bookingIds = members.flatMap((member) =>
+    member.kind === "diver" && isUuid(member.bookingId) ? [member.bookingId] : [],
+  );
+  const crewIds = members.flatMap((member) =>
+    member.kind === "crew" && isUuid(member.personId) ? [member.personId] : [],
+  );
+  const seats = bookingIds.length
+    ? await tx
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(bookings.tripId, tripId),
+            inArray(bookings.id, bookingIds),
+          ),
+        )
+        .orderBy(asc(bookings.id))
+        .for("no key update", { noWait: true })
+    : [];
+  const ids = [
+    ...new Set([...crewIds, ...seats.flatMap((seat) => (seat.personId ? [seat.personId] : []))]),
+  ];
+  if (!ids.length) return;
+  await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      // diveday:allow-deleted-people: an existing team can include a removed or erased member.
+      and(eq(people.shopId, shopId), inArray(people.id, ids)),
+    )
+    .orderBy(asc(people.id))
+    .for("no key update", { noWait: true });
+}
+
+/** Read member identifiers only; names are read after their person locks. */
+async function teamMemberRefs(
+  tx: Tx,
+  shopId: string,
+  tripId: string,
+  teamId: string,
+): Promise<BuddyTeamMemberInput[]> {
+  const rows = await tx
+    .select({ bookingId: buddyPairMembers.bookingId, crewPersonId: buddyPairMembers.crewPersonId })
+    .from(buddyPairMembers)
+    .where(
+      and(
+        eq(buddyPairMembers.shopId, shopId),
+        eq(buddyPairMembers.tripId, tripId),
+        eq(buddyPairMembers.pairId, teamId),
+      ),
+    );
+  return rows.flatMap<BuddyTeamMemberInput>((row) =>
+    row.bookingId
+      ? [{ kind: "diver" as const, bookingId: row.bookingId }]
+      : row.crewPersonId
+        ? [{ kind: "crew" as const, personId: row.crewPersonId }]
+        : [],
+  );
+}
+
+/** Roll back the trip lock before retrying a contended person. */
+async function retryTeamMutation<T extends FormBuddyTeamOutcome | BuddyTeamMutationOutcome>(
+  db: AppDb,
+  run: (tx: Tx) => Promise<T>,
+): Promise<T | { ok: false; reason: "busy" | "already_teamed" }> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await db.transaction(run);
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_teamed" };
+      if (!isLockWaitRefusal(error)) throw error;
+      if (attempt === 2) return { ok: false, reason: "busy" };
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  return { ok: false, reason: "busy" };
+}
+
 /**
  * Prove every named member is actually on this boat, and read the name the
  * trail will record.
@@ -218,6 +317,7 @@ async function resolveMembers(
               eq(bookings.shopId, shopId),
               eq(bookings.tripId, tripId),
               ne(bookings.status, "cancelled"),
+              isNull(people.anonymizedAt),
             ),
           )
       : [];
@@ -382,15 +482,7 @@ export async function formBuddyTeam(
     now?: Date;
   },
 ): Promise<FormBuddyTeamOutcome> {
-  let outcome: FormBuddyTeamOutcome;
-  try {
-    outcome = await db.transaction((tx) => formBuddyTeamInTx(tx, input));
-  } catch (error) {
-    // The pre-check races a concurrent write; the unique index is the
-    // authority, and losing to it is the same refusal.
-    if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_teamed" };
-    throw error;
-  }
+  const outcome = await retryTeamMutation(db, (tx) => formBuddyTeamInTx(tx, input));
   // Teams render on the manifest, so a change here is exactly what the push
   // signal exists for (ADR 20260726-manifest-push-refresh).
   if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
@@ -428,7 +520,7 @@ async function formBuddyTeamInTx(
   if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
     return { ok: false, reason: "trip_unavailable" };
   }
-
+  await lockTeamPeople(tx, input.shopId, input.tripId, input.members);
   const resolved = await resolveMembers(tx, input.shopId, input.tripId, input.members);
   if (!resolved.ok) return resolved;
 
@@ -517,6 +609,7 @@ export async function planPartyTeams(
     .select({
       startsAt: trips.startsAt,
       timezone: shops.timezone,
+      requireAdultForTeens: shops.requireAdultBuddyForTeens,
       courseId: trips.courseId,
       intro: courses.isIntroCourse,
     })
@@ -526,7 +619,10 @@ export async function planPartyTeams(
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   const plan: PartyTeamPlan = {
-    departure: { course: departure?.courseId ? { intro: Boolean(departure.intro) } : null },
+    departure: {
+      course: departure?.courseId ? { intro: Boolean(departure.intro) } : null,
+      requireAdultForTeens: departure?.requireAdultForTeens ?? false,
+    },
     members: new Map(),
     parties: new Map(),
     teamable: [],
@@ -549,6 +645,9 @@ export async function planPartyTeams(
           fullName: people.fullName,
           dateOfBirth: people.dateOfBirth,
           verifiedCard: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null)`,
+          certifications: sql<
+            NonNullable<PartyMember["certifications"]>
+          >`coalesce((select json_agg(json_build_object('agency', ${certifications.agency}, 'juniorStatus', ${certifications.juniorStatus})) from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null), '[]'::json)`,
         })
         .from(bookings)
         .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
@@ -557,6 +656,7 @@ export async function planPartyTeams(
             eq(bookings.shopId, shopId),
             eq(bookings.tripId, tripId),
             ne(bookings.status, "cancelled"),
+            isNull(people.anonymizedAt),
           ),
         )
         // diveday:allow-time-id-order: the order seats are grouped into parties; no reader sees it.
@@ -582,6 +682,7 @@ export async function planPartyTeams(
       age: seat.dateOfBirth ? ageOnDate(seat.dateOfBirth, tripDay) : null,
       declaredMinor: seat.declaredMinorAt !== null,
       verifiedCard: Boolean(seat.verifiedCard),
+      certifications: seat.certifications,
     };
     plan.members.set(seat.bookingId, member);
     if (onATeam.has(seat.bookingId)) continue;
@@ -640,27 +741,90 @@ export async function formPartyTeams(
     confirmedAdultParties?: readonly string[];
     now?: Date;
   },
-): Promise<number> {
-  const plan = await planPartyTeams(db, input.shopId, input.tripId);
-  const confirmed = new Set(input.confirmedAdultParties ?? []);
-  const teamable = [
-    ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
-    ...plan.ageUnconfirmed
-      .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
-      .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
-  ];
-  let formed = 0;
-  for (const { bookingIds, adultsConfirmed } of teamable) {
-    const outcome = await formBuddyTeam(db, {
-      shopId: input.shopId,
-      tripId: input.tripId,
-      members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
-      recordedByPersonId: input.recordedByPersonId,
-      adultsConfirmed,
-      now: input.now,
-    });
-    if (outcome.ok) formed += 1;
+): Promise<number | "busy"> {
+  let formed: number | "busy" = "busy";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      formed = await db.transaction(async (tx) => {
+        // A stale form must not bypass a policy enabled while it was open. Hold
+        // both the departure and shop policy while deriving and writing teams.
+        if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) return 0;
+        await tx
+          .select({ id: shops.id })
+          .from(shops)
+          .where(eq(shops.id, input.shopId))
+          .for("no key update", { noWait: true });
+        // Lock seats before people, matching held-seat repointing. Then match
+        // the card-sighting writer's person-then-card order. Sort each set so
+        // different departures cannot invert it. Card writers take the same
+        // person lock before introducing a new row. Never wait while holding
+        // the trip: erasure and other writers can already hold a person or card
+        // and subsequently need this trip. A failed attempt rolls back every
+        // lock before a bounded retry starts.
+        const seats = await tx
+          .select({ id: bookings.personId })
+          .from(bookings)
+          .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)))
+          .orderBy(asc(bookings.id))
+          .for("no key update", { noWait: true });
+        const seatedPeople = seats.flatMap((seat) => (seat.id ? [seat.id] : []));
+        const lockedPeople = await tx
+          .select({ id: people.id })
+          .from(people)
+          .where(
+            // diveday:allow-deleted-people: lock every seated person, including removed records.
+            and(eq(people.shopId, input.shopId), inArray(people.id, seatedPeople)),
+          )
+          .orderBy(asc(people.id))
+          .for("no key update", { noWait: true });
+        if (lockedPeople.length) {
+          await tx
+            .select({ id: certifications.id })
+            .from(certifications)
+            .where(
+              and(
+                eq(certifications.shopId, input.shopId),
+                inArray(
+                  certifications.personId,
+                  lockedPeople.map((person) => person.id),
+                ),
+              ),
+            )
+            .orderBy(asc(certifications.id))
+            .for("update", { noWait: true });
+        }
+        const plan = await planPartyTeams(tx, input.shopId, input.tripId);
+        const confirmed = new Set(input.confirmedAdultParties ?? []);
+        const teamable = [
+          ...plan.teamable.map((bookingIds) => ({ bookingIds, adultsConfirmed: false })),
+          ...plan.ageUnconfirmed
+            .filter((bookingIds) => confirmed.has(partyConfirmKey(bookingIds)))
+            .map((bookingIds) => ({ bookingIds, adultsConfirmed: true })),
+        ];
+        let count = 0;
+        for (const { bookingIds, adultsConfirmed } of teamable) {
+          const outcome = await formBuddyTeamInTx(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
+            recordedByPersonId: input.recordedByPersonId,
+            adultsConfirmed,
+            now: input.now,
+          });
+          if (outcome.ok) count += 1;
+        }
+        return count;
+      });
+      break;
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) return 0;
+      if (!isLockWaitRefusal(error)) throw error;
+      if (attempt === 2) return "busy";
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
   }
+  if (typeof formed === "number" && formed > 0)
+    await publishManifestEvent(db, input.shopId, input.tripId);
   return formed;
 }
 
@@ -676,56 +840,52 @@ export async function addBuddyTeamMember(
     now?: Date;
   },
 ): Promise<BuddyTeamMutationOutcome> {
-  let outcome: BuddyTeamMutationOutcome;
-  try {
-    outcome = await db.transaction(async (tx): Promise<BuddyTeamMutationOutcome> => {
-      const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
-      if (!staffId) return { ok: false, reason: "staff_not_found" };
-      if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
-        return { ok: false, reason: "trip_unavailable" };
-      }
-      const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
-      if (standing.length === 0) return { ok: false, reason: "team_not_found" };
-      if (standing.some((member) => memberKey(member) === memberKey(input.member))) {
-        return { ok: false, reason: "duplicate_member" };
-      }
-      const resolved = await resolveMembers(tx, input.shopId, input.tripId, [input.member]);
-      if (!resolved.ok) return resolved;
-      const [member] = resolved.members;
-      if (!member) return { ok: false, reason: "booking_unavailable" };
-      if (member.kind === "diver") {
-        const existing = await tx
-          .select({ bookingId: buddyPairMembers.bookingId })
-          .from(buddyPairMembers)
-          .where(eq(buddyPairMembers.bookingId, member.bookingId))
-          .limit(1);
-        if (existing.length > 0) return { ok: false, reason: "already_teamed" };
-      }
-      const occurredAt = input.now ?? nowDate();
-      await tx.insert(buddyPairMembers).values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        pairId: input.teamId,
-        bookingId: member.kind === "diver" ? member.bookingId : null,
-        crewPersonId: member.kind === "crew" ? member.personId : null,
-        pairedByPersonId: staffId,
-        createdAt: occurredAt,
-      });
-      await recordTeamEvent(tx, {
-        shopId: input.shopId,
-        tripId: input.tripId,
-        teamId: input.teamId,
-        action: "member_added",
-        members: sortMembers([...standing, member], memberKey),
-        recordedByPersonId: staffId,
-        occurredAt,
-      });
-      return { ok: true };
+  const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
+    const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
+    if (!staffId) return { ok: false, reason: "staff_not_found" };
+    if (!(await requireScheduledTrip(tx, input.shopId, input.tripId))) {
+      return { ok: false, reason: "trip_unavailable" };
+    }
+    const refs = await teamMemberRefs(tx, input.shopId, input.tripId, input.teamId);
+    await lockTeamPeople(tx, input.shopId, input.tripId, [...refs, input.member]);
+    const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
+    if (standing.length === 0) return { ok: false, reason: "team_not_found" };
+    if (standing.some((member) => memberKey(member) === memberKey(input.member))) {
+      return { ok: false, reason: "duplicate_member" };
+    }
+    const resolved = await resolveMembers(tx, input.shopId, input.tripId, [input.member]);
+    if (!resolved.ok) return resolved;
+    const [member] = resolved.members;
+    if (!member) return { ok: false, reason: "booking_unavailable" };
+    if (member.kind === "diver") {
+      const existing = await tx
+        .select({ bookingId: buddyPairMembers.bookingId })
+        .from(buddyPairMembers)
+        .where(eq(buddyPairMembers.bookingId, member.bookingId))
+        .limit(1);
+      if (existing.length > 0) return { ok: false, reason: "already_teamed" };
+    }
+    const occurredAt = input.now ?? nowDate();
+    await tx.insert(buddyPairMembers).values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      pairId: input.teamId,
+      bookingId: member.kind === "diver" ? member.bookingId : null,
+      crewPersonId: member.kind === "crew" ? member.personId : null,
+      pairedByPersonId: staffId,
+      createdAt: occurredAt,
     });
-  } catch (error) {
-    if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_teamed" };
-    throw error;
-  }
+    await recordTeamEvent(tx, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      teamId: input.teamId,
+      action: "member_added",
+      members: sortMembers([...standing, member], memberKey),
+      recordedByPersonId: staffId,
+      occurredAt,
+    });
+    return { ok: true };
+  });
   if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
   return outcome;
 }
@@ -761,9 +921,13 @@ export async function removeBuddyTeamMember(
   // trail keeps a `member_removed`/`dissolved` entry naming the actor, the
   // time, and the members as they stood, and the incident export renders it —
   // so what is lost is the live roster's convenience, never the record.
-  const outcome = await db.transaction(async (tx): Promise<BuddyTeamMutationOutcome> => {
+  const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
     const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
+    if (!(await lockTeamTrip(tx, input.shopId, input.tripId)))
+      return { ok: false, reason: "team_not_found" };
+    const refs = await teamMemberRefs(tx, input.shopId, input.tripId, input.teamId);
+    await lockTeamPeople(tx, input.shopId, input.tripId, refs);
     const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
     if (standing.length === 0) return { ok: false, reason: "team_not_found" };
     if (!standing.some((member) => memberKey(member) === memberKey(input.member))) {
@@ -819,9 +983,13 @@ export async function dissolveBuddyTeam(
     now?: Date;
   },
 ): Promise<BuddyTeamMutationOutcome> {
-  const outcome = await db.transaction(async (tx): Promise<BuddyTeamMutationOutcome> => {
+  const outcome = await retryTeamMutation(db, async (tx): Promise<BuddyTeamMutationOutcome> => {
     const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
+    if (!(await lockTeamTrip(tx, input.shopId, input.tripId)))
+      return { ok: false, reason: "team_not_found" };
+    const refs = await teamMemberRefs(tx, input.shopId, input.tripId, input.teamId);
+    await lockTeamPeople(tx, input.shopId, input.tripId, refs);
     const standing = await readTeamMembers(tx, input.shopId, input.tripId, input.teamId);
     if (standing.length === 0) return { ok: false, reason: "team_not_found" };
     await tx

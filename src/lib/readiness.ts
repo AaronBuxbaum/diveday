@@ -545,10 +545,9 @@ export type ReadinessInput = {
   trainingMarkInvalid?: boolean;
   /**
    * The seat's training mark stands and the course's instructor is aboard
-   * for it (`trainingDiveLevel`, issue #2731): the departure's and its sites'
-   * level is lowered to the course's own minimum only where it is at or below
-   * the card the course certifies (`trainingDiveRequiredLevel`). Absent, the
-   * departure's level stands. Specialty and nitrox gates are unchanged.
+   * for it (`trainingDiveLevel`, issue #2731): a site's level may be lowered
+   * to the course's minimum where the course certifies it. The departure's
+   * own level, specialty, and nitrox requirements always stand.
    */
   trainingDive?: TrainingDiveCourse | null;
   now?: Date;
@@ -1103,25 +1102,23 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // says: until staff fix the mark, nobody knows which forms this seat owes.
   if (input.trainingMarkInvalid) blockers.push({ code: "training_mark_invalid" });
 
-  // A snorkeler or a rider is asked for no card: the trip's and its sites'
-  // gates compose to nothing for a seat with no dive in it. Composed here, in
-  // the one place every requirement is composed, rather than checked beside it.
-  const composed = isDiver(input.participantType)
-    ? unionRequirements(input.requirement, input.siteRequirement)
-    : NO_REQUIREMENT;
-  // A marked training dive with its course's instructor aboard answers to the
-  // course's own minimum where the course reaches the level asked (issue
-  // #2731). Only ever for a diver; lowered, never removed.
-  const effective =
-    input.trainingDive && isDiver(input.participantType)
+  // A site-level training exception cannot erase a requirement the trip set.
+  // A supplied training context must already have passed its own safety gates.
+  const site = input.siteRequirement;
+  const effectiveSite =
+    site && input.trainingDive
       ? {
-          ...composed,
+          ...site,
           minimumCertificationLevel: trainingDiveRequiredLevel(
-            composed.minimumCertificationLevel,
+            site.minimumCertificationLevel,
             input.trainingDive,
           ),
         }
-      : composed;
+      : site;
+  // Riders and snorkelers have no dive for a certification to qualify.
+  const effective = isDiver(input.participantType)
+    ? unionRequirements(input.requirement, effectiveSite)
+    : NO_REQUIREMENT;
 
   if (effective.minimumCertificationLevel) {
     const certification = certificationBlocker(

@@ -67,6 +67,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "shop_setup_links",
   "internal_notes",
   "staff_credentials",
+  "staff_credential_history", // credential change history is retained with the staff credential, not age-pruned
   "staff_shifts",
   "crew_availability_blocks",
   "crew_assignment_requests",

@@ -1,0 +1,149 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "6b48a0ee-8cbc-45af-8175-c527526b54ad",
+  "prevIds": [
+    "bf009522-bcc6-4547-99db-82b2b48d3273"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_correction_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_correction_id",
+        "n|col|public.bookings.fly_safe_correction_id",
+        "e|col|public.bookings.fly_safe_correction_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_correction_attempts"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_correction_attempts",
+        "n|col|public.bookings.fly_safe_correction_attempts",
+        "e|col|public.bookings.fly_safe_correction_attempts"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_correction_lease_id"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_correction_lease_id",
+        "n|col|public.bookings.fly_safe_correction_lease_id",
+        "e|col|public.bookings.fly_safe_correction_lease_id"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "fly_safe_correction_lease_until"
+      ],
+      "writes": [
+        "s|col|public.bookings.fly_safe_correction_lease_until",
+        "n|col|public.bookings.fly_safe_correction_lease_until",
+        "e|col|public.bookings.fly_safe_correction_lease_until"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_correction_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_correction_attempts",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_correction_lease_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "fly_safe_correction_lease_until",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

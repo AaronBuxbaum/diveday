@@ -10,7 +10,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
-import { activityEvents, bookings, courses, people, shops, trips } from "./schema";
+import { activityEvents, bookings, courses, people, shops, tripDives, trips } from "./schema";
 import {
   aboardKey,
   readTrainingEnrollments,
@@ -153,6 +153,9 @@ export async function markTrainingDive(
         .update(bookings)
         .set({
           trainingEnrollmentBookingId: input.enrollmentBookingId,
+          trainingPlanInstructorPersonId: null,
+          trainingPlanByPersonId: null,
+          trainingPlanAt: null,
           trainingMarkedAt: now,
           trainingMarkedByPersonId: input.actorPersonId,
         })
@@ -301,6 +304,9 @@ export async function clearTrainingDive(
         .update(bookings)
         .set({
           trainingEnrollmentBookingId: null,
+          trainingPlanInstructorPersonId: null,
+          trainingPlanByPersonId: null,
+          trainingPlanAt: null,
           trainingMarkedAt: null,
           trainingMarkedByPersonId: null,
           // This clear's own stamp, replacing any earlier one: null when it
@@ -344,6 +350,8 @@ export type TrainingMarkRosterSeat = {
   mark: {
     enrollmentBookingId: string;
     courseTitle: string | null;
+    /** Recorded course type, when known; this does not identify an underwater group. */
+    intro?: boolean;
     sessionStartsAt: Date | null;
     valid: boolean;
     /**
@@ -354,6 +362,8 @@ export type TrainingMarkRosterSeat = {
      * warns when not.
      */
     courseInstructorAboard: boolean;
+    /** A seat-level mark cannot identify one dive on a multi-dive departure. */
+    siteAttributionUnknown?: boolean;
     markedAt: Date;
     markedByName: string | null;
   } | null;
@@ -394,7 +404,14 @@ type RosterSeatInput = {
 export async function trainingMarksForRoster(
   db: DbExecutor,
   shopId: string,
-  trip: { id: string; courseId: string | null; startsAt: Date; endsAt: Date },
+  trip: {
+    id: string;
+    courseId: string | null;
+    startsAt: Date;
+    endsAt: Date;
+    plannedDives: number;
+    diveSiteId: string | null;
+  },
   seats: readonly RosterSeatInput[],
   now: Date = nowDate(),
 ): Promise<{ bySeat: Map<string, TrainingMarkRosterSeat> }> {
@@ -410,6 +427,17 @@ export async function trainingMarksForRoster(
           !seat.identityHeld &&
           seat.participantType === "diver",
       );
+  const plannedSites =
+    marked.length === 0
+      ? []
+      : await db
+          .select({ id: tripDives.diveSiteId })
+          .from(tripDives)
+          .where(eq(tripDives.tripId, trip.id));
+  const siteIds = new Set(
+    [trip.diveSiteId, ...plannedSites.map((site) => site.id)].filter(Boolean),
+  );
+  const siteAttributionUnknown = trip.plannedDives !== 1 || siteIds.size !== 1;
   const staffIds = [
     ...new Set(
       seats.flatMap((seat) =>
@@ -508,11 +536,13 @@ export async function trainingMarksForRoster(
         ? {
             enrollmentBookingId: enrollmentId,
             courseTitle: enrollment?.courseTitle ?? null,
+            ...(enrollment?.course && !seat.identityHeld ? { intro: enrollment.course.intro } : {}),
             sessionStartsAt: enrollment?.sessionStartsAt ?? null,
             valid,
             courseInstructorAboard:
               enrollment !== undefined &&
               seatWithinRoom(room.get(aboardKey(trip.id, enrollment.tripId)), seat.bookingId),
+            ...(siteAttributionUnknown ? { siteAttributionUnknown: true } : {}),
             markedAt: seat.trainingMarkedAt,
             markedByName: seat.trainingMarkedByPersonId
               ? (nameById.get(seat.trainingMarkedByPersonId) ?? null)
@@ -558,6 +588,9 @@ export async function dropTrainingMarkWithin(
     .update(bookings)
     .set({
       trainingEnrollmentBookingId: null,
+      trainingPlanInstructorPersonId: null,
+      trainingPlanByPersonId: null,
+      trainingPlanAt: null,
       trainingMarkedAt: null,
       trainingMarkedByPersonId: null,
     })

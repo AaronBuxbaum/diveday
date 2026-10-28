@@ -16,6 +16,7 @@ import {
 } from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
+import { correctFlySafeForPerson, type FlySafeCorrectionOutcome } from "./fly-safe-correction";
 import { publishManifestEvent } from "./manifest-events";
 import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./notifications";
 import { recordSeatChange, type SeatChangeCode } from "./operations";
@@ -551,6 +552,8 @@ export type MoveSeatResult =
       waiver: SeatDiverWaiver;
       /** Whether the diver heard the new time: `skipped` when it did not change. */
       notice: "told" | "failed" | "skipped";
+      /** A correction may be owed independently of the time-change notice. */
+      flySafe: FlySafeCorrectionOutcome | "failed";
     });
 
 /**
@@ -608,7 +611,23 @@ export async function moveSeat(
     notice = "failed";
   }
 
+  let flySafe: FlySafeCorrectionOutcome | "failed";
+  try {
+    flySafe = await correctFlySafeForPerson(db, {
+      shopId: input.shopId,
+      personId: moved.personId,
+      now: movedAt,
+      emailProvider: notices.emailProvider,
+    });
+  } catch (error) {
+    log("booking.fly_safe_correction_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    flySafe = "failed";
+  }
+
   await publishManifestEvent(db, input.shopId, moved.fromTripId);
   await publishManifestEvent(db, input.shopId, moved.toTripId);
-  return { ...moved, waiver, notice };
+  return { ...moved, waiver, notice, flySafe };
 }

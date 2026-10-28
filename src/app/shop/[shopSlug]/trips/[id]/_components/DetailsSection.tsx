@@ -31,6 +31,7 @@ import { offeredRentableItems } from "@/lib/rentals";
 import type { FormNotice } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
+import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { BoatCapacityField } from "./BoatCapacityField";
@@ -319,6 +320,7 @@ export function DetailsSection({
             advancedLabel={t("trips.details.diveDetails")}
             diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
             initialCount={trip.plannedDives}
+            maxDives={maxPlannedDives(trip.courseId !== null)}
             initialDives={tripDiveList.map(({ dive }) => ({
               title: dive.title,
               diveSiteId: dive.diveSiteId,

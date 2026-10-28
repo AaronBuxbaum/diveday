@@ -6,6 +6,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  max,
   notInArray,
   type SQL,
   type SQLWrapper,
@@ -38,7 +39,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
-import { type FlySafeCorrectionOutcome, sendFlySafeCorrections } from "./fly-safe-correction";
+import { correctFlySafeForTripChange, type FlySafeCorrectionOutcome } from "./fly-safe-correction";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { rearmTripReminders } from "./reminder-rearm";
@@ -49,6 +50,7 @@ import {
   bookings,
   courses,
   diveSites,
+  executedDives,
   people,
   personRoles,
   rollCallCrewEvents,
@@ -65,6 +67,8 @@ import {
   recordTripChangeEvent,
   tripSiteRunSnapshot,
 } from "./trip-change-events";
+import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
+import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import {
   normalizedDiveCount,
   normalizedDiveDrafts,
@@ -140,7 +144,7 @@ export async function tripExistsForShop(
  * certificate (H-107, #2321), which every seats-left reads. `capacity` stays
  * the stated number the details form edits.
  */
-export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
+export async function getTripWithBooked(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({
       trip: trips,
@@ -574,8 +578,16 @@ export async function updateTrip(
   shopId: string,
   tripId: string,
   patch: TripPatch,
+  options: { captureRescheduleStart?: boolean } = {},
 ): Promise<UpdateTripOutcome> {
-  return updateTripRecord(db, shopId, tripId, patch, false);
+  return updateTripRecord(
+    db,
+    shopId,
+    tripId,
+    patch,
+    false,
+    options.captureRescheduleStart === true,
+  );
 }
 
 /** A section save preserves omitted facts from the current locked row, never a client snapshot. */
@@ -584,8 +596,9 @@ export async function updateTripSection(
   shopId: string,
   tripId: string,
   patch: Partial<TripPatch>,
+  options: { captureRescheduleStart?: boolean } = {},
 ): Promise<UpdateTripOutcome> {
-  return updateTripRecord(db, shopId, tripId, patch, true);
+  return updateTripRecord(db, shopId, tripId, patch, true, options.captureRescheduleStart === true);
 }
 
 function patchAtTripLock(
@@ -636,10 +649,16 @@ async function updateTripRecord(
   tripId: string,
   requested: Partial<TripPatch>,
   scoped: boolean,
+  captureRescheduleStart: boolean,
 ): Promise<UpdateTripOutcome> {
   let timeMoved = false;
   let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
+    // Match the send path's lock order: a reschedule dispatch owns the shared
+    // fence while it uses the trip row. Take the exclusive fence before the
+    // row lock so a writer waiting for an in-flight send never blocks that
+    // send while holding the row it still needs.
+    await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     const [existing] = await tx
       .select({
         id: trips.id,
@@ -683,7 +702,7 @@ async function updateTripRecord(
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
     const patch = patchAtTripLock(existing, requested, scoped);
-    const plannedDives = normalizedDiveCount(patch.plannedDives);
+    const plannedDives = normalizedDiveCount(patch.plannedDives, existing.courseId !== null);
     if (!plannedDives) return { ok: false, reason: "invalid" };
 
     // `seatHeld`, the same predicate `getTripWithBooked` above shows the
@@ -704,7 +723,20 @@ async function updateTripRecord(
     // Divers and crew alike (`recordedRollCallRows`): a crew member counted
     // after a dive is history this edit may not orphan either.
     const checkpointRows = await recordedRollCallRows(tx, shopId, [tripId]);
-    const recordedDiveCount = maxRecordedDiveNumber(checkpointRows);
+    const [executed] = await tx
+      .select({ lastDive: max(executedDives.diveNumber) })
+      .from(executedDives)
+      .where(
+        and(
+          eq(executedDives.shopId, shopId),
+          eq(executedDives.tripId, tripId),
+          isNull(executedDives.deletedAt),
+        ),
+      );
+    const recordedDiveCount = Math.max(
+      maxRecordedDiveNumber(checkpointRows),
+      executed?.lastDive ?? 0,
+    );
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
     }
@@ -937,6 +969,14 @@ async function updateTripRecord(
         .insert(tripScheduleDays)
         .values(patch.scheduleDays.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
     }
+    if (captureRescheduleStart && startMoved) {
+      await rememberUnnotifiedTripStart(tx, {
+        shopId,
+        tripId,
+        previousStartsAt: existing.startsAt,
+        now: changedAt,
+      });
+    }
     const afterArrival = tripArrivalSnapshot(trip);
     if (!tripChangeSnapshotsEqual(beforeArrival, afterArrival)) {
       await recordTripChangeEvent(tx, {
@@ -1001,11 +1041,17 @@ async function updateTripRecord(
   if (timeMoved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId] });
   // Its manifest, and any charter whose training mark rests on its times.
   if (timesChanged) await publishManifestEvent(db, shopId, tripId);
-  // **Marked as decompression diving: correct the fly-safe figure** (#2927).
-  // Here, after the commit, so every door that sets the flag fires it, and a
-  // send that throws never turns a saved departure into a failed save.
-  if (outcome.ok && outcome.trip.exceedsNoDecoLimits) {
-    return { ...outcome, flySafe: await flySafeCorrectionsAfterSave(db, shopId, tripId) };
+  // A changed trip can invalidate another seat’s full-itinerary guidance.
+  // Recheck after the commit so a send failure cannot undo the save.
+  if (outcome.ok) {
+    const flySafe = await flySafeCorrectionsAfterSave(db, shopId, tripId);
+    if (
+      outcome.trip.exceedsNoDecoLimits ||
+      flySafe === "failed" ||
+      flySafe.told > 0 ||
+      flySafe.failed > 0
+    )
+      return { ...outcome, flySafe };
   }
   return outcome;
 }
@@ -1016,7 +1062,7 @@ async function flySafeCorrectionsAfterSave(
   tripId: string,
 ): Promise<FlySafeCorrectionOutcome | "failed"> {
   try {
-    return await sendFlySafeCorrections(db, { shopId, tripId });
+    return await correctFlySafeForTripChange(db, { shopId, tripId });
   } catch (error) {
     log("fly_safe.correction_failed", "error", {
       shopId,
@@ -1174,8 +1220,9 @@ export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
 }
 
 export async function setTripStatus(
-  // Also callable inside a transaction: the blow-out cascade flips the status
-  // through this same seam while holding the trip row lock (src/db/blowouts.ts).
+  // Also callable inside a transaction: callers that already take the trip row
+  // lock must first hold the revision fence (the blow-out and one-trip cancel
+  // do so), preserving dispatch's fence-before-row ordering.
   db: DbExecutor,
   shopId: string,
   tripId: string,
@@ -1183,44 +1230,50 @@ export async function setTripStatus(
   now: Date = nowDate(),
   options: { actorPersonId?: string | null } = {},
 ) {
-  // Only a real call-off is news to the crew: a departure already cancelled
-  // being cancelled again tells nobody twice.
-  const [before] =
-    status === "cancelled"
-      ? await db
-          .select({ status: trips.status })
-          .from(trips)
-          .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-          .limit(1)
-      : [];
-  const [trip] = await db
-    .update(trips)
-    // Stamped on the way into `cancelled` and **cleared** on the way back to
-    // `scheduled`: an un-cancelled departure that kept a stale cancellation date
-    // would tell the owed-refund queue it had been owed since the day the shop
-    // changed its mind, and would put a date on a trip that is sailing.
-    .set({ status, cancelledAt: status === "cancelled" ? now : null })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .returning();
-  // A cancelled departure keeps its bookings, so the booking cascade never
-  // frees the gear reserved against it — release the un-collected units here,
-  // on the same executor (and so inside the blow-out's transaction when there
-  // is one). Reinstating does not resurrect them: the units went back on the
-  // wall, and prep re-assigns from what is actually free.
-  if (trip && status === "cancelled") {
-    await releaseUnclaimedGearReservationsForTrips(db, { shopId, tripIds: [tripId] });
-    // The crew hear it was called off (ADR 20261009-crew-hear-about-their-boats);
-    // the caller tells them once this commits (`flushUrgentCrewNotices`).
-    if (before?.status === "scheduled") {
-      await recordCrewCalledOff(db, {
-        shopId,
-        tripIds: [tripId],
-        actorPersonId: options.actorPersonId ?? null,
-        now,
-      });
+  return db.transaction(async (tx) => {
+    // This seam is also used directly with AppDb, so make the fence and status
+    // update one transaction. Existing transactional callers acquire it before
+    // their trip row lock; this nested transaction reuses that xact lock.
+    await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
+    // Only a real call-off is news to the crew: a departure already cancelled
+    // being cancelled again tells nobody twice.
+    const [before] =
+      status === "cancelled"
+        ? await tx
+            .select({ status: trips.status })
+            .from(trips)
+            .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+            .limit(1)
+        : [];
+    const [trip] = await tx
+      .update(trips)
+      // Stamped on the way into `cancelled` and **cleared** on the way back to
+      // `scheduled`: an un-cancelled departure that kept a stale cancellation date
+      // would tell the owed-refund queue it had been owed since the day the shop
+      // changed its mind, and would put a date on a trip that is sailing.
+      .set({ status, cancelledAt: status === "cancelled" ? now : null })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .returning();
+    // A cancelled departure keeps its bookings, so the booking cascade never
+    // frees the gear reserved against it — release the un-collected units here,
+    // on the same executor (and so inside the blow-out's transaction when there
+    // is one). Reinstating does not resurrect them: the units went back on the
+    // wall, and prep re-assigns from what is actually free.
+    if (trip && status === "cancelled") {
+      await releaseUnclaimedGearReservationsForTrips(tx, { shopId, tripIds: [tripId] });
+      // The crew hear it was called off (ADR 20261009-crew-hear-about-their-boats);
+      // the caller tells them once this commits (`flushUrgentCrewNotices`).
+      if (before?.status === "scheduled") {
+        await recordCrewCalledOff(tx, {
+          shopId,
+          tripIds: [tripId],
+          actorPersonId: options.actorPersonId ?? null,
+          now,
+        });
+      }
     }
-  }
-  return trip ?? null;
+    return trip ?? null;
+  });
 }
 
 export async function listTripScheduleDays(db: DbExecutor, shopId: string, tripId: string) {

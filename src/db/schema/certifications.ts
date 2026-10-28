@@ -225,6 +225,12 @@ export const certifications = pgTable(
     processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
     /** The staff member who ticked it; set only alongside `processedWithAgencyAt`. */
     processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    /** Explicit staff sighting of the card wording; null is unknown, not a full card. */
+    juniorStatus: text("junior_status").$type<"junior" | "full">(),
+    juniorStatusVerifiedAt: timestamp("junior_status_verified_at", { withTimezone: true }),
+    juniorStatusVerifiedByPersonId: uuid("junior_status_verified_by_person_id").references(
+      () => people.id,
+    ),
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -239,6 +245,15 @@ export const certifications = pgTable(
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("certifications_person_id_idx").on(table.personId),
     index("certifications_shop_person_idx").on(table.shopId, table.personId),
+    index("certifications_junior_status_verifier_idx").on(table.juniorStatusVerifiedByPersonId),
+    check(
+      "certifications_junior_status_valid",
+      sql`${table.juniorStatus} is null or ${table.juniorStatus} in ('junior', 'full')`,
+    ),
+    check(
+      "certifications_junior_status_evidence",
+      sql`(${table.juniorStatus} is null and ${table.juniorStatusVerifiedAt} is null and ${table.juniorStatusVerifiedByPersonId} is null) or (${table.juniorStatus} is not null and ${table.juniorStatusVerifiedAt} is not null and ${table.juniorStatusVerifiedByPersonId} is not null)`,
+    ),
     // Partial: almost every card is never processed here, and a merge or a
     // demo cascade probes this foreign key (`people-fk-indexes.test.ts`).
     index("certifications_processed_by_person_idx")
@@ -309,6 +324,41 @@ export const certifications = pgTable(
     check(
       "certifications_identifier_present_unless_self_declared",
       sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null)`,
+    ),
+  ],
+);
+
+/** Every staff sighting/correction is retained with the card until erasure. */
+export const certificationJuniorReviews = pgTable(
+  "certification_junior_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    certificationId: uuid("certification_id")
+      .notNull()
+      .references(() => certifications.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    juniorStatus: text("junior_status").$type<"junior" | "full">().notNull(),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+  },
+  (table) => [
+    index("certification_junior_reviews_person_idx").on(table.personId),
+    index("certification_junior_reviews_recorder_idx").on(table.recordedByPersonId),
+    index("certification_junior_reviews_card_idx").on(
+      table.shopId,
+      table.certificationId,
+      table.recordedAt,
+    ),
+    check(
+      "certification_junior_reviews_status_valid",
+      sql`${table.juniorStatus} in ('junior', 'full')`,
     ),
   ],
 );
