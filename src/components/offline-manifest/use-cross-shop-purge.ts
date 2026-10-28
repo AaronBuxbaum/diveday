@@ -35,6 +35,9 @@ export function useCrossShopPurge({
   resolveTenant,
   dispatchSaved,
   setList,
+  onListPurged,
+  onTenantVerified,
+  onTripPurged,
   refreshDiscarded,
 }: {
   tripId: string;
@@ -42,6 +45,9 @@ export function useCrossShopPurge({
   resolveTenant: () => Promise<string | null>;
   dispatchSaved: Dispatch<SavedCopyAction>;
   setList: Dispatch<SetStateAction<OfflineManifestEnvelope[] | null>>;
+  onListPurged: (saved: OfflineManifestEnvelope[], currentShopSlug: string) => void;
+  onTenantVerified: (currentShopSlug: string) => void;
+  onTripPurged: () => void;
   refreshDiscarded: () => void;
 }) {
   useEffect(() => {
@@ -53,6 +59,7 @@ export function useCrossShopPurge({
       tenantSlugRef.current = null;
       const slug = await resolveTenant();
       if (cancelled || !slug) return;
+      onTenantVerified(slug);
       try {
         await purgeOfflineManifestsExceptShop(slug);
       } catch {
@@ -106,11 +113,17 @@ export function useCrossShopPurge({
       // before changing this line.
       if (tripId) {
         const held = await loadOfflineManifest(tripId).catch(() => undefined);
-        if (!cancelled && held === null) dispatchSaved({ type: "gone", tenant: slug });
+        if (!cancelled && held === null) {
+          dispatchSaved({ type: "gone", tenant: slug });
+          onTripPurged();
+        }
       } else {
         await listOfflineManifests()
           .then((saved) => {
-            if (!cancelled) setList((current) => (current === null ? current : saved));
+            if (!cancelled) {
+              setList((current) => (current === null ? current : saved));
+              onListPurged(saved, slug);
+            }
           })
           // A failed refresh keeps the list we already rendered — stale beats
           // blank on a dock tablet; the next purge round retries anyway.
@@ -130,5 +143,15 @@ export function useCrossShopPurge({
     // No `t` any more: this round reports a fact and picks no words, so a
     // translator identity can no longer cancel a repaint mid-flight by
     // re-running the effect underneath it.
-  }, [refreshDiscarded, resolveTenant, tripId, tenantSlugRef, dispatchSaved, setList]);
+  }, [
+    refreshDiscarded,
+    resolveTenant,
+    tripId,
+    tenantSlugRef,
+    dispatchSaved,
+    setList,
+    onListPurged,
+    onTenantVerified,
+    onTripPurged,
+  ]);
 }

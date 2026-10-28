@@ -90,8 +90,15 @@ function discardedNoteMessage(
 function listNoteLossMessage(
   envelopes: readonly OfflineManifestEnvelope[],
   t: OfflineManifestTranslator,
+  currentShopSlug: string | null,
 ) {
-  const events = envelopes.flatMap((saved) => [...saved.events, ...saved.checklistEvents]);
+  // Offline, the server cannot verify which shop is signed in. Product policy
+  // accepts showing non-name, non-note-text references from locally saved
+  // manifests in that state; a verified online tenant scopes them after purge.
+  const scopedEnvelopes = currentShopSlug
+    ? envelopes.filter((saved) => saved.snapshot.shop.slug === currentShopSlug)
+    : envelopes;
+  const events = scopedEnvelopes.flatMap((saved) => [...saved.events, ...saved.checklistEvents]);
   if (events.length === 0) return "";
   const cutoff = events.filter((event) => event.noteDisposition === "discarded_erasure_cutoff");
   const unverified = events.filter(
@@ -112,12 +119,13 @@ function listNoteLossMessage(
 function initialListMessage(
   envelopes: readonly OfflineManifestEnvelope[],
   t: OfflineManifestTranslator,
+  currentShopSlug: string | null = null,
 ) {
   return [
     ...(envelopes.length > 0
       ? [t("shared.offlineManifest.reconcile.savedCount", { count: envelopes.length })]
       : []),
-    listNoteLossMessage(envelopes, t),
+    listNoteLossMessage(envelopes, t, currentShopSlug),
   ]
     .filter(Boolean)
     .join("\n");
@@ -136,6 +144,10 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     removedForOtherShop: null,
   });
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
+  // Null until the server has answered on this mount. A snapshot's shop slug
+  // is useful for display, never proof of the currently authenticated tenant.
+  const verifiedTenantSlugRef = useRef<string | null>(null);
+  const [verifiedTenantRevision, setVerifiedTenantRevision] = useState(0);
   // A failed reload of the live manifest carries its checkpoint through the
   // redirect (see manifest-sw.js) so a captain mid "After dive 1" roll call
   // doesn't land back on "Before departure". This first pass only checks the
@@ -189,6 +201,10 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
    * auto-save — so this surface is the first place a human can be told.
    */
   const [discarded, setDiscarded] = useState<DiscardedOfflineRecord[]>([]);
+  // A saved-trip load can finish after an online cross-shop purge confirms the
+  // copy is gone. Its reducer action is fenced, and so must its note-loss
+  // message be.
+  const tripPurgedRef = useRef(false);
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
   // The service worker sent the captain here because DiveDay did not answer
   // (`OFFLINE_FALLBACK_PARAM`), not because they opened the saved copy. While
@@ -224,6 +240,30 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const { tenantSlugRef, resolveTenant } = useOfflineTenant();
 
+  const tripNoticeForEnvelope = useCallback(
+    (saved: OfflineManifestEnvelope | null) => {
+      if (!saved) return "";
+      const verifiedSlug = verifiedTenantSlugRef.current;
+      if (verifiedSlug && saved.snapshot.shop.slug !== verifiedSlug) return null;
+      return discardedNoteMessage([...saved.events, ...saved.checklistEvents], t);
+    },
+    [t],
+  );
+
+  const initialMessageForList = useCallback(
+    (saved: OfflineManifestEnvelope[]) =>
+      initialListMessage(saved, t, verifiedTenantSlugRef.current),
+    [t],
+  );
+
+  useEffect(() => {
+    if (!tripId || !envelope || verifiedTenantRevision === 0 || tripPurgedRef.current) return;
+    const noteMessage = tripNoticeForEnvelope(envelope);
+    setMessage(
+      noteMessage === null ? "" : noteMessage || t("shared.offlineManifest.reconcile.ready"),
+    );
+  }, [tripId, envelope, verifiedTenantRevision, tripNoticeForEnvelope, t]);
+
   const refreshDiscarded = useCallback(() => {
     readDiscardedOfflineRecords()
       .then(setDiscarded)
@@ -246,7 +286,14 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     const slug = await resolveTenant();
     if (!slug) return;
     const held = await loadOfflineManifest(tripId).catch(() => null);
-    if (!held || held.snapshot.shop.slug !== slug) return;
+    if (!held) return;
+    if (held.snapshot.shop.slug !== slug) {
+      // A retained foreign pending record is not deleted by the purge, but its
+      // loss references are no longer authorized once the online tenant is
+      // known. Marks and queued evidence remain in IndexedDB.
+      if (discardedNoteMessage([...held.events, ...held.checklistEvents], t)) setMessage("");
+      return;
+    }
     try {
       const next = await syncOfflineManifest(tripId);
       if (!next) return;
@@ -317,9 +364,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // 20260726-shopwide-offline-manifest-priming's review follow-up).
   const reconcileList = useCallback(
     async (saved: OfflineManifestEnvelope[], currentShopSlug: string | null) => {
-      if (!navigator.onLine) return;
-      const withPending = saved.filter((envelope) => pendingOfflineEventCount(envelope) > 0);
-      if (withPending.length === 0) return;
+      if (!currentShopSlug) return;
       // Only ever sync a trip belonging to whichever shop this browser is
       // actually authenticated as right now. This view has no session context
       // of its own (it's designed to work fully offline/unauthenticated), so a
@@ -332,7 +377,18 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       // server-verified current shop is resolved once by the caller (it also
       // drives the cross-tenant purge); if it can't be determined (offline,
       // signed out, request failure), reconcile nothing rather than guess.
-      if (!currentShopSlug) return;
+      // Tenant verification authorizes which local records may contribute to
+      // this message. This also replaces the unscoped initial count/message
+      // after a reload, including when there is nothing to sync.
+      const authorized = saved.filter(
+        (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
+      );
+      if (tenantSlugRef.current === currentShopSlug) {
+        setMessage(initialListMessage(authorized, t, currentShopSlug));
+      }
+      if (!navigator.onLine) return;
+      const withPending = saved.filter((envelope) => pendingOfflineEventCount(envelope) > 0);
+      if (withPending.length === 0) return;
       const reconcilable = withPending.filter(
         (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
       );
@@ -348,6 +404,10 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
           .filter((envelope): envelope is OfflineManifestEnvelope => envelope !== null)
           .map((envelope) => [envelope.snapshot.manifests[0]?.trip.id ?? "", envelope] as const),
       );
+      // Another reconnect can re-verify a different shop while these syncs
+      // are in flight. An earlier tenant's result must not repaint the list or
+      // its note-loss metadata after that change.
+      if (tenantSlugRef.current !== currentShopSlug) return;
       const merged = saved.map((envelope) => {
         const id = envelope.snapshot.manifests[0]?.trip.id;
         return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
@@ -358,7 +418,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         0,
       );
       const pending = merged.reduce((sum, envelope) => sum + pendingOfflineEventCount(envelope), 0);
-      const noteLoss = listNoteLossMessage(merged, t);
+      const noteLoss = listNoteLossMessage(merged, t, currentShopSlug);
       const syncMessage =
         rejected > 0
           ? t("shared.offlineManifest.reconcile.listPendingRejected", { count: rejected })
@@ -369,8 +429,30 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
               : t("shared.offlineManifest.reconcile.listAllCaughtUp");
       setMessage([syncMessage, noteLoss].filter(Boolean).join("\n"));
     },
-    [t],
+    [t, tenantSlugRef],
   );
+
+  const onListPurged = useCallback(
+    (saved: OfflineManifestEnvelope[], currentShopSlug: string) => {
+      // The purge hook calls this only after re-reading IndexedDB under the
+      // server-verified tenant. Recompute rather than leaving a pre-purge
+      // notice in React state after foreign records have been removed.
+      if (tenantSlugRef.current === currentShopSlug) {
+        setMessage(initialListMessage(saved, t, currentShopSlug));
+      }
+    },
+    [t, tenantSlugRef],
+  );
+
+  const onTripPurged = useCallback(() => {
+    tripPurgedRef.current = true;
+    setMessage("");
+  }, []);
+
+  const onTenantVerified = useCallback((currentShopSlug: string) => {
+    verifiedTenantSlugRef.current = currentShopSlug;
+    setVerifiedTenantRevision((revision) => revision + 1);
+  }, []);
 
   useCrossShopPurge({
     tripId,
@@ -378,11 +460,15 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     resolveTenant,
     dispatchSaved,
     setList,
+    onListPurged,
+    onTenantVerified,
+    onTripPurged,
     refreshDiscarded,
   });
 
   useEffect(() => {
     if (!tripId) {
+      tripPurgedRef.current = false;
       // No specific trip requested — this is the dive.day-root/shell landing
       // page (see ADR 20260726-shopwide-offline-manifest-priming), so list
       // whatever this device already has rather than asking for a trip id.
@@ -391,7 +477,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         // Nothing saved says nothing here: the empty page's heading already
         // says it, and the status line under it repeated it word for word
         // (UX review 2026-10-10, item 33).
-        setMessage(initialListMessage(saved, t));
+        setMessage(initialMessageForList(saved));
       };
 
       const refreshList = () =>
@@ -423,6 +509,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       window.addEventListener("online", refreshList);
       return () => window.removeEventListener("online", refreshList);
     }
+    tripPurgedRef.current = false;
     loadOfflineManifest(tripId)
       .then((saved) => {
         dispatchSaved({ type: "loaded", envelope: saved });
@@ -439,15 +526,17 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
             isRollCallCheckpoint(current, plannedDives) ? current : "departure",
           );
         }
-        const noteMessage = saved
-          ? discardedNoteMessage([...saved.events, ...saved.checklistEvents], t)
-          : "";
-        setMessage(
-          noteMessage ||
-            (saved
-              ? t("shared.offlineManifest.reconcile.ready")
-              : t("shared.offlineManifest.reconcile.noneForTrip")),
-        );
+        const noteMessage = tripNoticeForEnvelope(saved);
+        if (!tripPurgedRef.current) {
+          setMessage(
+            noteMessage === null
+              ? ""
+              : noteMessage ||
+                  (saved
+                    ? t("shared.offlineManifest.reconcile.ready")
+                    : t("shared.offlineManifest.reconcile.noneForTrip")),
+          );
+        }
         if (saved && navigator.onLine) void reconcile();
       })
       .catch(() => {
@@ -460,7 +549,16 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
       });
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
-  }, [reconcile, reconcileList, refreshDiscarded, resolveTenant, tripId, t]);
+  }, [
+    reconcile,
+    reconcileList,
+    refreshDiscarded,
+    resolveTenant,
+    tripId,
+    t,
+    initialMessageForList,
+    tripNoticeForEnvelope,
+  ]);
 
   const acknowledgeDiscarded = () => {
     // Cleared on screen first: the button must feel instant on a boat, and if

@@ -32,8 +32,11 @@ vi.mock("@/lib/offline-manifest-store", () => ({
 // The purge round has its own tests (`use-cross-shop-purge.test.tsx`).
 vi.mock("./use-cross-shop-purge", () => ({ useCrossShopPurge: () => {} }));
 vi.mock("./use-offline-tenant", () => {
-  const tenantSlugRef = { current: null };
-  const resolveTenant = async () => tenant.slug;
+  const tenantSlugRef: { current: string | null } = { current: null };
+  const resolveTenant = async () => {
+    tenantSlugRef.current = tenant.slug;
+    return tenant.slug;
+  };
   return { useOfflineTenant: () => ({ tenantSlugRef, resolveTenant }) };
 });
 
@@ -488,12 +491,13 @@ describe("useSavedManifest on the list", () => {
     expect(sync).toHaveBeenCalledTimes(1);
     expect(sync).toHaveBeenCalledWith("trip-1");
     expect(result.current.list).toEqual([synced, theirs, quiet]);
-    // The foreign copy's event is still pending, so neither the initial
-    // saved-count status nor an all-caught-up status describes the final state.
+    // The foreign copy's event remains pending and is never submitted under
+    // this tenant's session; its aggregate pending status stays visible.
     expect(result.current.message).toBe(`${line("pendingWaiting")} {"count":1}`);
   });
 
   it("shows persisted roll-call and checklist note loss per saved trip after reload", async () => {
+    setOnline(true);
     const saved = [
       withDiscardedNotes("trip-12345678", "abcdef01"),
       withDiscardedNotes("trip-87654321", "9876abcd"),

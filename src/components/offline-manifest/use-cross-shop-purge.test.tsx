@@ -31,6 +31,9 @@ function setup(tripId: string, tenant: string | null) {
     resolveTenant: vi.fn(async () => tenant),
     dispatchSaved: vi.fn(),
     setList: vi.fn(),
+    onListPurged: vi.fn(),
+    onTenantVerified: vi.fn(),
+    onTripPurged: vi.fn(),
     refreshDiscarded: vi.fn(),
   };
   const hook = renderHook(() => useCrossShopPurge(props));
@@ -64,6 +67,7 @@ describe("useCrossShopPurge", () => {
     const { props } = setup("", "blue-mantis");
     expect(props.tenantSlugRef.current).toBeNull();
     await waitFor(() => expect(props.resolveTenant).toHaveBeenCalledTimes(1));
+    expect(props.onTenantVerified).toHaveBeenCalledWith("blue-mantis");
   });
 
   it("purges nothing and repaints nothing when no shop is signed in", async () => {
@@ -86,6 +90,7 @@ describe("useCrossShopPurge", () => {
     // purge can never assert "nothing saved" before the store was opened.
     expect(listAfter(props.setList, [])).toBe(kept);
     expect(listAfter(props.setList, null)).toBeNull();
+    expect(props.onListPurged).toHaveBeenCalledWith(kept, "blue-mantis");
   });
 
   it("keeps the list it already painted when the re-read fails", async () => {
@@ -101,6 +106,7 @@ describe("useCrossShopPurge", () => {
     await waitFor(() => expect(props.refreshDiscarded).toHaveBeenCalledTimes(1));
     expect(load).toHaveBeenCalledWith("trip-1");
     expect(props.dispatchSaved).toHaveBeenCalledWith({ type: "gone", tenant: "blue-mantis" });
+    expect(props.onTripPurged).toHaveBeenCalledTimes(1);
     expect(list).not.toHaveBeenCalled();
   });
 
