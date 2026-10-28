@@ -4,7 +4,7 @@ import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "./dive-site-di
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import type { CertificationLevel } from "./readiness";
 
-/** Fields a published dive-site briefing can refresh. A shop's name, photos, and route stay local. */
+/** Fields a template snapshot can compare or refresh. Conservation guidance and media stay local. */
 export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
   "description",
   "locationName",
@@ -187,6 +187,8 @@ export function diveSiteTemplateDiff(
   latest: DiveSiteTemplateSnapshot,
 ): DiveSiteTemplateDiff[] {
   return DIVE_SITE_TEMPLATE_SYNC_FIELDS.flatMap((field) => {
+    // A catalog revision cannot change the shop's site-specific guidance.
+    if (field === "conservationNote") return [];
     const currentValue = current[field];
     const latestValue = latest[field];
     if (sameValue(currentValue, latestValue)) return [];
@@ -208,13 +210,17 @@ export function mergedDiveSiteTemplateSnapshot(
   latest: DiveSiteTemplateSnapshot,
   mode: DiveSiteTemplateUpdateMode,
 ): DiveSiteTemplateSnapshot {
-  if (mode === "replace-template-copy") return latest;
+  if (mode === "replace-template-copy") {
+    return { ...latest, conservationNote: current.conservationNote };
+  }
   const merged = Object.fromEntries(
     DIVE_SITE_TEMPLATE_SYNC_FIELDS.map((field) => [
       field,
       sameValue(current[field], baseline[field]) ? latest[field] : current[field],
     ]),
   ) as DiveSiteTemplateSnapshot;
+  // Site-specific conservation guidance stays with the shop, even on replacement.
+  merged.conservationNote = current.conservationNote;
   // Two ends taken from two authors can cross: a shop's shallow end kept under a
   // deeper point the template has since shortened. The row refuses that pair
   // (`dive_sites_depth_range_ordered`), so the shallow end is dropped, not the update.

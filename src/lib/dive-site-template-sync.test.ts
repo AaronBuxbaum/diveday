@@ -46,6 +46,7 @@ describe("dive-site template sync", () => {
     expect(merged.description).toBe("Our local briefing.");
     expect(merged.divePlan).toBe("Follow the ridge, then return along the sand.");
     expect(merged.conservationNote).toBe("Use mooring buoys.");
+    expect(diff.some((change) => change.field === "conservationNote")).toBe(false);
   });
 
   it("can intentionally replace template-managed copy", () => {
@@ -68,6 +69,23 @@ describe("dive-site template sync", () => {
     );
     expect(merged.description).toBe(latest.description);
     expect(merged.creatures).toEqual(["blue-tang", "southern-stingray"]);
+    expect(merged.conservationNote).toBe("Use mooring buoys.");
+  });
+
+  it("preserves an empty local conservation note for either update mode", () => {
+    const baseline = diveSiteTemplateSnapshot(source);
+    const current = diveSiteTemplateSnapshotFromSite({ ...baseline, conservationNote: "" });
+    const latest = diveSiteTemplateSnapshot({ ...source, conservationNote: "New template note." });
+
+    expect(diveSiteTemplateDiff(current, baseline, latest)).toEqual([]);
+    expect(
+      mergedDiveSiteTemplateSnapshot(current, baseline, latest, "preserve-shop-edits")
+        .conservationNote,
+    ).toBe("");
+    expect(
+      mergedDiveSiteTemplateSnapshot(current, baseline, latest, "replace-template-copy")
+        .conservationNote,
+    ).toBe("");
   });
 
   it("never merges a shop's shallow end below a deeper point the template moved", () => {
