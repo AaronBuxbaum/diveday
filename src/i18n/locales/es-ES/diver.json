@@ -1011,6 +1011,8 @@
     "offlineSaved": "Guardada en este dispositivo para cuando no haya cobertura.",
     "offlineRemove": "Quitar la copia guardada",
     "offlineRemoved": "Quitada de este dispositivo hasta que vuelvas a abrir este enlace.",
+    "offlineRemoveFailed": "No se pudo quitar la copia guardada. Libera espacio en el dispositivo e inténtalo de nuevo con conexión.",
+    "cancelledCopyForgetFailed": "Puede que la página guardada siga en este dispositivo. Libera espacio y vuelve a cargar esta página con conexión para intentarlo de nuevo.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesUsed": "{line} · Usa {used, plural, one {# inmersión del paquete} other {# inmersiones del paquete}} ({left, plural, one {te queda #} other {te quedan #}}), una por tanque",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",

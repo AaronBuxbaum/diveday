@@ -157,16 +157,18 @@ export async function forgetThisReadyPage(): Promise<boolean> {
  */
 export async function forgetReadyPageCopy(): Promise<boolean> {
   const worker = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;
+  let registrationsRemoved = true;
   if (worker) {
     try {
       const registrations = await worker.getRegistrations();
-      await Promise.all(
+      const removed = await Promise.all(
         registrations
           .filter((registration) => new URL(registration.scope).pathname === READY_WORKER_SCOPE)
           .map((registration) => registration.unregister().catch(() => false)),
       );
+      registrationsRemoved = removed.every(Boolean);
     } catch {
-      // No registrations to read: still delete the copy below.
+      registrationsRemoved = false;
     }
   }
   try {
@@ -176,7 +178,7 @@ export async function forgetReadyPageCopy(): Promise<boolean> {
     // after a forget, and with this registration gone none can, so a shared
     // device keeps no hash of the link's path either.
     await caches.delete(READY_FORGOTTEN_CACHE_NAME);
-    return true;
+    return registrationsRemoved;
   } catch {
     return false;
   }

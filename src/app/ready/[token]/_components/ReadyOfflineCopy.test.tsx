@@ -34,6 +34,7 @@ const COPY = {
   savedNote: "Saved on this device for when there’s no signal.",
   remove: "Remove saved copy",
   removed: "Removed from this device until you next open this link.",
+  removeFailed: "Could not remove the saved copy. Free up storage and try again online.",
 };
 const KEEP_UNTIL = 1_800_000_000_000;
 const LOCALE = "en-US";
@@ -149,6 +150,26 @@ describe("ReadyOfflineCopy", () => {
     );
     await act(async () => {});
     expect(screen.queryByRole("button", { name: COPY.remove })).toBeNull();
+  });
+
+  it("does not say the copy was removed when storage cleanup fails", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.mocked(forgetReadyPageCopy).mockResolvedValueOnce(false);
+    render(
+      <ReadyOfflineCopy
+        copy={COPY}
+        keepUntil={KEEP_UNTIL}
+        locale={LOCALE}
+        timeZone={TIME_ZONE}
+        generatedAt={KEEP_UNTIL}
+      />,
+    );
+    const remove = await screen.findByRole("button", { name: COPY.remove });
+    await act(async () => {
+      fireEvent.click(remove);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(COPY.removeFailed);
+    expect(screen.queryByText(COPY.removed)).toBeNull();
   });
 
   /**

@@ -99,7 +99,7 @@ describe("forgetReadyPageCopy", () => {
     expect(unregister).toHaveBeenCalledTimes(1);
   });
 
-  it("still unregisters every /ready/ worker and deletes the copy when one unregister fails", async () => {
+  it("still tries every /ready/ worker and deletes the copy, but reports an unregister failure", async () => {
     const deleted: string[] = [];
     const second = vi.fn(async () => true);
     vi.stubGlobal("caches", {
@@ -116,12 +116,12 @@ describe("forgetReadyPageCopy", () => {
         ],
       },
     });
-    expect(await forgetReadyPageCopy()).toBe(true);
+    expect(await forgetReadyPageCopy()).toBe(false);
     expect(second).toHaveBeenCalledTimes(1);
     expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
   });
 
-  it("still deletes the copy when the registrations cannot be read", async () => {
+  it("deletes the copy but reports when registrations cannot be read", async () => {
     const deleted: string[] = [];
     vi.stubGlobal("caches", {
       delete: async (name: string) => {
@@ -132,7 +132,7 @@ describe("forgetReadyPageCopy", () => {
     vi.stubGlobal("navigator", {
       serviceWorker: { getRegistrations: () => Promise.reject(new Error("insecure")) },
     });
-    expect(await forgetReadyPageCopy()).toBe(true);
+    expect(await forgetReadyPageCopy()).toBe(false);
     expect(deleted).toEqual([READY_CACHE_NAME, READY_FORGOTTEN_CACHE_NAME]);
   });
 

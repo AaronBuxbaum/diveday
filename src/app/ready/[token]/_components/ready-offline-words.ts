@@ -8,5 +8,6 @@ export function readyOfflineWords(t: DiverTranslator) {
     savedNote: t("ready.offlineSaved"),
     remove: t("ready.offlineRemove"),
     removed: t("ready.offlineRemoved"),
+    removeFailed: t("ready.offlineRemoveFailed"),
   };
 }

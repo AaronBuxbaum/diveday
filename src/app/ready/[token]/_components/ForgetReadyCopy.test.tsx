@@ -17,9 +17,19 @@ afterEach(cleanup);
  * redirect, a reload, a staff cancel opened online), and silent.
  */
 describe("ForgetReadyCopy", () => {
-  it("asks the worker to forget this page's copy once, and draws nothing", () => {
-    const { container } = render(<ForgetReadyCopy />);
+  it("asks the worker to forget this page's copy once, and draws nothing on success", () => {
+    const { container } = render(<ForgetReadyCopy failedText="Could not remove saved page." />);
     expect(forgetThisReadyPage).toHaveBeenCalledTimes(1);
     expect(container.innerHTML).toBe("");
+  });
+
+  it("reports that the saved page may remain when the worker cannot forget it", async () => {
+    vi.mocked(forgetThisReadyPage).mockResolvedValueOnce(false);
+    const { findByRole } = render(
+      <ForgetReadyCopy failedText="The saved page may still be on this device." />,
+    );
+    expect(await findByRole("status")).toHaveTextContent(
+      "The saved page may still be on this device.",
+    );
   });
 });

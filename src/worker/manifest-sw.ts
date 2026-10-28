@@ -308,7 +308,6 @@ function keepReadyPage(
     request,
     keepReadyAssets,
     () => generation === readyRequestGeneration,
-    nowMs,
   );
 }
 
@@ -385,9 +384,7 @@ self.addEventListener("message", (event) => {
       port?.postMessage({ ok: false });
       return;
     }
-    event.waitUntil(
-      forgetReadyPage(caches, path, nowMs()).then(() => port?.postMessage({ ok: true })),
-    );
+    event.waitUntil(forgetReadyPage(caches, path, nowMs()).then((ok) => port?.postMessage({ ok })));
     return;
   }
   if (event.data?.type === "GET_SHELL_VERSION") {
@@ -754,7 +751,14 @@ self.addEventListener("fetch", (event) => {
       // lands on.
       const forgotten = forgetReadyPage(caches, path, nowMs());
       event.waitUntil(forgotten);
-      event.respondWith(forgotten.then(() => fetch(event.request)).catch(() => Response.error()));
+      event.respondWith(
+        forgotten
+          // Cancellation is already authoritative on the server. Keep showing
+          // its confirmation even if storage failed; the page's forget message
+          // reports that the saved copy may remain and gives a retry step.
+          .then(() => fetch(event.request))
+          .catch(() => Response.error()),
+      );
       return;
     }
     event.respondWith(

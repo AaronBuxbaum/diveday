@@ -95,11 +95,13 @@ describe("the /ready/ registration's fetch", () => {
 
   /** Every other cache the worker opens here (the forget markers), kept apart from the copy. */
   const others = new Map<string, Response>();
+  let failMarkerWrites = false;
   const otherStub = {
     keys: async () => [...others.keys()].map((path) => new Request(`https://dive.day${path}`)),
     delete: async (key: string | Request) =>
       others.delete(new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname),
     put: async (key: string | Request, response: Response) => {
+      if (failMarkerWrites) throw new Error("quota exceeded");
       others.set(
         new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname,
         response,
@@ -128,6 +130,7 @@ describe("the /ready/ registration's fetch", () => {
   beforeEach(() => {
     kept.clear();
     others.clear();
+    failMarkerWrites = false;
     vi.stubGlobal("caches", {
       open: async (name: string) => (name === READY_CACHE_NAME ? cacheStub : otherStub),
       match: async (key: string | Request) => (await cacheStub.match(key)) ?? otherStub.match(key),
@@ -474,9 +477,12 @@ describe("the /ready/ registration's fetch", () => {
     const keep = message("KEEP_READY_PAGE", `https://dive.day${PATH}`);
     try {
       await vi.waitFor(() => expect(finishPut).toBeDefined());
-      await message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`).settle();
+      const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+      const forgetting = forget.settle();
       finishPut?.();
+      await forgetting;
       await keep.settle();
+      expect(forget.replies).toEqual([{ ok: true }]);
       expect(keep.replies).toEqual([{ ok: false }]);
       expect(kept.size).toBe(0);
     } finally {
@@ -694,6 +700,20 @@ describe("the /ready/ registration's fetch", () => {
     await forget.settle();
     expect(kept.size).toBe(0);
     expect(forget.replies).toEqual([{ ok: true }]);
+  });
+
+  it("does not acknowledge a cancelled landing when its invalidation marker cannot be stored", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    failMarkerWrites = true;
+    const forget = message("FORGET_READY_PAGE", `https://dive.day${PATH}?cancelled=1`);
+    await forget.settle();
+    expect(kept.size).toBe(0);
+    expect(forget.replies).toEqual([{ ok: false }]);
   });
 
   /** Finding 2: a keep request answered after the cancel brings back the pre-cancel page. */

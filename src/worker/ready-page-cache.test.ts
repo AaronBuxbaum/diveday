@@ -9,6 +9,7 @@ import {
   READY_COPY_TIME_ZONE_META,
   READY_COPY_VERSION,
   READY_COPY_VERSION_META,
+  READY_FORGOTTEN_CACHE_NAME,
   READY_KEEP_UNTIL_META,
   READY_OFFLINE_GENERATED_AT_PLACEHOLDER,
   READY_OFFLINE_NOTE_ATTR,
@@ -588,6 +589,13 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
   });
 
+  it("keeps cancellation ordering in one bounded storage record across many paths", async () => {
+    for (let index = 0; index < 20; index += 1) {
+      await forgetReadyPage(store.storage, `/ready/${String(index).padStart(43, "A")}`, NOW);
+    }
+    expect(store.caches.get(READY_FORGOTTEN_CACHE_NAME)?.size).toBe(1);
+  });
+
   /**
    * Security review 2026-10-24 (#2979, finding 2): on a slow link a keep
    * request's fetch can start before the cancel and answer after it. What it
@@ -651,6 +659,7 @@ describe("saveReadyPage and readyPageFallback", () => {
     const request = await beginReadyPageRequest(store.storage, path);
     const open = store.storage.open.bind(store.storage);
     let forgot = false;
+    let forgetting: Promise<boolean> | undefined;
     const racing = {
       delete: store.storage.delete.bind(store.storage),
       open: async (name: string) => {
@@ -661,13 +670,14 @@ describe("saveReadyPage and readyPageFallback", () => {
             await cache.put(key as string, response);
             if (!forgot && name === READY_CACHE_NAME) {
               forgot = true;
-              await forgetReadyPage(store.storage, path, NOW + 10);
+              forgetting = forgetReadyPage(store.storage, path, NOW + 10);
             }
           },
         };
       },
     } as unknown as CacheStorage;
     expect(await saveReadyPage(racing, path, page("stale"), NOW + 20, request)).toBe(false);
+    expect(await forgetting).toBe(true);
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
 
@@ -702,10 +712,11 @@ describe("saveReadyPage and readyPageFallback", () => {
     const saving = saveReadyPage(racing, path, page("pre-cancel page"), NOW, request);
 
     await putEntered;
-    await forgetReadyPage(store.storage, path, NOW - 10);
+    const forgetting = forgetReadyPage(store.storage, path, NOW - 10);
     releasePut?.();
 
     expect(await saving).toBe(false);
+    expect(await forgetting).toBe(true);
     expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
   });
 
@@ -720,6 +731,41 @@ describe("saveReadyPage and readyPageFallback", () => {
     } as unknown as CacheStorage;
     await forgetReadyPage(broken, `/ready/${TOKEN}`, NOW);
     expect(store.caches.has(READY_CACHE_NAME)).toBe(false);
+  });
+
+  it("does not acknowledge a failed epoch write or let an in-flight save republish", async () => {
+    const path = `/ready/${TOKEN}`;
+    const pendingRequest = beginReadyPageRequest(store.storage, path);
+    const broken = {
+      delete: store.storage.delete.bind(store.storage),
+      open: async (name: string) => {
+        const cache = await store.storage.open(name);
+        if (name !== READY_FORGOTTEN_CACHE_NAME) return cache;
+        return {
+          ...cache,
+          put: async () => {
+            throw new Error("quota exceeded");
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+
+    const forgetting = forgetReadyPage(broken, path, NOW);
+    const request = await pendingRequest;
+    expect(await forgetting).toBe(false);
+    expect(
+      await saveReadyPage(store.storage, path, page("pre-forget response"), NOW, request),
+    ).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size ?? 0).toBe(0);
+
+    // A later request durably replaces the old request ID even though the
+    // dedicated forget attempt failed; after restart, the old response stays stale.
+    await beginReadyPageRequest(store.storage, path);
+    vi.resetModules();
+    const restarted = await import("./ready-page-cache");
+    expect(
+      await restarted.saveReadyPage(store.storage, path, page("pre-forget response"), NOW, request),
+    ).toBe(false);
   });
 
   it("keeps nothing that is not the page itself", async () => {

@@ -38,14 +38,20 @@ export function ReadyOfflineCopy({
   timeZone,
   generatedAt,
 }: {
-  copy: { offlineNote: string; savedNote: string; remove: string; removed: string };
+  copy: {
+    offlineNote: string;
+    savedNote: string;
+    remove: string;
+    removed: string;
+    removeFailed: string;
+  };
   keepUntil: number;
   locale: string;
   timeZone: string;
   generatedAt: number;
 }) {
   const [offline, setOffline] = useState(false);
-  const [saved, setSaved] = useState<"no" | "kept" | "removed">("no");
+  const [saved, setSaved] = useState<"no" | "kept" | "removed" | "removeFailed">("no");
   useEffect(() => {
     let live = true;
     const update = () => setOffline(!navigator.onLine);
@@ -67,8 +73,7 @@ export function ReadyOfflineCopy({
     };
   }, []);
   const remove = async () => {
-    await forgetReadyPageCopy();
-    setSaved("removed");
+    setSaved((await forgetReadyPageCopy()) ? "removed" : "removeFailed");
   };
   return (
     <>
@@ -103,6 +108,10 @@ export function ReadyOfflineCopy({
       ) : saved === "removed" ? (
         <p role="status" className="mt-2 text-sm text-muted">
           {copy.removed}
+        </p>
+      ) : saved === "removeFailed" ? (
+        <p role="status" className="mt-2 text-sm text-warning-strong">
+          {copy.removeFailed}
         </p>
       ) : null}
     </>
