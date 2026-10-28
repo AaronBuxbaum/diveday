@@ -70,6 +70,26 @@ test.describe("staff navigation", () => {
       });
     });
 
+    test("More stays clear and usable at 200% text size", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/safety-checklist");
+      const nav = page.getByRole("navigation", { name: "Principal", exact: true });
+      await expect(nav).toHaveAttribute("data-hydrated", "true");
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+      });
+
+      const more = nav.getByRole("button", { name: "Más", exact: true });
+      await expect(more).toBeVisible();
+      await more.click();
+      const settings = nav.locator('a[href="/shop/blue-mantis/settings"]');
+      await expect(settings).toBeVisible();
+      await capture(page, "staff-navigation-spanish-enlarged-text-more", "light", {
+        locale: SPANISH,
+        beforeShot: () => expectNavigationDoesNotExpandPage(page),
+      });
+    });
+
     test("Buceadores remains whole when reached by scrolling at 200% text size", async ({
       page,
     }) => {

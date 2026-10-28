@@ -234,6 +234,14 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
             })}
           </ul>
         </div>
+        <span
+          aria-hidden="true"
+          data-staff-tab-scroll-cue=""
+          className="flex w-6 flex-none items-center justify-center gap-px border-s border-e border-border text-muted"
+        >
+          <DiveDayIcon name="chevron-left" className="size-2.5" />
+          <DiveDayIcon name="chevron-right" className="size-2.5" />
+        </span>
         {rest.length > 0 ? (
           <MoreMenu
             root={root}

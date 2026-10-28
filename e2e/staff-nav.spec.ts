@@ -29,6 +29,8 @@ test.describe("owner", () => {
       const schedule = nav.getByRole("link", { name: "Agenda", exact: true });
       const divers = nav.getByRole("link", { name: "Buceadores", exact: true });
       const inbox = nav.getByRole("link", { name: "Mensajes", exact: true });
+      const cue = nav.locator("[data-staff-tab-scroll-cue]");
+      await expect(cue).toBeVisible();
       await expect(schedule).toBeVisible();
       await expect(divers).toBeVisible();
       await expect(inbox).toBeVisible();
@@ -83,6 +85,19 @@ test.describe("owner", () => {
       expect(geometry.focusedInsideNav).toBe(true);
       expect(geometry.minimumTargetHeight).toBeGreaterThanOrEqual(44);
       expect(geometry.targetsMeet44px).toBe(true);
+
+      const rail = nav.locator("[data-staff-tab-scroll]");
+      const cueBounds = await cue.boundingBox();
+      const moreBounds = await nav.getByRole("button", { name: "Más", exact: true }).boundingBox();
+      await rail.evaluate((element) => {
+        element.scrollLeft = element.scrollWidth;
+      });
+      const scrolledCueBounds = await cue.boundingBox();
+      expect(cueBounds).not.toBeNull();
+      expect(moreBounds).not.toBeNull();
+      expect(scrolledCueBounds).not.toBeNull();
+      expect(cueBounds?.x).toBe(scrolledCueBounds?.x);
+      expect((cueBounds?.x ?? 0) + (cueBounds?.width ?? 0)).toBeLessThanOrEqual(moreBounds?.x ?? 0);
     });
   });
 
