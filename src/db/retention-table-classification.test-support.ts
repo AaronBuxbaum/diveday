@@ -91,6 +91,8 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "trip_help_requests",
   // Interests: contact data, kept until erasure (src/lib/retention.ts).
   "interests",
+  // Seat-level links are removed with either referenced record; they need no independent clock.
+  "date_request_offer_bookings",
   "trip_last_minute_promos",
   "trip_blowouts",
   "trip_blowout_divers",

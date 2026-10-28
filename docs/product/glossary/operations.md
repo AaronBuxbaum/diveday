@@ -546,7 +546,12 @@
   "go and book" only when that many diver seats are free, an invitation is sent only when that many
   seats are free, and an invitation out counts that many seats against the next. A person-less
   date-request offer stops counting after 48 hours; a resend starts that interval again (#2914).
-  This is advice about further offers, not a reservation: booking still checks capacity. A couple is never
+  Each live booking explicitly linked to that departure offer answers one seat of its party; any
+  unbooked seats still count. A canceled or no-show booking, or one moved off that departure, no
+  longer answers a seat. If staff move that booking onto another offered departure, it answers
+  that offer only when they explicitly associate it with that request. Separate offers for separate
+  departures keep separate counts. This is
+  advice about further offers, not a reservation: booking still checks capacity. A couple is never
   split across dates. Staff read "Party of 2" on the row; the demand count adds parties, not rows
   (ADR 20260719-trip-waitlist, amended 2026-10-15).
 - **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every interest nobody invited to the next public date of the run that takes a seat (a date on a conditions hold or made private is passed over). The existing wait-list invite then goes out to that date's whole queue in the order people asked, while it has seats nobody has been invited to, measured as a sale would measure them (sellable seats, the divers-only limit, a course's instructor and ratio); a **wait-list party** is invited only when its whole party fits, and a smaller interest behind it may still be. The rolled invite says so in its own sentence ("Sat, Oct 17 has sailed. Sat, Oct 24 has room": a date can sail with a seat free), never as though the diver had asked for the new date. An interest staff already invited stays where they left it. From a full departure's demand banner, or under the wait list of a full departure with even one interest, "Carry the wait list" hands every interest to a departure staff choose (each offered with the seats it has left), with no message until staff invite. Entries are copied, keep the time the diver first asked and their party, skip anyone already seated there, and never rank anybody. `src/db/interest-roll.ts`.

@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { courseRatioRefusal } from "@/lib/booking-gates";
@@ -17,7 +17,7 @@ import {
   orderLastMinuteRecipients,
   reviewLastMinuteRecipients,
 } from "@/lib/interests";
-import { rowCanBeReactivated } from "@/lib/no-show";
+import { rowCanBeReactivated, SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { seatRefusal } from "@/lib/participant-types";
 import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
@@ -29,6 +29,7 @@ import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookings,
   type DiveSpecialty,
+  dateRequestOfferBookings,
   type Interest,
   interests,
   interestUnsubscribeTokens,
@@ -663,56 +664,110 @@ export async function setDateInterestOutcome(
 }
 
 /**
- * Link a successfully seated booking to only the departure offer made from
- * the date request that opened this booking. The single UPDATE checks the
- * request, shop, trip, offered child and live booking together, so a forged
- * request id cannot attach a booking across tenants or departures.
+ * Link one successfully seated booking to one offered departure child. A date
+ * request can ask for several seats, so each booking gets its own row and only
+ * one active linked seat is subtracted from the offer. An explicit later
+ * request can reassign a moved booking to another offered departure; no diver
+ * identity is inferred. The booking lock serializes reassignment of one seat,
+ * and the offer lock serializes bookings against that offer's party size.
  */
 export async function associateDateRequestOfferBooking(
-  db: DbExecutor,
+  db: AppDb,
   input: { shopId: string; tripId: string; requestId: string; bookingId: string },
 ): Promise<boolean> {
   const source = alias(interests, "date_request");
-  const rows = await db
-    .update(interests)
-    .set({ bookedBookingId: input.bookingId })
-    .where(
-      and(
-        eq(interests.shopId, input.shopId),
-        eq(interests.scope, "departure"),
-        eq(interests.tripId, input.tripId),
-        eq(interests.parentInterestId, input.requestId),
-        isNotNull(interests.offeredAt),
-        or(isNull(interests.bookedBookingId), eq(interests.bookedBookingId, input.bookingId)),
-        exists(
-          db
-            .select({ id: source.id })
-            .from(source)
-            .where(
-              and(
-                eq(source.id, interests.parentInterestId),
-                eq(source.shopId, input.shopId),
-                eq(source.scope, "date"),
-              ),
-            ),
+  return db.transaction(async (tx) => {
+    const [booking] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+          inArray(bookings.status, [...SEAT_HELD_STATUSES]),
         ),
-        exists(
-          db
-            .select({ id: bookings.id })
-            .from(bookings)
-            .where(
-              and(
-                eq(bookings.id, input.bookingId),
-                eq(bookings.shopId, input.shopId),
-                eq(bookings.tripId, input.tripId),
-                ne(bookings.status, "cancelled"),
-              ),
-            ),
+      )
+      .limit(1)
+      .for("update");
+    if (!booking) return false;
+
+    const [offer] = await tx
+      .select({ id: interests.id, partySize: interests.partySize })
+      .from(interests)
+      .innerJoin(
+        source,
+        and(
+          eq(source.id, interests.parentInterestId),
+          eq(source.shopId, input.shopId),
+          eq(source.scope, "date"),
         ),
-      ),
-    )
-    .returning({ id: interests.id });
-  return rows.length > 0;
+      )
+      .where(
+        and(
+          eq(interests.shopId, input.shopId),
+          eq(interests.scope, "departure"),
+          eq(interests.tripId, input.tripId),
+          eq(interests.parentInterestId, input.requestId),
+          isNotNull(interests.offeredAt),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!offer) return false;
+
+    const [existing] = await tx
+      .select({ interestId: dateRequestOfferBookings.interestId })
+      .from(dateRequestOfferBookings)
+      .where(eq(dateRequestOfferBookings.bookingId, input.bookingId))
+      .limit(1);
+    if (existing?.interestId === offer.id) return true;
+
+    const [linked] = await tx
+      .select({ seats: count(bookings.id) })
+      .from(dateRequestOfferBookings)
+      .innerJoin(
+        bookings,
+        and(
+          eq(bookings.id, dateRequestOfferBookings.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+          inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        ),
+      )
+      .where(
+        and(
+          eq(dateRequestOfferBookings.shopId, input.shopId),
+          eq(dateRequestOfferBookings.interestId, offer.id),
+        ),
+      );
+    if ((linked?.seats ?? 0) >= (offer.partySize ?? 1)) return false;
+
+    if (existing) {
+      const [updated] = await tx
+        .update(dateRequestOfferBookings)
+        .set({ interestId: offer.id })
+        .where(
+          and(
+            eq(dateRequestOfferBookings.shopId, input.shopId),
+            eq(dateRequestOfferBookings.bookingId, input.bookingId),
+          ),
+        )
+        .returning({ bookingId: dateRequestOfferBookings.bookingId });
+      return updated !== undefined;
+    }
+
+    const [inserted] = await tx
+      .insert(dateRequestOfferBookings)
+      .values({
+        shopId: input.shopId,
+        interestId: offer.id,
+        bookingId: input.bookingId,
+      })
+      .onConflictDoNothing()
+      .returning({ bookingId: dateRequestOfferBookings.bookingId });
+    return inserted !== undefined;
+  });
 }
 
 /**

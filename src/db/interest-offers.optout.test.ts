@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -37,7 +38,15 @@ const { associateDateRequestOfferBooking, askAnytime, unsubscribeAnytimeInterest
 const { optOutPersonFromCourtesyEmailByToken, resolveCourtesyEmailUnsubscribeToken } = await import(
   "./courtesy-email"
 );
-const { bookings, interests, people, tripLastMinutePromos, trips } = await import("./schema");
+const {
+  bookings,
+  dateRequestOfferBookings,
+  interests,
+  people,
+  shops,
+  tripLastMinutePromos,
+  trips,
+} = await import("./schema");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
 const { createTrip, upcomingTripsWithCounts } = await import("./trips");
 
@@ -182,7 +191,7 @@ describe("an unsubscribe from the last-minute list", () => {
 });
 
 describe("invitableSeats and the deal", () => {
-  it("stops counting only the anonymous date offer linked to its booked departure", async () => {
+  it("counts one seat per linked booking and follows its departure and status", async () => {
     const { db, shop, trip } = await context();
     const departure = await tripRow(db, trip.id);
     const baseline = await invitableSeats(db, departure);
@@ -250,6 +259,43 @@ describe("invitableSeats and the deal", () => {
       (candidate) => candidate.id !== trip.id,
     );
     if (!otherDeparture) throw new Error("setup: second departure missing");
+    const otherBaseline = await invitableSeats(db, await tripRow(db, otherDeparture.id));
+    const [otherOffer] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: otherDeparture.id,
+        parentInterestId: requestId,
+        partySize: 2,
+        offeredAt,
+      })
+      .returning({ id: interests.id });
+    if (!otherOffer) throw new Error("setup: second departure offer missing");
+    const secondBookingEmail = "second-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "The second diver in the party",
+      email: secondBookingEmail,
+      declaration: openWater,
+    });
+    const [secondPerson] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, secondBookingEmail));
+    if (!secondPerson) throw new Error("setup: second booking person missing");
+    const [secondBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: secondPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!secondBooking) throw new Error("setup: second booking missing");
     const foreignBookingEmail = "foreign-3102@example.com";
     await askAnytime(db, {
       shopId: shop.id,
@@ -274,6 +320,58 @@ describe("invitableSeats and the deal", () => {
       .returning({ id: bookings.id });
     if (!foreignBooking) throw new Error("setup: second departure booking missing");
 
+    const foreignShopSuffix = randomBytes(4).toString("hex");
+    const [foreignShop] = await db
+      .insert(shops)
+      .values({
+        name: `Other shop ${foreignShopSuffix}`,
+        slug: `other-shop-${foreignShopSuffix}`,
+        timezone: "UTC",
+      })
+      .returning();
+    if (!foreignShop) throw new Error("setup: foreign shop missing");
+    const [foreignTrip] = await db
+      .insert(trips)
+      .values({
+        shopId: foreignShop.id,
+        title: "Foreign departure",
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        capacity: 2,
+      })
+      .returning();
+    if (!foreignTrip) throw new Error("setup: foreign trip missing");
+    const [foreignTenantPerson] = await db
+      .insert(people)
+      .values({
+        shopId: foreignShop.id,
+        fullName: "Foreign shop diver",
+        email: `foreign-tenant-${foreignShopSuffix}@example.com`,
+      })
+      .returning();
+    if (!foreignTenantPerson) throw new Error("setup: foreign tenant person missing");
+    const [foreignTenantBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: foreignShop.id,
+        tripId: foreignTrip.id,
+        personId: foreignTenantPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!foreignTenantBooking) throw new Error("setup: foreign tenant booking missing");
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: foreignTenantBooking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 5);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 3);
+
     expect(
       await associateDateRequestOfferBooking(db, {
         shopId: shop.id,
@@ -290,6 +388,15 @@ describe("invitableSeats and the deal", () => {
         bookingId: booking.id,
       }),
     ).toBe(true);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: secondBooking.id,
+      }),
+    ).toBe(true);
     expect(
       await associateDateRequestOfferBooking(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
@@ -298,28 +405,93 @@ describe("invitableSeats and the deal", () => {
         bookingId: booking.id,
       }),
     ).toBe(false);
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        requestId,
+        bookingId: foreignBooking.id,
+      }),
+    ).toBe(true);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
+
+    const thirdBookingEmail = "third-3102@example.com";
+    await askAnytime(db, {
+      shopId: shop.id,
+      fullName: "A third diver outside the requested party",
+      email: thirdBookingEmail,
+      declaration: openWater,
+    });
+    const [thirdPerson] = await db.select().from(people).where(eq(people.email, thirdBookingEmail));
+    if (!thirdPerson) throw new Error("setup: third booking person missing");
+    const [thirdBooking] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: thirdPerson.id,
+        status: "booked",
+      })
+      .returning({ id: bookings.id });
+    if (!thirdBooking) throw new Error("setup: third booking missing");
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: thirdBooking.id,
+      }),
+    ).toBe(false);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
 
     await db.update(bookings).set({ tripId: otherDeparture.id }).where(eq(bookings.id, booking.id));
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 3);
+
+    // The staff action names the destination request explicitly. Reassign this
+    // booking from the old offer to the offer for its new departure; the old
+    // offer regains its unfilled seat while the new offer no longer double-holds it.
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: otherDeparture.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(true);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
 
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
 
     await db.update(bookings).set({ tripId: trip.id }).where(eq(bookings.id, booking.id));
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
 
     await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 2);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 5);
+    expect(
+      await associateDateRequestOfferBooking(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requestId,
+        bookingId: booking.id,
+      }),
+    ).toBe(true);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
+    expect(await invitableSeats(db, await tripRow(db, otherDeparture.id))).toBe(otherBaseline - 2);
 
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
-    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 3);
+    expect(await invitableSeats(db, await tripRow(db, trip.id))).toBe(baseline - 4);
 
     const [stored] = await db
-      .select({ bookedBookingId: interests.bookedBookingId })
-      .from(interests)
-      .where(eq(interests.id, unrelatedOffer.id));
-    expect(stored?.bookedBookingId).toBeNull();
+      .select({ bookingId: dateRequestOfferBookings.bookingId })
+      .from(dateRequestOfferBookings)
+      .where(eq(dateRequestOfferBookings.interestId, unrelatedOffer.id));
+    expect(stored).toBeUndefined();
   });
 
   it("releases an anonymous date-request party at 48 hours and counts a fresh re-offer", async () => {
