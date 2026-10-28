@@ -59,6 +59,53 @@ async function postedInvoiceFieldsMatch(
   });
 }
 
+async function submitRefusedDraft(page: Page, description: string) {
+  await page.goto(NEW_ORDER);
+  await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+  await page.locator('input[name="description-0"]').filter({ visible: true }).fill(description);
+  await page.locator('input[name="unitAmount-0"]').filter({ visible: true }).fill("12");
+  const submittedRequest = page.waitForRequest(
+    (request) => request.method() === "POST" && Boolean(request.headers()["next-action"]),
+  );
+  const submitButton = page.getByRole("button", { name: staffCopy("orders.new.submit") });
+  const refusedLanding = page.waitForURL(/notice=stripe-failed/);
+  await submitButton.click();
+  await refusedLanding;
+  // Do not start the next navigation while the form action is still pending.
+  await expect(submitButton).toBeEnabled();
+  await expect(page.locator('input[name="description-0"]').filter({ visible: true })).toHaveValue(
+    description,
+  );
+  const draft = await page.evaluate(() => {
+    const key = Object.keys(sessionStorage).find(
+      (candidate) =>
+        candidate.startsWith("diveday.refused-form.blue-mantis.") &&
+        candidate.endsWith(".new-order"),
+    );
+    if (!key) throw new Error("submitted draft was not retained");
+    const raw = sessionStorage.getItem(key);
+    if (!raw) throw new Error("submitted draft is empty");
+    return { key, raw, attempt: String(JSON.parse(raw).attempt) };
+  });
+  expect(
+    await postedInvoiceFieldsMatch(await submittedRequest, { invoiceAttempt: draft.attempt }),
+  ).toBe(true);
+  return draft;
+}
+
+async function firstSeededOrderPath(page: Page) {
+  await page.goto("/shop/blue-mantis/orders");
+  const href = await page
+    .locator('ul[aria-labelledby^="orders-day-"] > li')
+    .filter({ visible: true })
+    .first()
+    .getByRole("link")
+    .first()
+    .getAttribute("href");
+  if (!href) throw new Error("seeded order has no detail link");
+  return new URL(href, page.url()).pathname;
+}
+
 /** The first seat on a seeded departure's roster, opened to its foot row. */
 async function openFirstSeat(page: Page) {
   await page.goto(counterPath("blue-mantis", await seededTripId(page, "blue-mantis", ROSTER_TRIP)));
@@ -363,56 +410,17 @@ test.describe("as owner", () => {
     await expect(page.getByLabel("Order note")).toHaveValue("Target B retained note");
   });
 
-  test("completion cleanup preserves unrelated attempts and consumes only the matching current draft", async ({
+  test("completion cleanup preserves a current draft for malformed or unknown receipts", async ({
     page,
     request,
   }) => {
     await request.post("/api/test/seed-stripe-account");
-    const submitDraft = async (description: string) => {
-      await page.goto(NEW_ORDER);
-      await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
-      await page.locator('input[name="description-0"]').filter({ visible: true }).fill(description);
-      await page.locator('input[name="unitAmount-0"]').filter({ visible: true }).fill("12");
-      const submittedRequest = page.waitForRequest(
-        (request) => request.method() === "POST" && Boolean(request.headers()["next-action"]),
-      );
-      const refusedLanding = page.waitForURL(/notice=stripe-failed/);
-      await page.getByRole("button", { name: staffCopy("orders.new.submit") }).click();
-      await refusedLanding;
-      await expect(
-        page.locator('input[name="description-0"]').filter({ visible: true }),
-      ).toHaveValue(description);
-      const draft = await page.evaluate(() => {
-        const key = Object.keys(sessionStorage).find(
-          (candidate) =>
-            candidate.startsWith("diveday.refused-form.blue-mantis.") &&
-            candidate.endsWith(".new-order"),
-        );
-        if (!key) throw new Error("submitted draft was not retained");
-        const raw = sessionStorage.getItem(key);
-        if (!raw) throw new Error("submitted draft is empty");
-        return { key, raw, attempt: String(JSON.parse(raw).attempt) };
-      });
-      expect(
-        await postedInvoiceFieldsMatch(await submittedRequest, { invoiceAttempt: draft.attempt }),
-      ).toBe(true);
-      return draft;
-    };
-    const current = await submitDraft("Pending first invoice");
+    const current = await submitRefusedDraft(page, "Pending first invoice");
     await page.evaluate(() =>
       sessionStorage.setItem("diveday.refused-form.other-shop.other-staffer.new-order", "keep"),
     );
-    // An existing synthetic order isolates landing cleanup. The disabled fleet provider cannot complete a real create.
-    await page.goto("/shop/blue-mantis/orders");
-    await page
-      .locator('ul[aria-labelledby^="orders-day-"] > li')
-      .filter({ visible: true })
-      .first()
-      .getByRole("link")
-      .first()
-      .click();
-    await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
-    const orderUrl = page.url().split("?")[0];
+    // An existing synthetic order isolates landing cleanup; no real invoice is created in e2e.
+    const orderUrl = await firstSeededOrderPath(page);
     await page.goto(`${orderUrl}?invoiceCreated=1`);
     await expect(page).not.toHaveURL(/invoiceCreated=/);
     expect(await page.evaluate((key) => sessionStorage.getItem(key), current.key)).toBe(
@@ -432,8 +440,14 @@ test.describe("as owner", () => {
         sessionStorage.getItem("diveday.refused-form.other-shop.other-staffer.new-order"),
       ),
     ).toBe("keep");
-    const newer = await submitDraft("Pending newer invoice");
+  });
+
+  test("a stale invoice completion preserves a newer draft", async ({ page, request }) => {
+    await request.post("/api/test/seed-stripe-account");
+    const current = await submitRefusedDraft(page, "Pending first invoice");
+    const newer = await submitRefusedDraft(page, "Pending newer invoice");
     expect(newer.attempt !== current.attempt).toBe(true);
+    const orderUrl = await firstSeededOrderPath(page);
     await page.goto(`${orderUrl}?invoiceCreated=${current.attempt}`);
     await expect(page).not.toHaveURL(/invoiceCreated=/);
     expect(await page.evaluate((key) => sessionStorage.getItem(key), newer.key)).toBe(newer.raw);
