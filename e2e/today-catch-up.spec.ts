@@ -2,22 +2,21 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import { todayCatchUpScenario } from "./today-catch-up-helper";
 
 signedInAsOwner();
-test.beforeAll(async ({ staffStorageState }) => {
-  await staffStorageState("captain");
+test.beforeAll(async ({ todayCaptainStorageState }) => {
+  await todayCaptainStorageState;
 });
 
 test("Today catches the other staffer's walk-in and remembers Got it", async ({
   browser,
   page,
   workerBaseURL,
-  staffStorageState,
+  todayCaptainStorageState,
 }) => {
-  const readerStorageState = await staffStorageState("captain");
   const { reader, readerContext } = await todayCatchUpScenario(
     browser,
     page,
     workerBaseURL,
-    readerStorageState,
+    todayCaptainStorageState,
   );
   try {
     const strip = reader.getByRole("region", { name: /Since / });

@@ -6,7 +6,12 @@
  */
 
 import { clearCourseForms } from "./course-form-only";
-import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import {
+  expect,
+  signedInAsOwner,
+  signedInAsTodayCaptain,
+  test,
+} from "./fixtures";
 import {
   bookOpenWaterSession,
   counterPath,
@@ -48,8 +53,8 @@ for (const scheme of ["light", "dark"] as const) {
 
     test.describe("staff", () => {
       signedInAsOwner();
-      test.beforeAll(async ({ staffStorageState }) => {
-        await staffStorageState("captain");
+      test.beforeAll(async ({ todayCaptainStorageState }) => {
+        await todayCaptainStorageState;
       });
 
       /**
@@ -58,7 +63,7 @@ for (const scheme of ["light", "dark"] as const) {
        * 30 minutes before the divers, from the shop's crew time.
        */
       test.describe("as the captain", () => {
-        signedInAs("captain");
+        signedInAsTodayCaptain();
 
         test(`a captain's week names the crew's own dock time (${scheme})`, async ({ page }) => {
           await page.goto("/shop/blue-mantis");
@@ -75,14 +80,13 @@ for (const scheme of ["light", "dark"] as const) {
         browser,
         page,
         workerBaseURL,
-        staffStorageState,
+        todayCaptainStorageState,
       }) => {
-        const readerStorageState = await staffStorageState("captain");
         const { reader, readerContext } = await todayCatchUpScenario(
           browser,
           page,
           workerBaseURL,
-          readerStorageState,
+          todayCaptainStorageState,
         );
         try {
           await expect(reader.getByRole("region", { name: /Since / })).toContainText(

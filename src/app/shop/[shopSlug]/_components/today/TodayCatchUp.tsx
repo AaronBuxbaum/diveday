@@ -44,16 +44,19 @@ export async function TodayCatchUp({ shopSlug, locale }: { shopSlug: string; loc
       : [];
   });
   return (
-    <CatchUpStrip
-      idPrefix="today"
-      label={t("manifest.catchUp.todayLabel", {
-        time: formatTimeTz(result.mark.at, locale, timeZone),
-      })}
-      sentences={sentences}
-      dismissSize="md"
-      dismissLabel={t("manifest.catchUp.dismiss")}
-      dismissAction={action}
-    />
+    <>
+      <span hidden aria-hidden="true" data-today-catch-up-state="ready" />
+      <CatchUpStrip
+        idPrefix="today"
+        label={t("manifest.catchUp.todayLabel", {
+          time: formatTimeTz(result.mark.at, locale, timeZone),
+        })}
+        sentences={sentences}
+        dismissSize="md"
+        dismissLabel={t("manifest.catchUp.dismiss")}
+        dismissAction={action}
+      />
+    </>
   );
 }
 
