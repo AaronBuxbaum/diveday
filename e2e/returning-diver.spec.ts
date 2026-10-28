@@ -17,6 +17,9 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("diveday:returning-diver:v1")))
+    .toBe(JSON.stringify({ fullName: "Marco Reyes", email: "marco@example.com" }));
 
   // A second, unrelated trip's booking form now prefills the lead diver from
   // this device — no re-typing a name and email it already has.
