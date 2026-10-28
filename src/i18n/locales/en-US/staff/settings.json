@@ -385,7 +385,7 @@
     },
     "certCheck": {
       "heading": "Card checks",
-      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Features is on, in Chrome or Edge on a computer.",
+      "description": "The DiveDay browser extension checks NAUI, SDI, GUE and CMAS cards, and PADI when “PADI checks (beta)” is on. For SSI, it opens a prefilled form for you to complete. Use Chrome or Edge on a computer.",
       "added": "Added to this browser ({version})",
       "notAdded": "Not added",
       "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
@@ -588,6 +588,7 @@
         "dive_site_photo": "Dive-site photo",
         "shop_logo": "Shop logo",
         "shop_hero": "Shop cover photo",
+        "boat_photo": "Boat photo",
         "payment_receipt": "Imported receipt"
       },
       "mediaDeletions": {

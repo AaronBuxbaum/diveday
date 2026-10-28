@@ -39,13 +39,13 @@
   from a course session's own roster (see **Shop-issued certification**); or an **Agency check** reads the
   agency's own lookup page from the staffer's browser and certifies a level card when that page names
   the diver at its level. DiveDay's servers never call an agency. A card awaiting a check carries a link
-  to its agency's lookup page ("Check with SSI"), which becomes the Agency check when the extension is
-  in the browser. Some agencies (RAID, BSAC, the cave-diving bodies) get no link because they publish no
+  to its agency's lookup page, which becomes an Agency check when the extension is
+  in the browser. SSI instead opens a prefilled form for a staffer to complete manually. Some agencies (RAID, BSAC, the cave-diving bodies) get no link because they publish no
   lookup, while PADI's sits behind the shop's member
   sign-in and its link says so. Only a certified card at or above a trip's required level can
   satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which
   is what readiness reads.)
-- **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
+- **Agency check** — the DiveDay browser extension doing an agency lookup from the
   staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
   into the agency's own lookup page and hands back the page's text; the server certifies the card
   only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena", or a labeled pair
@@ -63,13 +63,15 @@
   browser ran it. That stamp means *the staffer's browser reported a match*: the words came from
   their browser, not signed by the agency, so it attests no more than **Mark certified** does, with
   the same permission. Anything else writes nothing and leaves the link. A match on a pending card
-  says it certified it; on an imported card, that it confirmed it. Level cards only, for SSI, NAUI,
+  says it certified it; on an imported card, that it confirmed it. Level cards only, for NAUI,
   SDI, GUE, CMAS and PADI, never divemaster or instructor (a professional rating is checked on the
   agency's professional tool); an unsighted self-declaration still needs its sighting. The lookup carries
-  only what the agency's form asks for: a birth date or a card number, both only for CMAS.
+  only what the agency's form asks for: a birth date or a card number, both only for CMAS. SSI's
+  manual handoff fills the name and known birth date, leaves its terms and search to the staffer,
+  and never reads a result or certifies a card.
 - **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its Divers tab
   (H-105): each **Agency check** the departure holds, one card at a time with a pause between, from
-  the staffer's browser. Each card is judged and certified on its own and keeps its own Undo; there
+  the staffer's browser, excluding SSI's manual handoff. Each card is judged and certified on its own and keeps its own Undo; there
   is no Undo for the departure. One diver the agency's page does not show is skipped, named, with
   the agency's page to open; two unreadable pages or unanswered requests in a row stop the run, and
   a signed-out **DiveChek check** stops it at once. The staffer can stop it. A re-run skips the cards
@@ -90,7 +92,8 @@
   staffer.
 - **Minimum extension version** — the oldest copy of the extension the app talks to
   (`MIN_EXTENSION_VERSION`). An older copy is treated as absent: the agency's link, never its
-  button, and Settings says "Update the extension". The extension also answers **hello** with its
+  button, and Settings says "Update the extension". SSI manual fill requires version 1.6.0 or newer;
+  older supported copies show an update prompt for SSI and continue checking other agencies. The extension also answers **hello** with its
   version and the agencies it checks.
 - **Try the checks** — Settings' disclosure (owners and managers), on the Card checks row, that runs the extension in this browser
   against nothing real: whether it is here and current, a **dry run** of each public agency's lookup
@@ -143,14 +146,15 @@
   list, naming the diver with a link to their record, because the row leaves with the card it was
   about.
 - **Agency check of a card** — an **Agency check** of one pending nitrox or specialty certification,
-  with its own "Check Nitrox with SSI" button on the diver record and a departure's Divers tab
+  with its own "Check Nitrox with NAUI" button on the diver record and a departure's Divers tab
   (issue #2592, ADR 20261008-cert-check-extension). The server certifies it only when the diver's own
   record on the agency's page lists that card in the agency's closed wording for its kind, under the
   card's own number, and never from a level card's match alone. Offered only for a card with a
   number of its own and not one a card sighting must confirm (a diver's own **Self-declared
   certification**, a **Shop-issued certification**, a listed card with no number). A match stamps
   `agency_checked_at` on the card, as for a level card, and its own Undo clears it and puts the card
-  back to pending (or, for an imported card, back to awaiting its confirm).
+  back to pending (or, for an imported card, back to awaiting its confirm). SSI opens a prefilled
+  manual lookup; the staffer reads SSI's result and uses Mark certified or confirms the imported card.
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names

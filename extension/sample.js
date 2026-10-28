@@ -3,8 +3,14 @@
 // diver. Its search is never sent anywhere: the form stops it, and this page
 // tells the service worker what was found, typed and pressed.
 (() => {
-  const { AGENCIES, SIGN_IN_PATH, PAGE_SHAPE_WORDS, fillAgencyForm, describePageShape } =
-    globalThis.DiveDayCertCheck;
+  const {
+    AGENCIES,
+    SIGN_IN_PATH,
+    PAGE_SHAPE_WORDS,
+    fillAgencyForm,
+    fillSsiManualForm,
+    describePageShape,
+  } = globalThis.DiveDayCertCheck;
   /** Nobody: a name, birth date and number no agency holds. */
   const SAMPLE = {
     firstName: "Alex",
@@ -74,9 +80,11 @@
     for (const input of Object.values(boxes)) input.value = "";
     pressed = null;
     const filled =
-      spec && !spec.signIn
-        ? fillAgencyForm(query, spec, SIGN_IN_PATH)
-        : { ok: false, missing: ["agency"] };
+      agency === "ssi"
+        ? { ok: fillSsiManualForm(query, true) }
+        : spec && !spec.signIn
+          ? fillAgencyForm(query, spec, SIGN_IN_PATH)
+          : { ok: false, missing: ["agency"] };
     const typed =
       Object.keys(boxes).length > 0 &&
       Object.entries(boxes).every(([key, input]) =>
@@ -116,6 +124,7 @@
       filled: !failedFill,
       typed: attempts.every((each) => each.typed),
       submitted: attempts.every((each) => each.submitted),
+      manual: agency === "ssi",
       missing: failedFill ? failedFill.filled?.missing || [] : [],
       pageShape: describePageShape(PAGE_SHAPE_WORDS, [SAMPLE.firstName, SAMPLE.lastName]),
     },

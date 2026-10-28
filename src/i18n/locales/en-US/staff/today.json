@@ -283,6 +283,7 @@
       "diveSitePhoto": "Dive-site photo",
       "shopLogo": "Shop logo",
       "shopHero": "Shop cover photo",
+      "boatPhoto": "Boat photo",
       "paymentReceipt": "Imported receipt"
     },
     "stuckDetail": "{kind} started {when} and never finished. Check Stripe.",
@@ -329,6 +330,8 @@
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {was} other {were}} due back {dueOn} and {count, plural, one {is} other {are}} still out.",
+    "overdueItems": "{count, plural, one {# late item} other {# late items}}",
+    "overduePeople": "{count, plural, one {# person has} other {# people have}} overdue rentals.",
     "dueBackDetail": "Gear due back today.",
     "dueBackPeople": "{count, plural, one {# person} other {# people}}",
     "serviceDueDetail": "{clockLabel} is due {dueOn}.",

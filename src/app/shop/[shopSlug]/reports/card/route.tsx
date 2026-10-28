@@ -5,6 +5,7 @@ import { yearCardCopy } from "@/app/_og/year-card-copy";
 import { canPersonViewShopReports, getShopYear } from "@/db/reporting";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { isoDate, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { currentShopSeason, shopSeasonOf } from "@/lib/season";
@@ -13,7 +14,7 @@ import { summarizeShopYear } from "@/lib/shop-year";
 
 /**
  * **Print the card** (ADR 20260908-one-hand, decision 6, lever T) — the shop's
- * year as one 3:2 image, from the year page's own act.
+ * selected month or year as one 3:2 image.
  *
  * Staff-only, behind the same gate the year page itself is behind: the card
  * carries no money and no diver's name, but who may read a shop's year is
@@ -33,7 +34,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
   // `?year=` prints a past year the page's year switch opened (fifth loop,
   // item 25); four digits and no later than this year, or this year. The year
   // is the shop's season, as on the page (issue #2657).
-  const asked = new URL(request.url).searchParams.get("year");
+  const search = new URL(request.url).searchParams;
+  const asked = search.get("year");
+  const monthParam = search.get("month");
+  const month = monthParam === null ? null : parseMonthKey(monthParam);
+  if (monthParam !== null && !month) {
+    return new NextResponse(null, { status: 400, headers: { "Cache-Control": "no-store" } });
+  }
   const seasonStart = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
   const thisYear = currentShopSeason(now, shop.timezone, seasonStart).year;
   const requested = asked && /^\d{4}$/.test(asked) ? Number(asked) : thisYear;
@@ -41,13 +48,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
     await getShopYear(db, shop.id, {
       timeZone: shop.timezone,
       now,
-      ...shopSeasonOf(requested <= thisYear ? requested : thisYear, seasonStart),
+      ...(month
+        ? {
+            startsOn: isoDate(month.year, month.month, 1),
+            endsOn: isoDate(
+              month.year,
+              month.month,
+              new Date(Date.UTC(month.year, month.month, 0)).getUTCDate(),
+            ),
+          }
+        : shopSeasonOf(requested <= thisYear ? requested : thisYear, seasonStart)),
     }),
   );
   if (!year.hasActivity) {
     return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
   }
   const locale = await requestLocale(shop.defaultLocale);
+  const copy = yearCardCopy({ shopName: shop.name, year, t: diverTranslator(locale), locale });
   // Before any ImageResponse is built: Next's image optimizer disables
   // libvips' SVG loader process-wide, which is what satori rasterizes through.
   // See src/lib/og-rasterizer.ts — the failure mode is a severed socket.
@@ -56,12 +73,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
     <YearCard
       year={year}
       brandColor={shop.brandColor}
-      copy={yearCardCopy({
-        shopName: shop.name,
-        year,
-        t: diverTranslator(locale),
-        locale,
-      })}
+      copy={month ? { ...copy, range: monthLabel(month, locale) } : copy}
     />,
     YEAR_CARD_SIZE,
   );

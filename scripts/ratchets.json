@@ -198,13 +198,12 @@
       {
         "why": "cert-check extension specs (#2625) merged to main before the long-literal ratchet landed",
         "files": {
-          "e2e/agency-check-extension.spec.ts": "0 -> 8",
           "e2e/agency-check.spec.ts": "0 -> 1"
         }
       }
     ],
     "e2e/add-diver.spec.ts": 6,
-    "e2e/agency-check-extension.spec.ts": 8,
+    "e2e/agency-check-extension.spec.ts": 7,
     "e2e/agency-check-padi.spec.ts": 7,
     "e2e/agency-check-roster.spec.ts": 3,
     "e2e/agency-check.spec.ts": 1,
@@ -541,7 +540,7 @@
         }
       }
     ],
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 396,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 368,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 351,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
@@ -599,8 +598,8 @@
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/page.tsx": 440,
     "src/app/ready/[token]/page.tsx": 633,
-    "src/app/s/[shopSlug]/page.tsx": 794,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 500,
+    "src/app/s/[shopSlug]/page.tsx": 753,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 495,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 727,
     "src/app/shop/[shopSlug]/page.tsx": 620,

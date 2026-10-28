@@ -45,7 +45,7 @@ import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
 import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
-import { TripHero } from "./_components/TripHero";
+import { TripBoatPhoto, TripHero } from "./_components/TripHero";
 import { pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
@@ -423,28 +423,23 @@ export default async function TripDetailPage({
               </p>
             ) : null}
           </div>
-          {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
-              forms-and-controls.md's section rhythm): every section from the
-              day's run to the shop's contact line stands 40px from the next, on
-              this `space-y-10`, and none carries a margin of its own. Each used
-              to spell its own — `mt-6`, `mt-8`, `mt-10` — and the page's
-              sections stood 24, 32 and 40px apart. */}
           <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
-            {/* The shape of the day as well as its sites: how long each dive runs,
-                how long the boat sits between two of them, and — once a reader
-                names a card — which of the day's sites go deeper than that card
-                covers. Facts the shop already publishes (issue #1479); the beat
-                stays time-neutral, since durations promise no clock. */}
+            {/* The day's sites and durations stay time-neutral (issue #1479). */}
             {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
-            <TripDayPlan
-              briefings={diveBriefings}
-              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
-              sightings={briefing.seen}
-              siteReviews={briefing.siteReviews}
-              shop={shop}
-              locale={locale}
-              profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
-            />
+            <div className="space-y-4">
+              <TripDayPlan
+                briefings={diveBriefings}
+                nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
+                sightings={briefing.seen}
+                siteReviews={briefing.siteReviews}
+                shop={shop}
+                locale={locale}
+                profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
+              />
+              {!isEmbed ? (
+                <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} />
+              ) : null}
+            </div>
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the shop's
                 site prose and the crew used to run down the page as five more

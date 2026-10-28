@@ -10,6 +10,7 @@ import {
   getBoatById,
   getBoatForHistory,
   listBoats,
+  replaceBoatPhoto,
   updateBoat,
   updateBoatWithinCertificate,
 } from "./boats";
@@ -22,6 +23,19 @@ import { createTrip } from "./trips-create";
 const ctx = fileScopedShopContext();
 
 describe("boats database operations", () => {
+  it("updates only its own live boat and refuses a stale photo replacement", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Photo boat", 10);
+    const url = "https://diveday-media.s3.us-east-1.amazonaws.com/shop-heroes/boat.jpg";
+    expect(await replaceBoatPhoto(db, shop.id, boat.id, null, url)).toBe(true);
+    expect(await replaceBoatPhoto(db, shop.id, boat.id, null, null)).toBe(false);
+    expect((await getBoatById(db, shop.id, boat.id))?.photoUrl).toBe(url);
+    expect(
+      await replaceBoatPhoto(db, "00000000-0000-0000-0000-000000000000", boat.id, url, null),
+    ).toBe(false);
+    expect(await replaceBoatPhoto(db, shop.id, boat.id, url, null)).toBe(true);
+    expect((await getBoatById(db, shop.id, boat.id))?.photoUrl).toBeNull();
+  });
   it("creates, retrieves, updates, and lists boats for a shop", async () => {
     const { db, shop } = ctx;
 

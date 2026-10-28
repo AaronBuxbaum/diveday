@@ -55,6 +55,21 @@ function renderSsiCard(action = vi.fn(async () => null)) {
 }
 
 describe("AgencyCheck and the extension's version", () => {
+  it("leaves SSI's manual check to the staffer without judging a page", async () => {
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.6.0");
+    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: false, reason: "manual_opened" });
+    const action = renderSsiCard();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Check with SSI" }));
+    });
+    expect(
+      screen.getByText(
+        "Review SSI’s terms and complete the check, then return to mark the correct card certified.",
+      ),
+    ).toBeVisible();
+    expect(action).not.toHaveBeenCalled();
+    expect(reportAgencyCheckPageAction).not.toHaveBeenCalled();
+  });
   it("draws the agency's link, not the button, for a copy older than DiveDay needs", () => {
     document.documentElement.setAttribute("data-diveday-cert-check", "1.4.0");
     renderSsiCard();

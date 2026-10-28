@@ -9,8 +9,11 @@ import {
   authVerifications,
   bookings,
   buddyTeamEvents,
+  crewAssignmentRequests,
   divePackageEntitlements,
   divePackages,
+  gearItems,
+  gearReservations,
   interests,
   interestUnsubscribeTokens,
   orders,
@@ -59,6 +62,56 @@ describe("deleteDemoShopCascade", () => {
     const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     await db.execute(sql`drop table inbox_saved_answers`);
+
+    await deleteDemoShopCascade(db, shop.id);
+    expect(await findShop(db, slug)).toBeUndefined();
+  });
+
+  it("deletes invoiced counter rentals before their orders", async () => {
+    const { db } = ctx;
+    const { slug } = await createDemoShop(db, { history: false });
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: demo shop has no people");
+    const [unit] = await db
+      .insert(gearItems)
+      .values({ shopId: shop.id, kind: "mask", label: "Rental" })
+      .returning();
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: person.id,
+        createdByPersonId: person.id,
+        collection: "cash",
+        currency: "usd",
+        totalCents: 1000,
+      })
+      .returning();
+    await db.insert(gearReservations).values({
+      shopId: shop.id,
+      gearItemId: unit.id,
+      personId: person.id,
+      orderId: order.id,
+      reservedFrom: "2026-01-01",
+      reservedUntil: "2026-01-02",
+    });
+
+    await deleteDemoShopCascade(db, shop.id);
+    expect(await findShop(db, slug)).toBeUndefined();
+  });
+
+  it("deletes crew requests before their departures", async () => {
+    const { db } = ctx;
+    const { slug } = await createDemoShop(db, { history: false });
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    const [trip] = await db.select().from(trips).where(eq(trips.shopId, shop.id)).limit(1);
+    if (!person || !trip) throw new Error("test setup: demo shop needs a person and departure");
+    await db
+      .insert(crewAssignmentRequests)
+      .values({ shopId: shop.id, tripId: trip.id, personId: person.id });
+
     await deleteDemoShopCascade(db, shop.id);
     expect(await findShop(db, slug)).toBeUndefined();
   });

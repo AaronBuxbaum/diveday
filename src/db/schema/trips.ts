@@ -167,6 +167,8 @@ export const boats = pgTable(
      * listed by name and seats alone, never with DiveDay filler.
      */
     description: text("description"),
+    /** The shop's public photograph of this hull. */
+    photoUrl: text("photo_url"),
     /**
      * **The vessel's legal passenger ceiling**, as printed on its Coast Guard
      * Certificate of Inspection (or the shop's own flag state's equivalent).

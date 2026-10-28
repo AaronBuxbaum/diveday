@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agencyCheckOffered, judgeAgencyPage } from "./agency-check";
+import { agencyCheckOffered, agencyCheckQuery, judgeAgencyPage } from "./agency-check";
 
 /**
  * Who is offered a check, and the agencies' own "nobody found" wording, read
@@ -7,6 +7,37 @@ import { agencyCheckOffered, judgeAgencyPage } from "./agency-check";
  * of the judge.
  */
 describe("agencyCheckOffered", () => {
+  it("offers SSI's manual form with names and birthday without a card number", () => {
+    const input = {
+      agency: "ssi" as const,
+      fullName: "Lena Ortiz",
+      dateOfBirth: "1990-04-12",
+      identifier: null,
+    };
+    expect(agencyCheckQuery(input)).toMatchObject({
+      firstName: "Lena",
+      lastName: "Ortiz",
+      birthDate: "1990-04-12",
+      cardNumber: null,
+    });
+    expect(agencyCheckQuery({ ...input, dateOfBirth: null })?.birthDate).toBeNull();
+    expect(agencyCheckQuery({ ...input, fullName: "Lena" })).toMatchObject({
+      firstName: "Lena",
+      lastName: "",
+    });
+    expect(
+      judgeAgencyPage({
+        agency: "ssi",
+        level: "open_water",
+        firstName: "Lena",
+        lastName: "Ortiz",
+        birthDate: "1990-04-12",
+        cardNumber: null,
+        today: "2026-10-26",
+        pageText: "Lena Ortiz\n1990-04-12\nOpen Water Diver",
+      }).verdict,
+    ).not.toBe("match");
+  });
   it("offers PADI only at a shop that turned PADI checks on, and every other agency anywhere", () => {
     expect(agencyCheckOffered("padi", { padiChecksEnabled: false })).toBe(false);
     expect(agencyCheckOffered("padi", { padiChecksEnabled: true })).toBe(true);

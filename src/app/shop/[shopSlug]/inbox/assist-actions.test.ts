@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { readFormDraft } from "@/db/form-drafts";
+import { readFormDraft, saveFormDraft } from "@/db/form-drafts";
 import { formDrafts } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -84,6 +84,37 @@ describe("Make a request", () => {
     const to = await redirectedTo(() => requestFromMessageAction(form(MESSAGE_ID)));
     expect(to).toBe(`/shop/${shop.slug}/inbox?notice=request-nothing`);
     expect(await readFormDraft(db, shop.id, owner, "took_a_call")).toBeNull();
+  });
+
+  it("returns a diver-page refusal to that conversation", async () => {
+    const { shop } = await signedIn();
+    vi.mocked(bookingAskFromMessage).mockResolvedValue(null);
+    const data = form(MESSAGE_ID);
+    data.set("returnPersonId", "af000000-1111-4222-8333-444444444444");
+    const to = await redirectedTo(() => requestFromMessageAction(data));
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/af000000-1111-4222-8333-444444444444?notice=request-nothing#conversation`,
+    );
+  });
+
+  it("preserves an unfinished call draft and explains why it did not overwrite it", async () => {
+    const { db, shop, owner } = await signedIn();
+    await saveFormDraft(db, {
+      shopId: shop.id,
+      personId: owner,
+      form: "took_a_call",
+      fields: [["fullName", "Earlier caller"]],
+    });
+    vi.mocked(bookingAskFromMessage).mockResolvedValue({
+      fields: { outcome: "date-request", email: "new@example.org" },
+      callback: null,
+      match: null,
+    });
+    const to = await redirectedTo(() => requestFromMessageAction(form(MESSAGE_ID)));
+    expect(to).toBe(`/shop/${shop.slug}/inbox?notice=request-draft-exists`);
+    expect((await readFormDraft(db, shop.id, owner, "took_a_call"))?.fields.fullName).toBe(
+      "Earlier caller",
+    );
   });
 
   it("reads nothing for an id that is not one", async () => {

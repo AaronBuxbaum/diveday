@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup, openPaperWaiverForm, openTripFromBoard, openTripTab } from "./helpers";
 import {
@@ -19,6 +20,21 @@ import {
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
+
+/** A pending GUE card exercises automatic checks without changing SSI's manual handoff. */
+async function addPendingGueCard(page: Page, search: string, name: string) {
+  await openDiverProfile(page, search, name);
+  const group = await openDiverFileGroup(page, "Certification records");
+  await group.getByText("Add certification", { exact: true }).click();
+  const form = group
+    .locator("form", { has: page.getByRole("button", { name: "Capture for review" }) })
+    .filter({ visible: true });
+  await form.locator('select[name="agency"]').selectOption("gue");
+  await form.locator('select[name="card"]').selectOption("level:open_water");
+  await form.getByLabel("Certification number").fill("GUE-4411");
+  await form.getByRole("button", { name: "Capture for review" }).click();
+  return openDiverFileGroup(page, "Certification records");
+}
 
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
@@ -192,11 +208,28 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "Check with SSI", exact: true }).waitFor();
         await capture(page, "diver-agency-verification-link", scheme);
         await page.evaluate(() => {
-          document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+          document.documentElement.setAttribute("data-diveday-cert-check", "1.6.0");
           window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page" || data.type !== "ssi-manual-fill") return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ok: false,
+                reason: "manual_opened",
+              },
+              window.location.origin,
+            );
+          });
         });
         await page.getByRole("button", { name: "Check with SSI", exact: true }).waitFor();
         await capture(page, "diver-agency-verification-action", scheme);
+        await page.getByRole("button", { name: "Check with SSI", exact: true }).click();
+        await page.getByText(staffCopy("divers.certifications.agencyCheck.manualOpened")).waitFor();
+        await capture(page, "diver-agency-verification-manual", scheme);
       });
 
       test(`the drysuit observation form keeps its input and action level (${scheme})`, async ({
@@ -490,10 +523,9 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **The other cards an agency's page lists, offered after a match**
        * (layer 3 of ADR 20261008-cert-check-extension). The extension is
-       * stood in for at the page's one seam, as next door: SSI's page shows
-       * Mateo Duarte's Open Water card, which the check certifies, and his
-       * nitrox and Deep cards, which the panel under it offers with a tick
-       * each. Safe to mutate: each test resets the shop's cards.
+       * stood in for at the page's one seam, as next door: GUE's page shows
+       * Mateo Duarte's Recreational Diver 1 card, which bundles nitrox and
+       * offers it separately. Each test resets the shop's cards.
        */
       test(`an agency check's offer of the page's other cards renders true to the design (${scheme})`, async ({
         page,
@@ -517,7 +549,7 @@ for (const scheme of ["light", "dark"] as const) {
                 type: "agency-check-result",
                 requestId: data.requestId,
                 ok: true,
-                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nOpen Water Diver\nEnriched Air Nitrox · Deep Diving`,
+                pageText: `GUE Verification\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nRecreational Diver 1`,
               },
               window.location.origin,
             );
@@ -527,15 +559,14 @@ for (const scheme of ["light", "dark"] as const) {
         // interval; the capture checks its Dismiss control at phone and desktop
         // widths while the offer's Add button remains visible behind it.
         await page.clock.install();
-        await openDiverProfile(page, "Mateo", "Mateo Duarte");
-        const group = await openDiverFileGroup(page, "Certification records");
-        await group.getByRole("button", { name: "Check with SSI" }).click();
+        const group = await addPendingGueCard(page, "Mateo", "Mateo Duarte");
+        await group.getByRole("button", { name: "Check with GUE" }).click();
         await group
           .getByRole("group", {
-            name: "SSI also shows these certifications. Add them? Each waits for Mark certified.",
+            name: "GUE also shows these certifications. Add them? Each waits for Mark certified.",
           })
           .waitFor();
-        const toast = page.getByRole("status").filter({ hasText: "SSI shows this certification." });
+        const toast = page.getByRole("status").filter({ hasText: "GUE shows this certification." });
         await toast.waitFor();
         await page.mouse.move(0, 0);
         await page.clock.fastForward(13_000);
@@ -548,9 +579,9 @@ for (const scheme of ["light", "dark"] as const) {
        * **A Divers-tab row after an agency check that came up short** (H-105).
        * Nothing here renders without the DiveDay browser extension, so this
        * stands in for it at the page's one seam (`e2e/agency-check-roster.spec.ts`
-       * does the same): SSI's page finds Tyler Brooks but shows him only as a
-       * Scuba Diver. The row keeps the agency's words under its reason, the
-       * link to SSI's own page, and its "Check with SSI" for another try —
+       * does the same): GUE's page finds Tyler Brooks without the claimed
+       * level. The row keeps the agency's words under its reason, the
+       * link to GUE's own page, and its "Check with GUE" for another try —
        * the state a staffer is left to read, and the densest one the row has.
        */
       test(`a Divers-tab row's agency check, short of a match, renders true to the design (${scheme})`, async ({
@@ -575,18 +606,19 @@ for (const scheme of ["light", "dark"] as const) {
                 type: "agency-check-result",
                 requestId: data.requestId,
                 ok: true,
-                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nScuba Diver`,
+                pageText: `GUE Verification\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nFundamentals`,
               },
               window.location.origin,
             );
           });
         });
+        await addPendingGueCard(page, "Tyler", "Tyler Brooks");
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Two-Tank Reef — French Reef");
         await openTripTab(page, "Trip");
         const roster = page.locator("#roster");
-        await roster.getByRole("button", { name: "Check with SSI" }).click();
-        await roster.getByText("SSI found this diver, but not at this level.").waitFor();
+        await roster.getByRole("button", { name: "Check with GUE" }).click();
+        await roster.getByText("GUE found this diver, but not at this level.").waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "trip-guests-agency-check", scheme);
       });
