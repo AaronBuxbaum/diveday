@@ -423,5 +423,6 @@ script again.
 | 20261027-junior-card-evidence | Record junior card evidence explicitly |
 | 20261027-server-staff-idle | End inactive staff sessions on… |
 | 20261027-staff-credential-history | Recorded staff credential history |
+| 20261028-returning-diver-device-memory | Remember a booker only by… |
 
 <!-- adr-index:end -->

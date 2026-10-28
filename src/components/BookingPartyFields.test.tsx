@@ -7,7 +7,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { SMS_CONSENT_ONCE_FILLED } from "@/components/SmsConsentNote";
 import { SEGMENT_CORNER, segmentedTrackClass } from "@/components/ui/segmented";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { saveReturningDiver } from "@/lib/returning-diver";
+import { nowDate } from "@/lib/clock";
+import { RETURNING_DIVER_MEMORY_MS, saveReturningDiver } from "@/lib/returning-diver";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
@@ -160,9 +161,13 @@ describe("BookingPartyFields — the group captions", () => {
    * cancelled half of it: 8 − 4 left 4px. The caption's gap is the one gap.
    */
   it("keeps a remembered diver's line the caption's 8px under it, with no margin pulling it up", () => {
-    saveReturningDiver({ fullName: "Marco Rossi", email: "marco@example.com" });
+    saveReturningDiver(
+      "blue-mantis",
+      { fullName: "Marco Rossi", email: "marco@example.com" },
+      nowDate().getTime() + RETURNING_DIVER_MEMORY_MS,
+    );
     try {
-      renderDiver(<BookingPartyFields maxPartySize={4} remember />);
+      renderDiver(<BookingPartyFields maxPartySize={4} rememberForShop="blue-mantis" />);
       const line = screen.getByRole("button", { name: "Not you?" }).closest("p");
       expect(line).toHaveTextContent("Booking as Marco Rossi");
       expect(screen.getByText("Your details").nextElementSibling).toHaveClass("mt-2");

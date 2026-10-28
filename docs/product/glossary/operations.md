@@ -2105,6 +2105,13 @@
   an address. Never on a held seat; a held seat is never one of its rows and never counted in
   their numbers. Read in `src/db/your-days.ts`; see
   [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
+- **Returning-diver device memory** — an optional, browser-local copy of the lead booker's name
+  and email used to prefill a later booking form at the same shop. It is off by default, scoped to
+  one shop on that device, clearable with "Not you?", and expires after 30 days. Only the explicit
+  opt-in on a successful, identity-confirmed, non-embedded booking can authorize the write; the
+  server uses a one-use receipt bound to the browser redirect, not the emailed readiness link or
+  the editable `?booked=1` flag. It is best-effort after hydration and is not guaranteed if the
+  browser leaves first. See [20261028-returning-diver-device-memory](../../architecture/decisions/20261028-returning-diver-device-memory.md).
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
   and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the
   roster did not say), and the one crew gap the staffing week would draw on it, from the same pass

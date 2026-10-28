@@ -13,9 +13,8 @@ import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
 import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
-import { ReadyBookedPage, ReadyThreadPage } from "@/app/ready/[token]/_components/ReadyMasthead";
+import { ReadyThreadPage } from "@/app/ready/[token]/_components/ReadyMasthead";
 import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
-import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
 import { readyOfflineWords } from "@/app/ready/[token]/_components/ready-offline-words";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
@@ -33,7 +32,6 @@ import {
 import { YourDays } from "@/app/ready/[token]/_components/YourDays";
 import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
-import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
@@ -69,6 +67,7 @@ import {
 import { HeldAfterDiveCard, NoShowCard, releasedSeat } from "./_components/AfterDiveDoors";
 import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
+import { ReadyBookedShell, ReadyThreadFallback } from "./_components/ReadyBookedShell";
 import {
   type ReadyActionReads,
   readReadyActions,
@@ -166,13 +165,16 @@ export default async function ReadyTokenPage({
   );
   if (!card) return thread;
   return (
-    <ReadyBookedPage
+    <ReadyBookedShell
       card={card}
       locale={await requestLocale(card.shop.defaultLocale)}
       dateActions={readyDateActions(dataPromise, partyClaimsPromise)}
+      delivered={delivered}
+      justBooked={justBooked}
+      token={token}
     >
-      <Suspense fallback={<ReadyThreadBodySkeleton />}>{thread}</Suspense>
-    </ReadyBookedPage>
+      {thread}
+    </ReadyBookedShell>
   );
 }
 
@@ -208,7 +210,7 @@ async function DiverReadinessPage({
   const data = await dataPromise;
   if (!data) return alone(<UnavailableReadyLink t={anonT} />);
 
-  const { detail, shop, person } = data;
+  const { detail, shop } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
   const yourDays = (
@@ -602,11 +604,6 @@ async function DiverReadinessPage({
           </ShopNotice>
         </div>
       ) : null}
-      {/* Client-only, per-device convenience (task 27): remember who just
-          booked, never on a held seat (#2125), to prefill their next visit. */}
-      {justBooked && person.email && !data.identityHeld ? (
-        <RememberBooker fullName={detail.person.fullName} email={person.email} />
-      ) : null}
       {/* Keep this page on the phone for the marina with no signal, on both
           openings (the booked card and the ordinary masthead), and date the
           copy by the live page itself (security review of layer 8, D2). */}
@@ -614,7 +611,7 @@ async function DiverReadinessPage({
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped
           fallback rather than holding the opening above them (UX audit #5). */}
-      <Suspense fallback={<ReadyThreadBodySkeleton />}>{threadBody}</Suspense>
+      <Suspense fallback={<ReadyThreadFallback />}>{threadBody}</Suspense>
     </>
   );
 

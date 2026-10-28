@@ -5,7 +5,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
-import { issueBookingCapability } from "@/db/booking-capabilities";
 import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-handoff";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
@@ -14,7 +13,6 @@ import { type AppDb, getDb } from "@/db/client";
 import { recordShopMilestone } from "@/db/founder-metrics";
 import { askForDeparture } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
-import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopBySlug } from "@/db/shops";
@@ -64,6 +62,9 @@ import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
 import { answerAlreadyHeld } from "./_lib/already-held";
 import { checkoutGearLines, persistCheckoutGear } from "./_lib/checkout-gear";
+import { issueConfirmedBookingCapability } from "./_lib/issue-confirmed-booking-capability";
+import { issueReturningDiverReceiptForBooking } from "./_lib/issue-returning-diver-receipt";
+import { recordLeadBookerLocale } from "./_lib/record-lead-booker-locale";
 import { sendJoinMail } from "./send-join-mail";
 
 /** Bound to each action so the public page can stay a pure renderer. */
@@ -80,33 +81,6 @@ export type TripRef = {
 /** `&embed=1` after an existing query, `?embed=1` to start one — never plain mode. */
 function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
   return embed ? `${delimiter}embed=1` : "";
-}
-
-async function issueConfirmedBookingCapability(
-  db: AppDb,
-  input: {
-    shopId: string;
-    bookingId: string;
-    tripId: string;
-    expectedPersonId: string | undefined;
-    confirmedBooking: Awaited<ReturnType<typeof getBookingForTrip>>;
-    purpose: "readiness" | "confirm";
-  },
-) {
-  if (
-    !input.expectedPersonId ||
-    !input.confirmedBooking ||
-    input.confirmedBooking.booking.personId !== input.expectedPersonId ||
-    input.confirmedBooking.booking.tripId !== input.tripId
-  )
-    return null;
-  return issueBookingCapability(db, {
-    shopId: input.shopId,
-    bookingId: input.bookingId,
-    purpose: input.purpose,
-    expectedPersonId: input.expectedPersonId,
-    expectedTripId: input.tripId,
-  });
 }
 
 /**
@@ -180,6 +154,9 @@ export async function bookSpot(
   const locale = await requestLocale();
   const t = diverTranslator(locale);
   const ip = await clientIp();
+  // Unchecked by default. A receipt is minted further below only after the
+  // booking transaction has succeeded and the booking identity is eligible.
+  const rememberBooker = !embed && formData.get("rememberBooker") === "on";
   const fields = readForm(bookingForm, formData);
   // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
   // numbers and for why the lock, not the row count, is what decides it.
@@ -503,22 +480,17 @@ export async function bookSpot(
     confirmedBooking,
     purpose: "readiness",
   });
-  await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
-  // This form is the diver's own — the public schedule page, submitted from
-  // their device — so its `Accept-Language` is first-hand evidence of the
-  // language the lead booker reads (docs ADR
-  // 20260731-per-person-notification-locale). Only the lead's: every other
-  // party member's name and address were typed *by* the lead, and this header
-  // says nothing about what those divers read.
-  const ownLocale = await requestFirstHandLocale();
-  // Through the booking-scoped writer, not the person-scoped one: it refuses
-  // an identity-unconfirmed booking, which is what stops someone who merely
-  // knows a diver's email address from re-languaging that diver's mail by
-  // booking a seat in their name (H-13, security-reviewer finding).
-  await recordDiverOwnLocaleForBooking(dbi, {
+  await issueReturningDiverReceiptForBooking(dbi, {
+    optedIn: rememberBooker,
+    embed,
+    shopId: shopNow.id,
     bookingId: primaryBookingId,
-    locale: ownLocale,
+    tripId,
+    confirmedBooking,
+    redirectCapability,
   });
+  await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
+  const ownLocale = await recordLeadBookerLocale(dbi, primaryBookingId);
   // The confirmation and every diver's waiver, after the seats are committed:
   // nothing in it may turn a completed booking into an error.
   await sendJoinMail(dbi, {

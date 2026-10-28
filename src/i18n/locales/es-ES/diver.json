@@ -399,6 +399,7 @@
     "bookVerb": "Reservar",
     "headingToPayment": "Vamos al pago…",
     "booking": "Reservando…",
+    "rememberOnDevice": "Recuerda mi nombre y correo en este dispositivo para este centro durante 30 días.",
     "fullHeading": "Este barco está completo",
     "alternativeSameCourse": "El mismo curso, {date}",
     "alternativeSameSite": "El mismo sitio de buceo, {date}",

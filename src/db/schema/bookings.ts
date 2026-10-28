@@ -794,6 +794,10 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   // `/ready/<token>/forms` and is refused by every other `/ready` door, so a
   // link handed over the counter cannot read or change the diver's trip prep.
   "course_forms",
+  // A one-use, browser-only receipt for an explicitly opted-in post-booking
+  // device-memory write. It is never a page/link capability; its source is
+  // the separate undelivered readiness capability created for the redirect.
+  "returning_diver_receipt",
 ]);
 
 /**
@@ -837,6 +841,8 @@ export const bookingCapabilities = pgTable(
      * (security review of layer r5-4, F1). False unless the minter says so.
      */
     delivered: boolean("delivered").notNull().default(false),
+    /** The undelivered redirect readiness capability this one-use receipt is bound to. */
+    sourceCapabilityId: uuid("source_capability_id"),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
@@ -847,6 +853,13 @@ export const bookingCapabilities = pgTable(
       table.bookingId,
       table.purpose,
       table.revokedAt,
+    ),
+    uniqueIndex("booking_capabilities_returning_receipt_source_unique")
+      .on(table.sourceCapabilityId)
+      .where(sql`${table.sourceCapabilityId} is not null`),
+    check(
+      "booking_capabilities_returning_diver_source",
+      sql`(${table.purpose} = 'returning_diver_receipt') = (${table.sourceCapabilityId} is not null)`,
     ),
   ],
 );

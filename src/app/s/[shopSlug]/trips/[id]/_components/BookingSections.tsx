@@ -8,7 +8,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
@@ -592,13 +592,23 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           maxPartySize={remaining}
           leadPhone
           fieldErrors={state.fieldErrors}
-          remember={!tripRef.embed}
+          rememberForShop={!tripRef.embed ? tripRef.shopSlug : null}
           onSizeChange={setPartySize}
           lead={knownDiver?.lead ?? null}
           onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}
           participantChoices={participantChoices}
           onTypesChange={setPartyTypes}
         />
+        {!tripRef.embed ? (
+          <ChoiceRow
+            type="checkbox"
+            name="rememberBooker"
+            value="on"
+            className="border-t border-border pt-3"
+          >
+            {t("rememberOnDevice")}
+          </ChoiceRow>
+        ) : null}
         {/* A rider stays aboard and rents nothing, so no gear step. */}
         {showGearFields
           ? Array.from({ length: partySize }, (_, index) => index)

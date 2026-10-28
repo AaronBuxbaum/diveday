@@ -60,7 +60,7 @@ export function BookingPartyFields({
   maxPartySize,
   leadPhone = false,
   fieldErrors,
-  remember = false,
+  rememberForShop,
   onSizeChange,
   lead,
   onLeadEmailSettled,
@@ -72,9 +72,8 @@ export function BookingPartyFields({
   /** Show an optional phone field for the lead booker (diver 1). */
   leadPhone?: boolean;
   fieldErrors?: BookingFieldErrors;
-  /** Prefill the lead diver from a previous booking on this device (task 27
-   * — Marco). Never in the embed widget; the caller decides that. */
-  remember?: boolean;
+  /** Prefill from this shop's unexpired, explicitly opted-in device memory. */
+  rememberForShop?: string | null;
   /** Told every time the diver-selected party size changes (including on
    * mount), so a caller can show its own party-size-dependent content (task
    * 18's running total). Pass a stable reference (`useState`'s setter, not
@@ -115,7 +114,7 @@ export function BookingPartyFields({
   const [hydrated, setHydrated] = useState(false);
   const { party, updateMember, rememberedDiver, forgetRememberedDiver } = usePartyMembers(
     lead,
-    remember,
+    rememberForShop,
   );
   const [phone, setPhone] = useState(lead?.phone ?? "");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
