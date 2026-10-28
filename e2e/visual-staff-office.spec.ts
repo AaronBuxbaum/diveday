@@ -576,8 +576,8 @@ test.describe("light mode — course date requests without a shop email", () => 
     await page.goto(`/s/${privateShop.slug}/courses/sdi-rescue-diver`);
     await expect(page.getByText(diverCopy("course.noDatesLead"), { exact: false })).toBeVisible();
     const inquiry = page.locator("#get-in-touch");
-    await expect(inquiry.locator("summary")).toHaveText(diverCopy("course.askAnotherDate"));
-    await inquiry.locator("summary").click();
+    await expect(inquiry.locator("> summary")).toHaveText(diverCopy("course.askAnotherDate"));
+    await inquiry.locator("> summary").click();
     await expect(inquiry.getByLabel(diverCopy("inquiry.yourEmail"))).toBeVisible();
     await capture(page, "course-request-no-email", "light");
   });

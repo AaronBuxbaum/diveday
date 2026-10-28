@@ -50,7 +50,7 @@ for (const scenario of cases) {
       const publicPage = makeActivitySafe(await context.newPage());
       await publicPage.goto(publicCoursePath(privateShop.slug, scenario.slug));
       const inquiry = publicPage.locator("#get-in-touch");
-      await expect(inquiry.locator("summary")).toHaveText(diver("course.askAnotherDate"));
+      await expect(inquiry.locator("> summary")).toHaveText(diver("course.askAnotherDate"));
       await openIfClosed(inquiry);
       await expect(
         publicPage.getByRole("link", { name: diver("course.bookThisDate") }),
